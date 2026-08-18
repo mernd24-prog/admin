@@ -1,12 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
-import { MdAdd, MdOutlineClose, MdSearch, MdStar, MdStarBorder } from "react-icons/md";
+import {
+  MdAdd,
+  MdOutlineClose,
+  MdSearch,
+  MdStar,
+  MdStarBorder,
+} from "react-icons/md";
 import { createProductReview } from "../../../../Redux/adminCoreSlice";
 import { ENDPOINTS } from "../../../../_helpers/endpoints";
 import { axiosPrivate } from "../../../../_helpers/axiosProvider";
 import { getStoredUser } from "../../../../_helpers/authStorage";
 import MultiImageUpload from "../../../../components/Atoms/ImageGallery/MultiImageUpload";
+import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
 
 const STATUSES = [
   { value: "published", label: "Published" },
@@ -22,10 +29,15 @@ const normalizeList = (response) => {
   return Array.isArray(items) ? items : [];
 };
 
-const productId = (product = {}) => product._id || product.id || product.productId || "";
+const productId = (product = {}) =>
+  product._id || product.id || product.productId || "";
 
 const productLabel = (product = {}) =>
-  product.title || product.name || product.productName || product.slug || productId(product);
+  product.title ||
+  product.name ||
+  product.productName ||
+  product.slug ||
+  productId(product);
 
 const readSessionUser = () => {
   try {
@@ -63,9 +75,11 @@ function StarRating({ value, onChange }) {
           className="text-2xl transition-colors"
           aria-label={`${star} star`}
         >
-          {star <= (hovered || value)
-            ? <MdStar className="text-yellow-400" />
-            : <MdStarBorder className="text-gray-300" />}
+          {star <= (hovered || value) ? (
+            <MdStar className="text-yellow-400" />
+          ) : (
+            <MdStarBorder className="text-gray-300" />
+          )}
         </button>
       ))}
       <span className="ml-1 text-xs text-gray-500">{value || 0}/5</span>
@@ -92,7 +106,10 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
   const [saving, setSaving] = useState(false);
 
   const selectedProduct = useMemo(
-    () => products.find((product) => String(productId(product)) === String(form.productId)),
+    () =>
+      products.find(
+        (product) => String(productId(product)) === String(form.productId),
+      ),
     [form.productId, products],
   );
 
@@ -151,22 +168,29 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
 
       setLoadingExisting(true);
       try {
-        const response = await axiosPrivate.get(ENDPOINTS.platform.productReviews, {
-          params: {
-            productId: form.productId,
-            buyerId: adminId,
-            limit: 1,
-            sortBy: "createdAt",
-            sortOrder: "desc",
+        const response = await axiosPrivate.get(
+          ENDPOINTS.platform.productReviews,
+          {
+            params: {
+              productId: form.productId,
+              buyerId: adminId,
+              limit: 1,
+              sortBy: "createdAt",
+              sortOrder: "desc",
+            },
           },
-        });
+        );
         const [review] = normalizeList(response);
         setExistingReview(review || null);
         setForm((current) => {
-          if (String(current.productId) !== String(form.productId)) return current;
+          if (String(current.productId) !== String(form.productId))
+            return current;
           return {
             ...current,
-            buyerName: review?.buyerName === "Admin Review" ? "" : review?.buyerName || "",
+            buyerName:
+              review?.buyerName === "Admin Review"
+                ? ""
+                : review?.buyerName || "",
             rating: review?.rating || 5,
             title: review?.title || "",
             reviewText: review?.reviewText || "",
@@ -176,7 +200,9 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
         });
       } catch (error) {
         setExistingReview(null);
-        toast.error(error?.response?.data?.message || "Failed to check existing review");
+        toast.error(
+          error?.response?.data?.message || "Failed to check existing review",
+        );
       } finally {
         setLoadingExisting(false);
       }
@@ -209,7 +235,11 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
           title: form.title.trim(),
         }),
       ).unwrap();
-      toast.success(existingReview ? "Review updated successfully" : "Review added successfully");
+      toast.success(
+        existingReview
+          ? "Review updated successfully"
+          : "Review added successfully",
+      );
       onCreated?.();
       onClose();
     } catch (error) {
@@ -222,141 +252,239 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
   const setMedia = (updater) => {
     setForm((current) => ({
       ...current,
-      media: typeof updater === "function" ? updater(current.media || []) : updater,
+      media:
+        typeof updater === "function" ? updater(current.media || []) : updater,
     }));
   };
+  const [productDropdownOpen, setProductDropdownOpen] = useState(false);
+  if (!isOpen) return null;
 
-  return (
-    <>
-      <div
-        className={`fixed inset-0 z-50 bg-black bg-opacity-40 backdrop-blur-sm transition-all duration-300 ${
-          isOpen ? "visible opacity-100" : "invisible opacity-0"
-        }`}
-        onClick={onClose}
-      />
-      <div
-        className={`fixed top-0 right-0 z-50 h-full w-full max-w-xl transform bg-white shadow-xl transition-transform duration-300 ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex items-center justify-between border-b px-5 py-4">
-          <h2 className="text-lg font-semibold text-gray-800">Add Product Review</h2>
-          <button onClick={onClose} className="text-gray-500 transition-colors hover:text-gray-800">
-            <MdOutlineClose size={22} />
-          </button>
+ return (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-sm"
+    onClick={onClose}
+  >
+    <div
+      className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+      onClick={(event) => event.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {existingReview ? "Edit Product Review" : "Add Product Review"}
+          </h2>
+
+          <p className="mt-1 text-sm text-gray-500">
+            {existingReview
+              ? "Update the selected product review details."
+              : "Add a review for a selected product."}
+          </p>
         </div>
 
-        <div className="h-[calc(100vh-120px)] space-y-5 overflow-y-auto p-5">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Product</label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <MdSearch className="absolute left-3 top-2.5 text-gray-400" size={18} />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") searchProducts(query);
-                  }}
-                  placeholder="Search product"
-                  className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-navy)]"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => searchProducts(query)}
-                disabled={searching}
-                className="rounded-lg border border-gray-300 px-3 text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
-              >
-                {searching ? "..." : "Search"}
-              </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+        >
+          <MdOutlineClose size={21} />
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 space-y-5 overflow-x-hidden overflow-y-auto px-6 py-5">
+        {/* Product */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            Product <span className="text-red-500">*</span>
+          </label>
+
+          {/* Search */}
+          <div className="flex gap-2">
+            <div className="relative min-w-0 flex-1">
+              <MdSearch
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    searchProducts(query);
+                  }
+                }}
+                placeholder="Search product"
+                className="w-full rounded-lg border border-gray-300 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-[var(--admin-gold)] focus:ring-0"
+              />
             </div>
-            <select
-              value={form.productId}
-              onChange={set("productId")}
-              className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-navy)]"
+
+            <button
+              type="button"
+              onClick={() => searchProducts(query)}
+              disabled={searching}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="">Select product</option>
-              {products.map((product) => {
-                const id = productId(product);
-                return (
-                  <option key={id} value={id}>
-                    {productLabel(product)}
-                  </option>
-                );
-              })}
-            </select>
-            {selectedProduct && (
-              <p className="mt-1 truncate text-xs text-gray-400">
-                {productId(selectedProduct)}
-              </p>
-            )}
-            {loadingExisting && (
-              <p className="mt-1 text-xs text-gray-400">Checking existing review...</p>
-            )}
-            {!loadingExisting && existingReview && (
-              <p className="mt-1 text-xs font-medium text-[var(--admin-navy)]">
-                Existing review found. Editing saved review.
-              </p>
-            )}
+              {searching ? "Searching..." : "Search"}
+            </button>
           </div>
 
+          {/* Product Select */}
+          <div className="mt-2.5">
+            <FilterSelect
+              options={products.map((product) => ({
+                value: productId(product),
+                label: productLabel(product),
+              }))}
+              value={
+                products
+                  .map((product) => ({
+                    value: productId(product),
+                    label: productLabel(product),
+                  }))
+                  .find(
+                    (option) =>
+                      String(option.value) === String(form.productId || "")
+                  ) || null
+              }
+              onChange={(option) => {
+                setForm((current) => ({
+                  ...current,
+                  productId: option?.value || "",
+                }));
+              }}
+              placeholder="Select product"
+              isSearchable
+              isClearable
+            />
+          </div>
+
+          {selectedProduct && (
+            <p className="mt-1.5 truncate text-xs text-gray-400">
+              Product ID: {productId(selectedProduct)}
+            </p>
+          )}
+
+          {loadingExisting && (
+            <p className="mt-1.5 text-xs text-gray-400">
+              Checking existing review...
+            </p>
+          )}
+
+          {!loadingExisting && existingReview && (
+            <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+              <p className="text-xs font-medium text-[var(--admin-navy)]">
+                Existing review found. You are editing the saved review.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Reviewer + Status */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Reviewer */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Reviewer Name</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Reviewer Name
+            </label>
+
             <input
               value={form.buyerName}
               onChange={set("buyerName")}
               maxLength={120}
-              placeholder="Leave blank to use logged-in admin name"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-navy)]"
+              placeholder="Admin name"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--admin-gold)] focus:ring-0"
             />
+
+            <p className="mt-1 text-[11px] text-gray-400">
+              Leave blank to use the logged-in admin name.
+            </p>
           </div>
 
+          {/* Status */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Rating</label>
+            <FilterSelect
+              label="Status"
+              options={STATUSES}
+              value={
+                STATUSES.find(
+                  (option) =>
+                    String(option.value) === String(form.status || "")
+                ) || null
+              }
+              onChange={(option) => {
+                setForm((current) => ({
+                  ...current,
+                  status: option?.value || "",
+                }));
+              }}
+              placeholder="Select status"
+              isSearchable={false}
+              isClearable={false}
+            />
+          </div>
+        </div>
+
+        {/* Rating */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            Rating <span className="text-red-500">*</span>
+          </label>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
             <StarRating
               value={form.rating}
-              onChange={(rating) => setForm((current) => ({ ...current, rating }))}
+              onChange={(rating) =>
+                setForm((current) => ({
+                  ...current,
+                  rating,
+                }))
+              }
             />
           </div>
+        </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
-            <select
-              value={form.status}
-              onChange={set("status")}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-navy)]"
-            >
-              {STATUSES.map((status) => (
-                <option key={status.value} value={status.value}>{status.label}</option>
-              ))}
-            </select>
+        {/* Title */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            Title
+          </label>
+
+          <input
+            value={form.title}
+            onChange={set("title")}
+            maxLength={200}
+            placeholder="Enter review title"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--admin-gold)] focus:ring-0"
+          />
+        </div>
+
+        {/* Review */}
+        <div>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">
+              Review <span className="text-red-500">*</span>
+            </label>
+
+            <span className="text-xs text-gray-400">
+              {form.reviewText.length}/2000
+            </span>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Title</label>
-            <input
-              value={form.title}
-              onChange={set("title")}
-              maxLength={200}
-              placeholder="Review title"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-navy)]"
-            />
-          </div>
+          <textarea
+            rows={4}
+            value={form.reviewText}
+            onChange={set("reviewText")}
+            maxLength={2000}
+            placeholder="Write review..."
+            className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--admin-gold)] focus:ring-0"
+          />
+        </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Review</label>
-            <textarea
-              rows={5}
-              value={form.reviewText}
-              onChange={set("reviewText")}
-              maxLength={2000}
-              placeholder="Write review"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-navy)]"
-            />
-            <p className="text-right text-xs text-gray-400">{form.reviewText.length}/2000</p>
-          </div>
-
+        {/* Images */}
+        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
           <MultiImageUpload
             label="Review Photos"
             images={form.media}
@@ -366,26 +494,37 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
             isDisabled={saving}
           />
         </div>
-
-        <div className="absolute bottom-0 left-0 right-0 flex justify-end gap-3 border-t bg-white px-5 py-4">
-          <button
-            onClick={onClose}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-lg bg-[var(--admin-navy)] px-5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            <MdAdd size={18} />
-            {saving ? "Saving..." : existingReview ? "Update Review" : "Add Review"}
-          </button>
-        </div>
       </div>
-    </>
-  );
+
+      {/* Footer */}
+      <div className="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50/70 px-6 py-4">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={saving}
+          className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={saving || loadingExisting}
+          className="inline-flex min-w-[135px] items-center justify-center gap-2 rounded-lg bg-[var(--admin-navy)] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <MdAdd size={18} />
+
+          {saving
+            ? "Saving..."
+            : existingReview
+              ? "Update Review"
+              : "Add Review"}
+        </button>
+      </div>
+    </div>
+  </div>
+);
 };
 
 export default AddProductReview;
