@@ -81,6 +81,9 @@ const DEFAULT_SETTINGS = {
     sellerPayoutBase: "gross_customer_price",
     platformFeeTaxRate: 18,
     chargePlatformFeeTaxToSeller: true,
+    payoutMode: "manual",
+    defaultPayoutDestination: "razorpayx",
+    allowSellerPayoutDestinationChoice: true,
     payoutReleaseMilestone: "return_window_closed",
     payoutSchedule: "manual",
     payoutManualApprovalRequired: true,
@@ -555,6 +558,75 @@ export default function CommerceSettings() {
           <Cards key={metric.label} {...metric} />
         ))}
       </div>
+      <Section title="Seller Payout Controls">
+        <div className="grid gap-4 md:grid-cols-2">
+          <FilterSelect
+            label="Payout Release Rule"
+            options={[option("return_window_closed", "Return window closed")]}
+            value={
+              [option("return_window_closed", "Return window closed")].find(
+                (item) => item.value === settings.finance.payoutReleaseMilestone,
+              ) || null
+            }
+            onChange={(selected) =>
+              patchSettings("finance", {
+                payoutReleaseMilestone: selected?.value ?? "",
+              })
+            }
+          />
+          <FilterSelect
+            label="Seller Payout Mode"
+            options={[
+              option("manual", "Manual approval by admin"),
+              option("auto_razorpayx", "Auto payout after return window"),
+            ]}
+            value={
+              [
+                option("manual", "Manual approval by admin"),
+                option("auto_razorpayx", "Auto payout after return window"),
+              ].find((item) => item.value === settings.finance.payoutMode) ||
+              null
+            }
+            onChange={(selected) => {
+              const payoutMode = selected?.value || "manual";
+              patchSettings("finance", {
+                payoutMode,
+                payoutManualApprovalRequired: payoutMode !== "auto_razorpayx",
+                payoutSchedule: payoutMode === "auto_razorpayx" ? "manual" : settings.finance.payoutSchedule,
+              });
+            }}
+          />
+          <FilterSelect
+            label="Default Payout Destination"
+            options={[
+              option("razorpayx", "Bank / RazorpayX"),
+              option("seller_wallet", "Seller Wallet"),
+            ]}
+            value={
+              [
+                option("razorpayx", "Bank / RazorpayX"),
+                option("seller_wallet", "Seller Wallet"),
+              ].find((item) => item.value === settings.finance.defaultPayoutDestination) ||
+              null
+            }
+            onChange={(selected) =>
+              patchSettings("finance", {
+                defaultPayoutDestination: selected?.value || "razorpayx",
+              })
+            }
+          />
+          <ToggleField
+            label="Allow seller to choose payout destination"
+            checked={settings.finance.allowSellerPayoutDestinationChoice}
+            onChange={(checked) =>
+              patchSettings("finance", {
+                allowSellerPayoutDestinationChoice: checked,
+              })
+            }
+            hint="When enabled, seller wallet/bank preference overrides the platform default."
+          />
+        </div>
+      </Section>
       <div className="grid gap-5 xl:grid-cols-2">
         <Section title="Seller Commission">
           <div className="grid gap-4 md:grid-cols-2">
@@ -839,21 +911,6 @@ export default function CommerceSettings() {
               }
             />
 
-            <FilterSelect
-              label="Payout Release Rule"
-              options={[option("return_window_closed", "Return window closed")]}
-              value={
-                [option("return_window_closed", "Return window closed")].find(
-                  (item) =>
-                    item.value === settings.finance.payoutReleaseMilestone,
-                ) || null
-              }
-              onChange={(selected) =>
-                patchSettings("finance", {
-                  payoutReleaseMilestone: selected?.value ?? "",
-                })
-              }
-            />
           </div>
         </Section>
         <Section title="Payout Calculation">

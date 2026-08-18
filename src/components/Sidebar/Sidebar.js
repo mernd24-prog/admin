@@ -354,6 +354,31 @@ const buildAccessModuleSidebarData = (modules = [], options = {}) => {
     .filter((item) => item.subItems.length > 0);
 };
 
+const ensureFestivalSidebarItem = (groups = [], sellerPanel = false) => {
+  const route = "festivals";
+  const hasRoute = groups.some((group) =>
+    (group.subItems || []).some((item) => item.module_code === route),
+  );
+  if (hasRoute) return groups;
+
+  const item = {
+    name: "Festivals",
+    label: "Festivals",
+    module_code: route,
+    module: "festivals",
+    order: 1,
+  };
+  return [
+    ...groups,
+    {
+      label: "Festivals",
+      icon: MdCampaign,
+      subItems: [item],
+      isSingleItem: true,
+    },
+  ];
+};
+
 // ─── Sidebar state helpers ────────────────────────────────────────────────────
 const getStoredSidebarState = () => {
   try {
@@ -495,15 +520,15 @@ const Sidebar = ({
         trustBackend: true,
       });
       if (sellerPanel && sidebarTree.length)
-        return sortSidebarGroups(sidebarTree, sellerPanel);
+        return ensureFestivalSidebarItem(sortSidebarGroups(sidebarTree, sellerPanel), sellerPanel);
       if (sidebarTree.length)
-        return sortSidebarGroups(sidebarTree, sellerPanel);
+        return ensureFestivalSidebarItem(sortSidebarGroups(sidebarTree, sellerPanel), sellerPanel);
     }
 
     if (accessSidebar.length)
-      return sortSidebarGroups(accessSidebar, sellerPanel);
+      return ensureFestivalSidebarItem(sortSidebarGroups(accessSidebar, sellerPanel), sellerPanel);
 
-    return [];
+    return ensureFestivalSidebarItem([], sellerPanel);
   }, [
     sellerPanel,
     accessModules,

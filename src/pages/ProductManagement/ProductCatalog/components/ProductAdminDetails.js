@@ -836,7 +836,7 @@ const ProductAdminDetails = () => {
                   label="Return Policy"
                   value={
                     product.warranty.returnPolicy.eligible
-                      ? `Eligible — ${product.warranty.returnPolicy.days || 7} days`
+                      ? `Eligible — ${product.warranty.returnPolicy.days ?? product.warranty.returnPolicy.returnWindowDays ?? 0} days`
                       : "Not eligible"
                   }
                 />
