@@ -31,9 +31,19 @@ const DISPLAY_TYPE_META = {
 };
 
 const slugify = (value = "") =>
-  String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
-const emptyForm = { name: "", slug: "", displayType: "dropdown", description: "", active: true };
+const emptyForm = {
+  name: "",
+  slug: "",
+  displayType: "dropdown",
+  description: "",
+  active: true,
+};
 const idOf = (r) => r?._id || r?.id || "";
 
 const getListPayload = (sliceData = {}) => {
@@ -56,7 +66,11 @@ const getTotal = (sliceData = {}, fallback = 0) =>
 export default function ProductOptions() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const list = useListPage({ defaultPageSize: 15, defaultSortKey: "createdAt", defaultSortDir: "desc" });
+  const list = useListPage({
+    defaultPageSize: 15,
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
+  });
 
   const selector = useSelector((s) => s.adminCore);
   const [modalOpen, setModalOpen] = useState(false);
@@ -80,14 +94,16 @@ export default function ProductOptions() {
 
   const load = useCallback(() => {
     const params = toQueryParams();
-    dispatch(getPlatformOptions({
-      page: params.page,
-      limit: params.limit || 15,
-      q: params.search || undefined,
-      active: params.active || undefined,
-      sortBy: params.sortBy,
-      sortDir: params.sortDir,
-    }));
+    dispatch(
+      getPlatformOptions({
+        page: params.page,
+        limit: params.limit || 15,
+        q: params.search || undefined,
+        active: params.active || undefined,
+        sortBy: params.sortBy,
+        sortDir: params.sortDir,
+      }),
+    );
   }, [dispatch, toQueryParams]);
 
   useEffect(() => {
@@ -103,10 +119,10 @@ export default function ProductOptions() {
         filters.activationStatus?.value === "All"
           ? ""
           : filters.activationStatus?.value === "active"
-          ? "true"
-          : filters.activationStatus?.value === "inactive"
-          ? "false"
-          : "";
+            ? "true"
+            : filters.activationStatus?.value === "inactive"
+              ? "false"
+              : "";
 
       list.setSearch(searchVal);
       list.setFilter("active", statusVal);
@@ -155,19 +171,34 @@ export default function ProductOptions() {
     }
   };
 
-  const openAdd = () => { setEditing(null); setForm(emptyForm); setErrors({}); setModalOpen(true); };
-  const openEdit = (row) => {
-    setEditing(row);
-    setForm({ name: row.name || "", slug: row.slug || slugify(row.name), displayType: row.displayType || "dropdown", description: row.description || "", active: row.active !== false });
+  const openAdd = () => {
+    setEditing(null);
+    setForm(emptyForm);
     setErrors({});
     setModalOpen(true);
   };
-  const closeModal = () => { setModalOpen(false); setEditing(null); };
+  const openEdit = (row) => {
+    setEditing(row);
+    setForm({
+      name: row.name || "",
+      slug: row.slug || slugify(row.name),
+      displayType: row.displayType || "dropdown",
+      description: row.description || "",
+      active: row.active !== false,
+    });
+    setErrors({});
+    setModalOpen(true);
+  };
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditing(null);
+  };
 
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = "Name is required";
-    if (form.slug && !/^[a-z0-9-]+$/.test(form.slug)) e.slug = "Use lowercase letters, numbers, and hyphens only";
+    if (form.slug && !/^[a-z0-9-]+$/.test(form.slug))
+      e.slug = "Use lowercase letters, numbers, and hyphens only";
     setErrors(e);
     return !Object.keys(e).length;
   };
@@ -177,7 +208,9 @@ export default function ProductOptions() {
     setSaving(true);
     try {
       if (editing) {
-        await dispatch(updatePlatformOption({ id: idOf(editing), ...form })).unwrap();
+        await dispatch(
+          updatePlatformOption({ id: idOf(editing), ...form }),
+        ).unwrap();
         toast.success("Option master updated");
       } else {
         await dispatch(createPlatformOption(form)).unwrap();
@@ -187,7 +220,9 @@ export default function ProductOptions() {
       load();
     } catch (err) {
       toast.error(err?.message || "Save failed");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -209,7 +244,9 @@ export default function ProductOptions() {
     if (!row) return;
     setSaving(true);
     try {
-      await dispatch(updatePlatformOption({ id: idOf(row), active: !row.active })).unwrap();
+      await dispatch(
+        updatePlatformOption({ id: idOf(row), active: !row.active }),
+      ).unwrap();
       toast.success(row.active ? "Disabled" : "Enabled");
       setStatusTarget(null);
       load();
@@ -283,7 +320,10 @@ export default function ProductOptions() {
       <PageHeader
         title="Product Option Masters"
         subtitle="Define reusable option attributes like Size, Color, RAM, Material"
-        breadcrumbs={[{ label: "Product Management" }, { label: "Option Masters" }]}
+        breadcrumbs={[
+          { label: "Product Management" },
+          { label: "Option Masters" },
+        ]}
         actions={
           <div className="flex items-center gap-3">
             <ExportButton
@@ -355,7 +395,8 @@ export default function ProductOptions() {
                 icon: <MdListAlt size={16} className="text-blue-600" />,
                 requiredModule: "products",
                 requiredAction: ACTIONS.VIEW,
-                onClick: () => navigate(`/app/product-option-value/${idOf(row)}`),
+                onClick: () =>
+                  navigate(`/app/product-option-value/${idOf(row)}`),
               },
               {
                 label: "Edit Option",
@@ -391,33 +432,53 @@ export default function ProductOptions() {
                 <input
                   autoFocus
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value, slug: f.slug || slugify(e.target.value) }))}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      name: e.target.value,
+                      slug: f.slug || slugify(e.target.value),
+                    }))
+                  }
                   placeholder="e.g. Color, Size, RAM, Material"
                   className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.name ? "border-red-400" : "border-gray-300"}`}
                 />
-                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+                {errors.name && (
+                  <p className="mt-1 text-xs text-red-500">{errors.name}</p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Slug
+                </label>
                 <input
                   value={form.slug}
-                  onChange={(e) => setForm((f) => ({ ...f, slug: slugify(e.target.value) }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, slug: slugify(e.target.value) }))
+                  }
                   placeholder="e.g. size, color, storage"
                   className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] ${errors.slug ? "border-red-400" : "border-gray-300"}`}
                 />
-                {errors.slug && <p className="mt-1 text-xs text-red-500">{errors.slug}</p>}
+                {errors.slug && (
+                  <p className="mt-1 text-xs text-red-500">{errors.slug}</p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Display Type</label>
-                <p className="text-xs text-gray-400 mb-2">How values appear on product and variant forms</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Display Type
+                </label>
+                <p className="text-xs text-gray-400 mb-2">
+                  How values appear on product and variant forms
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   {displayTypes.options.map((dt) => (
                     <button
                       key={dt.value}
                       type="button"
-                      onClick={() => setForm((f) => ({ ...f, displayType: dt.value }))}
+                      onClick={() =>
+                        setForm((f) => ({ ...f, displayType: dt.value }))
+                      }
                       className={`px-3 py-2 text-sm rounded-lg border text-left transition-colors ${
                         form.displayType === dt.value
                           ? "border-[var(--admin-gold)] bg-[var(--admin-blue-soft)] text-[var(--admin-navy)] font-medium"
@@ -431,24 +492,44 @@ export default function ProductOptions() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description (optional)
+                </label>
                 <input
                   value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, description: e.target.value }))
+                  }
                   placeholder="e.g. Available color options for this product"
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
                 />
               </div>
 
               <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
-                <span className="text-sm font-medium text-gray-700">Active (visible to sellers)</span>
-                <ToggleButton isToggle={form.active} handleClick={() => setForm((f) => ({ ...f, active: !f.active }))} />
+                <span className="text-sm font-medium text-gray-700">
+                  Active (visible to sellers)
+                </span>
+                <ToggleButton
+                  isToggle={form.active}
+                  handleClick={() =>
+                    setForm((f) => ({ ...f, active: !f.active }))
+                  }
+                />
               </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="px-5 py-2 text-sm font-medium text-white bg-[var(--admin-gold)] rounded-lg hover:bg-[var(--admin-gold-dark)] disabled:opacity-60">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-5 py-2 text-sm font-medium text-white bg-[var(--admin-gold)] rounded-lg hover:bg-[var(--admin-gold-dark)] disabled:opacity-60"
+              >
                 {saving ? "Saving…" : editing ? "Update" : "Create"}
               </button>
             </div>
@@ -471,7 +552,11 @@ export default function ProductOptions() {
         open={Boolean(statusTarget)}
         onClose={() => setStatusTarget(null)}
         onConfirm={() => handleToggleActive(statusTarget)}
-        title={statusTarget?.active === false ? "Enable Option Master?" : "Disable Option Master?"}
+        title={
+          statusTarget?.active === false
+            ? "Enable Option Master?"
+            : "Disable Option Master?"
+        }
         message={`This will mark "${statusTarget?.name || "this option"}" as ${statusTarget?.active === false ? "active" : "inactive"}.`}
         variant={statusTarget?.active === false ? "success" : "warning"}
         confirmLabel={statusTarget?.active === false ? "Enable" : "Disable"}

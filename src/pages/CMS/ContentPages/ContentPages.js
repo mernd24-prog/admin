@@ -2,9 +2,13 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { MdArticle } from "react-icons/md";
+import { MdAdd, MdArticle, MdDelete, MdEdit } from "react-icons/md";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-import { ConfirmModal, DataTable, PageHeader } from "../../../components/Shared";
+import {
+  ConfirmModal,
+  DataTable,
+  PageHeader,
+} from "../../../components/Shared";
 import ContentPageSetup from "./components/ContentPageSetup";
 import {
   createContentPage,
@@ -30,10 +34,20 @@ const emptyForm = {
   sections: [],
   cta: { label: "", url: "", target: "_self" },
   seo: {
-    metaTitle: "", metaDescription: "", keywords: [], focusKeyword: "",
-    canonicalUrl: "", robots: "index,follow", ogTitle: "", ogDescription: "",
-    ogImage: { url: "", alt: "" }, twitterTitle: "", twitterDescription: "",
-    twitterImage: { url: "", alt: "" }, schemaType: "WebPage", schemaJson: {},
+    metaTitle: "",
+    metaDescription: "",
+    keywords: [],
+    focusKeyword: "",
+    canonicalUrl: "",
+    robots: "index,follow",
+    ogTitle: "",
+    ogDescription: "",
+    ogImage: { url: "", alt: "" },
+    twitterTitle: "",
+    twitterDescription: "",
+    twitterImage: { url: "", alt: "" },
+    schemaType: "WebPage",
+    schemaJson: {},
     breadcrumbs: [],
   },
   visibility: { channels: ["web", "app"], roles: ["public"] },
@@ -81,14 +95,18 @@ const ContentPages = () => {
     dispatch(getContentPages({ page: pageNo, limit: PAGE_SIZE, q: search }));
   }, [dispatch, pageNo, search]);
 
-  useEffect(() => { fetchPages(); }, [fetchPages, isRefresh]);
+  useEffect(() => {
+    fetchPages();
+  }, [fetchPages, isRefresh]);
 
   const onChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === "title" && !prev.recordSlug && !prev.slug ? { slug: slugify(value) } : {}),
+      ...(name === "title" && !prev.recordSlug && !prev.slug
+        ? { slug: slugify(value) }
+        : {}),
     }));
     setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
@@ -97,17 +115,25 @@ const ContentPages = () => {
     const nextErrors = {};
     if (!formData.title.trim()) nextErrors.title = "Title is required";
     if (!formData.slug.trim()) nextErrors.slug = "Slug is required";
-    if (!formData.pageType.trim()) nextErrors.pageType = "Page type is required";
+    if (!formData.pageType.trim())
+      nextErrors.pageType = "Page type is required";
     const hasSectionContent = (formData.sections || []).some(
       (section) =>
         String(section?.title || "").trim() ||
         String(section?.description || "").trim() ||
         (section?.points || []).some(
-          (point) => String(point?.title || "").trim() || String(point?.description || "").trim(),
+          (point) =>
+            String(point?.title || "").trim() ||
+            String(point?.description || "").trim(),
         ),
     );
-    if (!formData.description.trim() && !formData.body.trim() && !hasSectionContent) {
-      nextErrors.description = "Description, body, or at least one section is required";
+    if (
+      !formData.description.trim() &&
+      !formData.body.trim() &&
+      !hasSectionContent
+    ) {
+      nextErrors.description =
+        "Description, body, or at least one section is required";
     }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -139,7 +165,9 @@ const ContentPages = () => {
     try {
       setSubmitting(true);
       if (formData.recordSlug) {
-        await dispatch(updateContentPage({ ...body, slug: formData.recordSlug })).unwrap();
+        await dispatch(
+          updateContentPage({ ...body, slug: formData.recordSlug }),
+        ).unwrap();
         toast.success("Content page updated successfully");
       } else {
         await dispatch(createContentPage(body)).unwrap();
@@ -168,8 +196,19 @@ const ContentPages = () => {
       excerpt: page.excerpt || page.description || "",
       category: page.category || "",
       tags: page.tags || [],
-      image: page.image || { url: page.heroImage || page.coverImage || "", alt: page.title || "", title: "", caption: "", type: "hero" },
-      gallery: page.gallery || (page.galleryImages || []).map((url) => ({ url, alt: page.title || "" })),
+      image: page.image || {
+        url: page.heroImage || page.coverImage || "",
+        alt: page.title || "",
+        title: "",
+        caption: "",
+        type: "hero",
+      },
+      gallery:
+        page.gallery ||
+        (page.galleryImages || []).map((url) => ({
+          url,
+          alt: page.title || "",
+        })),
       sections: page.sections || [],
       cta: page.cta || emptyForm.cta,
       seo: { ...emptyForm.seo, ...(page.seo || {}) },
@@ -210,7 +249,11 @@ const ContentPages = () => {
     try {
       setStatusLoadingSlug(slug);
       await dispatch(
-        updateContentPage({ slug, published: !page.published, status: !page.published ? "published" : "draft" }),
+        updateContentPage({
+          slug,
+          published: !page.published,
+          status: !page.published ? "published" : "draft",
+        }),
       ).unwrap();
       toast.success("Status updated successfully");
       setIsRefresh((v) => !v);
@@ -222,10 +265,28 @@ const ContentPages = () => {
   };
 
   const columns = [
-    { key: "title", label: "Title", render: (v) => <span className="font-medium text-gray-800">{v}</span> },
-    { key: "slug", label: "Slug", render: (v) => <span className="font-mono text-xs text-gray-500">{v}</span> },
-    { key: "pageType", label: "Type", render: (v) => <span className="capitalize text-sm">{v}</span> },
-    { key: "language", label: "Language", render: (v) => <span className="text-sm">{v || "en"}</span> },
+    {
+      key: "title",
+      label: "Title",
+      render: (v) => <span className="font-medium text-gray-800">{v}</span>,
+    },
+    {
+      key: "slug",
+      label: "Slug",
+      render: (v) => (
+        <span className="font-mono text-xs text-gray-500">{v}</span>
+      ),
+    },
+    {
+      key: "pageType",
+      label: "Type",
+      render: (v) => <span className="capitalize text-sm">{v}</span>,
+    },
+    {
+      key: "language",
+      label: "Language",
+      render: (v) => <span className="text-sm">{v || "en"}</span>,
+    },
     {
       key: "published",
       label: "Published",
@@ -241,8 +302,19 @@ const ContentPages = () => {
   ];
 
   const rowActions = (row) => [
-    { label: "Edit", onClick: () => openEdit(row), disabled: submitting || deleting || Boolean(statusLoadingSlug) },
-    { label: "Delete", onClick: () => setDeleteTarget(row), danger: true, disabled: submitting || deleting || Boolean(statusLoadingSlug) },
+    {
+      label: "Edit",
+      icon: <MdEdit size={16} />,
+      onClick: () => openEdit(row),
+      disabled: submitting || deleting || Boolean(statusLoadingSlug),
+    },
+    {
+      label: "Delete",
+      icon: <MdDelete size={16} />,
+      onClick: () => setDeleteTarget(row),
+      danger: true,
+      disabled: submitting || deleting || Boolean(statusLoadingSlug),
+    },
   ];
 
   return (
@@ -255,9 +327,9 @@ const ContentPages = () => {
           <button
             onClick={() => setIsModalOpen(true)}
             disabled={submitting || deleting || Boolean(statusLoadingSlug)}
-             
+            className="flex items-center gap-1"
           >
-            + Add Page
+            <MdAdd size={16} /> Add Page
           </button>
         }
       />
@@ -270,7 +342,10 @@ const ContentPages = () => {
         page={pageNo}
         pageSize={PAGE_SIZE}
         onPageChange={setPageNo}
-        onSearch={(v) => { setSearch(v?.trim() || ""); setPageNo(1); }}
+        onSearch={(v) => {
+          setSearch(v?.trim() || "");
+          setPageNo(1);
+        }}
         rowActions={rowActions}
         searchPlaceholder="Search content pages..."
         emptyText="No content pages found."

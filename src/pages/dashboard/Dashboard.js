@@ -992,7 +992,7 @@ export default function Dashboard() {
           Merchant Insights
         </h1>
         <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-          <div className="w-full sm:w-[190px]">
+          <div className="w-full  sm:w-[190px]">
             <FilterSelect
               options={RANGE_OPTIONS}
               value={selectedRangeOption}
@@ -1439,7 +1439,11 @@ export default function Dashboard() {
                       {index + 1}.
                     </td>
                     <td className="px-4 py-3 font-medium">
-                      <OrderLink orderId={orderId} orderNumber={orderNumber} className="font-semibold" />
+                      <OrderLink
+                        orderId={orderId}
+                        orderNumber={orderNumber}
+                        className="font-semibold"
+                      />
                     </td>
                     <td className="px-4 py-3">
                       {formatLabel(

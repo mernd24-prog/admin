@@ -12,6 +12,7 @@ import {
   statusLabel,
 } from "./supportUtils";
 import { formatDateTime12Hour } from "../../utils/formatters";
+import { QueryDetailsSkeleton } from "../../components/Loader/SkeletonLoader";
 
 const initialForm = {
   category: "",
@@ -280,7 +281,7 @@ const SellerHelpSupport = () => {
         isButtonView={false}
       >
         {detailLoading ? (
-          <div className="py-10 text-center text-sm text-[var(--admin-muted)]">Loading query details...</div>
+          <QueryDetailsSkeleton />
         ) : selectedQuery ? (
           <div className="space-y-5">
             <div className="grid gap-3 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4 text-sm sm:grid-cols-2">

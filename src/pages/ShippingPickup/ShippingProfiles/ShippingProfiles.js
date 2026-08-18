@@ -51,12 +51,20 @@ import { MdKeyboardArrowDown } from "react-icons/md";
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const SERVICEABILITY_MODES = [
-    { value: "all_india", label: "All Locations", description: "Deliver everywhere supported by configured locations" },
-    { value: "selected_pincodes", label: "Custom Selection", description: "Select zip codes according to your needs" },
-    // { value: "selected_cities", label: "Selected Cities", description: "Only selected cities (within selected states)" },
-    // { value: "selected_pincodes", label: "Selected Pincodes", description: "Only listed pincodes" },
-    // { value: "block_pincodes", label: "Block Pincodes", description: "All locations except blocked pincodes" },
-  ];
+  {
+    value: "all_india",
+    label: "All Locations",
+    description: "Deliver everywhere supported by configured locations",
+  },
+  {
+    value: "selected_pincodes",
+    label: "Custom Selection",
+    description: "Select zip codes according to your needs",
+  },
+  // { value: "selected_cities", label: "Selected Cities", description: "Only selected cities (within selected states)" },
+  // { value: "selected_pincodes", label: "Selected Pincodes", description: "Only listed pincodes" },
+  // { value: "block_pincodes", label: "Block Pincodes", description: "All locations except blocked pincodes" },
+];
 
 const normalizeServiceabilityMode = (value) =>
   value === "custom" ? "selected_pincodes" : value || "all_india";
@@ -269,10 +277,18 @@ function ProfileForm({
 }) {
   const patch = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
   const mode = form.serviceabilityMode;
-  const needsCountry = ["selected_states", "selected_cities", "block_pincodes"].includes(mode);
+  const needsCountry = [
+    "selected_states",
+    "selected_cities",
+    "block_pincodes",
+  ].includes(mode);
   const needsState = ["selected_cities", "block_pincodes"].includes(mode);
   const needsCity = mode === "block_pincodes";
-  const [locationFilter, setLocationFilter] = useState({ countryId: "", stateId: "", cityId: "" });
+  const [locationFilter, setLocationFilter] = useState({
+    countryId: "",
+    stateId: "",
+    cityId: "",
+  });
   const [locationOptions, setLocationOptions] = useState({
     countries: [],
     states: [],
@@ -286,28 +302,31 @@ function ProfileForm({
     pincodes: false,
   });
 
-  const countryOptions = useMemo(() =>
-    locationOptions.countries.map((c) => ({
-      value: optionParentId(c),
-      label: optionLabel(c),
-    })),
-    [locationOptions.countries]
+  const countryOptions = useMemo(
+    () =>
+      locationOptions.countries.map((c) => ({
+        value: optionParentId(c),
+        label: optionLabel(c),
+      })),
+    [locationOptions.countries],
   );
 
-  const stateOptions = useMemo(() =>
-    locationOptions.states.map((s) => ({
-      value: optionParentId(s),
-      label: optionLabel(s),
-    })),
-    [locationOptions.states]
+  const stateOptions = useMemo(
+    () =>
+      locationOptions.states.map((s) => ({
+        value: optionParentId(s),
+        label: optionLabel(s),
+      })),
+    [locationOptions.states],
   );
 
-  const cityOptions = useMemo(() =>
-    locationOptions.cities.map((c) => ({
-      value: optionParentId(c),
-      label: optionLabel(c),
-    })),
-    [locationOptions.cities]
+  const cityOptions = useMemo(
+    () =>
+      locationOptions.cities.map((c) => ({
+        value: optionParentId(c),
+        label: optionLabel(c),
+      })),
+    [locationOptions.cities],
   );
 
   useEffect(() => {
@@ -431,43 +450,41 @@ function ProfileForm({
   const [pincodeInput, setPincodeInput] = useState("");
 
   const addPincode = () => {
-  const pincode = pincodeInput.trim();
+    const pincode = pincodeInput.trim();
 
-  if (!pincode) return;
+    if (!pincode) return;
 
-  if (!/^\d{6}$/.test(pincode)) {
-    toast.error("Please enter a valid 6-digit pincode", {
-      id: TOAST_ID,
-    });
-    return;
-  }
+    if (!/^\d{6}$/.test(pincode)) {
+      toast.error("Please enter a valid 6-digit pincode", {
+        id: TOAST_ID,
+      });
+      return;
+    }
 
-  if (form.allowedPincodes.includes(pincode)) {
-    toast.error("This pincode is already added", {
-      id: TOAST_ID,
-    });
-    return;
-  }
+    if (form.allowedPincodes.includes(pincode)) {
+      toast.error("This pincode is already added", {
+        id: TOAST_ID,
+      });
+      return;
+    }
 
-  patch("allowedPincodes", [...form.allowedPincodes, pincode]);
-  setPincodeInput("");
-};
+    patch("allowedPincodes", [...form.allowedPincodes, pincode]);
+    setPincodeInput("");
+  };
 
-const removePincode = (pincode) => {
-  patch(
-    "allowedPincodes",
-    form.allowedPincodes.filter((item) => item !== pincode),
-  );
-};
+  const removePincode = (pincode) => {
+    patch(
+      "allowedPincodes",
+      form.allowedPincodes.filter((item) => item !== pincode),
+    );
+  };
 
-const handlePincodeKeyDown = (event) => {
-  if (event.key === "Enter" || event.key === ",") {
-    event.preventDefault();
-    addPincode();
-  }
-};
-
-
+  const handlePincodeKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addPincode();
+    }
+  };
 
   return (
     <div className="space-y-6 py-2">
@@ -490,7 +507,11 @@ const handlePincodeKeyDown = (event) => {
               />
               <FilterSelect
                 options={sellerOptions}
-                value={sellerOptions.find((seller) => seller.value === form.sellerId) || null}
+                value={
+                  sellerOptions.find(
+                    (seller) => seller.value === form.sellerId,
+                  ) || null
+                }
                 onChange={(option) => {
                   setForm((prev) => ({
                     ...prev,
@@ -507,8 +528,14 @@ const handlePincodeKeyDown = (event) => {
               <label className="admin-label">Organization</label>
               <FilterSelect
                 options={organizationOptions}
-                value={organizationOptions.find((o) => o.value === form.organizationId) || null}
-                onChange={(option) => patch("organizationId", option?.value || "")}
+                value={
+                  organizationOptions.find(
+                    (o) => o.value === form.organizationId,
+                  ) || null
+                }
+                onChange={(option) =>
+                  patch("organizationId", option?.value || "")
+                }
                 isDisabled={!form.sellerId}
                 placeholder="Seller-wide default"
                 isSearchable
@@ -544,7 +571,10 @@ const handlePincodeKeyDown = (event) => {
           <label className="admin-label">Shipping Method</label>
           <FilterSelect
             options={SHIPPING_METHODS}
-            value={SHIPPING_METHODS.find((m) => m.value === form.shippingMethod) || null}
+            value={
+              SHIPPING_METHODS.find((m) => m.value === form.shippingMethod) ||
+              null
+            }
             onChange={(option) => patch("shippingMethod", option?.value || "")}
             isSearchable={false}
             placeholder="Select shipping method..."
@@ -559,108 +589,112 @@ const handlePincodeKeyDown = (event) => {
         </h4>
 
         <div className="space-y-2">
-  {SERVICEABILITY_MODES.map((mode) => {
-    const isSelected = form.serviceabilityMode === mode.value;
+          {SERVICEABILITY_MODES.map((mode) => {
+            const isSelected = form.serviceabilityMode === mode.value;
 
-    return (
-      <label
-        key={mode.value}
-        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
-          isSelected
-            ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]/5"
-            : "border-gray-200 hover:border-gray-300"
-        }`}
-      >
-        <input
-          type="radio"
-          name="serviceabilityMode"
-          value={mode.value}
-          checked={isSelected}
-          onChange={() => {
-            setForm((prev) => ({
-              ...prev,
-              serviceabilityMode: mode.value,
-            }));
-          }}
-          className="sr-only"
-        />
-        <span
-          className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-            isSelected
-              ? "border-[var(--admin-blue)]"
-              : "border-gray-400 bg-white"
-          }`}
-          aria-hidden="true"
-        >
-          {isSelected && (
-            <span className="h-2 w-2 rounded-full bg-[var(--admin-blue)]" />
-          )}
-        </span>
+            return (
+              <label
+                key={mode.value}
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                  isSelected
+                    ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]/5"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="serviceabilityMode"
+                  value={mode.value}
+                  checked={isSelected}
+                  onChange={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      serviceabilityMode: mode.value,
+                    }));
+                  }}
+                  className="sr-only"
+                />
+                <span
+                  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                    isSelected
+                      ? "border-[var(--admin-blue)]"
+                      : "border-gray-400 bg-white"
+                  }`}
+                  aria-hidden="true"
+                >
+                  {isSelected && (
+                    <span className="h-2 w-2 rounded-full bg-[var(--admin-blue)]" />
+                  )}
+                </span>
 
-        <div>
-          <p className="text-sm font-semibold text-gray-800">{mode.label}</p>
-          <p className="text-xs text-gray-500">{mode.description}</p>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {mode.label}
+                  </p>
+                  <p className="text-xs text-gray-500">{mode.description}</p>
+                </div>
+              </label>
+            );
+          })}
         </div>
-      </label>
-    );
-  })}
-</div>
-{form.serviceabilityMode === "selected_pincodes" && (
-  <div className="mt-4 space-y-2">
-    <label className="admin-label">
-      Allowed Pincodes <span className="text-red-500">*</span>
-    </label>
+        {form.serviceabilityMode === "selected_pincodes" && (
+          <div className="mt-4 space-y-2">
+            <label className="admin-label">
+              Allowed Pincodes <span className="text-red-500">*</span>
+            </label>
 
-    <div className="flex gap-2">
-      <input
-        type="text"
-        value={pincodeInput}
-        onChange={(event) => {
-          const value = event.target.value.replace(/\D/g, "").slice(0, 6);
-          setPincodeInput(value);
-        }}
-        onKeyDown={handlePincodeKeyDown}
-        placeholder="Enter 6-digit pincode"
-        className="admin-input flex-1"
-        maxLength={6}
-        inputMode="numeric"
-      />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={pincodeInput}
+                onChange={(event) => {
+                  const value = event.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 6);
+                  setPincodeInput(value);
+                }}
+                onKeyDown={handlePincodeKeyDown}
+                placeholder="Enter 6-digit pincode"
+                className="admin-input flex-1"
+                maxLength={6}
+                inputMode="numeric"
+              />
 
-      <button
-        type="button"
-        onClick={addPincode}
-        className="admin-btn-primary whitespace-nowrap px-4"
-      >
-        Add
-      </button>
-    </div>
+              <button
+                type="button"
+                onClick={addPincode}
+                className="admin-btn-primary whitespace-nowrap px-4"
+              >
+                Add
+              </button>
+            </div>
 
-    {form.allowedPincodes.length > 0 && (
-      <div className="flex flex-wrap gap-2 rounded-lg border border-gray-200 p-3">
-        {form.allowedPincodes.map((pincode) => (
-          <span
-            key={pincode}
-            className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
-          >
-            {pincode}
+            {form.allowedPincodes.length > 0 && (
+              <div className="flex flex-wrap gap-2 rounded-lg border border-gray-200 p-3">
+                {form.allowedPincodes.map((pincode) => (
+                  <span
+                    key={pincode}
+                    className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
+                  >
+                    {pincode}
 
-            <button
-              type="button"
-              onClick={() => removePincode(pincode)}
-              className="ml-1 text-sm leading-none hover:text-red-500"
-            >
-              ×
-            </button>
-          </span>
-        ))}
-      </div>
-    )}
+                    <button
+                      type="button"
+                      onClick={() => removePincode(pincode)}
+                      className="ml-1 text-sm leading-none hover:text-red-500"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
 
-    <p className="text-xs text-gray-400">
-      {form.allowedPincodes.length} pincode(s) selected
-    </p>
-  </div>
-)}
+            <p className="text-xs text-gray-400">
+              {form.allowedPincodes.length} pincode(s) selected
+            </p>
+          </div>
+        )}
 
         {/* {needsCountry && (
           <div className="grid gap-3 md:grid-cols-3">
@@ -1409,9 +1443,7 @@ export default function ShippingProfiles() {
       templateId: profileId(selectedTemplate || {}) || "",
       sellerId: sellerId || "",
       organizationId: activeOrganizationId || "",
-      name: selectedTemplate?.name
-        ? `${selectedTemplate.name}`
-        : "",
+      name: selectedTemplate?.name ? `${selectedTemplate.name}` : "",
       description: selectedTemplate?.description || "",
       isDefault: profilesPayload.list.length === 0,
       active: true,
@@ -1462,9 +1494,7 @@ export default function ShippingProfiles() {
       ...form,
       serviceabilityMode,
       allowedPincodes:
-        serviceabilityMode === "selected_pincodes"
-          ? form.allowedPincodes
-          : [],
+        serviceabilityMode === "selected_pincodes" ? form.allowedPincodes : [],
       sellerId: form.sellerId || activeSellerId || undefined,
       organizationId: form.organizationId || null,
       shippingCharge:
@@ -1498,8 +1528,14 @@ export default function ShippingProfiles() {
       toast.error("You do not have permission to edit shipping profiles");
       return;
     }
-    if (!form.name?.trim()) { toast.error("Profile name is required"); return; }
-    if (!isSeller && !(form.sellerId || activeSellerId)) { toast.error("Select a target seller"); return; }
+    if (!form.name?.trim()) {
+      toast.error("Profile name is required");
+      return;
+    }
+    if (!isSeller && !(form.sellerId || activeSellerId)) {
+      toast.error("Select a target seller");
+      return;
+    }
     if (
       normalizeServiceabilityMode(form.serviceabilityMode) ===
         "selected_pincodes" &&
@@ -1532,7 +1568,10 @@ export default function ShippingProfiles() {
   };
 
   const handleTemplateSave = async () => {
-    if (!form.name?.trim()) { toast.error("Template name is required"); return; }
+    if (!form.name?.trim()) {
+      toast.error("Template name is required");
+      return;
+    }
     if (
       normalizeServiceabilityMode(form.serviceabilityMode) ===
         "selected_pincodes" &&
@@ -2052,8 +2091,7 @@ export default function ShippingProfiles() {
         <div className="space-y-4 py-2">
           <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             This creates a private seller profile. Editing pincodes, charge,
-            ETA, or status after copying will not change the admin
-            template.
+            ETA, or status after copying will not change the admin template.
           </div>
           {!isSeller && (
             <div className="grid gap-4 md:grid-cols-2">
@@ -2067,7 +2105,11 @@ export default function ShippingProfiles() {
                 />
                 <FilterSelect
                   options={sellerOptions}
-                  value={sellerOptions.find((seller) => seller.value === cloneForm.sellerId) || null}
+                  value={
+                    sellerOptions.find(
+                      (seller) => seller.value === cloneForm.sellerId,
+                    ) || null
+                  }
                   onChange={(option) =>
                     setCloneForm((prev) => ({
                       ...prev,
@@ -2087,7 +2129,11 @@ export default function ShippingProfiles() {
                 <label className="admin-label">Organization</label>
                 <FilterSelect
                   options={cloneOrganizationOptions}
-                  value={cloneOrganizationOptions.find((o) => o.value === cloneForm.organizationId) || null}
+                  value={
+                    cloneOrganizationOptions.find(
+                      (o) => o.value === cloneForm.organizationId,
+                    ) || null
+                  }
                   onChange={(option) =>
                     setCloneForm((prev) => ({
                       ...prev,

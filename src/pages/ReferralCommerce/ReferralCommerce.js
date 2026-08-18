@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
@@ -577,9 +583,16 @@ const Modal = ({ title, open, onClose, children, footer }) => {
   return (
     <div
       className="fixed inset-0 z-[10000] flex items-center justify-center bg-[rgba(31,27,95,0.35)] px-4 backdrop-blur-[2px]"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose?.()}
+      onMouseDown={(event) =>
+        event.target === event.currentTarget && onClose?.()
+      }
     >
-      <div role="dialog" aria-modal="true" aria-label={title} className="admin-card max-h-[90vh] w-full max-w-2xl overflow-hidden shadow-2xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="admin-card max-h-[90vh] w-full max-w-2xl overflow-hidden shadow-2xl"
+      >
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
           <IconButton title="Close" onClick={onClose}>
@@ -588,7 +601,9 @@ const Modal = ({ title, open, onClose, children, footer }) => {
         </div>
         <div className="max-h-[65vh] overflow-y-auto p-5">{children}</div>
         {footer && (
-          <div className="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-5 py-4">{footer}</div>
+          <div className="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-5 py-4">
+            {footer}
+          </div>
         )}
       </div>
     </div>
@@ -697,7 +712,13 @@ const ProductDistributionManager = () => {
     } finally {
       setLoading(false);
     }
-  }, [configPage, configPageSize, configStatus, debouncedConfigSearch, productPage]);
+  }, [
+    configPage,
+    configPageSize,
+    configStatus,
+    debouncedConfigSearch,
+    productPage,
+  ]);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -834,7 +855,8 @@ const ProductDistributionManager = () => {
               Product Distribution Configuration
             </h2>
             <p className="mt-1 text-xs text-[var(--admin-muted)]">
-              Select a catalog product and define how its referral pool is shared
+              Select a catalog product and define how its referral pool is
+              shared
             </p>
           </div>
           <span className="rounded-full border border-[var(--admin-line)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--admin-muted)]">
@@ -944,7 +966,8 @@ const ProductDistributionManager = () => {
               Product Selection
             </h3>
             <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-              Choose the seller, product, applicable variant, and pool calculation
+              Choose the seller, product, applicable variant, and pool
+              calculation
             </p>
           </div>
           <SelectInput
@@ -1116,10 +1139,18 @@ const ProductDistributionManager = () => {
             className={`rounded-lg border p-3 ${shareTotal === 100 ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}
           >
             <div className="flex items-center justify-between gap-3 text-xs font-semibold">
-              <span className={shareTotal === 100 ? "text-emerald-700" : "text-red-700"}>
+              <span
+                className={
+                  shareTotal === 100 ? "text-emerald-700" : "text-red-700"
+                }
+              >
                 Distribution total
               </span>
-              <span className={shareTotal === 100 ? "text-emerald-700" : "text-red-700"}>
+              <span
+                className={
+                  shareTotal === 100 ? "text-emerald-700" : "text-red-700"
+                }
+              >
                 {shareTotal}%
               </span>
             </div>
@@ -1246,7 +1277,8 @@ const ReferralCommerce = () => {
   const dispatch = useDispatch();
   const referralState = useSelector((state) => state.referralCommerce || {});
   const activeTab = sectionToTab[section] || "overview";
-  const pageMeta = MARKETING_PAGE_META[activeTab] || MARKETING_PAGE_META.overview;
+  const pageMeta =
+    MARKETING_PAGE_META[activeTab] || MARKETING_PAGE_META.overview;
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [hierarchySearch, setHierarchySearch] = useState("");
@@ -1286,10 +1318,12 @@ const ReferralCommerce = () => {
   const fraudReviews = getBranchList(referralState.fraudReviewsData);
   const hierarchy = getBranchPayload(referralState.hierarchyData);
   const loading = Boolean(referralState.loading);
-  const activeStatusOptions = (FILTER_STATUSES[activeTab] || []).map((value) => ({
-    value,
-    label: humanize(value),
-  }));
+  const activeStatusOptions = (FILTER_STATUSES[activeTab] || []).map(
+    (value) => ({
+      value,
+      label: humanize(value),
+    }),
+  );
   const hasListFilters = activeStatusOptions.length > 0;
 
   const filteredHierarchyRoots = useMemo(() => {
@@ -1384,7 +1418,7 @@ const ReferralCommerce = () => {
         ? { status: nextStatus }
         : {}),
     });
-    await Promise.all([
+    const responses = await Promise.all([
       dispatch(getReferralSummary()),
       dispatch(getReferralHierarchy()),
       dispatch(
@@ -1451,6 +1485,7 @@ const ReferralCommerce = () => {
         }),
       ),
     ]);
+    console.log("Referral Commerce Initial Load API Responses:", responses);
   };
 
   const refreshActive = async (filters = {}) => {
@@ -1458,23 +1493,46 @@ const ReferralCommerce = () => {
       q: filters.q ?? search,
       page: 1,
       limit: 50,
-      ...((filters.status ?? status) ? { status: filters.status ?? status } : {}),
+      ...((filters.status ?? status)
+        ? { status: filters.status ?? status }
+        : {}),
     };
     const requests = {
       overview: () => dispatch(getReferralSummary()),
-      influencers: () => Promise.all([dispatch(getReferralInfluencers(query)), dispatch(getReferralHierarchy())]),
+      influencers: () =>
+        Promise.all([
+          dispatch(getReferralInfluencers(query)),
+          dispatch(getReferralHierarchy()),
+        ]),
       codes: () => dispatch(getReferralCodes(query)),
       rules: () => dispatch(getReferralRules({ page: 1, limit: 20 })),
-      bonuses: () => Promise.all([
-        dispatch(getReferralBonusRules({ ...query, status: ["active", "inactive"].includes(query.status) ? query.status : undefined })),
-        dispatch(getReferralBonusProgress({
-          ...query,
-          status: ["achieved", "in_progress"].includes(query.status)
-            ? query.status
-            : undefined,
-        })),
-        dispatch(getReferralBonusAchievements({ ...query, status: ["locked", "released", "reversed"].includes(query.status) ? query.status : undefined })),
-      ]),
+      bonuses: () =>
+        Promise.all([
+          dispatch(
+            getReferralBonusRules({
+              ...query,
+              status: ["active", "inactive"].includes(query.status)
+                ? query.status
+                : undefined,
+            }),
+          ),
+          dispatch(
+            getReferralBonusProgress({
+              ...query,
+              status: ["achieved", "in_progress"].includes(query.status)
+                ? query.status
+                : undefined,
+            }),
+          ),
+          dispatch(
+            getReferralBonusAchievements({
+              ...query,
+              status: ["locked", "released", "reversed"].includes(query.status)
+                ? query.status
+                : undefined,
+            }),
+          ),
+        ]),
       orders: () => dispatch(getReferralOrders(query)),
       commissions: () => dispatch(getReferralCommissions(query)),
       payouts: () => dispatch(getReferralPayouts(query)),
@@ -1860,21 +1918,33 @@ const ReferralCommerce = () => {
   const closePayoutAction = () => {
     if (uploadingPaymentProof) return;
     setPayoutAction(null);
-    setPayoutActionForm({ adminNote: "", transactionReference: "", paymentProofUrl: "" });
+    setPayoutActionForm({
+      adminNote: "",
+      transactionReference: "",
+      paymentProofUrl: "",
+    });
   };
 
   const handlePaymentProofUpload = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
     if (!allowedTypes.includes(file.type)) {
       toast.error("Upload a PDF, JPG, PNG, or WebP payment proof");
       return;
     }
     try {
       setUploadingPaymentProof(true);
-      const paymentProofUrl = await uploadDocumentFile(file, "REFERRAL_PAYOUTS");
+      const paymentProofUrl = await uploadDocumentFile(
+        file,
+        "REFERRAL_PAYOUTS",
+      );
       setPayoutActionForm((form) => ({ ...form, paymentProofUrl }));
       toast.success("Payment proof uploaded");
     } catch (error) {
@@ -1891,21 +1961,31 @@ const ReferralCommerce = () => {
     const payoutId = getId(payout);
     try {
       if (action === "approve") {
-        await dispatch(approveReferralPayout({ payoutId, adminNote: payoutActionForm.adminNote })).unwrap();
+        await dispatch(
+          approveReferralPayout({
+            payoutId,
+            adminNote: payoutActionForm.adminNote,
+          }),
+        ).unwrap();
       }
       if (action === "reject") {
         await dispatch(
-          rejectReferralPayout({ payoutId, adminNote: payoutActionForm.adminNote }),
+          rejectReferralPayout({
+            payoutId,
+            adminNote: payoutActionForm.adminNote,
+          }),
         ).unwrap();
       }
       if (action === "paid") {
-        await dispatch(markReferralPayoutPaid({
-          payoutId,
-          transactionReference: payoutActionForm.transactionReference.trim(),
-          paymentProofUrl: payoutActionForm.paymentProofUrl || null,
-          adminNote: payoutActionForm.adminNote || null,
-          paidAt: new Date().toISOString(),
-        })).unwrap();
+        await dispatch(
+          markReferralPayoutPaid({
+            payoutId,
+            transactionReference: payoutActionForm.transactionReference.trim(),
+            paymentProofUrl: payoutActionForm.paymentProofUrl || null,
+            adminNote: payoutActionForm.adminNote || null,
+            paidAt: new Date().toISOString(),
+          }),
+        ).unwrap();
       }
       toast.success("Payout updated");
       closePayoutAction();
@@ -2002,20 +2082,32 @@ const ReferralCommerce = () => {
     hierarchy: `Level ${item.level || 1}`,
     wallet: formatCoins(item.wallet?.availableBalance),
     status: <StatusPill value={item.status} />,
-    actions: <RowActions actions={[
-      {
-        label: item.status === "active" ? "Suspend partner" : "Reactivate partner",
-        icon: item.status === "active" ? <X size={14} /> : <Check size={14} />,
-        danger: item.status === "active",
-        onClick: () => setInfluencerStatus(item, item.status === "active" ? "suspended" : "active"),
-      },
-      {
-        label: "Promote to Growth Partner",
-        icon: <GitBranch size={14} />,
-        hidden: item.influencerType === "parent" && item.canCreateChildren,
-        onClick: () => promoteInfluencer(item),
-      },
-    ]} />,
+    actions: (
+      <RowActions
+        actions={[
+          {
+            label:
+              item.status === "active"
+                ? "Suspend partner"
+                : "Reactivate partner",
+            icon:
+              item.status === "active" ? <X size={14} /> : <Check size={14} />,
+            danger: item.status === "active",
+            onClick: () =>
+              setInfluencerStatus(
+                item,
+                item.status === "active" ? "suspended" : "active",
+              ),
+          },
+          {
+            label: "Promote to Growth Partner",
+            icon: <GitBranch size={14} />,
+            hidden: item.influencerType === "parent" && item.canCreateChildren,
+            onClick: () => promoteInfluencer(item),
+          },
+        ]}
+      />
+    ),
   }));
 
   const codeRows = codes.map((code) => ({
@@ -2024,15 +2116,25 @@ const ReferralCommerce = () => {
     influencer: renderInfluencerRef(code.influencerId),
     usage: `${code.usageCount || 0}${code.usageLimit ? ` / ${code.usageLimit}` : ""}`,
     status: <StatusPill value={code.status} />,
-    actions: <RowActions actions={[
-      { label: "Edit code", icon: <Pencil size={14} />, onClick: () => openEditCode(code) },
-      {
-        label: code.status === "active" ? "Deactivate code" : "Activate code",
-        icon: code.status === "active" ? <X size={14} /> : <Check size={14} />,
-        danger: code.status === "active",
-        onClick: () => toggleCodeStatus(code),
-      },
-    ]} />,
+    actions: (
+      <RowActions
+        actions={[
+          {
+            label: "Edit code",
+            icon: <Pencil size={14} />,
+            onClick: () => openEditCode(code),
+          },
+          {
+            label:
+              code.status === "active" ? "Deactivate code" : "Activate code",
+            icon:
+              code.status === "active" ? <X size={14} /> : <Check size={14} />,
+            danger: code.status === "active",
+            onClick: () => toggleCodeStatus(code),
+          },
+        ]}
+      />
+    ),
   }));
 
   const orderRows = orders.map((order) => ({
@@ -2069,13 +2171,14 @@ const ReferralCommerce = () => {
     coins: formatCoins(payout.coinAmount ?? payout.amount),
     payable: formatAmount(
       payout.currencyAmount ??
-        Number((payout.coinAmount ?? payout.amount) || 0) * Number(payout.coinValue || 1),
+        Number((payout.coinAmount ?? payout.amount) || 0) *
+          Number(payout.coinValue || 1),
     ),
-    method: payout.payoutMethod === "upi_qr" ? "UPI QR" : payout.payoutMethod || "-",
-    destination:
-      payout.destinationSnapshot?.accountNumberLast4
-        ? `${payout.destinationSnapshot.bankName || "Bank"} · •••• ${payout.destinationSnapshot.accountNumberLast4}`
-        : ["upi", "upi_qr"].includes(payout.payoutMethod)
+    method:
+      payout.payoutMethod === "upi_qr" ? "UPI QR" : payout.payoutMethod || "-",
+    destination: payout.destinationSnapshot?.accountNumberLast4
+      ? `${payout.destinationSnapshot.bankName || "Bank"} · •••• ${payout.destinationSnapshot.accountNumberLast4}`
+      : ["upi", "upi_qr"].includes(payout.payoutMethod)
         ? payout.destinationSnapshot?.upiId || payout.upiId || "-"
         : payout.payoutMethod === "bank"
           ? payout.bankAccountId || "-"
@@ -2083,16 +2186,40 @@ const ReferralCommerce = () => {
     status: <StatusPill value={payout.status} />,
     requested: formatDate(payout.requestedAt || payout.createdAt),
     reference: payout.transactionReference || "-",
-    actions: <RowActions actions={[
-      { label: "Approve request", icon: <Check size={14} />, hidden: payout.status !== "pending", onClick: () => openPayoutAction(payout, "approve") },
-      { label: "Reject request", icon: <X size={14} />, danger: true, hidden: !["pending", "approved", "processing", "failed"].includes(payout.status), onClick: () => openPayoutAction(payout, "reject") },
-      { label: "Mark as paid", icon: <BadgeIndianRupee size={14} />, hidden: !["approved", "processing"].includes(payout.status), onClick: () => openPayoutAction(payout, "paid") },
-    ]} />,
+    actions: (
+      <RowActions
+        actions={[
+          {
+            label: "Approve request",
+            icon: <Check size={14} />,
+            hidden: payout.status !== "pending",
+            onClick: () => openPayoutAction(payout, "approve"),
+          },
+          {
+            label: "Reject request",
+            icon: <X size={14} />,
+            danger: true,
+            hidden: !["pending", "approved", "processing", "failed"].includes(
+              payout.status,
+            ),
+            onClick: () => openPayoutAction(payout, "reject"),
+          },
+          {
+            label: "Mark as paid",
+            icon: <BadgeIndianRupee size={14} />,
+            hidden: !["approved", "processing"].includes(payout.status),
+            onClick: () => openPayoutAction(payout, "paid"),
+          },
+        ]}
+      />
+    ),
   }));
   const payoutHasActions = payouts.some((payout) =>
     ["pending", "approved", "processing", "failed"].includes(payout.status),
   );
-  const payoutHasReference = payouts.some((payout) => payout.transactionReference);
+  const payoutHasReference = payouts.some(
+    (payout) => payout.transactionReference,
+  );
 
   const bonusRuleRows = bonusRules.map((rule) => ({
     key: getId(rule),
@@ -2110,10 +2237,25 @@ const ReferralCommerce = () => {
     applyTo: String(rule.applyTo || "").replace(/_/g, " "),
     release: String(rule.releaseRule || "").replace(/_/g, " "),
     status: <StatusPill value={rule.status} />,
-    actions: <RowActions actions={[
-      { label: "Edit rule", icon: <Pencil size={14} />, onClick: () => openBonusRuleModal(rule) },
-      { label: rule.status === "active" ? "Deactivate rule" : "Activate rule", icon: rule.status === "active" ? <X size={14} /> : <Check size={14} />, danger: rule.status === "active", onClick: () => toggleBonusRuleStatus(rule) },
-    ]} />,
+    actions: (
+      <RowActions
+        actions={[
+          {
+            label: "Edit rule",
+            icon: <Pencil size={14} />,
+            onClick: () => openBonusRuleModal(rule),
+          },
+          {
+            label:
+              rule.status === "active" ? "Deactivate rule" : "Activate rule",
+            icon:
+              rule.status === "active" ? <X size={14} /> : <Check size={14} />,
+            danger: rule.status === "active",
+            onClick: () => toggleBonusRuleStatus(rule),
+          },
+        ]}
+      />
+    ),
   }));
 
   const bonusProgressRows = bonusProgress.map((row) => ({
@@ -2279,11 +2421,7 @@ const ReferralCommerce = () => {
             title={item.label}
             value={item.value}
             description={item.sub}
-            icon={
-              <span style={{ color: item.iconColor }}>
-                {item.icon}
-              </span>
-            }
+            icon={<span style={{ color: item.iconColor }}>{item.icon}</span>}
             iconClassName="right-0 top-0 h-9 w-10 rounded-none rounded-bl-[10px] border-0"
             iconStyle={{ backgroundColor: item.iconBg }}
             className="min-h-[100px]"
@@ -2381,7 +2519,8 @@ const ReferralCommerce = () => {
             Referral Commerce Rules
           </h2>
           <p className="mt-1 text-xs text-[var(--admin-muted)]">
-            Configure referral pools, coin behavior, distribution shares, and withdrawals
+            Configure referral pools, coin behavior, distribution shares, and
+            withdrawals
           </p>
         </div>
         <span className="rounded-full border border-[var(--admin-line)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--admin-muted)]">
@@ -2860,259 +2999,268 @@ const ReferralCommerce = () => {
       <PageHeader
         title={pageMeta.title}
         subtitle={pageMeta.subtitle}
-        breadcrumbs={[
-          { label: "Marketing" },
-          { label: pageMeta.title },
-        ]}
+        breadcrumbs={[{ label: "Marketing" }, { label: pageMeta.title }]}
         actions={
-          <div className="flex flex-wrap gap-2">
-            <a
-              href={influencerPortalUrl}
-              target="_blank"
-              rel="noreferrer"
-              title="Open the Referral Partner sign-in portal"
-            >
-              <ExternalLink size={16} />
-              Partner Login
-            </a>
-            {/* <IconButton
-              title="Refresh"
-              onClick={() => refreshAll()}
-              variant="primary"
-              disabled={loading}
-            >
-              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-            </IconButton> */}
-            <button
-              type="button"
-              onClick={() => {
-                resetInfluencerForm();
-                setParentModalOpen(true);
-              }}
-            >
-              <UserPlus size={16} />
-              Growth Partner
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                resetInfluencerForm();
-                setInfluencerForm({
-                  ...emptyInfluencerForm,
-                  canCreateChildren: false,
-                });
-                setChildModalOpen(true);
-              }}
-            >
-              <GitBranch size={16} />
-              Brand Associate
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setEditingCode(null);
-                setCodeForm(emptyCodeForm);
-                setCodeModalOpen(true);
-              }}
-            >
-              <Plus size={16} />
-              Referral Code
-            </button>
-          </div>
+          activeTab === "influencers" ? (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  resetInfluencerForm();
+                  setParentModalOpen(true);
+                }}
+              >
+                <UserPlus size={16} />
+                Referral Partner
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  resetInfluencerForm();
+                  setInfluencerForm({
+                    ...emptyInfluencerForm,
+                    canCreateChildren: false,
+                  });
+                  setChildModalOpen(true);
+                }}
+              >
+                <GitBranch size={16} />
+                Brand Associate
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingCode(null);
+                  setCodeForm(emptyCodeForm);
+                  setCodeModalOpen(true);
+                }}
+              >
+                <Plus size={16} />
+                Referral Code
+              </button>
+              <a
+                href={influencerPortalUrl}
+                target="_blank"
+                rel="noreferrer"
+                title="Open the Referral Partner sign-in portal"
+              >
+                <ExternalLink size={16} />
+                Partner Login
+              </a>
+            </div>
+          ) : undefined
         }
       />
 
-      {hasListFilters && ![
-        "influencers",
-        "codes",
-        "bonuses",
-        "orders",
-        "commissions",
-        "payouts",
-        "fraud",
-      ].includes(activeTab) && <form
-        onSubmit={handleSearch}
-        className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-      >
-        <div className="relative min-w-[220px] flex-1">
-          <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-400">Search</label>
-          <Search
-            size={16}
-            className="absolute bottom-3 left-3 text-gray-400"
-          />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={`Search ${tabs.find((tab) => tab.key === activeTab)?.label?.toLowerCase() || "records"}…`}
-            className="h-10 w-full rounded border border-gray-200 pl-9 pr-3 text-sm outline-none focus:border-indigo-400"
-          />
-        </div>
-        <FilterSelect
-          className="w-48"
-          label="Status"
-          options={[{ value: "", label: "All statuses" }, ...activeStatusOptions]}
-          value={
-            [{ value: "", label: "All statuses" }, ...activeStatusOptions].find((opt) => String(opt.value) === String(status)) || {
-              value: "",
-              label: "All statuses",
-            }
-          }
-          onChange={(selected) => setStatus(selected ? selected.value : "")}
-          isSearchable={false}
-          placeholder="All statuses"
-          controlHeight={40}
-        />
-        <OrangeButton
-          type="submit"
-          className="!h-10 min-w-[106px] justify-center !py-0"
-          style={{ height: 40 }}
-        >
-          <Search size={16} />
-          Apply
-        </OrangeButton>
-        <button type="button" onClick={() => refreshActive()} className="admin-btn-secondary inline-flex h-10 items-center gap-2 px-3">
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh
-        </button>
-      </form>}
+      {hasListFilters &&
+        ![
+          "influencers",
+          "codes",
+          "bonuses",
+          "orders",
+          "commissions",
+          "payouts",
+          "fraud",
+        ].includes(activeTab) && (
+          <form
+            onSubmit={handleSearch}
+            className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+          >
+            <div className="relative min-w-[220px] flex-1">
+              <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                Search
+              </label>
+              <Search
+                size={16}
+                className="absolute bottom-3 left-3 text-gray-400"
+              />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={`Search ${tabs.find((tab) => tab.key === activeTab)?.label?.toLowerCase() || "records"}…`}
+                className="h-10 w-full rounded border border-gray-200 pl-9 pr-3 text-sm outline-none focus:border-indigo-400"
+              />
+            </div>
+            <FilterSelect
+              className="w-48"
+              label="Status"
+              options={[
+                { value: "", label: "All statuses" },
+                ...activeStatusOptions,
+              ]}
+              value={
+                [
+                  { value: "", label: "All statuses" },
+                  ...activeStatusOptions,
+                ].find((opt) => String(opt.value) === String(status)) || {
+                  value: "",
+                  label: "All statuses",
+                }
+              }
+              onChange={(selected) => setStatus(selected ? selected.value : "")}
+              isSearchable={false}
+              placeholder="All statuses"
+              controlHeight={40}
+            />
+            <OrangeButton
+              type="submit"
+              className="!h-10 min-w-[106px] justify-center !py-0"
+              style={{ height: 40 }}
+            >
+              <Search size={16} />
+              Apply
+            </OrangeButton>
+            <button
+              type="button"
+              onClick={() => refreshActive()}
+              className="admin-btn-secondary inline-flex h-10 items-center gap-2 px-3"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />{" "}
+              Refresh
+            </button>
+          </form>
+        )}
 
       {activeTab === "overview" && renderOverview()}
       {activeTab === "productDistribution" && <ProductDistributionManager />}
       {activeTab === "influencers" && (
-
-          <SharedDataTable
-            columns={[
-              { key: "influencer", label: "Referral Partner" },
-              { key: "profileId", label: "Profile ID" },
-              { key: "type", label: "Type" },
-              { key: "code", label: "Referral Code" },
-              { key: "hierarchy", label: "Hierarchy" },
-              { key: "wallet", label: "Available Coins" },
-              { key: "status", label: "Status" },
-              { key: "actions", label: "Actions" },
-            ]}
-            data={influencerRows}
-            loading={loading}
-            rowKey="key"
-            onSearch={setSearch}
-            searchPlaceholder="Search referral partners..."
-            filterBar={
-              <FilterBar
-                filters={[
-                  {
-                    key: "status",
-                    type: "select",
-                    label: "Status",
-                    width: "w-48",
-                    options: activeStatusOptions,
-                  },
-                ]}
-                values={{ status }}
-                onChange={(_, value) => setStatus(value)}
-                onClear={() => setStatus("")}
-                loading={loading}
-              />
-            }
-            emptyText="No referral partners found."
-            cardClassName="overflow-hidden"
-          />
+        <SharedDataTable
+          columns={[
+            { key: "influencer", label: "Referral Partner" },
+            { key: "profileId", label: "Profile ID" },
+            { key: "type", label: "Type" },
+            { key: "code", label: "Referral Code" },
+            { key: "hierarchy", label: "Hierarchy" },
+            { key: "wallet", label: "Available Coins" },
+            { key: "status", label: "Status" },
+            { key: "actions", label: "Actions" },
+          ]}
+          data={influencerRows}
+          loading={loading}
+          rowKey="key"
+          onSearch={setSearch}
+          searchPlaceholder="Search referral partners..."
+          filterBar={
+            <FilterBar
+              filters={[
+                {
+                  key: "status",
+                  type: "select",
+                  label: "Status",
+                  width: "w-48",
+                  options: activeStatusOptions,
+                },
+              ]}
+              values={{ status }}
+              onChange={(_, value) => setStatus(value)}
+              onClear={() => setStatus("")}
+              loading={loading}
+            />
+          }
+          emptyText="No referral partners found."
+          cardClassName="overflow-hidden"
+        />
       )}
       {activeTab === "codes" && (
         <SharedDataTable
-            columns={[
-              { key: "code", label: "Referral Code" },
-              { key: "influencer", label: "Referral Partner" },
-              { key: "usage", label: "Usage" },
-              { key: "status", label: "Status" },
-              { key: "actions", label: "Actions" },
-            ]}
-            data={codeRows}
-            loading={loading}
-            rowKey="key"
-            onSearch={setSearch}
-            searchPlaceholder="Search referral codes..."
-            filterBar={
-              <FilterBar
-                filters={[
-                  {
-                    key: "status",
-                    type: "select",
-                    label: "Status",
-                    width: "w-48",
-                    options: activeStatusOptions,
-                  },
-                ]}
-                values={{ status }}
-                onChange={(_, value) => setStatus(value)}
-                onClear={() => setStatus("")}
-                loading={loading}
-              />
-            }
-            emptyText="No referral codes found."
-          />
+          columns={[
+            { key: "code", label: "Referral Code" },
+            { key: "influencer", label: "Referral Partner" },
+            { key: "usage", label: "Usage" },
+            { key: "status", label: "Status" },
+            { key: "actions", label: "Actions" },
+          ]}
+          data={codeRows}
+          loading={loading}
+          rowKey="key"
+          onSearch={setSearch}
+          searchPlaceholder="Search referral codes..."
+          filterBar={
+            <FilterBar
+              filters={[
+                {
+                  key: "status",
+                  type: "select",
+                  label: "Status",
+                  width: "w-48",
+                  options: activeStatusOptions,
+                },
+              ]}
+              values={{ status }}
+              onChange={(_, value) => setStatus(value)}
+              onClear={() => setStatus("")}
+              loading={loading}
+            />
+          }
+          emptyText="No referral codes found."
+        />
       )}
       {activeTab === "rules" && renderRules()}
       {activeTab === "bonuses" && renderBonuses()}
       {activeTab === "orders" && (
-          <SharedDataTable
-            columns={[
-              { key: "order", label: "Order" },
-              { key: "code", label: "Referral Code" },
-              { key: "customer", label: "Customer" },
-              { key: "amount", label: "Eligible Amount" },
-              { key: "discount", label: "Discount" },
-              { key: "status", label: "Status" },
-              { key: "created", label: "Created" },
-            ]}
-            data={orderRows}
-            loading={loading}
-            rowKey="key"
-            onSearch={setSearch}
-            searchPlaceholder="Search referral orders..."
-            filterBar={renderActiveFilterBar()}
-            emptyText="No referral orders found."
-          />
+        <SharedDataTable
+          columns={[
+            { key: "order", label: "Order" },
+            { key: "code", label: "Referral Code" },
+            { key: "customer", label: "Customer" },
+            { key: "amount", label: "Eligible Amount" },
+            { key: "discount", label: "Discount" },
+            { key: "status", label: "Status" },
+            { key: "created", label: "Created" },
+          ]}
+          data={orderRows}
+          loading={loading}
+          rowKey="key"
+          onSearch={setSearch}
+          searchPlaceholder="Search referral orders..."
+          filterBar={renderActiveFilterBar()}
+          emptyText="No referral orders found."
+        />
       )}
       {activeTab === "commissions" && (
-          <SharedDataTable
-            columns={[
-              { key: "order", label: "Order" },
-              { key: "influencer", label: "Referral Partner" },
-              { key: "type", label: "Type" },
-              { key: "basis", label: "Basis" },
-              { key: "amount", label: "Coins" },
-              { key: "status", label: "Status" },
-              { key: "releaseAt", label: "Release At" },
-            ]}
-            data={commissionRows}
-            loading={loading}
-            rowKey="key"
-            onSearch={setSearch}
-            searchPlaceholder="Search wallet ledger..."
-            filterBar={renderActiveFilterBar()}
-            emptyText="No coin ledger entries found."
-          />
+        <SharedDataTable
+          columns={[
+            { key: "order", label: "Order" },
+            { key: "influencer", label: "Referral Partner" },
+            { key: "type", label: "Type" },
+            { key: "basis", label: "Basis" },
+            { key: "amount", label: "Coins" },
+            { key: "status", label: "Status" },
+            { key: "releaseAt", label: "Release At" },
+          ]}
+          data={commissionRows}
+          loading={loading}
+          rowKey="key"
+          onSearch={setSearch}
+          searchPlaceholder="Search wallet ledger..."
+          filterBar={renderActiveFilterBar()}
+          emptyText="No coin ledger entries found."
+        />
       )}
       {activeTab === "payouts" && (
-          <SharedDataTable
-            columns={[
-              { key: "influencer", label: "Referral Partner" },
-              { key: "coins", label: "Requested Coins" },
-              { key: "payable", label: "Transfer Amount" },
-              { key: "method", label: "Method" },
-              { key: "destination", label: "Transfer To" },
-              { key: "status", label: "Status" },
-              { key: "requested", label: "Requested" },
-              ...(payoutHasReference ? [{ key: "reference", label: "UTR / Reference" }] : []),
-              ...(payoutHasActions ? [{ key: "actions", label: "Actions" }] : []),
-            ]}
-            data={payoutRows}
-            loading={loading}
-            rowKey="key"
-            onSearch={setSearch}
-            searchPlaceholder="Search payout requests..."
-            filterBar={renderActiveFilterBar()}
-            emptyText="No payout requests found."
-          />
+        <SharedDataTable
+          columns={[
+            { key: "influencer", label: "Referral Partner" },
+            { key: "coins", label: "Requested Coins" },
+            { key: "payable", label: "Transfer Amount" },
+            { key: "method", label: "Method" },
+            { key: "destination", label: "Transfer To" },
+            { key: "status", label: "Status" },
+            { key: "requested", label: "Requested" },
+            ...(payoutHasReference
+              ? [{ key: "reference", label: "UTR / Reference" }]
+              : []),
+            ...(payoutHasActions ? [{ key: "actions", label: "Actions" }] : []),
+          ]}
+          data={payoutRows}
+          loading={loading}
+          rowKey="key"
+          onSearch={setSearch}
+          searchPlaceholder="Search payout requests..."
+          filterBar={renderActiveFilterBar()}
+          emptyText="No payout requests found."
+        />
       )}
       {activeTab === "hierarchy" && (
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
@@ -3181,28 +3329,28 @@ const ReferralCommerce = () => {
         </div>
       )}
       {activeTab === "fraud" && (
-          <SharedDataTable
-            columns={[
-              { key: "reason", label: "Reason" },
-              { key: "influencer", label: "Referral Partner" },
-              { key: "code", label: "Referral Code" },
-              { key: "severity", label: "Severity" },
-              { key: "status", label: "Status" },
-              { key: "created", label: "Created" },
-            ]}
-            data={fraudRows}
-            loading={loading}
-            rowKey="key"
-            onSearch={setSearch}
-            searchPlaceholder="Search fraud reviews..."
-            filterBar={renderActiveFilterBar()}
-            actions={
-              <span title="Fraud review">
-                <ShieldAlert size={18} className="text-amber-600" />
-              </span>
-            }
-            emptyText="No fraud reviews found."
-          />
+        <SharedDataTable
+          columns={[
+            { key: "reason", label: "Reason" },
+            { key: "influencer", label: "Referral Partner" },
+            { key: "code", label: "Referral Code" },
+            { key: "severity", label: "Severity" },
+            { key: "status", label: "Status" },
+            { key: "created", label: "Created" },
+          ]}
+          data={fraudRows}
+          loading={loading}
+          rowKey="key"
+          onSearch={setSearch}
+          searchPlaceholder="Search fraud reviews..."
+          filterBar={renderActiveFilterBar()}
+          actions={
+            <span title="Fraud review">
+              <ShieldAlert size={18} className="text-amber-600" />
+            </span>
+          }
+          emptyText="No fraud reviews found."
+        />
       )}
 
       <Modal
@@ -3417,53 +3565,216 @@ const ReferralCommerce = () => {
         onClose={closePayoutAction}
         footer={
           <>
-            <button type="button" disabled={uploadingPaymentProof} onClick={closePayoutAction} className="admin-btn-secondary">Cancel</button>
-            <OrangeButton type="submit" form="payoutActionForm" disabled={uploadingPaymentProof || (payoutAction?.action === "paid" && !payoutActionForm.paymentProofUrl)}>
-              {payoutAction?.action === "paid" ? "Mark Paid" : payoutAction?.action === "reject" ? "Reject Request" : "Approve Request"}
+            <button
+              type="button"
+              disabled={uploadingPaymentProof}
+              onClick={closePayoutAction}
+              className="admin-btn-secondary"
+            >
+              Cancel
+            </button>
+            <OrangeButton
+              type="submit"
+              form="payoutActionForm"
+              disabled={
+                uploadingPaymentProof ||
+                (payoutAction?.action === "paid" &&
+                  !payoutActionForm.paymentProofUrl)
+              }
+            >
+              {payoutAction?.action === "paid"
+                ? "Mark Paid"
+                : payoutAction?.action === "reject"
+                  ? "Reject Request"
+                  : "Approve Request"}
             </OrangeButton>
           </>
         }
       >
-        <form id="payoutActionForm" onSubmit={handlePayoutAction} className="space-y-4">
+        <form
+          id="payoutActionForm"
+          onSubmit={handlePayoutAction}
+          className="space-y-4"
+        >
           <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-4 text-sm">
-            <div><span className="block text-xs text-gray-500">Partner</span>{payoutAction ? renderInfluencerRef(payoutAction.payout.influencerId) : "-"}</div>
-            <div><span className="block text-xs text-gray-500">Requested coins</span><strong>{formatCoins(payoutAction?.payout?.coinAmount ?? payoutAction?.payout?.amount)}</strong></div>
-            <div><span className="block text-xs text-gray-500">Transfer amount</span><strong>{formatAmount(payoutAction?.payout?.currencyAmount ?? Number((payoutAction?.payout?.coinAmount ?? payoutAction?.payout?.amount) || 0) * Number(payoutAction?.payout?.coinValue || 1))}</strong></div>
-            <div><span className="block text-xs text-gray-500">Transfer destination</span><strong>{payoutAction?.payout?.destinationSnapshot?.accountNumber ? `${payoutAction.payout.destinationSnapshot.bankName || "Bank"} · ${payoutAction.payout.destinationSnapshot.accountNumber}` : payoutAction?.payout?.destinationSnapshot?.upiId || payoutAction?.payout?.upiId || payoutAction?.payout?.bankAccountId || "Manual"}</strong></div>
-            {payoutAction?.payout?.destinationSnapshot?.accountHolderName && <div><span className="block text-xs text-gray-500">Account holder</span><strong>{payoutAction.payout.destinationSnapshot.accountHolderName}</strong></div>}
-            {payoutAction?.payout?.destinationSnapshot?.ifscCode && <div><span className="block text-xs text-gray-500">IFSC</span><strong>{payoutAction.payout.destinationSnapshot.ifscCode}</strong></div>}
-            {payoutAction?.payout?.payoutQrUrl && <div><span className="block text-xs text-gray-500">Submitted QR</span><a href={payoutAction.payout.payoutQrUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-blue-700 hover:underline"><ExternalLink size={13}/>Review QR</a></div>}
-            <div><span className="block text-xs text-gray-500">Destination source</span><strong>{payoutAction?.payout?.destinationSource === "saved_profile" ? "Saved profile details" : payoutAction?.payout?.destinationSource === "one_time" ? "One-time details" : "Legacy request"}</strong></div>
+            <div>
+              <span className="block text-xs text-gray-500">Partner</span>
+              {payoutAction
+                ? renderInfluencerRef(payoutAction.payout.influencerId)
+                : "-"}
+            </div>
+            <div>
+              <span className="block text-xs text-gray-500">
+                Requested coins
+              </span>
+              <strong>
+                {formatCoins(
+                  payoutAction?.payout?.coinAmount ??
+                    payoutAction?.payout?.amount,
+                )}
+              </strong>
+            </div>
+            <div>
+              <span className="block text-xs text-gray-500">
+                Transfer amount
+              </span>
+              <strong>
+                {formatAmount(
+                  payoutAction?.payout?.currencyAmount ??
+                    Number(
+                      (payoutAction?.payout?.coinAmount ??
+                        payoutAction?.payout?.amount) ||
+                        0,
+                    ) * Number(payoutAction?.payout?.coinValue || 1),
+                )}
+              </strong>
+            </div>
+            <div>
+              <span className="block text-xs text-gray-500">
+                Transfer destination
+              </span>
+              <strong>
+                {payoutAction?.payout?.destinationSnapshot?.accountNumber
+                  ? `${payoutAction.payout.destinationSnapshot.bankName || "Bank"} · ${payoutAction.payout.destinationSnapshot.accountNumber}`
+                  : payoutAction?.payout?.destinationSnapshot?.upiId ||
+                    payoutAction?.payout?.upiId ||
+                    payoutAction?.payout?.bankAccountId ||
+                    "Manual"}
+              </strong>
+            </div>
+            {payoutAction?.payout?.destinationSnapshot?.accountHolderName && (
+              <div>
+                <span className="block text-xs text-gray-500">
+                  Account holder
+                </span>
+                <strong>
+                  {payoutAction.payout.destinationSnapshot.accountHolderName}
+                </strong>
+              </div>
+            )}
+            {payoutAction?.payout?.destinationSnapshot?.ifscCode && (
+              <div>
+                <span className="block text-xs text-gray-500">IFSC</span>
+                <strong>
+                  {payoutAction.payout.destinationSnapshot.ifscCode}
+                </strong>
+              </div>
+            )}
+            {payoutAction?.payout?.payoutQrUrl && (
+              <div>
+                <span className="block text-xs text-gray-500">
+                  Submitted QR
+                </span>
+                <a
+                  href={payoutAction.payout.payoutQrUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold text-blue-700 hover:underline"
+                >
+                  <ExternalLink size={13} />
+                  Review QR
+                </a>
+              </div>
+            )}
+            <div>
+              <span className="block text-xs text-gray-500">
+                Destination source
+              </span>
+              <strong>
+                {payoutAction?.payout?.destinationSource === "saved_profile"
+                  ? "Saved profile details"
+                  : payoutAction?.payout?.destinationSource === "one_time"
+                    ? "One-time details"
+                    : "Legacy request"}
+              </strong>
+            </div>
           </div>
           {payoutAction?.action === "paid" && (
             <>
-              <TextInput required label="Bank / UPI Transaction Reference *" name="transactionReference" value={payoutActionForm.transactionReference} onChange={(event) => setPayoutActionForm((form) => ({ ...form, transactionReference: event.target.value }))} />
+              <TextInput
+                required
+                label="Bank / UPI Transaction Reference *"
+                name="transactionReference"
+                value={payoutActionForm.transactionReference}
+                onChange={(event) =>
+                  setPayoutActionForm((form) => ({
+                    ...form,
+                    transactionReference: event.target.value,
+                  }))
+                }
+              />
               <div className="rounded-lg border border-dashed border-[#d8caa6] bg-[#fffaf0] p-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="text-xs font-medium uppercase text-gray-600">Payment proof *</div>
-                    <div className="mt-1 text-xs text-gray-500">Upload a PDF, JPG, PNG, or WebP receipt.</div>
+                    <div className="text-xs font-medium uppercase text-gray-600">
+                      Payment proof *
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      Upload a PDF, JPG, PNG, or WebP receipt.
+                    </div>
                   </div>
-                  <label className={`admin-btn-secondary inline-flex cursor-pointer items-center gap-2 ${uploadingPaymentProof ? "pointer-events-none opacity-60" : ""}`}>
+                  <label
+                    className={`admin-btn-secondary inline-flex cursor-pointer items-center gap-2 ${uploadingPaymentProof ? "pointer-events-none opacity-60" : ""}`}
+                  >
                     <UploadCloud size={15} />
-                    {uploadingPaymentProof ? "Uploading…" : payoutActionForm.paymentProofUrl ? "Replace file" : "Upload proof"}
-                    <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={uploadingPaymentProof} onChange={handlePaymentProofUpload} />
+                    {uploadingPaymentProof
+                      ? "Uploading…"
+                      : payoutActionForm.paymentProofUrl
+                        ? "Replace file"
+                        : "Upload proof"}
+                    <input
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      disabled={uploadingPaymentProof}
+                      onChange={handlePaymentProofUpload}
+                    />
                   </label>
                 </div>
                 {payoutActionForm.paymentProofUrl && (
                   <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-green-200 bg-white px-3 py-2 text-xs">
-                    <a href={payoutActionForm.paymentProofUrl} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1 font-semibold text-green-700 hover:underline">
+                    <a
+                      href={payoutActionForm.paymentProofUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex min-w-0 items-center gap-1 font-semibold text-green-700 hover:underline"
+                    >
                       <ExternalLink size={13} /> View uploaded payment proof
                     </a>
-                    <button type="button" className="font-semibold text-red-600 hover:underline" onClick={() => setPayoutActionForm((form) => ({ ...form, paymentProofUrl: "" }))}>Remove</button>
+                    <button
+                      type="button"
+                      className="font-semibold text-red-600 hover:underline"
+                      onClick={() =>
+                        setPayoutActionForm((form) => ({
+                          ...form,
+                          paymentProofUrl: "",
+                        }))
+                      }
+                    >
+                      Remove
+                    </button>
                   </div>
                 )}
               </div>
             </>
           )}
           <label className="block">
-            <span className="mb-1 block text-xs font-medium uppercase text-gray-500">Admin Note{payoutAction?.action === "reject" ? " *" : ""}</span>
-            <textarea required={payoutAction?.action === "reject"} rows="3" value={payoutActionForm.adminNote} onChange={(event) => setPayoutActionForm((form) => ({ ...form, adminNote: event.target.value }))} className="admin-input w-full resize-y" placeholder="Add an audit note" />
+            <span className="mb-1 block text-xs font-medium uppercase text-gray-500">
+              Admin Note{payoutAction?.action === "reject" ? " *" : ""}
+            </span>
+            <textarea
+              required={payoutAction?.action === "reject"}
+              rows="3"
+              value={payoutActionForm.adminNote}
+              onChange={(event) =>
+                setPayoutActionForm((form) => ({
+                  ...form,
+                  adminNote: event.target.value,
+                }))
+              }
+              className="admin-input w-full resize-y"
+              placeholder="Add an audit note"
+            />
           </label>
         </form>
       </Modal>

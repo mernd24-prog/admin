@@ -28,6 +28,7 @@ import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import Cards from "../../../components/Cards/Cards";
 import {
   ConfirmModal,
   DataTable,
@@ -254,35 +255,6 @@ const sellerLookupFromOption = (option = {}) => ({
   label: option.label || option.name || option.email || option.value || "",
   email: option.meta?.email || option.email || "",
 });
-
-function MetricCard({ icon, label, value, tone = "blue" }) {
-  const tones = {
-    blue: "bg-blue-50 text-blue-700",
-    green: "bg-emerald-50 text-emerald-700",
-    amber: "bg-amber-50 text-amber-700",
-    red: "bg-red-50 text-red-700",
-    slate: "bg-slate-50 text-slate-700",
-  };
-  return (
-    <div className="rounded-md border border-[var(--admin-line)] bg-white p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase text-[var(--admin-muted)]">
-            {label}
-          </p>
-          <p className="mt-1 text-xl font-semibold text-[var(--admin-ink)]">
-            {value}
-          </p>
-        </div>
-        <span
-          className={`flex h-10 w-10 items-center justify-center rounded-md ${tones[tone] || tones.blue}`}
-        >
-          {icon}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 function ProductSearch({ sellerId, value, onSelect }) {
   const [query, setQuery] = useState("");
@@ -1179,40 +1151,47 @@ const DealManagement = () => {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        <MetricCard
-          icon={<MdLocalOffer size={20} />}
+        <Cards
+          icon={<MdLocalOffer size={18} />}
           label="Deal Products"
           value={metrics.total}
+          iconBg="#e3d4ff"
+          iconColor="#8d5cf6"
         />
-        <MetricCard
-          icon={<MdCheckCircle size={20} />}
+        <Cards
+          icon={<MdCheckCircle size={18} />}
           label="Active"
           value={metrics.active}
-          tone="green"
+          iconBg="#cce8c9"
+          iconColor="#1d9b50"
         />
-        <MetricCard
-          icon={<MdHistory size={20} />}
+        <Cards
+          icon={<MdHistory size={18} />}
           label="Scheduled"
           value={metrics.scheduled}
-          tone="amber"
+          iconBg="#ffe5b5"
+          iconColor="#f5a300"
         />
-        <MetricCard
-          icon={<MdClose size={20} />}
+        <Cards
+          icon={<MdClose size={18} />}
           label="Expired"
           value={metrics.expired}
-          tone="slate"
+          iconBg="#ffd4d2"
+          iconColor="#ff4b55"
         />
-        <MetricCard
-          icon={<MdBarChart size={20} />}
+        <Cards
+          icon={<MdBarChart size={18} />}
           label="Units Sold"
           value={metrics.units}
-          tone="blue"
+          iconBg="#04258633"
+          iconColor="#0f4bb3"
         />
-        <MetricCard
-          icon={<MdBarChart size={20} />}
+        <Cards
+          icon={<MdBarChart size={18} />}
           label="Deal Revenue"
           value={money(metrics.revenue)}
-          tone="green"
+          iconBg="#cce8c9"
+          iconColor="#1d9b50"
         />
       </div>
 

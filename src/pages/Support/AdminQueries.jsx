@@ -2,7 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { MdRefresh, MdVisibility } from "react-icons/md";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
-import { DataTable, PageHeader, StatusBadge, UserLink } from "../../components/Shared";
+import {
+  DataTable,
+  PageHeader,
+  StatusBadge,
+  UserLink,
+} from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import {
@@ -14,6 +19,8 @@ import {
 } from "./supportUtils";
 
 import { isSellerPanel } from "../../_helpers/panelConfig";
+import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
+import { QueryDetailsSkeleton } from "../../components/Loader/SkeletonLoader";
 
 const TABS = [
   { key: "customer", label: "Customer Queries" },
@@ -66,13 +73,21 @@ const AdminQueries = () => {
 
   const openQuery = useCallback(async (query) => {
     setSelectedQuery(query);
-    setStatusForm({ status: query.status || "pending", adminNotes: query.adminNotes || "" });
+    setStatusForm({
+      status: query.status || "pending",
+      adminNotes: query.adminNotes || "",
+    });
     try {
       setDetailLoading(true);
-      const response = await axiosProvider.get(ENDPOINTS.support.adminDetail(query.queryId));
+      const response = await axiosProvider.get(
+        ENDPOINTS.support.adminDetail(query.queryId),
+      );
       const detail = response?.data?.data || query;
       setSelectedQuery(detail);
-      setStatusForm({ status: detail.status || "pending", adminNotes: detail.adminNotes || "" });
+      setStatusForm({
+        status: detail.status || "pending",
+        adminNotes: detail.adminNotes || "",
+      });
     } catch (requestError) {
       toast.error(requestError?.message || "Failed to load query details");
     } finally {
@@ -90,7 +105,10 @@ const AdminQueries = () => {
       );
       const updated = response?.data?.data || selectedQuery;
       setSelectedQuery(updated);
-      setStatusForm({ status: updated.status || "pending", adminNotes: updated.adminNotes || "" });
+      setStatusForm({
+        status: updated.status || "pending",
+        adminNotes: updated.adminNotes || "",
+      });
       toast.success("Query status updated");
       await fetchQueries();
     } catch (requestError) {
@@ -100,75 +118,79 @@ const AdminQueries = () => {
     }
   }, [fetchQueries, selectedQuery, statusForm]);
 
-  const columns = useMemo(() => [
-    {
-      key: "queryId",
-      label: "Query ID",
-      render: (value) => <span className="font-semibold text-[var(--admin-ink)]">{value}</span>,
-    },
-  {
-  key: "userName",
-  label: "User Name",
-  render: (value, row) => {
-    return (
-      <div>
-        {isSeller ? (
-          <span className="font-medium text-[var(--admin-ink)]">
-            {value || "N/A"}
-          </span>
-        ) : (
-          <UserLink
-            userId={row.userId}
-            userName={value}
-          />
-        )}
+  const columns = useMemo(
+    () => [
+      {
+        key: "queryId",
+        label: "Query ID",
+        render: (value) => (
+          <span className="font-semibold text-[var(--admin-ink)]">{value}</span>
+        ),
+      },
+      {
+        key: "userName",
+        label: "User Name",
+        render: (value, row) => {
+          return (
+            <div>
+              {isSeller ? (
+                <span className="font-medium text-[var(--admin-ink)]">
+                  {value || "N/A"}
+                </span>
+              ) : (
+                <UserLink userId={row.userId} userName={value} />
+              )}
 
-        {row.userEmail ? (
-          <div className="text-xs text-[var(--admin-muted)]">
-            {row.userEmail}
+              {row.userEmail ? (
+                <div className="text-xs text-[var(--admin-muted)]">
+                  {row.userEmail}
+                </div>
+              ) : null}
+            </div>
+          );
+        },
+      },
+      {
+        key: "userType",
+        label: "User Type",
+        render: (value) => <span className="capitalize">{value}</span>,
+      },
+      {
+        key: "category",
+        label: "Category",
+        render: (value) => categoryLabel(value),
+      },
+      {
+        key: "messagePreview",
+        label: "Message Preview",
+        className: "w-[250px] max-w-[250px]",
+        render: (value, row) => (
+          <div className="w-[200px] max-w-[200px] overflow-hidden">
+            <div className="truncate font-medium text-[var(--admin-ink)]">
+              {row.subject || "N/A"}
+            </div>
+
+            <div className="truncate text-xs text-[var(--admin-muted)]">
+              {value || row.message || "No message"}
+            </div>
           </div>
-        ) : null}
-      </div>
-    );
-  },
-},
-    {
-      key: "userType",
-      label: "User Type",
-      render: (value) => <span className="capitalize">{value}</span>,
-    },
-    {
-      key: "category",
-      label: "Category",
-      render: (value) => categoryLabel(value),
-    },
-   {
-  key: "messagePreview",
-  label: "Message Preview",
-  className: "w-[250px] max-w-[250px]",
-  render: (value, row) => (
-    <div className="w-[200px] max-w-[200px] overflow-hidden">
-      <div className="truncate font-medium text-[var(--admin-ink)]">
-        {row.subject || "N/A"}
-      </div>
-
-      <div className="truncate text-xs text-[var(--admin-muted)]">
-        {value || row.message || "No message"}
-      </div>
-    </div>
-  ),
-},
-    {
-      key: "status",
-      label: "Status",
-      render: (value) => <StatusBadge status={value} label={statusLabel(value)} dot />,
-    },
-    {
-      key: "createdAt",
-      label: "Created Date",
-      render: (value) => formatDateTime(value),
-    },
-  ], []);
+        ),
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (value) => (
+          <StatusBadge status={value} label={statusLabel(value)} dot />
+        ),
+      },
+      {
+        key: "createdAt",
+        label: "Created Date",
+        render: (value) => formatDateTime(value),
+      },
+    ],
+    [],
+  );
 
   return (
     <div>
@@ -244,13 +266,17 @@ const AdminQueries = () => {
         isOpen={Boolean(selectedQuery)}
         onClose={() => setSelectedQuery(null)}
         onSubmit={updateStatus}
-        title={selectedQuery?.queryId ? `Query ${selectedQuery.queryId}` : "Query Details"}
+        title={
+          selectedQuery?.queryId
+            ? `Query ${selectedQuery.queryId}`
+            : "Query Details"
+        }
         submitButtonText="Update Status"
         closeButtonText="Close"
         loading={savingStatus}
       >
         {detailLoading ? (
-          <div className="py-10 text-center text-sm text-[var(--admin-muted)]">Loading query details...</div>
+          <QueryDetailsSkeleton />
         ) : selectedQuery ? (
           <div className="space-y-5">
             <div className="grid gap-3 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4 text-sm sm:grid-cols-2">
@@ -259,49 +285,79 @@ const AdminQueries = () => {
               <Info label="Email" value={selectedQuery.userEmail || "N/A"} />
               <Info label="Phone" value={selectedQuery.userPhone || "N/A"} />
               {selectedQuery.userType === "seller" ? (
-                <Info label="Organization" value={selectedQuery.sellerOrganizationName || selectedQuery.sellerOrganizationId || "N/A"} />
+                <Info
+                  label="Organization"
+                  value={
+                    selectedQuery.sellerOrganizationName ||
+                    selectedQuery.sellerOrganizationId ||
+                    "N/A"
+                  }
+                />
               ) : null}
-              <Info label="Created" value={formatDateTime(selectedQuery.createdAt)} />
+              <Info
+                label="Created"
+                value={formatDateTime(selectedQuery.createdAt)}
+              />
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Category</p>
-              <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">{categoryLabel(selectedQuery.category)}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
+                Category
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">
+                {categoryLabel(selectedQuery.category)}
+              </p>
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Subject</p>
-              <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">{selectedQuery.subject}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
+                Subject
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">
+                {selectedQuery.subject}
+              </p>
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Message</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
+                Message
+              </p>
               <p className="mt-2 whitespace-pre-wrap rounded-md border border-[var(--admin-line)] bg-white p-3 text-sm leading-6 text-[var(--admin-ink)]">
                 {selectedQuery.message}
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="text-sm font-semibold text-[var(--admin-ink)]">
-                Status
-                <select
-                  className="mt-1 w-full rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 text-sm"
-                  value={statusForm.status}
-                  onChange={(event) => setStatusForm((prev) => ({ ...prev, status: event.target.value }))}
-                >
-                  {SUPPORT_STATUSES.map((status) => (
-                    <option key={status.value} value={status.value}>{status.label}</option>
-                  ))}
-                </select>
-              </label>
+              <FilterSelect
+                label="Status"
+                options={SUPPORT_STATUSES}
+                value={
+                  SUPPORT_STATUSES.find(
+                    (item) => item.value === statusForm.status,
+                  ) || null
+                }
+                onChange={(selectedOption) =>
+                  setStatusForm((prev) => ({
+                    ...prev,
+                    status: selectedOption?.value || "",
+                  }))
+                }
+                isSearchable={false}
+                isClearable={false}
+              />
             </div>
 
             <label className="block text-sm font-semibold text-[var(--admin-ink)]">
               Admin Notes
               <textarea
-                className="mt-1 min-h-[110px] w-full rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 text-sm"
+                className="mt-1 min-h-[110px] w-full rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 text-sm focus:outline-none"
                 value={statusForm.adminNotes}
-                onChange={(event) => setStatusForm((prev) => ({ ...prev, adminNotes: event.target.value }))}
+                onChange={(event) =>
+                  setStatusForm((prev) => ({
+                    ...prev,
+                    adminNotes: event.target.value,
+                  }))
+                }
                 placeholder="Optional internal note"
               />
             </label>
@@ -314,7 +370,9 @@ const AdminQueries = () => {
 
 const Info = ({ label, value }) => (
   <div>
-    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">{label}</p>
+    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
+      {label}
+    </p>
     <p className="mt-1 break-words text-sm text-[var(--admin-ink)]">{value}</p>
   </div>
 );

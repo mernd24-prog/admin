@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
+import { MdAdd, MdDelete, MdEdit, MdVisibility } from "react-icons/md";
 
 import { CONTENT_TYPE_MAP, CONTENT_TYPES } from "./contentTypes";
 import ContentPageSetup from "../ContentPages/components/ContentPageSetup";
@@ -97,21 +98,21 @@ const SingletonCard = ({
     <div className="flex items-center gap-3">
       <button
         onClick={() => onView(page)}
-        className="px-4 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+        className="inline-flex items-center gap-1 px-4 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
       >
-        View
+        <MdVisibility size={16} className="text-blue-600" /> View
       </button>
       <button
         onClick={() => onEdit(page)}
-        className="px-4 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50"
+        className="inline-flex items-center gap-1 px-4 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50"
       >
-        Edit
+        <MdEdit size={16} className="text-blue-600" /> Edit
       </button>
       <button
         onClick={() => onDelete(page)}
-        className="px-4 py-1.5 text-sm font-medium text-red-500 border border-red-200 rounded-lg hover:bg-red-50"
+        className="inline-flex items-center gap-1 px-4 py-1.5 text-sm font-medium text-red-500 border border-red-200 rounded-lg hover:bg-red-50"
       >
-        Delete
+        <MdDelete size={16} className="text-red-600" /> Delete
       </button>
       <div className="ml-auto">
         <ToggleButton
@@ -279,8 +280,11 @@ const ContentManagement = () => {
           <p className="text-sm text-gray-400">{activeType.label}</p>
         </div>
         {!isSingleton && (
-          <button onClick={openAdd} className="admin-btn-primary">
-            + Add Content
+          <button
+            onClick={openAdd}
+            className="admin-btn-primary inline-flex items-center gap-1"
+          >
+            <MdAdd size={16} /> Add Content
           </button>
         )}
       </div>
@@ -326,8 +330,12 @@ const ContentManagement = () => {
               className="flex-1 min-h-[38px] rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
               placeholder="Search by title, slug, or content"
               value={filters.search}
-              onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch(filters.search)}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, search: e.target.value }))
+              }
+              onKeyDown={(e) =>
+                e.key === "Enter" && handleSearch(filters.search)
+              }
             />
             <button
               type="button"
@@ -339,7 +347,10 @@ const ContentManagement = () => {
             {search && (
               <button
                 type="button"
-                onClick={() => { setFilters({ search: "" }); handleSearch(""); }}
+                onClick={() => {
+                  setFilters({ search: "" });
+                  handleSearch("");
+                }}
                 className="admin-btn-secondary"
               >
                 Clear
@@ -395,21 +406,21 @@ const ContentManagement = () => {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => openEdit(page)}
-                            className="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50"
+                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50"
                           >
-                            Edit
+                            <MdEdit size={14} className="text-blue-600" /> Edit
                           </button>
                           <button
                             onClick={() => setViewingPage(page)}
-                            className="px-3 py-1 text-xs font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
+                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
                           >
-                            View
+                            <MdVisibility size={14} className="text-blue-600" /> View
                           </button>
                           <button
                             onClick={() => setDeleteTarget(page)}
-                            className="px-3 py-1 text-xs font-medium text-red-500 border border-red-200 rounded hover:bg-red-50"
+                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-red-500 border border-red-200 rounded hover:bg-red-50"
                           >
-                            Delete
+                            <MdDelete size={14} className="text-red-600" /> Delete
                           </button>
                         </div>
                       </td>
