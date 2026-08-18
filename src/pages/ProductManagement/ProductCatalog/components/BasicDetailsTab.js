@@ -1179,7 +1179,7 @@ export default function BasicDetailsTab({
                       ? 0
                       : (formData.warranty?.returnPolicy?.returnWindowDays ??
                         formData.warranty?.returnPolicy?.days ??
-                        7)
+                        0)
                   }
                   onChange={(event) =>
                     handleNestedChange(

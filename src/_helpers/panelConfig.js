@@ -34,12 +34,14 @@ export const PANEL_MODES = {
 //   return "";
 // };
 
-const requestedMode = String(process.env.REACT_APP_PANEL_MODE || "")
-  .trim()
-  .toLowerCase();
-const configuredMode = Object.values(PANEL_MODES).includes(requestedMode)
-  ? requestedMode
-  : PANEL_MODES.SELLER;
+// const requestedMode = String(process.env.REACT_APP_PANEL_MODE || "")
+//   .trim()
+//   .toLowerCase();
+// const configuredMode = Object.values(PANEL_MODES).includes(requestedMode)
+//   ? requestedMode
+//   : PANEL_MODES.ADMIN;
+
+const configuredMode =PANEL_MODES.ADMIN;
 
 export const getPanelMode = () => configuredMode;
 

@@ -1960,9 +1960,12 @@ export default function ProductManagementUI() {
       period: toOptionalNumber(updatedFormData.warranty?.period),
       returnPolicy: (() => {
         const current = updatedFormData.warranty?.returnPolicy || {};
-        const returnable = current.returnable ?? current.eligible ?? true;
+        const isNonReturnable = String(current.type || "").toLowerCase() === "non_returnable";
+        const returnable = isNonReturnable
+          ? false
+          : current.returnable ?? current.eligible ?? true;
         const returnWindowDays = returnable
-          ? Number(current.returnWindowDays ?? current.days ?? 7)
+          ? Number(current.returnWindowDays ?? current.days ?? 0)
           : 0;
         return {
           ...current,

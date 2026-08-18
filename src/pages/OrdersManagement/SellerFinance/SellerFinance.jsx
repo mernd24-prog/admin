@@ -12,6 +12,7 @@ import {
   MdLocalShipping,
   MdPercent,
   MdReceiptLong,
+  MdRefresh,
   MdShoppingCart,
   MdUndo,
   MdWallet,
@@ -422,14 +423,18 @@ const inputCls =
   "min-h-[38px] rounded-md border border-[#E6E6E6] px-3 text-sm outline-none focus:border-[#2f6fed]";
 
 const PAYMENT_METHODS = [
-  { value: "manual", label: "Manual / record later" },
   { value: "razorpayx", label: "RazorpayX bank payout" },
+  /*
+  // Old manual payout methods kept for fallback. Do not remove; re-enable if
+  // RazorpayX needs to be paused temporarily.
+  { value: "manual", label: "Manual / record later" },
   { value: "neft", label: "NEFT" },
   { value: "rtgs", label: "RTGS" },
   { value: "imps", label: "IMPS" },
   { value: "upi", label: "UPI" },
   { value: "cheque", label: "Cheque" },
   { value: "bank_transfer", label: "Bank transfer" },
+  */
 ];
 
 const availablePaymentMethods = (razorpayXEnabled) =>
@@ -470,6 +475,7 @@ const SellerFinance = () => {
   );
   const [runtime, setRuntime] = useState({ razorpayX: { enabled: false, mode: "disabled", missingKeys: [] } });
   const razorpayXEnabled = runtime?.razorpayX?.enabled === true;
+  const defaultPayoutMethod = razorpayXEnabled ? "razorpayx" : "manual";
   const payoutMethods = useMemo(() => availablePaymentMethods(razorpayXEnabled), [razorpayXEnabled]);
 
   const loadRuntime = useCallback(async () => {
@@ -503,7 +509,7 @@ const SellerFinance = () => {
     orderId: initialParams.get("orderId") || "",
     sellerId: initialParams.get("sellerId") || "",
     organizationId: initialParams.get("organizationId") || "",
-    paymentMethod: "manual",
+    paymentMethod: defaultPayoutMethod,
     paymentReference: "",
     periodStart: "",
     periodEnd: "",
@@ -515,9 +521,23 @@ const SellerFinance = () => {
     open: false,
     payout: null,
     paymentReference: "",
-    paymentMethod: "manual",
+    paymentMethod: defaultPayoutMethod,
     note: "",
   });
+
+  useEffect(() => {
+    if (!razorpayXEnabled) return;
+    setProcessModal((prev) =>
+      prev.paymentMethod === "manual"
+        ? { ...prev, paymentMethod: "razorpayx", paymentReference: "" }
+        : prev,
+    );
+    setCompleteModal((prev) =>
+      prev.paymentMethod === "manual"
+        ? { ...prev, paymentMethod: "razorpayx", paymentReference: "" }
+        : prev,
+    );
+  }, [razorpayXEnabled]);
 
   // Fail Payout modal
   const [failModal, setFailModal] = useState({
@@ -657,6 +677,7 @@ const SellerFinance = () => {
         held: 0,
         released: 0,
         nextEligibleAt: null,
+        eligibleCommissionIds: [],
       };
       const rowGross = rowMoney(row, "amount", "gross_amount", "grossAmount");
       const rowNet = rowMoney(row, "net_amount", "netAmount");
@@ -672,6 +693,7 @@ const SellerFinance = () => {
       } else if (["available", "eligible"].includes(lifecycle)) {
         current.eligible += 1;
         current.payableNow += rowNet;
+        current.eligibleCommissionIds.push(row.id);
       } else if (["held", "blocked", "on_hold"].includes(lifecycle)) {
         current.held += 1;
         current.heldAmount += rowNet;
@@ -925,7 +947,7 @@ const SellerFinance = () => {
         orderId: "",
         sellerId: "",
         organizationId: "",
-        paymentMethod: "manual",
+        paymentMethod: defaultPayoutMethod,
         paymentReference: "",
         periodStart: "",
         periodEnd: "",
@@ -992,8 +1014,12 @@ const SellerFinance = () => {
             commission.organizationId ||
             undefined,
           commissionIds,
-          paymentMethod: "manual",
-          paymentReference: `commission_${commission.id}_${Date.now()}`,
+          paymentMethod: defaultPayoutMethod,
+          autoProcess: defaultPayoutMethod === "razorpayx",
+          paymentReference:
+            defaultPayoutMethod === "razorpayx"
+              ? undefined
+              : `commission_${commission.id}_${Date.now()}`,
           note: `Single eligible commission payout for order ${commission.order_number || commission.order_id}`,
         }),
       ).unwrap();
@@ -1010,6 +1036,39 @@ const SellerFinance = () => {
     }
   };
 
+  const handleSellerEligiblePayout = async (seller) => {
+    const sellerId = seller?.sellerId;
+    const commissionIds = Array.isArray(seller?.eligibleCommissionIds)
+      ? seller.eligibleCommissionIds.filter(Boolean)
+      : [];
+    if (!sellerId || !commissionIds.length) {
+      toast.error("No eligible unpaid commission found for this seller");
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await dispatch(
+        processSellerPayouts({
+          sellerId,
+          commissionIds,
+          paymentMethod: defaultPayoutMethod,
+          autoProcess: defaultPayoutMethod === "razorpayx",
+          paymentReference:
+            defaultPayoutMethod === "razorpayx"
+              ? undefined
+              : `seller_${sellerId}_${Date.now()}`,
+          note: `Eligible seller payout for ${seller.sellerName || sellerId}`,
+        }),
+      ).unwrap();
+      toast.success("Eligible seller payout was added to the approval queue");
+      await loadFinance();
+    } catch (error) {
+      toast.error(error?.message || error || "Unable to create seller payout");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const openOrderPayoutModal = (commission) => {
     const sellerId = commission.seller_id || commission.sellerId || "";
     const orderId = commission.order_id || commission.orderId || "";
@@ -1019,7 +1078,7 @@ const SellerFinance = () => {
       orderId,
       sellerId,
       organizationId: commission.organization_id || commission.organizationId || "",
-      paymentMethod: "manual",
+      paymentMethod: defaultPayoutMethod,
       paymentReference: "",
       periodStart: "",
       periodEnd: "",
@@ -1028,7 +1087,8 @@ const SellerFinance = () => {
   };
 
   const handleCompletePayoutSubmit = async () => {
-    if (!completeModal.paymentReference.trim()) {
+    const isRazorpayX = completeModal.paymentMethod === "razorpayx";
+    if (!isRazorpayX && !completeModal.paymentReference.trim()) {
       toast.error("Payment reference is required");
       return;
     }
@@ -1037,17 +1097,19 @@ const SellerFinance = () => {
       await dispatch(
         completeSellerPayout({
           payoutId: completeModal.payout.id,
-          paymentReference: completeModal.paymentReference.trim(),
+          paymentReference: isRazorpayX
+            ? undefined
+            : completeModal.paymentReference.trim(),
           paymentMethod: completeModal.paymentMethod,
           note: completeModal.note.trim() || undefined,
         }),
       ).unwrap();
-      toast.success("Payout marked as completed");
+      toast.success(isRazorpayX ? "RazorpayX payout started" : "Payout marked as completed");
       setCompleteModal({
         open: false,
         payout: null,
         paymentReference: "",
-        paymentMethod: "manual",
+        paymentMethod: defaultPayoutMethod,
         note: "",
       });
       await loadFinance();
@@ -1083,17 +1145,48 @@ const SellerFinance = () => {
   };
 
   const openCompleteModal = (payout) => {
+    const payoutMethod = payout.payment_method || "";
+    const shouldUseRazorpayX =
+      payoutMethod === "razorpayx" ||
+      ((!payoutMethod || payoutMethod === "manual") &&
+        defaultPayoutMethod === "razorpayx");
     setCompleteModal({
       open: true,
       payout,
-      paymentReference: payout.payment_reference || "",
-      paymentMethod: payout.payment_method || "manual",
+      paymentReference:
+        shouldUseRazorpayX
+          ? ""
+          : payout.payment_reference || "",
+      paymentMethod:
+        payoutMethod === "razorpayx" || payoutMethod === "seller_wallet"
+          ? payoutMethod
+          : defaultPayoutMethod,
       note: "",
     });
   };
 
   const openFailModal = (payout) => {
     setFailModal({ open: true, payout, reason: "", note: "" });
+  };
+
+  const refreshPayoutEligibility = async () => {
+    try {
+      setSubmitting(true);
+      const response = await apiRequest("POST", ENDPOINTS.payouts.refreshEligibility, { limit: 500 });
+      const result = unwrap(response);
+      const eligibleCount = Array.isArray(result.eligibleItems)
+        ? result.eligibleItems.filter((item) => item.eligible).length
+        : 0;
+      const fulfilledCount = Array.isArray(result.fulfilledOrders)
+        ? result.fulfilledOrders.filter((order) => order.fulfilled).length
+        : 0;
+      toast.success(`Payout refresh complete: ${eligibleCount} item(s) eligible, ${fulfilledCount} order(s) fulfilled`);
+      await loadFinance();
+    } catch (error) {
+      toast.error(error?.message || error || "Unable to refresh payout eligibility");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -1129,6 +1222,26 @@ const SellerFinance = () => {
         is shown separately because it is already reflected in the eligible item
         value.
       </div>
+
+      {!isSeller && (
+        <div className="mb-4 flex justify-end">
+          <PermissionGuard
+            module="sellers/commissions"
+            action={ACTIONS.UPDATE}
+            hide
+          >
+            <button
+              type="button"
+              onClick={refreshPayoutEligibility}
+              disabled={submitting}
+              className="inline-flex items-center gap-2 rounded-md border border-[#1B1D60] bg-white px-4 py-2 text-sm font-semibold text-[#1B1D60] shadow-sm disabled:opacity-60"
+            >
+              <MdRefresh className={submitting ? "animate-spin" : ""} />
+              Refresh Payout Eligibility
+            </button>
+          </PermissionGuard>
+        </div>
+      )}
 
       {!isSeller && filters.sellerId && (
         <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
@@ -1239,6 +1352,23 @@ const SellerFinance = () => {
                         : "—"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        {seller.eligible > 0 && (
+                          <PermissionGuard
+                            module="sellers/commissions"
+                            action={ACTIONS.UPDATE}
+                            hide
+                          >
+                            <button
+                              type="button"
+                              className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                              onClick={() => handleSellerEligiblePayout(seller)}
+                              disabled={submitting}
+                            >
+                              Create Payout
+                            </button>
+                          </PermissionGuard>
+                        )}
                       <button
                         type="button"
                         className="rounded-md bg-[#2f6fed] px-3 py-2 text-xs font-semibold text-white"
@@ -1253,6 +1383,7 @@ const SellerFinance = () => {
                       >
                         View Seller
                       </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -2105,10 +2236,21 @@ const SellerFinance = () => {
               </div>
             )}
             <div className="space-y-3">
-              <FieldRow label="Payment Reference *">
+              <FieldRow
+                label={
+                  completeModal.paymentMethod === "razorpayx"
+                    ? "Payment Reference"
+                    : "Payment Reference *"
+                }
+              >
                 <input
                   className={inputCls}
-                  placeholder="UTR / transaction ID / cheque no."
+                  placeholder={
+                    completeModal.paymentMethod === "razorpayx"
+                      ? "Generated by RazorpayX"
+                      : "UTR / transaction ID / cheque no."
+                  }
+                  disabled={completeModal.paymentMethod === "razorpayx"}
                   value={completeModal.paymentReference}
                   onChange={(e) =>
                     setCompleteModal((prev) => ({
@@ -2129,12 +2271,22 @@ const SellerFinance = () => {
                     }))
                   }
                 >
-                  {payoutMethods.filter((m) => m.value !== "razorpayx").map((m) => (
+                  {payoutMethods.map((m) => (
                     <option key={m.value} value={m.value}>
                       {m.label}
                     </option>
                   ))}
                 </select>
+                {completeModal.paymentMethod === "razorpayx" && (
+                  <p className="text-xs text-[#65718b]">
+                    Starts RazorpayX payout; the provider payout ID is saved as the payment reference.
+                  </p>
+                )}
+                {/*
+                  Old manual completion stays available by choosing one of the
+                  manual methods above if those methods are re-enabled in
+                  PAYMENT_METHODS.
+                */}
               </FieldRow>
               <FieldRow label="Internal Note">
                 <textarea
