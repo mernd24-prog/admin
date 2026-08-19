@@ -41,7 +41,7 @@ export const PANEL_MODES = {
 //   ? requestedMode
 //   : PANEL_MODES.ADMIN;
 
-const configuredMode =PANEL_MODES.ADMIN;
+const configuredMode =PANEL_MODES.SELLER;
 
 export const getPanelMode = () => configuredMode;
 

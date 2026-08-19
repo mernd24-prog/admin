@@ -437,66 +437,74 @@ const KYCStatusLayout = ({
         </div>
       </aside>
 
-      <main className="min-w-0 bg-[#FCF5E8]">
-        <header className="sticky top-0 z-30 flex min-h-[64px] items-center justify-between gap-[10px] bg-[#FCF5E8] px-4 py-4 text-[#111827]  sm:px-6 lg:h-[75px] lg:px-[48px] lg:pb-[17px] lg:pt-[18px]">
-          <div className="flex min-w-0 items-center gap-2 text-[12px] font-semibold leading-[16px] text-[#111827] sm:text-[14px] lg:text-[16px]">
-            <span>Onboarding</span>
-            <span className="mx-1 sm:mx-[10px]">›</span>
-            <span className="truncate">
-              {menuItems[currentIndex]?.label || "Status"}
-            </span>
-          </div>
-          <div ref={userMenuRef} className="relative flex items-center gap-4">
-            {/* <Bell size={16} className="text-white/90" /> */}
-            <button
-              type="button"
-              onClick={() => setUserMenuOpen((open) => !open)}
-              className="flex items-center gap-3 rounded-[8px] px-2 py-1.5 text-left transition hover:bg-white/60"
-              aria-expanded={userMenuOpen}
-              aria-haspopup="menu"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E49E1C] bg-white text-[11px] font-bold text-[#082f91]">
-                {headerInitials}
-              </span>
-              <span className="hidden text-left sm:block">
-                <span className="block max-w-[130px] truncate text-left text-[14px] font-bold leading-[20px] text-[#111827]">
-                  {headerName}
-                </span>
-                <span className="mt-1 block max-w-[130px] truncate text-left text-[10px] font-medium leading-[15px] text-[#5f6575]">
-                  {headerEmail || headerSubtitle}
-                </span>
-              </span>
-              <ChevronDown
-                size={16}
-                className={`text-[#082f91] transition ${userMenuOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-            {userMenuOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 top-[calc(100%+8px)] z-50 w-[210px] rounded-[8px] border border-[#eadfcb] bg-white py-2 shadow-xl"
-              >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-[#b42318] transition hover:bg-[#fff4f3]"
-                >
-                  <LogOut size={16} />
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
+<main className="min-w-0 bg-[#FCF5E8]">
+  <header className="sticky top-0 z-30 flex min-h-[64px] items-center justify-between gap-[10px] bg-[#FCF5E8] px-4 py-4 text-[#111827] sm:px-6 lg:h-[75px] lg:px-[48px] lg:pb-[17px] lg:pt-[18px]">
+    <div className="flex min-w-0 items-center gap-2 text-[12px] font-semibold leading-[16px] text-[#111827] sm:text-[14px] lg:text-[16px]">
+      <span>Onboarding</span>
+      <span className="mx-1 sm:mx-[10px]">›</span>
+      <span className="truncate">
+        {menuItems[currentIndex]?.label || "Status"}
+      </span>
+    </div>
 
+    <div ref={userMenuRef} className="relative flex items-center gap-4">
+      <button
+        type="button"
+        onClick={() => setUserMenuOpen((open) => !open)}
+        className="flex items-center gap-3 rounded-[8px] px-2 py-1.5 text-left transition hover:bg-white/60"
+        aria-expanded={userMenuOpen}
+        aria-haspopup="menu"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E49E1C] bg-white text-[11px] font-bold text-[#082f91]">
+          {headerInitials}
+        </span>
+
+        <span className="hidden text-left sm:block">
+          <span className="block max-w-[130px] truncate text-left text-[14px] font-bold leading-[20px] text-[#111827]">
+            {headerName}
+          </span>
+
+          <span className="mt-1 block max-w-[130px] truncate text-left text-[10px] font-medium leading-[15px] text-[#5f6575]">
+            {headerEmail || headerSubtitle}
+          </span>
+        </span>
+
+        <ChevronDown
+          size={16}
+          className={`text-[#082f91] transition ${
+            userMenuOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {userMenuOpen && (
         <div
-          ref={contentRef}
-          className="min-h-[calc(100vh-64px)] bg-[#F7F8FC] rounded-tl-[32px] rounded-tr-none rounded-br-none rounded-bl-none px-4 py-6 sm:px-8 lg:min-h-[calc(100vh-75px)] lg:px-10"
+          role="menu"
+          className="absolute right-0 top-[calc(100%+8px)] z-50 w-[210px] rounded-[8px] border border-[#eadfcb] bg-white py-2 shadow-xl"
         >
-          {children}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-[#b42318] transition hover:bg-[#fff4f3]"
+          >
+            <LogOut size={16} />
+            Logout
+          </button>
         </div>
-      </main>
+      )}
+    </div>
+  </header>
+
+  <div className="kyc-content-wrapper">
+    <div
+      ref={contentRef}
+      className="kyc-content-scroll bg-[#F7F8FC] px-4 py-6 sm:px-8 lg:px-10"
+    >
+      {children}
+    </div>
+  </div>
+</main>
     </div>
   );
 };

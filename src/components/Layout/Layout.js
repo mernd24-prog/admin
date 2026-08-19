@@ -831,64 +831,90 @@ function Layout() {
   }, [isExpanded, navbarOpen]);
 
   return (
-    <div className="admin-shell relative flex h-screen overflow-hidden  bg-[var(--admin-shell)]">
-      <div className={`z-50`}>
-        <Sidebar
-          navbarOpen={navbarOpen}
-          setNavbarOpen={setNavbarOpen}
-          setModuleName={setModuleName}
-          isExpanded={isExpanded}
-          setIsExpanded={setIsExpanded}
-          isRefreshConfig={isRefreshConfig}
-          setHasPermanentOpen={setHasPermanentOpen}
-        />
-      </div>
+  <div className="admin-shell relative flex h-screen overflow-hidden bg-[var(--admin-shell)]">
+    <div className="z-50">
+      <Sidebar
+        navbarOpen={navbarOpen}
+        setNavbarOpen={setNavbarOpen}
+        setModuleName={setModuleName}
+        isExpanded={isExpanded}
+        setIsExpanded={setIsExpanded}
+        isRefreshConfig={isRefreshConfig}
+        setHasPermanentOpen={setHasPermanentOpen}
+      />
+    </div>
 
+    <div
+      className={`relative flex flex-col flex-1 overflow-hidden !bg-[var(--admin-shell)] ${
+        navbarOpen ? "" : "lg:ml-0"
+      }`}
+    >
+      {/* Inner corner notch — sidebar/header junction */}
       <div
-        className={`relative flex flex-col flex-1 overflow-hidden !bg-[var(--admin-shell)] ${
-          navbarOpen ? "" : "lg:ml-0"
+        className="absolute left-0 top-0 h-5 w-5 z-40 pointer-events-none"
+        style={{
+          background: "var(--admin-canvas)",
+          WebkitMaskImage:
+            "radial-gradient(circle at 0 0, transparent 20px, black 20px)",
+          maskImage:
+            "radial-gradient(circle at 0 0, transparent 20px, black 20px)",
+          boxShadow:
+            "inset 6px 6px 8px -4px rgba(86, 78, 78, 0.25)",
+        }}
+      />
+
+      <Header
+        handleNavbar={handleSidebarToggle}
+        moduleName={moduleName}
+        hasPermanentOpen={hasPermanentOpen}
+        isSidebarExpanded={isExpanded}
+      />
+
+      <main
+        className={`flex-1 overflow-y-auto overflow-x-hidden bg-[var(--admin-canvas)] sidebar-scrollbar admin-inner-shadow rounded-tl-2xl ${
+          hasPermanentOpen ? "" : "pt-[58px]"
         }`}
       >
-        <Header
-          handleNavbar={handleSidebarToggle}
-          moduleName={moduleName}
-          hasPermanentOpen={hasPermanentOpen}
-          isSidebarExpanded={isExpanded}
-        />
-        <main
-          className={`flex-1 overflow-y-auto   bg-[var(--admin-canvas)] sidebar-scrollbar ${hasPermanentOpen ? "" : "pt-[58px]"}`}
-        >
-          <Suspense fallback={<PageSkeletonLoader />}>
-            <div className="admin-page-transition">
-              <Routes location={location}>
-                {dynamicRoutes.map((route) => {
-                  const routeElement = route.redirectTo ? (
-                    <Navigate to={route.redirectTo} replace />
-                  ) : (
-                    route.render()
-                  );
-                  const permissionPath = route.permissionPath || route.path;
+        <Suspense fallback={<PageSkeletonLoader />}>
+          <div className="admin-page-transition">
+            <Routes location={location}>
+              {dynamicRoutes.map((route) => {
+                const routeElement = route.redirectTo ? (
+                  <Navigate to={route.redirectTo} replace />
+                ) : (
+                  route.render()
+                );
 
-                  return (
-                    <Route
-                      key={route.path}
-                      path={route.path}
-                      element={
-                        route.redirectTo
-                          ? routeElement
-                          : renderRoute(permissionPath, routeElement)
-                      }
-                    />
-                  );
-                })}
-                <Route path="*" element={<Navigate to="/app/home" replace />} />
-              </Routes>
-            </div>
-          </Suspense>
-        </main>
-      </div>
+                const permissionPath =
+                  route.permissionPath || route.path;
+
+                return (
+                  <Route
+                    key={route.path}
+                    path={route.path}
+                    element={
+                      route.redirectTo
+                        ? routeElement
+                        : renderRoute(
+                            permissionPath,
+                            routeElement
+                          )
+                    }
+                  />
+                );
+              })}
+
+              <Route
+                path="*"
+                element={<Navigate to="/app/home" replace />}
+              />
+            </Routes>
+          </div>
+        </Suspense>
+      </main>
     </div>
-  );
+  </div>
+);
 }
 
 export default Layout;
