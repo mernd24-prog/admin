@@ -682,7 +682,7 @@ const Sidebar = ({
             <a href={"/app/dashboard"}>
               <BrandLogo
                 className="mb-0  h-[90px] w-[210px] rounded-[6px] border border-[var(--admin-gold)] bg-[var(--admin-shell)] p-[6px] shadow-[0_3px_8px_rgba(31,27,95,0.08)]"
-                imageClassName="!h-full w-full rounded-[5px] border border-[var(--admin-gold)] bg-white p-[4px]"
+                imageClassName="!h-full w-full rounded-[5px] border border-[var(--admin-gold)] bg-white p-[8px]"
               />
             </a>
           </div>
@@ -763,7 +763,7 @@ const Sidebar = ({
                         <Icon size={15} />
                       </span>
                       {isExpanded && (
-                        <span className="min-w-0 truncate text-[12px] font-semibold">
+                        <span className="min-w-0 truncate text-[13px] font-semibold">
                           {item.label}
                         </span>
                       )}
@@ -798,11 +798,11 @@ const Sidebar = ({
                     <span
                       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${hasActiveChild ? "text-white" : "text-[var(--admin-blue)]"}`}
                     >
-                      <Icon size={15} />
+                      <Icon size={18} />
                     </span>
                     {isExpanded && (
                       <>
-                        <span className="min-w-0 truncate text-[12px] font-semibold">
+                        <span className="min-w-0 truncate text-[13px] font-semibold">
                           {item.label}
                         </span>
                         <MdChevronRight
@@ -851,7 +851,7 @@ const Sidebar = ({
                                 <span
                                   className={`mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full ${isSubActive ? "bg-[var(--admin-gold)]" : "bg-[var(--admin-line-strong)]"}`}
                                 />
-                                <span className="min-w-0 whitespace-normal break-words text-[12px] capitalize leading-5">
+                                <span className="min-w-0 whitespace-normal break-words text-[13px] capitalize leading-5">
                                   {sub.label}
                                 </span>
                               </Link>
