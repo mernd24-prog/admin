@@ -514,11 +514,12 @@ const PayoutOpsQueue = () => {
         key: "status",
         label: "Status",
         sortable: true,
+        cellClassName: "whitespace-normal",
         render: (value, row) => (
-          <div>
+          <div className="min-w-0 max-w-[250px]">
             <StatusBadge status={value} dot />
             {payoutFailureReason(row) && (
-              <div className="mt-1 max-w-[220px] text-xs text-red-600">
+              <div className="mt-1 break-words whitespace-normal text-xs leading-4 text-red-600">
                 {payoutFailureReason(row)}
               </div>
             )}
