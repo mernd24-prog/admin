@@ -136,8 +136,6 @@ const normalizeProductServiceabilityMode = (mode) => {
     serviceable_pincodes: "allowlist",
     allow_pincodes: "allowlist",
     allowlist: "allowlist",
-    selected_states: "regions",
-    selected_cities: "regions",
     regions: "regions",
     disabled: "disabled",
   };
@@ -278,6 +276,7 @@ export default function ProductManagementUI() {
   const [platformOptions, setPlatformOptions] = useState([]);
   const [platformValues, setPlatformValues] = useState({});
   const fetchedOptionIds = useRef(new Set());
+  const categoryAttributeRequestRef = useRef(0);
   const [saving, setSaving] = useState(false);
   const [shippingProfileOptions, setShippingProfileOptions] = useState([]);
   const [allowedPincodeInput, setAllowedPincodeInput] = useState("");
@@ -720,6 +719,7 @@ export default function ProductManagementUI() {
       formData?.category_id ||
       formData?.categoryId;
     if (!categoryKey) {
+      categoryAttributeRequestRef.current += 1;
       setCategoryAttributeSchema([]);
       return;
     }
@@ -741,12 +741,14 @@ export default function ProductManagementUI() {
           setPlatformValues((prev) => ({ ...prev, [optId]: cachedValues }));
         }
       });
-      return;
     }
 
+    const requestId = categoryAttributeRequestRef.current + 1;
+    categoryAttributeRequestRef.current = requestId;
     dispatch(getCategoryAttributes({ categoryKey }))
       .unwrap()
       .then((res) => {
+        if (categoryAttributeRequestRef.current !== requestId) return;
         const data = res?.data || {};
         const schema = data.attributeSchema || [];
         setCategoryAttributeSchema(schema);
@@ -775,7 +777,12 @@ export default function ProductManagementUI() {
         });
       })
       .catch(() => {
-        setCategoryAttributeSchema([]);
+        if (
+          categoryAttributeRequestRef.current === requestId &&
+          !cachedCategoryAttributes
+        ) {
+          setCategoryAttributeSchema([]);
+        }
       });
   }, [
     dispatch,
@@ -891,8 +898,7 @@ export default function ProductManagementUI() {
   const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
 
   // Load shipping profiles whenever the seller / org context changes.
-  // Admin users also see admin-authored templates here so they can assign
-  // reusable delivery rules directly while creating/updating products.
+  // Published Admin templates are available to both panels as copy sources.
   useEffect(() => {
     const sid =
       formData?.sellerId ||
@@ -924,8 +930,7 @@ export default function ProductManagementUI() {
           .catch(() => []),
       );
     }
-    if (!isSellerPanelUser) {
-      requests.push(
+    requests.push(
         dispatch(
           getShippingProfileTemplates({
             status: "published",
@@ -953,7 +958,6 @@ export default function ProductManagementUI() {
           })
           .catch(() => []),
       );
-    }
     if (!requests.length) {
       setShippingProfileOptions([]);
       return;
@@ -1847,7 +1851,6 @@ export default function ProductManagementUI() {
           shipping: {
             ...(prev.shipping || {}),
             freeShipping: nextFreeShipping,
-            ...(nextFreeShipping ? { shippingProfileId: null } : {}),
           },
         };
       });
@@ -1880,7 +1883,6 @@ export default function ProductManagementUI() {
     // persist manual-attributes selection to payload
     updatedFormData.attributesManual = useManualAttributes;
     const selectedShippingOption =
-      !updatedFormData.shipping?.freeShipping &&
       updatedFormData.shipping?.shippingProfileId
         ? shippingProfileOptions.find(
             (option) =>
@@ -1889,8 +1891,6 @@ export default function ProductManagementUI() {
           ) || null
         : null;
     const selectedShippingProfile = selectedShippingOption?.profile || null;
-    const isSelectedShippingTemplate =
-      selectedShippingOption?.type === "template";
     const profileShippingCharge = selectedShippingProfile
       ? toOptionalNumber(selectedShippingProfile.shippingCharge)
       : undefined;
@@ -2005,45 +2005,20 @@ export default function ProductManagementUI() {
     const shipping = compactObject(
       selectedShippingProfile
         ? {
-            shippingProfileId: isSelectedShippingTemplate
-              ? null
-              : updatedFormData.shipping?.shippingProfileId,
+            shippingProfileId: updatedFormData.shipping?.shippingProfileId,
 
             freeShipping: profileShippingCharge === 0,
             additionalCost: profileShippingCharge,
             shippingCharge: profileShippingCharge,
 
-            serviceabilityMode: normalizeProductServiceabilityMode(
-              selectedShippingProfile.serviceabilityMode,
-            ),
-
-            allowPincodes:
-              selectedShippingProfile.allowedPincodes ||
-              selectedShippingProfile.allowPincodes ||
-              selectedShippingProfile.serviceablePincodes ||
-              [],
-
-            serviceablePincodes:
-              selectedShippingProfile.allowedPincodes ||
-              selectedShippingProfile.serviceablePincodes ||
-              selectedShippingProfile.allowPincodes ||
-              [],
-
-            regions:
-              selectedShippingProfile.regions ||
-              selectedShippingProfile.allowedStates ||
-              selectedShippingProfile.states ||
-              [],
-
-            states:
-              selectedShippingProfile.allowedStates ||
-              selectedShippingProfile.states ||
-              [],
-
-            cities:
-              selectedShippingProfile.allowedCities ||
-              selectedShippingProfile.cities ||
-              [],
+            // Profile serviceability is resolved at checkout. Keep product-level
+            // coverage empty so two competing pincode sources are never stored.
+            serviceabilityMode: "inherit",
+            allowPincodes: [],
+            serviceablePincodes: [],
+            regions: [],
+            states: [],
+            cities: [],
 
             codAvailable: resolvedCodAvailable,
 
@@ -2056,8 +2031,6 @@ export default function ProductManagementUI() {
           }
         : {
             ...(updatedFormData.shipping || {}),
-            blockPincodes: undefined,
-
             serviceabilityMode: normalizeProductServiceabilityMode(
               updatedFormData.shipping?.serviceabilityMode,
             ),
@@ -2104,9 +2077,8 @@ export default function ProductManagementUI() {
               updatedFormData.shipping?.estimatedDaysMax,
             ),
 
-            shippingProfileId: updatedFormData.shipping?.freeShipping
-              ? null
-              : updatedFormData.shipping?.shippingProfileId || null,
+            shippingProfileId:
+              updatedFormData.shipping?.shippingProfileId || null,
           },
     );
 
@@ -2308,6 +2280,36 @@ export default function ProductManagementUI() {
       },
     }));
   }, []);
+
+  const copyShippingTemplateToProduct = useCallback((templateOption) => {
+    const template = templateOption?.profile;
+    if (!template) return;
+    const pincodes = normalizePincodeList(
+      template.allowedPincodes || template.allowPincodes || template.serviceablePincodes,
+    );
+    patchShipping({
+      shippingProfileId: null,
+      serviceabilityMode: normalizeProductServiceabilityMode(template.serviceabilityMode),
+      allowPincodes: pincodes,
+      serviceablePincodes: pincodes,
+      regions: [],
+      states: [],
+      cities: [],
+      freeShipping: Number(template.shippingCharge || 0) === 0,
+      shippingCharge: toOptionalNumber(template.shippingCharge),
+      additionalCost: toOptionalNumber(template.shippingCharge),
+      handlingCharge: toOptionalNumber(template.handlingCharge),
+      freeShippingMinOrder: toOptionalNumber(template.freeShippingThreshold),
+      processingDays: toOptionalNumber(template.etaMin),
+      estimatedDaysMin: toOptionalNumber(template.etaMin),
+      estimatedDaysMax: toOptionalNumber(template.etaMax),
+      shippingMethod: template.shippingMethod || "standard",
+      codAvailable: template.codAvailable !== false,
+      copiedFromShippingTemplateId: template.sourceTemplateId || template.id || null,
+      copiedFromShippingTemplateName: template.name || templateOption.label || "",
+    });
+    toast.success(`Copied ${template.name || "shipping template"} into product delivery settings`);
+  }, [patchShipping]);
 
   const addProductPincode = useCallback(() => {
     const value = allowedPincodeInput.trim();
@@ -2950,7 +2952,7 @@ export default function ProductManagementUI() {
               </p>
             </div>
 
-            {formData?.shipping?.freeShipping ? (
+            {formData?.shipping?.freeShipping && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                 <p className="text-sm font-semibold text-emerald-800">
                   Free shipping is enabled
@@ -2960,8 +2962,8 @@ export default function ProductManagementUI() {
                   applies.
                 </p>
               </div>
-            ) : (
-              <div
+            )}
+            <div
                 className={`rounded-xl border p-4 space-y-3 ${formData?.shipping?.shippingProfileId ? "border-[var(--admin-blue)]" : "border-gray-200 "}`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -2975,27 +2977,33 @@ export default function ProductManagementUI() {
                     </p>
                   </div>
                   {formData?.shipping?.shippingProfileId && (
-                    <button
-                      type="button"
-                      className="text-xs text-red-500 hover:underline whitespace-nowrap"
-                      onClick={() =>
-                        patchShipping({
-                          shippingProfileId: null,
-                        })
-                      }
-                    >
-                      Remove profile
-                    </button>
+                    <div className="flex items-center gap-3 whitespace-nowrap">
+                      <a
+                        href={`/app/shipping-profiles?edit=${encodeURIComponent(formData.shipping.shippingProfileId)}`}
+                        className="text-xs font-semibold text-[var(--admin-blue)] hover:underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Edit profile
+                      </a>
+                      <button
+                        type="button"
+                        className="text-xs text-red-500 hover:underline"
+                        onClick={() => patchShipping({ shippingProfileId: null })}
+                      >
+                        Remove profile
+                      </button>
+                    </div>
                   )}
                 </div>
                 <FilterSelect
-                  options={shippingProfileOptions.map((opt) => ({
+                  options={shippingProfileOptions.filter((opt) => opt.type === "profile").map((opt) => ({
                     ...opt,
                     label:
                       opt.label + (opt.profile?.isDefault ? " (Default)" : ""),
                   }))}
                   value={
-                    shippingProfileOptions.find(
+                    shippingProfileOptions.filter((opt) => opt.type === "profile").find(
                       (opt) =>
                         opt.value === formData?.shipping?.shippingProfileId,
                     ) || null
@@ -3018,12 +3026,28 @@ export default function ProductManagementUI() {
                   isSearchable
                 />
 
-                {shippingProfileOptions.length === 0 && !formData?.sellerId && (
+                {!formData?.shipping?.shippingProfileId &&
+                  shippingProfileOptions.some((option) => option.type === "template") && (
+                    <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-3">
+                      <p className="text-xs font-semibold text-amber-900">Copy an Admin template</p>
+                      <p className="mb-2 mt-0.5 text-[11px] text-amber-700">Copies serviceability, pincodes, charges, and ETA into this product. It remains editable and does not create or select a reusable profile.</p>
+                      <FilterSelect
+                        options={shippingProfileOptions.filter((option) => option.type === "template")}
+                        value={null}
+                        onChange={copyShippingTemplateToProduct}
+                        placeholder="Select a template to copy"
+                        isSearchable
+                        isClearable={false}
+                      />
+                    </div>
+                  )}
+
+                {shippingProfileOptions.filter((option) => option.type === "profile").length === 0 && !formData?.sellerId && (
                   <p className="text-xs text-amber-600">
                     Select a seller first to load their shipping profiles.
                   </p>
                 )}
-                {shippingProfileOptions.length === 0 && formData?.sellerId && (
+                {shippingProfileOptions.filter((option) => option.type === "profile").length === 0 && formData?.sellerId && (
                   <p className="text-xs text-gray-400">
                     No active shipping profiles found.{" "}
                     <a
@@ -3044,7 +3068,8 @@ export default function ProductManagementUI() {
                     const p = selected?.profile;
                     if (!p) return null;
                     return (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                      <div className="space-y-3 pt-1">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {[
                           { label: "Method", value: p.shippingMethod },
                           {
@@ -3082,6 +3107,25 @@ export default function ProductManagementUI() {
                             </p>
                           </div>
                         ))}
+                        </div>
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                            Delivery coverage
+                          </p>
+                          {p.serviceabilityMode === "all_india" ? (
+                            <p className="text-xs font-semibold text-emerald-700">All India pincodes</p>
+                          ) : (p.allowedPincodes || []).length ? (
+                            <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+                              {(p.allowedPincodes || []).map((pincode) => (
+                                <span key={pincode} className="rounded-full border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-medium text-blue-700">
+                                  {pincode}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-600">No pincodes configured</p>
+                          )}
+                        </div>
                       </div>
                     );
                   })()}
@@ -3092,8 +3136,7 @@ export default function ProductManagementUI() {
                     manually.
                   </p>
                 )}
-              </div>
-            )}
+            </div>
 
             <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-4">
               <div>

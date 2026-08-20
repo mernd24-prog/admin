@@ -108,7 +108,6 @@ export const SELLER_ALLOWED_MODULE_CODES = new Set([
   "sellers/commissions",
   "seller-payouts",
   "seller-cod-collections",
-  "cod-config",
   "tax",
   "tax-invoices",
   "credit-notes",
@@ -248,7 +247,6 @@ const MODULE_LABELS = {
   // Subscription plans
   "subscription-plans": "Subscription Plan Management",
   // Payment config
-  "cod-config": "COD Configuration",
   chargebacks: "Chargeback Management",
   // Payouts
   "seller-payouts": "Seller Payout Management",
@@ -353,7 +351,6 @@ const MODULE_TABS = {
   // Subscription plans
   "subscription-plans": "Commerce Settings",
   // Payment config & chargebacks
-  "cod-config": "Commerce Settings",
   chargebacks: "Payments & Finance",
   // Payouts
   "seller-payouts": "Seller Finance & Payouts",
@@ -484,7 +481,6 @@ export const MODULE_DEFAULT_ROUTES = {
   // Subscription plans
   "subscription-plans": "subscription-plans",
   // Payment config
-  "cod-config": "cod-config",
   chargebacks: "chargebacks",
   // Payouts
   "seller-payouts": "seller-payouts",
@@ -553,7 +549,7 @@ const ROUTE_MODULES = [
   // Catalog Management — products
   [
     [
-      "/product-catalog", "/product-catalog/archived", "/store", "/bar-code", "/qty-head", "/seller-special-price-manager",
+      "/product-catalog", "/store", "/bar-code", "/qty-head", "/seller-special-price-manager",
     ],
     ["products"],
   ],
@@ -624,15 +620,14 @@ const ROUTE_MODULES = [
 
   // Commerce Settings
   [["/commerce-settings", "/platform-commission", "/seller-tiers"], ["commerce-settings", "platform-commission", "seller-tiers", "admin", "payments", "orders"]],
-  [["/cod-config"], ["cod-config"]],
   [["/subscription-plans"], ["subscriptions", "platform", "admin"]],
 
   // Marketing
   [["/discount-coupons"], ["coupons", "pricing"]],
   [["/badges", "/ribbons"], ["badges", "platform", "pricing"]],
   [["/referral-commerce/overview"], ["referral-overview", "referral"]],
-  [["/referral-commerce/product-distribution"], ["referral-product-distribution", "referral"]],
   [["/referral-commerce/influencers"], ["influencer-management", "referral"]],
+  [["/referral-commerce/product-amounts"], ["referral"]],
   [["/referral-commerce/codes"], ["referral-codes", "referral"]],
   [["/referral-commerce/rules"], ["referral-rules", "referral"]],
   [["/referral-commerce/bonuses"], ["referral-bonus-rules", "referral-bonus-progress", "referral-bonus-history", "referral"]],

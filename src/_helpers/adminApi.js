@@ -49,7 +49,6 @@ export const DEFAULT_SELLER_MODULES = [
   "seller-management",
   "sellers/commissions",
   "seller-payouts",
-  "cod-config",
   "tax",
   "tax-invoices",
   "credit-notes",

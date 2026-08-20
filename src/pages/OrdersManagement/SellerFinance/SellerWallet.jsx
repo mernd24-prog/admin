@@ -273,9 +273,9 @@ export default function SellerWallet() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <SummaryCard
-          title="Available for payout"
-          value={money(balances.availableBalance, currency)}
-          description={`${counts.available || 0} eligible order entries`}
+          title="Payable after adjustments"
+          value={money(balances.effectiveAvailablePayout, currency)}
+          description={`${money(balances.availableBalance, currency)} earnings before COD and other liabilities`}
           icon={<MdAccountBalanceWallet size={22} />}
         />
 
@@ -502,13 +502,24 @@ export default function SellerWallet() {
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-4">
             <h2 className="text-[18px] font-medium text-gray-900">
-              Adjustments
+              Seller-collected COD liability
             </h2>
             <p className="mt-2 font-medium text-gray-900">
-              {money(balances.refundAdjustmentBalance, currency)}
+              {money(balances.codLiabilityBalance, currency)}
             </p>
             <p className="mt-1 text-xs text-gray-500">
-              Refunds, chargebacks, corrections, and negative balance recovery.
+              COD cash held by you. It is automatically deducted from released earnings and any remainder carries forward.
+            </p>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <h2 className="text-[18px] font-medium text-gray-900">
+              Other adjustments
+            </h2>
+            <p className="mt-2 font-medium text-gray-900">
+              {money(balances.otherAdjustmentBalance, currency)}
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              Refunds, chargebacks, corrections, and non-COD recoveries.
             </p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-4">

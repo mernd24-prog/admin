@@ -711,7 +711,7 @@ const Sidebar = ({
           <button
             type="button"
             aria-label="Close sidebar"
-            className="absolute right-2 top-4 flex h-8 w-8 items-center justify-center text-[var(--admin-muted)] transition hover:text-[var(--admin-navy)] focus:outline-none sm:right-3 lg:hidden"
+            className= " absolute right-0 top-0 flex h-8 w-8 items-center justify-center text-[var(--admin-muted)] transition hover:text-[var(--admin-navy)] focus:outline-none sm:right-3 lg:hidden"
             onClick={() => {
               setNavbarOpen(false);
               setIsExpanded(false);

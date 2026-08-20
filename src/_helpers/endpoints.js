@@ -71,6 +71,7 @@ export const ENDPOINTS = {
     createSellerSubAdmin: "/admin/seller-users/seller-sub-admin",
   },
   sellers: {
+    myChargeSettings: "/sellers/me/charge-settings",
     onboardingKyc: "/sellers/onboarding/kyc",
     onboardingProfile: "/sellers/onboarding/profile",
     aadhaarPrecheck: "/sellers/kyc/aadhaar/precheck",
@@ -149,15 +150,7 @@ export const ENDPOINTS = {
       (productId) => `/admin/products/${productId}/status`,
       (productId) => `/products/${productId}/status`
     ),
-    archive: byPanelFn(
-      (productId) => `/admin/products/${productId}/archive`,
-      (productId) => `/products/${productId}/archive`
-    ),
     permanentDelete: (productId) => `/admin/products/${productId}/permanent`,
-    restore: byPanelFn(
-      (productId) => `/admin/products/${productId}/restore`,
-      (productId) => `/products/${productId}/restore`
-    ),
     duplicate: byPanelFn(
       (productId) => `/admin/products/${productId}/duplicate`,
       (productId) => `/products/${productId}/duplicate`
@@ -202,7 +195,6 @@ export const ENDPOINTS = {
     admin: "/payments/admin",
     detail: (paymentId) => `/payments/admin/${paymentId}`,
     options: "/payments/options",
-    codConfig: "/payments/admin/cod-config",
     approve: (paymentId) => `/payments/${paymentId}/approve`,
     reject: (paymentId) => `/payments/${paymentId}/reject`,
     codCollections: "/payments/cod-collections",
@@ -266,15 +258,13 @@ export const ENDPOINTS = {
   },
   commerceSettings: {
     detail: "/admin/commerce-settings",
-    sellerChargeSettings: "/admin/commerce-settings/seller-charge-settings",
-    sellerChargeSetting: (sellerId) => `/admin/commerce-settings/seller-charge-settings/${sellerId}`,
   },
   wallets: {
     adminTransactions: "/wallets/admin/transactions",
   },
   referral: {
-    productConfigs: "/admin/referral/product-configs",
-    productConfig: (configId) => `/admin/referral/product-configs/${configId}`,
+    productAmounts: "/admin/referral/product-amounts",
+    productAmount: (configId) => `/admin/referral/product-amounts/${configId}`,
     influencers: "/admin/referral/influencers",
     parentInfluencers: "/admin/referral/influencers/parents",
     childInfluencers: (parentId) => `/admin/referral/influencers/${parentId}/children`,

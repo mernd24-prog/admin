@@ -31,7 +31,6 @@ export default function SearchComponent({
   isActionButton = false,
   isSearchDown = false,
   isStatusAction,
-  isArchiveAction = false,
   isPermanentDeleteAction = false,
   productOptions = [],
   userOptions = [],
@@ -297,19 +296,6 @@ export default function SearchComponent({
           Deactivate
         </Button>
       </>
-    )}
-
-    {isActionButton && isArchiveAction && (
-      <Button
-        onClick={() => handleBulkAction("Archive")}
-        disabled={selectedRow.length === 0 || loading || isFiltering}
-        requiredModule={guardModule}
-        requiredAction="delete"
-        className="h-9 !min-h-9 border-amber-600 text-amber-700 gap-2"
-      >
-        <MdOutlineDeleteOutline className="text-xl" />
-        Archive
-      </Button>
     )}
 
     {isActionButton && isPermanentDeleteAction && (

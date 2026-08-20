@@ -250,7 +250,7 @@ const initialState = {
     productPrefillData: {},
     bulkUpdateProductsData: {}, adjustProductInventoryData: {}, getInventoryStatsData: {}, getTopProductsData: {},
     getInventoryTransactionsData: {},
-    archiveProductData: {}, restoreProductData: {}, duplicateProductData: {}, permanentlyDeleteProductData: {},
+    duplicateProductData: {}, permanentlyDeleteProductData: {},
 }
 
 export const getList = createApiThunkPrivate('product/getList', ENDPOINTS.platform.categories, 'GET', true, {
@@ -558,18 +558,7 @@ export const enableDisableProductCatalogs = patchMany(
 export const updateProductsById = createApiThunkPrivate('updateProductsById', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'PATCH', false, {
     transformBody: toProductPatchBody,
 })
-export const deleteProducts = createApiThunkPrivate('deleteProducts', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'DELETE')
 export const permanentlyDeleteProduct = createApiThunkPrivate('permanentlyDeleteProduct', (payload) => ENDPOINTS.products.permanentDelete(firstProductId(payload)), 'DELETE')
-export const archiveProduct = createApiThunkPrivate('archiveProduct', (payload) => ENDPOINTS.products.archive(firstProductId(payload)), 'PATCH', false, {
-    transformBody: (payload = {}) => ({ ...(payload.reason ? { reason: payload.reason } : {}) }),
-})
-export const restoreProduct = createApiThunkPrivate('restoreProduct', (payload) => ENDPOINTS.products.restore(firstProductId(payload)), 'PATCH', false, {
-    transformBody: (payload = {}) => ({
-        ...(payload.status ? { status: payload.status } : {}),
-        ...(payload.visibility ? { visibility: payload.visibility } : {}),
-        ...(payload.reason ? { reason: payload.reason } : {}),
-    }),
-})
 export const duplicateProduct = createApiThunkPrivate('duplicateProduct', (payload) => ENDPOINTS.products.duplicate(firstProductId(payload)), 'POST', false, {
     transformBody: (payload = {}) => ({
         ...(payload.title ? { title: payload.title } : {}),
@@ -771,10 +760,7 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, getProductById, 'updateProductsData')
         createExtraReducersForThunk(builder, enableDisableProductCatalogs, 'enableDisableProductCatalogsData')
         createExtraReducersForThunk(builder, updateProductsById, 'updateProductsByIdData')
-        createExtraReducersForThunk(builder, deleteProducts, 'deleteProductsData')
-        createExtraReducersForThunk(builder, archiveProduct, 'archiveProductData')
         createExtraReducersForThunk(builder, permanentlyDeleteProduct, 'permanentlyDeleteProductData')
-        createExtraReducersForThunk(builder, restoreProduct, 'restoreProductData')
         createExtraReducersForThunk(builder, duplicateProduct, 'duplicateProductData')
         createExtraReducersForThunk(builder, approveDisapprove, 'approveDisapproveData')
         createExtraReducersForThunk(builder, getAllBatchList, 'getAllBatchListData')

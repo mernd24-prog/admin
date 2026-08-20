@@ -113,7 +113,6 @@ const MODULE_ALIASES = {
   tax: ['tax-invoices', 'credit-notes'],
   'tax-invoices': ['tax'],
   'credit-notes': ['tax'],
-  'cod-config': ['commerce-settings'],
 };
 
 const expandModuleCandidates = (moduleSlug = '') => {

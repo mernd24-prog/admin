@@ -19,9 +19,7 @@ import { MdVisibility, MdEdit, MdDelete } from "react-icons/md";
 // Redux
 import {
   approveDisapprove,
-  archiveProduct,
   bulkUpdateProducts,
-  deleteProducts,
   duplicateProduct,
   enableDisableProductCatalogs,
   getProductById,
@@ -30,7 +28,6 @@ import {
   getProducts,
   getList as getCategoryList,
   permanentlyDeleteProduct,
-  restoreProduct,
   reviewProductRevision,
 } from "../../../Redux/productSlice";
 // import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
@@ -80,7 +77,6 @@ const ACTIVATION_STATUS_OPTIONS = [
   { value: "Active", label: "Active" },
   { value: "Inactive", label: "Inactive" },
   { value: "Scheduled", label: "Scheduled" },
-  { value: "Archived", label: "Archived" },
 ];
 const SELLER_PANEL_ROLES = new Set([
   "seller",
@@ -251,19 +247,7 @@ const PRODUCT_EXPORT_COLUMNS = [
   },
 ];
 
-const getInitialFiltersForPath = (pathname = "", search = "") => {
-  const queryStatus = new URLSearchParams(search || "").get("status");
-  const isArchivedRoute =
-    String(pathname || "").includes("/product-catalog/archived") ||
-    String(queryStatus || "").toLowerCase() === "archived";
-
-  if (!isArchivedRoute) return INITIAL_FILTERS;
-
-  return {
-    ...INITIAL_FILTERS,
-    approvalStatus: { value: "Archived", label: "Archived" },
-  };
-};
+const getInitialFiltersForPath = () => INITIAL_FILTERS;
 
 const ProductCatalog = () => {
   const dispatch = useDispatch();
@@ -272,14 +256,9 @@ const ProductCatalog = () => {
   const location = useLocation();
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
   const [loading, setLoading] = useState(false);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
   const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState(null);
   const [duplicateConfirmation, setDuplicateConfirmation] = useState({
-    open: false,
-    product: null,
-  });
-  const [archiveConfirmation, setArchiveConfirmation] = useState({
     open: false,
     product: null,
   });
@@ -297,7 +276,6 @@ const ProductCatalog = () => {
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [selectedImages, setSelectedImages] = useState(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState(null);
   const [filters, setFilters] = useState(() =>
     getInitialFiltersForPath(location.pathname, location.search),
   );
@@ -368,7 +346,7 @@ const ProductCatalog = () => {
       ...(appliedFilters?.activationStatus?.value === "Inactive"
         ? { status: "inactive" }
         : {}),
-      ...(["Draft", "Scheduled", "Archived"].includes(appliedFilters?.activationStatus?.value)
+      ...(["Draft", "Scheduled"].includes(appliedFilters?.activationStatus?.value)
         ? { status: String(appliedFilters.activationStatus.value).toLowerCase() }
         : {}),
       ...(approvalStatusToApiStatus[appliedFilters?.approvalStatus?.value]
@@ -552,18 +530,6 @@ const ProductCatalog = () => {
     setSelectedRow([]);
   };
 
-  const executeRestoreProduct = async (product) => {
-    const response = await dispatch(
-      restoreProduct({
-        _id: [product?._id],
-        status: "draft",
-        visibility: "private",
-        reason: "product_restored_from_admin",
-      }),
-    ).unwrap();
-    toast.success(response?.message || "Product restored as draft.");
-  };
-
   const handleToggle = async (data) => {
     if (!canToggleProduct(data)) {
       toast.error("This product status cannot be toggled from here.");
@@ -702,29 +668,6 @@ const ProductCatalog = () => {
     }
   };
 
-  function handleDelete(data) {
-    setShowDeleteConfirmation(true);
-    setProductToDelete(data);
-  }
-
-  async function handleDeleteSubmit() {
-    try {
-      const apiPayload = { _id: [productToDelete?._id] };
-      setLoading(true);
-      const res = await dispatch(deleteProducts(apiPayload)).unwrap();
-      toast.success(res?.message || "Product deleted successfully!");
-      setLoading(false);
-    } catch (error) {
-      toast.error(error?.message || "Delete failed.");
-      setLoading(false);
-    } finally {
-      setShowDeleteConfirmation(false);
-      setProductToDelete(null);
-      setLoading(false);
-      fetchProductsList();
-    }
-  }
-
   async function handlePermanentDeleteSubmit() {
     if (!permanentDeleteTarget) return;
     try {
@@ -741,20 +684,6 @@ const ProductCatalog = () => {
       setLoading(false);
     }
   }
-
-  const handleRestoreProduct = async (product) => {
-    setStatusConfirmation({
-      open: true,
-      type: "restore",
-      product,
-      productIds: [],
-      nextStatus: "draft",
-      title: "Restore product?",
-      message: `This will restore "${product?.title || product?.name || "this product"}" as a private draft for review before it can go live again.`,
-      confirmLabel: "Restore",
-      variant: "success",
-    });
-  };
 
   const handleDuplicateProduct = (product) => {
     setDuplicateConfirmation({ open: true, product });
@@ -779,27 +708,6 @@ const ProductCatalog = () => {
     }
   };
 
-  const handleArchiveProduct = (product) => {
-    setArchiveConfirmation({ open: true, product });
-  };
-
-  const handleArchiveSubmit = async () => {
-    const product = archiveConfirmation.product;
-    try {
-      setLoading(true);
-      const res = await dispatch(
-        archiveProduct({ _id: product?._id, reason: "admin_archived" }),
-      ).unwrap();
-      toast.success(res?.message || "Product archived successfully.");
-      setArchiveConfirmation({ open: false, product: null });
-      fetchProductsList();
-    } catch (err) {
-      toast.error(err?.message || "Failed to archive product.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleStatusConfirm = async () => {
     try {
       setLoading(true);
@@ -813,8 +721,6 @@ const ProductCatalog = () => {
           statusConfirmation.productIds,
           statusConfirmation.nextStatus,
         );
-      } else if (statusConfirmation.type === "restore") {
-        await executeRestoreProduct(statusConfirmation.product);
       }
       fetchProductsList();
     } catch (error) {
@@ -883,17 +789,9 @@ const ProductCatalog = () => {
       });
       return;
     }
-    if (action === "Archive" || action === "PermanentDelete") {
-      const permanent = action === "PermanentDelete";
-      const selectedProducts = (apiRes?.list || []).filter((product) =>
-        selectedRow.includes(product?._id || product?.id),
-      );
-      if (permanent && selectedProducts.some((product) => product.status !== "archived")) {
-        toast.error("Only archived products can be permanently deleted.");
-        return;
-      }
+    if (action === "PermanentDelete") {
       setBulkDeleteConfirmation({
-        permanent,
+        permanent: true,
         productIds: [...selectedRow],
       });
     }
@@ -903,14 +801,12 @@ const ProductCatalog = () => {
     if (!bulkDeleteConfirmation) return;
     try {
       setLoading(true);
-      const action = bulkDeleteConfirmation.permanent ? "permanent_delete" : "archive";
+      const action = "permanent_delete";
       const res = await dispatch(bulkUpdateProducts({
         productIds: bulkDeleteConfirmation.productIds,
         action,
       })).unwrap();
-      toast.success(res?.message || (bulkDeleteConfirmation.permanent
-        ? "Selected products permanently deleted."
-        : "Selected products archived."));
+      toast.success(res?.message || "Selected products permanently deleted.");
       setSelectedRow([]);
       setBulkDeleteConfirmation(null);
       fetchProductsList();
@@ -1107,12 +1003,9 @@ const ProductCatalog = () => {
       canReviewProduct,
       canToggleProduct,
       handleApproveToggle,
-      handleArchiveProduct,
-      handleDelete,
       handleDuplicateProduct,
       handleEditProduct,
       handleImageClick,
-      handleRestoreProduct,
       handleToggle,
       hasPendingRevision,
       navigate,
@@ -1174,7 +1067,6 @@ const ProductCatalog = () => {
             handleSearchRemove={clearFilters}
             isActionButton={true}
             isStatusAction={true}
-            isArchiveAction={true}
             isPermanentDeleteAction={!sellerView}
             handleAction={handleBulkAction}
             requiredModule="products"
@@ -1226,16 +1118,9 @@ const ProductCatalog = () => {
                 onClick: () => handleEditProduct(product?._id),
               },
               {
-                label: "Archive Product",
-                icon: <MdDelete size={16} className="text-red-600" />,
-                hidden: product?.status === "archived",
-                className: "text-red-600",
-                onClick: () => handleDelete(product),
-              },
-              {
                 label: "Delete Permanently",
                 icon: <MdDelete size={16} className="text-red-700" />,
-                hidden: sellerView || product?.status !== "archived",
+                hidden: sellerView,
                 className: "text-red-700",
                 onClick: () => setPermanentDeleteTarget(product),
               },
@@ -1243,20 +1128,6 @@ const ProductCatalog = () => {
           />
         </section>
       </div>
-
-      <ConfirmModal
-        open={showDeleteConfirmation}
-        onClose={() => {
-          setShowDeleteConfirmation(false);
-          setProductToDelete(null);
-        }}
-        title="Archive product?"
-        message={`This will archive "${productToDelete?.title || productToDelete?.name || "this product"}" and remove it from the normal catalog list. You can restore it later.`}
-        variant="danger"
-        confirmLabel="Archive"
-        loading={loading && Boolean(productToDelete)}
-        onConfirm={handleDeleteSubmit}
-      />
 
       <ConfirmModal
         open={Boolean(permanentDeleteTarget)}
@@ -1272,12 +1143,10 @@ const ProductCatalog = () => {
       <ConfirmModal
         open={Boolean(bulkDeleteConfirmation)}
         onClose={() => setBulkDeleteConfirmation(null)}
-        title={bulkDeleteConfirmation?.permanent ? "Delete selected products permanently?" : "Archive selected products?"}
-        message={bulkDeleteConfirmation?.permanent
-          ? `This permanently deletes ${bulkDeleteConfirmation?.productIds?.length || 0} selected archived product(s). Products with order history will be blocked. This cannot be undone.`
-          : `This archives ${bulkDeleteConfirmation?.productIds?.length || 0} selected product(s). They can be restored later.`}
+        title="Delete selected products permanently?"
+        message={`This permanently deletes ${bulkDeleteConfirmation?.productIds?.length || 0} selected product(s). Products with order history will be blocked. This cannot be undone.`}
         variant="danger"
-        confirmLabel={bulkDeleteConfirmation?.permanent ? "Delete Permanently" : "Archive"}
+        confirmLabel="Delete Permanently"
         loading={loading && Boolean(bulkDeleteConfirmation)}
         onConfirm={handleBulkDeleteConfirm}
       />
@@ -1302,17 +1171,6 @@ const ProductCatalog = () => {
         confirmLabel="Duplicate"
         loading={loading && duplicateConfirmation.open}
         onConfirm={handleDuplicateSubmit}
-      />
-
-      <ConfirmModal
-        open={archiveConfirmation.open}
-        onClose={() => setArchiveConfirmation({ open: false, product: null })}
-        title="Archive product?"
-        message={`This will archive "${archiveConfirmation.product?.title || "this product"}" and remove it from the active catalog. You can restore it later.`}
-        variant="danger"
-        confirmLabel="Archive"
-        loading={loading && archiveConfirmation.open}
-        onConfirm={handleArchiveSubmit}
       />
 
       <ImageGallery

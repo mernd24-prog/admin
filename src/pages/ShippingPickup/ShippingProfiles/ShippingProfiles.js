@@ -61,9 +61,6 @@ const SERVICEABILITY_MODES = [
     label: "Custom Selection",
     description: "Select zip codes according to your needs",
   },
-  // { value: "selected_cities", label: "Selected Cities", description: "Only selected cities (within selected states)" },
-  // { value: "selected_pincodes", label: "Selected Pincodes", description: "Only listed pincodes" },
-  // { value: "block_pincodes", label: "Block Pincodes", description: "All locations except blocked pincodes" },
 ];
 
 const normalizeServiceabilityMode = (value) =>
@@ -81,10 +78,7 @@ const EMPTY_FORM = {
   description: "",
   shippingMethod: "standard",
   serviceabilityMode: "all_india",
-  allowedStates: [],
-  allowedCities: [],
   allowedPincodes: [],
-  blockedPincodes: [],
   codAvailable: true,
   shippingCharge: 0,
   freeShippingThreshold: "",
@@ -276,174 +270,6 @@ function ProfileForm({
   onSellerSearch,
 }) {
   const patch = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
-  const mode = form.serviceabilityMode;
-  const needsCountry = [
-    "selected_states",
-    "selected_cities",
-    "block_pincodes",
-  ].includes(mode);
-  const needsState = ["selected_cities", "block_pincodes"].includes(mode);
-  const needsCity = mode === "block_pincodes";
-  const [locationFilter, setLocationFilter] = useState({
-    countryId: "",
-    stateId: "",
-    cityId: "",
-  });
-  const [locationOptions, setLocationOptions] = useState({
-    countries: [],
-    states: [],
-    cities: [],
-    pincodes: [],
-  });
-  const [locationLoading, setLocationLoading] = useState({
-    countries: false,
-    states: false,
-    cities: false,
-    pincodes: false,
-  });
-
-  const countryOptions = useMemo(
-    () =>
-      locationOptions.countries.map((c) => ({
-        value: optionParentId(c),
-        label: optionLabel(c),
-      })),
-    [locationOptions.countries],
-  );
-
-  const stateOptions = useMemo(
-    () =>
-      locationOptions.states.map((s) => ({
-        value: optionParentId(s),
-        label: optionLabel(s),
-      })),
-    [locationOptions.states],
-  );
-
-  const cityOptions = useMemo(
-    () =>
-      locationOptions.cities.map((c) => ({
-        value: optionParentId(c),
-        label: optionLabel(c),
-      })),
-    [locationOptions.cities],
-  );
-
-  useEffect(() => {
-    let active = true;
-    setLocationLoading((prev) => ({ ...prev, countries: true }));
-    dropdownApi
-      .getCountries({ limit: 100 })
-      .then((options) => {
-        if (!active) return;
-        setLocationOptions((prev) => ({ ...prev, countries: options || [] }));
-        const india = (options || []).find((option) =>
-          /india/i.test(optionLabel(option)),
-        );
-        setLocationFilter((prev) =>
-          prev.countryId || !india
-            ? prev
-            : { ...prev, countryId: optionParentId(india) },
-        );
-      })
-      .catch(() => {
-        if (active) setLocationOptions((prev) => ({ ...prev, countries: [] }));
-      })
-      .finally(() => {
-        if (active)
-          setLocationLoading((prev) => ({ ...prev, countries: false }));
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!locationFilter.countryId) {
-      setLocationOptions((prev) => ({
-        ...prev,
-        states: [],
-        cities: [],
-        pincodes: [],
-      }));
-      return undefined;
-    }
-    let active = true;
-    setLocationLoading((prev) => ({ ...prev, states: true }));
-    dropdownApi
-      .getStates(locationFilter.countryId, { limit: 100 })
-      .then((options) => {
-        if (active)
-          setLocationOptions((prev) => ({ ...prev, states: options || [] }));
-      })
-      .catch(() => {
-        if (active) setLocationOptions((prev) => ({ ...prev, states: [] }));
-      })
-      .finally(() => {
-        if (active) setLocationLoading((prev) => ({ ...prev, states: false }));
-      });
-    return () => {
-      active = false;
-    };
-  }, [locationFilter.countryId]);
-
-  useEffect(() => {
-    if (!locationFilter.stateId) {
-      setLocationOptions((prev) => ({ ...prev, cities: [], pincodes: [] }));
-      return undefined;
-    }
-    let active = true;
-    setLocationLoading((prev) => ({ ...prev, cities: true }));
-    dropdownApi
-      .getCities(locationFilter.stateId, { limit: 100 })
-      .then((options) => {
-        if (active)
-          setLocationOptions((prev) => ({ ...prev, cities: options || [] }));
-      })
-      .catch(() => {
-        if (active) setLocationOptions((prev) => ({ ...prev, cities: [] }));
-      })
-      .finally(() => {
-        if (active) setLocationLoading((prev) => ({ ...prev, cities: false }));
-      });
-    return () => {
-      active = false;
-    };
-  }, [locationFilter.stateId]);
-
-  useEffect(() => {
-    if (!locationFilter.cityId) {
-      setLocationOptions((prev) => ({ ...prev, pincodes: [] }));
-      return undefined;
-    }
-    let active = true;
-    setLocationLoading((prev) => ({ ...prev, pincodes: true }));
-    dropdownApi
-      .getPincodes(locationFilter.cityId, { limit: 100 })
-      .then((options) => {
-        if (active)
-          setLocationOptions((prev) => ({ ...prev, pincodes: options || [] }));
-      })
-      .catch(() => {
-        if (active) setLocationOptions((prev) => ({ ...prev, pincodes: [] }));
-      })
-      .finally(() => {
-        if (active)
-          setLocationLoading((prev) => ({ ...prev, pincodes: false }));
-      });
-    return () => {
-      active = false;
-    };
-  }, [locationFilter.cityId]);
-
-  const patchLocation = (key, value) => {
-    setLocationFilter((prev) => ({
-      ...prev,
-      [key]: value,
-      ...(key === "countryId" ? { stateId: "", cityId: "" } : {}),
-      ...(key === "stateId" ? { cityId: "" } : {}),
-    }));
-  };
 
   const TOAST_ID = "shipping-profile-pincode";
 
@@ -696,144 +522,6 @@ function ProfileForm({
           </div>
         )}
 
-        {/* {needsCountry && (
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="space-y-1">
-              <label className="admin-label">Country</label>
-              <FilterSelect
-                options={countryOptions}
-                value={countryOptions.find((o) => o.value === locationFilter.countryId) || null}
-                onChange={(option) => patchLocation("countryId", option?.value || "")}
-                isLoading={locationLoading.countries}
-                isSearchable
-                placeholder="Select country..."
-                isClearable
-              />
-            </div>
-            {needsState && (
-              <div className="space-y-1">
-                <label className="admin-label">State Filter</label>
-                <FilterSelect
-                  options={stateOptions}
-                  value={stateOptions.find((o) => o.value === locationFilter.stateId) || null}
-                  onChange={(option) => patchLocation("stateId", option?.value || "")}
-                  isDisabled={!locationFilter.countryId}
-                  isLoading={locationLoading.states}
-                  isSearchable
-                  placeholder="Select state..."
-                  isClearable
-                />
-              </div>
-            )}
-            {needsCity && (
-              <div className="space-y-1">
-                <label className="admin-label">City Filter</label>
-                <FilterSelect
-                  options={cityOptions}
-                  value={cityOptions.find((o) => o.value === locationFilter.cityId) || null}
-                  onChange={(option) => patchLocation("cityId", option?.value || "")}
-                  isDisabled={!locationFilter.stateId}
-                  isLoading={locationLoading.cities}
-                  isSearchable
-                  placeholder="Select city..."
-                  isClearable
-                />
-              </div>
-            )}
-          </div>
-        )} */}
-
-        {/* {(mode === "selected_states" || mode === "selected_cities") && (
-          <div className="space-y-1">
-            <label className="admin-label">States</label>
-            <OptionMultiSelect
-              value={form.allowedStates}
-              onChange={(v) => patch("allowedStates", v)}
-              options={locationOptions.states}
-              placeholder={
-                locationFilter.countryId
-                  ? "Select states..."
-                  : "Select a country first"
-              }
-              searchPlaceholder="Search states..."
-              emptyText="No states found"
-              disabled={!locationFilter.countryId}
-              loading={locationLoading.states}
-            />
-            <p className="text-xs text-gray-400">
-              {form.allowedStates.length} state(s) selected
-            </p>
-          </div>
-        )}
-
-        {mode === "selected_cities" && (
-          <div className="space-y-1">
-            <label className="admin-label">Cities</label>
-            <OptionMultiSelect
-              value={form.allowedCities}
-              onChange={(v) => patch("allowedCities", v)}
-              options={locationOptions.cities}
-              placeholder={
-                locationFilter.stateId
-                  ? "Select cities..."
-                  : "Select a state filter first"
-              }
-              searchPlaceholder="Search cities..."
-              emptyText="No cities found"
-              disabled={!locationFilter.stateId}
-              loading={locationLoading.cities}
-            />
-            <p className="text-xs text-gray-400">
-              {form.allowedCities.length} city/cities selected
-            </p>
-          </div>
-        )}
-
-        {mode === "selected_pincodes" && (
-          <div className="space-y-1">
-            <label className="admin-label">Allowed Pincodes</label>
-            <OptionMultiSelect
-              value={form.allowedPincodes}
-              onChange={(v) => patch("allowedPincodes", v)}
-              options={locationOptions.pincodes}
-              placeholder={
-                locationFilter.cityId
-                  ? "Select allowed pincodes..."
-                  : "Select a city filter first"
-              }
-              searchPlaceholder="Search pincodes..."
-              emptyText="No pincodes found"
-              disabled={!locationFilter.cityId}
-              loading={locationLoading.pincodes}
-            />
-            <p className="text-xs text-gray-400">
-              {form.allowedPincodes.length} pincode(s) added
-            </p>
-          </div>
-        )}
-
-        {mode === "block_pincodes" && (
-          <div className="space-y-1">
-            <label className="admin-label">Blocked Pincodes</label>
-            <OptionMultiSelect
-              value={form.blockedPincodes}
-              onChange={(v) => patch("blockedPincodes", v)}
-              options={locationOptions.pincodes}
-              placeholder={
-                locationFilter.cityId
-                  ? "Select blocked pincodes..."
-                  : "Select a city filter first"
-              }
-              searchPlaceholder="Search pincodes..."
-              emptyText="No pincodes found"
-              disabled={!locationFilter.cityId}
-              loading={locationLoading.pincodes}
-            />
-            <p className="text-xs text-gray-400">
-              {form.blockedPincodes.length} pincode(s) blocked
-            </p>
-          </div>
-        )} */}
       </section>
 
       {/* Charges */}
@@ -1021,17 +709,8 @@ const etaLabel = (profile = {}) => {
 const coverageLabel = (profile = {}) => {
   if (profile.serviceabilityMode === "all_india") return "All locations";
   const parts = [
-    profile.allowedStates?.length
-      ? `${profile.allowedStates.length} states`
-      : "",
-    profile.allowedCities?.length
-      ? `${profile.allowedCities.length} cities`
-      : "",
     profile.allowedPincodes?.length
       ? `${profile.allowedPincodes.length} pincodes`
-      : "",
-    profile.blockedPincodes?.length
-      ? `${profile.blockedPincodes.length} blocked`
       : "",
   ].filter(Boolean);
   return parts.length
@@ -1104,6 +783,7 @@ export default function ShippingProfiles() {
   const [cloneSellerSearch, setCloneSellerSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const openedEditProfileRef = useRef("");
 
   const { shippingProfilesData, shippingProfileTemplatesData } = useSelector(
     (state) => state.delivery,
@@ -1410,10 +1090,7 @@ export default function ShippingProfiles() {
       serviceabilityMode: normalizeServiceabilityMode(
         template.serviceabilityMode,
       ),
-      allowedStates: template.allowedStates || [],
-      allowedCities: template.allowedCities || [],
       allowedPincodes: template.allowedPincodes || [],
-      blockedPincodes: template.blockedPincodes || [],
       codAvailable: template.codAvailable !== false,
       shippingCharge: template.shippingCharge ?? 0,
       freeShippingThreshold: template.freeShippingThreshold ?? "",
@@ -1463,10 +1140,7 @@ export default function ShippingProfiles() {
       serviceabilityMode: normalizeServiceabilityMode(
         profile.serviceabilityMode,
       ),
-      allowedStates: profile.allowedStates || [],
-      allowedCities: profile.allowedCities || [],
       allowedPincodes: profile.allowedPincodes || [],
-      blockedPincodes: profile.blockedPincodes || [],
       codAvailable: profile.codAvailable !== false,
       shippingCharge: profile.shippingCharge ?? 0,
       freeShippingThreshold: profile.freeShippingThreshold ?? "",
@@ -1479,6 +1153,17 @@ export default function ShippingProfiles() {
     });
     setModal({ open: true, mode: "edit", profile });
   };
+
+  useEffect(() => {
+    const requestedId = new URLSearchParams(window.location.search).get("edit") || "";
+    if (!requestedId || openedEditProfileRef.current === requestedId) return;
+    const requestedProfile = profilesPayload.list.find(
+      (profile) => String(profileId(profile)) === String(requestedId),
+    );
+    if (!requestedProfile) return;
+    openedEditProfileRef.current = requestedId;
+    openEdit(requestedProfile);
+  }, [profilesPayload.list]);
 
   const closeModal = () =>
     setModal({ open: false, mode: "create", profile: null });

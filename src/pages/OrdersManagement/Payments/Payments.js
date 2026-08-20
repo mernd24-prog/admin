@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
   MdCheckCircle,
-  MdSettings,
   MdVisibility,
   MdCancel,
 } from "react-icons/md";
@@ -367,9 +366,6 @@ const Payments = () => {
               onClick={() => navigate("/app/cod-collections")}
             >
               <MdCheckCircle size={17} /> COD Collections
-            </button>
-            <button type="button" onClick={() => navigate("/app/cod-config")}>
-              <MdSettings size={17} /> COD Settings
             </button>
           </div>
         }

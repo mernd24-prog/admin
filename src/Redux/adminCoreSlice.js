@@ -30,8 +30,6 @@ const initialState = {
   moderateAdminProductData: {},
   adminOrdersData: {},
   adminPaymentsData: {},
-  codConfigData: {},
-  updateCodConfigData: {},
   approvePaymentData: {},
   rejectPaymentData: {},
   adminReturnsData: {},
@@ -490,17 +488,6 @@ export const getAdminOrders = createApiThunkPrivate(
 );
 
 export const getAdminPayments = createApiThunkPrivate("adminCore/getAdminPayments", ENDPOINTS.payments.admin, "GET", true, { transformParams: pickQuery(["status", "provider", "buyerId", "orderId", "search", "fromDate", "toDate", "sortBy", "sortDir", "limit", "offset"]) });
-export const getCodConfig = createApiThunkPrivate("adminCore/getCodConfig", ENDPOINTS.payments.codConfig, "GET");
-export const updateCodConfig = createApiThunkPrivate("adminCore/updateCodConfig", ENDPOINTS.payments.codConfig, "PUT", false, {
-  transformBody: (payload = {}) => ({
-    enabled: Boolean(payload.enabled),
-    chargeAmount: toNum(payload.chargeAmount, 0),
-    minOrderAmount: toNum(payload.minOrderAmount, null),
-    maxOrderAmount: toNum(payload.maxOrderAmount, null),
-    currency: payload.currency || "INR",
-    metadata: payload.metadata || {},
-  }),
-});
 export const approvePayment = createApiThunkPrivate("adminCore/approvePayment", (payload) => ENDPOINTS.payments.approve(payload.paymentId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["referenceId", "reason"]) });
 export const rejectPayment = createApiThunkPrivate("adminCore/rejectPayment", (payload) => ENDPOINTS.payments.reject(payload.paymentId || payload.id), "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["referenceId", "reason"]) });
 export const getAdminReturns = createApiThunkPrivate("adminCore/getAdminReturns", ENDPOINTS.returns.list, "GET", true, { transformParams: pickQuery(["status", "reason", "buyerId", "orderId", "sellerId", "refundStatus", "shipmentStatus", "search", "fromDate", "toDate", "sortBy", "sortDir", "limit", "offset"]) });
@@ -687,8 +674,6 @@ const adminCoreSlice = createSlice({
       [moderateAdminProduct, "moderateAdminProductData"],
       [getAdminOrders, "adminOrdersData"],
       [getAdminPayments, "adminPaymentsData"],
-      [getCodConfig, "codConfigData"],
-      [updateCodConfig, "updateCodConfigData"],
       [approvePayment, "approvePaymentData"],
       [rejectPayment, "rejectPaymentData"],
       [getAdminReturns, "adminReturnsData"],

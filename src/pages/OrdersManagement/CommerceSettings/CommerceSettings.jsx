@@ -39,10 +39,6 @@ const DEFAULT_SETTINGS = {
   },
   cod: {
     enabled: true,
-    availabilityMode: "all_pincodes",
-    allowPincodes: [],
-    blockPincodes: [],
-    collectionPolicy: "platform_or_courier",
     payoutRequiresCapture: true,
     feeAmount: 0,
     minOrderAmount: "",
@@ -106,13 +102,6 @@ const ROUTES = [
 ];
 
 const option = (value, label) => ({ value, label });
-const joinList = (value) =>
-  Array.isArray(value) ? value.join(", ") : String(value || "");
-const splitList = (value) =>
-  String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
 const nullableNumber = (value) =>
   value === "" || value === null || value === undefined ? null : Number(value);
 // const optionLabel = (item = {}) =>
@@ -429,8 +418,6 @@ export default function CommerceSettings() {
         ...nextSettings,
         cod: {
           ...nextSettings.cod,
-          allowPincodes: splitList(joinList(nextSettings.cod.allowPincodes)),
-          blockPincodes: splitList(joinList(nextSettings.cod.blockPincodes)),
           feeAmount: Number(nextSettings.cod.feeAmount || 0),
           minOrderAmount: nullableNumber(nextSettings.cod.minOrderAmount),
           maxOrderAmount: nullableNumber(nextSettings.cod.maxOrderAmount),
@@ -558,6 +545,46 @@ export default function CommerceSettings() {
           <Cards key={metric.label} {...metric} />
         ))}
       </div>
+      <Section title="Platform COD Controls">
+        <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          Sellers manage COD pincodes and select who collects the cash. These controls apply platform-wide only.
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <ToggleField
+            label="Enable Cash on Delivery"
+            checked={settings.cod.enabled}
+            onChange={(checked) => patchSettings("cod", { enabled: checked })}
+            hint="Master switch for COD checkout across the marketplace."
+          />
+          <InputField
+            label="Platform COD Fee (₹)"
+            type="number"
+            min="0"
+            value={settings.cod.feeAmount}
+            onChange={(value) => patchSettings("cod", { feeAmount: value })}
+          />
+          <InputField
+            label="Minimum COD Order (₹)"
+            type="number"
+            min="0"
+            value={settings.cod.minOrderAmount ?? ""}
+            onChange={(value) => patchSettings("cod", { minOrderAmount: value })}
+          />
+          <InputField
+            label="Maximum COD Order (₹)"
+            type="number"
+            min="0"
+            value={settings.cod.maxOrderAmount ?? ""}
+            onChange={(value) => patchSettings("cod", { maxOrderAmount: value })}
+          />
+          <ToggleField
+            label="Require COD capture before payout"
+            checked={settings.cod.payoutRequiresCapture}
+            onChange={(checked) => patchSettings("cod", { payoutRequiresCapture: checked })}
+            hint="Prevents seller payout until collected COD is captured."
+          />
+        </div>
+      </Section>
       <Section title="Seller Payout Controls">
         <div className="grid gap-4 md:grid-cols-2">
           <FilterSelect

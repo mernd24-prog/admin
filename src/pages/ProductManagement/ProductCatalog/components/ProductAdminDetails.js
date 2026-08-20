@@ -6,7 +6,6 @@ import Loader from "../../../../components/Loader/Loader";
 import {
   getProductById,
   approveDisapprove,
-  archiveProduct,
   duplicateProduct,
   getProductRevisions,
   reviewProductRevision,
@@ -157,7 +156,6 @@ const ProductAdminDetails = () => {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [archiveConfirm, setArchiveConfirm] = useState(false);
   const [duplicateConfirm, setDuplicateConfirm] = useState(false);
   const currentRole = normalizeRole(getStoredRole());
   const isSellerRole = ["seller", "seller-admin", "seller-sub-admin"].includes(currentRole);
@@ -267,22 +265,6 @@ const ProductAdminDetails = () => {
     }
   };
 
-  const handleArchiveSubmit = async () => {
-    setActionLoading(true);
-    try {
-      const res = await dispatch(
-        archiveProduct({ _id: id, reason: "admin_archived" }),
-      ).unwrap();
-      toast.success(res?.message || "Product archived successfully.");
-      dispatch(getProductById({ _id: id }));
-    } catch (err) {
-      toast.error(err?.message || "Failed to archive product.");
-    } finally {
-      setActionLoading(false);
-      setArchiveConfirm(false);
-    }
-  };
-
   const handleDuplicateSubmit = async () => {
     setActionLoading(true);
     try {
@@ -335,31 +317,6 @@ const ProductAdminDetails = () => {
               Duplicate
             </button>
           </PermissionGuard> */}
-          {/* {product.status !== "archived" && (
-            <PermissionGuard module="products" action="delete" hide>
-              <button
-                onClick={() => setArchiveConfirm(true)}
-                className="px-4 py-2 text-sm rounded-md bg-orange-500 text-white hover:bg-orange-600"
-              >
-                Archive
-              </button>
-            </PermissionGuard>
-          )} */}
-          {/* {product.status === "archived" && (
-            <PermissionGuard module="products" action="restore" hide>
-              <Link
-                to={`/app/product-catalog`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  // restore via list page restore flow
-                  navigate("/app/product-catalog?status=archived");
-                }}
-                className="px-4 py-2 text-sm rounded-md bg-green-600 text-white hover:bg-green-700"
-              >
-                Restore
-              </Link>
-            </PermissionGuard>
-          )} */}
           <Link
             to={`/app/product-catalog/form/${id}`}
             className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
@@ -1187,17 +1144,6 @@ const ProductAdminDetails = () => {
         revision={pendingRevision}
         onClose={() => setReviewOpen(false)}
         onSubmit={handleReviewSubmit}
-      />
-
-      <ConfirmModal
-        open={archiveConfirm}
-        onClose={() => setArchiveConfirm(false)}
-        title="Archive product?"
-        message={`This will archive "${product?.title || "this product"}" and remove it from the active catalog. You can restore it later.`}
-        variant="danger"
-        confirmLabel="Archive"
-        loading={actionLoading}
-        onConfirm={handleArchiveSubmit}
       />
 
       <ConfirmModal

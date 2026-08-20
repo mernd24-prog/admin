@@ -9,7 +9,6 @@ const STATUS_CONFIG = {
   inactive:         { label: 'Inactive',         color: 'bg-orange-100 text-orange-700' },
   rejected:         { label: 'Rejected',         color: 'bg-red-100 text-red-700' },
   scheduled:        { label: 'Scheduled',        color: 'bg-blue-100 text-blue-700' },
-  archived:         { label: 'Archived',         color: 'bg-slate-100 text-slate-600' },
   change_pending:   { label: 'Change Pending',   color: 'bg-purple-100 text-purple-700' },
 };
 

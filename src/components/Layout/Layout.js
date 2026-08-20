@@ -251,9 +251,6 @@ const Chargebacks = React.lazy(
 const FraudCases = React.lazy(
   () => import("../../pages/OrdersManagement/Payments/FraudCases"),
 );
-const CodConfig = React.lazy(
-  () => import("../../pages/OrdersManagement/Payments/CodConfig"),
-);
 const SellerPayouts = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerPayouts"),
 );
@@ -553,7 +550,6 @@ function Layout() {
       { path: "/transactions", render: () => <UsersTransactions /> },
       { path: "/transactions/view/:id", render: () => <ViewTransaction /> },
       { path: "/product-catalog", render: () => <ProductCatalog /> },
-      { path: "/product-catalog/archived", render: () => <ProductCatalog /> },
       { path: "/seller-Product-Inventory", redirectTo: "/app/inventory" },
       { path: "/seller-product-inventory", redirectTo: "/app/inventory" },
       {
@@ -727,7 +723,6 @@ function Layout() {
       },
       { path: "/credit-notes", render: () => <CreditNotes /> },
       { path: "/subscription-plans", render: () => <SubscriptionPlans /> },
-      { path: "/cod-config", render: () => <CodConfig /> },
       { path: "/chargebacks", render: () => <Chargebacks /> },
       { path: "/seller-payouts", render: () => <SellerPayouts /> },
       { path: "/payout-ops-queue", render: () => <PayoutOpsQueue /> },

@@ -82,7 +82,6 @@ export function formatRelativeDate(value, fallback = "Not available") {
  * Examples:
  *   "order_status"       → "Order Status"
  *   "pending_payment"    → "Pending Payment"
- *   "cod-config"         → "Cod-Config"
  *   "seller_kyc_PENDING" → "Seller Kyc Pending"
  *   ""                   → "Not available"
  */

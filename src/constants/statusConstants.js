@@ -201,7 +201,6 @@ export const PRODUCT_STATUSES = [
   "draft",
   "published",
   "unpublished",
-  "archived",
 ];
 
 export const PRODUCT_STATUS_OPTIONS = statusOptions(PRODUCT_STATUSES);

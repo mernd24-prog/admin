@@ -10,7 +10,7 @@ Scope: Admin UI wiring for completed backend product lifecycle, revision, visibi
 - Product Detail now displays revision status, version, compliance snapshot, pending revision diff, and status history.
 - Product Catalog has a Change Pending route and sidebar entry.
 - Product Catalog route presets now load Draft, Pending Approval, Change Pending, and Rejected product queues.
-- Product status badges now show `change_pending`, `scheduled`, and `archived`.
+- Product status badges now show `change_pending` and `scheduled`.
 - Admin Redux now calls product revision list and revision review backend endpoints.
 - Product create/update payloads no longer send raw `gstRate`; backend derives GST from active HSN master data.
 - Inline HSN creation in product form is now guarded by `tax:create`.

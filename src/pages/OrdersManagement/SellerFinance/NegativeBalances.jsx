@@ -241,8 +241,20 @@ const NegativeBalances = () => {
         },
       },
       {
+        key: "liabilityType",
+        label: "Type / Order",
+        render: (value, row) => (
+          <div>
+            <div className="text-sm font-medium text-gray-800">
+              {value === "seller_collected_cod" ? "Seller-collected COD" : "Other adjustment"}
+            </div>
+            {row.orderId ? <div className="text-xs text-gray-500">Order: {row.orderId}</div> : null}
+          </div>
+        ),
+      },
+      {
         key: "negativeAmount",
-        label: "Negative Amount",
+        label: "Outstanding",
         sortable: true,
         render: (value, row) =>
           money(
@@ -258,9 +270,9 @@ const NegativeBalances = () => {
       },
       {
         key: "resolvedAmount",
-        label: "Resolved",
+        label: "Recovered",
         sortable: false,
-        render: (value) => (value != null ? money(value) : "—"),
+        render: (value, row) => money(value ?? row.recoveredAmount ?? 0),
       },
       {
         key: "status",
