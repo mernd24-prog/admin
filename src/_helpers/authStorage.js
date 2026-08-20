@@ -251,7 +251,9 @@ export const hasModuleAccess = (moduleCode) => {
     coupons: ["coupons", "discount-coupons", "discount_coupons"],
   
   
-    "cms-pages": ["cms-pages", "cms_pages", "content-management"],
+    "cms-pages": ["cms-pages", "cms_pages", "content-management", "content-pages", "auth-testimonials"],
+    cms_pages: ["cms-pages", "cms_pages", "content-management", "content-pages", "auth-testimonials"],
+    cms: ["cms", "cms-pages", "cms_pages", "content-pages", "auth-testimonials"],
     reviews: ["reviews", "product-reviews"],
     warranty: ["warranty", "warranty-templates"],
     fraud: ["fraud", "chargebacks"],
