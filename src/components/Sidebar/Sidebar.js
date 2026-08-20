@@ -20,6 +20,7 @@ import {
   MdSettings,
   MdLocalOffer,
   MdAdminPanelSettings,
+  MdReviews,
 } from "react-icons/md";
 import { CiSettings } from "react-icons/ci";
 import { getMyModulePermission } from "../../Redux/userManagementSlice";
@@ -89,6 +90,7 @@ const ICON_BY_NAME = {
   MdSettings,
   MdLocalOffer,
   MdAdminPanelSettings,
+  MdReviews,
   CiSettings,
 };
 
@@ -167,6 +169,42 @@ const filterSellerSidebarItems = (items = []) =>
 
 const firstArray = (...values) =>
   values.find((value) => Array.isArray(value)) || [];
+
+const mergeSidebarModuleTrees = (...sources) => {
+  const byKey = new Map();
+  const mergeChildren = (current = [], next = []) =>
+    mergeSidebarModuleTrees(current, next);
+
+  sources
+    .filter(Array.isArray)
+    .flat()
+    .forEach((item = {}) => {
+      const key =
+        item.id ||
+        item.moduleKey ||
+        item.moduleSlug ||
+        item.slug ||
+        item.metadata?.routeKey ||
+        item.routePath;
+      if (!key) return;
+
+      const existing = byKey.get(key) || {};
+      byKey.set(key, {
+        ...existing,
+        ...item,
+        children: mergeChildren(existing.children || [], item.children || []),
+      });
+    });
+
+  return Array.from(byKey.values()).sort(
+    (left, right) =>
+      Number(left.order ?? left.sortOrder ?? 0) -
+        Number(right.order ?? right.sortOrder ?? 0) ||
+      String(left.moduleName || left.name || "").localeCompare(
+        String(right.moduleName || right.name || ""),
+      ),
+  );
+};
 
 const filterSidebarTreeByAccess = (items = [], options = {}) => {
   if (options.trustBackend) return items;
@@ -433,7 +471,7 @@ const Sidebar = ({
   const [userData, setUserData] = useState(null);
   const dynamicSidebarModules = useMemo(() => {
     const sd = adminCoreSelector?.rbacSidebarModulesData;
-    return firstArray(
+    return mergeSidebarModuleTrees(
       sd?.data?.normalized?.data,
       sd?.normalized?.normalized?.data,
       sd?.normalized?.data,
