@@ -739,13 +739,18 @@ export default function BasicDetailsTab({
     if (titled !== value) handleChange({ target: { name, value: titled } });
   };
 
+  const isReturnable =
+    formData.warranty?.returnPolicy?.returnable ??
+    formData.warranty?.returnPolicy?.eligible ??
+    true;
+
   return (
     <>
       <Loader loading={isLoading} />
       <div className="bg-white">
-        <div className="pb-4 mb-5 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">Basic Details</h3>
-          <p className="text-sm text-gray-500 mt-0.5">
+        <div className="product-form-section-header">
+          <h3>Basic Details</h3>
+          <p>
             Customize the product basic details like name, brand, and categories
           </p>
         </div>
@@ -841,7 +846,7 @@ export default function BasicDetailsTab({
                 <PermissionGuard module="categories" action="create" hide>
                   <button
                     type="button"
-                    className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-blue)] px-3 py-2 text-xs font-semibold text-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
+                    className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
                     onClick={() => setIsCategoryModal(true)}
                   >
                     + Add
@@ -871,7 +876,7 @@ export default function BasicDetailsTab({
                 <PermissionGuard module="tax" action="create" hide>
                   <button
                     type="button"
-                    className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-blue)] px-3 py-2 text-xs font-semibold text-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
+                    className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
                     onClick={() => setIsHsnAddModal(true)}
                   >
                     + Add
@@ -1076,12 +1081,12 @@ export default function BasicDetailsTab({
                 />
               </>
             )} */}
-            <div className="md:col-span-2 rounded-lg border border-[var(--admin-line)] bg-white p-4 shadow-sm">
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-900">
+            <section className="product-form-subsection md:col-span-2">
+              <div className="product-form-section-header">
+                <h3>
                   Warranty information
-                </h4>
-                <p className="mt-1 text-xs text-gray-500">
+                </h3>
+                <p>
                   Describe warranty coverage, exclusions, claim rules, required
                   documents, and support instructions.
                 </p>
@@ -1146,50 +1151,48 @@ export default function BasicDetailsTab({
                 className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
                 placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
               />
-            </div>
+            </section>
 
-            <div className="md:col-span-2 rounded-lg border border-gray-200 p-4">
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-900">
-                  Product Return Policy
-                </h4>
-                <p className="mt-1 text-xs text-gray-500">
-                  This policy is snapshotted on each order item and cannot be
-                  changed for existing orders.
-                </p>
+            <section className="product-form-subsection md:col-span-2">
+              <div className="product-form-section-header flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3>
+                    Product Return Policy
+                  </h3>
+                  <p className="max-w-2xl">
+                    Set the return window, available resolution, shipping responsibility,
+                    and verification requirements for this product.
+                  </p>
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    The policy is saved with each order and will not change for existing orders.
+                  </p>
+                </div>
+                <div className="shrink-0 rounded-full bg-[var(--admin-surface-soft)] px-3 py-2">
+                  <Input
+                    className="!mb-0"
+                    labelName="Returnable"
+                    name="warranty.returnPolicy.returnable"
+                    type="switch"
+                    value={isReturnable}
+                    onChange={(event) =>
+                      handleNestedChange(
+                        "warranty.returnPolicy.returnable",
+                        event.target.checked,
+                      )
+                    }
+                  />
+                </div>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Input
-                  labelName="Returnable"
-                  name="warranty.returnPolicy.returnable"
-                  type="switch"
-                  value={
-                    formData.warranty?.returnPolicy?.returnable ??
-                    formData.warranty?.returnPolicy?.eligible ??
-                    true
-                  }
-                  onChange={(event) =>
-                    handleNestedChange(
-                      "warranty.returnPolicy.returnable",
-                      event.target.checked,
-                    )
-                  }
-                />
+              <div className="grid gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
                 <Input
                   labelName="Return Window Days"
                   name="warranty.returnPolicy.returnWindowDays"
                   type="number"
                   min={0}
                   max={365}
-                  disabled={
-                    (formData.warranty?.returnPolicy?.returnable ??
-                      formData.warranty?.returnPolicy?.eligible ??
-                      true) === false
-                  }
+                  disabled={!isReturnable}
                   value={
-                    (formData.warranty?.returnPolicy?.returnable ??
-                      formData.warranty?.returnPolicy?.eligible ??
-                      true) === false
+                    !isReturnable
                       ? 0
                       : (formData.warranty?.returnPolicy?.returnWindowDays ??
                         formData.warranty?.returnPolicy?.days ??
@@ -1258,6 +1261,11 @@ export default function BasicDetailsTab({
                       : undefined
                   }
                 />
+                <div className="md:col-span-2 xl:col-span-3">
+                  <p className="mb-3 border-[var(--admin-line)] pt-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Return requirements
+                  </p>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:gap-x-12">
                 <Input
                   labelName="Require Return Images"
                   name="warranty.returnPolicy.requiresImages"
@@ -1287,8 +1295,10 @@ export default function BasicDetailsTab({
                     )
                   }
                 />
+                  </div>
+                </div>
               </div>
-            </div>
+            </section>
           </div>
         </div>
       </div>

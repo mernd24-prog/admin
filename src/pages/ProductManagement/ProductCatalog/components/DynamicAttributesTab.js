@@ -35,21 +35,13 @@ const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, err
   if (!attributeSchema.length) {
     return (
       <div className="bg-white">
-        <div className="pb-4 mb-5 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">Category Attributes</h3>
-          <p className="text-sm text-gray-500 mt-0.5">Select a category to load product attributes.</p>
-        </div>
-        <p className="text-sm text-gray-400 italic">No attributes found for the selected category.</p>
+        <p className="text-sm text-gray-400 italic">Select a category to load product attributes.</p>
       </div>
     );
   }
 
   return (
     <div className="bg-white">
-      <div className="pb-4 mb-5 border-b border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">Category Attributes</h3>
-        <p className="text-sm text-gray-500 mt-0.5">These fields are controlled by the selected category.</p>
-      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
         {attributeSchema.map((field) => {
           const value = attributes[field.key];

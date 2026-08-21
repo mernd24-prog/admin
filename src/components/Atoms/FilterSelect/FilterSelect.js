@@ -152,6 +152,7 @@ const FilterSelect = ({
         <SelectComponent
           styles={customStyles(error, controlHeight)}
           className="capitalize"
+          classNamePrefix="admin-filter-select"
           inputId={inputId}
           name={name}
           {...(loadOptions

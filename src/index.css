@@ -349,6 +349,165 @@ select:active {
   box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.11);
 }
 
+/* Product create/edit uses the gold brand accent for every form focus state. */
+.product-catalog-form .admin-input:focus,
+.product-catalog-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.product-catalog-form select:focus,
+.product-catalog-form textarea:focus {
+  border-color: var(--admin-gold) !important;
+  box-shadow: 0 0 0 3px rgba(214, 163, 35, 0.14) !important;
+  outline: none;
+}
+
+.product-catalog-form .admin-react-select__control--is-focused,
+.product-catalog-form .admin-filter-select__control--is-focused {
+  border-color: var(--admin-gold) !important;
+  box-shadow: 0 0 0 3px rgba(214, 163, 35, 0.14) !important;
+}
+
+.product-catalog-form .admin-react-select__control--is-focused:hover,
+.product-catalog-form .admin-filter-select__control--is-focused:hover {
+  border-color: var(--admin-gold) !important;
+}
+
+/* React Select contains a small text input; do not draw a second focus ring on it. */
+.product-catalog-form .admin-react-select__input input:focus,
+.product-catalog-form .admin-filter-select__input input:focus {
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* One continuous form surface with consistent, scannable sections. */
+.product-catalog-form .product-form-section {
+  padding: 28px 24px;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.product-catalog-form .product-form-section:last-child {
+  border-bottom: 0;
+}
+
+.product-catalog-form .product-form-section-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.product-catalog-form .product-form-section-header h3 {
+  margin: 0;
+  color: var(--admin-ink);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.product-catalog-form .product-form-section-header p {
+  margin: 2px 0 0;
+  color: var(--admin-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.product-catalog-form .product-form-section h4 {
+  color: var(--admin-ink);
+  font-weight: 600;
+}
+
+.product-catalog-form .product-form-subsection {
+  margin-top: 8px;
+  padding-top: 28px;
+  border-top: 1px solid var(--admin-line);
+}
+
+.product-catalog-form .admin-field {
+  min-width: 0;
+}
+
+@media (max-width: 639px) {
+  .product-catalog-form .product-form-section {
+    padding: 24px 16px;
+  }
+}
+
+/* Keep all form borders quiet and reserve gold for interaction. */
+.product-catalog-form .admin-input,
+.product-catalog-form .admin-react-select__control,
+.product-catalog-form .admin-filter-select__control,
+.product-catalog-form .text-editor-wrapper > .relative > div {
+  border-color: var(--admin-field-line) !important;
+  box-shadow: none;
+}
+
+.product-catalog-form .text-editor-wrapper .ql-toolbar.ql-snow {
+  border: 0 !important;
+  border-bottom: 1px solid var(--admin-line) !important;
+  background: var(--admin-field);
+}
+
+.product-catalog-form .text-editor-wrapper .ql-container.ql-snow {
+  border: 0 !important;
+}
+
+.product-catalog-form .admin-input:focus,
+.product-catalog-form select:focus,
+.product-catalog-form textarea:focus,
+.product-catalog-form button:focus-visible {
+  border-color: var(--admin-gold) !important;
+  outline: none !important;
+  --tw-ring-color: rgba(214, 163, 35, 0.18) !important;
+  box-shadow: 0 0 0 3px rgba(214, 163, 35, 0.15) !important;
+}
+
+.product-catalog-form .text-editor-wrapper > .relative > div:focus-within {
+  border-color: var(--admin-gold) !important;
+  --tw-ring-color: rgba(214, 163, 35, 0.18) !important;
+  box-shadow: 0 0 0 3px rgba(214, 163, 35, 0.15) !important;
+}
+
+.product-catalog-form .admin-react-select__input input:focus,
+.product-catalog-form .admin-filter-select__input input:focus {
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.product-catalog-form .admin-react-select__control--is-focused,
+.product-catalog-form .admin-filter-select__control--is-focused {
+  border-color: var(--admin-gold) !important;
+  box-shadow: 0 0 0 3px rgba(214, 163, 35, 0.15) !important;
+}
+
+body .admin-shell .product-catalog-form input.product-variant-search-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+body .admin-shell .product-catalog-form input.product-variant-search-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus {
+  min-height: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  appearance: none !important;
+}
+
+/* The React Select search input must not receive the admin shell's native
+   input border; the surrounding select control is its only visible border. */
+.admin-shell .product-catalog-form .admin-filter-select__input-container,
+.admin-shell .product-catalog-form .admin-react-select__input-container,
+.admin-shell .product-catalog-form .admin-filter-select__input-container input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.admin-input),
+.admin-shell .product-catalog-form .admin-react-select__input-container input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.admin-input),
+.admin-shell .product-catalog-form .admin-filter-select__input-container input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.admin-input):focus,
+.admin-shell .product-catalog-form .admin-react-select__input-container input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.admin-input):focus {
+  min-height: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  appearance: none;
+}
+
 /* One search treatment for every table toolbar. */
 .admin-table-search {
   max-width: 672px;

@@ -20,6 +20,7 @@ export default function ProductSettingsPanel({
       {/* Save */}
       <div className="bg-white border border-gray-100 rounded-xl p-4">
         <Button
+          variant="primary"
           className="w-full !font-semibold"
           onClick={handleSaveSubmit}
           disabled={saving}
