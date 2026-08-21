@@ -1322,21 +1322,12 @@ export default function ProductManagementUI() {
     const hasShippingProfile = Boolean(formData?.shipping?.shippingProfileId);
 
     if (!hasShippingProfile) {
-      const deliveryMode = normalizeProductServiceabilityMode(
-        formData?.shipping?.serviceabilityMode,
-      );
-
       const allowedPincodes = normalizePincodeList(
         formData?.shipping?.allowPincodes ||
           formData?.shipping?.serviceablePincodes,
       );
 
-      if (deliveryMode !== "allowlist") {
-        newErrors.shipping =
-          "Add allowed delivery pincodes when no shipping profile is selected.";
-      } else if (!allowedPincodes.length) {
-        newErrors.shipping = "Add at least one allowed delivery pincode.";
-      } else if (
+      if (
         allowedPincodes.some((pincode) => !isValidIndianPincode(pincode))
       ) {
         newErrors.shipping = "Every pincode must be a valid 6-digit pincode.";
@@ -2002,6 +1993,10 @@ export default function ProductManagementUI() {
         };
       })(),
     });
+    const manualDeliveryPincodes = normalizePincodeList(
+      updatedFormData.shipping?.allowPincodes ||
+        updatedFormData.shipping?.serviceablePincodes,
+    );
     const shipping = compactObject(
       selectedShippingProfile
         ? {
@@ -2011,9 +2006,9 @@ export default function ProductManagementUI() {
             additionalCost: profileShippingCharge,
             shippingCharge: profileShippingCharge,
 
-            // Profile serviceability is resolved at checkout. Keep product-level
-            // coverage empty so two competing pincode sources are never stored.
-            serviceabilityMode: "inherit",
+            // The profile remains the delivery source. Product-level coverage
+            // stays unrestricted and empty so it cannot conflict with it.
+            serviceabilityMode: "all_pincodes",
             allowPincodes: [],
             serviceablePincodes: [],
             regions: [],
@@ -2031,19 +2026,17 @@ export default function ProductManagementUI() {
           }
         : {
             ...(updatedFormData.shipping || {}),
-            serviceabilityMode: normalizeProductServiceabilityMode(
-              updatedFormData.shipping?.serviceabilityMode,
-            ),
+            serviceabilityMode: manualDeliveryPincodes.length
+              ? "allowlist"
+              : "all_pincodes",
 
-            allowPincodes: normalizePincodeList(
-              updatedFormData.shipping?.allowPincodes ||
-                updatedFormData.shipping?.serviceablePincodes,
-            ),
+            allowPincodes: manualDeliveryPincodes,
 
-            serviceablePincodes: normalizePincodeList(
-              updatedFormData.shipping?.serviceablePincodes ||
-                updatedFormData.shipping?.allowPincodes,
-            ),
+            serviceablePincodes: manualDeliveryPincodes,
+
+            regions: [],
+            states: [],
+            cities: [],
 
             freeShipping: Boolean(updatedFormData.shipping?.freeShipping),
 
@@ -2348,7 +2341,7 @@ export default function ProductManagementUI() {
           formData?.shipping?.serviceablePincodes,
       ).filter((item) => item !== pincode);
       patchShipping({
-        serviceabilityMode: "allowlist",
+        serviceabilityMode: next.length ? "allowlist" : "all_pincodes",
         allowPincodes: next,
         serviceablePincodes: next,
       });
@@ -3014,7 +3007,7 @@ export default function ProductManagementUI() {
                       shippingProfileId: profileId,
                       ...(profileId
                         ? {
-                            serviceabilityMode: "inherit",
+                            serviceabilityMode: "all_pincodes",
                             allowPincodes: [],
                             serviceablePincodes: [],
                           }
@@ -3152,39 +3145,23 @@ export default function ProductManagementUI() {
 
               {formData?.shipping?.shippingProfileId && (
                 <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-                  A shipping profile is selected. Its pincode rules are used at
-                  checkout, so manual product pincodes are locked. Remove the
-                  profile to add product-specific pincodes.
+                  Product-level serviceability is automatically All India and
+                  its pincode list is cleared. The selected profile provides
+                  the actual checkout delivery rules. Remove the profile to add
+                  product-specific allowed pincodes.
                 </p>
               )}
               {!formData?.shipping?.shippingProfileId && (
                 <>
-                  <div>
-                    <label className="admin-label">
-                      Delivery rule <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      className="admin-input"
-                      value="allowlist"
-                      onChange={() =>
-                        patchShipping({
-                          serviceabilityMode: "allowlist",
-                        })
-                      }
-                    >
-                      <option value="allowlist">
-                        Deliver only to allowed pincodes
-                      </option>
-                    </select>
-                    <p className="mt-1 text-[11px] text-gray-500">
-                      Required when no shipping profile is selected. Any pincode
-                      not added here is automatically not deliverable.
-                    </p>
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                    Leave the list empty to deliver across All India. Add one or
+                    more pincodes only when this product must be restricted to
+                    specific delivery locations.
                   </div>
 
                   <div className="space-y-2">
                     <label className="admin-label">
-                      Allowed pincodes <span className="text-red-500">*</span>
+                      Allowed pincodes <span className="font-normal text-gray-400">(optional)</span>
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -3233,7 +3210,7 @@ export default function ProductManagementUI() {
                         ))
                       ) : (
                         <span className="text-xs text-gray-400">
-                          No allowed pincodes added yet.
+                          No pincodes added — delivery defaults to All India.
                         </span>
                       )}
                     </div>

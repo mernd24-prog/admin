@@ -60,12 +60,12 @@ export default function CodCollections() {
     { key: "expected_amount", label: "Expected / Collected", render: (value, row) => <div><div>{money(value)}</div><div className="text-xs text-gray-500">{money(row.collected_amount)}</div></div> },
     { key: "status", label: "Status", render: (value) => <StatusBadge status={value} label={label(value)} /> },
     { key: "reference_id", label: "Reference", render: (value) => value || "-" },
-    { key: "actions", label: "Actions", render: (_, row) => ["pending", "submitted"].includes(row.status) ? <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => setDecision({ open: true, row, amount: row.collected_amount || row.expected_amount || "", referenceId: row.reference_id || "", notes: row.notes || "", markRemitted: row.collected_by === "seller" })}><MdCheckCircle size={15} /> Verify</button> : "-" },
+    { key: "actions", label: "Actions", render: (_, row) => ["pending", "submitted"].includes(row.status) ? <button type="button" className="admin-btn-secondary !px-2 !py-1" onClick={() => setDecision({ open: true, row, amount: row.collected_amount || row.expected_amount || "", referenceId: row.reference_id || "", notes: row.notes || "", markRemitted: false })}><MdCheckCircle size={15} /> Verify</button> : "-" },
   ], []);
 
   return (
     <div>
-      <PageHeader title="COD Collections" subtitle="Verify courier/platform cash and seller-direct COD before settlement" breadcrumbs={[{ label: "Payments & Finance" }, { label: "COD Collections" }]} actions={<button type="button" onClick={load}><MdRefresh size={17} /> Refresh</button>} />
+      <PageHeader title="COD Collections" subtitle="Verify seller-collected COD payments before settlement" breadcrumbs={[{ label: "Payments & Finance" }, { label: "COD Collections" }]} actions={<button type="button" onClick={load}><MdRefresh size={17} /> Refresh</button>} />
       <DataTable columns={columns} data={items} loading={loading} totalCount={items.length} page={1} pageSize={100} onPageChange={() => {}} onPageSizeChange={() => {}} onSearch={() => {}} onSort={() => {}} onRefresh={load} requiredModule="payments" />
       <DefaultModal isOpen={decision.open} onClose={() => setDecision({ open: false, row: null, amount: "", referenceId: "", notes: "", markRemitted: false })} title="Verify COD Collection" onSubmit={verify}>
         <div className="space-y-3">
@@ -73,7 +73,7 @@ export default function CodCollections() {
           <Input labelName="Collected amount" type="number" value={decision.amount} onChange={(event) => setDecision((prev) => ({ ...prev, amount: event.target.value }))} required />
           <Input labelName="Collection / remittance reference" value={decision.referenceId} onChange={(event) => setDecision((prev) => ({ ...prev, referenceId: event.target.value }))} required />
           <Input labelName="Notes" type="textarea" value={decision.notes} onChange={(event) => setDecision((prev) => ({ ...prev, notes: event.target.value }))} />
-          {decision.row?.collected_by === "seller" && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={decision.markRemitted} onChange={(event) => setDecision((prev) => ({ ...prev, markRemitted: event.target.checked }))} /> Cash remitted to platform</label>}
+          {decision.row?.collected_by === "seller" && <label className="flex items-start gap-2 text-sm"><input className="mt-1" type="checkbox" checked={decision.markRemitted} onChange={(event) => setDecision((prev) => ({ ...prev, markRemitted: event.target.checked }))} /><span>Platform has actually received the full cash amount from the seller <span className="block text-xs text-gray-500">Leave unchecked when you are only verifying that the seller collected cash from the customer.</span></span></label>}
         </div>
       </DefaultModal>
     </div>

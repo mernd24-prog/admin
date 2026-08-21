@@ -674,7 +674,10 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
     const taxableShare = taxableTotal > 0 ? taxableBase / taxableTotal : productShare;
     const payoutMode = String(firstDefined(pricing.sellerPayoutBase, pricing.seller_payout_base, metadata.sellerPayoutBase, "")).toLowerCase();
     const discountIncluded = payoutMode === "gross_customer_price" || payoutMode === "gross_seller_invoice";
-    const productAmount = money(firstDefined(pricing.sellerPayoutBaseAmount, pricing.seller_payout_base_amount, product.grossSellerInvoiceAmount, product.amount, record?.amount, lineTotal));
+    // Once a commission ledger exists it is the financial source of truth.
+    // Its amount is gross seller supply (including product GST), whereas the
+    // checkout payout-base snapshot may be taxable value only.
+    const productAmount = money(firstDefined(record?.amount, product.grossSellerInvoiceAmount, product.amount, pricing.sellerPayoutBaseAmount, pricing.seller_payout_base_amount, lineTotal));
     const shipping = money(firstDefined(pricing.shippingReimbursementAmount, pricing.shipping_reimbursement_amount, metadata.shippingReimbursementAmount, metadata.sellerDeliveryChargeAmount, seller.shippingReimbursement * productShare));
     const shippingDeduction = money(firstDefined(pricing.shippingDeductionAmount, pricing.shipping_deduction_amount, metadata.shippingDeductionAmount, seller.shippingDeduction * productShare));
     const discount = discountIncluded ? 0 : money(firstDefined(pricing.marketplaceFundedDiscountAmount, pricing.marketplace_funded_discount_amount, product.marketplaceFundedDiscountAmount, seller.marketplaceFundedDiscount * productShare));
@@ -2106,7 +2109,7 @@ const OrderSummary = () => {
                 const hasItemLevelAdjustment = productRows.some((row) =>
                   money(row.refundRecovery) > 0 || money(row.returnedQuantity) > 0 || money(row.cancelledQuantity) > 0,
                 );
-                const displaySellerPayout = hasProductRows && hasItemLevelAdjustment ? productRowsTotal : seller.sellerPayout;
+                const displaySellerPayout = hasProductRows ? productRowsTotal : seller.sellerPayout;
                 const payoutMismatch = hasProductRows && Math.abs(productRowsTotal - seller.sellerPayout) >= 0.01;
                 const itemProductPayable = sumMoney(productRows, "productAmount");
                 const itemShipping = sumMoney(productRows, "shipping");
@@ -2164,11 +2167,6 @@ const OrderSummary = () => {
                       <div className="rounded-lg bg-[#f8faff] px-3 py-2 text-right">
                         <div className="text-xs text-[#65718b]">Amount payable to seller</div>
                         <div className="text-lg font-bold text-[#1f4fc9]">{formatMoney(displaySellerPayout)}</div>
-                        {payoutMismatch && !hasItemLevelAdjustment && (
-                          <div className="mt-1 text-[11px] font-semibold text-[#8A5A00]">
-                            Item rows need backend reconciliation
-                          </div>
-                        )}
                         {payoutMismatch && hasItemLevelAdjustment && (
                           <div className="mt-1 text-[11px] font-semibold text-[#8A5A00]">
                             Showing item-wise adjusted payout

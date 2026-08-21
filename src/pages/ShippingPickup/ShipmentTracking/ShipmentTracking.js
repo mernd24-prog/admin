@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -290,7 +289,6 @@ const ShipmentTracking = () => {
     courierName: "",
     awbNumber: "",
     trackingUrl: "",
-    shippedAt: "",
   });
   const [trackingErrors, setTrackingErrors] = useState({});
   const [cancellationAction, setCancellationAction] = useState({
@@ -314,22 +312,6 @@ const ShipmentTracking = () => {
         : FILTER_FIELDS,
     [isSeller],
   );
-
-   const minimumShippedAt = useMemo(() => {
-  const orderDate =
-    selectedShipment?.order_created_at ||
-    selectedShipment?.orderCreatedAt ||
-    selectedShipment?.order?.created_at ||
-    selectedShipment?.order?.createdAt ||
-    selectedShipment?.created_at ||
-    selectedShipment?.createdAt;
-
-  if (!orderDate || !moment(orderDate).isValid()) {
-    return undefined;
-  }
-
-  return moment(orderDate).format("YYYY-MM-DDTHH:mm");
-}, [selectedShipment]);
 
   const fetchShipments = useCallback(async () => {
     try {
@@ -366,9 +348,6 @@ const ShipmentTracking = () => {
         courierName: row.courier_name || "",
         awbNumber: row.awb_number || row.tracking_number || "",
         trackingUrl: row.tracking_url || "",
-        shippedAt: row.shipped_at
-          ? moment(row.shipped_at).format("YYYY-MM-DDTHH:mm")
-          : "",
       });
       try {
         setLoading(true);
@@ -385,9 +364,6 @@ const ShipmentTracking = () => {
           awbNumber:
             nextShipment.awb_number || nextShipment.tracking_number || "",
           trackingUrl: nextShipment.tracking_url || "",
-          shippedAt: nextShipment.shipped_at
-            ? moment(nextShipment.shipped_at).format("YYYY-MM-DDTHH:mm")
-            : "",
         });
       } catch (requestError) {
         toast.error(
@@ -430,38 +406,6 @@ const ShipmentTracking = () => {
     const note = trackingAction.note.trim();
     const trackingUrl = trackingAction.trackingUrl.trim();
 
-    const orderDate =
-      selectedShipment?.order_created_at ||
-      selectedShipment?.orderCreatedAt ||
-      selectedShipment?.order?.created_at ||
-      selectedShipment?.order?.createdAt ||
-      selectedShipment?.created_at ||
-      selectedShipment?.createdAt;
-
-    // `datetime-local` has no timezone information. Parse it as browser-local
-    // time first, then convert to ISO before sending it to the backend.
-    const selectedShippedAt = trackingAction.shippedAt
-      ? moment(trackingAction.shippedAt, "YYYY-MM-DDTHH:mm", true)
-      : null;
-
-    if (
-      selectedShippedAt &&
-      (!selectedShippedAt.isValid() ||
-        selectedShippedAt.valueOf() > moment().valueOf())
-    ) {
-      nextErrors.shippedAt = "Shipment time cannot be in the future.";
-    }
-
-    if (
-      selectedShippedAt?.isValid() &&
-      orderDate &&
-      moment(orderDate).isValid() &&
-      selectedShippedAt.valueOf() < moment(orderDate).valueOf()
-    ) {
-      nextErrors.shippedAt =
-        "Shipment time cannot be earlier than the order date.";
-    }
-
     if (location && (/^\d+$/.test(location) || location.length < 3)) {
       nextErrors.location = "Enter a readable location, not only numbers.";
     }
@@ -490,9 +434,6 @@ const ShipmentTracking = () => {
           "Allowed: letters, numbers, -, _, and / only.";
       }
 
-      if (!trackingAction.shippedAt) {
-        nextErrors.shippedAt = "Shipment time is required.";
-      }
     }
 
     if (trackingUrl) {
@@ -523,10 +464,7 @@ const ShipmentTracking = () => {
       setTrackingErrors({});
       setLoading(true);
 
-      const shippedAtIso =
-        selectedShippedAt?.isValid() && trackingAction.shippedAt
-          ? selectedShippedAt.toISOString()
-          : undefined;
+      const eventTime = new Date().toISOString();
 
       await dispatch(
         addShipmentTracking({
@@ -539,7 +477,8 @@ const ShipmentTracking = () => {
           awbNumber: trackingAction.awbNumber,
           trackingNumber: trackingAction.awbNumber,
           trackingUrl: trackingAction.trackingUrl,
-          shippedAt: shippedAtIso,
+          eventTime,
+          shippedAt: trackingAction.status === "in_transit" ? eventTime : undefined,
         }),
       ).unwrap();
 
@@ -862,7 +801,7 @@ const ShipmentTracking = () => {
                 </div>
                 <p className="mt-0.5 text-xs text-gray-500">
                   Select the next valid shipment stage. Only relevant details
-                  are requested.
+                  are requested. Update time is recorded automatically.
                 </p>
               </div>
               <StatusBadge
@@ -1076,42 +1015,6 @@ const ShipmentTracking = () => {
                         />
                         <FieldError message={trackingErrors.trackingUrl} />
                       </label>
-                     <label className="grid min-w-0 gap-1 text-xs text-gray-500">
-  <span>
-    Shipped At{" "}
-    <span className="text-red-500" aria-hidden="true">
-      *
-    </span>
-  </span>
-
-  <input
-    className={`min-w-0 w-full max-w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${
-      trackingErrors.shippedAt
-        ? "border-red-400"
-        : "border-gray-200"
-    }`}
-    type="datetime-local"
-    min={minimumShippedAt}
-    max={moment().local().format("YYYY-MM-DDTHH:mm")}
-    value={trackingAction.shippedAt}
-    required
-    aria-required="true"
-    aria-invalid={Boolean(trackingErrors.shippedAt)}
-    onChange={(event) => {
-      setTrackingAction((prev) => ({
-        ...prev,
-        shippedAt: event.target.value,
-      }));
-
-      setTrackingErrors((prev) => ({
-        ...prev,
-        shippedAt: "",
-      }));
-    }}
-  />
-
-  <FieldError message={trackingErrors.shippedAt} />
-</label>
                     </div>
                   </div>
                 )}

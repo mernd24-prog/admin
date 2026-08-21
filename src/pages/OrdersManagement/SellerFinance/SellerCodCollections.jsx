@@ -9,7 +9,6 @@ import { ENDPOINTS } from "../../../_helpers/endpoints";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { uploadDocumentFile } from "../../../_helpers/globalFunctions";
-import { isSellerPanel } from "../../../_helpers/panelConfig";
 
 const money = (amount) => `₹${Number(amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 const label = (value) => String(value || "-").replace(/_/g, " ");
@@ -19,8 +18,6 @@ export default function SellerCodCollections() {
   const [loading, setLoading] = useState(false);
   const [uploadingProof, setUploadingProof] = useState(false);
   const [form, setForm] = useState({ open: false, row: null, amount: "", referenceId: "", proofUrl: "", notes: "" });
-  const [codSettings, setCodSettings] = useState({ enabled: true, collectionPolicy: "platform_or_courier", availabilityMode: "all_pincodes", allowPincodes: [] });
-  const [savingSettings, setSavingSettings] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -33,32 +30,6 @@ export default function SellerCodCollections() {
     } finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
-
-  useEffect(() => {
-    if (!isSellerPanel()) return;
-    axiosProvider.get(ENDPOINTS.sellers.myChargeSettings)
-      .then((response) => setCodSettings((current) => ({ ...current, ...(response?.data?.data?.cod || {}) })))
-      .catch((error) => toast.error(error?.response?.data?.message || "Unable to load seller COD settings"));
-  }, []);
-
-  const saveCodSettings = async () => {
-    if (codSettings.availabilityMode === "allowlist" && !codSettings.allowPincodes.length) {
-      toast.error("Add at least one allowed pincode");
-      return;
-    }
-    try {
-      setSavingSettings(true);
-      await axiosProvider.put(ENDPOINTS.sellers.myChargeSettings, { cod: codSettings });
-      toast.success("Seller COD settings saved");
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to save seller COD settings");
-    } finally { setSavingSettings(false); }
-  };
-
-  const patchCodList = (key, value) => setCodSettings((current) => ({
-    ...current,
-    [key]: String(value || "").split(",").map((item) => item.trim()).filter(Boolean),
-  }));
 
   const uploadProof = useCallback(async (event) => {
     const file = event.target.files?.[0];
@@ -131,19 +102,7 @@ export default function SellerCodCollections() {
   ], []);
 
   return <div>
-    <PageHeader title="My COD Collections" subtitle="Submit seller-direct cash collection for Admin verification before settlement" breadcrumbs={[{ label: "Seller Finance" }, { label: "COD Collections" }]} actions={<button type="button" onClick={load}><MdRefresh size={17} /> Refresh</button>} />
-    {isSellerPanel() && <div className="mb-5 rounded-xl border border-[#eadfca] bg-white p-5 shadow-sm">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div><h2 className="text-base font-semibold text-[#111342]">Seller COD Rules</h2><p className="mt-1 text-sm text-gray-500">You control serviceable pincodes and who collects COD for your shipments.</p></div>
-        <button type="button" className="admin-btn-primary" disabled={savingSettings} onClick={saveCodSettings}>{savingSettings ? "Saving…" : "Save COD Rules"}</button>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <label className="text-sm font-medium text-gray-700">Collection mode<select className="mt-1 w-full rounded-lg border border-[#d8caa6] bg-white px-3 py-2.5" value={codSettings.collectionPolicy} onChange={(event) => setCodSettings((current) => ({ ...current, collectionPolicy: event.target.value }))}><option value="platform_or_courier">Platform or courier collects</option><option value="seller_direct">Seller collects directly</option><option value="hybrid">Hybrid collection</option></select></label>
-        <label className="text-sm font-medium text-gray-700">Pincode rule<select className="mt-1 w-full rounded-lg border border-[#d8caa6] bg-white px-3 py-2.5" value={codSettings.availabilityMode} onChange={(event) => setCodSettings((current) => ({ ...current, availabilityMode: event.target.value }))}><option value="all_pincodes">All serviceable pincodes</option><option value="allowlist">Only allowed pincodes</option><option value="disabled">Disable COD</option></select></label>
-        <label className="flex items-center gap-3 rounded-lg border border-[#eadfca] px-4 py-3 text-sm font-medium text-gray-700"><input type="checkbox" checked={codSettings.enabled} onChange={(event) => setCodSettings((current) => ({ ...current, enabled: event.target.checked }))} /> Enable COD for my store</label>
-        {codSettings.availabilityMode === "allowlist" && <label className="text-sm font-medium text-gray-700 md:col-span-2">Allowed pincodes<input className="mt-1 w-full rounded-lg border border-[#d8caa6] px-3 py-2.5" value={codSettings.allowPincodes.join(", ")} onChange={(event) => patchCodList("allowPincodes", event.target.value)} placeholder="110001, 400001, 560001" /><span className="mt-1 block text-xs font-normal text-gray-500">Enter comma-separated 6-digit pincodes.</span></label>}
-      </div>
-    </div>}
+    <PageHeader title="My COD Collections" subtitle="COD is enabled per product. Submit cash collected from delivered COD orders for Admin verification before settlement." breadcrumbs={[{ label: "Seller Finance" }, { label: "COD Collections" }]} actions={<button type="button" onClick={load}><MdRefresh size={17} /> Refresh</button>} />
     <DataTable columns={columns} data={items} loading={loading} totalCount={items.length} page={1} pageSize={100} onPageChange={() => {}} onPageSizeChange={() => {}} onSearch={() => {}} onSort={() => {}} onRefresh={load} requiredModule="sellers/commissions" />
     <DefaultModal isOpen={form.open} onClose={() => setForm({ open: false, row: null, amount: "", referenceId: "", proofUrl: "", notes: "" })} title="Submit COD Collection" onSubmit={submit}>
       <div className="space-y-3">
