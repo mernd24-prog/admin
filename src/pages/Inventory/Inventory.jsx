@@ -10,6 +10,7 @@ import {
   MdInventory2,
   MdOpenInNew,
   MdRemove,
+  MdRefresh,
   MdSave,
 } from "react-icons/md";
 import { useDispatch } from "react-redux";
@@ -22,6 +23,7 @@ import {
   SellerLink,
   StatusBadge,
 } from "../../components/Shared";
+import OrangeButton from "../../components/Atoms/buttons/OrangeButton";
 import Loader from "../../components/Loader/Loader";
 import { exportToExcel, parseImportFile } from "../../_helpers/exportToCsv";
 import { isSellerPanel } from "../../_helpers/panelConfig";
@@ -189,19 +191,19 @@ const variantTitle = (row = {}) => (
 
 const productTitle = (row = {}) => (
   <div className="flex min-w-[220px] max-w-[52vw] items-center gap-3 xl:w-[560px]">
-  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[var(--admin-line)] bg-white">
-  {firstImage(row) ? (
-    <img
-      src={firstImage(row)}
-      alt={row.productName || "Variant"}
-      className="h-full w-full object-contain p-1"
-    />
-  ) : (
-    <div className="flex h-full w-full items-center justify-center text-[var(--admin-muted)]">
-      <MdInventory2 size={20} />
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[var(--admin-line)] bg-white">
+      {firstImage(row) ? (
+        <img
+          src={firstImage(row)}
+          alt={row.productName || "Variant"}
+          className="h-full w-full object-contain p-1"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-[var(--admin-muted)]">
+          <MdInventory2 size={20} />
+        </div>
+      )}
     </div>
-  )}
-</div>
 
     <div className="min-w-0">
       <p
@@ -1074,7 +1076,12 @@ const Inventory = () => {
             label: "Seller",
             render: (_, row) => (
               <SellerLink
-                sellerId={row.sellerId || row.seller_id || row.seller?.id || row.seller?._id}
+                sellerId={
+                  row.sellerId ||
+                  row.seller_id ||
+                  row.seller?.id ||
+                  row.seller?._id
+                }
                 sellerName={sellerLabel(row)}
               />
             ),
@@ -1170,18 +1177,6 @@ const Inventory = () => {
         },
       },
       {
-        key: "changeStatus",
-        label: "Change Status",
-        render: (_, row) =>
-          isPendingStock(row) ? (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
-              ⟳ Pending
-            </span>
-          ) : (
-            <span className="text-xs text-[var(--admin-muted)]">N/A</span>
-          ),
-      },
-      {
         key: "status",
         label: "Status",
         render: (value) => <StatusBadge status={value} dot />,
@@ -1240,7 +1235,6 @@ const Inventory = () => {
       <div>
         <Loader
           loading={saving || importing}
-          label={importing ? "Importing inventory..." : "Saving inventory..."}
         />
 
         <PageHeader
@@ -1249,49 +1243,31 @@ const Inventory = () => {
           backPath="/app/inventory"
           status={product.status}
           actions={
-            sellerView ? (
-              <>
-                <button
-                  type="button"
-                  onClick={handleExport}
-                  disabled={loading || !detailRows.length}
-                >
-                  Export Excel
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={importing || saving}
-                >
-                  {importing ? "Importing…" : "Import Excel"}
-                </button>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  className="hidden"
-                  onChange={handleImport}
+            <>
+              <button
+                type="button"
+                className="admin-btn-secondary inline-flex items-center gap-1.5"
+                onClick={refresh}
+                disabled={loading}
+              >
+                <MdRefresh
+                  size={17}
+                  className={loading ? "animate-spin" : ""}
                 />
-
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!canSave}
-                  title={
-                    pendingCount
-                      ? "Save inventory changes"
-                      : "No changes to save"
-                  }
-                  className="disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:bg-gray-300"
-                >
-                  {saving
-                    ? "Saving…"
-                    : `Save ${pendingCount ? `(${pendingCount})` : ""}`}
-                </button>
-              </>
-            ) : null
+                {loading ? "Refreshing..." : "Refresh"}
+              </button>
+              <OrangeButton
+                onClick={handleSave}
+                disabled={!canSave}
+                title={
+                  pendingCount ? "Save inventory changes" : "No changes to save"
+                }
+              >
+                {saving
+                  ? "Saving…"
+                  : `Save ${pendingCount ? `(${pendingCount})` : ""}`}
+              </OrangeButton>
+            </>
           }
         />
 
@@ -1354,7 +1330,6 @@ const Inventory = () => {
           totalCount={detailRows.length}
           rowKey="id"
           searchPlaceholder="Search variants"
-          onRefresh={refresh}
           emptyText="No variants found"
           rowActions={(row) => [
             {

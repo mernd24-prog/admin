@@ -86,7 +86,7 @@ export default function ProductOptions() {
     activationStatus: { value: "All", label: "All" },
   });
   const displayTypes = useDropdownOptions("product-option-display-types");
-  const { toQueryParams } = list;
+  const { toQueryParams, setSearch, setFilter, clearFilters, setPage } = list;
 
   const items = getListPayload(selector?.platformOptionsData);
   const total = getTotal(selector?.platformOptionsData, items.length);
@@ -124,21 +124,25 @@ export default function ProductOptions() {
               ? "false"
               : "";
 
-      list.setSearch(searchVal);
-      list.setFilter("active", statusVal);
+      if (list.search !== searchVal) {
+        setSearch(searchVal);
+      }
+      if ((list.filters.active || "") !== statusVal) {
+        setFilter("active", statusVal);
+      }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [filters.search, filters.activationStatus?.value]);
+  }, [filters.search, filters.activationStatus?.value, list.search, list.filters.active, setSearch, setFilter]);
 
   const handleSearchClear = () => {
     setFilters({
       search: "",
       activationStatus: { value: "All", label: "All" },
     });
-    list.clearFilters();
-    list.setSearch("");
-    list.setPage(1);
+    clearFilters();
+    setSearch("");
+    setPage(1);
   };
 
   const handleBulkAction = async (action, rows) => {

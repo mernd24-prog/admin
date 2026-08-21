@@ -8,6 +8,7 @@ import React, {
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { MdArrowBack, MdAdd, MdDelete, MdEdit, MdClose } from "react-icons/md";
+import { formatLabel } from "../../../utils/formatters";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import Input from "../../../components/Atoms/Input/Input";
 import Loader from "../../../components/Loader/Loader";
@@ -45,7 +46,7 @@ const typeOptions = [
   "multi_select",
   "boolean",
   "date",
-].map((value) => ({ value, label: value.replace("_", " ") }));
+].map((value) => ({ value, label: formatLabel(value) }));
 
 const CHECKBOX_FIELDS = [
   { key: "required", label: "Required" },
@@ -666,13 +667,6 @@ const CategoryAttributesPanel = ({
             )}
           </div>
           <div className="flex items-center gap-3">
-            {/* <OrangeButton
-              onClick={() =>
-                setAttributes((prev) => [...prev, { ...EMPTY_ATTRIBUTE }])
-              }
-            >
-              <MdAdd size={15} /> Add Attribute
-            </OrangeButton> */}
             <button
               type="button"
               onClick={handleBack}

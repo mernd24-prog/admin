@@ -14,9 +14,8 @@ import {
   DataTable,
   PageHeader,
   StatusBadge,
-  FilterBar,
-  BulkActionBar,
 } from "../../../components/Shared";
+import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 
 import { useListPage } from "../../../hooks/useListPage";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
@@ -29,26 +28,33 @@ import { validateValues } from "../../../_helpers/validation";
 const PAGE_SIZE = 20;
 const MODULE = "countries";
 
-const FILTER_FIELDS = [
-  { key: "search", type: "search", label: "Search", placeholder: "Search by name or code…", width: "w-56" },
-  {
-    key: "status",
-    type: "select",
-    label: "Status",
-    width: "w-36",
-    options: [
-      { value: "active",   label: "Active" },
-      { value: "inactive", label: "Inactive" },
-    ],
-  },
-];
+
 
 const COLUMNS = [
-  { key: "name",    label: "Country",    sortable: true, render: (v) => <span className="capitalize font-medium">{v}</span> },
-  { key: "code",    label: "Code",       sortable: true, render: (v) => <span className="font-mono text-xs uppercase">{v}</span> },
-  { key: "dialCode",label: "Dial Code"  },
-  { key: "_status", label: "Status",     render: (_, row) => <StatusBadge status={row.active || !row.isDisable ? "active" : "inactive"} dot /> },
-  { key: "_actions",label: "Actions" },
+  {
+    key: "name",
+    label: "Country",
+    sortable: true,
+    render: (v) => <span className="capitalize font-medium">{v}</span>,
+  },
+  {
+    key: "code",
+    label: "Code",
+    sortable: true,
+    render: (v) => <span className="font-mono text-xs uppercase">{v}</span>,
+  },
+  { key: "dialCode", label: "Dial Code" },
+  {
+    key: "_status",
+    label: "Status",
+    render: (_, row) => (
+      <StatusBadge
+        status={row.active || !row.isDisable ? "active" : "inactive"}
+        dot
+      />
+    ),
+  },
+  { key: "_actions", label: "Actions" },
 ];
 
 const extractListPayload = (payload = {}) => {
@@ -56,45 +62,94 @@ const extractListPayload = (payload = {}) => {
   const nested = data?.data || data;
   const list = nested?.list || nested?.items || [];
   return {
-    list:  Array.isArray(list) ? list : [],
+    list: Array.isArray(list) ? list : [],
     total: Number(nested?.total || list.length || 0),
   };
 };
 
 const validateCountry = (data) =>
   validateValues(data, {
-    name:     { label: "Country name", required: true, minLength: 3, maxLength: 100 },
-    code:     { label: "Country code", required: true, minLength: 2, maxLength: 5 },
-    dialCode: { label: "Dial code",    required: true, maxLength: 10 },
+    name: {
+      label: "Country name",
+      required: true,
+      minLength: 3,
+      maxLength: 100,
+    },
+    code: { label: "Country code", required: true, minLength: 2, maxLength: 5 },
+    dialCode: { label: "Dial code", required: true, maxLength: 10 },
   });
 
 const INIT_FORM = { name: "", code: "", dialCode: "", _id: undefined };
 
 const ManageCountry = () => {
   const dispatch = useDispatch();
-  const list     = useListPage({ defaultPageSize: PAGE_SIZE, defaultSortKey: "name" });
+  const list = useListPage({
+    defaultPageSize: PAGE_SIZE,
+    defaultSortKey: "name",
+  });
 
-  const [apiRes,    setApiRes]    = useState({ list: [], total: 0 });
-  const [loading,   setLoading]   = useState(false);
-  const [formData,  setFormData]  = useState(INIT_FORM);
-  const [errors,    setErrors]    = useState({});
-  const [isEditMode,setIsEditMode]= useState(false);
-  const [isFormOpen,setIsFormOpen]= useState(false);
-  const [submitting,setSubmitting]= useState(false);
+  const [apiRes, setApiRes] = useState({ list: [], total: 0 });
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState(INIT_FORM);
+  const [errors, setErrors] = useState({});
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [statusLoadingId, setStatusLoadingId] = useState("");
+  const [filters, setFilters] = useState({
+    search: "",
+    activationStatus: { value: "All", label: "All" },
+  });
+
+  const { setSearch, setFilter, clearFilters, setPage } = list;
+
+  // Sync SearchComponent filters with useListPage state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const searchVal = filters.search || "";
+      const statusVal =
+        filters.activationStatus?.value === "All"
+          ? ""
+          : filters.activationStatus?.value || "";
+
+      setSearch(searchVal);
+      setFilter("status", statusVal);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [filters.search, filters.activationStatus?.value, setSearch, setFilter]);
+
+  const handleSearchClear = () => {
+    setFilters({
+      search: "",
+      activationStatus: { value: "All", label: "All" },
+    });
+    clearFilters();
+    setSearch("");
+    setPage(1);
+  };
+
+  const handleBulkAction = (action) => {
+    if (action === "Active") {
+      handleBulkStatus(false);
+    } else if (action === "Inactive") {
+      handleBulkStatus(true);
+    }
+  };
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchCountries = useCallback(() => {
     const params = list.toQueryParams();
     const query = {
-      page:         params.page,
-      size:         params.limit,
-      keyWord:      params.search || params.filters?.search || "",
+      page: params.page,
+      size: params.limit,
+      keyWord: params.search || params.filters?.search || "",
       searchFields: "name,code",
-      sortBy:       params.sortBy,
-      sortOrder:    params.sortDir === "asc" ? "asc" : "desc",
+      sortBy: params.sortBy,
+      sortOrder: params.sortDir === "asc" ? "asc" : "desc",
     };
-    if (params.status && params.status !== "all") query.active = params.status === "active";
+    if (params.status && params.status !== "all")
+      query.active = params.status === "active";
 
     setLoading(true);
     dispatch(getCountryList(query))
@@ -106,7 +161,14 @@ const ManageCountry = () => {
   useEffect(() => {
     fetchCountries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [list.page, list.pageSize, list.search, list.sortKey, list.sortDir, list.filters]);
+  }, [
+    list.page,
+    list.pageSize,
+    list.search,
+    list.sortKey,
+    list.sortDir,
+    list.filters,
+  ]);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const isActive = (row) =>
@@ -122,7 +184,12 @@ const ManageCountry = () => {
 
   const openEdit = (country) => {
     if (submitting || statusLoadingId) return;
-    setFormData({ name: country.name, code: country.code, dialCode: country.dialCode, _id: country._id });
+    setFormData({
+      name: country.name,
+      code: country.code,
+      dialCode: country.dialCode,
+      _id: country._id,
+    });
     setErrors({});
     setIsEditMode(true);
     setIsFormOpen(true);
@@ -140,17 +207,25 @@ const ManageCountry = () => {
     e.preventDefault();
     if (submitting) return;
     const validationErrors = validateCountry(formData);
-    if (Object.keys(validationErrors).length) { setErrors(validationErrors); return; }
+    if (Object.keys(validationErrors).length) {
+      setErrors(validationErrors);
+      return;
+    }
 
     setSubmitting(true);
     dispatch(isEditMode ? editCountry(formData) : create(formData))
       .unwrap()
       .then((res) => {
-        toast.success(res?.message || `Country ${isEditMode ? "updated" : "created"} successfully.`);
+        toast.success(
+          res?.message ||
+            `Country ${isEditMode ? "updated" : "created"} successfully.`,
+        );
         fetchCountries();
         closeForm(true);
       })
-      .catch((err) => { toast.error(err?.message || "Failed to save country."); })
+      .catch((err) => {
+        toast.error(err?.message || "Failed to save country.");
+      })
       .finally(() => setSubmitting(false));
   };
 
@@ -160,7 +235,12 @@ const ManageCountry = () => {
     if (!id || statusLoadingId) return;
     try {
       setStatusLoadingId(id);
-      const res = await dispatch(enableDisableCountry({ _id: [country._id], isDisable: isActive(country) })).unwrap();
+      const res = await dispatch(
+        enableDisableCountry({
+          _id: [country._id],
+          isDisable: isActive(country),
+        }),
+      ).unwrap();
       toast.success(res?.message || "Status updated.");
       fetchCountries();
     } catch (err) {
@@ -175,7 +255,9 @@ const ManageCountry = () => {
     if (!list.selectedKeys.length) return;
     setLoading(true);
     try {
-      const res = await dispatch(enableDisableCountry({ _id: list.selectedKeys, isDisable })).unwrap();
+      const res = await dispatch(
+        enableDisableCountry({ _id: list.selectedKeys, isDisable }),
+      ).unwrap();
       toast.success(res?.message || "Bulk update complete.");
       list.clearSelection();
       fetchCountries();
@@ -188,27 +270,34 @@ const ManageCountry = () => {
 
   // ── Table columns with renderers ──────────────────────────────────────────
   const columns = COLUMNS.map((col) => {
-    if (col.key === "_status") return { ...col, render: (_, row) => <StatusBadge status={isActive(row) ? "active" : "inactive"} dot /> };
-    if (col.key === "_actions") return {
-      ...col,
-      render: (_, row) => (
-        <div className="flex items-center gap-2">
-          <ToggleButton
-            isToggle={isActive(row)}
-            handleClick={() => handleToggle(row)}
-            requiredModule={MODULE}
-            loading={statusLoadingId === row._id}
-            disabled={Boolean(statusLoadingId) || submitting}
-          />
-          <ActionButtons
-            onEdit={() => openEdit(row)}
-            showLinkButton={false}
-            showDeleteButton={false}
-            requiredModule={MODULE}
-          />
-        </div>
-      ),
-    };
+    if (col.key === "_status")
+      return {
+        ...col,
+        render: (_, row) => (
+          <StatusBadge status={isActive(row) ? "active" : "inactive"} dot />
+        ),
+      };
+    if (col.key === "_actions")
+      return {
+        ...col,
+        render: (_, row) => (
+          <div className="flex items-center gap-2">
+            <ToggleButton
+              isToggle={isActive(row)}
+              handleClick={() => handleToggle(row)}
+              requiredModule={MODULE}
+              loading={statusLoadingId === row._id}
+              disabled={Boolean(statusLoadingId) || submitting}
+            />
+            <ActionButtons
+              onEdit={() => openEdit(row)}
+              showLinkButton={false}
+              showDeleteButton={false}
+              requiredModule={MODULE}
+            />
+          </div>
+        ),
+      };
     return col;
   });
 
@@ -227,7 +316,6 @@ const ManageCountry = () => {
             <button
               onClick={openAdd}
               disabled={submitting || Boolean(statusLoadingId)}
-              
             >
               + Add Country
             </button>
@@ -235,59 +323,57 @@ const ManageCountry = () => {
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={apiRes.list}
-        loading={loading}
-        totalCount={apiRes.total}
-        page={list.page}
-        pageSize={list.pageSize}
-        onPageChange={list.setPage}
-        onPageSizeChange={list.setPageSize}
-        onSort={list.setSort}
-        sortKey={list.sortKey}
-        sortDir={list.sortDir}
-        selectable
-        selectedKeys={list.selectedKeys}
-        onSelectionChange={list.setSelectedKeys}
-        rowKey="_id"
-        requiredModule={MODULE}
-        emptyText="No countries found."
-        emptyIcon={<MdPublic size={36} className="text-gray-200" />}
-        filterBar={
-          <FilterBar
-            filters={FILTER_FIELDS}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
-            loading={loading}
-            activeCount={list.activeFilterCount}
-          />
-        }
-        bulkActionBar={
-          <BulkActionBar
-            selectedCount={list.selectedCount}
-            totalCount={apiRes.list.length}
-            onClear={list.clearSelection}
-            module={MODULE}
-            loading={loading}
-            actions={[
-              {
-                label:   "Set Active",
-                action:  "status_change",
-                variant: "primary",
-                onClick: () => handleBulkStatus(false),
-              },
-              {
-                label:   "Set Inactive",
-                action:  "status_change",
-                variant: "warning",
-                onClick: () => handleBulkStatus(true),
-              },
+      <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
+        <section className="border-b border-[var(--admin-line)]">
+          <SearchComponent
+            selectedRow={list.selectedKeys}
+            setSelectedRow={list.setSelectedKeys}
+            filters={filters}
+            setFilters={setFilters}
+            isSearchShow={true}
+            isActivationStatus={true}
+            activationStatusOptions={[
+              { value: "All", label: "All" },
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Inactive" },
             ]}
+            applyFilters={() => {}}
+            handleSearchRemove={handleSearchClear}
+            isActionButton={true}
+            isStatusAction={true}
+            handleAction={handleBulkAction}
+            requiredModule={MODULE}
+            isSearchDown={false}
+            defaultSearchOpen={true}
+            compactFilterBar={true}
+            hideFilterActions={true}
+            largeSearchInput={true}
           />
-        }
-      />
+        </section>
+        <section>
+          <DataTable
+            columns={columns}
+            data={apiRes.list}
+            loading={loading}
+            totalCount={apiRes.total}
+            page={list.page}
+            pageSize={list.pageSize}
+            onPageChange={list.setPage}
+            onPageSizeChange={list.setPageSize}
+            onSort={list.setSort}
+            sortKey={list.sortKey}
+            sortDir={list.sortDir}
+            selectable
+            selectedKeys={list.selectedKeys}
+            onSelectionChange={list.setSelectedKeys}
+            rowKey="_id"
+            requiredModule={MODULE}
+            emptyText="No countries found."
+            emptyIcon={<MdPublic size={36} className="text-gray-200" />}
+            cardClassName="overflow-hidden rounded-none border-0 shadow-none"
+          />
+        </section>
+      </div>
 
       {/* Form modal */}
       <DefaultModal
@@ -296,14 +382,56 @@ const ManageCountry = () => {
         onClose={closeForm}
         onSubmit={handleSubmit}
         loading={submitting}
-        submitButtonText={submitting ? "Saving..." : isEditMode ? "Update Country" : "Create Country"}
+        submitButtonText={
+          submitting
+            ? "Saving..."
+            : isEditMode
+              ? "Update Country"
+              : "Create Country"
+        }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3">
           <div className="col-span-2">
-            <Input labelName="Name" type="text" name="name" value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} error={errors.name} required maxLength={25} disabled={submitting} />
+            <Input
+              labelName="Name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, name: e.target.value }))
+              }
+              error={errors.name}
+              required
+              maxLength={25}
+              disabled={submitting}
+            />
           </div>
-          <Input labelName="Code" type="text" name="code" value={formData.code} onChange={(e) => setFormData((p) => ({ ...p, code: e.target.value }))} error={errors.code} required maxLength={5} disabled={submitting} />
-          <Input labelName="Dial Code" type="text" name="dialCode" value={formData.dialCode} onChange={(e) => setFormData((p) => ({ ...p, dialCode: e.target.value }))} error={errors.dialCode} required maxLength={10} disabled={submitting} />
+          <Input
+            labelName="Code"
+            type="text"
+            name="code"
+            value={formData.code}
+            onChange={(e) =>
+              setFormData((p) => ({ ...p, code: e.target.value }))
+            }
+            error={errors.code}
+            required
+            maxLength={5}
+            disabled={submitting}
+          />
+          <Input
+            labelName="Dial Code"
+            type="text"
+            name="dialCode"
+            value={formData.dialCode}
+            onChange={(e) =>
+              setFormData((p) => ({ ...p, dialCode: e.target.value }))
+            }
+            error={errors.dialCode}
+            required
+            maxLength={10}
+            disabled={submitting}
+          />
         </div>
       </DefaultModal>
     </div>
