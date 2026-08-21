@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { MdRefresh, MdVisibility } from "react-icons/md";
+import { MdCheckCircle, MdDelete, MdVisibility } from "react-icons/md";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import {
+  BulkActionBar,
+  ConfirmModal,
   DataTable,
   PageHeader,
   StatusBadge,
@@ -19,6 +21,7 @@ import {
 } from "./supportUtils";
 
 import { isSellerPanel } from "../../_helpers/panelConfig";
+import { ACTIONS } from "../../_helpers/usePermission";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
 import { QueryDetailsSkeleton } from "../../components/Loader/SkeletonLoader";
 
@@ -26,6 +29,78 @@ const TABS = [
   { key: "customer", label: "Customer Queries" },
   { key: "seller", label: "Seller Queries" },
 ];
+
+const getStatusHistory = (query = {}) =>
+  Array.isArray(query.statusHistory)
+    ? query.statusHistory
+    : Array.isArray(query.metadata?.statusHistory)
+      ? query.metadata.statusHistory
+      : [];
+
+const getConversationItems = (query = {}) => {
+  const userLabel = query.userType === "seller" ? "Seller message" : "Customer message";
+  const items = [
+    {
+      key: "user-message",
+      type: "user",
+      title: userLabel,
+      message: query.message || query.messagePreview || "N/A",
+      status: query.status || "pending",
+      timestamp: query.createdAt,
+    },
+  ];
+
+  const followUpMessages = Array.isArray(query.messages)
+    ? query.messages
+    : Array.isArray(query.metadata?.messages)
+      ? query.metadata.messages
+      : [];
+
+  followUpMessages.forEach((item, index) => {
+    const senderType = item.senderType === "seller" ? "Seller" : item.senderType === "customer" ? "Customer" : "Support";
+    items.push({
+      key: `reply-${item.createdAt || index}`,
+      type: item.senderType === "admin" ? "admin" : "user",
+      title: `${senderType} reply`,
+      message: item.message || "",
+      status: query.status || "pending",
+      timestamp: item.createdAt,
+    });
+  });
+
+  getStatusHistory(query).forEach((item, index) => {
+    items.push({
+      key: `admin-history-${item.changedAt || index}`,
+      type: "admin",
+      title: `Admin updated status to ${statusLabel(item.status)}`,
+      message: item.note || "",
+      status: item.status,
+      timestamp: item.changedAt,
+    });
+  });
+
+  const hasLatestNote = String(query.adminNotes || "").trim();
+  const latestNoteAlreadyIncluded = items.some(
+    (item) => item.type === "admin" && item.message.trim() === hasLatestNote,
+  );
+
+  if (hasLatestNote && !latestNoteAlreadyIncluded) {
+    items.push({
+      key: "admin-latest-note",
+      type: "admin",
+      title: "Latest admin note",
+      message: hasLatestNote,
+      status: query.status || "pending",
+      timestamp: query.lastStatusChangedAt || query.updatedAt,
+    });
+  }
+
+  return items.sort((first, second) => {
+    const firstTime = new Date(first.timestamp || 0).getTime();
+    const secondTime = new Date(second.timestamp || 0).getTime();
+    return firstTime - secondTime;
+  });
+};
 
 const AdminQueries = () => {
   const [activeTab, setActiveTab] = useState("customer");
@@ -40,6 +115,10 @@ const AdminQueries = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [statusForm, setStatusForm] = useState({ status: "", adminNotes: "" });
   const [savingStatus, setSavingStatus] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState([]);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const isSeller = isSellerPanel();
 
   const fetchQueries = useCallback(async () => {
@@ -57,6 +136,9 @@ const AdminQueries = () => {
       const payload = response?.data || {};
       const list = Array.isArray(payload?.data) ? payload.data : [];
       setQueries(list);
+      setSelectedKeys((keys) =>
+        keys.filter((key) => list.some((query) => query.queryId === key)),
+      );
       setTotal(getPaginationTotal(payload, list.length));
     } catch (requestError) {
       const message = requestError?.message || "Failed to load support queries";
@@ -75,7 +157,7 @@ const AdminQueries = () => {
     setSelectedQuery(query);
     setStatusForm({
       status: query.status || "pending",
-      adminNotes: query.adminNotes || "",
+      adminNotes: "",
     });
     try {
       setDetailLoading(true);
@@ -86,7 +168,7 @@ const AdminQueries = () => {
       setSelectedQuery(detail);
       setStatusForm({
         status: detail.status || "pending",
-        adminNotes: detail.adminNotes || "",
+        adminNotes: "",
       });
     } catch (requestError) {
       toast.error(requestError?.message || "Failed to load query details");
@@ -107,7 +189,7 @@ const AdminQueries = () => {
       setSelectedQuery(updated);
       setStatusForm({
         status: updated.status || "pending",
-        adminNotes: updated.adminNotes || "",
+        adminNotes: "",
       });
       toast.success("Query status updated");
       await fetchQueries();
@@ -117,6 +199,76 @@ const AdminQueries = () => {
       setSavingStatus(false);
     }
   }, [fetchQueries, selectedQuery, statusForm]);
+
+  const markResolved = useCallback(async (query, adminNotes = query?.adminNotes || "") => {
+    if (!query?.queryId || query.status === "resolved") return;
+    try {
+      setSavingStatus(true);
+      const response = await axiosProvider.patch(
+        ENDPOINTS.support.adminStatus(query.queryId),
+        {
+          status: "resolved",
+          adminNotes,
+        },
+      );
+      const updated = response?.data?.data || query;
+      if (selectedQuery?.queryId === query.queryId) {
+        setSelectedQuery(updated);
+        setStatusForm({
+          status: updated.status || "resolved",
+          adminNotes: "",
+        });
+      }
+      toast.success("Query marked as resolved");
+      await fetchQueries();
+    } catch (requestError) {
+      toast.error(requestError?.message || "Failed to mark query as resolved");
+    } finally {
+      setSavingStatus(false);
+    }
+  }, [fetchQueries, selectedQuery]);
+
+  const deleteQuery = useCallback(async () => {
+    if (!deleteTarget?.queryId) return;
+    try {
+      setDeleteLoading(true);
+      await axiosProvider.delete(ENDPOINTS.support.adminDelete(deleteTarget.queryId));
+      toast.success("Query deleted");
+      if (selectedQuery?.queryId === deleteTarget.queryId) {
+        setSelectedQuery(null);
+      }
+      setSelectedKeys((keys) => keys.filter((key) => key !== deleteTarget.queryId));
+      setDeleteTarget(null);
+      await fetchQueries();
+    } catch (requestError) {
+      toast.error(requestError?.message || "Failed to delete query");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [deleteTarget, fetchQueries, selectedQuery]);
+
+  const deleteSelectedQueries = useCallback(async () => {
+    if (!selectedKeys.length) return;
+    try {
+      setDeleteLoading(true);
+      const response = await axiosProvider.delete(
+        ENDPOINTS.support.adminBulkDelete,
+        { data: { queryIds: selectedKeys } },
+      );
+      const deletedCount = response?.data?.data?.deletedCount || selectedKeys.length;
+      toast.success(`${deletedCount} quer${deletedCount === 1 ? "y" : "ies"} deleted`);
+      if (selectedQuery?.queryId && selectedKeys.includes(selectedQuery.queryId)) {
+        setSelectedQuery(null);
+      }
+      setBulkDeleteOpen(false);
+      setSelectedKeys([]);
+      await fetchQueries();
+    } catch (requestError) {
+      toast.error(requestError?.message || "Failed to delete selected queries");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [fetchQueries, selectedKeys, selectedQuery]);
 
   const columns = useMemo(
     () => [
@@ -189,7 +341,7 @@ const AdminQueries = () => {
         render: (value) => formatDateTime(value),
       },
     ],
-    [],
+    [isSeller],
   );
 
   return (
@@ -224,6 +376,7 @@ const AdminQueries = () => {
               setActiveTab(tab.key);
               setPage(1);
               setSearch("");
+              setSelectedKeys([]);
             }}
           >
             {tab.label}
@@ -253,11 +406,50 @@ const AdminQueries = () => {
         rowKey="queryId"
         emptyText={`No ${activeTab} queries found.`}
         onRowClick={openQuery}
+        selectable
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        bulkActionBar={
+          <BulkActionBar
+            selectedCount={selectedKeys.length}
+            totalCount={queries.length}
+            onClear={() => setSelectedKeys([])}
+            onSelectAll={() =>
+              setSelectedKeys(queries.map((row) => row.queryId).filter(Boolean))
+            }
+            module="queries"
+            loading={loading || deleteLoading}
+            actions={[
+              {
+                label: "Delete Selected",
+                icon: <MdDelete />,
+                action: ACTIONS.DELETE,
+                variant: "danger",
+                onClick: () => setBulkDeleteOpen(true),
+              },
+            ]}
+          />
+        }
         rowActions={(row) => [
           {
             label: "View",
             icon: <MdVisibility />,
             onClick: () => openQuery(row),
+          },
+          ...(row.status !== "resolved"
+            ? [
+                {
+                  label: "Mark as Resolved",
+                  icon: <MdCheckCircle className="text-green-600" />,
+                  onClick: () => markResolved(row),
+                },
+              ]
+            : []),
+          {
+            label: "Delete Query",
+            icon: <MdDelete className="text-red-600" />,
+            danger: true,
+            onClick: () => setDeleteTarget(row),
           },
         ]}
       />
@@ -320,11 +512,42 @@ const AdminQueries = () => {
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-                Message
+                Ticket Conversation
               </p>
-              <p className="mt-2 whitespace-pre-wrap rounded-md border border-[var(--admin-line)] bg-white p-3 text-sm leading-6 text-[var(--admin-ink)]">
-                {selectedQuery.message}
-              </p>
+              <div className="mt-3 space-y-3">
+                {getConversationItems(selectedQuery).map((item) => {
+                  const isAdminMessage = item.type === "admin";
+                  return (
+                    <div
+                      key={item.key}
+                      className={`flex ${isAdminMessage ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[88%] rounded-md border px-3 py-2 text-sm shadow-sm ${
+                          isAdminMessage
+                            ? "border-[var(--admin-blue)] bg-[var(--admin-blue)] text-white"
+                            : "border-[var(--admin-line)] bg-white text-[var(--admin-ink)]"
+                        }`}
+                      >
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <span className={`text-xs font-semibold ${isAdminMessage ? "text-white" : "text-[var(--admin-ink)]"}`}>
+                            {item.title}
+                          </span>
+                          {isAdminMessage ? (
+                            <StatusBadge status={item.status} label={statusLabel(item.status)} dot />
+                          ) : null}
+                        </div>
+                        <p className={`whitespace-pre-wrap leading-6 ${isAdminMessage ? "text-white" : "text-[var(--admin-ink)]"}`}>
+                          {item.message || "No note added."}
+                        </p>
+                        <p className={`mt-1 text-[11px] ${isAdminMessage ? "text-white/80" : "text-[var(--admin-muted)]"}`}>
+                          {formatDateTime(item.timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -345,10 +568,24 @@ const AdminQueries = () => {
                 isSearchable={false}
                 isClearable={false}
               />
+              {statusForm.status !== "resolved" ? (
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-md border border-green-600 px-4 text-sm font-semibold text-green-700 transition hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => markResolved(selectedQuery, statusForm.adminNotes)}
+                    disabled={savingStatus}
+                  >
+                    <MdCheckCircle size={18} />
+                    Mark as Resolved
+                  </button>
+                </div>
+              ) : null}
             </div>
 
+
             <label className="block text-sm font-semibold text-[var(--admin-ink)]">
-              Admin Notes
+              New Admin Note
               <textarea
                 className="mt-1 min-h-[110px] w-full rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 text-sm focus:outline-none"
                 value={statusForm.adminNotes}
@@ -358,12 +595,35 @@ const AdminQueries = () => {
                     adminNotes: event.target.value,
                   }))
                 }
-                placeholder="Optional internal note"
+                placeholder="Add a new note for this status update"
               />
             </label>
+
           </div>
         ) : null}
       </DefaultModal>
+
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="Delete Query"
+        message={`Are you sure you want to delete ${deleteTarget?.queryId || "this query"}? This cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete"
+        loading={deleteLoading}
+        onConfirm={deleteQuery}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmModal
+        isOpen={bulkDeleteOpen}
+        title="Delete Selected Queries"
+        message={`Are you sure you want to delete ${selectedKeys.length} selected quer${selectedKeys.length === 1 ? "y" : "ies"}? This cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete Selected"
+        loading={deleteLoading}
+        onConfirm={deleteSelectedQueries}
+        onCancel={() => setBulkDeleteOpen(false)}
+      />
     </div>
   );
 };
