@@ -25,7 +25,7 @@ import Loader from "../../../../components/Loader/Loader";
 import { getAllStateList } from "../../../../Redux/stateSlice";
 import { getAllCityList } from "../../../../Redux/citySlice";
 import { GrDocument } from "react-icons/gr";
-import { FiTrash2, FiAlertCircle, FiPlus } from "react-icons/fi";
+import { FiTrash2, FiAlertCircle, FiPlus, FiImage, FiVideo } from "react-icons/fi";
 import { toast } from "sonner";
 import { useNavigate, useParams } from "react-router-dom";
 import TabNavigation from "./TabNavigation";
@@ -2584,6 +2584,10 @@ export default function ProductManagementUI() {
         icon: <GrDocument />,
         component: (
           <div ref={refs["product-details"]} className="space-y-4">
+            <div className="product-form-section-header">
+              <h3>Attributes</h3>
+              <p>Manage the product attributes controlled by its category.</p>
+            </div>
             {/* <div className="pb-4 border-b border-gray-100 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-gray-900">Attributes</h3>
@@ -2747,157 +2751,7 @@ export default function ProductManagementUI() {
           </div>
         ),
       },
-      {
-        id: "common-images",
-        title: "Media",
-        description: "Images and one product video shown on the customer product page.",
-        icon: <BsMenuApp />,
-        component: (
-          <section
-            ref={refs["common-images"]}
-            className="space-y-5 rounded-xl border border-[var(--admin-line)] bg-white p-5 shadow-sm"
-          >
-            <div>
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-lg font-semibold text-[var(--admin-ink)]">
-                  Product view images
-                </h3>
-                <span className="rounded-full bg-[var(--admin-blue)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--admin-blue)]">
-                  {(formData.commonImages || []).length}/
-                  {MAX_COMMON_PRODUCT_IMAGES}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-gray-500">
-                Upload shared images such as front, back, packaging, usage,
-                and detail views. They appear for every variant.
-              </p>
-            </div>
 
-            <div className="flex flex-wrap gap-3">
-              {(formData.commonImages || []).map((image, imageIndex) => (
-                <div
-                  key={`${image}-${imageIndex}`}
-                  className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200 bg-white"
-                >
-                  <img
-                    src={image}
-                    alt={`Catalog image ${imageIndex + 1}`}
-                    className="h-full w-full object-contain p-1"
-                  />
-                  {imageIndex === 0 && (
-                    <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold text-white">
-                      Cover
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => removeCommonProductImage(imageIndex)}
-                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
-                    aria-label={`Remove catalog image ${imageIndex + 1}`}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-
-              {(formData.commonImages || []).length <
-                MAX_COMMON_PRODUCT_IMAGES && (
-                <label
-                  className={`flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-xs text-gray-500 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)] ${commonImagesUploading ? "pointer-events-none opacity-50" : ""}`}
-                >
-                  <FiPlus size={20} />
-                  <span>{commonImagesUploading ? "Uploading…" : "Upload"}</span>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    multiple
-                    className="hidden"
-                    onChange={(event) => {
-                      uploadCommonProductImages(event.target.files);
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-              )}
-            </div>
-            {/* 
-              {(formData.commonImages || []).length < MAX_COMMON_PRODUCT_IMAGES && (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    type="url"
-                    className="admin-input flex-1"
-                    placeholder="Or paste a common image URL"
-                    value={commonImageUrl}
-                    onChange={(event) => setCommonImageUrl(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        addCommonProductImageUrl();
-                      }
-                    }}
-                  />
-                  <button type="button" className="admin-btn" onClick={addCommonProductImageUrl}>Add image</button>
-                </div>
-              )} */}
-
-            <div className="border-t border-gray-100 pt-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-[var(--admin-ink)]">
-                    Product video
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Upload one video for this product. It will be visible on the customer product page.
-                  </p>
-                </div>
-                <span className="rounded-full bg-[var(--admin-blue)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--admin-blue)]">
-                  {(formData.videos || []).filter(Boolean).length}/1
-                </span>
-              </div>
-
-              {(formData.videos || []).filter(Boolean).length ? (
-                <div className="mt-4 max-w-md overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-                  <video
-                    src={(formData.videos || []).filter(Boolean)[0]}
-                    className="aspect-video w-full bg-black"
-                    controls
-                    preload="metadata"
-                  />
-                  <div className="flex items-center justify-between gap-3 px-3 py-2">
-                    <span className="truncate text-xs text-gray-500">
-                      Product video uploaded
-                    </span>
-                    <button
-                      type="button"
-                      onClick={removeProductVideo}
-                      className="rounded-md px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <label
-                  className={`mt-4 flex h-28 max-w-md cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-[var(--admin-blue)] hover:text-[var(--admin-blue)] ${productVideoUploading ? "pointer-events-none opacity-50" : ""}`}
-                >
-                  <FiPlus size={20} />
-                  <span>{productVideoUploading ? "Uploading video…" : "Upload product video"}</span>
-                  <span className="mt-1 text-xs text-gray-400">MP4, WebM, MOV or OGG</span>
-                  <input
-                    type="file"
-                    accept="video/mp4,video/webm,video/ogg,video/quicktime"
-                    className="hidden"
-                    onChange={(event) => {
-                      uploadProductVideo(event.target.files?.[0]);
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-              )}
-            </div>
-          </section>
-        ),
-      },
       {
         id: "variants-options",
         title: "Variants & options",
@@ -2906,11 +2760,9 @@ export default function ProductManagementUI() {
         icon: <BsMenuApp />,
         component: (
           <div className="space-y-5">
-            <div className="pb-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Variant Builder
-              </h3>
-              <p className="text-sm text-gray-500 mt-0.5">
+            <div className="product-form-section-header">
+              <h3>Variants &amp; Options</h3>
+              <p>
                 Define option axes (Color, Size...), generate combinations, then
                 edit each variant.
               </p>
@@ -2936,6 +2788,142 @@ export default function ProductManagementUI() {
           </div>
         ),
       },
+       {
+        id: "common-images",
+        title: "Media",
+        description: "Images and one product video shown on the customer product page.",
+        icon: <BsMenuApp />,
+        component: (
+          <section
+            ref={refs["common-images"]}
+            className="space-y-5"
+          >
+            <div className="product-form-section-header">
+              <h3>Media</h3>
+              <p>Upload product images and one product video for the storefront.</p>
+            </div>
+            <div className="flex flex-col gap-6">
+              <div className="order-2 min-w-0">
+                <span className="mb-2 inline-flex rounded-full bg-[var(--admin-gold-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--admin-gold-dark)]">
+                  Images {(formData.commonImages || []).length}/{MAX_COMMON_PRODUCT_IMAGES}
+                </span>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,112px))] gap-3">
+              {(formData.commonImages || []).map((image, imageIndex) => (
+                <div
+                  key={`${image}-${imageIndex}`}
+                    className="group relative aspect-square w-full overflow-hidden rounded-lg border border-[var(--admin-field-line)] bg-[var(--admin-field)]"
+                >
+                  <img
+                    src={image}
+                    alt={`Catalog image ${imageIndex + 1}`}
+                    className="h-full w-full object-contain p-2"
+                  />
+                  {imageIndex === 0 && (
+                    <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+                      Cover
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeCommonProductImage(imageIndex)}
+                    className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-semibold text-red-600 opacity-100 shadow-sm transition hover:bg-red-50 sm:opacity-0 sm:group-hover:opacity-100"
+                    aria-label={`Remove catalog image ${imageIndex + 1}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+
+              {(formData.commonImages || []).length <
+                MAX_COMMON_PRODUCT_IMAGES && (
+                <label
+                  className={`group flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-field)] px-3 text-center text-xs text-gray-500 transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]/40 hover:text-[var(--admin-gold-dark)] ${(formData.commonImages || []).length === 0 ? "col-span-full h-32 w-full max-w-[260px]" : "aspect-square w-full"} ${commonImagesUploading ? "pointer-events-none opacity-50" : ""}`}
+                >
+                  <span className="mb-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm"><FiImage size={15} /></span>
+                  <span className="font-semibold">{commonImagesUploading ? "Uploading…" : "Add images"}</span>
+                  <span className="mt-1 text-[10px] text-gray-400">PNG, JPG or WebP</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      uploadCommonProductImages(event.target.files);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+                </div>
+              </div>
+            {/* 
+              {(formData.commonImages || []).length < MAX_COMMON_PRODUCT_IMAGES && (
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="url"
+                    className="admin-input flex-1"
+                    placeholder="Or paste a common image URL"
+                    value={commonImageUrl}
+                    onChange={(event) => setCommonImageUrl(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        addCommonProductImageUrl();
+                      }
+                    }}
+                  />
+                  <button type="button" className="admin-btn" onClick={addCommonProductImageUrl}>Add image</button>
+                </div>
+              )} */}
+
+              <div className="order-1 min-w-0">
+              <span className="mb-2 inline-flex rounded-full bg-[var(--admin-gold-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--admin-gold-dark)]">
+                Video {(formData.videos || []).filter(Boolean).length}/1
+              </span>
+              {(formData.videos || []).filter(Boolean).length ? (
+                <div className="max-w-[260px] overflow-hidden rounded-lg border border-[var(--admin-field-line)] bg-[var(--admin-field)]">
+                  <video
+                    src={(formData.videos || []).filter(Boolean)[0]}
+                    className="aspect-video w-full bg-black"
+                    controls
+                    preload="metadata"
+                  />
+                  <div className="flex items-center justify-between gap-3 px-3 py-2">
+                    <span className="truncate text-xs text-gray-500">
+                      Product video uploaded
+                    </span>
+                    <button
+                      type="button"
+                      onClick={removeProductVideo}
+                      className="rounded-md px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label
+                  className={`flex h-32 w-full max-w-[260px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-field)] px-3 text-center text-xs text-gray-500 transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]/40 hover:text-[var(--admin-gold-dark)] ${productVideoUploading ? "pointer-events-none opacity-50" : ""}`}
+                >
+                  <span className="mb-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm"><FiVideo size={16} /></span>
+                  <span className="font-semibold">{productVideoUploading ? "Uploading video…" : "Add product video"}</span>
+                  <span className="mt-1 text-[10px] leading-tight text-gray-400">MP4, WebM, MOV or OGG</span>
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/ogg,video/quicktime"
+                    className="hidden"
+                    onChange={(event) => {
+                      uploadProductVideo(event.target.files?.[0]);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+              </div>
+            </div>
+          </section>
+        ),
+      },
       {
         id: "shipping",
         title: "Shipping",
@@ -2944,11 +2932,11 @@ export default function ProductManagementUI() {
         component: (
           <div className="space-y-6">
             {/* Header */}
-            <div className="pb-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">Shipping</h3>
-              <p className="text-sm text-gray-500 mt-0.5">
-                Select a shipping profile or configure delivery settings
-                manually.
+            <div className="product-form-section-header">
+              <h3>Shipping</h3>
+              <p>
+                Use a saved profile, copy a template, or set product-level
+                delivery pincodes.
               </p>
             </div>
 
@@ -2964,18 +2952,9 @@ export default function ProductManagementUI() {
               </div>
             )}
             <div
-                className={`rounded-xl border p-4 space-y-3 ${formData?.shipping?.shippingProfileId ? "border-[var(--admin-blue)]" : "border-gray-200 "}`}
+                className="space-y-3"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">
-                      Shipping Profile
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Reusable delivery configuration. Selecting a profile uses
-                      its serviceability, charges, and ETA.
-                    </p>
-                  </div>
+                <div className="flex items-start justify-end gap-2">
                   {formData?.shipping?.shippingProfileId && (
                     <div className="flex items-center gap-3 whitespace-nowrap">
                       <a
@@ -2997,6 +2976,7 @@ export default function ProductManagementUI() {
                   )}
                 </div>
                 <FilterSelect
+                  label="Shipping profile (optional)"
                   options={shippingProfileOptions.filter((opt) => opt.type === "profile").map((opt) => ({
                     ...opt,
                     label:
@@ -3021,21 +3001,22 @@ export default function ProductManagementUI() {
                         : {}),
                     });
                   }}
-                  placeholder="— No profile (use manual settings below) —"
+                  placeholder="Select a saved shipping profile"
                   isClearable
                   isSearchable
                 />
 
                 {!formData?.shipping?.shippingProfileId &&
                   shippingProfileOptions.some((option) => option.type === "template") && (
-                    <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-3">
-                      <p className="text-xs font-semibold text-amber-900">Copy an Admin template</p>
-                      <p className="mb-2 mt-0.5 text-[11px] text-amber-700">Copies serviceability, pincodes, charges, and ETA into this product. It remains editable and does not create or select a reusable profile.</p>
+                    <div className="pt-1">
+                      <p className="mb-2 text-xs text-gray-500">
+                        Or copy an admin template into editable product settings.
+                      </p>
                       <FilterSelect
                         options={shippingProfileOptions.filter((option) => option.type === "template")}
                         value={null}
                         onChange={copyShippingTemplateToProduct}
-                        placeholder="Select a template to copy"
+                        placeholder="Copy settings from a template"
                         isSearchable
                         isClearable={false}
                       />
@@ -3043,8 +3024,8 @@ export default function ProductManagementUI() {
                   )}
 
                 {shippingProfileOptions.filter((option) => option.type === "profile").length === 0 && !formData?.sellerId && (
-                  <p className="text-xs text-amber-600">
-                    Select a seller first to load their shipping profiles.
+                  <p className="text-xs text-[var(--admin-gold-dark)]">
+                    Select a seller to view saved profiles.
                   </p>
                 )}
                 {shippingProfileOptions.filter((option) => option.type === "profile").length === 0 && formData?.sellerId && (
@@ -3138,15 +3119,14 @@ export default function ProductManagementUI() {
                 )}
             </div>
 
-            <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-4">
+            <div className="space-y-4 border-t border-[var(--admin-line)] pt-5">
               <div>
                 <p className="text-sm font-semibold text-gray-800">
                   Product delivery pincodes
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  This controls whether customers can buy this product for a
-                  pincode. It is checked separately from shipping charges, even
-                  when shipping is free.
+                  Choose where this product can be delivered. These rules also
+                  apply when shipping is free.
                 </p>
               </div>
 
@@ -3177,8 +3157,7 @@ export default function ProductManagementUI() {
                       </option>
                     </select>
                     <p className="mt-1 text-[11px] text-gray-500">
-                      Required when no shipping profile is selected. Any pincode
-                      not added here is automatically not deliverable.
+                      Unlisted pincodes will not be available for delivery.
                     </p>
                   </div>
 
@@ -3256,11 +3235,9 @@ export default function ProductManagementUI() {
         icon: <GrDocument />,
         component: (
           <div className="space-y-5">
-            <div className="pb-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">
-                SEO &amp; Metadata
-              </h3>
-              <p className="text-sm text-gray-500 mt-0.5">
+            <div className="product-form-section-header">
+              <h3>SEO &amp; Metadata</h3>
+              <p>
                 Optimise how this product appears in search engines and social
                 sharing.
               </p>
@@ -3280,11 +3257,9 @@ export default function ProductManagementUI() {
         icon: <BsMenuApp />,
         component: (
           <div className="space-y-6">
-            <div className="pb-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Tags &amp; Discovery
-              </h3>
-              <p className="text-sm text-gray-500 mt-0.5">
+            <div className="product-form-section-header">
+              <h3>Tags &amp; Discovery</h3>
+              <p>
                 Tags, badges, and discoverability settings.
               </p>
             </div>
@@ -3462,7 +3437,7 @@ export default function ProductManagementUI() {
   }, [flowGateErrors, handleSaveSubmit]);
 
   return (
-    <div className="relative min-h-screen">
+    <div className="product-catalog-form relative min-h-screen">
       <Loader
         loading={
           loading ||
@@ -3533,14 +3508,14 @@ export default function ProductManagementUI() {
           </div>
           <main
             ref={mainContainerRef}
-            className="flex-1 bg-white border border-gray-100 rounded-xl overflow-visible"
+            className="product-form-sections flex-1 overflow-visible rounded-xl border border-[var(--admin-line)] bg-white"
           >
             {tabs?.map((tab) => (
               <section
                 key={tab.id}
                 ref={refs[tab.id]}
                 id={tab.id}
-                className="px-4 py-6 sm:px-6 sm:py-8 border-b border-gray-100 last:border-b-0 scroll-mt-24"
+                className="product-form-section scroll-mt-24"
               >
                 {tab.component}
               </section>

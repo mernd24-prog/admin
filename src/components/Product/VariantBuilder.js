@@ -402,50 +402,52 @@ const VariantBuilder = ({
               className="rounded-xl border border-gray-200 bg-white overflow-hidden"
             >
               {/* Option header */}
-              <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100">
+              <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 bg-gray-50 px-3 py-2.5">
                 <MdDragIndicator className="text-gray-300 text-lg flex-shrink-0 cursor-grab" />
                 <span className="text-sm font-semibold text-gray-800 flex-1 min-w-0">
                   {option.name}
                 </span>
-                <select
-                  className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-600 focus:outline-none focus:border-[var(--admin-blue)]"
-                  value={option.displayType || "button"}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={(e) =>
-                    updateOption(optIdx, "displayType", e.target.value)
-                  }
-                >
-                  {DISPLAY_TYPES.map((dt) => (
-                    <option key={dt.value} value={dt.value}>
-                      {dt.label}
-                    </option>
-                  ))}
-                </select>
-                <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer whitespace-nowrap">
-                  <input
-                    type="checkbox"
-                    className="w-3 h-3 accent-[var(--admin-blue)]"
-                    checked={Boolean(option.required)}
+                <div className="ml-auto flex h-8 shrink-0 items-stretch overflow-hidden rounded-md border border-gray-200 bg-white">
+                  <select
+                    className="h-full min-w-[116px] border-0 bg-white px-2 text-xs text-gray-700 outline-none focus:ring-0"
+                    value={option.displayType || "button"}
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) =>
-                      updateOption(optIdx, "required", e.target.checked)
+                      updateOption(optIdx, "displayType", e.target.value)
                     }
-                  />
-                  Required
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setActiveOptionIdx(isOpen ? null : optIdx)}
-                  className="text-xs font-medium text-[var(--admin-blue)] hover:underline whitespace-nowrap px-1"
-                >
-                  {isOpen ? "Done" : "+ Values"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeOption(optIdx)}
-                  className="text-xs text-red-400 hover:text-red-600 font-medium px-1"
-                >
-                  Remove
-                </button>
+                  >
+                    {DISPLAY_TYPES.map((dt) => (
+                      <option key={dt.value} value={dt.value}>
+                        {dt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <label className="flex h-full cursor-pointer items-center gap-1.5 whitespace-nowrap border-l border-gray-200 px-2.5 text-xs text-gray-600 hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 accent-[var(--admin-blue)]"
+                      checked={Boolean(option.required)}
+                      onChange={(e) =>
+                        updateOption(optIdx, "required", e.target.checked)
+                      }
+                    />
+                    Required
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setActiveOptionIdx(isOpen ? null : optIdx)}
+                    className="inline-flex h-full items-center whitespace-nowrap border-l border-gray-200 px-2.5 text-xs font-medium leading-none text-[var(--admin-blue)] hover:bg-blue-50"
+                  >
+                    {isOpen ? "Done" : "+ Values"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeOption(optIdx)}
+                    className="inline-flex h-full items-center whitespace-nowrap border-l border-gray-200 px-2.5 text-xs font-medium leading-none text-red-500 hover:bg-red-50 hover:text-red-600"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
 
               {/* Selected values */}
@@ -545,11 +547,11 @@ const VariantBuilder = ({
 
         {/* Search & add option */}
         <div className="relative" ref={optionSearchRef}>
-          <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 focus-within:border-[var(--admin-blue)] focus-within:ring-2 focus-within:ring-[var(--admin-blue)]/10 transition-all">
+          <div className="flex items-center gap-2 rounded-lg border bg-[var(--admin-field)] px-3 py-2 transition-all focus-within:border-[var(--admin-gold)] focus-within:ring-1 focus-within:ring-[var(--admin-gold)]/15">
             <MdAdd className="text-gray-800 flex-shrink-0" size={18} />
             <input
               type="text"
-              className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-800 focus:outline-none"
+              className="product-variant-search-input min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-gray-800 shadow-none placeholder:text-gray-500 focus:border-0 focus:outline-none focus:ring-0"
               placeholder="Search option master (Color, Size, RAM…)"
               value={optionSearch}
               onChange={(e) => {
@@ -691,7 +693,7 @@ const VariantBuilder = ({
                         [field]: "",
                       }));
                     }}
-                    className="flex-shrink-0 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm text-[var(--admin-blue)] hover:bg-[var(--admin-blue)] hover:text-white transition-colors"
+                    className="flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-2.5 py-1 text-sm font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold)] hover:text-[var(--admin-navy)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
                   >
                     Set
                   </button>
@@ -741,8 +743,8 @@ const VariantBuilder = ({
                 onDragEnd={() => {
                   dragVariantIdx.current = null;
                 }}
-                className={`rounded-xl border overflow-hidden transition-shadow hover:shadow-sm
-                  ${variant.isDefault ? "border-[var(--admin-blue)] bg-blue-50/30" : "border-gray-200 bg-white"}`}
+                className={`overflow-hidden rounded-xl border transition-colors
+                  ${variant.isDefault ? "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/15" : "border-[var(--admin-field-line)] bg-white hover:border-[var(--admin-line-strong)]"}`}
               >
                 {/* Collapsed row */}
                 <div
@@ -762,8 +764,8 @@ const VariantBuilder = ({
                       e.stopPropagation();
                       setDefaultVariant(idx);
                     }}
-                    className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors
-                      ${variant.isDefault ? "bg-[var(--admin-blue)] border-[var(--admin-blue)]" : "border-gray-300 hover:border-[var(--admin-blue)]"}`}
+                    className={`h-4 w-4 flex-shrink-0 rounded-full border-2 transition-colors
+                      ${variant.isDefault ? "border-[var(--admin-gold)] bg-[var(--admin-gold)]" : "border-[var(--admin-line-strong)] hover:border-[var(--admin-gold)]"}`}
                   />
 
                   {/* Variant label */}

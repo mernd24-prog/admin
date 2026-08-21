@@ -61,6 +61,7 @@ const selectStyles = (invalid, hasValue) => ({
     whiteSpace: "nowrap",
   }),
   indicatorsContainer: (base) => ({ ...base, flexShrink: 0 }),
+  indicatorSeparator: () => ({ display: "none" }),
   menu: (base) => ({ ...base, borderRadius: 8, zIndex: 60 }),
   option: (base, state) => ({
     ...base,
@@ -206,6 +207,7 @@ const Input = ({
         : Boolean(selectedValue);
       return (
         <Select
+          classNamePrefix="admin-react-select"
           inputId={inputId}
           name={name}
           options={list}
