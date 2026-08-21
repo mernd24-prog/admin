@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { FaPlus, FaMinus } from "react-icons/fa";
+import { FaPlus, FaMinus, FaChevronRight } from "react-icons/fa";
 import { MdSearch, MdClose, MdAdd, MdTune } from "react-icons/md";
 
 // Components
@@ -36,6 +36,7 @@ const ProductCategories = () => {
   const [isRefresh, setIsRefresh] = useState(false);
   const [isPublish, setIsPublish] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState(() => new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedCategories, setHasLoadedCategories] = useState(false);
   const [allCategories, setAllCategories] = useState([]);
@@ -334,30 +335,15 @@ const ProductCategories = () => {
     setCategoryEditOpen(true);
   }, []);
 
-  const toggleExpand = (id, level = 0, parentId = null) => {
-    setCategories((prev) => {
-      if (level === 0) {
-        // Toggle root category
-        return prev.map((cat) =>
-          cat._id === id ? { ...cat, isExpanded: !cat.isExpanded } : cat,
-        );
-      } else if (level === 1) {
-        // Toggle subcategory
-        return prev.map((cat) => {
-          if (cat._id === parentId) {
-            return {
-              ...cat,
-              subCategories: cat.subCategories.map((sub) =>
-                sub._id === id ? { ...sub, isExpanded: !sub.isExpanded } : sub,
-              ),
-            };
-          }
-          return cat;
-        });
-      }
-      return prev;
+  const toggleExpand = useCallback((id) => {
+    setExpandedCategoryIds((current) => {
+      const next = new Set(current);
+      const key = String(id);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
     });
-  };
+  }, []);
 
   const handleDelete = useCallback((data) => {
     setSelectedCategory({ id: data._id, name: data.name });
@@ -613,18 +599,20 @@ const ProductCategories = () => {
     if (!searchTerm || !searchTerm.trim()) {
       return sourceCategories;
     }
-    const term = searchTerm.trim().toLowerCase();
+
+    const term = searchTerm.toLowerCase().trim();
+
     return sourceCategories
       .map((category) => {
         const mainCategoryMatches = category.name
-          .toLowerCase()
+          ?.toLowerCase()
           .includes(term);
 
         const filteredSubCategories =
           category.subCategories
             ?.map((subCategory) => {
               const subCategoryMatches = subCategory.name
-                .toLowerCase()
+                ?.toLowerCase()
                 .includes(term);
 
               const filteredChildren =
@@ -636,7 +624,6 @@ const ProductCategories = () => {
                 return {
                   ...subCategory,
                   subCategories: filteredChildren,
-                  isExpanded: true,
                 };
               }
               return null;
@@ -647,7 +634,6 @@ const ProductCategories = () => {
           return {
             ...category,
             subCategories: filteredSubCategories,
-            isExpanded: true,
           };
         }
         return null;
@@ -656,7 +642,23 @@ const ProductCategories = () => {
   }, []);
 
   useEffect(() => {
-    setCategories(filterCategoryTree(filters.search, allCategories));
+    const filtered = filterCategoryTree(filters.search, allCategories);
+    setCategories(filtered);
+
+    // Auto-expand all nodes when searching (like the hierarchy does)
+    if (filters.search?.trim()) {
+      const ids = new Set();
+      const collectIds = (nodes = []) => {
+        nodes.forEach((node) => {
+          if (node.subCategories?.length) {
+            ids.add(String(node._id));
+            collectIds(node.subCategories);
+          }
+        });
+      };
+      collectIds(filtered);
+      setExpandedCategoryIds(ids);
+    }
   }, [filters.search, allCategories, filterCategoryTree]);
 
   const handleSearchRemove = useCallback(() => {
@@ -744,28 +746,16 @@ const ProductCategories = () => {
 
   // Helper function to format count display
   const formatCount = (count) => {
-    if (count === 0) return "0";
-    return count > 99 ? "99+" : count.toString();
+    return String(count);
   };
 
   const renderCategory = (
     category,
     level = 0,
-    parentId = null,
-    allCategories = [],
+    isLastChild = false,
   ) => {
     const hasChildren = category.subCategories?.length > 0;
     const marginLeft = level > 0 ? `${level * 40}px` : "0";
-
-    const isLastChild = parentId
-      ? (() => {
-          const parent = findCategoryById(allCategories, parentId);
-          return (
-            parent?.subCategories?.indexOf(category) ===
-            parent?.subCategories?.length - 1
-          );
-        })()
-      : false;
 
     return (
       <div key={category._id} className="relative">
@@ -797,23 +787,23 @@ const ProductCategories = () => {
           }`}
           style={{ marginLeft }}
         >
-          <div className="flex items-center gap-3">
-            {hasChildren && (
+          <div className="flex min-w-0 items-center gap-3">
+            {hasChildren ? (
               <button
-                onClick={() => toggleExpand(category._id, level, parentId)}
-                className={`flex items-center justify-center w-5 h-5 rounded-sm border ${
-                  category.isExpanded
-                    ? "bg-gray-600 border-gray-600 text-black"
-                    : "bg-white border-gray-400 text-gray-600 hover:border-gray-600"
+                type="button"
+                onClick={() => toggleExpand(category._id)}
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border text-sm leading-none ${
+                  expandedCategoryIds.has(String(category._id))
+                    ? "border-gray-600 bg-gray-600 text-white"
+                    : "border-gray-400 bg-white text-gray-600 hover:border-gray-600"
                 }`}
+                aria-label={`${expandedCategoryIds.has(String(category._id)) ? "Collapse" : "Expand"} ${category.name}`}
               >
-                {category.isExpanded ? (
-                  <FaMinus size={10} />
-                ) : (
-                  <FaPlus size={10} />
-                )}
+                {expandedCategoryIds.has(String(category._id)) ? "−" : "+"}
               </button>
-            )}
+            ) : level > 0 ? (
+              <span className="h-5 w-5 shrink-0" />
+            ) : null}
 
             <span
               className={`capitalize ${
@@ -826,7 +816,7 @@ const ProductCategories = () => {
             </span>
             {hasChildren && (
               <span
-                className={`px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-700`}
+                className="px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-700"
               >
                 {formatCount(countSubCategories(category))}
               </span>
@@ -867,14 +857,13 @@ const ProductCategories = () => {
         </div>
 
         {/* Subcategories */}
-        {category.isExpanded && hasChildren && (
+        {(filters.search?.trim() || expandedCategoryIds.has(String(category._id))) && hasChildren && (
           <div className="relative">
             {category.subCategories.map((subCategory, index) =>
               renderCategory(
                 subCategory,
                 level + 1,
-                category._id,
-                allCategories,
+                index === category.subCategories.length - 1,
               ),
             )}
           </div>
@@ -961,8 +950,8 @@ const ProductCategories = () => {
             </div>
           )}
           {!categoriesLoading && categories.length > 0 ? (
-            categories.map((category) =>
-              renderCategory(category, 0, null, categories),
+            categories.map((category, index) =>
+              renderCategory(category, 0, index === categories.length - 1),
             )
           ) : !categoriesLoading ? (
             <div className="text-center py-8 text-gray-400 text-sm">

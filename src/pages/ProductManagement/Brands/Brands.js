@@ -35,7 +35,7 @@ import {
   MdImage,
   MdClose,
 } from "react-icons/md";
-import {ButtonLoader} from "../../../components/Loader/Loader";
+import { ButtonLoader } from "../../../components/Loader/Loader";
 
 // const FILTER_FIELDS = [
 //   {
@@ -145,31 +145,21 @@ const BASE_COLUMNS = [
     key: "logo",
     label: "Logo",
     width: "80px",
-    render: (v, row) => (
-      <BrandAssetCell src={v} name={row.name} />
-    ),
+    render: (v, row) => <BrandAssetCell src={v} name={row.name} />,
   },
   {
     key: "name",
     label: "Brand Name",
     width: "280px",
     sortable: true,
-    render: (v) => (
-      <span className="font-medium text-gray-800">
-        {v}
-      </span>
-    ),
+    render: (v) => <span className="font-medium text-gray-800">{v}</span>,
   },
   {
     key: "thumbnails",
     label: "Thumbnail",
     width: "120px",
     render: (v, row) => (
-      <BrandAssetCell
-        src={v}
-        name={row.name}
-        type="thumbnail"
-      />
+      <BrandAssetCell src={v} name={row.name} type="thumbnail" />
     ),
   },
   {
@@ -217,19 +207,19 @@ const Brands = () => {
     defaultSortKey: "name",
     defaultSortDir: "asc",
   });
-const [uploadingType, setUploadingType] = useState(null);
-const [logoPreview, setLogoPreview] = useState("");
-const [thumbnailPreview, setThumbnailPreview] = useState("");
+  const [uploadingType, setUploadingType] = useState(null);
+  const [logoPreview, setLogoPreview] = useState("");
+  const [thumbnailPreview, setThumbnailPreview] = useState("");
 
-const [logoError, setLogoError] = useState(false);
-const [thumbnailError, setThumbnailError] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+  const [thumbnailError, setThumbnailError] = useState(false);
   const [brands, setBrands] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isRefresh, setIsRefresh] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   const [filters, setFilters] = useState(INITIAL_FILTERS);
-const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS);
 
   const [modalMode, setModalMode] = useState(null); // "add" | "edit" | null
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -244,118 +234,112 @@ const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS);
   const [rejectionReason, setRejectionReason] = useState("");
 
   const handleBrandImageUpload = async (file, type) => {
-  if (!file) return;
+    if (!file) return;
 
-  try {
-    setUploadingType(type);
+    try {
+      setUploadingType(type);
 
-    if (type === "BRANDS") {
-      setLogoError(false);
-    }
-
-    if (type === "BRAND_THUMBNAIL") {
-      setThumbnailError(false);
-    }
-
-    await handleFileUpload(file, type);
-
-    const previewUrl = URL.createObjectURL(file);
-
-    if (type === "BRANDS") {
-      setLogoPreview((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return previewUrl;
-      });
-
-      if (errors.logo) {
-        setErrors((prev) => ({
-          ...prev,
-          logo: undefined,
-        }));
+      if (type === "BRANDS") {
+        setLogoError(false);
       }
-    }
 
-    if (type === "BRAND_THUMBNAIL") {
-      setThumbnailPreview((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return previewUrl;
-      });
-
-      if (errors.thumbnails) {
-        setErrors((prev) => ({
-          ...prev,
-          thumbnails: undefined,
-        }));
+      if (type === "BRAND_THUMBNAIL") {
+        setThumbnailError(false);
       }
+
+      await handleFileUpload(file, type);
+
+      const previewUrl = URL.createObjectURL(file);
+
+      if (type === "BRANDS") {
+        setLogoPreview((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return previewUrl;
+        });
+
+        if (errors.logo) {
+          setErrors((prev) => ({
+            ...prev,
+            logo: undefined,
+          }));
+        }
+      }
+
+      if (type === "BRAND_THUMBNAIL") {
+        setThumbnailPreview((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return previewUrl;
+        });
+
+        if (errors.thumbnails) {
+          setErrors((prev) => ({
+            ...prev,
+            thumbnails: undefined,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Image upload failed:", error);
+    } finally {
+      setUploadingType(null);
     }
-  } catch (error) {
-    console.error("Image upload failed:", error);
-  } finally {
-    setUploadingType(null);
-  }
-};
+  };
 
- const fetchList = useCallback(async () => {
-  setLoading(true);
+  const fetchList = useCallback(async () => {
+    setLoading(true);
 
-  try {
-    const activationValue = appliedFilters?.activationStatus?.value;
-    const approvalValue = appliedFilters?.approvalStatus?.value;
+    try {
+      const activationValue = appliedFilters?.activationStatus?.value;
+      const approvalValue = appliedFilters?.approvalStatus?.value;
 
-    const res = await dispatch(
-      getBrandList({
-        page: list.page,
-        size: list.pageSize || 10,
+      const res = await dispatch(
+        getBrandList({
+          page: list.page,
+          size: list.pageSize || 10,
 
-        keyWord: appliedFilters?.search || "",
-        searchFields: "name",
+          keyWord: appliedFilters?.search || "",
+          searchFields: "name",
 
-        select:
-          "name isDisable createdAt logo thumbnails approvalStatus needsApprovalReview active",
+          select:
+            "name isDisable createdAt logo thumbnails approvalStatus needsApprovalReview active",
 
-        sortBy: list.sortKey || "name",
-        sortOrder: list.sortDir || "asc",
+          sortBy: list.sortKey || "name",
+          sortOrder: list.sortDir || "asc",
 
-        ...(activationValue === "Active"
-          ? { isDisable: false }
-          : {}),
+          ...(activationValue === "Active" ? { isDisable: false } : {}),
 
-        ...(activationValue === "Inactive"
-          ? { isDisable: true }
-          : {}),
+          ...(activationValue === "Inactive" ? { isDisable: true } : {}),
 
-        ...(approvalValue && approvalValue !== "All"
-          ? { approvalStatus: approvalValue }
-          : {}),
+          ...(approvalValue && approvalValue !== "All"
+            ? { approvalStatus: approvalValue }
+            : {}),
 
-        ...(appliedFilters?.dateFrom
-          ? { dateFrom: appliedFilters.dateFrom }
-          : {}),
+          ...(appliedFilters?.dateFrom
+            ? { dateFrom: appliedFilters.dateFrom }
+            : {}),
 
-        ...(appliedFilters?.dateTo
-          ? { dateTo: appliedFilters.dateTo }
-          : {}),
-      }),
-    ).unwrap();
+          ...(appliedFilters?.dateTo ? { dateTo: appliedFilters.dateTo } : {}),
+        }),
+      ).unwrap();
 
-    const data = res?.data || {};
+      const data = res?.data || {};
 
-    setBrands(data?.list || []);
-    setTotal(data?.total || 0);
-  } catch (err) {
-    toast.error(err?.message || "Failed to fetch brands");
-  } finally {
-    setLoading(false);
-  }
-}, [
-  dispatch,
-  list.page,
-  list.pageSize,
-  list.sortKey,
-  list.sortDir,
-  appliedFilters,
-  isRefresh,
-]);
+      setBrands(data?.list || []);
+      setTotal(data?.total || 0);
+    } catch (err) {
+      toast.error(err?.message || "Failed to fetch brands");
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    dispatch,
+    list.page,
+    list.pageSize,
+    list.sortKey,
+    list.sortDir,
+    appliedFilters,
+    isRefresh,
+  ]);
 
   // useEffect(() => {
   //   fetchList();
@@ -368,30 +352,29 @@ const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS);
   //   list.sortDir,
   //   isRefresh,
   // ]);
-useEffect(() => {
-  fetchList();
-}, [fetchList]);
-useEffect(() => {
-  const delay =
-    filters.search !== appliedFilters.search ? 300 : 0;
+  useEffect(() => {
+    fetchList();
+  }, [fetchList]);
+  useEffect(() => {
+    const delay = filters.search !== appliedFilters.search ? 300 : 0;
 
-  const timer = setTimeout(() => {
+    const timer = setTimeout(() => {
+      setAppliedFilters(filters);
+      list.setPage(1);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [filters]);
+  const handleSearchApply = () => {
     setAppliedFilters(filters);
     list.setPage(1);
-  }, delay);
+  };
 
-  return () => clearTimeout(timer);
-}, [filters]);
-const handleSearchApply = () => {
-  setAppliedFilters(filters);
-  list.setPage(1);
-};
-
-const clearFilters = () => {
-  setFilters(INITIAL_FILTERS);
-  setAppliedFilters(INITIAL_FILTERS);
-  list.setPage(1);
-};
+  const clearFilters = () => {
+    setFilters(INITIAL_FILTERS);
+    setAppliedFilters(INITIAL_FILTERS);
+    list.setPage(1);
+  };
   const validateForm = () => {
     const errs = {};
     if (!formData.name?.trim()) errs.name = "Brand name is required";
@@ -517,12 +500,16 @@ const clearFilters = () => {
       return;
     }
     try {
-      await dispatch(reviewBrandSubmission({
-        _id: reviewIds.length > 1 ? reviewIds : reviewIds[0],
-        action,
-        rejectionReason: rejectionReason.trim(),
-      })).unwrap();
-      toast.success(`${reviewIds.length} brand${reviewIds.length === 1 ? "" : "s"} ${action === "approve" ? "approved" : "rejected"}`);
+      await dispatch(
+        reviewBrandSubmission({
+          _id: reviewIds.length > 1 ? reviewIds : reviewIds[0],
+          action,
+          rejectionReason: rejectionReason.trim(),
+        }),
+      ).unwrap();
+      toast.success(
+        `${reviewIds.length} brand${reviewIds.length === 1 ? "" : "s"} ${action === "approve" ? "approved" : "rejected"}`,
+      );
       setReviewTarget(null);
       setRejectionReason("");
       list.clearSelection();
@@ -541,112 +528,110 @@ const clearFilters = () => {
         headerClassName: "text-left",
         cellClassName: "admin-table-action-cell !text-left",
         render: (_, row) => (
-  <div className="flex items-center !justify-start gap-1.5">
+          <div className="flex items-center !justify-start gap-1.5">
+            {/* Edit */}
+            <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
+              <button
+                type="button"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--admin-line)] bg-white text-[var(--admin-navy)] transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]"
+                title="Edit brand"
+                onClick={() => {
+                  setFormData({
+                    _id: row._id,
+                    name: row.name || "",
+                    logo: row.logo || "",
+                    thumbnails: row.thumbnails || "",
+                    isDisable: row.isDisable || false,
+                  });
+                  setModalMode("edit");
+                }}
+              >
+                <MdEdit size={18} />
+              </button>
+            </PermissionGuard>
 
-    {/* Edit */}
-    <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
-      <button
-        type="button"
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--admin-line)] bg-white text-[var(--admin-navy)] shadow-sm transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]"
-        title="Edit brand"
-        onClick={() => {
-          setFormData({
-            _id: row._id,
-            name: row.name || "",
-            logo: row.logo || "",
-            thumbnails: row.thumbnails || "",
-            isDisable: row.isDisable || false,
-          });
-          setModalMode("edit");
-        }}
-      >
-        <MdEdit size={18} />
-      </button>
-    </PermissionGuard>
+            {/* Enable / Disable */}
+            {!isBrandReviewable(row) && (
+              <PermissionGuard
+                module="brands"
+                action={ACTIONS.STATUS_CHANGE}
+                hide
+              >
+                <button
+                  type="button"
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-md border shadow-sm transition ${
+                    row.isDisable
+                      ? "border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200"
+                      : "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] hover:bg-white"
+                  }`}
+                  title={row.isDisable ? "Enable brand" : "Disable brand"}
+                  onClick={() => {
+                    setToggleTarget(row);
+                    setToggleOpen(true);
+                  }}
+                >
+                  {row.isDisable ? (
+                    <MdCheckCircle size={18} />
+                  ) : (
+                    <MdBlock size={18} />
+                  )}
+                </button>
+              </PermissionGuard>
+            )}
 
-    {/* Enable / Disable */}
-    {!isBrandReviewable(row) && (
-      <PermissionGuard
-        module="brands"
-        action={ACTIONS.STATUS_CHANGE}
-        hide
-      >
-        <button
-          type="button"
-          className={`inline-flex h-8 w-8 items-center justify-center rounded-md border shadow-sm transition ${
-            row.isDisable
-              ? "border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200"
-              : "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] hover:bg-white"
-          }`}
-          title={row.isDisable ? "Enable brand" : "Disable brand"}
-          onClick={() => {
-            setToggleTarget(row);
-            setToggleOpen(true);
-          }}
-        >
-          {row.isDisable ? (
-            <MdCheckCircle size={18} />
-          ) : (
-            <MdBlock size={18} />
-          )}
-        </button>
-      </PermissionGuard>
-    )}
+            {/* Delete */}
+            <PermissionGuard module="brands" action={ACTIONS.DELETE} hide>
+              <button
+                type="button"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-100 bg-white text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-50"
+                title="Delete brand"
+                onClick={() => {
+                  setDeleteTarget(row);
+                  setDeleteOpen(true);
+                }}
+              >
+                <MdDelete size={18} />
+              </button>
+            </PermissionGuard>
 
-    {/* Delete */}
-    <PermissionGuard module="brands" action={ACTIONS.DELETE} hide>
-      <button
-        type="button"
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-100 bg-white text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-50"
-        title="Delete brand"
-        onClick={() => {
-          setDeleteTarget(row);
-          setDeleteOpen(true);
-        }}
-      >
-        <MdDelete size={18} />
-      </button>
-    </PermissionGuard>
+            {/* Approve - Last */}
+            {isBrandReviewable(row) && (
+              <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-2 text-xs font-semibold text-emerald-700"
+                  title="Approve brand"
+                  onClick={() => {
+                    setReviewTarget(row);
+                    setRejectionReason("");
+                  }}
+                >
+                  Approve
+                </button>
+              </PermissionGuard>
+            )}
 
-    {/* Approve - Last */}
-    {isBrandReviewable(row) && (
-      <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
-        <button
-          type="button"
-          className="inline-flex h-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-2 text-xs font-semibold text-emerald-700"
-          title="Approve brand"
-          onClick={() => {
-            setReviewTarget(row);
-            setRejectionReason("");
-          }}
-        >
-          Approve
-        </button>
-      </PermissionGuard>
-    )}
-
-    {/* Reject - Last */}
-    {isBrandReviewable(row) && (
-      <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
-        <button
-          type="button"
-          className="inline-flex h-8 items-center justify-center rounded-md border border-red-200 bg-red-50 px-2 text-xs font-semibold text-red-700"
-          title="Reject brand"
-          onClick={() => {
-            setReviewTarget({
-              ...row,
-              reviewAction: "reject",
-            });
-            setRejectionReason("");
-          }}
-        >
-          Reject
-        </button>
-      </PermissionGuard>
-    )}
-
-  </div>
-),
+            {/* Reject - Last */}
+            {isBrandReviewable(row) && (
+              <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-red-200 bg-red-50 px-2 text-xs font-semibold text-red-700"
+                  title="Reject brand"
+                  onClick={() => {
+                    setReviewTarget({
+                      ...row,
+                      reviewAction: "reject",
+                    });
+                    setRejectionReason("");
+                  }}
+                >
+                  Reject
+                </button>
+              </PermissionGuard>
+            )}
+          </div>
+        ),
       },
     ],
     [],
@@ -669,375 +654,346 @@ const clearFilters = () => {
         }
       />
 
-    <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
+        {/* Search + Filters */}
+        <section className="border-b border-[var(--admin-line)]">
+          <SearchComponent
+            filters={filters}
+            setFilters={setFilters}
+            isSearchShow={true}
+            isActivationStatus={true}
+            activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
+            isApprovalOptions={true}
+            approvalOptions={APPROVAL_STATUS_OPTIONS}
+            dateFrom={true}
+            dateTo={true}
+            applyFilters={handleSearchApply}
+            handleSearchRemove={clearFilters}
+            isSearchDown={false}
+            defaultSearchOpen={true}
+            compactFilterBar={true}
+            hideFilterActions={true}
+            largeSearchInput={true}
+            exclusiveStatusFilters={false}
+            filterGridClassName="grid-cols-1 sm:grid-cols-2 lg:grid-cols-7"
+            searchActions={
+              <ExportButton
+                data={brands}
+                filename="brands"
+                columns={BASE_COLUMNS}
+                requiredModule="brands"
+              />
+            }
+          />
+        </section>
 
-  {/* Search + Filters */}
-  <section className="border-b border-[var(--admin-line)]">
-  <SearchComponent
-  filters={filters}
-  setFilters={setFilters}
+        {/* Brand Table */}
+        <section>
+          <DataTable
+            columns={columns}
+            data={brands}
+            loading={loading}
+            totalCount={total}
+            page={list.page}
+            pageSize={list.pageSize}
+            onPageChange={list.setPage}
+            onPageSizeChange={list.setPageSize}
+            onSort={list.setSort}
+            sortKey={list.sortKey}
+            sortDir={list.sortDir}
+            emptyText="No brands found."
+            emptyIcon={
+              <MdBrandingWatermark size={40} className="text-gray-200" />
+            }
+            requiredModule="brands"
+            // exportConfig={{
+            //   filename: "brands",
+            //   columns: BASE_COLUMNS,
+            // }}
 
-  isSearchShow={true}
-
-  isActivationStatus={true}
-  activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
-
-  isApprovalOptions={true}
-  approvalOptions={APPROVAL_STATUS_OPTIONS}
-
-  dateFrom={true}
-  dateTo={true}
-
-  applyFilters={handleSearchApply}
-  handleSearchRemove={clearFilters}
-
-  isSearchDown={false}
-  defaultSearchOpen={true}
-
-  compactFilterBar={true}
-  hideFilterActions={true}
-  largeSearchInput={true}
-
-  exclusiveStatusFilters={false}
-
-  filterGridClassName="grid-cols-1 sm:grid-cols-2 lg:grid-cols-7"
-
-  searchActions={
-    <ExportButton
-      data={brands}
-      filename="brands"
-      columns={BASE_COLUMNS}
-      requiredModule="brands"
-    />
-  }
-/>
-  </section>
-
-  {/* Brand Table */}
-  <section>
-    <DataTable
-      columns={columns}
-      data={brands}
-      loading={loading}
-
-      totalCount={total}
-
-      page={list.page}
-      pageSize={list.pageSize}
-
-      onPageChange={list.setPage}
-      onPageSizeChange={list.setPageSize}
-
-      onSort={list.setSort}
-
-      sortKey={list.sortKey}
-      sortDir={list.sortDir}
-
-      emptyText="No brands found."
-
-      emptyIcon={
-        <MdBrandingWatermark
-          size={40}
-          className="text-gray-200"
-        />
-      }
-
-      requiredModule="brands"
-
-      // exportConfig={{
-      //   filename: "brands",
-      //   columns: BASE_COLUMNS,
-      // }}
-
-      cardClassName="
+            cardClassName="
         overflow-hidden
         rounded-none
         border-0
         shadow-none
       "
-
-      tableContainerClassName="
+            tableContainerClassName="
         hide-scrollbar
         max-h-[calc(100vh-360px)]
         overflow-x-auto
         overflow-y-auto
         pb-2
       "
-    />
-  </section>
-
-</div>
-
-      {/* Add / Edit Modal */}
-{modalMode && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
-    <div className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--admin-navy)]">
-            {modalMode === "add" ? "Add Brand" : "Edit Brand"}
-          </h2>
-
-          <p className="mt-0.5 text-xs text-gray-500">
-            {modalMode === "add"
-              ? "Add brand details and upload brand images."
-              : "Update brand details and images."}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={closeModal}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-        >
-          ×
-        </button>
+          />
+        </section>
       </div>
 
-      {/* Form */}
-      <form
-        onSubmit={handleSubmit}
-        className="flex min-h-0 flex-1 flex-col"
-      >
-        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
-          {/* Brand Name */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Brand Name <span className="text-red-500">*</span>
-            </label>
+      {/* Add / Edit Modal */}
+      {modalMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
+          <div className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--admin-navy)]">
+                  {modalMode === "add" ? "Add Brand" : "Edit Brand"}
+                </h2>
 
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  name: e.target.value,
-                }));
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {modalMode === "add"
+                    ? "Add brand details and upload brand images."
+                    : "Update brand details and images."}
+                </p>
+              </div>
 
-                if (errors.name) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    name: undefined,
-                  }));
-                }
-              }}
-              className={`w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition ${
-                errors.name
-                  ? "border-red-400 focus:ring-2 focus:ring-red-100"
-                  : "border-gray-300 focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
-              }`}
-              placeholder="e.g. Apple, Samsung"
-              maxLength={50}
-            />
-
-            {errors.name && (
-              <p className="mt-1 text-xs text-red-500">
-                {errors.name}
-              </p>
-            )}
-          </div>
-
-          {/* Brand Logo */}
-          <div>
-            <div className="mb-2">
-              <label className="text-sm font-medium text-gray-700">
-                Brand Logo <span className="text-red-500">*</span>
-              </label>
-
-              <p className="mt-0.5 text-xs text-gray-500">
-                Recommended format: PNG or WEBP
-              </p>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+              >
+                ×
+              </button>
             </div>
 
-            {uploadingType === "BRANDS" ? (
-              <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
-                <ButtonLoader />
-                <span className="text-xs font-medium text-gray-500">
-                  Uploading logo...
-                </span>
-              </div>
-            ) : (logoPreview || formData.logo) && !logoError ? (
-              <div className="relative flex min-h-[150px] items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4">
-                <img
-                  src={logoPreview || formData.logo}
-                  alt="Brand Logo"
-                  onLoad={() => setLogoError(false)}
-                  onError={() => {
-                    if (!logoPreview) {
-                      setLogoError(true);
-                    }
-                  }}
-                  className="max-h-28 max-w-[80%] object-contain"
-                />
+            {/* Form */}
+            <form
+              onSubmit={handleSubmit}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+                {/* Brand Name */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Brand Name <span className="text-red-500">*</span>
+                  </label>
 
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }));
+
+                      if (errors.name) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          name: undefined,
+                        }));
+                      }
+                    }}
+                    className={`w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition ${
+                      errors.name
+                        ? "border-red-400 focus:ring-2 focus:ring-red-100"
+                        : "border-gray-300 focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
+                    }`}
+                    placeholder="e.g. Apple, Samsung"
+                    maxLength={50}
+                  />
+
+                  {errors.name && (
+                    <p className="mt-1 text-xs text-red-500">{errors.name}</p>
+                  )}
+                </div>
+
+                {/* Brand Logo */}
+                <div>
+                  <div className="mb-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Brand Logo <span className="text-red-500">*</span>
+                    </label>
+
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Recommended format: PNG or WEBP
+                    </p>
+                  </div>
+
+                  {uploadingType === "BRANDS" ? (
+                    <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
+                      <ButtonLoader />
+                      <span className="text-xs font-medium text-gray-500">
+                        Uploading logo...
+                      </span>
+                    </div>
+                  ) : (logoPreview || formData.logo) && !logoError ? (
+                    <div className="relative flex min-h-[150px] items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4">
+                      <img
+                        src={logoPreview || formData.logo}
+                        alt="Brand Logo"
+                        onLoad={() => setLogoError(false)}
+                        onError={() => {
+                          if (!logoPreview) {
+                            setLogoError(true);
+                          }
+                        }}
+                        className="max-h-28 max-w-[80%] object-contain"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (logoPreview) {
+                            URL.revokeObjectURL(logoPreview);
+                          }
+
+                          setLogoPreview("");
+                          setLogoError(false);
+
+                          setFormData((prev) => ({
+                            ...prev,
+                            logo: "",
+                          }));
+                        }}
+                        className="absolute right-3 top-3 rounded-md border border-red-100 bg-white px-2.5 py-1.5 text-xs font-medium text-red-500 shadow-sm transition hover:bg-red-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <ImageUpload
+                      id="brand-logo"
+                      label="Upload Logo"
+                      onChange={(file) =>
+                        handleBrandImageUpload(file, "BRANDS")
+                      }
+                      isDisabled={uploadingType !== null}
+                    />
+                  )}
+
+                  {errors.logo && (
+                    <p className="mt-1.5 text-xs text-red-500">{errors.logo}</p>
+                  )}
+                </div>
+
+                {/* Thumbnail */}
+                <div>
+                  <div className="mb-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Thumbnail <span className="text-red-500">*</span>
+                    </label>
+
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Used as the brand thumbnail across the catalog.
+                    </p>
+                  </div>
+
+                  {uploadingType === "BRAND_THUMBNAIL" ? (
+                    <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
+                      <ButtonLoader />
+                      <span className="text-xs font-medium text-gray-500">
+                        Uploading thumbnail...
+                      </span>
+                    </div>
+                  ) : (thumbnailPreview || formData.thumbnails) &&
+                    !thumbnailError ? (
+                    <div className="relative flex min-h-[150px] items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4">
+                      <img
+                        src={thumbnailPreview || formData.thumbnails}
+                        alt="Brand Thumbnail"
+                        onLoad={() => setThumbnailError(false)}
+                        onError={() => {
+                          if (!thumbnailPreview) {
+                            setThumbnailError(true);
+                          }
+                        }}
+                        className="max-h-28 max-w-[80%] object-contain"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (thumbnailPreview) {
+                            URL.revokeObjectURL(thumbnailPreview);
+                          }
+
+                          setThumbnailPreview("");
+                          setThumbnailError(false);
+
+                          setFormData((prev) => ({
+                            ...prev,
+                            thumbnails: "",
+                          }));
+                        }}
+                        className="absolute right-3 top-3 rounded-md border border-red-100 bg-white px-2.5 py-1.5 text-xs font-medium text-red-500 shadow-sm transition hover:bg-red-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <ImageUpload
+                      id="brand-thumbnail"
+                      label="Upload Thumbnail"
+                      onChange={(file) =>
+                        handleBrandImageUpload(file, "BRAND_THUMBNAIL")
+                      }
+                      isDisabled={uploadingType !== null}
+                    />
+                  )}
+
+                  {errors.thumbnails && (
+                    <p className="mt-1.5 text-xs text-red-500">
+                      {errors.thumbnails}
+                    </p>
+                  )}
+                </div>
+
+                {/* Status */}
+                <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3.5">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">
+                      Brand Status
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Enable or disable this brand.
+                    </p>
+                  </div>
+
+                  <ToggleButton
+                    isToggle={!formData.isDisable}
+                    handleClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        isDisable: !prev.isDisable,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 border-t border-gray-200 bg-white px-6 py-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (logoPreview) {
-                      URL.revokeObjectURL(logoPreview);
-                    }
-
-                    setLogoPreview("");
-                    setLogoError(false);
-
-                    setFormData((prev) => ({
-                      ...prev,
-                      logo: "",
-                    }));
-                  }}
-                  className="absolute right-3 top-3 rounded-md border border-red-100 bg-white px-2.5 py-1.5 text-xs font-medium text-red-500 shadow-sm transition hover:bg-red-50"
+                  onClick={closeModal}
+                  disabled={saving || uploadingType !== null}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Remove
+                  Cancel
                 </button>
-              </div>
-            ) : (
-              <ImageUpload
-                id="brand-logo"
-                label="Upload Logo"
-                onChange={(file) =>
-                  handleBrandImageUpload(file, "BRANDS")
-                }
-                isDisabled={uploadingType !== null}
-              />
-            )}
-
-            {errors.logo && (
-              <p className="mt-1.5 text-xs text-red-500">
-                {errors.logo}
-              </p>
-            )}
-          </div>
-
-          {/* Thumbnail */}
-          <div>
-            <div className="mb-2">
-              <label className="text-sm font-medium text-gray-700">
-                Thumbnail <span className="text-red-500">*</span>
-              </label>
-
-              <p className="mt-0.5 text-xs text-gray-500">
-                Used as the brand thumbnail across the catalog.
-              </p>
-            </div>
-
-            {uploadingType === "BRAND_THUMBNAIL" ? (
-              <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
-                <ButtonLoader />
-                <span className="text-xs font-medium text-gray-500">
-                  Uploading thumbnail...
-                </span>
-              </div>
-            ) : (thumbnailPreview || formData.thumbnails) &&
-              !thumbnailError ? (
-              <div className="relative flex min-h-[150px] items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4">
-                <img
-                  src={thumbnailPreview || formData.thumbnails}
-                  alt="Brand Thumbnail"
-                  onLoad={() => setThumbnailError(false)}
-                  onError={() => {
-                    if (!thumbnailPreview) {
-                      setThumbnailError(true);
-                    }
-                  }}
-                  className="max-h-28 max-w-[80%] object-contain"
-                />
 
                 <button
-                  type="button"
-                  onClick={() => {
-                    if (thumbnailPreview) {
-                      URL.revokeObjectURL(thumbnailPreview);
-                    }
-
-                    setThumbnailPreview("");
-                    setThumbnailError(false);
-
-                    setFormData((prev) => ({
-                      ...prev,
-                      thumbnails: "",
-                    }));
-                  }}
-                  className="absolute right-3 top-3 rounded-md border border-red-100 bg-white px-2.5 py-1.5 text-xs font-medium text-red-500 shadow-sm transition hover:bg-red-50"
+                  type="submit"
+                  disabled={saving || uploadingType !== null}
+                  className="min-w-[120px] rounded-lg bg-[var(--admin-gold)] px-5 py-2 text-sm font-semibold text-[var(--admin-navy)] transition hover:bg-[var(--admin-gold-dark)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Remove
+                  {saving ? (
+                    <span className="inline-flex items-center gap-2">
+                      <ButtonLoader />
+                      Saving...
+                    </span>
+                  ) : modalMode === "add" ? (
+                    "Create Brand"
+                  ) : (
+                    "Save Changes"
+                  )}
                 </button>
               </div>
-            ) : (
-              <ImageUpload
-                id="brand-thumbnail"
-                label="Upload Thumbnail"
-                onChange={(file) =>
-                  handleBrandImageUpload(file, "BRAND_THUMBNAIL")
-                }
-                isDisabled={uploadingType !== null}
-              />
-            )}
-
-            {errors.thumbnails && (
-              <p className="mt-1.5 text-xs text-red-500">
-                {errors.thumbnails}
-              </p>
-            )}
-          </div>
-
-          {/* Status */}
-          <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3.5">
-            <div>
-              <p className="text-sm font-medium text-gray-700">
-                Brand Status
-              </p>
-
-              <p className="mt-0.5 text-xs text-gray-500">
-                Enable or disable this brand.
-              </p>
-            </div>
-
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={() =>
-                setFormData((prev) => ({
-                  ...prev,
-                  isDisable: !prev.isDisable,
-                }))
-              }
-            />
+            </form>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-gray-200 bg-white px-6 py-4">
-          <button
-            type="button"
-            onClick={closeModal}
-            disabled={saving || uploadingType !== null}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="submit"
-            disabled={saving || uploadingType !== null}
-            className="min-w-[120px] rounded-lg bg-[var(--admin-gold)] px-5 py-2 text-sm font-semibold text-[var(--admin-navy)] transition hover:bg-[var(--admin-gold-dark)] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving ? (
-              <span className="inline-flex items-center gap-2">
-                <ButtonLoader />
-                Saving...
-              </span>
-            ) : modalMode === "add" ? (
-              "Create Brand"
-            ) : (
-              "Save Changes"
-            )}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
+      )}
       <ConfirmModal
         open={deleteOpen}
         onClose={() => {

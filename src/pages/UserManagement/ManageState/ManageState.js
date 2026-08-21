@@ -10,9 +10,8 @@ import {
   DataTable,
   PageHeader,
   StatusBadge,
-  FilterBar,
-  BulkActionBar,
 } from "../../../components/Shared";
+import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 
 import { useListPage } from "../../../hooks/useListPage";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
@@ -58,13 +57,57 @@ const ManageState = () => {
   const [isFormOpen,setIsFormOpen]= useState(false);
   const [submitting,setSubmitting]= useState(false);
   const [statusLoadingId, setStatusLoadingId] = useState("");
+  const [filters, setFilters] = useState({
+    search: "",
+    activationStatus: { value: "All", label: "All" },
+    country: { value: "", label: "All" },
+  });
 
-  // ── Filter fields (search + country select) ────────────────────────────────
-  const FILTER_FIELDS = [
-    { key: "search",  type: "search", label: "Search", placeholder: "Search by name…", width: "w-52" },
-    { key: "country", type: "select", label: "Country", width: "w-44",
-      options: countryOptions.map((c) => ({ value: c.value, label: c.label })) },
+  const { setSearch, setFilter, clearFilters, setPage } = list;
+
+  // Sync SearchComponent filters with useListPage state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const searchVal = filters.search || "";
+      const statusVal =
+        filters.activationStatus?.value === "All"
+          ? ""
+          : filters.activationStatus?.value || "";
+      const countryVal = filters.country?.value || "";
+
+      setSearch(searchVal);
+      setFilter("status", statusVal);
+      setFilter("country", countryVal);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [filters.search, filters.activationStatus?.value, filters.country?.value, setSearch, setFilter]);
+
+  const handleSearchClear = () => {
+    setFilters({
+      search: "",
+      activationStatus: { value: "All", label: "All" },
+      country: { value: "", label: "All" },
+    });
+    clearFilters();
+    setSearch("");
+    setPage(1);
+  };
+
+  const handleBulkAction = (action) => {
+    if (action === "Active") {
+      handleBulkStatus(false);
+    } else if (action === "Inactive") {
+      handleBulkStatus(true);
+    }
+  };
+
+  const countryFilterOptions = [
+    { value: "", label: "All" },
+    ...countryOptions,
   ];
+
+
 
   // ── Columns ────────────────────────────────────────────────────────────────
   const COLUMNS = [
@@ -210,49 +253,59 @@ const ManageState = () => {
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={apiRes.list}
-        loading={loading}
-        totalCount={apiRes.total}
-        page={list.page}
-        pageSize={list.pageSize}
-        onPageChange={list.setPage}
-        onPageSizeChange={list.setPageSize}
-        onSort={list.setSort}
-        sortKey={list.sortKey}
-        sortDir={list.sortDir}
-        selectable
-        selectedKeys={list.selectedKeys}
-        onSelectionChange={list.setSelectedKeys}
-        rowKey="_id"
-        requiredModule={MODULE}
-        emptyText="No states found."
-        emptyIcon={<MdMap size={36} className="text-gray-200" />}
-        filterBar={
-          <FilterBar
-            filters={FILTER_FIELDS}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
-            loading={loading}
-            activeCount={list.activeFilterCount}
-          />
-        }
-        bulkActionBar={
-          <BulkActionBar
-            selectedCount={list.selectedCount}
-            totalCount={apiRes.list.length}
-            onClear={list.clearSelection}
-            module={MODULE}
-            loading={loading}
-            actions={[
-              { label: "Set Active",   action: "status_change", variant: "primary",  onClick: () => handleBulkStatus(false) },
-              { label: "Set Inactive", action: "status_change", variant: "warning", onClick: () => handleBulkStatus(true) },
+      <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
+        <section className="border-b border-[var(--admin-line)]">
+          <SearchComponent
+            selectedRow={list.selectedKeys}
+            setSelectedRow={list.setSelectedKeys}
+            filters={filters}
+            setFilters={setFilters}
+            isSearchShow={true}
+            isSelectNearSearch={true}
+            countryOptions={countryFilterOptions}
+            isActivationStatus={true}
+            activationStatusOptions={[
+              { value: "All", label: "All" },
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Inactive" },
             ]}
+            applyFilters={() => {}}
+            handleSearchRemove={handleSearchClear}
+            isActionButton={true}
+            isStatusAction={true}
+            handleAction={handleBulkAction}
+            requiredModule={MODULE}
+            isSearchDown={false}
+            defaultSearchOpen={true}
+            compactFilterBar={true}
+            hideFilterActions={true}
+            largeSearchInput={true}
           />
-        }
-      />
+        </section>
+        <section>
+          <DataTable
+            columns={columns}
+            data={apiRes.list}
+            loading={loading}
+            totalCount={apiRes.total}
+            page={list.page}
+            pageSize={list.pageSize}
+            onPageChange={list.setPage}
+            onPageSizeChange={list.setPageSize}
+            onSort={list.setSort}
+            sortKey={list.sortKey}
+            sortDir={list.sortDir}
+            selectable
+            selectedKeys={list.selectedKeys}
+            onSelectionChange={list.setSelectedKeys}
+            rowKey="_id"
+            requiredModule={MODULE}
+            emptyText="No states found."
+            emptyIcon={<MdMap size={36} className="text-gray-200" />}
+            cardClassName="overflow-hidden rounded-none border-0 shadow-none"
+          />
+        </section>
+      </div>
 
       <DefaultModal
         title={isEditMode ? "Edit State" : "Add State"}

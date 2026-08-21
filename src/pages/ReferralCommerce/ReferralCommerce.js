@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   BadgeIndianRupee,
   Check,
@@ -614,64 +614,248 @@ const Modal = ({ title, open, onClose, children, footer }) => {
 };
 
 const ProductReferralAmounts = () => {
-  const empty = { productId: "", productTitle: "", amountType: "fixed_amount", amountValue: "", maximumAmount: "", active: true };
+  const empty = {
+    productId: "",
+    productTitle: "",
+    amountType: "fixed_amount",
+    amountValue: "",
+    maximumAmount: "",
+    active: true,
+  };
   const [form, setForm] = useState(empty);
   const [products, setProducts] = useState([]);
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(false);
   const unwrapList = (response) => {
     const value = response?.data?.data || response?.data || [];
-    return Array.isArray(value) ? value : value.items || value.list || value.products || [];
+    return Array.isArray(value)
+      ? value
+      : value.items || value.list || value.products || [];
   };
   const load = useCallback(async () => {
     try {
       setLoading(true);
       const [configResponse, productResponse] = await Promise.all([
-        axiosPrivate.get(ENDPOINTS.referral.productAmounts, { params: { page: 1, limit: 100 } }),
-        axiosPrivate.get(ENDPOINTS.products.list, { params: { page: 1, limit: 200, status: "active" } }),
+        axiosPrivate.get(ENDPOINTS.referral.productAmounts, {
+          params: { page: 1, limit: 100 },
+        }),
+        axiosPrivate.get(ENDPOINTS.products.list, {
+          params: { page: 1, limit: 200, status: "active" },
+        }),
       ]);
       setConfigs(unwrapList(configResponse));
       setProducts(unwrapList(productResponse));
-    } catch (error) { toast.error(error?.response?.data?.message || "Unable to load product referral amounts"); }
-    finally { setLoading(false); }
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to load product referral amounts",
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
-  useEffect(() => { load(); }, [load]);
-  const selectedProduct = products.find((product) => String(getId(product)) === String(form.productId));
+  useEffect(() => {
+    load();
+  }, [load]);
+  const selectedProduct = products.find(
+    (product) => String(getId(product)) === String(form.productId),
+  );
   const save = async (event) => {
     event.preventDefault();
-    if (!form.productId || form.amountValue === "") return toast.error("Select a product and enter its referral amount");
+    if (!form.productId || form.amountValue === "")
+      return toast.error("Select a product and enter its referral amount");
     try {
       setLoading(true);
       await axiosPrivate.put(ENDPOINTS.referral.productAmounts, {
         ...form,
-        productTitle: selectedProduct?.name || selectedProduct?.title || form.productTitle || "",
+        productTitle:
+          selectedProduct?.name ||
+          selectedProduct?.title ||
+          form.productTitle ||
+          "",
         amountValue: Number(form.amountValue),
         maximumAmount: Number(form.maximumAmount || 0),
       });
       toast.success("Product referral amount saved");
-      setForm(empty); await load();
-    } catch (error) { toast.error(error?.response?.data?.message || "Unable to save product referral amount"); }
-    finally { setLoading(false); }
+      setForm(empty);
+      await load();
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to save product referral amount",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
   const remove = async (config) => {
-    try { await axiosPrivate.delete(ENDPOINTS.referral.productAmount(getId(config))); toast.success("Product override removed; global amount will apply"); await load(); }
-    catch (error) { toast.error(error?.response?.data?.message || "Unable to remove override"); }
+    try {
+      await axiosPrivate.delete(
+        ENDPOINTS.referral.productAmount(getId(config)),
+      );
+      toast.success("Product override removed; global amount will apply");
+      await load();
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Unable to remove override",
+      );
+    }
   };
-  return <section className="admin-card overflow-hidden">
-    <div className="border-b border-[var(--admin-line)] p-5"><h2 className="text-base font-bold text-[var(--admin-navy)]">Product Referral Pool Overrides</h2><p className="mt-1 text-xs text-[var(--admin-muted)]">Set how much pool a product contributes. Distribution percentages always come from Global Rules. Variants cannot override this value.</p></div>
-    <form onSubmit={save} className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4">
-      <label className="text-xs font-semibold text-gray-600">Product<select className="admin-input mt-2" value={form.productId} onChange={(event) => setForm((current) => ({ ...current, productId: event.target.value }))}><option value="">Select product</option>{products.map((product) => <option key={getId(product)} value={getId(product)}>{product.name || product.title || getId(product)}</option>)}</select></label>
-      <label className="text-xs font-semibold text-gray-600">Amount type<select className="admin-input mt-2" value={form.amountType} onChange={(event) => setForm((current) => ({ ...current, amountType: event.target.value }))}><option value="fixed_amount">Fixed amount per unit</option><option value="percentage">Percentage of product line</option></select></label>
-      <TextInput label={form.amountType === "percentage" ? "Pool Percentage" : "Pool Amount Per Unit (₹)"} name="amountValue" type="number" min="0" step="0.01" value={form.amountValue} onChange={(event) => setForm((current) => ({ ...current, amountValue: event.target.value }))} />
-      <TextInput label="Maximum Pool Per Line (₹)" name="maximumAmount" type="number" min="0" step="0.01" value={form.maximumAmount} onChange={(event) => setForm((current) => ({ ...current, maximumAmount: event.target.value }))} hint="0 means no extra cap." />
-      <div className="flex items-center justify-between gap-3 md:col-span-2 xl:col-span-4"><label className="admin-switch"><input type="checkbox" className="sr-only" checked={form.active} onChange={(event) => setForm((current) => ({ ...current, active: event.target.checked }))} /><span className="admin-switch-track" /><span>Active override</span></label><OrangeButton type="submit" disabled={loading}><Check size={16} /> Save Product Amount</OrangeButton></div>
-    </form>
-    <div className="border-t border-[var(--admin-line)]"><SharedDataTable columns={[{ key: "productTitle", label: "Product" }, { key: "amountType", label: "Type", render: (value) => formatLabel(value) }, { key: "amountValue", label: "Pool Value" }, { key: "maximumAmount", label: "Maximum" }, { key: "active", label: "Status", render: (value) => value ? "Active" : "Inactive" }]} data={configs} loading={loading} rowActions={(row) => [{ label: "Edit", icon: <Pencil size={15} />, onClick: () => setForm({ productId: row.productId, productTitle: row.productTitle || "", amountType: row.amountType, amountValue: row.amountValue, maximumAmount: row.maximumAmount || "", active: row.active !== false }) }, { label: "Remove override", icon: <X size={15} />, danger: true, onClick: () => remove(row) }]} emptyText="No product overrides. The global referral pool amount applies to every product." /></div>
-  </section>;
+  return (
+    <section className="admin-card overflow-hidden">
+      <div className="border-b border-[var(--admin-line)] p-5">
+        <h2 className="text-base font-bold text-[var(--admin-navy)]">
+          Product Referral Pool Overrides
+        </h2>
+        <p className="mt-1 text-xs text-[var(--admin-muted)]">
+          Set how much pool a product contributes. Distribution percentages
+          always come from Global Rules. Variants cannot override this value.
+        </p>
+      </div>
+      <form
+        onSubmit={save}
+        className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4"
+      >
+        <label className="text-xs font-semibold text-gray-600">
+          Product
+          <select
+            className="admin-input mt-2"
+            value={form.productId}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                productId: event.target.value,
+              }))
+            }
+          >
+            <option value="">Select product</option>
+            {products.map((product) => (
+              <option key={getId(product)} value={getId(product)}>
+                {product.name || product.title || getId(product)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs font-semibold text-gray-600">
+          Amount type
+          <select
+            className="admin-input mt-2"
+            value={form.amountType}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                amountType: event.target.value,
+              }))
+            }
+          >
+            <option value="fixed_amount">Fixed amount per unit</option>
+            <option value="percentage">Percentage of product line</option>
+          </select>
+        </label>
+        <TextInput
+          label={
+            form.amountType === "percentage"
+              ? "Pool Percentage"
+              : "Pool Amount Per Unit (₹)"
+          }
+          name="amountValue"
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.amountValue}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              amountValue: event.target.value,
+            }))
+          }
+        />
+        <TextInput
+          label="Maximum Pool Per Line (₹)"
+          name="maximumAmount"
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.maximumAmount}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              maximumAmount: event.target.value,
+            }))
+          }
+          hint="0 means no extra cap."
+        />
+        <div className="flex items-center justify-between gap-3 md:col-span-2 xl:col-span-4">
+          <label className="admin-switch">
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={form.active}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  active: event.target.checked,
+                }))
+              }
+            />
+            <span className="admin-switch-track" />
+            <span>Active override</span>
+          </label>
+          <OrangeButton type="submit" disabled={loading}>
+            <Check size={16} /> Save Product Amount
+          </OrangeButton>
+        </div>
+      </form>
+      <div className="border-t border-[var(--admin-line)]">
+        <SharedDataTable
+          columns={[
+            { key: "productTitle", label: "Product" },
+            {
+              key: "amountType",
+              label: "Type",
+              render: (value) => formatLabel(value),
+            },
+            { key: "amountValue", label: "Pool Value" },
+            { key: "maximumAmount", label: "Maximum" },
+            {
+              key: "active",
+              label: "Status",
+              render: (value) => (value ? "Active" : "Inactive"),
+            },
+          ]}
+          data={configs}
+          loading={loading}
+          rowActions={(row) => [
+            {
+              label: "Edit",
+              icon: <Pencil size={15} />,
+              onClick: () =>
+                setForm({
+                  productId: row.productId,
+                  productTitle: row.productTitle || "",
+                  amountType: row.amountType,
+                  amountValue: row.amountValue,
+                  maximumAmount: row.maximumAmount || "",
+                  active: row.active !== false,
+                }),
+            },
+            {
+              label: "Remove override",
+              icon: <X size={15} />,
+              danger: true,
+              onClick: () => remove(row),
+            },
+          ]}
+          emptyText="No product overrides. The global referral pool amount applies to every product."
+        />
+      </div>
+    </section>
+  );
 };
 
 const ReferralCommerce = () => {
   const { section } = useParams();
+  const navigate = useNavigate();
   const referralCodeStatuses = useDropdownOptions("referral-code-statuses");
   const referralDistributionTypes = useDropdownOptions(
     "referral-distribution-types",
@@ -918,7 +1102,11 @@ const ReferralCommerce = () => {
         : {}),
     };
     const requests = {
-      overview: () => dispatch(getReferralSummary()),
+      overview: () =>
+        Promise.all([
+          dispatch(getReferralSummary()),
+          dispatch(getReferralOrders({ page: 1, limit: 50 })),
+        ]),
       influencers: () =>
         Promise.all([
           dispatch(getReferralInfluencers(query)),
@@ -1928,6 +2116,88 @@ const ReferralCommerce = () => {
           ))}
         </div>
       </section>
+
+      <section className="admin-card overflow-hidden bg-white">
+        <div className="flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4">
+          <h2 className="text-[17px] font-bold font-inter text-[var(--admin-navy)]">
+            Recent Orders
+          </h2>
+          <button
+            type="button"
+            className="inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+            onClick={() => navigate("/app/referral-commerce/orders")}
+          >
+            See All
+          </button>
+        </div>
+        <table className="w-full text-left">
+          <thead className="admin-table-head font-inter text-[12px]">
+            <tr>
+              <th className="px-4 py-3 font-semibold">S. No.</th>
+              <th className="px-4 py-3 font-semibold">Order ID</th>
+              <th className="px-4 py-3 font-semibold">Customer</th>
+              <th className="px-4 py-3 font-semibold">Amount</th>
+              <th className="px-4 py-3 font-semibold">Status</th>
+            </tr>
+          </thead>
+          <tbody className="text-[12px] text-slate-600">
+            {orders.slice(0, 5).length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  No recent orders available.
+                </td>
+              </tr>
+            )}
+            {orders.slice(0, 5).map((order, index) => {
+              const status = order.status || "Pending";
+              const orderId =
+                order.orderId || order.order_id || order.id || order._id;
+              const orderNumber =
+                order.orderNumber ||
+                order.order_number ||
+                String(orderId || index + 1).slice(0, 10);
+
+              const amountVal =
+                order.eligibleAmount ??
+                order.seller_order_total ??
+                order.payable_amount ??
+                order.totalAmount ??
+                order.total ??
+                0;
+              const formattedAmount = `₹${Number(amountVal).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+
+              const customerName =
+                order.customerName ||
+                order.customer ||
+                order.customerId ||
+                order.buyer_id ||
+                order.buyerId ||
+                "-";
+
+              return (
+                <tr
+                  key={orderId || index}
+                  className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
+                >
+                  <td className="px-4 py-3 text-start tabular-nums">
+                    {index + 1}.
+                  </td>
+                  <td className="px-4 py-3 font-medium">
+                    {renderOrderLink(orderId, orderNumber)}
+                  </td>
+                  <td className="px-4 py-3">{formatLabel(customerName)}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    {formattedAmount}
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusPill value={status} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
     </div>
   );
 
@@ -2181,8 +2451,17 @@ const ReferralCommerce = () => {
           onChange={handleRulesField}
         />
         <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">4</span>
-          <div><h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">Referral Code Format</h3><p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">Define the format used for every newly generated influencer code</p></div>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
+            4
+          </span>
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+              Referral Code Format
+            </h3>
+            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+              Define the format used for every newly generated influencer code
+            </p>
+          </div>
         </div>
         <TextInput
           label="Code Prefix"
@@ -2211,8 +2490,19 @@ const ReferralCommerce = () => {
           <option value="numeric">Numbers only</option>
         </SelectInput>
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-          <span className="block text-[10px] font-semibold uppercase tracking-wide">Example</span>
-          <strong>{String(rulesForm.referralCodePrefix || "").toUpperCase()}{rulesForm.referralCodeCharacterSet === "numeric" ? "0".repeat(Math.min(Number(rulesForm.referralCodeRandomLength || 6), 16)) : "X".repeat(Math.min(Number(rulesForm.referralCodeRandomLength || 6), 16))}</strong>
+          <span className="block text-[10px] font-semibold uppercase tracking-wide">
+            Example
+          </span>
+          <strong>
+            {String(rulesForm.referralCodePrefix || "").toUpperCase()}
+            {rulesForm.referralCodeCharacterSet === "numeric"
+              ? "0".repeat(
+                  Math.min(Number(rulesForm.referralCodeRandomLength || 6), 16),
+                )
+              : "X".repeat(
+                  Math.min(Number(rulesForm.referralCodeRandomLength || 6), 16),
+                )}
+          </strong>
         </div>
         <TextInput
           label="Maximum Withdrawal Coins"
