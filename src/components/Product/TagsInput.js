@@ -46,10 +46,10 @@ const TagsInput = ({
   };
 
   return (
-    <div className="relative">
+    <div className="relative ">
       <div
-        className={`flex flex-wrap gap-1.5 p-2 border rounded-md min-h-[42px] transition-all ${
-          focused ? 'border-[var(--admin-blue)] ring-2 ring-[var(--admin-blue)]/20' : 'border-gray-300'
+        className={`admin-input flex flex-wrap gap-1.5 p-2 border rounded-md min-h-[42px] transition-all ${
+          focused ? 'border-[var(--admin-gold)]' : 'border-gray-300'
         }`}
       >
         {tags.map((tag) => (
@@ -69,7 +69,7 @@ const TagsInput = ({
         ))}
         <input
           type="text"
-          className="flex-1 min-w-[120px] outline-none text-sm bg-transparent"
+          className="product-tag-input min-w-[120px] flex-1 text-sm"
           placeholder={tags.length < maxTags ? placeholder : `Max ${maxTags} tags reached`}
           value={input}
           disabled={tags.length >= maxTags}

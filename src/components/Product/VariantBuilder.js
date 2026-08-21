@@ -547,7 +547,7 @@ const VariantBuilder = ({
 
         {/* Search & add option */}
         <div className="relative" ref={optionSearchRef}>
-          <div className="flex items-center gap-2 rounded-lg border bg-[var(--admin-field)] px-3 py-2 transition-all focus-within:border-[var(--admin-gold)] focus-within:ring-1 focus-within:ring-[var(--admin-gold)]/15">
+          <div className="flex items-center gap-2 rounded-lg border bg-[var(--admin-field)] px-3 py-2 transition-all focus-within:border-[var(--admin-gold)] focus-within:ring-[var(--admin-gold)]/15">
             <MdAdd className="text-gray-800 flex-shrink-0" size={18} />
             <input
               type="text"

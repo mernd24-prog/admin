@@ -378,6 +378,13 @@ select:active {
   outline: none !important;
 }
 
+/* Flat gold focus for fields that should not render an additional blurred ring. */
+body .admin-shell .product-catalog-form .admin-input.product-flat-gold-focus:focus {
+  border-color: var(--admin-gold) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 /* One continuous form surface with consistent, scannable sections. */
 .product-catalog-form .product-form-section {
   padding: 28px 24px;
@@ -479,7 +486,9 @@ select:active {
 }
 
 body .admin-shell .product-catalog-form input.product-variant-search-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-body .admin-shell .product-catalog-form input.product-variant-search-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus {
+body .admin-shell .product-catalog-form input.product-variant-search-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+body .admin-shell .product-catalog-form input.product-tag-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+body .admin-shell .product-catalog-form input.product-tag-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus {
   min-height: 0 !important;
   border: none !important;
   border-radius: 0 !important;
