@@ -584,7 +584,7 @@ export const updateProductReview = createApiThunkPrivate("adminCore/updateProduc
   const reviewId = payload.reviewId || payload._id || payload.id;
   return payload.sellerScope ? ENDPOINTS.platform.sellerProductReview(reviewId) : ENDPOINTS.platform.productReview(reviewId);
 }, "PATCH", false, { transformBody: (payload = {}) => pickPayload(payload, ["rating", "title", "reviewText", "media", "helpfulVotes", "status", "rejectionReason", "adminReply"]) });
-export const bulkUpdateProductReviews = createApiThunkPrivate("adminCore/bulkUpdateProductReviews", ENDPOINTS.platform.productReviewsBulkAction, "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["reviewIds", "action", "status", "rejectionReason", "reason"]) });
+export const bulkUpdateProductReviews = createApiThunkPrivate("adminCore/bulkUpdateProductReviews", (payload = {}) => payload.sellerScope ? ENDPOINTS.platform.sellerProductReviewsBulkAction : ENDPOINTS.platform.productReviewsBulkAction, "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["reviewIds", "action", "status", "rejectionReason", "reason"]) });
 export const deleteProductReview = createApiThunkPrivate("adminCore/deleteProductReview", (payload) => ENDPOINTS.platform.productReview(payload.reviewId || payload._id || payload.id), "DELETE", false, { transformParams: noParams });
 
 // Platform attribute options (admin-managed: Color, Size, RAM, etc.)

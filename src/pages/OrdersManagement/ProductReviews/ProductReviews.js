@@ -356,20 +356,19 @@ const ProductReviews = () => {
     list.filters,
   ]);
 
-  const handleToggleStatus = async (review) => {
+  const updateReviewStatus = async (review, status, successMessage) => {
     const reviewId = review._id || review.id;
-    const current = review.status || "pending";
-    const newStatus = current === "published" ? "hidden" : "published";
+    if (!reviewId) return;
     setToggleLoadingId(reviewId);
     try {
       await dispatch(
         updateProductReview({
           reviewId,
-          status: newStatus,
+          status,
           sellerScope: isSellerPanelUser,
         }),
       ).unwrap();
-      toast.success("Review status updated");
+      toast.success(successMessage || "Review status updated");
       fetchReviews();
     } catch (err) {
       toast.error(err?.message || "Failed to update review status");
@@ -378,17 +377,25 @@ const ProductReviews = () => {
     }
   };
 
+  const handleToggleStatus = async (review) => {
+    const current = review.status || "pending";
+    const newStatus = current === "published" ? "hidden" : "published";
+    const message = newStatus === "published" ? "Review approved" : "Review hidden";
+    await updateReviewStatus(review, newStatus, message);
+  };
+
   const handleBulkStatus = async (status) => {
-    if (isSellerPanelUser || !list.selectedKeys.length) return;
+    if (!list.selectedKeys.length) return;
     setBulkLoading(true);
     try {
       await dispatch(
         bulkUpdateProductReviews({
           reviewIds: list.selectedKeys,
           status,
+          sellerScope: isSellerPanelUser,
         }),
       ).unwrap();
-      toast.success("Selected reviews updated");
+      toast.success(status === "published" ? "Selected reviews approved" : "Selected reviews updated");
       list.clearSelection();
       fetchReviews();
     } catch (err) {
@@ -537,7 +544,13 @@ const ProductReviews = () => {
           onClick={() => handleToggleStatus(row)}
           disabled={toggleLoadingId === (row._id || row.id)}
           className="disabled:opacity-50"
-          title="Click to toggle published/hidden"
+          title={
+            isSellerPanelUser
+              ? (v || "pending") === "published"
+                ? "Hide this review"
+                : "Approve this review"
+              : "Click to toggle published/hidden"
+          }
         >
           <StatusBadge
             status={v || "pending"}
@@ -608,7 +621,7 @@ const ProductReviews = () => {
         emptyIcon={<MdRateReview size={40} className="text-gray-200" />}
         requiredModule="reviews"
         exportConfig={{ filename: "product-reviews", columns }}
-        selectable={!isSellerPanelUser}
+        selectable
         selectedKeys={list.selectedKeys}
         onSelectionChange={list.setSelectedKeys}
         rowKey="_id"
@@ -623,50 +636,65 @@ const ProductReviews = () => {
           />
         }
         bulkActionBar={
-          !isSellerPanelUser ? (
-            <BulkActionBar
-              selectedCount={list.selectedCount}
-              totalCount={items.length}
-              onClear={list.clearSelection}
-              onSelectAll={() =>
-                list.setSelectedKeys(
-                  items.map((row) => row._id || row.id).filter(Boolean),
-                )
-              }
-              module="reviews"
-              loading={loading || bulkLoading}
-              actions={[
-                {
-                  label: "Approve Selected",
-                  icon: <MdCheckCircle />,
-                  action: ACTIONS.EDIT,
-                  variant: "primary",
-                  onClick: () => handleBulkStatus("published"),
-                },
-                {
-                  label: "Reject Selected",
-                  icon: <MdClose />,
-                  action: ACTIONS.EDIT,
-                  variant: "danger",
-                  onClick: () => handleBulkStatus("rejected"),
-                },
-                {
-                  label: "Hide Selected",
-                  icon: <MdVisibilityOff />,
-                  action: ACTIONS.EDIT,
-                  variant: "warning",
-                  onClick: () => handleBulkStatus("hidden"),
-                },
-                {
-                  label: "Delete Selected",
-                  icon: <MdDelete />,
-                  action: ACTIONS.DELETE,
-                  variant: "danger",
-                  onClick: () => setBulkDeleteConfirm(true),
-                },
-              ]}
-            />
-          ) : null
+          <BulkActionBar
+            selectedCount={list.selectedCount}
+            totalCount={items.length}
+            onClear={list.clearSelection}
+            onSelectAll={() =>
+              list.setSelectedKeys(
+                items.map((row) => row._id || row.id).filter(Boolean),
+              )
+            }
+            module="reviews"
+            loading={loading || bulkLoading}
+            actions={
+              isSellerPanelUser
+                ? [
+                    {
+                      label: "Approve Selected",
+                      icon: <MdCheckCircle />,
+                      variant: "primary",
+                      onClick: () => handleBulkStatus("published"),
+                    },
+                    {
+                      label: "Hide Selected",
+                      icon: <MdVisibilityOff />,
+                      variant: "warning",
+                      onClick: () => handleBulkStatus("hidden"),
+                    },
+                  ]
+                : [
+                    {
+                      label: "Approve Selected",
+                      icon: <MdCheckCircle />,
+                      action: ACTIONS.EDIT,
+                      variant: "primary",
+                      onClick: () => handleBulkStatus("published"),
+                    },
+                    {
+                      label: "Reject Selected",
+                      icon: <MdClose />,
+                      action: ACTIONS.EDIT,
+                      variant: "danger",
+                      onClick: () => handleBulkStatus("rejected"),
+                    },
+                    {
+                      label: "Hide Selected",
+                      icon: <MdVisibilityOff />,
+                      action: ACTIONS.EDIT,
+                      variant: "warning",
+                      onClick: () => handleBulkStatus("hidden"),
+                    },
+                    {
+                      label: "Delete Selected",
+                      icon: <MdDelete />,
+                      action: ACTIONS.DELETE,
+                      variant: "danger",
+                      onClick: () => setBulkDeleteConfirm(true),
+                    },
+                  ]
+            }
+          />
         }
         rowActions={(row) => {
           const actions = [
@@ -698,6 +726,18 @@ const ProductReviews = () => {
                   }),
               },
             );
+          } else if ((row.status || "pending") === "published") {
+            actions.push({
+              label: "Hide Review",
+              icon: <MdVisibilityOff size={16} className="text-amber-600" />,
+              onClick: () => updateReviewStatus(row, "hidden", "Review hidden"),
+            });
+          } else {
+            actions.push({
+              label: "Approve Review",
+              icon: <MdCheckCircle size={16} className="text-green-600" />,
+              onClick: () => updateReviewStatus(row, "published", "Review approved"),
+            });
           }
 
           return actions;

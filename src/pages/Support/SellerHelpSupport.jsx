@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { MdAdd, MdArrowBack, MdVisibility } from "react-icons/md";
+import { MdAdd, MdArrowBack, MdSend, MdVisibility } from "react-icons/md";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import { DataTable, PageHeader, StatusBadge } from "../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
@@ -25,6 +25,77 @@ const truncateText = (value, limit = 70) => {
   return text.length > limit ? `${text.slice(0, limit).trim()}...` : text;
 };
 
+const getStatusHistory = (query = {}) =>
+  Array.isArray(query.statusHistory)
+    ? query.statusHistory
+    : Array.isArray(query.metadata?.statusHistory)
+      ? query.metadata.statusHistory
+      : [];
+
+const getConversationItems = (query = {}) => {
+  const items = [
+    {
+      key: "seller-message",
+      type: "seller",
+      title: "Your message",
+      message: query.message || query.messagePreview || "N/A",
+      status: query.status || "pending",
+      timestamp: query.createdAt,
+    },
+  ];
+
+  getStatusHistory(query).forEach((item, index) => {
+    items.push({
+      key: `admin-history-${item.changedAt || index}`,
+      type: "admin",
+      title: `Support updated status to ${statusLabel(item.status)}`,
+      message: item.note || "",
+      status: item.status,
+      timestamp: item.changedAt,
+    });
+  });
+
+  const followUpMessages = Array.isArray(query.messages)
+    ? query.messages
+    : Array.isArray(query.metadata?.messages)
+      ? query.metadata.messages
+      : [];
+
+  followUpMessages.forEach((item, index) => {
+    const isSeller = item.senderType === "seller" || item.senderType === "customer";
+    items.push({
+      key: `reply-${item.createdAt || index}`,
+      type: isSeller ? "seller" : "admin",
+      title: isSeller ? "Your reply" : "Support reply",
+      message: item.message || "",
+      status: query.status || "pending",
+      timestamp: item.createdAt,
+    });
+  });
+
+  const hasLatestNote = String(query.adminNotes || "").trim();
+  const latestNoteAlreadyIncluded = items.some(
+    (item) => item.type === "admin" && item.message.trim() === hasLatestNote,
+  );
+
+  if (hasLatestNote && !latestNoteAlreadyIncluded) {
+    items.push({
+      key: "admin-latest-note",
+      type: "admin",
+      title: "Latest support note",
+      message: hasLatestNote,
+      status: query.status || "pending",
+      timestamp: query.lastStatusChangedAt || query.updatedAt,
+    });
+  }
+
+  return items.sort((first, second) => {
+    const firstTime = new Date(first.timestamp || 0).getTime();
+    const secondTime = new Date(second.timestamp || 0).getTime();
+    return firstTime - secondTime;
+  });
+};
+
 const SellerHelpSupport = () => {
   const [showQueryForm, setShowQueryForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -38,6 +109,8 @@ const SellerHelpSupport = () => {
   const [search, setSearch] = useState("");
   const [selectedQuery, setSelectedQuery] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [replySubmitting, setReplySubmitting] = useState(false);
 
   const fetchQueries = useCallback(async () => {
     try {
@@ -113,6 +186,30 @@ const SellerHelpSupport = () => {
       setDetailLoading(false);
     }
   }, []);
+
+  const submitReply = useCallback(async () => {
+    if (!selectedQuery?.queryId) return;
+    const message = replyMessage.trim();
+    if (!message) {
+      toast.error("Please type a message");
+      return;
+    }
+    try {
+      setReplySubmitting(true);
+      const response = await axiosProvider.post(
+        ENDPOINTS.support.reply(selectedQuery.queryId),
+        { message },
+      );
+      setSelectedQuery(response?.data?.data || selectedQuery);
+      setReplyMessage("");
+      toast.success("Reply sent");
+      await fetchQueries();
+    } catch (requestError) {
+      toast.error(requestError?.message || "Failed to send reply");
+    } finally {
+      setReplySubmitting(false);
+    }
+  }, [fetchQueries, replyMessage, selectedQuery]);
 
   const columns = useMemo(() => [
     { key: "queryId", label: "Query ID", render: (value) => <span className="font-semibold">{value}</span> },
@@ -276,7 +373,10 @@ const SellerHelpSupport = () => {
 
       <DefaultModal
         isOpen={Boolean(selectedQuery)}
-        onClose={() => setSelectedQuery(null)}
+        onClose={() => {
+          setSelectedQuery(null);
+          setReplyMessage("");
+        }}
         title={selectedQuery?.queryId ? `Query ${selectedQuery.queryId}` : "Query Details"}
         isButtonView={false}
       >
@@ -299,17 +399,66 @@ const SellerHelpSupport = () => {
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Message</p>
-              <p className="mt-2 whitespace-pre-wrap rounded-md border border-[var(--admin-line)] bg-white p-3 text-sm leading-6 text-[var(--admin-ink)]">
-                {selectedQuery.message || selectedQuery.messagePreview || "N/A"}
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Ticket Conversation</p>
+              <div className="mt-3 space-y-3">
+                {getConversationItems(selectedQuery).map((item) => {
+                  const isSellerMessage = item.type === "seller";
+                  return (
+                    <div
+                      key={item.key}
+                      className={`flex ${isSellerMessage ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[88%] rounded-md border px-3 py-2 text-sm shadow-sm ${
+                          isSellerMessage
+                            ? "border-[var(--admin-blue)] bg-[var(--admin-blue)] text-white"
+                            : "border-[var(--admin-line)] bg-white text-[var(--admin-ink)]"
+                        }`}
+                      >
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <span className={`text-xs font-semibold ${isSellerMessage ? "text-white" : "text-[var(--admin-ink)]"}`}>
+                            {item.title}
+                          </span>
+                          {!isSellerMessage ? (
+                            <StatusBadge status={item.status} label={statusLabel(item.status)} dot />
+                          ) : null}
+                        </div>
+                        <p className={`whitespace-pre-wrap leading-6 ${isSellerMessage ? "text-white" : "text-[var(--admin-ink)]"}`}>
+                          {item.message || "No note added."}
+                        </p>
+                        <p className={`mt-1 text-[11px] ${isSellerMessage ? "text-white/80" : "text-[var(--admin-muted)]"}`}>
+                          {formatDateTime12Hour(item.timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Admin Notes</p>
-              <p className="mt-2 whitespace-pre-wrap rounded-md border border-[var(--admin-line)] bg-white p-3 text-sm leading-6 text-[var(--admin-ink)]">
-                {selectedQuery.adminNotes || "No notes yet."}
-              </p>
+            <div className="rounded-md border border-[var(--admin-line)] bg-white p-3">
+              <label className="block text-sm font-semibold text-[var(--admin-ink)]">
+                Add Reply
+                <textarea
+                  className="mt-2 min-h-[96px] w-full rounded-md border border-[var(--admin-line)] px-3 py-2 text-sm leading-6 focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20"
+                  value={replyMessage}
+                  onChange={(event) => setReplyMessage(event.target.value)}
+                  maxLength={5000}
+                  placeholder="Type your follow-up message for support"
+                  disabled={replySubmitting}
+                />
+              </label>
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  className="button-primary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={submitReply}
+                  disabled={replySubmitting || !replyMessage.trim()}
+                >
+                  <MdSend size={16} />
+                  {replySubmitting ? "Sending..." : "Send Reply"}
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

@@ -362,9 +362,12 @@ export const ENDPOINTS = {
     mine: "/support/queries",
     myDetail: (queryId) => `/support/queries/${queryId}`,
     create: "/support/queries",
+    reply: (queryId) => `/support/queries/${queryId}/replies`,
     adminList: "/admin/support/queries",
     adminDetail: (queryId) => `/admin/support/queries/${queryId}`,
     adminStatus: (queryId) => `/admin/support/queries/${queryId}/status`,
+    adminDelete: (queryId) => `/admin/support/queries/${queryId}`,
+    adminBulkDelete: "/admin/support/queries",
   },
   deals: {
     list: "/deals",
@@ -466,6 +469,7 @@ export const ENDPOINTS = {
     sellerProductReview: (reviewId) => `/sellers/me/product-reviews/${reviewId}`,
     createProductReview: "/admin/platform/product-reviews",
     productReviewsBulkAction: "/admin/platform/product-reviews/bulk-action",
+    sellerProductReviewsBulkAction: "/sellers/me/product-reviews/bulk-action",
   },
   common: {
     countries: "/admin/common/countries",
