@@ -63,7 +63,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
         </div>
         <input
           type="text"
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
+          className="admin-input product-flat-gold-focus !h-[42px]"
           placeholder="Compelling title for search engines (max 70 chars)"
           value={seo.metaTitle || ''}
           onChange={(e) => onChange('seo.metaTitle', e.target.value)}
@@ -79,7 +79,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
         </div>
         <textarea
           rows={3}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
+          className="admin-input product-flat-gold-focus !h-auto resize-none py-2"
           placeholder="Summary shown in search results (max 160 chars)"
           value={seo.metaDescription || ''}
           onChange={(e) => onChange('seo.metaDescription', e.target.value)}
@@ -90,7 +90,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
       {/* Keywords */}
       <div className="space-y-1">
         <label className="text-sm font-medium text-gray-700">Keywords</label>
-        <div className="flex flex-wrap gap-1.5 p-2 border border-gray-300 rounded-md min-h-[42px] focus-within:ring-2 focus-within:ring-[var(--admin-blue)]">
+        <div className="admin-input flex min-h-[42px] flex-wrap gap-1.5 rounded-md border border-gray-300 p-2 transition-colors focus-within:border-[var(--admin-gold)]">
           {(seo.keywords || []).map((kw) => (
             <span
               key={kw}
@@ -102,7 +102,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
           ))}
           <input
             type="text"
-            className="flex-1 min-w-[120px] outline-none text-sm bg-transparent"
+            className="product-tag-input min-w-[120px] flex-1 text-sm"
             placeholder="Type keyword + Enter"
             value={keywordInput}
             onChange={(e) => setKeywordInput(e.target.value)}
@@ -117,7 +117,7 @@ const SEOPanel = ({ seo = {}, onChange, slug = '' }) => {
         <label className="text-sm font-medium text-gray-700">Canonical URL</label>
         <input
           type="url"
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
+          className="admin-input product-flat-gold-focus !h-[42px]"
           placeholder="https://yourstore.com/products/product-slug"
           value={seo.canonicalUrl || ''}
           onChange={(e) => onChange('seo.canonicalUrl', e.target.value)}
