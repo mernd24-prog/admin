@@ -2830,7 +2830,7 @@ export default function ProductManagementUI() {
               {(formData.commonImages || []).length <
                 MAX_COMMON_PRODUCT_IMAGES && (
                 <label
-                  className={`group flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-field)] px-3 text-center text-xs text-gray-500 transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]/40 hover:text-[var(--admin-gold-dark)] ${(formData.commonImages || []).length === 0 ? "col-span-full h-32 w-full max-w-[260px]" : "aspect-square w-full"} ${commonImagesUploading ? "pointer-events-none opacity-50" : ""}`}
+                  className={`group flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-field)] px-3 text-center text-xs text-gray-500 transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]/40 hover:text-[var(--admin-gold-dark)] ${(formData.commonImages || []).length === 0 ? "col-span-full h-32 w-full" : "aspect-square w-full"} ${commonImagesUploading ? "pointer-events-none opacity-50" : ""}`}
                 >
                   <span className="mb-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm"><FiImage size={15} /></span>
                   <span className="font-semibold">{commonImagesUploading ? "Uploading…" : "Add images"}</span>
@@ -2874,10 +2874,10 @@ export default function ProductManagementUI() {
                 Video {(formData.videos || []).filter(Boolean).length}/1
               </span>
               {(formData.videos || []).filter(Boolean).length ? (
-                <div className="max-w-[260px] overflow-hidden rounded-lg border border-[var(--admin-field-line)] bg-[var(--admin-field)]">
+                <div className="w-full overflow-hidden rounded-lg border border-[var(--admin-field-line)] bg-[var(--admin-field)]">
                   <video
                     src={(formData.videos || []).filter(Boolean)[0]}
-                    className="aspect-video w-full bg-black"
+                    className="aspect-video w-full max-h-[360px] bg-black"
                     controls
                     preload="metadata"
                   />
@@ -2896,7 +2896,7 @@ export default function ProductManagementUI() {
                 </div>
               ) : (
                 <label
-                  className={`flex h-32 w-full max-w-[260px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-field)] px-3 text-center text-xs text-gray-500 transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]/40 hover:text-[var(--admin-gold-dark)] ${productVideoUploading ? "pointer-events-none opacity-50" : ""}`}
+                  className={`flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-field)] px-3 text-center text-xs text-gray-500 transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]/40 hover:text-[var(--admin-gold-dark)] ${productVideoUploading ? "pointer-events-none opacity-50" : ""}`}
                 >
                   <span className="mb-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm"><FiVideo size={16} /></span>
                   <span className="font-semibold">{productVideoUploading ? "Uploading video…" : "Add product video"}</span>
@@ -3418,12 +3418,10 @@ export default function ProductManagementUI() {
     <div className="product-catalog-form relative min-h-screen">
       <Loader
         loading={
-          loading ||
-          productLoading ||
-          (isEditMode &&
-            !productLoadFailed &&
-            String(prefilledProductId || "") !== String(id)) ||
-          saving
+          saving ||
+          (isEditMode
+            ? !prefilledProductId && productLoading && !productLoadFailed
+            : loading)
         }
       />
       <Breadcrumb isEditMode={isEditMode} />
