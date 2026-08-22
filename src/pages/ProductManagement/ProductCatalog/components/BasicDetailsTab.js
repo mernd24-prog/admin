@@ -739,10 +739,9 @@ export default function BasicDetailsTab({
     if (titled !== value) handleChange({ target: { name, value: titled } });
   };
 
-  const isReturnable =
-    formData.warranty?.returnPolicy?.returnable ??
-    formData.warranty?.returnPolicy?.eligible ??
-    true;
+ const isReturnable = Boolean(
+  formData.warranty?.returnPolicy?.returnable
+);
 
   return (
     <>
@@ -1168,44 +1167,76 @@ export default function BasicDetailsTab({
                   </p>
                 </div>
                 <div className="shrink-0 rounded-full bg-[var(--admin-surface-soft)] px-3 py-2">
-                  <Input
-                    className="!mb-0"
-                    labelName="Returnable"
-                    name="warranty.returnPolicy.returnable"
-                    type="switch"
-                    value={isReturnable}
-                    onChange={(event) =>
-                      handleNestedChange(
-                        "warranty.returnPolicy.returnable",
-                        event.target.checked,
-                      )
-                    }
-                  />
+         <Input
+  className="!mb-0"
+  labelName="Returnable"
+  name="warranty.returnPolicy.returnable"
+  type="switch"
+  value={isReturnable}
+  onChange={(eventOrValue) => {
+    const checked =
+      typeof eventOrValue === "boolean"
+        ? eventOrValue
+        : Boolean(eventOrValue?.target?.checked);
+
+    handleNestedChange(
+      "warranty.returnPolicy.returnable",
+      checked
+    );
+
+    handleNestedChange(
+      "warranty.returnPolicy.eligible",
+      checked
+    );
+
+    handleNestedChange(
+      "warranty.returnPolicy.type",
+      checked ? "standard" : "non_returnable"
+    );
+
+    if (!checked) {
+      handleNestedChange(
+        "warranty.returnPolicy.days",
+        0
+      );
+
+      handleNestedChange(
+        "warranty.returnPolicy.returnWindowDays",
+        0
+      );
+    }
+  }}
+/>
                 </div>
               </div>
               <div className="grid gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
-                <Input
-                  labelName="Return Window Days"
-                  name="warranty.returnPolicy.returnWindowDays"
-                  type="number"
-                  min={0}
-                  max={365}
-                  disabled={!isReturnable}
-                  value={
-                    !isReturnable
-                      ? 0
-                      : (formData.warranty?.returnPolicy?.returnWindowDays ??
-                        formData.warranty?.returnPolicy?.days ??
-                        0)
-                  }
-                  onChange={(event) =>
-                    handleNestedChange(
-                      "warranty.returnPolicy.returnWindowDays",
-                      event.target.value,
-                    )
-                  }
-                  helperText="Starts from the item delivery timestamp."
-                />
+              <Input
+  labelName="Return Window Days"
+  name="warranty.returnPolicy.returnWindowDays"
+  type="number"
+  min={0}
+  max={365}
+  disabled={!isReturnable}
+  value={
+    formData.warranty?.returnPolicy?.returnWindowDays ?? ""
+  }
+  onChange={(event) => {
+    const value =
+      event.target.value === ""
+        ? ""
+        : Number(event.target.value);
+
+    handleNestedChange(
+      "warranty.returnPolicy.returnWindowDays",
+      value
+    );
+
+    handleNestedChange(
+      "warranty.returnPolicy.days",
+      value
+    );
+  }}
+/>
                 <Input
                   labelName="Allowed Resolution"
                   name="warranty.returnPolicy.resolution"
