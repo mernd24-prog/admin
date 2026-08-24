@@ -26,16 +26,19 @@ const ToggleButton = ({
           onClick={disabled || loading ? undefined : handleClick}
         />
         <div
-         
           className={`w-9 h-5 rounded-full bg-[var(--admin-line-strong)] 
             peer-checked:bg-[var(--admin-navy)] transition-all duration-300 ${
-              disabled || loading ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+              disabled || loading
+                ? "cursor-not-allowed opacity-60"
+                : "cursor-pointer"
             }`}
         ></div>
         <div
           className={`absolute top-[4px] left-[1px] w-4 h-4 rounded-full flex items-center justify-center 
             transition-all duration-300 transform ${
-              isToggle ? "translate-x-full bg-white text-[var(--admin-navy)]" : "bg-white"
+              isToggle
+                ? "translate-x-full bg-white text-[var(--admin-navy)]"
+                : "bg-white"
             }`}
         >
           {loading ? (
@@ -51,7 +54,9 @@ const ToggleButton = ({
     <PermissionGuard module={guardModule} action={requiredAction} hide>
       {toggle}
     </PermissionGuard>
-  ) : toggle;
+  ) : (
+    toggle
+  );
 };
 
 export default ToggleButton;

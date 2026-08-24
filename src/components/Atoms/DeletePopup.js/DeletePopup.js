@@ -1,15 +1,13 @@
-import React from 'react'
-import ButtonTransparent from '../../ButtonTransparent/button';
-import NewButton from '../../Button/NewButton';
-
+import React from "react";
+import ButtonTransparent from "../../ButtonTransparent/button";
+import NewButton from "../../Button/NewButton";
 
 const DeletePopup = ({
   isDeleteModalOpen,
   closeDeleteModal,
   confirmDelete,
-  DeleteHeading
+  DeleteHeading,
 }) => {
- 
   return (
     <div>
       {isDeleteModalOpen && (
@@ -18,18 +16,21 @@ const DeletePopup = ({
             <div className="flex items-center justify-center mb-4">
               <img src="/Img/delete.png" alt="" />
             </div>
-            <h2 className="text-[17px] font-[600] text-black mb-4">{DeleteHeading}</h2>
+            <h2 className="text-[17px] font-[600] text-black mb-4">
+              {DeleteHeading}
+            </h2>
             <div className="flex items-center justify-center gap-4 py-6">
-              <ButtonTransparent onClick={closeDeleteModal}> Cancel</ButtonTransparent>
+              <ButtonTransparent onClick={closeDeleteModal}>
+                {" "}
+                Cancel
+              </ButtonTransparent>
               <NewButton onClick={confirmDelete}> Yes</NewButton>
             </div>
           </div>
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
 export default DeletePopup;
-
-

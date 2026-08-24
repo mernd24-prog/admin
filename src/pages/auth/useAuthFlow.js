@@ -36,7 +36,8 @@ const REGISTER_NAME_MAX_LENGTH = 20;
 const REGISTER_NAME_REGEX = /^[A-Za-z]+$/;
 const STANDARD_PASSWORD_LENGTH = 16;
 const EMAIL_MAX_LENGTH = 254;
-const EMAIL_REGEX = /^[^\s@]+@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/;
+const EMAIL_REGEX =
+  /^[^\s@]+@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/;
 const VALID_EMAIL_TLDS = new Set([
   "com",
   "in",
@@ -52,7 +53,9 @@ const VALID_EMAIL_TLDS = new Set([
 ]);
 
 const normalizeEmail = (value) =>
-  String(value || "").trim().toLowerCase();
+  String(value || "")
+    .trim()
+    .toLowerCase();
 
 const getEmailValidationError = (value) => {
   const email = String(value || "").trim();
@@ -81,7 +84,9 @@ const getEmailValidationError = (value) => {
 };
 
 const sanitizeRegisterName = (value = "") =>
-  String(value || "").replace(/[^A-Za-z]/g, "").slice(0, REGISTER_NAME_MAX_LENGTH);
+  String(value || "")
+    .replace(/[^A-Za-z]/g, "")
+    .slice(0, REGISTER_NAME_MAX_LENGTH);
 
 const DEFAULT_FORM_FIELDS = {
   email: "",
@@ -354,7 +359,9 @@ export const useAuthFlow = ({
         } else if (formFields.firstName.trim().length < 2) {
           errors.firstName = "First name must be at least 2 characters";
           isValid = false;
-        } else if (formFields.firstName.trim().length > REGISTER_NAME_MAX_LENGTH) {
+        } else if (
+          formFields.firstName.trim().length > REGISTER_NAME_MAX_LENGTH
+        ) {
           errors.firstName = `First name cannot be more than ${REGISTER_NAME_MAX_LENGTH} characters`;
           isValid = false;
         } else if (!REGISTER_NAME_REGEX.test(formFields.firstName.trim())) {
@@ -368,7 +375,9 @@ export const useAuthFlow = ({
         } else if (formFields.lastName.trim().length < 2) {
           errors.lastName = "Last name must be at least 2 characters";
           isValid = false;
-        } else if (formFields.lastName.trim().length > REGISTER_NAME_MAX_LENGTH) {
+        } else if (
+          formFields.lastName.trim().length > REGISTER_NAME_MAX_LENGTH
+        ) {
           errors.lastName = `Last name cannot be more than ${REGISTER_NAME_MAX_LENGTH} characters`;
           isValid = false;
         } else if (!REGISTER_NAME_REGEX.test(formFields.lastName.trim())) {
@@ -399,7 +408,9 @@ export const useAuthFlow = ({
         } else if (formFields.registerPassword.length < 8) {
           errors.registerPassword = "Password must be at least 8 characters";
           isValid = false;
-        } else if (formFields.registerPassword.length > STANDARD_PASSWORD_LENGTH) {
+        } else if (
+          formFields.registerPassword.length > STANDARD_PASSWORD_LENGTH
+        ) {
           errors.registerPassword = `Password cannot exceed ${STANDARD_PASSWORD_LENGTH} characters`;
           isValid = false;
         } else if (
@@ -463,6 +474,14 @@ export const useAuthFlow = ({
     },
     [activeFormType, sellerPanel, setInlineError, termsAccepted],
   );
+
+  const handleTermsChange = useCallback((checked) => {
+    setTermsAccepted(checked);
+
+    if (checked) {
+      setLoginError("");
+    }
+  }, []);
 
   const storeOrClearCredentials = useCallback(
     (email) => {
@@ -662,172 +681,169 @@ export const useAuthFlow = ({
     [codeInputRefs, formFields, verificationCode],
   );
 
-const handleLoginSubmit = useCallback(
-  async (event) => {
-    event.preventDefault();
+  const handleLoginSubmit = useCallback(
+    async (event) => {
+      event.preventDefault();
 
-    if (!validateFields(AUTH_FORM_TYPES.LOGIN)) {
-      setFormAnimation("slide-in");
-      return;
-    }
+      if (!validateFields(AUTH_FORM_TYPES.LOGIN)) {
+        setFormAnimation("slide-in");
+        return;
+      }
 
-    if (!requireTermsAgreement(AUTH_FORM_TYPES.LOGIN)) {
-      return;
-    }
+      if (!requireTermsAgreement(AUTH_FORM_TYPES.LOGIN)) {
+        return;
+      }
 
-    const email = normalizeEmail(formFields.email);
-    const password = formFields.password;
+      const email = normalizeEmail(formFields.email);
+      const password = formFields.password;
 
-    if (getEmailValidationError(email)) {
-      setFormErrors((prev) => ({
-        ...prev,
-        email: "Please enter a valid email address.",
-      }));
-      setLoginError("");
-      setFormAnimation("error");
+      if (getEmailValidationError(email)) {
+        setFormErrors((prev) => ({
+          ...prev,
+          email: "Please enter a valid email address.",
+        }));
+        setLoginError("");
+        setFormAnimation("error");
 
-      setTimeout(() => {
+        setTimeout(() => {
+          setFormAnimation("loading");
+        }, 500);
+
+        return;
+      }
+
+      storeOrClearCredentials(email);
+
+      try {
         setFormAnimation("loading");
-      }, 500);
 
-      return;
-    }
+        const response = await dispatch(
+          adminLogin({
+            email,
+            password,
+          }),
+        );
 
-    storeOrClearCredentials(email);
+        if (response?.error) {
+          const apiMessage = getApiErrorMessage(response);
+          const normalizedApiMessage = String(apiMessage || "").toLowerCase();
+          const isEmailValidationError =
+            normalizedApiMessage.includes("email must be") ||
+            normalizedApiMessage.includes("valid email") ||
+            normalizedApiMessage.includes("invalid email");
 
-    try {
-      setFormAnimation("loading");
+          if (isEmailValidationError) {
+            setFormErrors((prev) => ({
+              ...prev,
+              email: "Please enter a valid email address.",
+            }));
+            setLoginError("");
+          } else {
+            setInlineError(AUTH_FORM_TYPES.LOGIN, apiMessage);
+          }
 
-      const response = await dispatch(
-        adminLogin({
-          email,
-          password,
-        }),
-      );
+          setFormAnimation("error");
 
-      if (response?.error) {
-        const apiMessage = getApiErrorMessage(response);
-        const normalizedApiMessage = String(apiMessage || "").toLowerCase();
-        const isEmailValidationError =
-          normalizedApiMessage.includes("email must be") ||
-          normalizedApiMessage.includes("valid email") ||
-          normalizedApiMessage.includes("invalid email");
+          setTimeout(() => {
+            setFormAnimation("slide-in");
+          }, 500);
 
-        if (isEmailValidationError) {
-          setFormErrors((prev) => ({
-            ...prev,
-            email: "Please enter a valid email address.",
-          }));
-          setLoginError("");
-        } else {
-          setInlineError(AUTH_FORM_TYPES.LOGIN, apiMessage);
+          return;
         }
+
+        setFormAnimation("success-animation");
+
+        setTimeout(() => {
+          const auth = normalizeAuthPayload(response?.payload);
+
+          if (auth.requiresOnboarding && auth.onboardingToken) {
+            if (!sellerPanel) {
+              clearStoredAuth();
+
+              setInlineError(
+                AUTH_FORM_TYPES.LOGIN,
+                "Seller onboarding belongs in the seller panel.",
+              );
+
+              return;
+            }
+
+            dispatch(
+              startSellerOnboarding({
+                onboardingToken: auth.onboardingToken,
+                user: auth.user || null,
+                flowState: auth.flowState || null,
+              }),
+            );
+
+            toast.success("Continue seller onboarding.");
+            navigate(AUTH_ROUTES.VERIFICATION_COMPLETE);
+            return;
+          }
+
+          if (!auth.accessToken) {
+            setInlineError(
+              AUTH_FORM_TYPES.LOGIN,
+              "Login did not return an access token.",
+            );
+
+            return;
+          }
+
+          if (!isAllowedRoleForPanel(auth.role, panelMode)) {
+            clearStoredAuth();
+
+            setInlineError(
+              AUTH_FORM_TYPES.LOGIN,
+              sellerPanel
+                ? "Please use a seller account for this panel."
+                : "Please use an admin account for this panel.",
+            );
+
+            return;
+          }
+
+          persistAuthenticatedSession(auth);
+          toast.success("Login successful");
+          resetForm();
+          navigate(AUTH_ROUTES.APP_HOME);
+        }, 600);
+      } catch (error) {
+        const apiMessage = getApiErrorMessage(
+          error,
+          "Login failed. Please try again.",
+        );
+
+        const friendlyMessage = apiMessage
+          ?.toLowerCase()
+          .includes("email must be a valid email")
+          ? "Please enter a valid email address."
+          : apiMessage;
+
+        setInlineError(AUTH_FORM_TYPES.LOGIN, friendlyMessage);
 
         setFormAnimation("error");
 
         setTimeout(() => {
           setFormAnimation("slide-in");
         }, 500);
-
-        return;
       }
-
-      setFormAnimation("success-animation");
-
-      setTimeout(() => {
-        const auth = normalizeAuthPayload(response?.payload);
-
-        if (auth.requiresOnboarding && auth.onboardingToken) {
-          if (!sellerPanel) {
-            clearStoredAuth();
-
-            setInlineError(
-              AUTH_FORM_TYPES.LOGIN,
-              "Seller onboarding belongs in the seller panel.",
-            );
-
-            return;
-          }
-
-          dispatch(
-            startSellerOnboarding({
-              onboardingToken: auth.onboardingToken,
-              user: auth.user || null,
-              flowState: auth.flowState || null,
-            }),
-          );
-
-          toast.success("Continue seller onboarding.");
-          navigate(AUTH_ROUTES.VERIFICATION_COMPLETE);
-          return;
-        }
-
-        if (!auth.accessToken) {
-          setInlineError(
-            AUTH_FORM_TYPES.LOGIN,
-            "Login did not return an access token.",
-          );
-
-          return;
-        }
-
-        if (!isAllowedRoleForPanel(auth.role, panelMode)) {
-          clearStoredAuth();
-
-          setInlineError(
-            AUTH_FORM_TYPES.LOGIN,
-            sellerPanel
-              ? "Please use a seller account for this panel."
-              : "Please use an admin account for this panel.",
-          );
-
-          return;
-        }
-
-        persistAuthenticatedSession(auth);
-        toast.success("Login successful");
-        resetForm();
-        navigate(AUTH_ROUTES.APP_HOME);
-      }, 600);
-    } catch (error) {
-      const apiMessage = getApiErrorMessage(
-        error,
-        "Login failed. Please try again.",
-      );
-
-      const friendlyMessage = apiMessage
-        ?.toLowerCase()
-        .includes("email must be a valid email")
-        ? "Please enter a valid email address."
-        : apiMessage;
-
-      setInlineError(
-        AUTH_FORM_TYPES.LOGIN,
-        friendlyMessage,
-      );
-
-      setFormAnimation("error");
-
-      setTimeout(() => {
-        setFormAnimation("slide-in");
-      }, 500);
-    }
-  },
-  [
-    dispatch,
-    formFields.email,
-    formFields.password,
-    navigate,
-    panelMode,
-    persistAuthenticatedSession,
-    requireTermsAgreement,
-    resetForm,
-    sellerPanel,
-    setInlineError,
-    storeOrClearCredentials,
-    validateFields,
-  ],
-);
+    },
+    [
+      dispatch,
+      formFields.email,
+      formFields.password,
+      navigate,
+      panelMode,
+      persistAuthenticatedSession,
+      requireTermsAgreement,
+      resetForm,
+      sellerPanel,
+      setInlineError,
+      storeOrClearCredentials,
+      validateFields,
+    ],
+  );
 
   const handleForgotPasswordSubmit = useCallback(
     async (event) => {
@@ -1186,9 +1202,7 @@ const handleLoginSubmit = useCallback(
         const isRegistrationOtp =
           activeFormType === AUTH_FORM_TYPES.REGISTER_VERIFICATION;
         const email = normalizeEmail(
-          isRegistrationOtp
-            ? formFields.registerEmail
-            : formFields.forgotEmail,
+          isRegistrationOtp ? formFields.registerEmail : formFields.forgotEmail,
         );
         const purpose = isRegistrationOtp ? "registration" : "forgot_password";
         const response = await dispatch(resendOtp({ email, purpose }));
@@ -1268,7 +1282,7 @@ const handleLoginSubmit = useCallback(
     resendOtpLabel,
     resetForm,
     sellerPanel,
-    setTermsAccepted,
+    handleTermsChange,
     termsAccepted,
     updateFormFields,
     verificationCode,

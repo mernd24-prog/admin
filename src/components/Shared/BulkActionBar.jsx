@@ -1,6 +1,6 @@
-import React from 'react';
-import { MdClose } from 'react-icons/md';
-import PermissionGuard from '../Atoms/PermissionGuard/PermissionGuard';
+import React from "react";
+import { MdClose } from "react-icons/md";
+import PermissionGuard from "../Atoms/PermissionGuard/PermissionGuard";
 
 /**
  * BulkActionBar
@@ -29,10 +29,12 @@ import PermissionGuard from '../Atoms/PermissionGuard/PermissionGuard';
  */
 
 const VARIANT_CLASSES = {
-  danger:   'text-red-600   hover:bg-red-50   border-red-200',
-  warning:  'text-yellow-600 hover:bg-yellow-50 border-yellow-200',
-  primary:  'text-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)] border-[var(--admin-blue)]/30',
-  default:  'text-[var(--admin-muted)] hover:bg-white border-[var(--admin-line)]',
+  danger: "text-red-600   hover:bg-red-50   border-red-200",
+  warning: "text-yellow-600 hover:bg-yellow-50 border-yellow-200",
+  primary:
+    "text-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)] border-[var(--admin-blue)]/30",
+  default:
+    "text-[var(--admin-muted)] hover:bg-white border-[var(--admin-line)]",
 };
 
 const BulkActionBar = ({
@@ -71,7 +73,7 @@ const BulkActionBar = ({
       {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-2">
         {actions.map((action, idx) => {
-          const variantClass = VARIANT_CLASSES[action.variant || 'default'];
+          const variantClass = VARIANT_CLASSES[action.variant || "default"];
           const btn = (
             <button
               key={action.label}
@@ -80,14 +82,21 @@ const BulkActionBar = ({
               disabled={loading || action.disabled}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variantClass}`}
             >
-              {action.icon && <span className="text-[14px]">{action.icon}</span>}
+              {action.icon && (
+                <span className="text-[14px]">{action.icon}</span>
+              )}
               {action.label}
             </button>
           );
 
           if (moduleSlug && action.action) {
             return (
-              <PermissionGuard key={idx} module={moduleSlug} action={action.action} hide>
+              <PermissionGuard
+                key={idx}
+                module={moduleSlug}
+                action={action.action}
+                hide
+              >
                 {btn}
               </PermissionGuard>
             );

@@ -35,10 +35,8 @@ export const getVerificationCase = (flowState) => {
     kycStatus === "rejected" || kycStatus === "resubmit_required";
   const bankRejected =
     bankStatus === "rejected" || bankStatus === "resubmit_required";
-  const kycApproved =
-    kycStatus === "approved" || kycStatus === "verified";
-  const bankApproved =
-    bankStatus === "approved" || bankStatus === "verified";
+  const kycApproved = kycStatus === "approved" || kycStatus === "verified";
+  const bankApproved = bankStatus === "approved" || bankStatus === "verified";
   const bankDetailsCompleted =
     flowState.requirements?.bankDetails?.completed === true ||
     Boolean(flowState.sellerProfile?.bankDetails);

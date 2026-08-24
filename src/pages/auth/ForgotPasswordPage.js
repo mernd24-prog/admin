@@ -5,10 +5,7 @@ import FormSubmitButton from "../../components/Atoms/FormButton/FormSubmitButton
 import { AUTH_FORM_TYPES } from "../../context/AuthLayoutContext";
 import { useAuthFlow } from "./useAuthFlow";
 import AuthTermsCheckbox from "./components/AuthTermsCheckbox";
-import {
-  AUTH_INPUT_CLASS_NAME,
-  AUTH_LABEL_CLASS_NAME,
-} from "./authFormStyles";
+import { AUTH_INPUT_CLASS_NAME, AUTH_LABEL_CLASS_NAME } from "./authFormStyles";
 import { useAuthPageMeta } from "./useAuthPageMeta";
 
 const ForgotPasswordPage = () => {
@@ -16,10 +13,7 @@ const ForgotPasswordPage = () => {
     currentFormType: AUTH_FORM_TYPES.FORGOT_PASSWORD,
   });
 
-  useAuthPageMeta(
-    "Forgot Password",
-    "Recover your seller account password.",
-  );
+  useAuthPageMeta("Forgot Password", "Recover your seller account password.");
 
   return (
     <div className="relative overflow-hidden">
@@ -56,14 +50,13 @@ const ForgotPasswordPage = () => {
           <div className="pt-2">
             <AuthTermsCheckbox
               checked={auth.termsAccepted}
-              onChange={(event) => auth.setTermsAccepted(event.target.checked)}
+              onChange={(event) => auth.handleTermsChange(event.target.checked)}
             />
             <FormSubmitButton
               buttonLabel={
                 auth.loading ? "Sending Reset Link..." : "Send Reset Link"
               }
             />
-
           </div>
         </div>
       </FormLayout>

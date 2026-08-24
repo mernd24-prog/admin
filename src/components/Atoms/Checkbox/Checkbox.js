@@ -1,12 +1,6 @@
 import React from "react";
 
-const CustomCheckbox = ({
-  id,
-  name,
-  checked,
-  onChange,
-  className = "",
-}) => {
+const CustomCheckbox = ({ id, name, checked, onChange, className = "" }) => {
   return (
     <label
       className={`relative inline-flex shrink-0 cursor-pointer items-center select-none ${className}`}

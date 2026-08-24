@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MdExpandMore, MdExpandLess } from 'react-icons/md';
+import React, { useState } from "react";
+import { MdExpandMore, MdExpandLess } from "react-icons/md";
 
 /**
  * FormSection
@@ -24,7 +24,7 @@ const FormSection = ({
   defaultOpen = true,
   required = false,
   children,
-  className = '',
+  className = "",
 }) => {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -32,7 +32,7 @@ const FormSection = ({
     <div className={`admin-card overflow-hidden ${className}`}>
       {/* Header */}
       <div
-        className={`flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] ${collapsible ? 'cursor-pointer select-none hover:bg-[var(--admin-surface-soft)]' : ''}`}
+        className={`flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] ${collapsible ? "cursor-pointer select-none hover:bg-[var(--admin-surface-soft)]" : ""}`}
         onClick={collapsible ? () => setOpen((o) => !o) : undefined}
       >
         <div className="flex items-center gap-3">
@@ -44,9 +44,18 @@ const FormSection = ({
           <div>
             <h3 className="text-sm font-semibold text-[var(--admin-ink)] flex items-center gap-1.5">
               {title}
-              {required && <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" title="Required" />}
+              {required && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"
+                  title="Required"
+                />
+              )}
             </h3>
-            {subtitle && <p className="text-xs text-[var(--admin-muted)] mt-0.5">{subtitle}</p>}
+            {subtitle && (
+              <p className="text-xs text-[var(--admin-muted)] mt-0.5">
+                {subtitle}
+              </p>
+            )}
           </div>
         </div>
         {collapsible && (
@@ -57,9 +66,7 @@ const FormSection = ({
       </div>
 
       {/* Body */}
-      {(!collapsible || open) && (
-        <div className="px-5 py-4">{children}</div>
-      )}
+      {(!collapsible || open) && <div className="px-5 py-4">{children}</div>}
     </div>
   );
 };

@@ -103,7 +103,7 @@ const Login = () => {
           {auth.sellerPanel && (
             <AuthTermsCheckbox
               checked={auth.termsAccepted}
-              onChange={(event) => auth.setTermsAccepted(event.target.checked)}
+              onChange={(event) => auth.handleTermsChange(event.target.checked)}
             />
           )}
           <FormSubmitButton
@@ -115,8 +115,6 @@ const Login = () => {
                   : "Login"
             }
           />
-
-
         </div>
       </FormLayout>
     </div>

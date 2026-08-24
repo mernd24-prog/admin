@@ -44,7 +44,8 @@ export const ActionButtons = ({
   showActivateAndDeActivate = false,
   activate = false,
   showPrintIcon = false,
-  viewButton=false,onViewClick,
+  viewButton = false,
+  onViewClick,
   requiredModule,
   editAction = "update",
   deleteAction = "delete",
@@ -68,156 +69,163 @@ export const ActionButtons = ({
   const iconButtonClass = "admin-icon-action";
   const successIconButtonClass = "admin-icon-action success";
   const dangerIconButtonClass = "admin-icon-action danger";
-  const guard = (action, node) => guardModule ? (
-    <PermissionGuard module={guardModule} action={action} hide>{node}</PermissionGuard>
-  ) : node;
+  const guard = (action, node) =>
+    guardModule ? (
+      <PermissionGuard module={guardModule} action={action} hide>
+        {node}
+      </PermissionGuard>
+    ) : (
+      node
+    );
   return (
     <div className="flex items-center gap-1.5">
-      {showEditButton && guard(editAction, (
-        <Tooltip text="Edit" position="top">
+      {showEditButton &&
+        guard(
+          editAction,
+          <Tooltip text="Edit" position="top">
+            <button
+              type="button"
+              onClick={onEdit}
+              className={successIconButtonClass}
+            >
+              <FiEdit size={18} />
+            </button>
+          </Tooltip>,
+        )}
+
+      {viewButton &&
+        guard(
+          viewAction,
+          <Tooltip text="View" position="top">
+            <button
+              type="button"
+              onClick={onViewClick}
+              className={iconButtonClass}
+            >
+              <FiEye size={18} />
+            </button>
+          </Tooltip>,
+        )}
+
+      {showAddButton &&
+        guard(
+          addAction,
+          <Tooltip text="Add" position="top">
+            <button type="button" onClick={onAdd} className={iconButtonClass}>
+              <IoAddCircleOutline size={20} />
+            </button>
+          </Tooltip>,
+        )}
+      {showOptionValues &&
+        guard(
+          optionValueAction,
           <button
             type="button"
-            onClick={onEdit}
-            className={successIconButtonClass}
-          >
-            <FiEdit size={18} />
-          </button>
-        </Tooltip>
-      ))}
-
-
-         {viewButton && guard(viewAction, (
-        <Tooltip text="View" position="top">
-          <button
-            type="button"
-            onClick={onViewClick}
+            onClick={onOptionValue}
             className={iconButtonClass}
           >
-            <FiEye size={18} />
-          </button>
-        </Tooltip>
-      ))}
-
-
-      {showAddButton && guard(addAction, (
-        <Tooltip text="Add" position="top">
+            <BsListTask size={20} />
+          </button>,
+        )}
+      {userPermissions &&
+        guard(
+          permissionAction,
+          <FaUserLock size={20} onClick={onPermissionClick} />,
+        )}
+      {showWarningButton &&
+        guard(
+          warningAction,
+          <button type="button" onClick={onWarning} className={iconButtonClass}>
+            <IoWarningOutline size={20} />
+          </button>,
+        )}
+      {showViewButton &&
+        guard(
+          viewAction,
+          <button type="button" onClick={onView} className={iconButtonClass}>
+            <FaEye size={20} />
+          </button>,
+        )}
+      {showLinkButton &&
+        guard(
+          linkAction,
+          <button type="button" onClick={onLink} className={iconButtonClass}>
+            <IoMdLink size={20} />
+          </button>,
+        )}
+      {showHistoryButton &&
+        guard(
+          historyAction,
+          <button type="button" onClick={onHistory} className={iconButtonClass}>
+            <RxCountdownTimer size={20} />
+          </button>,
+        )}
+      {showDeleteButton &&
+        guard(
+          deleteAction,
           <button
             type="button"
-            onClick={onAdd}
-            className={iconButtonClass}
-          >
-            <IoAddCircleOutline size={20} />
-          </button>
-        </Tooltip>
-      ))}
-      {showOptionValues && guard(optionValueAction, (
-        <button
-          type="button"
-          onClick={onOptionValue}
-          className={iconButtonClass}
-        >
-          <BsListTask size={20} />
-        </button>
-      ))}
-      {userPermissions && guard(permissionAction, <FaUserLock size={20} onClick={onPermissionClick} />)}
-      {showWarningButton && guard(warningAction, (
-        <button
-          type="button"
-          onClick={onWarning}
-          className={iconButtonClass}
-        >
-          <IoWarningOutline size={20} />
-        </button>
-      ))}
-      {showViewButton && guard(viewAction, (
-        <button
-          type="button"
-          onClick={onView}
-          className={iconButtonClass}
-        >
-          <FaEye size={20} />
-        </button>
-      ))}
-      {showLinkButton && guard(linkAction, (
-        <button
-          type="button"
-          onClick={onLink}
-          className={iconButtonClass}
-        >
-          <IoMdLink size={20} />
-        </button>
-      ))}
-      {showHistoryButton && guard(historyAction, (
-        <button
-          type="button"
-          onClick={onHistory}
-          className={iconButtonClass}
-        >
-          <RxCountdownTimer size={20} />
-        </button>
-      ))}
-      {showDeleteButton && guard(deleteAction, (
-        <button
-          type="button"
-          onClick={onDelete}
+            onClick={onDelete}
             className={dangerIconButtonClass}
-        >
-          <FiTrash2 size={18} />
-        </button>
-      ))}
-      {showBannerButton && guard(bannerAction, (
-        <button
-          type="button"
-          onClick={onBanner}
-          className={iconButtonClass}
-        >
-          <MdListAlt size={18} />
-        </button>
-      ))}
-      {showPasswordButton && guard(passwordAction, (
-        <Tooltip text="Change Password" position="top">
-          <button
-            type="button"
-            onClick={onPasswordChange}
-            className={iconButtonClass}
           >
-            <MdPassword size={20} />
-          </button>
-        </Tooltip>
-      ))}
-      {showListing && guard(listingAction, (
-        <button
-          type="button"
-          onClick={onListing}
-          className={iconButtonClass}
-        >
-          <IoIosList size={20} />
-        </button>
-      ))}
-      {showPrint && guard(printAction, (
-        <p className="" onClick={onPrint}>
-          Print
-        </p>
-      ))}
-      {showPrintIcon && guard(printAction, (
-        <button
-          type="button"
-          onClick={onPrint}
-          className={iconButtonClass}
-        >
-          <MdLocalPrintshop size={18} />
-        </button>
-      ))}
-      {showReplace && guard(replaceAction, (
-        <p className="" onClick={onReplace}>
-          Replace
-        </p>
-      ))}
-      {showActivateAndDeActivate && guard(statusAction, (
-        <p className={activate ? "text-green-500" : "text-red-500"}>
-          {activate ? "Activate" : "DeActivate"}
-        </p>
-      ))}
+            <FiTrash2 size={18} />
+          </button>,
+        )}
+      {showBannerButton &&
+        guard(
+          bannerAction,
+          <button type="button" onClick={onBanner} className={iconButtonClass}>
+            <MdListAlt size={18} />
+          </button>,
+        )}
+      {showPasswordButton &&
+        guard(
+          passwordAction,
+          <Tooltip text="Change Password" position="top">
+            <button
+              type="button"
+              onClick={onPasswordChange}
+              className={iconButtonClass}
+            >
+              <MdPassword size={20} />
+            </button>
+          </Tooltip>,
+        )}
+      {showListing &&
+        guard(
+          listingAction,
+          <button type="button" onClick={onListing} className={iconButtonClass}>
+            <IoIosList size={20} />
+          </button>,
+        )}
+      {showPrint &&
+        guard(
+          printAction,
+          <p className="" onClick={onPrint}>
+            Print
+          </p>,
+        )}
+      {showPrintIcon &&
+        guard(
+          printAction,
+          <button type="button" onClick={onPrint} className={iconButtonClass}>
+            <MdLocalPrintshop size={18} />
+          </button>,
+        )}
+      {showReplace &&
+        guard(
+          replaceAction,
+          <p className="" onClick={onReplace}>
+            Replace
+          </p>,
+        )}
+      {showActivateAndDeActivate &&
+        guard(
+          statusAction,
+          <p className={activate ? "text-green-500" : "text-red-500"}>
+            {activate ? "Activate" : "DeActivate"}
+          </p>,
+        )}
     </div>
   );
 };

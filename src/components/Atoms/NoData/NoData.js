@@ -1,10 +1,10 @@
-import React from 'react';
+import React from "react";
 
 const Nodata = ({ nodataLabel, nodataDesc }) => {
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-md p-6 mx-auto space-y-4">
       <div className="w-52 flex items-center justify-center">
-        <img src='/Img/noData.png' alt='' />
+        <img src="/Img/noData.png" alt="" />
       </div>
       <h2 className="text-xl font-semibold text-gray-900">{nodataLabel}</h2>
       <p className="text-center text-gray-600">{nodataDesc}</p>

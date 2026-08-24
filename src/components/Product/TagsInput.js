@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 /**
  * Multi-tag input with autocomplete suggestions.
@@ -14,33 +14,34 @@ const TagsInput = ({
   tags = [],
   onChange,
   suggestions = [],
-  placeholder = 'Add tag…',
+  placeholder = "Add tag…",
   maxTags = 20,
 }) => {
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [focused, setFocused] = useState(false);
 
   const filteredSuggestions = input.trim()
     ? suggestions.filter(
-        (s) => s.toLowerCase().includes(input.toLowerCase()) && !tags.includes(s),
+        (s) =>
+          s.toLowerCase().includes(input.toLowerCase()) && !tags.includes(s),
       )
     : [];
 
   const addTag = (tag) => {
-    const trimmed = tag.trim().toLowerCase().replace(/\s+/g, '-');
+    const trimmed = tag.trim().toLowerCase().replace(/\s+/g, "-");
     if (!trimmed || tags.includes(trimmed) || tags.length >= maxTags) return;
     onChange([...tags, trimmed]);
-    setInput('');
+    setInput("");
   };
 
   const removeTag = (tag) => onChange(tags.filter((t) => t !== tag));
 
   const handleKeyDown = (e) => {
-    if ((e.key === 'Enter' || e.key === ',') && input.trim()) {
+    if ((e.key === "Enter" || e.key === ",") && input.trim()) {
       e.preventDefault();
       addTag(input);
     }
-    if (e.key === 'Backspace' && !input && tags.length) {
+    if (e.key === "Backspace" && !input && tags.length) {
       removeTag(tags[tags.length - 1]);
     }
   };
@@ -49,7 +50,7 @@ const TagsInput = ({
     <div className="relative ">
       <div
         className={`admin-input flex flex-wrap gap-1.5 p-2 border rounded-md min-h-[42px] transition-all ${
-          focused ? 'border-[var(--admin-gold)]' : 'border-gray-300'
+          focused ? "border-[var(--admin-gold)]" : "border-gray-300"
         }`}
       >
         {tags.map((tag) => (
@@ -70,7 +71,9 @@ const TagsInput = ({
         <input
           type="text"
           className="product-tag-input min-w-[120px] flex-1 text-sm"
-          placeholder={tags.length < maxTags ? placeholder : `Max ${maxTags} tags reached`}
+          placeholder={
+            tags.length < maxTags ? placeholder : `Max ${maxTags} tags reached`
+          }
           value={input}
           disabled={tags.length >= maxTags}
           onChange={(e) => setInput(e.target.value)}

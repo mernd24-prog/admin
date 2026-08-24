@@ -19,7 +19,8 @@ const EMPTY_TEXT_VALUES = new Set(["", "NA", "N/A"]);
 const isEmptyCellValue = (value) =>
   value === null ||
   value === undefined ||
-  (typeof value === "string" && EMPTY_TEXT_VALUES.has(value.trim().toUpperCase()));
+  (typeof value === "string" &&
+    EMPTY_TEXT_VALUES.has(value.trim().toUpperCase()));
 
 const shouldPreserveText = (value) => /@|https?:\/\/|www\./i.test(value);
 
@@ -44,13 +45,18 @@ const VOID_ELEMENT_TAGS = new Set([
 ]);
 
 const renderCellValue = (value, nested = false) => {
-  if (nested && (value === null || value === undefined || typeof value === "boolean")) {
+  if (
+    nested &&
+    (value === null || value === undefined || typeof value === "boolean")
+  ) {
     return null;
   }
   if (nested && typeof value === "string" && value.trim() === "") return null;
-  if (isEmptyCellValue(value)) return <span className="text-gray-400">N/A</span>;
+  if (isEmptyCellValue(value))
+    return <span className="text-gray-400">N/A</span>;
   if (typeof value === "string") return formatCellText(value);
-  if (Array.isArray(value)) return value.map((item) => renderCellValue(item, true));
+  if (Array.isArray(value))
+    return value.map((item) => renderCellValue(item, true));
   if (React.isValidElement(value)) {
     const children = value.props?.children;
     if (VOID_ELEMENT_TAGS.has(value.type)) return value;
@@ -197,7 +203,8 @@ const TableData = ({
     (showExtraHeading ? Math.max(0, 10 - tableHeadings.length) : 0);
   const totalRecords = totalData ?? data?.length ?? 0;
   const showLoading =
-    loading || (!hasMounted && (!Array.isArray(data) || data.length === 0) && !error);
+    loading ||
+    (!hasMounted && (!Array.isArray(data) || data.length === 0) && !error);
 
   useEffect(() => {
     setHasMounted(true);
@@ -340,7 +347,8 @@ const TableData = ({
                           <td className="w-16 px-4 py-3 align-middle font-medium text-[var(--admin-muted)]">
                             {(resolvedCurrentPage - 1) * resolvedPageSize +
                               rowIndex +
-                              1}.
+                              1}
+                            .
                           </td>
                         )}
                         {row && Array.isArray(row) && row.length > 0 ? (

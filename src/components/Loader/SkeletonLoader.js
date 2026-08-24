@@ -1,17 +1,21 @@
+import React from "react";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
-import React from 'react';
-import Skeleton from 'react-loading-skeleton';
-import 'react-loading-skeleton/dist/skeleton.css';
-
-export const SkeletonLoader = ({ count = 1, height = 20, width, circle = false }) => {
+export const SkeletonLoader = ({
+  count = 1,
+  height = 20,
+  width,
+  circle = false,
+}) => {
   return (
-    <Skeleton 
-      count={count} 
-      height={height} 
-      width={width} 
-      circle={circle} 
-      baseColor="#f8f4f0"  
-      highlightColor="#e8e4e0" 
+    <Skeleton
+      count={count}
+      height={height}
+      width={width}
+      circle={circle}
+      baseColor="#f8f4f0"
+      highlightColor="#e8e4e0"
     />
   );
 };
@@ -23,49 +27,70 @@ export const TableSkeletonLoader = ({ columns = 5, rows = 10 }) => {
         <table className="w-full text-left table-auto">
           <thead className="bg-[#f8f4f0] border-b-[1px] border-[#e0dcd8] h-16">
             <tr>
-              {Array(columns).fill(0).map((_, index) => (
-                <th key={index} className="p-2">
-                  <SkeletonLoader width={100} />
-                </th>
-              ))}
+              {Array(columns)
+                .fill(0)
+                .map((_, index) => (
+                  <th key={index} className="p-2">
+                    <SkeletonLoader width={100} />
+                  </th>
+                ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-[#e8e4e0]">
-            {Array(rows).fill(0).map((_, rowIndex) => (
-              <tr key={rowIndex} className="hover:bg-[#f0ece8]">
-                {Array(columns).fill(0).map((_, cellIndex) => (
-                  <td key={cellIndex} className="p-2">
-                    <SkeletonLoader width={Math.random() * 100 + 50} />
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {Array(rows)
+              .fill(0)
+              .map((_, rowIndex) => (
+                <tr key={rowIndex} className="hover:bg-[#f0ece8]">
+                  {Array(columns)
+                    .fill(0)
+                    .map((_, cellIndex) => (
+                      <td key={cellIndex} className="p-2">
+                        <SkeletonLoader width={Math.random() * 100 + 50} />
+                      </td>
+                    ))}
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
-      
+
       <div className="mt-4 overflow-hidden overflow-y-auto lg:hidden">
-        {Array(5).fill(0).map((_, index) => (
-          <div key={index} className="p-4 mb-4 bg-[#f8f4f0] border border-[#e0dcd8] rounded-lg">
-            {Array(columns).fill(0).map((_, cellIndex) => (
-              <div key={cellIndex} className="flex items-center justify-between pb-3 mb-3 border-b border-[#e8e4e0]">
-                <SkeletonLoader width={80} />
-                <SkeletonLoader width={120} />
-              </div>
-            ))}
-          </div>
-        ))}
+        {Array(5)
+          .fill(0)
+          .map((_, index) => (
+            <div
+              key={index}
+              className="p-4 mb-4 bg-[#f8f4f0] border border-[#e0dcd8] rounded-lg"
+            >
+              {Array(columns)
+                .fill(0)
+                .map((_, cellIndex) => (
+                  <div
+                    key={cellIndex}
+                    className="flex items-center justify-between pb-3 mb-3 border-b border-[#e8e4e0]"
+                  >
+                    <SkeletonLoader width={80} />
+                    <SkeletonLoader width={120} />
+                  </div>
+                ))}
+            </div>
+          ))}
       </div>
     </div>
   );
 };
 
 export const CardSkeletonLoader = ({ count = 4 }) => (
-  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Loading cards">
+  <div
+    className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+    aria-label="Loading cards"
+  >
     {Array.from({ length: count }).map((_, index) => (
       <div key={index} className="admin-card p-4">
         <SkeletonLoader height={18} width="45%" />
-        <div className="mt-4"><SkeletonLoader height={30} width="60%" /></div>
+        <div className="mt-4">
+          <SkeletonLoader height={30} width="60%" />
+        </div>
       </div>
     ))}
   </div>
@@ -95,7 +120,9 @@ export const FormSkeletonLoader = ({ fields = 4 }) => (
     {Array.from({ length: fields }).map((_, index) => (
       <div key={index}>
         <SkeletonLoader height={12} width={100} />
-        <div className="mt-2"><SkeletonLoader height={40} /></div>
+        <div className="mt-2">
+          <SkeletonLoader height={40} />
+        </div>
       </div>
     ))}
   </div>
@@ -166,11 +193,11 @@ export const QueryDetailsSkeleton = () => (
 
 // export const SkeletonLoader = ({ count = 1, height = 20, width, circle = false }) => {
 //   return (
-//     <Skeleton 
-//       count={count} 
-//       height={height} 
-//       width={width} 
-//       circle={circle} 
+//     <Skeleton
+//       count={count}
+//       height={height}
+//       width={width}
+//       circle={circle}
 //       baseColor="#f3f3f3"
 //       highlightColor="#ecebeb"
 //     />
