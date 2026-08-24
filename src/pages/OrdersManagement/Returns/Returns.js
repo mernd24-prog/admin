@@ -483,6 +483,92 @@ const sellerQcGuidance = (row = {}) => {
   return null;
 };
 
+const RETURN_FLOW_STAGES = [
+  { label: "Return requested", statuses: ["requested"] },
+  { label: "Return accepted", statuses: ["approved", "pickup_failed"] },
+  { label: "Item coming back", statuses: ["reverse_pickup_scheduled", "manual_ship_back", "shipped_back", "in_reverse_transit"] },
+  { label: "Item received", statuses: ["received"] },
+  { label: "Quality check", statuses: ["qc_passed", "qc_completed", "qc_failed", "qc_failure_upheld"] },
+  { label: "Customer reimbursed", statuses: ["refund_pending", "refund_failed", "partially_refunded", "refunded", "closed"] },
+];
+
+const sellerReturnNextStep = (returnRequest = {}) => {
+  const status = String(returnRequest.status || "requested").toLowerCase();
+  const steps = {
+    requested: ["Accept the return", "Review the requested items and approve the quantities you will receive."],
+    approved: ["Arrange the return", "Schedule reverse pickup or provide manual ship-back instructions."],
+    pickup_failed: ["Arrange pickup again", "The previous pickup failed. Reschedule it or use manual ship-back."],
+    reverse_pickup_scheduled: ["Wait for pickup", "Update tracking only when the courier status changes."],
+    manual_ship_back: ["Wait for customer shipment", "Tracking will show when the customer ships the item."],
+    shipped_back: ["Track the return", "Confirm receipt only after the returned item reaches you."],
+    in_reverse_transit: ["Track the return", "Confirm receipt only after the returned item reaches you."],
+    received: ["Inspect the item", "Record sellable or damaged quantities and upload evidence when required."],
+    qc_passed: ["No seller action", "Admin/finance reimburses the customer and adjusts this item's payout."],
+    qc_completed: ["No seller action", "Admin/finance reimburses the customer and adjusts this item's payout."],
+    refund_pending: ["Refund is processing", "No seller payment is required. Wait for finance confirmation."],
+    refund_failed: ["Admin action required", "Finance will retry or record the customer reimbursement."],
+    refunded: ["Return completed", "Customer reimbursement and seller payout adjustment are recorded."],
+    closed: ["Return closed", "No further seller action is required."],
+  };
+  if (status === "qc_failed") {
+    const guidance = sellerQcGuidance(returnRequest);
+    return [guidance?.label || "Wait for review", "Only this item's payout remains held while the QC dispute is reviewed."];
+  }
+  return steps[status] || ["Review return status", "Use the available action shown for this return."];
+};
+
+const SellerReturnOverview = ({ returnRequest = {} }) => {
+  const status = String(returnRequest.status || "requested").toLowerCase();
+  const currentIndex = Math.max(0, RETURN_FLOW_STAGES.findIndex((stage) => stage.statuses.includes(status)));
+  const [nextLabel, nextDescription] = sellerReturnNextStep(returnRequest);
+  const isCod = returnRequest.isCod || String(returnRequest.paymentProvider || returnRequest.payment_provider || "").toLowerCase() === "cod";
+  const refundAmount = returnRequest.refundAmount || returnRequest.refundBreakup?.totalRefundAmount || 0;
+
+  return (
+    <div className="rounded-xl border border-[#eadfbd] bg-[#fffdf8] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-bold text-[#202337]">What happens next</div>
+          <div className="mt-1 text-xs text-[#65718b]">One return flow, with the action owner shown clearly.</div>
+        </div>
+        <StatusBadge status={status} dot />
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {RETURN_FLOW_STAGES.map((stage, index) => {
+          const complete = index < currentIndex || ["refunded", "closed"].includes(status);
+          const active = index === currentIndex && !["refunded", "closed"].includes(status);
+          return (
+            <div key={stage.label} className={`rounded-lg border px-3 py-2 ${active ? "border-[#2f6fed] bg-[#eef4ff]" : complete ? "border-emerald-200 bg-emerald-50" : "border-gray-200 bg-white"}`}>
+              <div className={`text-[11px] font-bold ${active ? "text-[#1f4fc9]" : complete ? "text-emerald-700" : "text-gray-400"}`}>
+                {complete ? "✓" : index + 1}
+              </div>
+              <div className="mt-1 text-xs font-semibold text-[#202337]">{stage.label}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+          <div className="text-xs font-bold uppercase text-blue-700">Your next step</div>
+          <div className="mt-1 font-semibold text-blue-950">{nextLabel}</div>
+          <div className="mt-1 text-xs leading-5 text-blue-800">{nextDescription}</div>
+        </div>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+          <div className="text-xs font-bold uppercase text-emerald-700">Money impact</div>
+          <div className="mt-1 font-semibold text-emerald-950">Customer reimbursement: {money(refundAmount)}</div>
+          <div className="mt-1 text-xs leading-5 text-emerald-800">
+            {isCod
+              ? "COD has no Razorpay refund. After QC, Admin/finance reimburses the customer by wallet or recorded manual bank/UPI payment. The returned item's seller payout is reversed; if already paid, it becomes a wallet adjustment or recoverable balance."
+              : "After QC, Admin/finance refunds the original payment or wallet. The returned item's seller payout is reversed; if already paid, it becomes a wallet adjustment or recoverable balance."}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Returns = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -1262,6 +1348,7 @@ const Returns = () => {
         isButtonView={false}
       >
         <div className="space-y-4 text-sm">
+          {isSeller && <SellerReturnOverview returnRequest={detailReturn || {}} />}
           {isSeller && sellerQcGuidance(detailReturn) && (
             <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
               <div className="font-semibold">
@@ -1340,7 +1427,7 @@ const Returns = () => {
                 "Not available"}
             </div>
           </div>
-          {Array.isArray(detailReturn?.refund?.attempts) &&
+          {!isSeller && Array.isArray(detailReturn?.refund?.attempts) &&
             detailReturn.refund.attempts.length > 0 && (
               <div className="rounded border border-gray-100 p-3">
                 <div className="font-semibold text-gray-700 mb-2">
@@ -1514,7 +1601,7 @@ const Returns = () => {
               })}
             </div>
           </div>
-          <div>
+          {!isSeller && <div>
             <div className="font-semibold text-gray-700 mb-2">
               Refund attempts
             </div>
@@ -1544,7 +1631,7 @@ const Returns = () => {
                 <div className="text-xs text-gray-500">No refund attempts.</div>
               )}
             </div>
-          </div>
+          </div>}
           {detailReturn?.qcReview &&
             Object.keys(detailReturn.qcReview).length > 0 && (
               <div className="rounded border border-amber-200 bg-amber-50 p-3">

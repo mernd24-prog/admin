@@ -498,6 +498,8 @@ export const createProducts = createApiThunkPrivate('createProducts', ENDPOINTS.
 export const getProductPrefillBasic = createApiThunkPrivate('getProductPrefillBasic', ENDPOINTS.products.prefillBasic, 'GET', true, {
     transformParams: (params = {}) => ({
         ...(params.includeInactive !== undefined ? { includeInactive: params.includeInactive } : {}),
+        ...(params.includeOptionValues !== undefined ? { includeOptionValues: params.includeOptionValues } : {}),
+        ...(params.includeCategoryAttributes !== undefined ? { includeCategoryAttributes: params.includeCategoryAttributes } : {}),
     }),
 })
 
@@ -511,6 +513,8 @@ export const getProductPrefillLookups = createApiThunkPrivate('getProductPrefill
 export const getProductPrefillLocations = createApiThunkPrivate('getProductPrefillLocations', ENDPOINTS.products.prefillLocations, 'GET', true, {
     transformParams: (params = {}) => ({
         ...(params.includeInactive !== undefined ? { includeInactive: params.includeInactive } : {}),
+        ...(params.includeStates !== undefined ? { includeStates: params.includeStates } : {}),
+        ...(params.includeCities !== undefined ? { includeCities: params.includeCities } : {}),
     }),
 })
 

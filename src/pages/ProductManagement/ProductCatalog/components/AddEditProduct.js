@@ -51,7 +51,9 @@ const API_CALLS = [
     action: () =>
       getProductPrefill({
         includeProducts: false,
-        includeLocations: true,
+        includeLocations: false,
+        includeOptionValues: false,
+        includeCategoryAttributes: false,
         limit: 20,
       }),
     name: "Product Prefill",
@@ -713,17 +715,19 @@ export default function ProductManagementUI() {
     fetchAllData();
   }, [fetchAllData]);
 
-  // Related-product choices are not required to render the form. Load them
-  // once after the required lookup data, and merge them into the same prefill
-  // state without downloading locations a second time.
+  // Locations and related-product choices are not required to render the form.
+  // Load them after the essential catalog data so a large location catalog can
+  // never hold the Add/Edit screen behind its loader.
   useEffect(() => {
     if (loading) return;
     dispatch(
       getProductPrefill({
         includeBasic: false,
         includeLookups: false,
-        includeLocations: false,
+        includeLocations: true,
         includeProducts: true,
+        includeStates: false,
+        includeCities: false,
         productLimit: 100,
       }),
     ).catch(() => {});
@@ -853,32 +857,6 @@ export default function ProductManagementUI() {
       })
       .catch(() => {});
   }, [dispatch, prefillData.optionValuesByOptionId, prefillList]);
-
-  useEffect(() => {
-    platformOptions.forEach((option) => {
-      const optId = option._id || option.id;
-      if (!optId || fetchedOptionIds.current.has(optId)) return;
-      const cachedValues = prefillData.optionValuesByOptionId?.[optId] || [];
-      if (cachedValues.length) {
-        fetchedOptionIds.current.add(optId);
-        setPlatformValues((prev) => ({ ...prev, [optId]: cachedValues }));
-        return;
-      }
-      fetchedOptionIds.current.add(optId);
-      dispatch(
-        getPlatformOptionValues({ optionId: optId, limit: 100, active: true }),
-      )
-        .unwrap()
-        .then((res) => {
-          const raw = res?.data;
-          const list = Array.isArray(raw) ? raw : raw?.list || raw?.items || [];
-          setPlatformValues((prev) => ({ ...prev, [optId]: list }));
-        })
-        .catch(() => {
-          fetchedOptionIds.current.delete(optId);
-        });
-    });
-  }, [dispatch, platformOptions, prefillData.optionValuesByOptionId]);
 
   // When a platform-linked axis is added to variantAxes, load its values
   useEffect(() => {
