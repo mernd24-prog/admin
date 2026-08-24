@@ -21,9 +21,11 @@ export const FORCE_LOGOUT_CODES = new Set([
 ]);
 
 export const FORCE_LOGOUT_MESSAGES = {
-  USER_NOT_FOUND: "Your account no longer exists. Please contact administrator.",
+  USER_NOT_FOUND:
+    "Your account no longer exists. Please contact administrator.",
   USER_DELETED: "Your account has been removed. Please contact administrator.",
-  USER_INACTIVE: "Your account has been deactivated. Please contact administrator.",
+  USER_INACTIVE:
+    "Your account has been deactivated. Please contact administrator.",
   USER_BLOCKED: "Your account has been blocked. Please contact support.",
   TOKEN_EXPIRED: "Your session has expired. Please login again.",
   TOKEN_INVALID: "Invalid session. Please login again.",
@@ -31,7 +33,8 @@ export const FORCE_LOGOUT_MESSAGES = {
   ROLE_INACTIVE: "Your role is no longer active. Please contact administrator.",
   PERMISSION_REMOVED: "Your permissions were updated. Please login again.",
   SESSION_INVALID: "Your session is no longer valid. Please login again.",
-  BACKEND_UNREACHABLE: "Backend is not reachable. Please login again when service is available.",
+  BACKEND_UNREACHABLE:
+    "Backend is not reachable. Please login again when service is available.",
   FORCE_LOGOUT: "Please login again to continue.",
 };
 
@@ -62,7 +65,9 @@ export const getStoredAccessToken = () =>
   localStorage.getItem(ACCESS_TOKEN_KEY) || getSessionUser()?.token || null;
 
 export const getStoredRefreshToken = () =>
-  localStorage.getItem(REFRESH_TOKEN_KEY) || getSessionUser()?.refreshToken || null;
+  localStorage.getItem(REFRESH_TOKEN_KEY) ||
+  getSessionUser()?.refreshToken ||
+  null;
 
 export const getSellerOnboardingToken = () =>
   localStorage.getItem("sellerOnboardingToken") || null;
@@ -70,7 +75,10 @@ export const getSellerOnboardingToken = () =>
 export const getJwtExpiryMs = (token) => {
   if (!token || String(token).split(".").length < 3) return null;
 
-  const payload = String(token).split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+  const payload = String(token)
+    .split(".")[1]
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
   const decoded = safeParse(safeAtob(payload), null);
   return decoded?.exp ? decoded.exp * 1000 : null;
 };
@@ -101,17 +109,30 @@ export const isAuthEndpoint = (url = "") => {
 };
 
 export const getAuthErrorCode = (errorOrResponse = {}) => {
-  const data = errorOrResponse?.response?.data || errorOrResponse?.data || errorOrResponse || {};
+  const data =
+    errorOrResponse?.response?.data ||
+    errorOrResponse?.data ||
+    errorOrResponse ||
+    {};
   return data?.code || data?.error?.code || null;
 };
 
-export const getAuthErrorMessage = (errorOrResponse = {}, fallback = "Session expired. Please login again.") => {
-  const data = errorOrResponse?.response?.data || errorOrResponse?.data || errorOrResponse || {};
+export const getAuthErrorMessage = (
+  errorOrResponse = {},
+  fallback = "Session expired. Please login again.",
+) => {
+  const data =
+    errorOrResponse?.response?.data ||
+    errorOrResponse?.data ||
+    errorOrResponse ||
+    {};
   const code = getAuthErrorCode(errorOrResponse);
-  return data?.message ||
+  return (
+    data?.message ||
     data?.error?.message ||
     FORCE_LOGOUT_MESSAGES[code] ||
-    fallback;
+    fallback
+  );
 };
 
 export const shouldForceLogoutForResponse = (errorOrResponse = {}) => {
@@ -132,25 +153,35 @@ export const persistAuthTokens = ({ accessToken, refreshToken } = {}) => {
         ...sessionUser,
         ...(accessToken ? { token: accessToken } : {}),
         ...(refreshToken ? { refreshToken } : {}),
-      })
+      }),
     );
   }
 };
 
-export const forceLogout = (reasonCodeOrMessage = "SESSION_INVALID", message = null) => {
+export const forceLogout = (
+  reasonCodeOrMessage = "SESSION_INVALID",
+  message = null,
+) => {
   const isKnownCode = FORCE_LOGOUT_CODES.has(reasonCodeOrMessage);
   const reasonCode = isKnownCode ? reasonCodeOrMessage : "SESSION_INVALID";
-  const reason = message || FORCE_LOGOUT_MESSAGES[reasonCodeOrMessage] || reasonCodeOrMessage || FORCE_LOGOUT_MESSAGES[reasonCode];
+  const reason =
+    message ||
+    FORCE_LOGOUT_MESSAGES[reasonCodeOrMessage] ||
+    reasonCodeOrMessage ||
+    FORCE_LOGOUT_MESSAGES[reasonCode];
 
   clearStoredAuth();
 
   if (typeof window === "undefined") return;
-  localStorage.setItem("logoutReason", JSON.stringify({ code: reasonCode, message: reason }));
+  localStorage.setItem(
+    "logoutReason",
+    JSON.stringify({ code: reasonCode, message: reason }),
+  );
 
   window.dispatchEvent(
     new CustomEvent(SESSION_EXPIRED_EVENT, {
       detail: { code: reasonCode, reason, message: reason },
-    })
+    }),
   );
   window.dispatchEvent(new CustomEvent("auth:changed"));
 

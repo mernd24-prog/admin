@@ -125,7 +125,10 @@ export const isSellerBlockedModule = (moduleCode = "") =>
 
 export const isSellerAllowedModule = (moduleCode = "") => {
   const normalized = normalizeModuleCode(moduleCode);
-  return !isSellerBlockedModule(normalized) && SELLER_ALLOWED_MODULE_CODES.has(normalized);
+  return (
+    !isSellerBlockedModule(normalized) &&
+    SELLER_ALLOWED_MODULE_CODES.has(normalized)
+  );
 };
 
 export const MODULE_TAB_ORDER = [
@@ -382,35 +385,35 @@ const formatModuleLabel = (value = "") =>
 // ─── Default landing route per module ────────────────────────────────────────
 export const MODULE_DEFAULT_ROUTES = {
   // Core
-  admin:      "home",
+  admin: "home",
   "seller-dashboard": "home",
-  analytics:  "analytics",
-  rbac:       "roles-permissions",
-  admin_users:"admin-users",
+  analytics: "analytics",
+  rbac: "roles-permissions",
+  admin_users: "admin-users",
   "admin-users": "admin-users",
   // Catalog
-  products:          "product-catalog",
-  categories:        "categories",
-  sub_categories:    "categories",
-  sub_sub_categories:"categories",
-  brands:            "brands",
-  option_masters:    "product-options",
-  option_values:     "product-option-values",
-  platform:          "categories",
+  products: "product-catalog",
+  categories: "categories",
+  sub_categories: "categories",
+  sub_sub_categories: "categories",
+  brands: "brands",
+  option_masters: "product-options",
+  option_values: "product-option-values",
+  platform: "categories",
 
   // Inventory
-  inventory:"inventory",
+  inventory: "inventory",
   // Orders
-  carts:        "carts",
-  orders:       "orders",
-  returns:      "returns",
-  queries:      "queries",
+  carts: "carts",
+  orders: "orders",
+  returns: "returns",
+  queries: "queries",
   "help-support": "help-support",
-  reviews:      "product-reviews",
-  payments:     "payments",
+  reviews: "product-reviews",
+  payments: "payments",
   "cod-collections": "cod-collections",
-  wallets:      "wallet-transactions",
-  subscriptions:"subscription-orders",
+  wallets: "wallet-transactions",
+  subscriptions: "subscription-orders",
   "payments-finance": "payments",
   "shipping-fulfilment": "shipment-tracking",
   "returns-cancellations": "returns",
@@ -418,46 +421,46 @@ export const MODULE_DEFAULT_ROUTES = {
   "seller-finance-payouts": "seller-finance",
   "commerce-settings-menu": "commerce-settings",
   // Users
-  users:              "users",
-  sellers:            "seller",
-  seller_kyc:         "seller",
-  "seller-kyc":       "seller",
-  seller_bank:        "seller",
-  "seller-bank":      "seller",
-  "seller-management":"seller-users",
+  users: "users",
+  sellers: "seller",
+  seller_kyc: "seller",
+  "seller-kyc": "seller",
+  seller_bank: "seller",
+  "seller-bank": "seller",
+  "seller-management": "seller-users",
   "my-organizations": "my-organizations",
-  "sellers/commissions":"seller-finance",
+  "sellers/commissions": "seller-finance",
   "promotion-funding-ledger": "promotion-funding-ledger",
   "seller-promotion-funding-ledger": "promotion-funding-ledger",
   "seller-cod-collections": "seller-cod-collections",
-  commission:           "platform-commission",
-  "commission-rules":   "platform-commission",
-  "platform-fee":       "platform-commission",
+  commission: "platform-commission",
+  "commission-rules": "platform-commission",
+  "platform-fee": "platform-commission",
   "platform-fee-rules": "platform-commission",
-  "commerce-settings":  "commerce-settings",
+  "commerce-settings": "commerce-settings",
   "platform-commerce-settings": "platform-commission",
   "seller-commerce-config": "platform-commission",
   "commerce-templates": "platform-commission",
   "platform-commission": "platform-commission",
   "seller-tiers": "seller-tiers",
   // CMS/Content
- 
+
   cms_pages: "content-management",
-  
+
   // Marketing
-  coupons:         "discount-coupons",
-  pricing:         "discount-coupons",
-  referral:        "referral-commerce",
-  notifications:   "messages",
-  reports:         "reports-sales",
+  coupons: "discount-coupons",
+  pricing: "discount-coupons",
+  referral: "referral-commerce",
+  notifications: "messages",
+  reports: "reports-sales",
   // Invoices & Taxation
-  tax:       "tax",
+  tax: "tax",
   locations: "country",
   countries: "country",
-  states:    "state",
-  cities:    "city",
+  states: "state",
+  cities: "city",
   zip_codes: "zip-codes",
-  delivery:  "shipment-tracking",
+  delivery: "shipment-tracking",
   // Settings / misc
   fraud: "fraud-cases",
   "fraud-cases": "fraud-cases",
@@ -505,12 +508,16 @@ export const MODULE_DEFAULT_ROUTES = {
 };
 
 export const getModuleLabel = (moduleSlug) => {
-  const slug = String(moduleSlug || "").trim().toLowerCase();
+  const slug = String(moduleSlug || "")
+    .trim()
+    .toLowerCase();
   return MODULE_LABELS[slug] || formatModuleLabel(slug);
 };
 
 export const getModuleMeta = (moduleSlug) => {
-  const slug = String(moduleSlug || "").trim().toLowerCase();
+  const slug = String(moduleSlug || "")
+    .trim()
+    .toLowerCase();
   const tab = MODULE_TABS[slug] || "Settings";
   return {
     slug,
@@ -518,9 +525,10 @@ export const getModuleMeta = (moduleSlug) => {
     name: getModuleLabel(slug),
     tab,
     route: MODULE_DEFAULT_ROUTES[slug] || slug,
-    order: MODULE_TAB_ORDER.indexOf(tab) === -1
-      ? MODULE_TAB_ORDER.length
-      : MODULE_TAB_ORDER.indexOf(tab),
+    order:
+      MODULE_TAB_ORDER.indexOf(tab) === -1
+        ? MODULE_TAB_ORDER.length
+        : MODULE_TAB_ORDER.indexOf(tab),
   };
 };
 
@@ -540,22 +548,44 @@ const ROUTE_MODULES = [
   [["/users", "/users-addresses"], ["users"]],
   [["/transactions"], ["users", "wallets", "sellers/commissions"]],
   [["/seller"], ["sellers"]],
-  [["/seller-management", "/seller-staff", "/seller-users", "/seller-sub-admins", "/seller-organizations"], ["seller-management", "sellers"]],
+  [
+    [
+      "/seller-management",
+      "/seller-staff",
+      "/seller-users",
+      "/seller-sub-admins",
+      "/seller-organizations",
+    ],
+    ["seller-management", "sellers"],
+  ],
   [["/my-organizations"], ["seller-management"]],
-  [["/seller-kyc", "/seller-kyc-detail"], ["seller_kyc", "seller-kyc", "sellers"]],
-  [["/seller-bank", "/seller-bank-detail"], ["seller_bank", "seller-bank", "sellers"]],
+  [
+    ["/seller-kyc", "/seller-kyc-detail"],
+    ["seller_kyc", "seller-kyc", "sellers"],
+  ],
+  [
+    ["/seller-bank", "/seller-bank-detail"],
+    ["seller_bank", "seller-bank", "sellers"],
+  ],
   [["/seller-onboarding"], ["sellers", "seller_kyc"]],
 
   // Catalog Management — products
   [
     [
-      "/product-catalog", "/store", "/bar-code", "/qty-head", "/seller-special-price-manager",
+      "/product-catalog",
+      "/store",
+      "/bar-code",
+      "/qty-head",
+      "/seller-special-price-manager",
     ],
     ["products"],
   ],
 
   // Catalog Management — categories
-  [["/categories", "/category-attributes"], ["categories", "platform", "products"]],
+  [
+    ["/categories", "/category-attributes"],
+    ["categories", "platform", "products"],
+  ],
   // Catalog Management — brands
   [["/brands"], ["brands", "platform", "products"]],
   // Catalog Management — option masters / values
@@ -567,8 +597,11 @@ const ROUTE_MODULES = [
   // Catalog Management — other platform catalog
   [
     [
-      "/product-families", "/product-variants",
-      "/product-dimensions", "/finish", "/batch",
+      "/product-families",
+      "/product-variants",
+      "/product-dimensions",
+      "/finish",
+      "/batch",
     ],
     ["platform", "products"],
   ],
@@ -576,36 +609,42 @@ const ROUTE_MODULES = [
   // Inventory Management
   [
     [
-      "/inventory", "/inventory-overview", "/variant-inventory",
-      "/seller-Product-Inventory", "/seller-product-inventory", "/inventory-adjustment",
-      "/inventory-transactions", "/warehouse", "/low-stock-alerts", "/threshold-products", "/inventory-audit",
+      "/inventory",
+      "/inventory-overview",
+      "/variant-inventory",
+      "/seller-Product-Inventory",
+      "/seller-product-inventory",
+      "/inventory-adjustment",
+      "/inventory-transactions",
+      "/warehouse",
+      "/low-stock-alerts",
+      "/threshold-products",
+      "/inventory-audit",
     ],
     ["inventory", "products"],
   ],
 
   // Orders Management
-  [
-    [
-      "/orders", "/orders/view", "/view-orders", "/checkout-quote",
-    ],
-    ["orders"],
-  ],
+  [["/orders", "/orders/view", "/view-orders", "/checkout-quote"], ["orders"]],
   [["/carts"], ["carts"]],
   [["/product-reviews"], ["reviews", "orders"]],
   [["/subscription-orders"], ["subscriptions", "orders"]],
 
   // Payments & Finance
-  [["/payments", "/cod-collections"], ["payments", "wallets", "orders"]],
+  [
+    ["/payments", "/cod-collections"],
+    ["payments", "wallets", "orders"],
+  ],
   [["/chargebacks"], ["payments", "orders"]],
-  [["/fraud-cases", "/fraud"], ["fraud", "payments"]],
+  [
+    ["/fraud-cases", "/fraud"],
+    ["fraud", "payments"],
+  ],
   [["/wallet-management", "/wallet-transactions"], ["wallets"]],
 
   // Shipping & Fulfilment
   [
-    [
-      "/shipping-company-users", "/shipment-tracking",
-      "/shipping-duration",
-    ],
+    ["/shipping-company-users", "/shipment-tracking", "/shipping-duration"],
     ["delivery"],
   ],
 
@@ -615,45 +654,89 @@ const ROUTE_MODULES = [
   [["/queries", "/help-support"], ["queries"]],
 
   // Seller Finance & Payouts
-  [["/seller-finance", "/promotion-funding-ledger", "/seller-wallet", "/seller-cod-collections", "/payout-ops-queue", "/negative-balances"], ["sellers/commissions"]],
+  [
+    [
+      "/seller-finance",
+      "/promotion-funding-ledger",
+      "/seller-wallet",
+      "/seller-cod-collections",
+      "/payout-ops-queue",
+      "/negative-balances",
+    ],
+    ["sellers/commissions"],
+  ],
   [["/seller-payouts"], ["sellers/commissions"]],
 
   // Commerce Settings
-  [["/commerce-settings", "/platform-commission", "/seller-tiers"], ["commerce-settings", "platform-commission", "seller-tiers", "admin", "payments", "orders"]],
+  [
+    ["/commerce-settings", "/platform-commission", "/seller-tiers"],
+    [
+      "commerce-settings",
+      "platform-commission",
+      "seller-tiers",
+      "admin",
+      "payments",
+      "orders",
+    ],
+  ],
   [["/subscription-plans"], ["subscriptions", "platform", "admin"]],
 
   // Marketing
   [["/discount-coupons"], ["coupons", "pricing"]],
-  [["/badges", "/ribbons"], ["badges", "platform", "pricing"]],
+  [
+    ["/badges", "/ribbons"],
+    ["badges", "platform", "pricing"],
+  ],
   [["/referral-commerce/overview"], ["referral-overview", "referral"]],
   [["/referral-commerce/influencers"], ["influencer-management", "referral"]],
   [["/referral-commerce/product-amounts"], ["referral"]],
   [["/referral-commerce/codes"], ["referral-codes", "referral"]],
   [["/referral-commerce/rules"], ["referral-rules", "referral"]],
-  [["/referral-commerce/bonuses"], ["referral-bonus-rules", "referral-bonus-progress", "referral-bonus-history", "referral"]],
+  [
+    ["/referral-commerce/bonuses"],
+    [
+      "referral-bonus-rules",
+      "referral-bonus-progress",
+      "referral-bonus-history",
+      "referral",
+    ],
+  ],
   [["/referral-commerce/bonus-rules"], ["referral-bonus-rules", "referral"]],
-  [["/referral-commerce/bonus-progress"], ["referral-bonus-progress", "referral"]],
-  [["/referral-commerce/bonus-history"], ["referral-bonus-history", "referral"]],
+  [
+    ["/referral-commerce/bonus-progress"],
+    ["referral-bonus-progress", "referral"],
+  ],
+  [
+    ["/referral-commerce/bonus-history"],
+    ["referral-bonus-history", "referral"],
+  ],
   [["/referral-commerce/orders"], ["referral-orders", "referral"]],
   [["/referral-commerce/commissions"], ["referral-ledger", "referral"]],
   [["/referral-commerce/payouts"], ["referral-payouts", "referral"]],
   [["/referral-commerce/hierarchy"], ["referral-hierarchy", "referral"]],
   [["/referral-commerce/fraud"], ["referral-fraud", "referral"]],
   [["/referral-commerce"], ["referral-overview", "referral"]],
- 
 
   // Invoices & Taxation
   [
     [
-      "/tax", "/subTax", "/tax-rule", "/hsn-code",
-      "/tax-documents", "/tax-invoices", "/credit-notes",
+      "/tax",
+      "/subTax",
+      "/tax-rule",
+      "/hsn-code",
+      "/tax-documents",
+      "/tax-invoices",
+      "/credit-notes",
     ],
     ["tax"],
   ],
   [["/country"], ["countries", "locations"]],
   [["/state"], ["states", "locations"]],
   [["/city"], ["cities", "locations"]],
-  [["/zip-codes", "/zipcode"], ["zip_codes", "locations"]],
+  [
+    ["/zip-codes", "/zipcode"],
+    ["zip_codes", "locations"],
+  ],
   [["/warranty"], ["warranty", "products"]],
 
   // Analytics
@@ -665,25 +748,35 @@ const ROUTE_MODULES = [
   // Reports & Analytics
   [
     [
-      "/reports-sales", "/reports-products",
-      "/reports-inventory", "/reports-sellers",
+      "/reports-sales",
+      "/reports-products",
+      "/reports-inventory",
+      "/reports-sellers",
     ],
     ["reports", "analytics"],
   ],
 
   // CMS / Content
-  
 
   // Settings
-  [["/settings", "/setting", "/rotate"], ["admin", "platform", "fraud"]],
+  [
+    ["/settings", "/setting", "/rotate"],
+    ["admin", "platform", "fraud"],
+  ],
 
   // Seller Management — additional
   [["/seller-onboarding"], ["sellers", "seller_kyc"]],
   [["/seller-status"], ["sellers"]],
-  [["/seller-sub-admins", "/seller-organizations"], ["seller-management", "sellers"]],
+  [
+    ["/seller-sub-admins", "/seller-organizations"],
+    ["seller-management", "sellers"],
+  ],
 
   // CMS & Content — additional
-  [["/content-pages", "/auth-testimonials"], ["cms_pages", "cms"]],
+  [
+    ["/content-pages", "/auth-testimonials"],
+    ["cms_pages", "cms"],
+  ],
 
   // Users — additional
   [["/users-addresses", "/user-addresses"], ["users"]],
@@ -701,8 +794,6 @@ const ROUTE_MODULES = [
   [["/deal-payouts"], ["deals"]],
   [["/deal-sponsorships"], ["deals"]],
 
-  
-
   // Analytics events
   [["/analytics-events"], ["analytics", "reports"]],
 
@@ -719,16 +810,27 @@ const ROUTE_MODULES = [
   // Misc legacy
   [
     [
-      "/supplier", "/goods-receive", "/stoks", "/inventory",
-      "/store/store-page", "/product", "/purchase", "/sale",
-      "/ledger", "/upload-file",
+      "/supplier",
+      "/goods-receive",
+      "/stoks",
+      "/inventory",
+      "/store/store-page",
+      "/product",
+      "/purchase",
+      "/sale",
+      "/ledger",
+      "/upload-file",
     ],
     ["admin", "products"],
   ],
 ];
 
 export const getModuleRoute = (moduleSlug) =>
-  MODULE_DEFAULT_ROUTES[String(moduleSlug || "").trim().toLowerCase()] ||
+  MODULE_DEFAULT_ROUTES[
+    String(moduleSlug || "")
+      .trim()
+      .toLowerCase()
+  ] ||
   getModuleMeta(moduleSlug).route ||
   String(moduleSlug || "").trim();
 
@@ -756,7 +858,9 @@ const moduleRouteEntry = (module, route, overrides = {}) => {
     overrides.tab ||
     (typeof module === "object" ? module.tab || module.metadata?.tab : "") ||
     meta.tab;
-  const routeCode = routeCodeFromPath(route || overrides.route || meta.route || slug);
+  const routeCode = routeCodeFromPath(
+    route || overrides.route || meta.route || slug,
+  );
 
   if (!routeCode) return null;
 
@@ -773,10 +877,7 @@ const moduleRouteEntry = (module, route, overrides = {}) => {
   };
 };
 
-export const getAccessModuleRouteEntries = (
-  module,
-  _options = {},
-) => {
+export const getAccessModuleRouteEntries = (module, _options = {}) => {
   const slug = getAccessModuleSlug(module);
   if (!slug) return [];
 
@@ -823,9 +924,15 @@ const getDynamicRouteModuleCandidates = (path, modules = [], options = {}) => {
 
 export const getRouteModuleCandidates = (path, modules = [], options = {}) => {
   const route = trimRoute(path);
-  const dynamicCandidates = getDynamicRouteModuleCandidates(path, modules, options);
-  const matched = ROUTE_MODULES.find(([prefixes]) =>
-    prefixes.some((p) => route === p || route.startsWith(`${p}/`))
+  const dynamicCandidates = getDynamicRouteModuleCandidates(
+    path,
+    modules,
+    options,
   );
-  return Array.from(new Set([...(matched ? matched[1] : []), ...dynamicCandidates]));
+  const matched = ROUTE_MODULES.find(([prefixes]) =>
+    prefixes.some((p) => route === p || route.startsWith(`${p}/`)),
+  );
+  return Array.from(
+    new Set([...(matched ? matched[1] : []), ...dynamicCandidates]),
+  );
 };

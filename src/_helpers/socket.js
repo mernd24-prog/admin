@@ -2,9 +2,7 @@ import { io } from "socket.io-client";
 import { socketApiUrl } from "./axiosProvider";
 import { getAuthToken } from "./globalFunctions";
 
-
 let socket = null;
-
 
 const initializeSocket = () => {
   const token = getAuthToken();

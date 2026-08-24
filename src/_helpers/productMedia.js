@@ -24,7 +24,8 @@ export const resolveMediaUrl = (value) => {
     const trimmed = value.trim();
     if (!trimmed) return "";
     if (trimmed.startsWith("//")) {
-      const protocol = typeof window !== "undefined" ? window.location.protocol : "https:";
+      const protocol =
+        typeof window !== "undefined" ? window.location.protocol : "https:";
       return `${protocol}${trimmed}`;
     }
     if (isAbsoluteMediaUrl(trimmed)) return trimmed;
@@ -69,10 +70,12 @@ export const normalizeImageList = (...sources) => {
 export const getDefaultVariant = (product = {}) => {
   const variants = Array.isArray(product?.variants) ? product.variants : [];
   if (!variants.length) return null;
-  return variants.find((variant) => variant?.isDefault === true) ||
+  return (
+    variants.find((variant) => variant?.isDefault === true) ||
     variants.find((variant) => variant?.status !== "inactive") ||
     variants[0] ||
-    null;
+    null
+  );
 };
 
 export const getProductImages = (product = {}) =>

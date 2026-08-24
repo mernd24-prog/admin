@@ -3,10 +3,12 @@ import { isSellerPanel } from "./panelConfig";
 export const API_PREFIX = "/api/v1";
 
 const byPanel = (adminPath, sellerPath = adminPath) =>
-  (isSellerPanel() ? sellerPath : adminPath);
+  isSellerPanel() ? sellerPath : adminPath;
 
-const byPanelFn = (adminBuilder, sellerBuilder = adminBuilder) => (...args) =>
-  (isSellerPanel() ? sellerBuilder(...args) : adminBuilder(...args));
+const byPanelFn =
+  (adminBuilder, sellerBuilder = adminBuilder) =>
+  (...args) =>
+    isSellerPanel() ? sellerBuilder(...args) : adminBuilder(...args);
 
 export const ENDPOINTS = {
   meta: {
@@ -50,19 +52,18 @@ export const ENDPOINTS = {
     subAdmins: byPanel("/admin/access/sub-admins", "/sellers/me/sub-admins"),
     subAdminModules: byPanelFn(
       (userId) => `/admin/access/sub-admins/${userId}/modules`,
-      (userId) => `/sellers/me/sub-admins/${userId}/modules`
+      (userId) => `/sellers/me/sub-admins/${userId}/modules`,
     ),
   },
-   inventory: {
+  inventory: {
     variants: "/inventory/variants",
 
-    product: (productId) =>
-      `/inventory/products/${productId}`,
+    product: (productId) => `/inventory/products/${productId}`,
 
     adjustVariant: (productId, variantSku) =>
       `/inventory/products/${productId}/variants/${variantSku}`,
   },
-  
+
   sellerUsers: {
     sellers: "/admin/seller-users/sellers",
     sellerAdmins: "/admin/seller-users/seller-admins",
@@ -87,16 +88,21 @@ export const ENDPOINTS = {
     kycStatus: (sellerId) => `/admin/sellers/${sellerId}/kyc/status`,
     kycDetail: (sellerId) => `/admin/sellers/${sellerId}/kyc`,
     bankStatus: (sellerId) => `/admin/sellers/${sellerId}/bank/status`,
-    onboardingStatus: (sellerId) => `/admin/sellers/${sellerId}/onboarding/status`,
+    onboardingStatus: (sellerId) =>
+      `/admin/sellers/${sellerId}/onboarding/status`,
     goLive: (sellerId) => `/admin/sellers/${sellerId}/go-live`,
     kycReview: (sellerId) => `/sellers/${sellerId}/kyc/review`,
     kycReviewAdmin: (sellerId) => `/admin/sellers/${sellerId}/kyc/status`,
     organizations: (sellerId) => `/admin/sellers/${sellerId}/organizations`,
-    organization: (sellerId, organizationId) => `/admin/sellers/${sellerId}/organizations/${organizationId}`,
-    organizationStatus: (sellerId, organizationId) => `/admin/sellers/${sellerId}/organizations/${organizationId}/status`,
+    organization: (sellerId, organizationId) =>
+      `/admin/sellers/${sellerId}/organizations/${organizationId}`,
+    organizationStatus: (sellerId, organizationId) =>
+      `/admin/sellers/${sellerId}/organizations/${organizationId}/status`,
     myOrganizations: "/sellers/me/organizations",
-    myOrganization: (organizationId) => `/sellers/me/organizations/${organizationId}`,
-    myOrganizationDefault: (organizationId) => `/sellers/me/organizations/${organizationId}/default`,
+    myOrganization: (organizationId) =>
+      `/sellers/me/organizations/${organizationId}`,
+    myOrganizationDefault: (organizationId) =>
+      `/sellers/me/organizations/${organizationId}/default`,
     myStatus: "/sellers/me/status",
     myKyc: "/sellers/me/kyc",
     sellerOnboardingStatus: "/sellers/me/onboarding-status",
@@ -119,51 +125,79 @@ export const ENDPOINTS = {
     list: "/admin/seller-organizations",
     create: (sellerId) => `/admin/sellers/${sellerId}/organizations`,
     bySeller: (sellerId) => `/admin/sellers/${sellerId}/organizations`,
-    detail: (sellerId, organizationId) => `/admin/sellers/${sellerId}/organizations/${organizationId}`,
-    update: (sellerId, organizationId) => `/admin/sellers/${sellerId}/organizations/${organizationId}`,
-    status: (sellerId, organizationId) => `/admin/sellers/${sellerId}/organizations/${organizationId}/status`,
+    detail: (sellerId, organizationId) =>
+      `/admin/sellers/${sellerId}/organizations/${organizationId}`,
+    update: (sellerId, organizationId) =>
+      `/admin/sellers/${sellerId}/organizations/${organizationId}`,
+    status: (sellerId, organizationId) =>
+      `/admin/sellers/${sellerId}/organizations/${organizationId}/status`,
   },
   products: {
     list: byPanel("/admin/products", "/products"),
     listForPanel: byPanel("/admin/products", "/products/seller/me"),
     prefill: byPanel("/admin/products/prefill", "/products/prefill"),
-    prefillBasic: byPanel("/admin/products/prefill/basic", "/products/prefill/basic"),
-    prefillLookups: byPanel("/admin/products/prefill/lookups", "/products/prefill/lookups"),
-    prefillLocations: byPanel("/admin/products/prefill/locations", "/products/prefill/locations"),
-    prefillProducts: byPanel("/admin/products/prefill/products", "/products/prefill/products"),
+    prefillBasic: byPanel(
+      "/admin/products/prefill/basic",
+      "/products/prefill/basic",
+    ),
+    prefillLookups: byPanel(
+      "/admin/products/prefill/lookups",
+      "/products/prefill/lookups",
+    ),
+    prefillLocations: byPanel(
+      "/admin/products/prefill/locations",
+      "/products/prefill/locations",
+    ),
+    prefillProducts: byPanel(
+      "/admin/products/prefill/products",
+      "/products/prefill/products",
+    ),
     search: "/products/search",
     sellerMine: "/products/seller/me",
     detail: byPanelFn(
       (productId) => `/admin/products/${productId}`,
-      (productId) => `/products/manage/${productId}`
+      (productId) => `/products/manage/${productId}`,
     ),
     moderationQueue: "/admin/products/moderation-queue",
     moderate: (productId) => `/admin/products/${productId}/moderate`,
     revisions: byPanelFn(
       (productId) => `/admin/products/${productId}/revisions`,
-      (productId) => `/products/${productId}/revisions`
+      (productId) => `/products/${productId}/revisions`,
     ),
-    reviewRevision: (productId, revisionId) => `/admin/products/${productId}/revisions/${revisionId}/review`,
+    reviewRevision: (productId, revisionId) =>
+      `/admin/products/${productId}/revisions/${revisionId}/review`,
     approve: (productId) => `/admin/products/${productId}/approve`,
     reject: (productId) => `/admin/products/${productId}/reject`,
     status: byPanelFn(
       (productId) => `/admin/products/${productId}/status`,
-      (productId) => `/products/${productId}/status`
+      (productId) => `/products/${productId}/status`,
     ),
     permanentDelete: (productId) => `/admin/products/${productId}/permanent`,
     duplicate: byPanelFn(
       (productId) => `/admin/products/${productId}/duplicate`,
-      (productId) => `/products/${productId}/duplicate`
+      (productId) => `/products/${productId}/duplicate`,
     ),
     bulkUpdate: byPanel("/admin/products/bulk/update", "/products/bulk/update"),
-    specialPrices: byPanel("/admin/products/special-prices/bulk", "/products/special-prices/bulk"),
+    specialPrices: byPanel(
+      "/admin/products/special-prices/bulk",
+      "/products/special-prices/bulk",
+    ),
     inventory: byPanelFn(
       (productId) => `/admin/products/${productId}/inventory`,
-      (productId) => `/products/${productId}/inventory`
+      (productId) => `/products/${productId}/inventory`,
     ),
-    inventoryStats: byPanel("/admin/products/inventory/stats", "/products/inventory/stats"),
-    inventoryLowStock: byPanel("/admin/inventory/low-stock", "/products/inventory/low-stock"),
-    analyticsTop: byPanel("/admin/products/analytics/top", "/products/analytics/top"),
+    inventoryStats: byPanel(
+      "/admin/products/inventory/stats",
+      "/products/inventory/stats",
+    ),
+    inventoryLowStock: byPanel(
+      "/admin/inventory/low-stock",
+      "/products/inventory/low-stock",
+    ),
+    analyticsTop: byPanel(
+      "/admin/products/analytics/top",
+      "/products/analytics/top",
+    ),
   },
   orders: {
     admin: "/admin/orders",
@@ -175,7 +209,8 @@ export const ENDPOINTS = {
     cancel: (orderId) => `/orders/${orderId}/cancel`,
     status: (orderId) => `/orders/${orderId}/status`,
     notes: (orderId) => `/orders/${orderId}/notes`,
-    boxLabelDownload: (orderId, shipmentId) => `/orders/${orderId}/shipments/${shipmentId}/box-label`,
+    boxLabelDownload: (orderId, shipmentId) =>
+      `/orders/${orderId}/shipments/${shipmentId}/box-label`,
     checkoutQuote: "/orders/checkout/admin-quote",
   },
   cancellations: {
@@ -184,8 +219,10 @@ export const ENDPOINTS = {
     approve: (cancellationId) => `/cancellations/${cancellationId}/approve`,
     reject: (cancellationId) => `/cancellations/${cancellationId}/reject`,
     retry: (cancellationId) => `/cancellations/${cancellationId}/retry`,
-    approveRefund: (cancellationId) => `/cancellations/${cancellationId}/approve-refund`,
-    manualRefund: (cancellationId) => `/cancellations/${cancellationId}/manual-refund`,
+    approveRefund: (cancellationId) =>
+      `/cancellations/${cancellationId}/approve-refund`,
+    manualRefund: (cancellationId) =>
+      `/cancellations/${cancellationId}/manual-refund`,
   },
   carts: {
     admin: "/admin/carts",
@@ -199,18 +236,25 @@ export const ENDPOINTS = {
     reject: (paymentId) => `/payments/${paymentId}/reject`,
     codCollections: "/payments/cod-collections",
     myCodCollections: "/payments/cod-collections/mine",
-    submitCodCollection: (shipmentId) => `/payments/cod-collections/shipments/${shipmentId}/submit`,
-    verifyCodCollection: (collectionId) => `/payments/cod-collections/${collectionId}/verify`,
+    submitCodCollection: (shipmentId) =>
+      `/payments/cod-collections/shipments/${shipmentId}/submit`,
+    verifyCodCollection: (collectionId) =>
+      `/payments/cod-collections/${collectionId}/verify`,
   },
   inventory: {
-    variants: byPanel("/admin/inventory/variants", "/products/inventory/variants"),
+    variants: byPanel(
+      "/admin/inventory/variants",
+      "/products/inventory/variants",
+    ),
     product: byPanelFn(
       (productId) => `/admin/inventory/products/${productId}`,
-      (productId) => `/products/inventory/products/${productId}`
+      (productId) => `/products/inventory/products/${productId}`,
     ),
     adjustVariant: byPanelFn(
-      (productId, variantSku) => `/admin/inventory/products/${productId}/variants/${encodeURIComponent(variantSku)}/adjust`,
-      (productId, variantSku) => `/products/inventory/products/${productId}/variants/${encodeURIComponent(variantSku)}/adjust`
+      (productId, variantSku) =>
+        `/admin/inventory/products/${productId}/variants/${encodeURIComponent(variantSku)}/adjust`,
+      (productId, variantSku) =>
+        `/products/inventory/products/${productId}/variants/${encodeURIComponent(variantSku)}/adjust`,
     ),
     stats: "/admin/inventory/stats",
     lowStock: "/admin/inventory/low-stock",
@@ -236,7 +280,8 @@ export const ENDPOINTS = {
     myPayoutsExport: "/sellers/commissions/my-payouts/export",
     mySettlements: "/sellers/commissions/my-settlements",
     mySettlementsExport: "/sellers/commissions/my-settlements/export",
-    mySettlementStatement: (settlementId) => `/sellers/commissions/my-settlements/${settlementId}/statement`,
+    mySettlementStatement: (settlementId) =>
+      `/sellers/commissions/my-settlements/${settlementId}/statement`,
     calculate: (orderId) => `/sellers/commissions/calculate/${orderId}`,
     process: "/sellers/commissions/process-payouts",
     complete: (payoutId) => `/sellers/commissions/payouts/${payoutId}/process`,
@@ -244,17 +289,21 @@ export const ENDPOINTS = {
     cancel: (payoutId) => `/sellers/commissions/payouts/${payoutId}/cancel`,
     approve: (payoutId) => `/sellers/commissions/payouts/${payoutId}/approve`,
     hold: (payoutId) => `/sellers/commissions/payouts/${payoutId}/hold`,
-    releaseHold: (payoutId) => `/sellers/commissions/payouts/${payoutId}/release-hold`,
+    releaseHold: (payoutId) =>
+      `/sellers/commissions/payouts/${payoutId}/release-hold`,
     retry: (payoutId) => `/sellers/commissions/payouts/${payoutId}/retry`,
-    syncRazorpayX: (payoutId) => `/sellers/commissions/payouts/${payoutId}/sync-razorpayx`,
+    syncRazorpayX: (payoutId) =>
+      `/sellers/commissions/payouts/${payoutId}/sync-razorpayx`,
     operationsQueue: "/sellers/commissions/payout-ops/queue",
     refreshEligibility: "/sellers/commissions/payout-ops/refresh-eligibility",
     sellerWallet: (sellerId) => `/sellers/commissions/wallet/${sellerId}`,
     negativeBalances: "/sellers/commissions/negative-balances",
-    resolveNegativeBalance: (settlementId) => `/sellers/commissions/negative-balances/${settlementId}/resolve`,
+    resolveNegativeBalance: (settlementId) =>
+      `/sellers/commissions/negative-balances/${settlementId}/resolve`,
     settlements: "/sellers/commissions/settlements",
     settlementsExport: "/sellers/commissions/settlements/export",
-    settlementStatement: (settlementId) => `/sellers/commissions/settlements/${settlementId}/statement`,
+    settlementStatement: (settlementId) =>
+      `/sellers/commissions/settlements/${settlementId}/statement`,
   },
   commerceSettings: {
     detail: "/admin/commerce-settings",
@@ -267,9 +316,12 @@ export const ENDPOINTS = {
     productAmount: (configId) => `/admin/referral/product-amounts/${configId}`,
     influencers: "/admin/referral/influencers",
     parentInfluencers: "/admin/referral/influencers/parents",
-    childInfluencers: (parentId) => `/admin/referral/influencers/${parentId}/children`,
-    influencerStatus: (influencerId) => `/admin/referral/influencers/${influencerId}/status`,
-    promoteInfluencer: (influencerId) => `/admin/referral/influencers/${influencerId}/promote`,
+    childInfluencers: (parentId) =>
+      `/admin/referral/influencers/${parentId}/children`,
+    influencerStatus: (influencerId) =>
+      `/admin/referral/influencers/${influencerId}/status`,
+    promoteInfluencer: (influencerId) =>
+      `/admin/referral/influencers/${influencerId}/promote`,
     codes: "/admin/referral/codes",
     code: (codeId) => `/admin/referral/codes/${codeId}`,
     orders: "/admin/referral/orders",
@@ -292,7 +344,8 @@ export const ENDPOINTS = {
     adminReports: "/tax/reports",
     adminInvoice: (orderId) => `/tax/orders/${orderId}/invoice`,
     invoice: (orderId) => `/tax/orders/${orderId}/invoice`,
-    marketplaceInvoices: (orderId) => `/tax/orders/${orderId}/marketplace-invoices`,
+    marketplaceInvoices: (orderId) =>
+      `/tax/orders/${orderId}/marketplace-invoices`,
     invoices: "/tax/invoices",
     invoicesExport: "/tax/invoices/export",
     invoiceDetail: (invoiceId) => `/tax/invoices/${invoiceId}`,
@@ -300,12 +353,15 @@ export const ENDPOINTS = {
     invoiceDispatch: (invoiceId) => `/tax/invoices/${invoiceId}/dispatch`,
     creditNotes: "/tax/credit-notes",
     creditNotesExport: "/tax/credit-notes/export",
-    creditNoteDownload: (creditNoteId) => `/tax/credit-notes/${creditNoteId}/download`,
-    creditNoteDispatch: (creditNoteId) => `/tax/credit-notes/${creditNoteId}/dispatch`,
+    creditNoteDownload: (creditNoteId) =>
+      `/tax/credit-notes/${creditNoteId}/download`,
+    creditNoteDispatch: (creditNoteId) =>
+      `/tax/credit-notes/${creditNoteId}/dispatch`,
     reports: "/tax/reports",
     reportsExport: "/tax/reports/export",
     documentDispatches: "/tax/document-dispatches",
-    documentDispatchRetry: (dispatchId) => `/tax/document-dispatches/${dispatchId}/retry`,
+    documentDispatchRetry: (dispatchId) =>
+      `/tax/document-dispatches/${dispatchId}/retry`,
   },
   coupons: {
     list: "/pricing/coupons",
@@ -316,7 +372,8 @@ export const ENDPOINTS = {
     rates: "/delivery/rates",
     shipments: "/delivery/shipments",
     shipment: (shipmentId) => `/delivery/shipments/${shipmentId}`,
-    shipmentTracking: (shipmentId) => `/delivery/shipments/${shipmentId}/tracking`,
+    shipmentTracking: (shipmentId) =>
+      `/delivery/shipments/${shipmentId}/tracking`,
   },
   shippingProfiles: {
     list: "/shipping-profiles",
@@ -328,7 +385,8 @@ export const ENDPOINTS = {
     setDefault: (profileId) => `/shipping-profiles/${profileId}/set-default`,
     templates: "/shipping-profiles/templates",
     template: (templateId) => `/shipping-profiles/templates/${templateId}`,
-    cloneTemplate: (templateId) => `/shipping-profiles/templates/${templateId}/clone`,
+    cloneTemplate: (templateId) =>
+      `/shipping-profiles/templates/${templateId}/clone`,
   },
   returns: {
     list: "/returns",
@@ -338,13 +396,15 @@ export const ENDPOINTS = {
     approve: (returnId) => `/returns/${returnId}/approve`,
     reject: (returnId) => `/returns/${returnId}/reject`,
     schedule: (returnId) => `/returns/${returnId}/schedule`,
-    reverseTracking: (returnId) => `/returns/${returnId}/reverse-shipment/tracking`,
+    reverseTracking: (returnId) =>
+      `/returns/${returnId}/reverse-shipment/tracking`,
     receive: (returnId) => `/returns/${returnId}/receive`,
     qc: (returnId) => `/returns/${returnId}/qc`,
     qcEvidence: (returnId) => `/returns/${returnId}/qc/evidence`,
     qcDecision: (returnId) => `/returns/${returnId}/qc/decision`,
     returnToCustomer: (returnId) => `/returns/${returnId}/return-to-customer`,
-    returnToCustomerTracking: (returnId) => `/returns/${returnId}/return-to-customer/tracking`,
+    returnToCustomerTracking: (returnId) =>
+      `/returns/${returnId}/return-to-customer/tracking`,
     refund: (returnId) => `/returns/${returnId}/refund`,
     retryRefund: (returnId) => `/returns/${returnId}/refund/retry`,
     syncRefund: (returnId) => `/returns/${returnId}/refund/sync`,
@@ -408,7 +468,10 @@ export const ENDPOINTS = {
   rbac: {
     permissionManagementModules: "/rbac/permission-management/modules",
     modules: "/rbac/modules",
-    sidebarModules: byPanel("/rbac/modules/sidebar", "/sellers/me/sidebar/modules"),
+    sidebarModules: byPanel(
+      "/rbac/modules/sidebar",
+      "/sellers/me/sidebar/modules",
+    ),
     module: (moduleId) => `/rbac/modules/${moduleId}`,
     moduleStatus: (moduleId) => `/rbac/modules/${moduleId}/status`,
     reorderModules: "/rbac/modules/reorder",
@@ -419,7 +482,8 @@ export const ENDPOINTS = {
     rolePermissions: (roleId) => `/rbac/roles/${roleId}/permissions`,
     rolePermissionsBulk: (roleId) => `/rbac/roles/${roleId}/permissions/bulk`,
     userPermissions: (userId) => `/rbac/users/${userId}/permissions`,
-    userEffectivePermissions: (userId) => `/rbac/users/${userId}/permissions/effective`,
+    userEffectivePermissions: (userId) =>
+      `/rbac/users/${userId}/permissions/effective`,
     userPermissionCheck: (userId) => `/rbac/users/${userId}/permissions/check`,
     userPermissionsBulk: (userId) => `/rbac/users/${userId}/permissions/bulk`,
     userRoles: (userId) => `/rbac/users/${userId}/roles`,
@@ -431,24 +495,30 @@ export const ENDPOINTS = {
     webhooks: "/admin/platform/webhooks",
     featureFlags: "/admin/platform/feature-flags",
     subscriptionPlans: "/admin/platform/subscription-plans",
-    subscriptionPlan: (planId) => `/admin/platform/subscription-plans/${planId}`,
+    subscriptionPlan: (planId) =>
+      `/admin/platform/subscription-plans/${planId}`,
     subscriptions: "/admin/platform/subscriptions",
-    subscriptionStatus: (subscriptionId) => `/admin/platform/subscriptions/${subscriptionId}/status`,
+    subscriptionStatus: (subscriptionId) =>
+      `/admin/platform/subscriptions/${subscriptionId}/status`,
     categories: "/admin/platform/categories",
     category: (categoryKey) => `/admin/platform/categories/${categoryKey}`,
-    categoryAttributes: (categoryKey) => `/admin/categories/${categoryKey}/attributes`,
+    categoryAttributes: (categoryKey) =>
+      `/admin/categories/${categoryKey}/attributes`,
     productFamilies: "/admin/platform/product-families",
-    productFamily: (familyCode) => `/admin/platform/product-families/${familyCode}`,
+    productFamily: (familyCode) =>
+      `/admin/platform/product-families/${familyCode}`,
     productVariants: "/admin/platform/product-variants",
-    productVariant: (variantId) => `/admin/platform/product-variants/${variantId}`,
+    productVariant: (variantId) =>
+      `/admin/platform/product-variants/${variantId}`,
     brands: "/admin/platform/brands",
     brand: (brandId) => `/admin/platform/brands/${brandId}`,
     badges: "/admin/platform/badges",
     badge: (badgeId) => `/admin/platform/badges/${badgeId}`,
     badgesActive: "/admin/platform/badges/active",
     warrantyTemplates: "/admin/platform/warranty-templates",
-    warrantyTemplate: (templateId) => `/admin/platform/warranty-templates/${templateId}`,
-    
+    warrantyTemplate: (templateId) =>
+      `/admin/platform/warranty-templates/${templateId}`,
+
     dimensions: "/admin/platform/dimensions",
     dimension: (dimensionId) => `/admin/platform/dimensions/${dimensionId}`,
     batches: "/admin/platform/batches",
@@ -456,17 +526,23 @@ export const ENDPOINTS = {
     productOptions: "/admin/platform/product-options",
     productOption: (optionId) => `/admin/platform/product-options/${optionId}`,
     productOptionValues: "/admin/platform/product-option-values",
-    productOptionValue: (optionValueId) => `/admin/platform/product-option-values/${optionValueId}`,
+    productOptionValue: (optionValueId) =>
+      `/admin/platform/product-option-values/${optionValueId}`,
     hsnCodes: "/admin/platform/hsn-codes",
     hsnCode: (hsnCode) => `/admin/platform/hsn-codes/${hsnCode}`,
     geography: "/admin/platform/geography",
-    geographyDetail: (countryCode) => `/admin/platform/geography/${countryCode}`,
+    geographyDetail: (countryCode) =>
+      `/admin/platform/geography/${countryCode}`,
     contentPages: "/admin/cms",
     contentPage: (slug) => `/admin/cms/${slug}`,
-    productReviews: byPanel("/admin/platform/product-reviews", "/sellers/me/product-reviews"),
+    productReviews: byPanel(
+      "/admin/platform/product-reviews",
+      "/sellers/me/product-reviews",
+    ),
     sellerProductReviews: "/sellers/me/product-reviews",
     productReview: (reviewId) => `/admin/platform/product-reviews/${reviewId}`,
-    sellerProductReview: (reviewId) => `/sellers/me/product-reviews/${reviewId}`,
+    sellerProductReview: (reviewId) =>
+      `/sellers/me/product-reviews/${reviewId}`,
     createProductReview: "/admin/platform/product-reviews",
     productReviewsBulkAction: "/admin/platform/product-reviews/bulk-action",
     sellerProductReviewsBulkAction: "/sellers/me/product-reviews/bulk-action",
@@ -501,22 +577,28 @@ export const ENDPOINTS = {
     resumeQueue: (queueName) => `/admin/system/queues/${queueName}/resume`,
     deadLetter: "/admin/system/dead-letter",
     retryDeadLetter: (eventId) => `/admin/system/dead-letter/${eventId}/retry`,
-    discardDeadLetter: (eventId) => `/admin/system/dead-letter/${eventId}/discard`,
+    discardDeadLetter: (eventId) =>
+      `/admin/system/dead-letter/${eventId}/discard`,
   },
   festivals: {
     adminList: "/admin/festivals",
     adminDetail: (festivalId) => `/admin/festivals/${festivalId}`,
     adminStatus: (festivalId) => `/admin/festivals/${festivalId}/status`,
     adminAnalytics: "/admin/festivals/analytics",
-    adminCategories: (festivalId) => `/admin/festivals/${festivalId}/categories`,
+    adminCategories: (festivalId) =>
+      `/admin/festivals/${festivalId}/categories`,
     adminCategory: (categoryId) => `/admin/festivals/categories/${categoryId}`,
     adminProductRequests: "/admin/festivals/product-requests",
-    adminApproveProduct: (submissionId) => `/admin/festivals/product-requests/${submissionId}/approve`,
-    adminRejectProduct: (submissionId) => `/admin/festivals/product-requests/${submissionId}/reject`,
+    adminApproveProduct: (submissionId) =>
+      `/admin/festivals/product-requests/${submissionId}/approve`,
+    adminRejectProduct: (submissionId) =>
+      `/admin/festivals/product-requests/${submissionId}/reject`,
     sellerList: "/seller/festivals",
     sellerJoin: (festivalId) => `/seller/festivals/${festivalId}/join`,
-    sellerCategories: (festivalId) => `/seller/festivals/${festivalId}/categories`,
+    sellerCategories: (festivalId) =>
+      `/seller/festivals/${festivalId}/categories`,
     sellerProducts: (festivalId) => `/seller/festivals/${festivalId}/products`,
-    sellerProduct: (submissionId) => `/seller/festivals/products/${submissionId}`,
+    sellerProduct: (submissionId) =>
+      `/seller/festivals/products/${submissionId}`,
   },
 };

@@ -15,11 +15,21 @@ const ORGANIZATION_HEADER_EXCLUDED_PREFIXES = [
 
 const normalizeEndpointPath = (endpoint = "") => {
   try {
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost";
+    const baseUrl =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "http://localhost";
     const parsed = new URL(String(endpoint || ""), baseUrl);
-    return parsed.pathname.replace(/^\/api\/v\d+/i, "").replace(/\/+$/, "") || "/";
+    return (
+      parsed.pathname.replace(/^\/api\/v\d+/i, "").replace(/\/+$/, "") || "/"
+    );
   } catch {
-    return String(endpoint || "").split("?")[0].replace(/^\/api\/v\d+/i, "").replace(/\/+$/, "") || "/";
+    return (
+      String(endpoint || "")
+        .split("?")[0]
+        .replace(/^\/api\/v\d+/i, "")
+        .replace(/\/+$/, "") || "/"
+    );
   }
 };
 
@@ -49,9 +59,11 @@ export const setSelectedSellerOrganizationId = (organizationId = "") => {
   } else {
     window.localStorage.removeItem(SELLER_ORGANIZATION_KEY);
   }
-  window.dispatchEvent(new CustomEvent("seller:organizationChanged", {
-    detail: { organizationId: value },
-  }));
+  window.dispatchEvent(
+    new CustomEvent("seller:organizationChanged", {
+      detail: { organizationId: value },
+    }),
+  );
 };
 
 export const clearSelectedSellerOrganizationId = () => {
