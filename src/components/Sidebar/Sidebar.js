@@ -392,30 +392,26 @@ const buildAccessModuleSidebarData = (modules = [], options = {}) => {
     .filter((item) => item.subItems.length > 0);
 };
 
-const ensureFestivalSidebarItem = (groups = [], sellerPanel = false) => {
-  const route = "festivals";
-  const hasRoute = groups.some((group) =>
-    (group.subItems || []).some((item) => item.module_code === route),
-  );
-  if (hasRoute) return groups;
-
-  const item = {
-    name: "Festivals",
-    label: "Festivals",
-    module_code: route,
-    module: "festivals",
-    order: 1,
-  };
-  return [
-    ...groups,
-    {
-      label: "Festivals",
-      icon: MdCampaign,
-      subItems: [item],
-      isSingleItem: true,
-    },
-  ];
-};
+// Festivals are intentionally not part of either panel navigation. Filter the
+// module as well as an empty Festivals group so stale RBAC/sidebar data stored
+// in a session or returned by an older backend cannot make it reappear.
+const removeFestivalSidebarItems = (groups = []) =>
+  groups
+    .map((group) => ({
+      ...group,
+      subItems: (group.subItems || []).filter((item) => {
+        const moduleCode = String(
+          item.module_code || item.moduleCode || item.module || item.route || "",
+        ).toLowerCase();
+        const label = String(item.label || item.name || "").toLowerCase();
+        return moduleCode !== "festivals" && label !== "festivals";
+      }),
+    }))
+    .filter(
+      (group) =>
+        group.subItems.length > 0 &&
+        String(group.label || "").toLowerCase() !== "festivals",
+    );
 
 // ─── Sidebar state helpers ────────────────────────────────────────────────────
 const getStoredSidebarState = () => {
@@ -558,15 +554,15 @@ const Sidebar = ({
         trustBackend: true,
       });
       if (sellerPanel && sidebarTree.length)
-        return ensureFestivalSidebarItem(sortSidebarGroups(sidebarTree, sellerPanel), sellerPanel);
+        return removeFestivalSidebarItems(sortSidebarGroups(sidebarTree, sellerPanel));
       if (sidebarTree.length)
-        return ensureFestivalSidebarItem(sortSidebarGroups(sidebarTree, sellerPanel), sellerPanel);
+        return removeFestivalSidebarItems(sortSidebarGroups(sidebarTree, sellerPanel));
     }
 
     if (accessSidebar.length)
-      return ensureFestivalSidebarItem(sortSidebarGroups(accessSidebar, sellerPanel), sellerPanel);
+      return removeFestivalSidebarItems(sortSidebarGroups(accessSidebar, sellerPanel));
 
-    return ensureFestivalSidebarItem([], sellerPanel);
+    return [];
   }, [
     sellerPanel,
     accessModules,

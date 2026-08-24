@@ -462,6 +462,7 @@ const TextInput = ({
   type = "text",
   placeholder = "",
   min,
+  minLength,
   step,
   hint = "",
   required = false,
@@ -477,6 +478,7 @@ const TextInput = ({
       onChange={onChange}
       placeholder={placeholder}
       min={min}
+      minLength={minLength}
       step={step}
       required={required}
       className="h-10 w-full rounded border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-400"
@@ -1281,12 +1283,12 @@ const ReferralCommerce = () => {
       await dispatch(
         createReferralParent(compactPayload(influencerForm)),
       ).unwrap();
-      toast.success("Growth Partner created");
+      toast.success("Parent Influencer created");
       setParentModalOpen(false);
       resetInfluencerForm();
       await refreshAll();
     } catch (error) {
-      toast.error(error || "Unable to create Growth Partner");
+      toast.error(error || "Unable to create Parent Influencer");
     }
   };
 
@@ -2758,7 +2760,7 @@ const ReferralCommerce = () => {
                 }}
               >
                 <UserPlus size={16} />
-                Referral Partner
+                Parent Influencer
               </button>
 
               <button
@@ -3101,13 +3103,13 @@ const ReferralCommerce = () => {
       )}
 
       <Modal
-        title="Create Growth Partner"
+        title="Create Parent Influencer"
         open={parentModalOpen}
         onClose={() => setParentModalOpen(false)}
         footer={
           <OrangeButton type="submit" form="parentInfluencerForm">
             <Check size={16} />
-            Create Growth Partner
+            Create Parent Influencer
           </OrangeButton>
         }
       >
@@ -3132,6 +3134,7 @@ const ReferralCommerce = () => {
             label="Email"
             name="email"
             type="email"
+            required
             value={influencerForm.email}
             onChange={handleInfluencerField}
           />
@@ -3142,9 +3145,12 @@ const ReferralCommerce = () => {
             onChange={handleInfluencerField}
           />
           <TextInput
-            label="Password"
+            label="Temporary Password"
             name="password"
             type="password"
+            required
+            minLength={8}
+            hint="At least 8 characters. The influencer uses this for the first login."
             value={influencerForm.password}
             onChange={handleInfluencerField}
           />
