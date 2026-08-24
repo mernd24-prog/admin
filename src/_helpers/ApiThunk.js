@@ -72,16 +72,21 @@ const normalizeLegacyRecord = (record) => {
     next.paymentStatus = next.status;
   }
   if (!next.full_name && fullName) next.full_name = fullName;
-  if (!next.userName && next.email) next.userName = String(next.email).split("@")[0];
+  if (!next.userName && next.email)
+    next.userName = String(next.email).split("@")[0];
   if (!next.name && next.title) next.name = next.title;
   if (!next.title && next.name) next.title = next.name;
   if (next.body && !next.content) next.content = next.body;
   if (next.content && !next.body) next.body = next.content;
   if (next.pageType && !next.category_id) next.category_id = next.pageType;
-  if (next.gstRate !== undefined && next.IGST === undefined) next.IGST = Number(next.gstRate || 0);
-  if (next.gstRate !== undefined && next.CGST === undefined) next.CGST = Number(next.gstRate || 0) / 2;
-  if (next.gstRate !== undefined && next.SGST === undefined) next.SGST = Number(next.gstRate || 0) / 2;
-  if (next.cessRate !== undefined && next.additionalTax === undefined) next.additionalTax = Number(next.cessRate || 0);
+  if (next.gstRate !== undefined && next.IGST === undefined)
+    next.IGST = Number(next.gstRate || 0);
+  if (next.gstRate !== undefined && next.CGST === undefined)
+    next.CGST = Number(next.gstRate || 0) / 2;
+  if (next.gstRate !== undefined && next.SGST === undefined)
+    next.SGST = Number(next.gstRate || 0) / 2;
+  if (next.cessRate !== undefined && next.additionalTax === undefined)
+    next.additionalTax = Number(next.cessRate || 0);
   const normalizedImages = normalizeImageList(
     next.images,
     next.imageUrls,
@@ -97,13 +102,24 @@ const normalizeLegacyRecord = (record) => {
       next.product_image_id = { images: normalizedImages };
     }
   }
-  if (next.status && next.isApproved === undefined && (next.title || next.sku || next.price !== undefined)) {
+  if (
+    next.status &&
+    next.isApproved === undefined &&
+    (next.title || next.sku || next.price !== undefined)
+  ) {
     next.isApproved = next.approvalStatus === "approved";
   }
 
   if (typeof next.isDisable !== "boolean") {
     if (accountStatus) {
-      next.isDisable = !["active", "ready_for_go_live", "verified", "confirmed", "delivered", "fulfilled"].includes(accountStatus);
+      next.isDisable = ![
+        "active",
+        "ready_for_go_live",
+        "verified",
+        "confirmed",
+        "delivered",
+        "fulfilled",
+      ].includes(accountStatus);
     } else if (typeof next.active === "boolean") {
       next.isDisable = !next.active;
     } else if (typeof next.published === "boolean") {
@@ -210,7 +226,13 @@ const getErrorMessage = (error) =>
   "Something went wrong!";
 
 const createApiThunk = (axiosInstance) => {
-  return (name, url, method = "POST", legacyOrOptions = false, maybeOptions = {}) => {
+  return (
+    name,
+    url,
+    method = "POST",
+    legacyOrOptions = false,
+    maybeOptions = {},
+  ) => {
     const options = isObject(legacyOrOptions) ? legacyOrOptions : maybeOptions;
 
     return createAsyncThunk(name, async (payload, { rejectWithValue }) => {
@@ -232,10 +254,16 @@ const createApiThunk = (axiosInstance) => {
           url: resolveEndpoint(url, endpointPayload),
         };
 
-        if (lowerMethod === "get" || (lowerMethod === "delete" && !options.sendBodyForDelete)) {
+        if (
+          lowerMethod === "get" ||
+          (lowerMethod === "delete" && !options.sendBodyForDelete)
+        ) {
           config.params = requestParams;
         } else {
-          if (options.includeParamsWithBody && Object.keys(requestParams || {}).length) {
+          if (
+            options.includeParamsWithBody &&
+            Object.keys(requestParams || {}).length
+          ) {
             config.params = requestParams;
           }
           config.data = requestBody;
@@ -253,7 +281,11 @@ export const createApiThunkPublic = createApiThunk(axiosPublic);
 export const createApiThunkPrivate = createApiThunk(axiosPrivate);
 export const createApiThunkPrivateImage = createApiThunk(axiosImage);
 
-export const createExtraReducersForThunk = (builder, thunkAction, sliceName) => {
+export const createExtraReducersForThunk = (
+  builder,
+  thunkAction,
+  sliceName,
+) => {
   builder
     .addCase(thunkAction.pending, (state) => {
       state.loading = true;
@@ -281,22 +313,35 @@ export const createExtraReducersForThunk = (builder, thunkAction, sliceName) => 
       }
       state[sliceName].loading = false;
       state[sliceName].error =
-        action?.payload || `Something went wrong while fetching ${sliceName} details.`;
+        action?.payload ||
+        `Something went wrong while fetching ${sliceName} details.`;
     });
 };
 
 export const createCrudThunks = (resourceName, endpoints) => ({
   list: createApiThunkPrivate(`${resourceName}/list`, endpoints.list, "GET"),
   detail: endpoints.detail
-    ? createApiThunkPrivate(`${resourceName}/detail`, (payload) => endpoints.detail(payload.id), "GET")
+    ? createApiThunkPrivate(
+        `${resourceName}/detail`,
+        (payload) => endpoints.detail(payload.id),
+        "GET",
+      )
     : undefined,
   create: endpoints.create
     ? createApiThunkPrivate(`${resourceName}/create`, endpoints.create, "POST")
     : undefined,
   update: endpoints.update
-    ? createApiThunkPrivate(`${resourceName}/update`, (payload) => endpoints.update(payload.id), "PATCH")
+    ? createApiThunkPrivate(
+        `${resourceName}/update`,
+        (payload) => endpoints.update(payload.id),
+        "PATCH",
+      )
     : undefined,
   remove: endpoints.remove
-    ? createApiThunkPrivate(`${resourceName}/remove`, (payload) => endpoints.remove(payload.id), "DELETE")
+    ? createApiThunkPrivate(
+        `${resourceName}/remove`,
+        (payload) => endpoints.remove(payload.id),
+        "DELETE",
+      )
     : undefined,
 });

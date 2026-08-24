@@ -52,12 +52,9 @@ const MultiImageUpload = ({
 
         try {
             const uploadedUrls = await uploadFileMulti(validFiles, type || "PRODUCTS");
-            console.log(uploadedUrls)
-          
             setImages((prev) => normalizeImageList(prev, uploadedUrls));
         } catch (err) {
             toast.error(err || "Upload failed. Please try again.");
-            console.log(err)
         } finally {
             setIsUploading(false);
         }

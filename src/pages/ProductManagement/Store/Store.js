@@ -433,8 +433,6 @@ const Store = () => {
 
   const confirmDelete = async () => {
     try {
-      console.log("Deleting shop:", selectedShopForDelete);
-
       setShowDeleteConfirmation(false);
       setSelectedShopForDelete(null);
       fetchStoreList();

@@ -1089,7 +1089,6 @@ const ReferralCommerce = () => {
         }),
       ),
     ]);
-    console.log("Referral Commerce Initial Load API Responses:", responses);
   };
 
   const refreshActive = async (filters = {}) => {

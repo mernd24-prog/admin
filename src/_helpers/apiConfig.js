@@ -1,9 +1,15 @@
-import { axiosImage, axiosPrivate, axiosPublic } from './axiosProvider';
-import { normalizeApiError } from './normalizeApiError';
-import { isAuthEndpoint } from './authSession';
-import { getSelectedSellerOrganizationHeader } from './sellerOrganizationContext';
+import { axiosImage, axiosPrivate, axiosPublic } from "./axiosProvider";
+import { normalizeApiError } from "./normalizeApiError";
+import { isAuthEndpoint } from "./authSession";
+import { getSelectedSellerOrganizationHeader } from "./sellerOrganizationContext";
 
-export const apiRequest = async (method, endpoint, data, contentType = "json", tokenOverride = null) => {
+export const apiRequest = async (
+  method,
+  endpoint,
+  data,
+  contentType = "json",
+  tokenOverride = null,
+) => {
   const lowerMethod = String(method || "GET").toLowerCase();
   const isMultipart = contentType !== "json";
   const client = isMultipart
@@ -15,7 +21,7 @@ export const apiRequest = async (method, endpoint, data, contentType = "json", t
     method,
     url: endpoint,
     headers: {
-      'Content-Type': isMultipart ? 'multipart/form-data' : 'application/json',
+      "Content-Type": isMultipart ? "multipart/form-data" : "application/json",
       ...(tokenOverride ? { Authorization: `Bearer ${tokenOverride}` } : {}),
       ...getSelectedSellerOrganizationHeader(endpoint),
     },

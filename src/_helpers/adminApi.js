@@ -55,41 +55,54 @@ export const DEFAULT_SELLER_MODULES = [
 ];
 
 export const normalizeModuleSlug = (value = "") =>
-  String(value || "").trim().toLowerCase();
+  String(value || "")
+    .trim()
+    .toLowerCase();
 
 export const normalizePermissionActions = (actions = []) =>
   Array.from(
     new Set(
       ["view", ...(actions || [])]
-        .map((action) => String(action || "").trim().toLowerCase())
+        .map((action) =>
+          String(action || "")
+            .trim()
+            .toLowerCase(),
+        )
         .filter(Boolean),
     ),
   );
 
 export const getAccessModuleSlug = (module = {}) =>
-  normalizeModuleSlug(module.slug || module.moduleKey || module.moduleSlug || module.module);
+  normalizeModuleSlug(
+    module.slug || module.moduleKey || module.moduleSlug || module.module,
+  );
 
 export const getAccessModuleAssignableActions = (module = {}) => {
   const assignableActions = Array.isArray(module.assignableActions)
     ? module.assignableActions
     : [];
-  if (assignableActions.length) return normalizePermissionActions(assignableActions);
+  if (assignableActions.length)
+    return normalizePermissionActions(assignableActions);
 
   const permissionActions = Array.isArray(module.permissions)
     ? module.permissions
-      .filter((permission) => permission?.assignable !== false)
-      .map((permission) => permission.action)
+        .filter((permission) => permission?.assignable !== false)
+        .map((permission) => permission.action)
     : [];
-  return permissionActions.length ? normalizePermissionActions(permissionActions) : ["view"];
+  return permissionActions.length
+    ? normalizePermissionActions(permissionActions)
+    : ["view"];
 };
 
 export const getAccessModuleAssignedActions = (module = {}) => {
   const assignedActions = Array.isArray(module.permissions)
     ? module.permissions
-      .filter((permission) => permission?.assigned === true)
-      .map((permission) => permission.action)
+        .filter((permission) => permission?.assigned === true)
+        .map((permission) => permission.action)
     : [];
-  return assignedActions.length ? normalizePermissionActions(assignedActions) : ["view"];
+  return assignedActions.length
+    ? normalizePermissionActions(assignedActions)
+    : ["view"];
 };
 
 export const buildAccessModuleActionMaps = (modules = []) =>
@@ -109,19 +122,26 @@ export const buildModulePermissions = (
   assignableActionsByModule = {},
   selectedActionsByModule = {},
 ) =>
-  Array.from(new Set((modules || []).map(normalizeModuleSlug).filter(Boolean)))
-    .map((moduleName) => {
-      const assignableActions = normalizePermissionActions(assignableActionsByModule[moduleName] || ["view"]);
-      const sourceActions = Array.isArray(selectedActionsByModule[moduleName]) && selectedActionsByModule[moduleName].length
+  Array.from(
+    new Set((modules || []).map(normalizeModuleSlug).filter(Boolean)),
+  ).map((moduleName) => {
+    const assignableActions = normalizePermissionActions(
+      assignableActionsByModule[moduleName] || ["view"],
+    );
+    const sourceActions =
+      Array.isArray(selectedActionsByModule[moduleName]) &&
+      selectedActionsByModule[moduleName].length
         ? selectedActionsByModule[moduleName]
         : ["view"];
-      const sourceSet = new Set(normalizePermissionActions(sourceActions));
-      const actions = assignableActions.filter((action) => action === "view" || sourceSet.has(action));
-      return {
-        module: moduleName,
-        actions: actions.length ? actions : ["view"],
-      };
-    });
+    const sourceSet = new Set(normalizePermissionActions(sourceActions));
+    const actions = assignableActions.filter(
+      (action) => action === "view" || sourceSet.has(action),
+    );
+    return {
+      module: moduleName,
+      actions: actions.length ? actions : ["view"],
+    };
+  });
 
 export const getApiErrorMessage = (error) =>
   error?.error?.message ||
@@ -130,7 +150,12 @@ export const getApiErrorMessage = (error) =>
   "Something went wrong!";
 
 export const toIdList = (payload = {}) => {
-  const value = payload.ids || payload._id || payload.userId || payload.sellerId || payload.id;
+  const value =
+    payload.ids ||
+    payload._id ||
+    payload.userId ||
+    payload.sellerId ||
+    payload.id;
   if (Array.isArray(value)) return value.filter(Boolean);
   return value ? [value] : [];
 };
@@ -138,7 +163,10 @@ export const toIdList = (payload = {}) => {
 export const firstId = (payload = {}) => toIdList(payload)[0];
 
 export const splitName = (fullName = "") => {
-  const parts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
+  const parts = String(fullName || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
   return {
     firstName: parts.shift() || "User",
     lastName: parts.join(" "),
@@ -179,7 +207,13 @@ export const toProfile = (payload = {}, requireLastName = false) => {
     };
   }
 
-  const name = splitName(payload.full_name || payload.fullName || payload.name || payload.userName || payload.email);
+  const name = splitName(
+    payload.full_name ||
+      payload.fullName ||
+      payload.name ||
+      payload.userName ||
+      payload.email,
+  );
   return {
     firstName: name.firstName,
     lastName: name.lastName || (requireLastName ? "User" : ""),
@@ -187,9 +221,22 @@ export const toProfile = (payload = {}, requireLastName = false) => {
   };
 };
 
-export const normalizeAllowedModules = (modules, fallback = DEFAULT_PLATFORM_MODULES) => {
+export const normalizeAllowedModules = (
+  modules,
+  fallback = DEFAULT_PLATFORM_MODULES,
+) => {
   const source = Array.isArray(modules) && modules.length ? modules : fallback;
-  return Array.from(new Set(source.map((moduleName) => String(moduleName || "").trim().toLowerCase()).filter(Boolean)));
+  return Array.from(
+    new Set(
+      source
+        .map((moduleName) =>
+          String(moduleName || "")
+            .trim()
+            .toLowerCase(),
+        )
+        .filter(Boolean),
+    ),
+  );
 };
 
 export const toAccountStatus = (payload = {}) => {
@@ -200,18 +247,32 @@ export const toAccountStatus = (payload = {}) => {
 
 export const toListParams = (params = {}, defaults = {}) => ({
   ...defaults,
-  ...(params.q || params.keyWord || params.search ? { q: params.q || params.keyWord || params.search } : {}),
-  ...(params.page !== undefined && params.page !== null ? { page: Number(params.page) } : {}),
-  ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
-  ...(params.offset !== undefined && params.offset !== null ? { offset: Number(params.offset) } : {}),
-  ...(params.sortBy || params.sort ? { sortBy: params.sortBy || params.sort } : {}),
-  ...(params.sortOrder || params.sortDir ? { sortOrder: params.sortOrder || params.sortDir } : {}),
+  ...(params.q || params.keyWord || params.search
+    ? { q: params.q || params.keyWord || params.search }
+    : {}),
+  ...(params.page !== undefined && params.page !== null
+    ? { page: Number(params.page) }
+    : {}),
+  ...(params.limit || params.size
+    ? { limit: Number(params.limit || params.size) }
+    : {}),
+  ...(params.offset !== undefined && params.offset !== null
+    ? { offset: Number(params.offset) }
+    : {}),
+  ...(params.sortBy || params.sort
+    ? { sortBy: params.sortBy || params.sort }
+    : {}),
+  ...(params.sortOrder || params.sortDir
+    ? { sortOrder: params.sortOrder || params.sortDir }
+    : {}),
   ...(params.searchFields ? { searchFields: params.searchFields } : {}),
   ...(params.role ? { role: params.role } : {}),
   ...(params.accountStatus ? { accountStatus: params.accountStatus } : {}),
   ...(params.status ? { status: params.status } : {}),
   ...(params.approvalStatus ? { approvalStatus: params.approvalStatus } : {}),
-  ...(params.onboardingStatus ? { onboardingStatus: params.onboardingStatus } : {}),
+  ...(params.onboardingStatus
+    ? { onboardingStatus: params.onboardingStatus }
+    : {}),
   ...(params.active !== undefined ? { active: params.active } : {}),
   ...(params.isDisable !== undefined
     ? { active: !(params.isDisable === true || params.isDisable === "true") }
@@ -228,7 +289,12 @@ export const toManagedUserCreateBody = (payload = {}, options = {}) => ({
   ...(payload.accountStatus ? { accountStatus: payload.accountStatus } : {}),
   profile: toProfile(payload, options.requireLastName),
   ...(options.allowedModules
-    ? { allowedModules: normalizeAllowedModules(payload.allowedModules, options.allowedModules) }
+    ? {
+        allowedModules: normalizeAllowedModules(
+          payload.allowedModules,
+          options.allowedModules,
+        ),
+      }
     : {}),
   ...(Array.isArray(payload.modulePermissions)
     ? { modulePermissions: payload.modulePermissions }
@@ -244,8 +310,10 @@ export const toBuyerCreateBody = (payload = {}) => ({
   profile: toProfile(payload),
 });
 
-export const toSubAdminCreateBody = (payload = {}, fallbackModules = ["admin"]) =>
-  toManagedUserCreateBody(payload, { allowedModules: fallbackModules });
+export const toSubAdminCreateBody = (
+  payload = {},
+  fallbackModules = ["admin"],
+) => toManagedUserCreateBody(payload, { allowedModules: fallbackModules });
 
 export const toSellerRegisterBody = (payload = {}) => ({
   email: String(payload.email || "").trim(),
@@ -255,8 +323,18 @@ export const toSellerRegisterBody = (payload = {}) => ({
   ...(payload.isDisable ? { accountStatus: toAccountStatus(payload) } : {}),
   profile: toProfile(payload, true),
   sellerProfile: {
-    displayName: payload.displayName || payload.storeName || payload.full_name || payload.fullName || payload.name,
-    legalBusinessName: payload.legalBusinessName || payload.businessName || payload.full_name || payload.fullName || payload.name,
+    displayName:
+      payload.displayName ||
+      payload.storeName ||
+      payload.full_name ||
+      payload.fullName ||
+      payload.name,
+    legalBusinessName:
+      payload.legalBusinessName ||
+      payload.businessName ||
+      payload.full_name ||
+      payload.fullName ||
+      payload.name,
     supportEmail: payload.email,
     supportPhone: payload.phone,
   },
@@ -277,7 +355,12 @@ export const toUserUpdateBody = (payload = {}) => {
   if (payload.phone !== undefined) {
     body.phone = payload.phone || null;
   }
-  const hasProfile = payload.profile || payload.full_name || payload.fullName || payload.name || payload.userName;
+  const hasProfile =
+    payload.profile ||
+    payload.full_name ||
+    payload.fullName ||
+    payload.name ||
+    payload.userName;
   if (hasProfile) {
     body.profile = toProfile(payload);
   }
@@ -300,18 +383,30 @@ export const toUserUpdateBody = (payload = {}) => {
     body.sellerProfile = {
       ...(payload.sellerProfile || {}),
       ...(payload.displayName ? { displayName: payload.displayName } : {}),
-      ...(payload.legalBusinessName ? { legalBusinessName: payload.legalBusinessName } : {}),
+      ...(payload.legalBusinessName
+        ? { legalBusinessName: payload.legalBusinessName }
+        : {}),
       ...(payload.supportEmail ? { supportEmail: payload.supportEmail } : {}),
       ...(payload.supportPhone ? { supportPhone: payload.supportPhone } : {}),
       ...(payload.businessType ? { businessType: payload.businessType } : {}),
-      ...(payload.registrationNumber ? { registrationNumber: payload.registrationNumber } : {}),
+      ...(payload.registrationNumber
+        ? { registrationNumber: payload.registrationNumber }
+        : {}),
       ...(payload.gstNumber ? { gstNumber: payload.gstNumber } : {}),
       ...(payload.panNumber ? { panNumber: payload.panNumber } : {}),
-      ...(payload.aadhaarNumber ? { aadhaarNumber: payload.aadhaarNumber } : {}),
-      ...(payload.businessWebsite ? { businessWebsite: payload.businessWebsite } : {}),
-      ...(payload.primaryContactName ? { primaryContactName: payload.primaryContactName } : {}),
+      ...(payload.aadhaarNumber
+        ? { aadhaarNumber: payload.aadhaarNumber }
+        : {}),
+      ...(payload.businessWebsite
+        ? { businessWebsite: payload.businessWebsite }
+        : {}),
+      ...(payload.primaryContactName
+        ? { primaryContactName: payload.primaryContactName }
+        : {}),
       ...(payload.description ? { description: payload.description } : {}),
-      ...(payload.onboardingStatus ? { onboardingStatus: payload.onboardingStatus } : {}),
+      ...(payload.onboardingStatus
+        ? { onboardingStatus: payload.onboardingStatus }
+        : {}),
     };
   }
   return body;
@@ -327,7 +422,9 @@ export const toKycReviewBody = (payload = {}) => ({
 });
 
 export const unsupportedThunk = (name, message) =>
-  createAsyncThunk(name, async (_payload, { rejectWithValue }) => rejectWithValue(message));
+  createAsyncThunk(name, async (_payload, { rejectWithValue }) =>
+    rejectWithValue(message),
+  );
 
 export const patchMany = (name, endpointBuilder, bodyBuilder, successMessage) =>
   createAsyncThunk(name, async (payload, { rejectWithValue }) => {
@@ -339,13 +436,18 @@ export const patchMany = (name, endpointBuilder, bodyBuilder, successMessage) =>
 
       const results = [];
       for (const id of ids) {
-        results.push(await apiRequest("PATCH", endpointBuilder(id), bodyBuilder(payload)));
+        results.push(
+          await apiRequest("PATCH", endpointBuilder(id), bodyBuilder(payload)),
+        );
       }
 
       return {
         success: true,
         message: results[0]?.message || successMessage,
-        data: ids.length === 1 ? (results[0]?.data ?? results[0]) : results.map((item) => item?.data ?? item),
+        data:
+          ids.length === 1
+            ? (results[0]?.data ?? results[0])
+            : results.map((item) => item?.data ?? item),
         meta: { total: ids.length },
         raw: results,
       };
@@ -354,7 +456,11 @@ export const patchMany = (name, endpointBuilder, bodyBuilder, successMessage) =>
     }
   });
 
-export const deleteMany = (name, endpointBuilder, successMessage = "Deleted successfully") =>
+export const deleteMany = (
+  name,
+  endpointBuilder,
+  successMessage = "Deleted successfully",
+) =>
   createAsyncThunk(name, async (payload, { rejectWithValue }) => {
     try {
       const ids = toIdList(payload);
@@ -370,7 +476,10 @@ export const deleteMany = (name, endpointBuilder, successMessage = "Deleted succ
       return {
         success: true,
         message: results[0]?.message || successMessage,
-        data: ids.length === 1 ? (results[0]?.data ?? results[0]) : results.map((item) => item?.data ?? item),
+        data:
+          ids.length === 1
+            ? (results[0]?.data ?? results[0])
+            : results.map((item) => item?.data ?? item),
         meta: { total: ids.length },
         raw: results,
       };
