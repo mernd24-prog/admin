@@ -1,121 +1,132 @@
-import { useMemo } from 'react';
-import { useSelector } from 'react-redux';
-import { getStoredRole, getStoredUser, normalizeRole } from './authStorage';
-import { isSellerPanel } from './panelConfig';
+import { useMemo } from "react";
+import { useSelector } from "react-redux";
+import { getStoredRole, getStoredUser, normalizeRole } from "./authStorage";
+import { isSellerPanel } from "./panelConfig";
 import {
   getRouteModuleCandidates,
   isSelfServiceRoute,
   isSellerAllowedModule,
   isSellerBlockedModule,
   isSellerBlockedRoute,
-} from './rbacRoutes';
+} from "./rbacRoutes";
 
 /**
  * PERMISSION ACTIONS — match backend RBAC action slugs exactly.
  * Covers all actions defined in the RBAC flow guide.
  */
 export const ACTIONS = {
-  VIEW:          'view',
-  CREATE:        'create',
-  ADD:           'create',        // alias → create
-  UPDATE:        'update',
-  EDIT:          'update',        // alias → update
-  DELETE:        'delete',
-  STATUS_CHANGE: 'status_change',
-  STATUS:        'status_change', // alias → status_change
-  APPROVE:       'approve',
-  REJECT:        'reject',
-  ASSIGN:        'assign',
-  EXPORT:        'export',
-  IMPORT:        'import',
-  RESTORE:       'restore',
-  BULK_ACTION:   'bulk_action',
-  ADJUST:        'adjust',
+  VIEW: "view",
+  CREATE: "create",
+  ADD: "create", // alias → create
+  UPDATE: "update",
+  EDIT: "update", // alias → update
+  DELETE: "delete",
+  STATUS_CHANGE: "status_change",
+  STATUS: "status_change", // alias → status_change
+  APPROVE: "approve",
+  REJECT: "reject",
+  ASSIGN: "assign",
+  EXPORT: "export",
+  IMPORT: "import",
+  RESTORE: "restore",
+  BULK_ACTION: "bulk_action",
+  ADJUST: "adjust",
 };
 
 const ACTION_ALIASES = {
-  add: 'create',
-  edit: 'update',
-  status: 'status_change',
-  approval: 'approve',
-  action: 'status_change',
-  review: 'approve',
-  manage: 'status_change',
-  activate: 'status_change',
-  deactivate: 'status_change',
-  enable: 'status_change',
-  disable: 'status_change',
-  archive: 'status_change',
-  recover: 'restore',
-  bulk: 'bulk_action',
-  'bulk-action': 'bulk_action',
-  'bulk action': 'bulk_action',
-  bulkaction: 'bulk_action',
-  adjustment: 'adjust',
-  'stock-adjustment': 'adjust',
-  stock_adjustment: 'adjust',
+  add: "create",
+  edit: "update",
+  status: "status_change",
+  approval: "approve",
+  action: "status_change",
+  review: "approve",
+  manage: "status_change",
+  activate: "status_change",
+  deactivate: "status_change",
+  enable: "status_change",
+  disable: "status_change",
+  archive: "status_change",
+  recover: "restore",
+  bulk: "bulk_action",
+  "bulk-action": "bulk_action",
+  "bulk action": "bulk_action",
+  bulkaction: "bulk_action",
+  adjustment: "adjust",
+  "stock-adjustment": "adjust",
+  stock_adjustment: "adjust",
 };
 
 const ACTION_EQUIVALENTS = {
-  create: ['add'],
-  update: ['edit'],
-  approve: ['approval', 'review'],
-  status_change: ['status', 'action', 'manage', 'activate', 'deactivate', 'enable', 'disable', 'archive'],
-  restore: ['recover'],
-  bulk_action: ['bulk', 'bulk-action', 'bulk action', 'bulkaction'],
-  adjust: ['adjustment', 'stock-adjustment', 'stock_adjustment'],
+  create: ["add"],
+  update: ["edit"],
+  approve: ["approval", "review"],
+  status_change: [
+    "status",
+    "action",
+    "manage",
+    "activate",
+    "deactivate",
+    "enable",
+    "disable",
+    "archive",
+  ],
+  restore: ["recover"],
+  bulk_action: ["bulk", "bulk-action", "bulk action", "bulkaction"],
+  adjust: ["adjustment", "stock-adjustment", "stock_adjustment"],
 };
 
-const normalizeAction = (action = '') => {
-  const value = String(action || '').trim().toLowerCase();
+const normalizeAction = (action = "") => {
+  const value = String(action || "")
+    .trim()
+    .toLowerCase();
   return ACTION_ALIASES[value] || value;
 };
 
-const expandActionCandidates = (action = '') => {
+const expandActionCandidates = (action = "") => {
   const normalized = normalizeAction(action);
   const aliases = ACTION_EQUIVALENTS[normalized] || [];
   return Array.from(new Set([normalized, ...aliases]));
 };
 
-const normalizeModuleCode = (value = '') =>
-  String(value || '')
+const normalizeModuleCode = (value = "") =>
+  String(value || "")
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/_/g, '-');
+    .replace(/\s+/g, "-")
+    .replace(/_/g, "-");
 
 const MODULE_ALIASES = {
-  admin: ['seller-dashboard'],
-  dashboard: ['seller-dashboard', 'admin'],
-  home: ['seller-dashboard', 'admin'],
-  seller: ['sellers'],
-  sellers: ['seller-management'],
-  'seller-management': ['sellers'],
-  'seller-users': ['sellers', 'seller-management'],
-  'seller-sub-admins': ['sellers', 'seller-management'],
-  'seller-organizations': ['sellers', 'seller-management'],
-  commission: ['sellers/commissions'],
-  commissions: ['sellers/commissions'],
-  'seller-finance': ['sellers/commissions'],
-  'seller-finance-management': ['sellers/commissions'],
-  'seller-finance-summary': ['sellers/commissions'],
-  'seller-finance-payouts': ['sellers/commissions', 'seller-payouts'],
-  'seller-my-payouts': ['sellers/commissions'],
-  'seller-payouts': ['sellers/commissions'],
-  'seller-cod-collections': ['sellers/commissions'],
-  'cod-collections': ['payments'],
-  products: ['product'],
-  product: ['products'],
-  'product-catalog': ['products'],
-  inventory: ['stock'],
-  delivery: ['shipping-fulfilment', 'shipment-tracking'],
-  'shipment-tracking': ['delivery'],
-  tax: ['tax-invoices', 'credit-notes'],
-  'tax-invoices': ['tax'],
-  'credit-notes': ['tax'],
+  admin: ["seller-dashboard"],
+  dashboard: ["seller-dashboard", "admin"],
+  home: ["seller-dashboard", "admin"],
+  seller: ["sellers"],
+  sellers: ["seller-management"],
+  "seller-management": ["sellers"],
+  "seller-users": ["sellers", "seller-management"],
+  "seller-sub-admins": ["sellers", "seller-management"],
+  "seller-organizations": ["sellers", "seller-management"],
+  commission: ["sellers/commissions"],
+  commissions: ["sellers/commissions"],
+  "seller-finance": ["sellers/commissions"],
+  "seller-finance-management": ["sellers/commissions"],
+  "seller-finance-summary": ["sellers/commissions"],
+  "seller-finance-payouts": ["sellers/commissions", "seller-payouts"],
+  "seller-my-payouts": ["sellers/commissions"],
+  "seller-payouts": ["sellers/commissions"],
+  "seller-cod-collections": ["sellers/commissions"],
+  "cod-collections": ["payments"],
+  products: ["product"],
+  product: ["products"],
+  "product-catalog": ["products"],
+  inventory: ["stock"],
+  delivery: ["shipping-fulfilment", "shipment-tracking"],
+  "shipment-tracking": ["delivery"],
+  tax: ["tax-invoices", "credit-notes"],
+  "tax-invoices": ["tax"],
+  "credit-notes": ["tax"],
 };
 
-const expandModuleCandidates = (moduleSlug = '') => {
+const expandModuleCandidates = (moduleSlug = "") => {
   const normalized = normalizeModuleCode(moduleSlug);
   const aliases = MODULE_ALIASES[normalized] || [];
   return Array.from(new Set([normalized, ...aliases.map(normalizeModuleCode)]));
@@ -123,24 +134,28 @@ const expandModuleCandidates = (moduleSlug = '') => {
 
 const safeParseStorage = (storage, key, fallback = null) => {
   try {
-    return storage?.getItem ? JSON.parse(storage.getItem(key) || 'null') || fallback : fallback;
+    return storage?.getItem
+      ? JSON.parse(storage.getItem(key) || "null") || fallback
+      : fallback;
   } catch {
     return fallback;
   }
 };
 
 const permissionLikeToSlug = (permission) => {
-  if (typeof permission === 'string') return permission;
-  if (!permission || typeof permission !== 'object') return '';
-  return permission.slug || permission.permission || permission.permissionSlug || '';
+  if (typeof permission === "string") return permission;
+  if (!permission || typeof permission !== "object") return "";
+  return (
+    permission.slug || permission.permission || permission.permissionSlug || ""
+  );
 };
 
 const getStoredPermissionSlugs = () => {
   const localUser = getStoredUser() || {};
   const sessionUser =
-    typeof window === 'undefined'
+    typeof window === "undefined"
       ? {}
-      : safeParseStorage(window.sessionStorage, 'EcomAdmin', {});
+      : safeParseStorage(window.sessionStorage, "EcomAdmin", {});
   return [
     localUser.permissions,
     localUser.effectivePermissions,
@@ -153,12 +168,16 @@ const getStoredPermissionSlugs = () => {
   ]
     .flatMap((value) => (Array.isArray(value) ? value : []))
     .map(permissionLikeToSlug)
-    .map((permission) => String(permission || '').trim().toLowerCase())
-    .filter((permission) => permission.includes(':'));
+    .map((permission) =>
+      String(permission || "")
+        .trim()
+        .toLowerCase(),
+    )
+    .filter((permission) => permission.includes(":"));
 };
 
 const applyPermissionSlugToMap = (map, permissionSlug) => {
-  const [moduleSlug, actionSlug] = String(permissionSlug || '').split(':');
+  const [moduleSlug, actionSlug] = String(permissionSlug || "").split(":");
   const slug = normalizeModuleCode(moduleSlug);
   const action = normalizeAction(actionSlug);
   if (!slug || !action) return;
@@ -176,12 +195,12 @@ const applyPermissionSlugToMap = (map, permissionSlug) => {
  * ROLE constants — mirrors backend roles.js
  */
 export const ROLES = {
-  SUPER_ADMIN:      'super-admin',
-  ADMIN:            'admin',
-  SUB_ADMIN:        'sub-admin',
-  SELLER:           'seller',
-  SELLER_ADMIN:     'seller-admin',
-  SELLER_SUB_ADMIN: 'seller-sub-admin',
+  SUPER_ADMIN: "super-admin",
+  ADMIN: "admin",
+  SUB_ADMIN: "sub-admin",
+  SELLER: "seller",
+  SELLER_ADMIN: "seller-admin",
+  SELLER_SUB_ADMIN: "seller-sub-admin",
 };
 
 /**
@@ -230,12 +249,12 @@ export function usePermission() {
       moduleSources.forEach((mod) => {
         const slug = normalizeModuleCode(
           mod.slug ||
-          mod.moduleKey ||
-          mod.moduleSlug ||
-          mod.module ||
-          mod.module_code?.module_code ||
-          mod.module_code ||
-          mod.metadata?.requiredModule
+            mod.moduleKey ||
+            mod.moduleSlug ||
+            mod.module ||
+            mod.module_code?.module_code ||
+            mod.module_code ||
+            mod.metadata?.requiredModule,
         );
         if (!slug) return;
 
@@ -251,7 +270,7 @@ export function usePermission() {
             if (!action) return;
             const assigned = p.assigned === true;
             map[slug][action] = map[slug][action] === true || assigned;
-            if (action === 'view' && assigned) {
+            if (action === "view" && assigned) {
               map[slug]._assigned = true;
             }
           });
@@ -260,7 +279,7 @@ export function usePermission() {
     }
 
     getStoredPermissionSlugs().forEach((permissionSlug) =>
-      applyPermissionSlugToMap(map, permissionSlug)
+      applyPermissionSlugToMap(map, permissionSlug),
     );
 
     return map;
@@ -292,7 +311,9 @@ export function usePermission() {
       return true;
     }
 
-    const mod = moduleCandidates.map((candidate) => permMap[candidate]).find(Boolean);
+    const mod = moduleCandidates
+      .map((candidate) => permMap[candidate])
+      .find(Boolean);
     const normalizedAction = action ? normalizeAction(action) : ACTIONS.VIEW;
 
     // Module/page access is view access. Route bootstrap is handled by Layout;
@@ -305,7 +326,9 @@ export function usePermission() {
     if (!mod || !mod._assigned) return false;
 
     const actionCandidates = expandActionCandidates(normalizedAction);
-    const hasExplicitGrant = actionCandidates.some((candidate) => mod[candidate] === true);
+    const hasExplicitGrant = actionCandidates.some(
+      (candidate) => mod[candidate] === true,
+    );
     if (hasExplicitGrant) return true;
 
     return false;
@@ -341,8 +364,22 @@ export function usePermission() {
   const isRole = (r) => role === r;
 
   const isSuperAdmin = isRole(ROLES.SUPER_ADMIN);
-  const isAdmin      = isRole(ROLES.SUPER_ADMIN) || isRole(ROLES.ADMIN);
-  const isSeller     = isRole(ROLES.SELLER) || isRole(ROLES.SELLER_ADMIN) || isRole(ROLES.SELLER_SUB_ADMIN);
+  const isAdmin = isRole(ROLES.SUPER_ADMIN) || isRole(ROLES.ADMIN);
+  const isSeller =
+    isRole(ROLES.SELLER) ||
+    isRole(ROLES.SELLER_ADMIN) ||
+    isRole(ROLES.SELLER_SUB_ADMIN);
 
-  return { can, canAny, canAll, canRoute, isRole, isSuperAdmin, isAdmin, isSeller, role, permMap };
+  return {
+    can,
+    canAny,
+    canAll,
+    canRoute,
+    isRole,
+    isSuperAdmin,
+    isAdmin,
+    isSeller,
+    role,
+    permMap,
+  };
 }

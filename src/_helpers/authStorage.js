@@ -11,7 +11,12 @@ const RBAC_SIDEBAR_MODULES_KEY = "rbacSidebarModules";
 const MODULE_PERMISSIONS_KEY = "modulePermissions";
 
 export const ADMIN_ROLES = ["super-admin", "admin", "sub-admin"];
-export const BLOCKED_ADMIN_ROLES = ["seller", "seller-admin", "seller-sub-admin", "buyer"];
+export const BLOCKED_ADMIN_ROLES = [
+  "seller",
+  "seller-admin",
+  "seller-sub-admin",
+  "buyer",
+];
 export const LEGACY_ROLE_IDS = {
   "super-admin": 1,
   admin: 1,
@@ -43,10 +48,16 @@ export const normalizeRole = (roleLike) => {
   if (!roleLike) return "";
   if (typeof roleLike === "number") return LEGACY_ROLE_BY_ID[roleLike] || "";
   if (typeof roleLike === "string") {
-    const cleanRole = roleLike.trim().toLowerCase().replace(/_/g, "-").replace(/\s+/g, "-");
+    const cleanRole = roleLike
+      .trim()
+      .toLowerCase()
+      .replace(/_/g, "-")
+      .replace(/\s+/g, "-");
     return LEGACY_ROLE_BY_ID[cleanRole] || cleanRole;
   }
-  return normalizeRole(roleLike.slug || roleLike.code || roleLike.name || roleLike.role);
+  return normalizeRole(
+    roleLike.slug || roleLike.code || roleLike.name || roleLike.role,
+  );
 };
 
 export const getLegacyRoleId = (roleLike) =>
@@ -60,7 +71,7 @@ export const extractRole = (...sources) => {
         source?.role_code ||
         source?.roleCode ||
         source?.role_id ||
-        source?.roleId
+        source?.roleId,
     );
     if (role) return role;
   }
@@ -79,26 +90,37 @@ export const extractAllowedModules = (...sources) => {
   return [];
 };
 
-export const isAllowedAdminRole = (role) => ADMIN_ROLES.includes(normalizeRole(role));
-export const isBlockedAdminRole = (role) => BLOCKED_ADMIN_ROLES.includes(normalizeRole(role));
+export const isAllowedAdminRole = (role) =>
+  ADMIN_ROLES.includes(normalizeRole(role));
+export const isBlockedAdminRole = (role) =>
+  BLOCKED_ADMIN_ROLES.includes(normalizeRole(role));
 export const SELLER_ROLES = ["seller", "seller-admin", "seller-sub-admin"];
-export const BLOCKED_SELLER_ROLES = ["super-admin", "admin", "sub-admin", "buyer"];
-export const isAllowedSellerRole = (role) => SELLER_ROLES.includes(normalizeRole(role));
-export const isBlockedSellerRole = (role) => BLOCKED_SELLER_ROLES.includes(normalizeRole(role));
+export const BLOCKED_SELLER_ROLES = [
+  "super-admin",
+  "admin",
+  "sub-admin",
+  "buyer",
+];
+export const isAllowedSellerRole = (role) =>
+  SELLER_ROLES.includes(normalizeRole(role));
+export const isBlockedSellerRole = (role) =>
+  BLOCKED_SELLER_ROLES.includes(normalizeRole(role));
 
 export const isAllowedRoleForPanel = (role, panelMode = getPanelMode()) => {
   const { allowedRoles } = getPanelRoleRules(panelMode);
   return allowedRoles.includes(normalizeRole(role));
 };
 
-export const isAllowedRoleForCurrentPanel = (role) => isAllowedRoleForPanel(role, getPanelMode());
+export const isAllowedRoleForCurrentPanel = (role) =>
+  isAllowedRoleForPanel(role, getPanelMode());
 
 export const isRestrictedRoleForPanel = (role, panelMode = getPanelMode()) =>
   normalizeRole(role) === getPanelRoleRules(panelMode).restrictedRole;
 
 export const getAccessToken = () => localStorage.getItem(ACCESS_TOKEN_KEY);
 export const getRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_KEY);
-export const getStoredUser = () => safeParse(localStorage.getItem(USER_KEY), null);
+export const getStoredUser = () =>
+  safeParse(localStorage.getItem(USER_KEY), null);
 export const getStoredRole = () => localStorage.getItem(ROLE_KEY) || "";
 export const getAllowedModules = () =>
   safeParse(localStorage.getItem(ALLOWED_MODULES_KEY), []);
@@ -115,8 +137,12 @@ export const getStoredSidebarModules = () => {
 };
 export const getStoredModulePermissions = () =>
   (() => {
-    const localPermissions = safeParse(localStorage.getItem(MODULE_PERMISSIONS_KEY), []);
-    if (Array.isArray(localPermissions) && localPermissions.length) return localPermissions;
+    const localPermissions = safeParse(
+      localStorage.getItem(MODULE_PERMISSIONS_KEY),
+      [],
+    );
+    if (Array.isArray(localPermissions) && localPermissions.length)
+      return localPermissions;
     return safeParse(sessionStorage.getItem(MODULE_PERMISSIONS_KEY), []) || [];
   })();
 
@@ -144,7 +170,10 @@ export const setStoredAuth = ({
   if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
   if (role) localStorage.setItem(ROLE_KEY, normalizeRole(role));
   if (Array.isArray(allowedModules)) {
-    localStorage.setItem(ALLOWED_MODULES_KEY, JSON.stringify(allowedModules.map(String)));
+    localStorage.setItem(
+      ALLOWED_MODULES_KEY,
+      JSON.stringify(allowedModules.map(String)),
+    );
   }
   if (Array.isArray(sidebarModules)) {
     const serialized = JSON.stringify(sidebarModules);
@@ -208,51 +237,246 @@ export const hasModuleAccess = (moduleCode) => {
   const moduleAliases = {
     dashboard: ["home", "dashboard", "analytics", "admin"],
     products: ["products", "product", "product-catalog", "store", "bar-code"],
-    categories: ["categories", "category", "category-attributes", "sub-categories", "sub-sub-categories"],
-    "sub-categories": ["sub-categories", "sub_categories", "categories", "category-attributes"],
-    "sub-sub-categories": ["sub-sub-categories", "sub_sub_categories", "categories", "category-attributes"],
+    categories: [
+      "categories",
+      "category",
+      "category-attributes",
+      "sub-categories",
+      "sub-sub-categories",
+    ],
+    "sub-categories": [
+      "sub-categories",
+      "sub_categories",
+      "categories",
+      "category-attributes",
+    ],
+    "sub-sub-categories": [
+      "sub-sub-categories",
+      "sub_sub_categories",
+      "categories",
+      "category-attributes",
+    ],
     brands: ["brands", "brand"],
-    option_masters: ["option-masters", "option_masters", "product-options", "product_options"],
-    "option-masters": ["option-masters", "option_masters", "product-options", "product_options"],
-    option_values: ["option-values", "option_values", "product-option-values", "product_option_values", "product-option-value"],
-    "option-values": ["option-values", "option_values", "product-option-values", "product_option_values", "product-option-value"],
-    platform: ["platform", "categories", "category-attributes", "brands", "product-options", "product-option-values", "product-families", "product-variants", "product-dimensions", "finish", "batch"],
+    option_masters: [
+      "option-masters",
+      "option_masters",
+      "product-options",
+      "product_options",
+    ],
+    "option-masters": [
+      "option-masters",
+      "option_masters",
+      "product-options",
+      "product_options",
+    ],
+    option_values: [
+      "option-values",
+      "option_values",
+      "product-option-values",
+      "product_option_values",
+      "product-option-value",
+    ],
+    "option-values": [
+      "option-values",
+      "option_values",
+      "product-option-values",
+      "product_option_values",
+      "product-option-value",
+    ],
+    platform: [
+      "platform",
+      "categories",
+      "category-attributes",
+      "brands",
+      "product-options",
+      "product-option-values",
+      "product-families",
+      "product-variants",
+      "product-dimensions",
+      "finish",
+      "batch",
+    ],
     inventory: ["inventory", "stock", "stock-adjustment"],
-    orders: ["orders", "order", "checkout-quote", "carts", "subscription_orders", "subscription-orders", "view-orders"],
-    payments: ["payments", "payment", "payouts", "payments-finance", "cod-collections", "chargebacks", "fraud-cases"],
-    wallets: ["wallets", "wallet", "transactions", "user-transactions", "wallet-transactions", "wallet-management"],
+    orders: [
+      "orders",
+      "order",
+      "checkout-quote",
+      "carts",
+      "subscription_orders",
+      "subscription-orders",
+      "view-orders",
+    ],
+    payments: [
+      "payments",
+      "payment",
+      "payouts",
+      "payments-finance",
+      "cod-collections",
+      "chargebacks",
+      "fraud-cases",
+    ],
+    wallets: [
+      "wallets",
+      "wallet",
+      "transactions",
+      "user-transactions",
+      "wallet-transactions",
+      "wallet-management",
+    ],
     pricing: ["pricing", "coupons", "discount-coupons", "discount_coupons"],
     referral: ["referral", "referral-commerce", "influencers"],
-    delivery: ["delivery", "delivery-shipping", "shipping-fulfilment", "shipment-tracking", "shipping-duration"],
-    sellers: ["sellers", "seller", "vendors", "profile", "seller-management", "seller-users", "seller-staff", "seller-organizations"],
-    "seller-management": ["seller-management", "sellers", "seller-admins", "seller-sub-admins", "seller-hierarchy", "seller-users", "seller-staff", "seller-organizations"],
+    delivery: [
+      "delivery",
+      "delivery-shipping",
+      "shipping-fulfilment",
+      "shipment-tracking",
+      "shipping-duration",
+    ],
+    sellers: [
+      "sellers",
+      "seller",
+      "vendors",
+      "profile",
+      "seller-management",
+      "seller-users",
+      "seller-staff",
+      "seller-organizations",
+    ],
+    "seller-management": [
+      "seller-management",
+      "sellers",
+      "seller-admins",
+      "seller-sub-admins",
+      "seller-hierarchy",
+      "seller-users",
+      "seller-staff",
+      "seller-organizations",
+    ],
     seller_kyc: ["seller-kyc", "seller_kyc", "seller-kyc-detail"],
     "seller-kyc": ["seller-kyc", "seller_kyc", "seller-kyc-detail"],
     seller_bank: ["seller-bank", "seller_bank", "seller-bank-detail"],
     "seller-bank": ["seller-bank", "seller_bank", "seller-bank-detail"],
-    "sellers/commissions": ["sellers/commissions", "seller-finance-payouts", "seller-finance-management", "seller-finance-summary", "seller-my-payouts", "seller-finance", "seller-commissions", "seller_commissions", "commissions", "seller-payouts", "seller_payouts", "seller-cod-collections", "payout-ops-queue", "negative-balances", "settlements"],
+    "sellers/commissions": [
+      "sellers/commissions",
+      "seller-finance-payouts",
+      "seller-finance-management",
+      "seller-finance-summary",
+      "seller-my-payouts",
+      "seller-finance",
+      "seller-commissions",
+      "seller_commissions",
+      "commissions",
+      "seller-payouts",
+      "seller_payouts",
+      "seller-cod-collections",
+      "payout-ops-queue",
+      "negative-balances",
+      "settlements",
+    ],
     notifications: ["notifications", "messages"],
-    returns: ["returns", "return-requests", "returns-cancellations", "cancellations"],
+    returns: [
+      "returns",
+      "return-requests",
+      "returns-cancellations",
+      "cancellations",
+    ],
     analytics: ["analytics", "dashboard", "home"],
-    reports: ["reports", "reports-sales", "reports-products", "reports-inventory", "reports-sellers", "analytics"],
+    reports: [
+      "reports",
+      "reports-sales",
+      "reports-products",
+      "reports-inventory",
+      "reports-sellers",
+      "analytics",
+    ],
     users: ["users", "user", "customers", "admin_users", "admin-users"],
     admin_users: ["admin-users", "admin_users", "sub-admins", "sub_admins"],
     "admin-users": ["admin-users", "admin_users", "sub-admins", "sub_admins"],
-    rbac: ["rbac", "admin_users", "admin-users", "user-permissions", "roles-permissions", "module-management"],
-    tax: ["tax", "invoices-taxation", "tax-invoices", "credit-notes", "hsn-code", "hsn-codes", "subtax", "sub-tax", "tax-rule", "tax-documents", "gst"],
-    "commerce-settings": ["commerce-settings", "commerce-settings-menu", "platform-commission", "seller-tiers", "discount-coupons", "subscription-plans"],
-    locations: ["locations", "country", "countries", "state", "states", "city", "cities", "zipcode", "zip-code", "zip-codes", "pincode", "pin-code"],
+    rbac: [
+      "rbac",
+      "admin_users",
+      "admin-users",
+      "user-permissions",
+      "roles-permissions",
+      "module-management",
+    ],
+    tax: [
+      "tax",
+      "invoices-taxation",
+      "tax-invoices",
+      "credit-notes",
+      "hsn-code",
+      "hsn-codes",
+      "subtax",
+      "sub-tax",
+      "tax-rule",
+      "tax-documents",
+      "gst",
+    ],
+    "commerce-settings": [
+      "commerce-settings",
+      "commerce-settings-menu",
+      "platform-commission",
+      "seller-tiers",
+      "discount-coupons",
+      "subscription-plans",
+    ],
+    locations: [
+      "locations",
+      "country",
+      "countries",
+      "state",
+      "states",
+      "city",
+      "cities",
+      "zipcode",
+      "zip-code",
+      "zip-codes",
+      "pincode",
+      "pin-code",
+    ],
     countries: ["country", "countries", "locations"],
     states: ["state", "states", "locations"],
     cities: ["city", "cities", "locations"],
-    zip_codes: ["zipcode", "zip-code", "zip-codes", "pincode", "pin-code", "locations"],
-    "zip-codes": ["zipcode", "zip-code", "zip-codes", "pincode", "pin-code", "locations"],
+    zip_codes: [
+      "zipcode",
+      "zip-code",
+      "zip-codes",
+      "pincode",
+      "pin-code",
+      "locations",
+    ],
+    "zip-codes": [
+      "zipcode",
+      "zip-code",
+      "zip-codes",
+      "pincode",
+      "pin-code",
+      "locations",
+    ],
     coupons: ["coupons", "discount-coupons", "discount_coupons"],
-  
-  
-    "cms-pages": ["cms-pages", "cms_pages", "content-management", "content-pages", "auth-testimonials"],
-    cms_pages: ["cms-pages", "cms_pages", "content-management", "content-pages", "auth-testimonials"],
-    cms: ["cms", "cms-pages", "cms_pages", "content-pages", "auth-testimonials"],
+
+    "cms-pages": [
+      "cms-pages",
+      "cms_pages",
+      "content-management",
+      "content-pages",
+      "auth-testimonials",
+    ],
+    cms_pages: [
+      "cms-pages",
+      "cms_pages",
+      "content-management",
+      "content-pages",
+      "auth-testimonials",
+    ],
+    cms: [
+      "cms",
+      "cms-pages",
+      "cms_pages",
+      "content-pages",
+      "auth-testimonials",
+    ],
     reviews: ["reviews", "product-reviews"],
     warranty: ["warranty", "warranty-templates"],
     fraud: ["fraud", "chargebacks"],
@@ -261,7 +485,9 @@ export const hasModuleAccess = (moduleCode) => {
 
   const expandedModuleCodes = moduleCodes
     .map(normalizeCode)
-    .flatMap((code) => [code, ...(moduleAliases[code] || [])].map(normalizeCode));
+    .flatMap((code) =>
+      [code, ...(moduleAliases[code] || [])].map(normalizeCode),
+    );
 
   const sellerOwnedModules = new Set([
     "dashboard",
@@ -290,11 +516,13 @@ export const hasModuleAccess = (moduleCode) => {
   const sellerOwnedAliases = new Set(
     Object.entries(moduleAliases)
       .filter(([moduleKey]) => sellerOwnedModules.has(moduleKey))
-      .flatMap(([, aliases]) => aliases.map(normalizeCode))
+      .flatMap(([, aliases]) => aliases.map(normalizeCode)),
   );
 
   const isSellerOwnedCode = (code) =>
-    sellerOwnedModules.has(code) || sellerOwnedAliases.has(code) || isSellerAllowedModule(code);
+    sellerOwnedModules.has(code) ||
+    sellerOwnedAliases.has(code) ||
+    isSellerAllowedModule(code);
 
   if (panelMode === PANEL_MODES.SELLER) {
     if (expandedModuleCodes.some(isSellerBlockedModule)) return false;
@@ -305,16 +533,24 @@ export const hasModuleAccess = (moduleCode) => {
   }
 
   const storedPermissionValues = [
-    ...(Array.isArray(getStoredUser()?.permissions) ? getStoredUser().permissions : []),
+    ...(Array.isArray(getStoredUser()?.permissions)
+      ? getStoredUser().permissions
+      : []),
     ...(Array.isArray(sessionUser?.permissions)
       ? sessionUser?.permissions
       : []),
   ];
+
   const permissionModules = storedPermissionValues
-    .map((permission) => String(permission || "").trim().toLowerCase())
+    .map((permission) =>
+      String(permission || "")
+        .trim()
+        .toLowerCase(),
+    )
     .filter((permission) => permission.includes(":"))
     .filter((permission) => normalizeCode(permission.split(":")[1]) === "view")
     .map((permission) => normalizeCode(permission.split(":")[0]));
+    
   const legacyAllowedModules = [
     ...(Array.isArray(getStoredUser()?.allowedModules)
       ? getStoredUser().allowedModules
@@ -326,10 +562,7 @@ export const hasModuleAccess = (moduleCode) => {
   ].map(normalizeCode);
 
   const allowedModules = Array.from(
-    new Set([
-      ...legacyAllowedModules,
-      ...permissionModules,
-    ]),
+    new Set([...legacyAllowedModules, ...permissionModules]),
   );
   if (role !== restrictedRole && !allowedModules.length) return false;
 

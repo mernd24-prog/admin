@@ -26,7 +26,9 @@ export const getFieldValue = (values, path) =>
     .reduce((result, key) => result?.[key], values);
 
 export const setFieldValue = (values, path, nextValue) => {
-  const keys = String(path).replace(/\[(\d+)\]/g, ".$1").split(".");
+  const keys = String(path)
+    .replace(/\[(\d+)\]/g, ".$1")
+    .split(".");
   const result = Array.isArray(values) ? [...values] : { ...values };
   let pointer = result;
   keys.forEach((key, index) => {
@@ -35,7 +37,9 @@ export const setFieldValue = (values, path, nextValue) => {
       return;
     }
     const existing = pointer[key];
-    pointer[key] = Array.isArray(existing) ? [...existing] : { ...(existing || {}) };
+    pointer[key] = Array.isArray(existing)
+      ? [...existing]
+      : { ...(existing || {}) };
     pointer = pointer[key];
   });
   return result;
@@ -58,7 +62,8 @@ const messageFor = (label, rule, expected) => {
     number: "Enter a valid number",
     decimal: "Enter a valid decimal number",
     positiveNumber: "Enter a positive number",
-    password: "Use 8+ characters with upper/lowercase, number and special character",
+    password:
+      "Use 8+ characters with upper/lowercase, number and special character",
     minLength: `${name} must be at least ${expected} characters`,
     maxLength: `${name} must be no more than ${expected} characters`,
     min: `${name} must be at least ${expected}`,
@@ -84,7 +89,8 @@ export const validators = {
   slug: (value) => PATTERNS.slug.test(String(value).trim()),
   number: (value) => Number.isFinite(Number(value)),
   decimal: (value) => PATTERNS.decimal.test(String(value)),
-  positiveNumber: (value) => PATTERNS.positiveNumber.test(String(value)) && Number(value) >= 0,
+  positiveNumber: (value) =>
+    PATTERNS.positiveNumber.test(String(value)) && Number(value) >= 0,
   password: (value) =>
     /[a-z]/.test(value) &&
     /[A-Z]/.test(value) &&
@@ -93,7 +99,12 @@ export const validators = {
     String(value).length >= 8,
 };
 
-export const validateField = (value, rule = {}, values = {}, fieldName = "") => {
+export const validateField = (
+  value,
+  rule = {},
+  values = {},
+  fieldName = "",
+) => {
   const label = rule.label || fieldName;
   const active = typeof rule.when === "function" ? rule.when(values) : true;
   if (!active) return "";
@@ -103,10 +114,14 @@ export const validateField = (value, rule = {}, values = {}, fieldName = "") => 
   if (empty(value)) return "";
 
   if (rule.minLength && String(value).length < rule.minLength) {
-    return rule.messages?.minLength || messageFor(label, "minLength", rule.minLength);
+    return (
+      rule.messages?.minLength || messageFor(label, "minLength", rule.minLength)
+    );
   }
   if (rule.maxLength && String(value).length > rule.maxLength) {
-    return rule.messages?.maxLength || messageFor(label, "maxLength", rule.maxLength);
+    return (
+      rule.messages?.maxLength || messageFor(label, "maxLength", rule.maxLength)
+    );
   }
   if (rule.min !== undefined && Number(value) < rule.min) {
     return rule.messages?.min || messageFor(label, "min", rule.min);
@@ -116,10 +131,24 @@ export const validateField = (value, rule = {}, values = {}, fieldName = "") => 
   }
 
   const typeRules = [
-    "email", "phone", "url", "gst", "pan", "ifsc", "pincode", "hsn",
-    "sku", "slug", "number", "decimal", "positiveNumber", "password",
+    "email",
+    "phone",
+    "url",
+    "gst",
+    "pan",
+    "ifsc",
+    "pincode",
+    "hsn",
+    "sku",
+    "slug",
+    "number",
+    "decimal",
+    "positiveNumber",
+    "password",
   ];
-  const failedRule = typeRules.find((type) => rule[type] && !validators[type](value));
+  const failedRule = typeRules.find(
+    (type) => rule[type] && !validators[type](value),
+  );
   if (failedRule) {
     return rule.messages?.[failedRule] || messageFor(label, failedRule);
   }
@@ -133,9 +162,15 @@ export const validateField = (value, rule = {}, values = {}, fieldName = "") => 
     }
   }
   if (rule.fileSize && value?.size > rule.fileSize * 1024 * 1024) {
-    return rule.messages?.fileSize || messageFor(label, "fileSize", rule.fileSize);
+    return (
+      rule.messages?.fileSize || messageFor(label, "fileSize", rule.fileSize)
+    );
   }
-  if (rule.fileTypes?.length && value?.type && !rule.fileTypes.includes(value.type)) {
+  if (
+    rule.fileTypes?.length &&
+    value?.type &&
+    !rule.fileTypes.includes(value.type)
+  ) {
     return rule.messages?.fileType || messageFor(label, "fileType");
   }
   if (typeof rule.validate === "function") {
@@ -149,15 +184,24 @@ export const validateField = (value, rule = {}, values = {}, fieldName = "") => 
 
 export const validateValues = (values, schema = {}) =>
   Object.entries(schema).reduce((errors, [path, rule]) => {
-    const error = validateField(getFieldValue(values, path), rule, values, rule.label || path);
+    const error = validateField(
+      getFieldValue(values, path),
+      rule,
+      values,
+      rule.label || path,
+    );
     return error ? setFieldValue(errors, path, error) : errors;
   }, {});
 
 export const mapApiErrors = (error) => {
-  const details = error?.errors || error?.response?.data?.errors || error?.details || [];
-  if (!Array.isArray(details)) return details && typeof details === "object" ? details : {};
+  const details =
+    error?.errors || error?.response?.data?.errors || error?.details || [];
+  if (!Array.isArray(details))
+    return details && typeof details === "object" ? details : {};
   return details.reduce((errors, detail) => {
     const path = detail.field || detail.path || detail.param;
-    return path ? setFieldValue(errors, path, detail.message || "Invalid value") : errors;
+    return path
+      ? setFieldValue(errors, path, detail.message || "Invalid value")
+      : errors;
   }, {});
 };

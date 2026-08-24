@@ -1,13 +1,15 @@
 const firstValidationMessage = (details) => {
   if (!Array.isArray(details)) return null;
 
-  return details
-    .map((detail) => {
-      if (!detail) return null;
-      if (typeof detail === "string") return detail;
-      return detail?.message || detail?.msg || detail?.error || null;
-    })
-    .find(Boolean) || null;
+  return (
+    details
+      .map((detail) => {
+        if (!detail) return null;
+        if (typeof detail === "string") return detail;
+        return detail?.message || detail?.msg || detail?.error || null;
+      })
+      .find(Boolean) || null
+  );
 };
 
 const getFieldDetails = (data = {}) => {
@@ -22,7 +24,10 @@ const getFieldDetails = (data = {}) => {
   return candidates.find(Array.isArray) || [];
 };
 
-export const normalizeApiError = (error, fallback = "Something went wrong!") => {
+export const normalizeApiError = (
+  error,
+  fallback = "Something went wrong!",
+) => {
   const responseData = error?.response?.data;
   const data = responseData || error?.data || error?.raw || error || {};
   const details = getFieldDetails(data);

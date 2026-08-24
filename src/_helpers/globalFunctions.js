@@ -1,9 +1,12 @@
 import { toast } from "../utils/toast";
-import { formatDate as _formatDate, formatDateTime as _formatDateTime } from "../utils/formatters";
+import {
+  formatDate as _formatDate,
+  formatDateTime as _formatDateTime,
+} from "../utils/formatters";
 import { apiRequestImage } from "./apiConfig";
 import { useState } from "react";
-import { saveAs } from 'file-saver';
-import * as XLSX from 'xlsx';
+import { saveAs } from "file-saver";
+import * as XLSX from "xlsx";
 import { FiAlertCircle } from "react-icons/fi";
 import { FaRegFileAlt } from "react-icons/fa";
 
@@ -64,7 +67,9 @@ export const getUserRole = () => {
 };
 
 export const getRandomHexColor = () => {
-  return `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
+  return `#${Math.floor(Math.random() * 16777215)
+    .toString(16)
+    .padStart(6, "0")}`;
 };
 
 export const maskEmail = (email = "") => {
@@ -91,7 +96,8 @@ export const formatChatDate = (sentAt) => {
 
   const isToday = messageDate.toDateString() === today.toDateString();
   const isYesterday = messageDate.toDateString() === yesterday.toDateString();
-  const isThisWeek = messageDate > new Date(today.setDate(today.getDate() - today.getDay()));
+  const isThisWeek =
+    messageDate > new Date(today.setDate(today.getDate() - today.getDay()));
 
   if (isToday) return `Today`;
   if (isYesterday) return `Yesterday`;
@@ -102,15 +108,18 @@ export const formatChatDate = (sentAt) => {
   return messageDate.toLocaleDateString("en-GB");
 };
 
-export const uploadFile = async (file, moduleName = 'DEFAULT') => {
-  if (!file) throw new Error('No file provided');
-
+export const uploadFile = async (file, moduleName = "DEFAULT") => {
+  if (!file) throw new Error("No file provided");
   const formData = new FormData();
-  formData.append('file', file);
-  formData.append('module', moduleName);
+  formData.append("file", file);
+  formData.append("module", moduleName);
 
   try {
-    const response = await apiRequestImage('POST', '/file-uploader/upload', formData);
+    const response = await apiRequestImage(
+      "POST",
+      "/file-uploader/upload",
+      formData,
+    );
     const payload = response?.data || response || {};
     const imageURL =
       payload?.imageURL ||
@@ -121,30 +130,35 @@ export const uploadFile = async (file, moduleName = 'DEFAULT') => {
     if (!imageURL) {
       throw new Error("Upload response did not include an image URL");
     }
-
     return imageURL;
   } catch (error) {
-    throw error.message || 'Upload failed';
+    throw error.message || "Upload failed";
   }
 };
 
-export const uploadFileMulti = async (files, moduleName = 'DEFAULT') => {
+export const uploadFileMulti = async (files, moduleName = "DEFAULT") => {
   if (!files || files.length === 0) {
-    throw new Error('No files provided');
+    throw new Error("No files provided");
   }
 
   const formData = new FormData();
   for (const file of files) {
-    formData.append('file', file); // 'files' should match the backend field name
+    formData.append("file", file); // 'files' should match the backend field name
   }
-  formData.append('module', moduleName);
+  formData.append("module", moduleName);
 
   try {
-    const response = await apiRequestImage('POST', '/file-uploader/upload-multi', formData);
+    const response = await apiRequestImage(
+      "POST",
+      "/file-uploader/upload-multi",
+      formData,
+    );
     const payload = response?.data || response || {};
     const imageURLs =
       payload?.imageURLs ||
-      payload?.images?.map((image) => image?.imageURL || image?.url).filter(Boolean) ||
+      payload?.images
+        ?.map((image) => image?.imageURL || image?.url)
+        .filter(Boolean) ||
       [];
 
     if (!imageURLs.length) {
@@ -153,20 +167,24 @@ export const uploadFileMulti = async (files, moduleName = 'DEFAULT') => {
 
     return imageURLs;
   } catch (error) {
-    throw error?.message || 'Upload failed';
+    throw error?.message || "Upload failed";
   }
 };
 
-export const uploadDocumentFile = async (file, moduleName = 'DEFAULT') => {
-  if (!file) throw new Error('No file provided');
+export const uploadDocumentFile = async (file, moduleName = "DEFAULT") => {
+  if (!file) throw new Error("No file provided");
 
   const formData = new FormData();
-  formData.append('file', file);
-  formData.append('module', moduleName);
-  formData.append('type', 'catalog-document');
+  formData.append("file", file);
+  formData.append("module", moduleName);
+  formData.append("type", "catalog-document");
 
   try {
-    const response = await apiRequestImage('POST', '/file-uploader/upload-document', formData);
+    const response = await apiRequestImage(
+      "POST",
+      "/file-uploader/upload-document",
+      formData,
+    );
     const payload = response?.data || response || {};
     const documentURL =
       payload?.documentURL ||
@@ -177,23 +195,26 @@ export const uploadDocumentFile = async (file, moduleName = 'DEFAULT') => {
     if (!documentURL) {
       throw new Error("Upload response did not include a document URL");
     }
-
     return documentURL;
   } catch (error) {
-    throw error?.message || 'Upload failed';
+    throw error?.message || "Upload failed";
   }
 };
 
-export const uploadVideoFile = async (file, moduleName = 'DEFAULT') => {
-  if (!file) throw new Error('No file provided');
+export const uploadVideoFile = async (file, moduleName = "DEFAULT") => {
+  if (!file) throw new Error("No file provided");
 
   const formData = new FormData();
-  formData.append('file', file);
-  formData.append('module', moduleName);
-  formData.append('type', 'product-video');
+  formData.append("file", file);
+  formData.append("module", moduleName);
+  formData.append("type", "product-video");
 
   try {
-    const response = await apiRequestImage('POST', '/file-uploader/upload-video', formData);
+    const response = await apiRequestImage(
+      "POST",
+      "/file-uploader/upload-video",
+      formData,
+    );
     const payload = response?.data || response || {};
     const videoURL =
       payload?.videoURL ||
@@ -204,55 +225,58 @@ export const uploadVideoFile = async (file, moduleName = 'DEFAULT') => {
     if (!videoURL) {
       throw new Error("Upload response did not include a video URL");
     }
-
     return videoURL;
   } catch (error) {
-    throw error?.message || 'Upload failed';
+    throw error?.message || "Upload failed";
   }
 };
 
 export const uploadCsvFile = async (files) => {
-  if (!files) throw new Error('No file provided');
+  if (!files) throw new Error("No file provided");
 
-  let { seller_id, store_id, file } = files
+  let { seller_id, store_id, file } = files;
 
   const formData = new FormData();
-  formData.append('file', file);
-  formData.append('seller_id', seller_id);
-  formData.append('store_id', store_id);
+  formData.append("file", file);
+  formData.append("seller_id", seller_id);
+  formData.append("store_id", store_id);
   try {
-    const response = await apiRequestImage('POST', '/product/upload-product-csv', formData);
+    const response = await apiRequestImage(
+      "POST",
+      "/product/upload-product-csv",
+      formData,
+    );
     return response?.data?.imageURL;
   } catch (error) {
-    throw error.message || 'Upload failed';
+    throw error.message || "Upload failed";
   }
 };
 
-
 export const transformArray = (data) => {
-  return Array.isArray(data) && data.map(item => {
-    const code = item?.code || item?.batchCode || '';
-    const igst = item?.IGST ?? 0;
-    const cgst = item?.CGST ?? 0;
-    const sgst = item?.SGST ?? 0;
-    const additionalTax = item?.additionalTax ?? 0;
+  return (
+    Array.isArray(data) &&
+    data.map((item) => {
+      const code = item?.code || item?.batchCode || "";
+      const igst = item?.IGST ?? 0;
+      const cgst = item?.CGST ?? 0;
+      const sgst = item?.SGST ?? 0;
+      const additionalTax = item?.additionalTax ?? 0;
 
-    return {
-      value: item?._id || item?.id,
-      label: item?.userName
-        ? `${item.userName} (${item.email || ''})`
-        : item?.name ||
-          item?.period ||
-          item?.dimensions_value ||
-          item?.replace_policy ||
-          item?.duration ||
-          item?.batchCode ||
-          `${code} | IGST: ${igst}% | CGST: ${cgst}% | SGST: ${sgst}% | Add. Tax: ${additionalTax}%`
-    };
-  });
+      return {
+        value: item?._id || item?.id,
+        label: item?.userName
+          ? `${item.userName} (${item.email || ""})`
+          : item?.name ||
+            item?.period ||
+            item?.dimensions_value ||
+            item?.replace_policy ||
+            item?.duration ||
+            item?.batchCode ||
+            `${code} | IGST: ${igst}% | CGST: ${cgst}% | SGST: ${sgst}% | Add. Tax: ${additionalTax}%`,
+      };
+    })
+  );
 };
-
-
 
 export const validateFiles = (files) => {
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -261,7 +285,9 @@ export const validateFiles = (files) => {
 
   for (const f of files) {
     if (!allowedTypes.includes(f.type)) {
-      toast.error(`${f.name} is not a valid image. Only PNG, JPG, and WEBP are allowed.`);
+      toast.error(
+        `${f.name} is not a valid image. Only PNG, JPG, and WEBP are allowed.`,
+      );
       continue;
     }
     if (f.size > maxSize) {
@@ -275,13 +301,20 @@ export const validateFiles = (files) => {
 };
 
 export const validateDocumentFiles = (files) => {
-  const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+  const allowedTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+  ];
   const maxSize = 10 * 1024 * 1024;
   const validFiles = [];
 
   for (const f of files) {
     if (!allowedTypes.includes(f.type)) {
-      toast.error(`${f.name} is not a supported document. Use PDF, PNG, JPG, or WEBP.`);
+      toast.error(
+        `${f.name} is not a supported document. Use PDF, PNG, JPG, or WEBP.`,
+      );
       continue;
     }
     if (f.size > maxSize) {
@@ -295,21 +328,21 @@ export const validateDocumentFiles = (files) => {
 };
 export const roleBasedAccess = () => {
   return [
-    { label: 'user', value: 5 },
-    { label: 'seller', value: 3 }
+    { label: "user", value: 5 },
+    { label: "seller", value: 3 },
   ];
 };
 
 export const roleBasedAccess2 = () => {
   return [
-    { label: 'user', value: 5 },
-    { label: 'seller', value: 3 },
+    { label: "user", value: 5 },
+    { label: "seller", value: 3 },
   ];
 };
 export const roles = {
   5: "User",
-  3: "Seller"
-}
+  3: "Seller",
+};
 /** @deprecated Use formatDate / formatDateTime from utils/formatters instead */
 export const formatDateForDisplay = (timestamp, includeTime = false) => {
   return includeTime ? _formatDateTime(timestamp) : _formatDate(timestamp);
@@ -318,31 +351,32 @@ export const formatDateForDisplay = (timestamp, includeTime = false) => {
 export const generateCSV = (data, options) => {
   try {
     if (!data || !Array.isArray(data) || data.length === 0) {
-      throw new Error('No data provided for CSV generation');
+      throw new Error("No data provided for CSV generation");
     }
 
     // Get headers from first object if not provided
     const headers = options.headers || Object.keys(data[0]);
 
     // Filter out excluded keys
-    const filteredHeaders = headers.filter(header =>
-      !options.excludeKeys?.includes(header)
+    const filteredHeaders = headers.filter(
+      (header) => !options.excludeKeys?.includes(header),
     );
 
     // CSV content generation
-    let csvContent = '';
+    let csvContent = "";
 
     // Add headers
-    csvContent += filteredHeaders.map(header => `"${header}"`).join(',') + '\r\n';
+    csvContent +=
+      filteredHeaders.map((header) => `"${header}"`).join(",") + "\r\n";
 
     // Add rows
-    data.forEach(item => {
-      const row = filteredHeaders.map(header => {
+    data.forEach((item) => {
+      const row = filteredHeaders.map((header) => {
         let value = item[header];
         if (value === undefined || value === null) {
-          return '';
+          return "";
         }
-        if (typeof value === 'object') {
+        if (typeof value === "object") {
           value = JSON.stringify(value);
         }
         value = String(value).replace(/"/g, '""');
@@ -350,43 +384,41 @@ export const generateCSV = (data, options) => {
         return `"${value}"`;
       });
 
-      csvContent += row.join(',') + '\r\n';
+      csvContent += row.join(",") + "\r\n";
     });
 
     // Create download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', options.filename || 'export.csv');
-    link.style.visibility = 'hidden';
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", options.filename || "export.csv");
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
   } catch (error) {
-    console.error('Error generating CSV:', error);
+    console.error("Error generating CSV:", error);
     throw error;
   }
 };
 
-
 export const DownloadExcelButton = ({
   fileUrl,
-  fileName = 'validation_errors.xlsx',
+  fileName = "validation_errors.xlsx",
   isError = false,
-  isDataAvailable = true
+  isDataAvailable = true,
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = async () => {
     try {
       if (!isDataAvailable) {
-        alert('No Data Found for download.');
+        alert("No Data Found for download.");
         return;
       }
       if (!fileUrl) {
-        alert('No file URL available to download.');
+        alert("No file URL available to download.");
         return;
       }
 
@@ -397,14 +429,14 @@ export const DownloadExcelButton = ({
 
       const data = await response.json();
       if (!Array.isArray(data) || data.length === 0) {
-        alert('No data available to download.');
+        alert("No data available to download.");
         return;
       }
 
       const wb = XLSX.utils.book_new();
       const headers = Object.keys(data[0]);
       // Add "Errors" column at the end
-      const excelHeaders = [...headers, 'Errors'];
+      const excelHeaders = [...headers, "Errors"];
       const excelData = [excelHeaders];
       const errorCells = [];
       const errorSummary = []; // Store error details for summary sheet
@@ -415,15 +447,15 @@ export const DownloadExcelButton = ({
 
         headers.forEach((header, colIndex) => {
           const field = item[header];
-          let value = '';
-          if (field && typeof field === 'object' && 'value' in field) {
-            value = field.value ?? '';
-            if (field.error && field.color === 'red') {
+          let value = "";
+          if (field && typeof field === "object" && "value" in field) {
+            value = field.value ?? "";
+            if (field.error && field.color === "red") {
               value = `ERROR: ${value}`;
               errorCells.push({
                 row: rowIndex + 1,
                 col: colIndex,
-                error: field.error
+                error: field.error,
               });
 
               rowErrors.push(`${header}: ${field.error}`);
@@ -432,16 +464,16 @@ export const DownloadExcelButton = ({
                 rowNumber: rowIndex + 2,
                 column: header,
                 cellValue: value,
-                errorMessage: field.error
+                errorMessage: field.error,
               });
             }
           } else {
-            value = field ?? '';
+            value = field ?? "";
           }
           row.push(value);
         });
 
-        row.push(rowErrors.join('\n'));
+        row.push(rowErrors.join("\n"));
         excelData.push(row);
       });
 
@@ -451,41 +483,49 @@ export const DownloadExcelButton = ({
         if (!ws[cellRef]) ws[cellRef] = {};
         ws[cellRef].s = {
           font: {
-            color: { rgb: 'FFFF0000' },
-            bold: true
-          }
+            color: { rgb: "FFFF0000" },
+            bold: true,
+          },
         };
       });
 
-      const errorsHeaderRef = XLSX.utils.encode_cell({ r: 0, c: headers.length });
+      const errorsHeaderRef = XLSX.utils.encode_cell({
+        r: 0,
+        c: headers.length,
+      });
       if (!ws[errorsHeaderRef]) ws[errorsHeaderRef] = {};
       ws[errorsHeaderRef].s = {
         fill: {
-          patternType: 'solid',
-          fgColor: { rgb: 'FFFFCCCC' }
+          patternType: "solid",
+          fgColor: { rgb: "FFFFCCCC" },
         },
         font: {
           bold: true,
-          color: { rgb: 'FF000000' }
-        }
+          color: { rgb: "FF000000" },
+        },
       };
 
-      ws['!cols'] = headers.map(() => ({ wch: 20 }));
-      ws['!cols'].push({ wch: 40 });
+      ws["!cols"] = headers.map(() => ({ wch: 20 }));
+      ws["!cols"].push({ wch: 40 });
 
       // Add main data sheet
-      XLSX.utils.book_append_sheet(wb, ws, 'Data');
+      XLSX.utils.book_append_sheet(wb, ws, "Data");
 
       if (errorSummary.length > 0) {
-        const errorHeaders = ['Row Number', 'Column', 'Cell Value', 'Error Message'];
+        const errorHeaders = [
+          "Row Number",
+          "Column",
+          "Cell Value",
+          "Error Message",
+        ];
         const errorSheetData = [errorHeaders];
 
-        errorSummary.forEach(error => {
+        errorSummary.forEach((error) => {
           errorSheetData.push([
             error.rowNumber,
             error.column,
             error.cellValue,
-            error.errorMessage
+            error.errorMessage,
           ]);
         });
 
@@ -495,47 +535,48 @@ export const DownloadExcelButton = ({
           if (!errorWs[cellRef]) errorWs[cellRef] = {};
           errorWs[cellRef].s = {
             fill: {
-              patternType: 'solid',
-              fgColor: { rgb: 'FFD9534F' }
+              patternType: "solid",
+              fgColor: { rgb: "FFD9534F" },
             },
             font: {
               bold: true,
-              color: { rgb: 'FFFFFFFF' }
-            }
+              color: { rgb: "FFFFFFFF" },
+            },
           };
         });
 
-        errorWs['!cols'] = [
+        errorWs["!cols"] = [
           { wch: 12 }, // Row Number
           { wch: 20 }, // Column
           { wch: 25 }, // Cell Value
-          { wch: 40 }  // Error Message
+          { wch: 40 }, // Error Message
         ];
 
-        XLSX.utils.book_append_sheet(wb, errorWs, 'Error Summary');
+        XLSX.utils.book_append_sheet(wb, errorWs, "Error Summary");
       }
 
       const excelBuffer = XLSX.write(wb, {
-        bookType: 'xlsx',
-        type: 'array',
-        cellStyles: true
+        bookType: "xlsx",
+        type: "array",
+        cellStyles: true,
       });
 
       const blob = new Blob([excelBuffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
       saveAs(blob, fileName);
 
       if (errorSummary.length > 0) {
-        alert(`Excel file downloaded successfully!\n${errorSummary.length} validation errors found. Check the "Error Summary" sheet for details.`);
+        alert(
+          `Excel file downloaded successfully!\n${errorSummary.length} validation errors found. Check the "Error Summary" sheet for details.`,
+        );
       } else {
-        alert('Excel file downloaded successfully!');
+        alert("Excel file downloaded successfully!");
       }
-
     } catch (err) {
-      console.error('Download error:', err);
-      alert('Failed to download Excel file. Please try again.');
+      console.error("Download error:", err);
+      alert("Failed to download Excel file. Please try again.");
     } finally {
       setIsDownloading(false);
     }
@@ -545,18 +586,19 @@ export const DownloadExcelButton = ({
     <button
       onClick={handleDownload}
       disabled={isDownloading}
-      className={`inline-flex items-center px-3 py-1 text-xs font-medium transition-colors ${isDownloading
-        ? 'text-gray-400 cursor-not-allowed'
-        : isError
-          ? 'text-red-600 hover:text-red-800'
-          : 'text-blue-600 hover:text-blue-800'
-        }`}
+      className={`inline-flex items-center px-3 py-1 text-xs font-medium transition-colors ${
+        isDownloading
+          ? "text-gray-400 cursor-not-allowed"
+          : isError
+            ? "text-red-600 hover:text-red-800"
+            : "text-blue-600 hover:text-blue-800"
+      }`}
       title={
         isDownloading
-          ? 'Downloading...'
+          ? "Downloading..."
           : isError
-            ? 'Download Excel with error highlights and summary'
-            : 'Download Excel file'
+            ? "Download Excel with error highlights and summary"
+            : "Download Excel file"
       }
     >
       {isDownloading ? (
