@@ -1543,9 +1543,9 @@ const UserDetails = () => {
                       />
                     </div>
 
-                    <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
+                    {/* <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
                       Organization-level fields such as official email, phone, bank details, addresses, GSTIN, and PAN are managed in <strong>Seller Organizations</strong>.
-                    </div>
+                    </div> */}
                   </div>
                 </div>
 

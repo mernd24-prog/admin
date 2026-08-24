@@ -14,7 +14,7 @@ import Loader from "../../../components/Loader/Loader";
 import SummaryCard from "../../../components/Shared/SummaryCard";
 import DataTable from "../../../components/Shared/DataTable";
 import {OrderLink} from "../../../components/Shared/EntityLink";
-import { getMySellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
+import { getMySellerWalletSummary, getSellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
 import {
   formatCurrency,
   formatDateTime12Hour,
@@ -23,34 +23,27 @@ import {
 import { toast } from "sonner";
 import { apiRequest } from "../../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
+import { usePermission } from "../../../_helpers/usePermission";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 
 const unwrap = (value = {}) => value?.data?.data || value?.data || {};
 const money = (value, currency = "INR") =>
   formatCurrency(Number(value || 0), "₹0", currency);
-const label = (value = "") =>
-  String(value || "pending")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
-const emptyBankDetails = {
-  accountHolderName: "",
-  accountNumber: "",
-  ifscCode: "",
-  bankName: "",
-  branchName: "",
+const receivableMeaning = (item = {}) => {
+  const status = String(item.releaseStatus || item.status || "pending").toLowerCase();
+  const reason = String(item.releaseReason || "").toLowerCase();
+  if (["released", "paid", "completed"].includes(status)) return "Included in a completed payout or balance adjustment.";
+  if (["processing", "approved"].includes(status)) return "Included in a payout that is currently being processed.";
+  if (["held", "blocked", "on_hold"].includes(status)) return "Temporarily unavailable because of a return, refund, dispute, or payment hold.";
+  if (["eligible", "available"].includes(status)) return "Return window is closed and this earning is available for payout or liability adjustment.";
+  if (reason.includes("return_window")) return "Waiting for the product return window to close before this earning can be released.";
+  return "Earning is recorded but has not reached its payout release milestone yet.";
 };
 const listFrom = (response = {}) => {
   const root = unwrap(response);
   return root.items || root.list || root.rows || root.data || [];
 };
-const clean = (value = "") => String(value || "").trim();
-const normalizeBankDetails = (bankDetails = {}) => ({
-  accountHolderName: clean(bankDetails.accountHolderName),
-  accountNumber: clean(bankDetails.accountNumber).replace(/\D/g, ""),
-  ifscCode: clean(bankDetails.ifscCode).toUpperCase(),
-  bankName: clean(bankDetails.bankName),
-  branchName: clean(bankDetails.branchName),
-});
 const organizationIdOf = (organization) => {
   const source = organization || {};
   return source.id || source._id || source.organizationId || source.organization_id || "";
@@ -59,6 +52,7 @@ const organizationIdOf = (organization) => {
 export default function SellerWallet() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { isSeller } = usePermission();
   const walletState = useSelector(
     (state) => state.sellerCommissions?.walletSummaryData || {},
   );
@@ -69,20 +63,14 @@ export default function SellerWallet() {
   const items = Array.isArray(wallet.items) ? wallet.items : [];
   const loading = Boolean(walletState.loading);
   const [savingPreference, setSavingPreference] = useState(false);
-  const [savingBank, setSavingBank] = useState(false);
+  const [sellerOptions, setSellerOptions] = useState([]);
+  const [selectedSellerId, setSelectedSellerId] = useState(
+    () => new URLSearchParams(window.location.search).get("sellerId") || "",
+  );
   const [organizations, setOrganizations] = useState([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState("");
-  const [bankDetails, setBankDetails] = useState(emptyBankDetails);
-  const [bankErrors, setBankErrors] = useState({});
   const payoutPreference = wallet.payoutPreference || {};
   const payoutDestination = payoutPreference.destination || "razorpayx";
-  const walletOrganizationId =
-    payoutPreference.organizationId ||
-    wallet.organizationId ||
-    wallet.organization_id ||
-    items.find((item) => item.organizationId || item.organization_id)?.organizationId ||
-    items.find((item) => item.organizationId || item.organization_id)?.organization_id ||
-    "";
   const sellerWallet = wallet.sellerWallet || {};
   const walletTransactions = Array.isArray(sellerWallet.transactions)
     ? sellerWallet.transactions
@@ -111,15 +99,13 @@ export default function SellerWallet() {
       },
       {
         key: "releaseReason",
-        label: "Reason / release",
+        label: "What this amount means",
         render: (value, item) => (
-          <div>
-            <div className="max-w-xs text-xs text-gray-600">
-              {formatLabel(value || label(item.releaseStatus))}
-            </div>
+          <div className="min-w-[260px] max-w-[360px]">
+            <div className="text-xs leading-5 text-gray-600">{receivableMeaning(item)}</div>
             {item.eligibleAt && (
               <div className="mt-1 text-[11px] text-gray-400">
-                Eligible {formatDateTime12Hour(item.eligibleAt)}
+                Release date: {formatDateTime12Hour(item.eligibleAt)}
               </div>
             )}
           </div>
@@ -137,6 +123,11 @@ export default function SellerWallet() {
 
   const load = useCallback(async () => {
     try {
+      if (!isSeller) {
+        if (!selectedSellerId) return;
+        await dispatch(getSellerWalletSummary({ sellerId: selectedSellerId })).unwrap();
+        return;
+      }
       const [walletResponse, organizationResponse] = await Promise.all([
         dispatch(
         getMySellerWalletSummary({ limit: 100, offset: 0 }),
@@ -157,11 +148,17 @@ export default function SellerWallet() {
       } else if (loadedPreference.organizationId) {
         setSelectedOrganizationId(loadedPreference.organizationId);
       }
-      setBankDetails(normalizeBankDetails(loadedPreference.bankDetails || {}));
     } catch (error) {
       toast.error(error?.message || error || "Unable to load seller wallet");
     }
-  }, [dispatch, payoutPreference.organizationId]);
+  }, [dispatch, isSeller, payoutPreference.organizationId, selectedSellerId]);
+
+  useEffect(() => {
+    if (isSeller) return;
+    dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {
+      toast.error("Unable to load sellers");
+    });
+  }, [isSeller]);
 
   useEffect(() => {
     load();
@@ -189,77 +186,22 @@ export default function SellerWallet() {
       null,
     [organizations, selectedOrganizationId],
   );
-
-  const updateSelectedOrganization = (organizationId) => {
-    setSelectedOrganizationId(organizationId);
-    setBankDetails((current) => normalizeBankDetails(current));
-    setBankErrors({});
-  };
-
-  const updateBankField = (field, value) => {
-    setBankDetails((current) => ({
-      ...current,
-      [field]: field === "ifscCode"
-        ? value.toUpperCase()
-        : field === "accountNumber"
-          ? value.replace(/\D/g, "")
-          : value,
-    }));
-    setBankErrors((current) => {
-      const next = { ...current };
-      delete next[field];
-      return next;
-    });
-  };
-
-  const validateBankDetails = () => {
-    const next = {};
-    const payload = normalizeBankDetails(bankDetails);
-    if (!payload.accountHolderName) next.accountHolderName = "Account holder name is required";
-    if (!/^\d{9,18}$/.test(payload.accountNumber)) next.accountNumber = "Enter 9 to 18 digit account number";
-    if (!IFSC_REGEX.test(payload.ifscCode)) next.ifscCode = "Enter valid IFSC, e.g. HDFC0001234";
-    if (!payload.bankName) next.bankName = "Bank name is required";
-    setBankErrors(next);
-    return Object.keys(next).length ? null : payload;
-  };
-
-  const saveBankDetails = async () => {
-    const targetOrganizationId =
-      selectedOrganizationId ||
-      organizationIdOf(selectedOrganization) ||
-      walletOrganizationId;
-    if (!targetOrganizationId) {
-      toast.error("Seller store is not linked yet. Please refresh once or complete seller store setup first.");
-      return;
-    }
-    const payload = validateBankDetails();
-    if (!payload) {
-      toast.error("Please fix payout bank details");
-      return;
-    }
-    try {
-      setSavingBank(true);
-      await apiRequest("PATCH", ENDPOINTS.payouts.myPayoutPreference, {
-        organizationId: targetOrganizationId,
-        payoutDestination: "razorpayx",
-        bankDetails: payload,
-      });
-      toast.success("Payout bank details saved");
-      await load();
-    } catch (error) {
-      toast.error(error?.message || error || "Unable to save payout bank details");
-    } finally {
-      setSavingBank(false);
-    }
-  };
+  const savedBankDetails = selectedOrganization?.bankDetails || payoutPreference.bankDetails || {};
+  const savedAccountNumber = String(savedBankDetails.accountNumber || "");
+  const hasSavedBank = Boolean(
+    savedBankDetails.accountHolderName &&
+    savedAccountNumber &&
+    savedBankDetails.ifscCode &&
+    savedBankDetails.bankName,
+  );
 
   return (
     <div>
       <Loader loading={loading} />
       <PageHeader
-        title="Wallet"
-        subtitle="Track receivables, holds, payout processing, adjustments, and released earnings."
-        breadcrumbs={[{ label: "My Finance & Payouts" }, { label: "Wallet" }]}
+        title={isSeller ? "Wallet" : "Seller Wallet"}
+        subtitle={isSeller ? "Understand what you earned, what is waiting, what you owe, and what can actually be paid out." : "Select a seller to review earnings, liabilities, adjustments, and payout readiness."}
+        breadcrumbs={[{ label: isSeller ? "My Finance & Payouts" : "Seller Finance & Payouts" }, { label: "Wallet" }]}
         actions={
           <button
             type="button"
@@ -271,14 +213,40 @@ export default function SellerWallet() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <SummaryCard
-          title="Payable after adjustments"
-          value={money(balances.effectiveAvailablePayout, currency)}
-          description={`${money(balances.availableBalance, currency)} earnings before COD and other liabilities`}
-          icon={<MdAccountBalanceWallet size={22} />}
-        />
+      {!isSeller && (
+        <div className="admin-card mb-4 max-w-xl p-4">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Seller</label>
+          <FilterSelect
+            options={sellerOptions}
+            value={sellerOptions.find((option) => String(option.value) === String(selectedSellerId)) || null}
+            onChange={(option) => setSelectedSellerId(option?.value || "")}
+            placeholder="Select seller to view wallet"
+            isSearchable
+            isClearable
+          />
+        </div>
+      )}
 
+      {!isSeller && !selectedSellerId ? (
+        <div className="admin-card p-10 text-center text-sm text-[var(--admin-muted)]">Select a seller above to view their wallet and balance movements.</div>
+      ) : (
+        <>
+
+      {Number(balances.codLiabilityBalance || 0) > 0 && (
+        <div className="admin-card mb-4 border-l-4 border-l-[var(--admin-gold)] p-4 text-sm text-[var(--admin-ink)]">
+          <div className="font-semibold">You currently hold {money(balances.codLiabilityBalance, currency)} of seller-collected COD cash.</div>
+          <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">It is adjusted from released earnings; any unpaid remainder carries forward.</p>
+        </div>
+      )}
+
+      <div className="admin-card mb-4 grid gap-3 p-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
+        <div><span className="block text-xs text-[var(--admin-muted)]">Available earnings</span><strong className="text-[var(--admin-ink)]">{money(balances.availableBalance, currency)}</strong></div>
+        <div><span className="block text-xs text-[var(--admin-muted)]">Less: COD liability</span><strong className="text-red-600">−{money(balances.codLiabilityBalance, currency)}</strong></div>
+        <div><span className="block text-xs text-[var(--admin-muted)]">Less: other adjustments</span><strong className="text-red-600">−{money(balances.otherAdjustmentBalance, currency)}</strong></div>
+        <div className="xl:border-l xl:border-[var(--admin-line)] xl:pl-4"><span className="block text-xs text-[var(--admin-muted)]">Payable now</span><strong className="text-[var(--admin-gold-dark)]">{money(balances.effectiveAvailablePayout, currency)}</strong></div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <SummaryCard
           title="Seller wallet balance"
           value={money(sellerWallet.availableBalance, currency)}
@@ -347,6 +315,8 @@ export default function SellerWallet() {
         </section>
 
         <aside className="space-y-4">
+          {isSeller && (
+            <>
           <div className="rounded-xl border border-gray-200 bg-white p-4">
             <h2 className="text-[18px] font-medium text-gray-900">
               Payout preference
@@ -390,7 +360,7 @@ export default function SellerWallet() {
                 Payout bank account
               </h2>
               <p className="mt-1 text-xs text-gray-500">
-                Add or update the bank account where RazorpayX payouts should be received.
+                RazorpayX uses the verified bank details saved in your store profile.
               </p>
               {organizations.length > 1 && (
                 <label className="mt-3 block text-xs font-medium text-gray-600">
@@ -398,7 +368,7 @@ export default function SellerWallet() {
                   <select
                     className="admin-input mt-1 w-full"
                     value={selectedOrganizationId}
-                    onChange={(event) => updateSelectedOrganization(event.target.value)}
+                    onChange={(event) => setSelectedOrganizationId(event.target.value)}
                   >
                     {organizations.map((organization) => (
                       <option key={organizationIdOf(organization)} value={organizationIdOf(organization)}>
@@ -408,45 +378,26 @@ export default function SellerWallet() {
                   </select>
                 </label>
               )}
-              <div className="mt-3 space-y-3">
-                {[
-                  ["accountHolderName", "Account holder name", "Sachin Singh"],
-                  ["accountNumber", "Account number", "123456789012"],
-                  ["ifscCode", "IFSC code", "HDFC0001234"],
-                  ["bankName", "Bank name", "HDFC Bank"],
-                  ["branchName", "Branch name", "Optional"],
-                ].map(([field, fieldLabel, placeholder]) => (
-                  <label key={field} className="block text-xs font-medium text-gray-600">
-                    {fieldLabel}
-                    <input
-                      className={`admin-input mt-1 w-full ${bankErrors[field] ? "border-red-300" : ""}`}
-                      value={bankDetails[field] || ""}
-                      placeholder={placeholder}
-                      maxLength={field === "ifscCode" ? 11 : undefined}
-                      onChange={(event) => updateBankField(field, event.target.value)}
-                    />
-                    {bankErrors[field] && (
-                      <span className="mt-1 block text-[11px] text-red-600">
-                        {bankErrors[field]}
-                      </span>
-                    )}
-                  </label>
-                ))}
+              <div className={`mt-3 rounded-lg border p-3 text-sm ${hasSavedBank ? "border-emerald-100 bg-emerald-50" : "border-amber-100 bg-amber-50"}`}>
+                {hasSavedBank ? (
+                  <dl className="space-y-2 text-gray-700">
+                    <div><dt className="text-xs text-gray-500">Account holder</dt><dd className="font-medium">{savedBankDetails.accountHolderName}</dd></div>
+                    <div><dt className="text-xs text-gray-500">Bank account</dt><dd className="font-medium">{savedBankDetails.bankName} · •••• {savedAccountNumber.slice(-4)}</dd></div>
+                    <div><dt className="text-xs text-gray-500">IFSC</dt><dd className="font-medium">{savedBankDetails.ifscCode}</dd></div>
+                  </dl>
+                ) : (
+                  <p className="text-amber-700">Complete the bank details in My Store before selecting RazorpayX payouts.</p>
+                )}
               </div>
-              <button
-                type="button"
-                className="mt-4 flex h-11 w-full items-center justify-center rounded-md bg-[#2f6fed] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#245bd3] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
-                disabled={savingBank}
-                onClick={saveBankDetails}
-              >
-                {savingBank ? "Saving..." : "Save payout bank"}
-              </button>
+            
               {selectedOrganization?.bankVerificationStatus && (
                 <p className="mt-3 text-xs text-gray-500">
                   Verification status: {formatLabel(selectedOrganization.bankVerificationStatus)}.
                 </p>
               )}
             </div>
+          )}
+            </>
           )}
           <div className="rounded-xl border border-gray-200 bg-white p-4">
             <h2 className="text-[18px] font-medium text-gray-900">
@@ -471,7 +422,7 @@ export default function SellerWallet() {
             <button
               type="button"
               className="admin-btn mt-4 w-full"
-              onClick={() => navigate("/app/seller-payouts")}
+              onClick={() => navigate(isSeller ? "/app/seller-payouts" : `/app/seller-payouts?sellerId=${selectedSellerId}`)}
             >
               View payouts
             </button>
@@ -508,7 +459,7 @@ export default function SellerWallet() {
               {money(balances.codLiabilityBalance, currency)}
             </p>
             <p className="mt-1 text-xs text-gray-500">
-              COD cash held by you. It is automatically deducted from released earnings and any remainder carries forward.
+              {isSeller ? "COD cash held by you." : "COD cash held by this seller."} It is automatically deducted from released earnings and any remainder carries forward.
             </p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -535,6 +486,8 @@ export default function SellerWallet() {
           </div>
         </aside>
       </div>
+        </>
+      )}
     </div>
   );
 }

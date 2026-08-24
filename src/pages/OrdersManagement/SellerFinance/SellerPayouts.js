@@ -99,6 +99,52 @@ const signedMoney = (value, currency = "INR") => {
   return money(0, currency);
 };
 
+const payoutExplanation = (row = {}) => {
+  const metadata = jsonOf(row.metadata);
+  const recovery = Number(metadata.recoveryAppliedAmount || 0);
+  const remaining = (metadata.recoveryApplications || []).reduce(
+    (sum, item) => sum + Number(item?.remainingAmount || 0),
+    0,
+  );
+  const net = Number(valueOf(row, "net_amount", "netAmount") || 0);
+  const method = String(valueOf(row, "payment_method", "paymentMethod") || "").toLowerCase();
+  if (metadata.offsetOnly || method === "ledger_offset") {
+    return {
+      title: "No bank transfer",
+      detail: `${money(recovery, row.currency)} of earnings adjusted against seller-collected COD${remaining > 0 ? `; ${money(remaining, row.currency)} still owed to platform` : ""}.`,
+      tone: "amber",
+    };
+  }
+  if (recovery > 0) {
+    return {
+      title: `${money(net, row.currency)} payable after adjustment`,
+      detail: `${money(recovery, row.currency)} adjusted against COD/negative balance; the remainder is transferable.`,
+      tone: "amber",
+    };
+  }
+  if (["completed", "processed"].includes(String(row.status || "").toLowerCase())) {
+    return { title: "Transfer completed", detail: "Net payout was released through the selected payout destination.", tone: "green" };
+  }
+  return { title: "Transfer not completed", detail: "This payout is waiting for approval, processing, or provider confirmation.", tone: "gray" };
+};
+
+const settlementExplanation = (row = {}) => {
+  const metadata = jsonOf(row.metadata);
+  const source = String(metadata.source || "").toLowerCase();
+  const amount = Math.abs(Number(valueOf(row, "net_amount", "netAmount") || 0));
+  if (source === "negative_balance_offset_application") {
+    return `Applied ${money(amount, row.currency)} of earnings to seller-collected COD liability.`;
+  }
+  if (source === "ledger_offset_only") {
+    return "Payout closed with no transfer because all available earnings were used for COD/negative balance.";
+  }
+  if (source === "seller_direct_cod_recovery" || metadata.adjustmentType === "cod_recovery") {
+    const remaining = Number(metadata.remainingAmount ?? metadata.recoveryAmount ?? amount);
+    return `${money(remaining, row.currency)} seller-collected COD is still owed to the platform and will carry forward.`;
+  }
+  return row.notes || "Settlement movement created from the payout calculation.";
+};
+
 const getInitialPayoutFilters = () => {
   const params = new URLSearchParams(window.location.search);
   return ["sellerId", "status", "fromDate", "toDate"].reduce((filters, key) => {
@@ -214,74 +260,57 @@ const SellerPayouts = () => {
         render: (value, row) => money(value ?? row.totalAmount, row.currency),
       },
       {
-        key: "commission_amount",
-        label: "Platform commission",
-        render: (value, row) => (
-          <span className="text-red-600">
-            -{money(value ?? row.commissionAmount, row.currency)}
-          </span>
-        ),
-      },
-      {
-        key: "tax_amount",
-        label: "GST on commission",
-        render: (value, row) => (
-          <span className="text-red-600">
-            -{money(value ?? row.taxAmount, row.currency)}
-          </span>
-        ),
-      },
-      {
-        key: "tax_withheld",
-        label: "TCS/TDS",
+        key: "deductions",
+        label: "Fees & deductions",
         render: (_, row) => {
           const breakdown = breakdownOf(row);
-          return (
-            <span className="text-red-600">
-              -
-              {money(
-                Number(breakdown.gstTcsAmount || 0) +
-                  Number(breakdown.incomeTaxTdsAmount || 0),
-                row.currency,
-              )}
-            </span>
-          );
-        },
-      },
-      {
-        key: "shipping_net",
-        label: "Shipping net",
-        render: (_, row) => {
-          const breakdown = breakdownOf(row);
-          const shippingNet =
+          const commission = Number(valueOf(row, "commission_amount", "commissionAmount"));
+          const commissionTax = Number(valueOf(row, "tax_amount", "taxAmount"));
+          const withholding =
+            Number(breakdown.gstTcsAmount || 0) +
+            Number(breakdown.incomeTaxTdsAmount || 0);
+          const refund = Number(valueOf(row, "refund_amount", "refundAmount"));
+          const shipping =
             Number(breakdown.shippingReimbursementAmount || 0) -
             Number(breakdown.shippingDeductionAmount || 0);
           return (
-            <span
-              className={shippingNet >= 0 ? "text-green-700" : "text-red-600"}
-            >
-              {signedMoney(shippingNet, row.currency)}
-            </span>
+            <div className="min-w-[190px] space-y-0.5 text-xs">
+              <div className="flex justify-between gap-4"><span className="text-[var(--admin-muted)]">Commission + GST</span><span className="font-medium text-red-600">−{money(commission + commissionTax, row.currency)}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-[var(--admin-muted)]">TCS / TDS</span><span className="text-red-600">−{money(withholding, row.currency)}</span></div>
+              {(refund !== 0 || shipping !== 0) && <div className="flex justify-between gap-4"><span className="text-[var(--admin-muted)]">Refund / shipping</span><span className={shipping - refund >= 0 ? "text-green-700" : "text-red-600"}>{signedMoney(shipping - refund, row.currency)}</span></div>}
+            </div>
           );
         },
       },
       {
-        key: "refund_amount",
-        label: "Refunds",
-        render: (value, row) => (
-          <span className="text-red-600">
-            -{money(value ?? row.refundAmount, row.currency)}
-          </span>
-        ),
+        key: "adjustment_amount",
+        label: "COD / other adjustment",
+        render: (value, row) => {
+          const amount = Number(value ?? row.adjustmentAmount ?? 0);
+          return <span className={amount < 0 ? "font-medium text-red-600" : "text-green-700"}>{signedMoney(amount, row.currency)}</span>;
+        },
       },
       {
         key: "net_amount",
-        label: "Net payout",
+        label: "Amount to transfer",
         render: (value, row) => (
           <span className="font-semibold text-green-700">
             {money(value ?? row.netAmount, row.currency)}
           </span>
         ),
+      },
+      {
+        key: "outcome",
+        label: "Outcome / reason",
+        render: (_, row) => {
+          const explanation = payoutExplanation(row);
+          return (
+            <div className="min-w-[220px] max-w-[300px]">
+              <div className={explanation.tone === "green" ? "font-semibold text-green-700" : explanation.tone === "amber" ? "font-semibold text-amber-700" : "font-semibold text-gray-700"}>{explanation.title}</div>
+              <div className="mt-0.5 text-xs leading-5 text-gray-500">{explanation.detail}</div>
+            </div>
+          );
+        },
       },
       {
         key: "period_start",
@@ -290,15 +319,6 @@ const SellerPayouts = () => {
           <span className="text-xs text-gray-500">
             {fmt(value ?? row.periodStart)} –{" "}
             {fmt(valueOf(row, "period_end", "periodEnd"))}
-          </span>
-        ),
-      },
-      {
-        key: "processed_at",
-        label: "Paid",
-        render: (value, row) => (
-          <span className="text-xs text-gray-500">
-            {fmt(value ?? row.processedAt, true)}
           </span>
         ),
       },
@@ -364,17 +384,23 @@ const SellerPayouts = () => {
           `-${money(valueOf(row, "refund_amount", "refundAmount"), row.currency)}`,
       },
       {
-        label: "Net payout",
+        label: "COD / other adjustment",
+        value: (row) =>
+          signedMoney(valueOf(row, "adjustment_amount", "adjustmentAmount"), row.currency),
+      },
+      {
+        label: "Amount to transfer",
         value: (row) =>
           money(valueOf(row, "net_amount", "netAmount"), row.currency),
       },
+      { label: "Outcome / reason", value: (row) => payoutExplanation(row).detail },
       {
         label: "Period",
         value: (row) =>
           `${fmt(valueOf(row, "period_start", "periodStart"))} – ${fmt(valueOf(row, "period_end", "periodEnd"))}`,
       },
       {
-        label: "Paid",
+        label: "Transfer date",
         value: (row) => fmt(valueOf(row, "processed_at", "processedAt")),
       },
     ],
@@ -451,9 +477,10 @@ const SellerPayouts = () => {
         value: (row) =>
           money(valueOf(row, "net_amount", "netAmount"), row.currency),
       },
+      { label: "Movement / reason", value: (row) => settlementExplanation(row) },
       { label: "Status", value: (row) => formatLabel(row.status || "pending") },
       {
-        label: "Paid",
+        label: "Recorded on",
         value: (row) =>
           fmt(
             valueOf(row, "settlement_date", "settlementDate") ?? row.created_at,
@@ -483,7 +510,7 @@ const SellerPayouts = () => {
         title="My Payouts"
         subtitle={
           isSeller
-            ? "See how every payout was calculated and when it was paid."
+            ? "See what was earned, what was adjusted, why it was adjusted, and how much was actually transferred."
             : "Calculated seller payouts. Use Payout Operations to approve or complete them."
         }
         breadcrumbs={[{ label: "My Finance & Payouts" }, { label: "Payouts" }]}
@@ -496,6 +523,13 @@ const SellerPayouts = () => {
           </div>
         }
       />
+
+      {isSeller && (
+        <div className="admin-card border-l-4 border-l-[var(--admin-gold)] px-4 py-3 text-sm text-[var(--admin-ink)]">
+          <strong>Receivable − fees − COD/other adjustments = amount transferred.</strong>
+          <span className="ml-1 text-[var(--admin-muted)]">A completed ₹0 payout means earnings were fully adjusted; check the outcome column.</span>
+        </div>
+      )}
 
       {/* <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
         Payout amounts come from delivered orders and their checkout fee snapshots. They cannot be typed manually.
@@ -563,16 +597,13 @@ const SellerPayouts = () => {
             <table className="min-w-full text-left text-sm">
               <thead className="admin-table-head text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
                 <tr>
-                  <th className="px-5 py-3">Settlement</th>
-                  <th className="px-4 py-3">Payout</th>
-                  <th className="px-4 py-3">Seller Receivable</th>
-                  <th className="px-4 py-3">Platform Commission</th>
-                  <th className="px-4 py-3">GST on Commission</th>
-                  <th className="px-4 py-3">TCS/TDS</th>
-                  <th className="px-4 py-3">Shipping Net</th>
-                  <th className="px-4 py-3">Net</th>
+                  <th className="px-5 py-3">Reference</th>
+                  <th className="px-4 py-3">Earnings</th>
+                  <th className="px-4 py-3">Fees & Taxes</th>
+                  <th className="px-4 py-3">Movement</th>
+                  <th className="px-4 py-3">Reason</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Paid</th>
+                  <th className="px-4 py-3">Recorded On</th>
                   <th className="px-4 py-3 text-right">Statement</th>
                 </tr>
               </thead>
@@ -587,6 +618,10 @@ const SellerPayouts = () => {
                     const shippingNet =
                       Number(breakdown.shippingReimbursementAmount || 0) -
                       Number(breakdown.shippingDeductionAmount || 0);
+                    const feesAndTaxes =
+                      Number(valueOf(row, "commission_amount", "commissionAmount")) +
+                      Number(valueOf(row, "tax_amount", "taxAmount")) +
+                      taxWithheld - shippingNet;
                     return (
                       <tr
                         key={row.id}
@@ -599,17 +634,7 @@ const SellerPayouts = () => {
                           >
                             #{String(row.id || "").slice(0, 8) || "—"}
                           </span>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3">
-                          <span
-                            title={valueOf(row, "payout_id", "payoutId")}
-                            className="rounded bg-[var(--admin-canvas)] px-1.5 py-0.5 font-mono text-xs text-[var(--admin-ink)]"
-                          >
-                            #
-                            {String(
-                              valueOf(row, "payout_id", "payoutId") || "—",
-                            ).slice(0, 8)}
-                          </span>
+                          <div className="mt-1 text-[10px] text-[var(--admin-muted)]">Payout #{String(valueOf(row, "payout_id", "payoutId") || "—").slice(0, 8)}</div>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3">
                           {money(
@@ -618,36 +643,16 @@ const SellerPayouts = () => {
                           )}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-red-600">
-                          -
-                          {money(
-                            valueOf(
-                              row,
-                              "commission_amount",
-                              "commissionAmount",
-                            ),
-                            row.currency,
-                          )}
+                          −{money(Math.max(feesAndTaxes, 0), row.currency)}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-red-600">
-                          -
-                          {money(
-                            valueOf(row, "tax_amount", "taxAmount"),
-                            row.currency,
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-red-600">
-                          -{money(taxWithheld, row.currency)}
-                        </td>
-                        <td
-                          className={`whitespace-nowrap px-4 py-3 ${shippingNet >= 0 ? "text-green-700" : "text-red-600"}`}
-                        >
-                          {signedMoney(shippingNet, row.currency)}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 font-semibold text-green-700">
+                        <td className={`whitespace-nowrap px-4 py-3 font-semibold ${Number(valueOf(row, "net_amount", "netAmount")) < 0 ? "text-red-600" : "text-green-700"}`}>
                           {money(
                             valueOf(row, "net_amount", "netAmount"),
                             row.currency,
                           )}
+                        </td>
+                        <td className="min-w-[260px] max-w-[340px] px-4 py-3 text-xs leading-5 text-[var(--admin-muted)]">
+                          {settlementExplanation(row)}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3">
                           <StatusBadge status={row.status || "pending"} dot />
@@ -687,7 +692,7 @@ const SellerPayouts = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={11} className="px-5 py-10 text-center">
+                    <td colSpan={8} className="px-5 py-10 text-center">
                       <div className="flex flex-col items-center gap-2 text-[var(--admin-muted)]">
                         <MdReceiptLong
                           size={28}
@@ -815,7 +820,7 @@ const SellerPayouts = () => {
                       </span>
                     </div>
                     <div className="flex justify-between border-t pt-2 text-base font-semibold">
-                      <span>Net payout</span>
+                      <span>Amount to transfer</span>
                       <span className="text-green-700">
                         {money(
                           valueOf(detail, "net_amount", "netAmount"),
@@ -823,6 +828,10 @@ const SellerPayouts = () => {
                         )}
                       </span>
                     </div>
+                  </div>
+                  <div className={`rounded-lg border p-4 ${payoutExplanation(detail).tone === "green" ? "border-green-200 bg-green-50 text-green-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+                    <div className="font-semibold">{payoutExplanation(detail).title}</div>
+                    <p className="mt-1 text-xs leading-5">{payoutExplanation(detail).detail}</p>
                   </div>
                 </>
               );
