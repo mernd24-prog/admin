@@ -6,8 +6,6 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   createProducts,
   getProductPrefill,
-  getProductPrefillProducts,
-  getProductPrefillLocations,
   getProductById,
   updateProductsById,
   getCategoryAttributes,
@@ -50,23 +48,44 @@ import { isSellerPanel } from "../../../../_helpers/panelConfig";
 
 const API_CALLS = [
   {
-    action: () => getProductPrefill({ includeProducts: false, limit: 20 }),
-    name: "Product Prefill Basic+Lookups",
+    action: () =>
+      getProductPrefill({
+        includeProducts: false,
+        includeLocations: true,
+        limit: 20,
+      }),
+    name: "Product Prefill",
   },
 ];
 
 const API_CALL_OBJECT = {
   "Category List": {
-    action: () => getProductPrefill({ includeProducts: true, limit: 100 }),
-    name: "Product Prefill",
+    action: () =>
+      getProductPrefill({
+        includeLookups: false,
+        includeLocations: false,
+        includeProducts: false,
+      }),
+    name: "Category List",
   },
   "Country List": {
-    action: () => getProductPrefill({ includeProducts: true, limit: 100 }),
-    name: "Product Prefill",
+    action: () =>
+      getProductPrefill({
+        includeBasic: false,
+        includeLookups: false,
+        includeLocations: true,
+        includeProducts: false,
+      }),
+    name: "Country List",
   },
   "Hsn code list": {
-    action: () => getProductPrefill({ includeProducts: true, limit: 100 }),
-    name: "Product Prefill",
+    action: () =>
+      getProductPrefill({
+        includeLookups: false,
+        includeLocations: false,
+        includeProducts: false,
+      }),
+    name: "HSN Code List",
   },
 };
 
@@ -277,6 +296,8 @@ export default function ProductManagementUI() {
   const [platformValues, setPlatformValues] = useState({});
   const fetchedOptionIds = useRef(new Set());
   const categoryAttributeRequestRef = useRef(0);
+  const initialPrefillStartedRef = useRef(false);
+  const requestedProductIdRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [shippingProfileOptions, setShippingProfileOptions] = useState([]);
   const [allowedPincodeInput, setAllowedPincodeInput] = useState("");
@@ -677,6 +698,8 @@ export default function ProductManagementUI() {
   );
 
   useEffect(() => {
+    if (initialPrefillStartedRef.current) return;
+    initialPrefillStartedRef.current = true;
     const userDataString = sessionStorage.getItem("EcomAdmin");
     if (userDataString) {
       try {
@@ -690,24 +713,25 @@ export default function ProductManagementUI() {
     fetchAllData();
   }, [fetchAllData]);
 
-  // background-load heavy prefill parts once initial prefill has completed
+  // Related-product choices are not required to render the form. Load them
+  // once after the required lookup data, and merge them into the same prefill
+  // state without downloading locations a second time.
   useEffect(() => {
     if (loading) return;
-    // fetch larger payloads in background without blocking UI
-    (async () => {
-      try {
-        // products (related products) can be heavy
-        dispatch(getProductPrefillProducts({ includeProducts: true, productLimit: 100 })).catch(() => {});
-        // locations (cities/states/warehouses)
-        dispatch(getProductPrefillLocations({})).catch(() => {});
-      } catch (err) {
-        // intentionally swallow—these are background best-effort loads
-      }
-    })();
+    dispatch(
+      getProductPrefill({
+        includeBasic: false,
+        includeLookups: false,
+        includeLocations: false,
+        includeProducts: true,
+        productLimit: 100,
+      }),
+    ).catch(() => {});
   }, [loading, dispatch]);
 
   useEffect(() => {
-    if (id) {
+    if (id && requestedProductIdRef.current !== String(id)) {
+      requestedProductIdRef.current = String(id);
       fetchProductById(id);
     }
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps

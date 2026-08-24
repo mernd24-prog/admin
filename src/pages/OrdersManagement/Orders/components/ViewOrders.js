@@ -623,21 +623,100 @@ const getOrderItemTitle = (item = {}) => {
   return firstDefined(item.product_title, item.productTitle, snapshot.title, item.name, item.product_id, item.productId, "Product");
 };
 
+const getOrderItemVariantLabel = (item = {}) => {
+  const snapshot = normalizeJson(firstDefined(item.product_snapshot, item.productSnapshot), {});
+  const directTitle = String(firstDefined(
+    item.variant_title,
+    item.variantTitle,
+    snapshot.variantTitle,
+    snapshot.variant_title,
+    "",
+  )).trim();
+  if (directTitle && directTitle.toLowerCase() !== "default") return directTitle;
+
+  const attributes = normalizeJson(firstDefined(item.attributes, item.variant_attributes, item.variantAttributes), {});
+  const attributeLabel = Object.entries(attributes)
+    .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== "")
+    .map(([key, value]) => `${formatLabel(key)}: ${String(value).trim()}`)
+    .join(" · ");
+  return attributeLabel || "";
+};
+
+const getReconciledItemTax = (item = {}) => {
+  const saved = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
+  const lineTotal = money(firstDefined(item.line_total, item.lineTotal, saved.lineTotal, 0));
+  const savedLineTotal = money(firstDefined(saved.lineTotal, saved.line_total, lineTotal));
+  const gstRate = money(firstDefined(saved.gstRate, saved.gst_rate, item.gst_rate, item.gstRate, 0));
+  const cessRate = money(firstDefined(saved.cessRate, saved.cess_rate, 0));
+  const gstInclusive = firstDefined(saved.gstInclusive, saved.gst_inclusive, true) !== false;
+  const sellerFundedDiscount = money(firstDefined(
+    saved.sellerFundedDiscountAmount,
+    saved.seller_funded_discount_amount,
+    item.pricing_snapshot?.sellerFundedDiscountAmount,
+    item.pricingSnapshot?.sellerFundedDiscountAmount,
+    0,
+  ));
+  const discountedLineTotal = money(Math.max(0, lineTotal - sellerFundedDiscount));
+  const mismatch = Math.abs(savedLineTotal - lineTotal) >= 0.01;
+
+  if (!mismatch) return { ...saved, reconciliationRequired: false };
+
+  const totalRate = gstRate + cessRate;
+  const taxableAmount = gstInclusive && totalRate > 0
+    ? money((discountedLineTotal * 100) / (100 + totalRate))
+    : discountedLineTotal;
+  const taxAmount = money(taxableAmount * gstRate / 100);
+  const cessAmount = gstInclusive
+    ? money(discountedLineTotal - taxableAmount - taxAmount)
+    : money(taxableAmount * cessRate / 100);
+
+  return {
+    ...saved,
+    lineTotal,
+    discountedLineTotal,
+    taxableAmount,
+    taxableAmountBeforeDiscount: gstInclusive && totalRate > 0
+      ? money((lineTotal * 100) / (100 + totalRate))
+      : lineTotal,
+    taxAmount,
+    cessAmount,
+    taxIncludedAmount: gstInclusive ? money(taxAmount + cessAmount) : 0,
+    taxPayableAmount: gstInclusive ? 0 : money(taxAmount + cessAmount),
+    gstRate,
+    cessRate,
+    gstInclusive,
+    reconciliationRequired: true,
+  };
+};
+
 const getCommissionForItem = (item = {}, records = []) => {
   const itemId = getOrderItemId(item);
   const productId = getItemProductId(item);
-  return (Array.isArray(records) ? records : []).find((record) => {
+  const variantId = String(firstDefined(item.variant_id, item.variantId, ""));
+  const variantSku = String(firstDefined(item.variant_sku, item.variantSku, item.product_sku, item.productSku, ""));
+  const candidates = (Array.isArray(records) ? records : []).map((record) => {
     const metadata = normalizeJson(record.metadata, {});
     const products = Array.isArray(metadata.products) ? metadata.products : [];
-    const ids = [
+    const itemIds = [
       record.order_item_id,
       record.orderItemId,
       ...(Array.isArray(record.order_item_ids) ? record.order_item_ids : []),
       ...(Array.isArray(record.orderItemIds) ? record.orderItemIds : []),
-      ...products.flatMap((product) => [product.orderItemId, product.order_item_id, product.productId, product.product_id]),
+      ...products.flatMap((product) => [product.orderItemId, product.order_item_id]),
     ].filter(Boolean).map(String);
-    return (itemId && ids.includes(itemId)) || (productId && ids.includes(productId));
-  }) || null;
+    const variantIds = products.flatMap((product) => [product.variantId, product.variant_id]).filter(Boolean).map(String);
+    const variantSkus = products.flatMap((product) => [product.variantSku, product.variant_sku, product.sku]).filter(Boolean).map(String);
+    const productIds = products.flatMap((product) => [product.productId, product.product_id]).filter(Boolean).map(String);
+    return { record, itemIds, variantIds, variantSkus, productIds };
+  });
+  return candidates.find((candidate) => itemId && candidate.itemIds.includes(String(itemId)))?.record ||
+    candidates.find((candidate) =>
+      (variantId && candidate.variantIds.includes(variantId)) ||
+      (variantSku && candidate.variantSkus.includes(variantSku)))?.record ||
+    (candidates.filter((candidate) => productId && candidate.productIds.includes(String(productId))).length === 1
+      ? candidates.find((candidate) => productId && candidate.productIds.includes(String(productId)))?.record
+      : null) ||
+    null;
 };
 
 const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionRecords = [], returnRequests = [], cancellations = []) => {
@@ -645,7 +724,7 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
   const cancellationImpactByItem = buildCancellationImpactByItem(cancellations);
   const productTotal = sellerItems.reduce((total, item) => total + money(firstDefined(item.line_total, item.lineTotal, 0)), 0);
   const taxableTotal = sellerItems.reduce((total, item) => {
-    const tax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
+    const tax = getReconciledItemTax(item);
     return total + money(firstDefined(tax.taxableAmount, tax.taxable_amount, item.taxable_amount, item.taxableAmount, 0));
   }, 0);
 
@@ -661,15 +740,22 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
     const reversedQuantity = Math.min(itemQuantity, money(returnedQuantity + cancelledQuantity));
     const remainingQuantity = Math.max(0, money(itemQuantity - reversedQuantity));
     const returnRatio = itemQuantity > 0 ? Math.min(1, reversedQuantity / itemQuantity) : 0;
-    const tax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
+    const tax = getReconciledItemTax(item);
     const pricing = normalizeJson(firstDefined(item.pricing_snapshot, item.pricingSnapshot), {});
     const record = getCommissionForItem(item, commissionRecords);
     const metadata = normalizeJson(record?.metadata, {});
     const product = Array.isArray(metadata.products) ? metadata.products[0] || {} : {};
     const lineTotal = money(firstDefined(item.line_total, item.lineTotal, product.amount, record?.amount, 0));
     const taxableBase = money(firstDefined(tax.taxableAmount, tax.taxable_amount, product.taxableAmount, item.taxable_amount, item.taxableAmount, lineTotal));
-    const gstTcsTaxableBase = money(firstDefined(metadata.taxableSupplyAmount, metadata.gstTcsTaxableAmount, metadata.gst_tcs_taxable_amount, pricing.gstTcsTaxableAmount, pricing.gst_tcs_taxable_amount, taxableBase));
-    const incomeTaxTdsTaxableBase = money(firstDefined(metadata.incomeTaxTdsTaxableAmount, metadata.income_tax_tds_taxable_amount, pricing.incomeTaxTdsTaxableAmount, pricing.income_tax_tds_taxable_amount, taxableBase));
+    const recordStatus = String(firstDefined(record?.status, item.payout_status, item.payoutStatus, "pending")).toLowerCase();
+    const financialRecordFinalized = ["paid", "completed", "processed", "settled"].includes(recordStatus);
+    const useReconciledLine = tax.reconciliationRequired && !financialRecordFinalized;
+    const gstTcsTaxableBase = useReconciledLine
+      ? taxableBase
+      : money(firstDefined(metadata.taxableSupplyAmount, metadata.gstTcsTaxableAmount, metadata.gst_tcs_taxable_amount, pricing.gstTcsTaxableAmount, pricing.gst_tcs_taxable_amount, taxableBase));
+    const incomeTaxTdsTaxableBase = useReconciledLine
+      ? taxableBase
+      : money(firstDefined(metadata.incomeTaxTdsTaxableAmount, metadata.income_tax_tds_taxable_amount, pricing.incomeTaxTdsTaxableAmount, pricing.income_tax_tds_taxable_amount, taxableBase));
     const productShare = productTotal > 0 ? lineTotal / productTotal : 0;
     const taxableShare = taxableTotal > 0 ? taxableBase / taxableTotal : productShare;
     const payoutMode = String(firstDefined(pricing.sellerPayoutBase, pricing.seller_payout_base, metadata.sellerPayoutBase, "")).toLowerCase();
@@ -681,9 +767,14 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
     const shipping = money(firstDefined(pricing.shippingReimbursementAmount, pricing.shipping_reimbursement_amount, metadata.shippingReimbursementAmount, metadata.sellerDeliveryChargeAmount, seller.shippingReimbursement * productShare));
     const shippingDeduction = money(firstDefined(pricing.shippingDeductionAmount, pricing.shipping_deduction_amount, metadata.shippingDeductionAmount, seller.shippingDeduction * productShare));
     const discount = discountIncluded ? 0 : money(firstDefined(pricing.marketplaceFundedDiscountAmount, pricing.marketplace_funded_discount_amount, product.marketplaceFundedDiscountAmount, seller.marketplaceFundedDiscount * productShare));
-    const commission = money(firstDefined(record?.commission_amount, record?.commissionAmount, metadata.platformFeeAmount, metadata.commissionFeeAmount, product.platformFeeAmount, pricing.platformFeeAmount, seller.commissionFee * taxableShare));
-    const commissionGst = money(firstDefined(record?.tax_amount, record?.taxAmount, metadata.platformFeeTaxAmount, product.platformFeeTaxAmount, pricing.platformFeeTaxAmount, seller.platformFeeTax * taxableShare));
     const commissionRate = money(firstDefined(metadata.platformFeeRate, metadata.commissionRate, pricing.platformFeeRate, pricing.commissionRate, seller.commissionRates?.[0], 0));
+    const commission = useReconciledLine && commissionRate > 0
+      ? money(taxableBase * commissionRate / 100)
+      : money(firstDefined(record?.commission_amount, record?.commissionAmount, metadata.platformFeeAmount, metadata.commissionFeeAmount, product.platformFeeAmount, pricing.platformFeeAmount, seller.commissionFee * taxableShare));
+    const commissionGstRate = money(firstDefined(metadata.platformFeeTaxRate, metadata.commissionTaxRate, pricing.platformFeeTaxRate, pricing.commissionTaxRate, seller.platformFeeTaxRate, 18));
+    const commissionGst = useReconciledLine
+      ? money(commission * commissionGstRate / 100)
+      : money(firstDefined(record?.tax_amount, record?.taxAmount, metadata.platformFeeTaxAmount, product.platformFeeTaxAmount, pricing.platformFeeTaxAmount, seller.platformFeeTax * taxableShare));
     const commissionBase = money(firstDefined(
       metadata.sellerCommissionBaseAmount,
       metadata.commissionBaseAmount,
@@ -699,9 +790,12 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
     const netCommission = money(commission * (1 - returnRatio));
     const netCommissionGst = money(commissionGst * (1 - returnRatio));
     const netCommissionBase = money(commissionBase * (1 - returnRatio));
-    const commissionGstRate = money(firstDefined(metadata.platformFeeTaxRate, metadata.commissionTaxRate, pricing.platformFeeTaxRate, pricing.commissionTaxRate, seller.platformFeeTaxRate, 18));
-    const gstTcs = money(firstDefined(metadata.gstTcsAmount, pricing.gstTcsAmount, pricing.gst_tcs_amount, seller.gstTcsAmount * taxableShare));
-    const incomeTaxTds = money(firstDefined(metadata.incomeTaxTdsAmount, pricing.incomeTaxTdsAmount, pricing.income_tax_tds_amount, seller.incomeTaxTdsAmount * taxableShare));
+    const gstTcs = useReconciledLine
+      ? money(taxableBase * money(seller.gstTcsRate) / 100)
+      : money(firstDefined(metadata.gstTcsAmount, pricing.gstTcsAmount, pricing.gst_tcs_amount, seller.gstTcsAmount * taxableShare));
+    const incomeTaxTds = useReconciledLine
+      ? money(taxableBase * money(seller.incomeTaxTdsRate) / 100)
+      : money(firstDefined(metadata.incomeTaxTdsAmount, pricing.incomeTaxTdsAmount, pricing.income_tax_tds_amount, seller.incomeTaxTdsAmount * taxableShare));
     const netGstTcs = money(gstTcs * (1 - returnRatio));
     const netIncomeTaxTds = money(incomeTaxTds * (1 - returnRatio));
     const netGstTcsTaxableBase = money(gstTcsTaxableBase * (1 - returnRatio));
@@ -710,7 +804,7 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
     const backendRefundRecovery = money(firstDefined(record?.refund_amount, record?.refundAmount, metadata.refundAmount, 0));
     const refundRecovery = backendRefundRecovery || (returnRatio > 0 ? money(computedOriginalPayout * returnRatio) : 0);
     const backendNetPayout = money(firstDefined(record?.net_amount, record?.netAmount, 0));
-    const finalPayout = record
+    const finalPayout = record && !useReconciledLine
       ? (refundRecovery > 0 && backendRefundRecovery <= 0 ? Math.max(0, money(backendNetPayout - refundRecovery)) : backendNetPayout)
       : Math.max(0, money(productAmount + shipping + discount - shippingDeduction - commission - commissionGst - gstTcs - incomeTaxTds - refundRecovery));
     const beforeReturn = money(finalPayout + refundRecovery);
@@ -740,6 +834,7 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
     return {
       id: getItemKey(item),
       title: getOrderItemTitle(item),
+      variantLabel: getOrderItemVariantLabel(item),
       status: remainingQuantity <= 0 && isCancelled
         ? "Cancelled"
         : remainingQuantity <= 0 && isReturned
@@ -778,6 +873,11 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
       incomeTaxTds,
       gstTcsTaxableBase,
       incomeTaxTdsTaxableBase,
+      taxAmount: money(
+        money(firstDefined(tax.taxAmount, tax.tax_amount, 0)) +
+        money(firstDefined(tax.cessAmount, tax.cess_amount, 0)),
+      ),
+      reconciledLegacySnapshot: useReconciledLine,
       netGstTcs,
       netIncomeTaxTds,
       netGstTcsTaxableBase,
@@ -804,6 +904,11 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
             <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="font-bold text-[#202337]">{row.title}</div>
+                {row.variantLabel && (
+                  <div className="mt-1 text-xs font-semibold text-[#2f6fed]">
+                    Variant: {row.variantLabel}
+                  </div>
+                )}
                 <div className="mt-1 text-xs text-[#65718b]">
                   {row.status}
                   {row.orderedQuantity > 1 && (
@@ -1705,9 +1810,10 @@ const OrderSummary = () => {
                   <span className="col-span-2 text-right">Total</span>
                 </div>
                 {group.items.map((item) => {
-                  const itemTax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
+                  const itemTax = getReconciledItemTax(item);
                   const productSnapshot = normalizeJson(firstDefined(item.product_snapshot, item.productSnapshot), {});
                   const productTitle = firstDefined(item.product_title, item.productTitle, productSnapshot.title, item.product_id, "Product");
+                  const variantLabel = getOrderItemVariantLabel(item);
                   const productId = firstDefined(item.product_id, item.productId, productSnapshot.id, productSnapshot._id);
                   return (
                     <div key={getItemKey(item)} className="grid grid-cols-1 gap-3 border-b border-[#eef0f6] px-4 py-4 text-sm last:border-b-0 md:grid-cols-12 md:items-start">
@@ -1721,6 +1827,11 @@ const OrderSummary = () => {
                           </DetailLink>
                         ) : (
                           <div className="font-semibold text-[#202337]">{productTitle}</div>
+                        )}
+                        {variantLabel && (
+                          <div className="mt-1 text-xs font-semibold text-[#2f6fed]">
+                            Variant: {variantLabel}
+                          </div>
                         )}
                         <div className="text-xs text-[#65718b]">
                           SKU: {firstDefined(item.variant_sku, item.product_sku, productSnapshot.sku, "N/A")} · HSN: {firstDefined(item.hsn_code, productSnapshot.hsnCode, "N/A")}
@@ -1747,7 +1858,7 @@ const OrderSummary = () => {
                       <div className="md:col-span-2 md:text-right">
                         <div className="font-semibold text-[#202337]">{formatMoney(firstDefined(item.line_total, item.lineTotal))}</div>
                         <div className="text-xs text-[#65718b]">
-                          GST included: {formatMoney(firstDefined(item.tax_amount, item.taxAmount, itemTax.taxAmount))} · {getItemTaxLabel(itemTax, item)}
+                          GST included: {formatMoney(firstDefined(itemTax.taxAmount, itemTax.tax_amount, item.tax_amount, item.taxAmount))} · {getItemTaxLabel(itemTax, item)}
                         </div>
                       </div>
                     </div>
@@ -2121,6 +2232,7 @@ const OrderSummary = () => {
                 const itemIncomeTaxTds = sumMoney(productRows, "netIncomeTaxTds");
                 const itemGstTcsBase = sumMoney(productRows, "netGstTcsTaxableBase");
                 const itemIncomeTaxTdsBase = sumMoney(productRows, "netIncomeTaxTdsTaxableBase");
+                const itemTaxCollected = sumMoney(productRows, "taxAmount");
                 const beforeReturnTotal = sumMoney(productRows, "beforeReturn");
                 const productPayable = hasProductRows ? itemProductPayable : (seller.sellerPayoutBase || seller.grossSales);
                 const netCommission = seller.commissionReversal > 0 ? seller.netCommissionFee : seller.commissionFee;
@@ -2207,7 +2319,9 @@ const OrderSummary = () => {
                             >
                               <PayoutRow
                                 label="Product amount"
-                                note={seller.taxCollected > 0 ? `Product GST included: ${formatMoney(seller.taxCollected)}` : ""}
+                                note={(hasProductRows ? itemTaxCollected : seller.taxCollected) > 0
+                                  ? `Product GST included: ${formatMoney(hasProductRows ? itemTaxCollected : seller.taxCollected)}`
+                                  : ""}
                                 value={formatMoney(productPayable)}
                               />
                               {displayShipping > 0 && (

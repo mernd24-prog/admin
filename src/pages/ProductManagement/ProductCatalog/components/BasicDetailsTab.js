@@ -287,12 +287,6 @@ export default function BasicDetailsTab({
     loadMyBrandSubmissions();
   }, [loadMyBrandSubmissions]);
 
-  useEffect(() => {
-    if (!isSellerPanelUser || !fetchAllData) return undefined;
-    const interval = window.setInterval(() => fetchAllData(), 30000);
-    return () => window.clearInterval(interval);
-  }, [fetchAllData, isSellerPanelUser]);
-
   const handleBrandLogoUpload = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = "";

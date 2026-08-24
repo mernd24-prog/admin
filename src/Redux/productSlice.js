@@ -523,23 +523,29 @@ export const getProductPrefillProducts = createApiThunkPrivate('getProductPrefil
     }),
 })
 
-export const getProductPrefill = createAsyncThunk('getProductPrefill', async (params = {}, { dispatch, rejectWithValue }) => {
+export const getProductPrefill = createAsyncThunk('getProductPrefill', async (params = {}, { dispatch, getState, rejectWithValue }) => {
     try {
-        const calls = [
-            dispatch(getProductPrefillBasic(params)).unwrap(),
-            dispatch(getProductPrefillLookups(params)).unwrap(),
-            dispatch(getProductPrefillLocations(params)).unwrap(),
-            dispatch(getProductPrefillProducts(params)).unwrap(),
-        ];
+        const shouldLoad = {
+            basic: params.includeBasic !== false,
+            lookups: params.includeLookups !== false,
+            locations: params.includeLocations !== false,
+            products: params.includeProducts !== false,
+        };
+        const requests = [];
+        if (shouldLoad.basic) requests.push(['basic', dispatch(getProductPrefillBasic(params)).unwrap()]);
+        if (shouldLoad.lookups) requests.push(['lookups', dispatch(getProductPrefillLookups(params)).unwrap()]);
+        if (shouldLoad.locations) requests.push(['locations', dispatch(getProductPrefillLocations(params)).unwrap()]);
+        if (shouldLoad.products) requests.push(['products', dispatch(getProductPrefillProducts(params)).unwrap()]);
 
-        const [basicRes, lookupsRes, locationsRes, productsRes] = await Promise.all(calls);
+        const results = await Promise.all(requests.map(([, request]) => request));
+        const fresh = results.reduce((acc, response, index) => {
+            acc[requests[index][0]] = response?.data || response || {};
+            return acc;
+        }, {});
+        const existingState = getState()?.product?.productPrefillData;
+        const existing = existingState?.data?.data || existingState?.normalized?.data || existingState?.data || {};
 
-        const basic = basicRes?.data || basicRes || {};
-        const lookups = lookupsRes?.data || lookupsRes || {};
-        const locations = locationsRes?.data || locationsRes || {};
-        const products = productsRes?.data || productsRes || {};
-
-        return deepMerge({}, basic, lookups, locations, products);
+        return deepMerge({}, existing, fresh.basic, fresh.lookups, fresh.locations, fresh.products);
     } catch (err) {
         return rejectWithValue(err?.toString ? err.toString() : err);
     }
