@@ -30,6 +30,138 @@ const Row = ({ label, value }) => (
   </div>
 );
 
+const CopyableReferenceRow = ({ label, value, onCopy }) => (
+  <div className="rounded-md border border-gray-200 bg-white p-3">
+    <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
+    <div className="mt-1 flex items-center gap-2">
+      <p className="min-w-0 flex-1 break-all font-mono text-sm text-gray-900">{value || '—'}</p>
+      {value && (
+        <button
+          type="button"
+          className="shrink-0 rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          onClick={() => onCopy(value)}
+        >
+          Copy
+        </button>
+      )}
+    </div>
+  </div>
+);
+
+const DetailPill = ({ label, value }) => (
+  <div className="rounded-md border border-gray-200 bg-white p-3">
+    <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
+    <p className="mt-1 break-words text-sm font-medium text-gray-900">{value || '—'}</p>
+  </div>
+);
+
+const formatBooleanValue = (value) => {
+  if (value === true) return 'Yes';
+  if (value === false) return 'No';
+  return value || '';
+};
+
+const getVerificationSnapshot = (entry = {}) => {
+  const latestResponse = entry.latestResponse || entry.latestVerificationResponse || entry.response || {};
+  const raw = latestResponse.raw || latestResponse.response || {};
+  const rawData = raw.data || {};
+  return {
+    entry,
+    latestResponse,
+    raw,
+    data: {
+      ...rawData,
+      ...(latestResponse.data || {}),
+    },
+  };
+};
+
+const buildVerificationDetails = ({ service, source = {}, fallback = {} }) => {
+  const snapshot = getVerificationSnapshot(source);
+  const merged = {
+    ...snapshot.entry,
+    ...snapshot.latestResponse,
+    ...snapshot.raw,
+    ...snapshot.data,
+    ...fallback,
+  };
+  const referenceId = getVerificationReferenceValue(source) || getVerificationReferenceValue(fallback);
+  const base = [
+    { label: 'Provider', value: merged.provider || source.provider || 'apitxt' },
+    { label: 'Reference ID', value: referenceId, copyable: true },
+    { label: 'Verified', value: formatBooleanValue(merged.latestVerified ?? merged.verified) },
+    { label: 'Message', value: merged.latestMessage || merged.message },
+  ];
+
+  if (service === 'gst') {
+    return [
+      ...base,
+      { label: 'GSTIN', value: merged.gstin || fallback.gstin },
+      { label: 'GST Status', value: merged.status },
+      { label: 'Legal Name', value: merged.legal_name || merged.legalName },
+      { label: 'Trade Name', value: merged.trade_name || merged.tradeName },
+      { label: 'Business Type', value: merged.business_type || merged.businessType },
+      { label: 'Registration Date', value: merged.registration_date || merged.registrationDate },
+      { label: 'State', value: merged.state },
+      { label: 'District', value: merged.district },
+      { label: 'Pincode', value: merged.pincode },
+      { label: 'Registered Address', value: merged.address || merged.registeredAddress },
+      { label: 'Credits Charged', value: merged.credits_charged || merged.creditsCharged },
+    ];
+  }
+
+  if (service === 'pan') {
+    return [
+      ...base,
+      { label: 'PAN', value: merged.pan || fallback.panNumber },
+      { label: 'PAN Status', value: merged.status },
+      { label: 'Category', value: merged.category },
+      { label: 'Full Name', value: merged.full_name || merged.fullName },
+      { label: 'Name Match', value: formatBooleanValue(merged.name_match ?? merged.nameMatch) },
+      { label: 'DOB Match', value: formatBooleanValue(merged.dob_match ?? merged.dobMatch) },
+      { label: 'Aadhaar Seeding', value: merged.aadhaar_seeding_status || merged.aadhaarSeedingStatus },
+    ];
+  }
+
+  return [
+    ...base,
+    { label: 'Aadhaar Reference', value: merged.reference_id || merged.referenceId || referenceId, copyable: true },
+    { label: 'Masked Aadhaar', value: merged.masked_aadhaar || merged.latestMaskedAadhaar },
+    { label: 'Name', value: merged.name },
+    { label: 'Date of Birth', value: merged.date_of_birth || merged.dateOfBirth },
+    { label: 'Gender', value: merged.gender },
+    { label: 'Care Of', value: merged.care_of || merged.careOf },
+    { label: 'Address', value: merged.full_address || merged.address },
+    { label: 'Has Photo', value: formatBooleanValue(merged.has_photo ?? merged.hasPhoto) },
+    { label: 'Mode', value: merged.verificationMode || merged.mode },
+  ];
+};
+
+const VerificationDetailsCard = ({ title, details = [], onCopy }) => {
+  const visibleDetails = details.filter((item) => item.value !== undefined && item.value !== null && String(item.value).trim() !== '');
+  if (!visibleDetails.length) return null;
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {visibleDetails.map((item) =>
+          item.copyable ? (
+            <CopyableReferenceRow
+              key={`${title}-${item.label}`}
+              label={item.label}
+              value={item.value}
+              onCopy={onCopy}
+            />
+          ) : (
+            <DetailPill key={`${title}-${item.label}`} label={item.label} value={item.value} />
+          ),
+        )}
+      </div>
+    </div>
+  );
+};
+
 const getPayload = (sliceData) =>
   sliceData?.data?.data ||
   sliceData?.data?.normalized?.data ||
@@ -42,6 +174,27 @@ const getListItems = (sliceData) => {
   if (Array.isArray(payload)) return payload;
   return payload?.list || payload?.items || payload?.results || [];
 };
+
+function getVerificationReferenceValue(entry = {}) {
+  const latestResponse = entry.latestResponse || entry.latestVerificationResponse || {};
+  const raw = latestResponse.raw || latestResponse.response || {};
+  const data = raw.data || latestResponse.data || {};
+  return (
+    entry.referenceId ||
+    entry.providerReferenceId ||
+    entry.latestReferenceId ||
+    entry.requestId ||
+    entry.latestRequestId ||
+    latestResponse.providerReferenceId ||
+    latestResponse.referenceId ||
+    latestResponse.reference_id ||
+    raw.request_id ||
+    raw.requestId ||
+    data.request_id ||
+    data.requestId ||
+    ''
+  );
+}
 
 const isSameId = (record, id) =>
   String(record?._id || record?.id || record?.userId || '') === String(id || '');
@@ -632,6 +785,87 @@ const UserDetails = () => {
     (user.accountStatus === 'active' ? 'live' : 'pending');
   const goLiveLabel = organizationSummary.goLiveLabel || goLiveStatus;
   const primaryOrganization = organizationSummary.primaryOrganization || getPrimaryOrganization(organizations) || user.organization || {};
+  const verificationMetadata = useMemo(
+    () => ({
+      ...(sellerProfile.metadata || {}),
+      ...(primaryOrganization.metadata || {}),
+    }),
+    [sellerProfile.metadata, primaryOrganization.metadata],
+  );
+  const verificationReferenceRows = useMemo(() => {
+    const references = sellerKyc.verificationReferences || {};
+    return [
+      {
+        label: 'GST APITXT Reference ID',
+        value:
+          getVerificationReferenceValue(references.gst) ||
+          getVerificationReferenceValue(verificationMetadata.gstVerification),
+      },
+      {
+        label: 'PAN APITXT Reference ID',
+        value:
+          getVerificationReferenceValue(references.pan) ||
+          getVerificationReferenceValue(verificationMetadata.panVerification),
+      },
+      {
+        label: 'Aadhaar APITXT Reference ID',
+        value:
+          getVerificationReferenceValue(references.aadhaar) ||
+          getVerificationReferenceValue(verificationMetadata.aadhaarVerification),
+      },
+    ].filter((item) => item.value);
+  }, [sellerKyc.verificationReferences, verificationMetadata]);
+  const verificationDetailCards = useMemo(() => {
+    const references = sellerKyc.verificationReferences || {};
+    const cards = [
+      {
+        key: 'gst',
+        title: 'GST APITXT Details',
+        details: buildVerificationDetails({
+          service: 'gst',
+          source: verificationMetadata.gstVerification || references.gst || {},
+          fallback: {
+            ...references.gst,
+            gstin: sellerKyc.gstNumber || sellerProfile.gstNumber || primaryOrganization.gstin,
+          },
+        }),
+      },
+      {
+        key: 'pan',
+        title: 'PAN APITXT Details',
+        details: buildVerificationDetails({
+          service: 'pan',
+          source: verificationMetadata.panVerification || references.pan || {},
+          fallback: {
+            ...references.pan,
+            panNumber: sellerKyc.panNumber || sellerProfile.panNumber || primaryOrganization.pan,
+          },
+        }),
+      },
+      {
+        key: 'aadhaar',
+        title: 'Aadhaar APITXT Details',
+        details: buildVerificationDetails({
+          service: 'aadhaar',
+          source: verificationMetadata.aadhaarVerification || references.aadhaar || {},
+          fallback: references.aadhaar || {},
+        }),
+      },
+    ];
+
+    return cards.filter((card) =>
+      card.details.some((item) => item.value !== undefined && item.value !== null && String(item.value).trim() !== ''),
+    );
+  }, [
+    sellerKyc.verificationReferences,
+    sellerKyc.gstNumber,
+    sellerKyc.panNumber,
+    sellerProfile.gstNumber,
+    sellerProfile.panNumber,
+    primaryOrganization.gstin,
+    primaryOrganization.pan,
+    verificationMetadata,
+  ]);
 
   // edit form state
   const [editSeller, setEditSeller] = useState({
@@ -647,6 +881,15 @@ const UserDetails = () => {
   const ownerAdminDisplayName = getDisplayName(ownerAdmin || user.ownerAdmin || user.ownerAdminUser || {});
   const ownerAdminDisplay = ownerAdminDisplayName || ownerAdmin?.email || ownerAdminId;
   const lastLoginDisplay = formatDateTime(getLastLoginValue(user));
+  const handleCopyReference = useCallback(async (value) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success('Reference ID copied');
+    } catch {
+      toast.error('Unable to copy reference ID');
+    }
+  }, []);
   const assignedModuleCards = useMemo(() => {
     if (!shouldShowAdminAccess) return [];
 
@@ -1173,6 +1416,44 @@ const UserDetails = () => {
             {/* Onboarding Checklist */}
             <OnboardingChecklist checklist={checklist} />
 
+            {verificationReferenceRows.length > 0 && (
+              <section className="bg-white border border-gray-200 rounded-lg p-5">
+                <div className="mb-4">
+                  <h2 className="text-base font-semibold text-gray-800">APITXT Verification References</h2>
+                  <p className="mt-1 text-xs text-gray-500">Provider reference IDs received during seller KYC verification.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  {verificationReferenceRows.map((item) => (
+                    <CopyableReferenceRow
+                      key={item.label}
+                      label={item.label}
+                      value={item.value}
+                      onCopy={handleCopyReference}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {verificationDetailCards.length > 0 && (
+              <section className="bg-white border border-gray-200 rounded-lg p-5">
+                <div className="mb-4">
+                  <h2 className="text-base font-semibold text-gray-800">APITXT Verification Details</h2>
+                  <p className="mt-1 text-xs text-gray-500">Admin-only provider details captured during seller KYC checks.</p>
+                </div>
+                <div className="space-y-4">
+                  {verificationDetailCards.map((card) => (
+                    <VerificationDetailsCard
+                      key={card.key}
+                      title={card.title}
+                      details={card.details}
+                      onCopy={handleCopyReference}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
             <section className="bg-white border border-gray-200 rounded-lg p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -1236,7 +1517,25 @@ const UserDetails = () => {
                           <Row label="Business Type"   value={organization.businessType} />
                           <Row label="Primary Contact" value={organization.primaryContactName} />
                           {organization.registrationNumber && <Row label="Registration No." value={organization.registrationNumber} />}
-                          {organization.businessWebsite && <Row label="Website" value={organization.businessWebsite} />}
+                         {organization.businessWebsite && (
+  <Row
+    label="Website"
+    value={
+      <a
+        href={
+          organization.businessWebsite.startsWith("http")
+            ? organization.businessWebsite
+            : `https://${organization.businessWebsite}`
+        }
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 hover:underline"
+      >
+        {organization.businessWebsite}
+      </a>
+    }
+  />
+)}
                           {organization.aadhaarNumber && <Row label="Aadhaar" value={organization.aadhaarNumber} />}
                           {organization.dateOfBirth && <Row label="Date of Birth" value={formatDateTime(organization.dateOfBirth)} />}
                         </div>

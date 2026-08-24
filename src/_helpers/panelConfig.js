@@ -41,7 +41,7 @@ const requestedMode = String(process.env.REACT_APP_PANEL_MODE || "")
 //   ? requestedMode
 //   : PANEL_MODES.ADMIN;
 
-const configuredMode =PANEL_MODES.SELLER;
+const configuredMode =PANEL_MODES.ADMIN;
 
 export const getPanelMode = () => configuredMode;
 
