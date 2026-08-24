@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import DefaultMiddleModal from '../Atoms/Modal/DefaultMiddleModal ';
+import React, { useState, useEffect } from "react";
+import DefaultMiddleModal from "../Atoms/Modal/DefaultMiddleModal ";
 
 /**
  * Reusable modal for KYC / bank / onboarding verification decisions.
@@ -20,24 +20,24 @@ const VerificationDecisionModal = ({
   isOpen,
   onClose,
   onSubmit,
-  title = 'Verification Decision',
-  decisionLabel = 'Decision',
+  title = "Verification Decision",
+  decisionLabel = "Decision",
   options = [],
-  defaultDecision = '',
-  rejectionValue = 'rejected',
-  rejectionLabel = 'Rejection Reason',
-  submitText = 'Submit',
+  defaultDecision = "",
+  rejectionValue = "rejected",
+  rejectionLabel = "Rejection Reason",
+  submitText = "Submit",
 }) => {
   const [decision, setDecision] = useState(defaultDecision);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionReason, setRejectionReason] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (isOpen) {
       setDecision(defaultDecision);
-      setRejectionReason('');
-      setError('');
+      setRejectionReason("");
+      setError("");
     }
   }, [isOpen, defaultDecision]);
 
@@ -46,16 +46,16 @@ const VerificationDecisionModal = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (needsReason && !rejectionReason.trim()) {
-      setError('Rejection reason is required');
+      setError("Rejection reason is required");
       return;
     }
-    setError('');
+    setError("");
     setLoading(true);
     try {
       await onSubmit(decision, needsReason ? rejectionReason.trim() : null);
       onClose();
     } catch (err) {
-      setError(err?.message || 'Something went wrong');
+      setError(err?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -70,27 +70,39 @@ const VerificationDecisionModal = ({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">{decisionLabel}</label>
+          <label className="block text-sm font-medium text-gray-700">
+            {decisionLabel}
+          </label>
           <select
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
             value={decision}
-            onChange={(e) => { setDecision(e.target.value); setError(''); }}
+            onChange={(e) => {
+              setDecision(e.target.value);
+              setError("");
+            }}
           >
             {options.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>
 
         {needsReason && (
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">{rejectionLabel} <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700">
+              {rejectionLabel} <span className="text-red-500">*</span>
+            </label>
             <textarea
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
               rows={3}
               placeholder="Provide a clear reason for rejection..."
               value={rejectionReason}
-              onChange={(e) => { setRejectionReason(e.target.value); setError(''); }}
+              onChange={(e) => {
+                setRejectionReason(e.target.value);
+                setError("");
+              }}
             />
           </div>
         )}
@@ -111,7 +123,7 @@ const VerificationDecisionModal = ({
             className="px-4 py-2 text-sm rounded-md bg-[var(--admin-blue)] text-white hover:bg-[#2e3074] disabled:opacity-60"
             disabled={loading}
           >
-            {loading ? 'Submitting…' : submitText}
+            {loading ? "Submitting…" : submitText}
           </button>
         </div>
       </form>

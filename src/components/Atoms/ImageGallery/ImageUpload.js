@@ -13,7 +13,7 @@ const ImageUpload = ({
   labelClassName = "",
   previewClassName = "",
   iconClassName = "",
-  required
+  required,
 }) => {
   const fileInputRef = useRef();
 
@@ -22,7 +22,7 @@ const ImageUpload = ({
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       onChange(selectedFile);
-      e.target.value = null
+      e.target.value = null;
     }
   };
 
@@ -58,11 +58,7 @@ const ImageUpload = ({
         className={`relative border-2 border-dashed rounded-lg transition-all duration-200 ${
           file ? "border-transparent" : "border-gray-300"
         } ${
-          errorMessage
-            ? "border-red-500"
-            : file
-              ? ""
-              : "hover:border-blue-400"
+          errorMessage ? "border-red-500" : file ? "" : "hover:border-blue-400"
         } ${
           isDisabled
             ? "opacity-70 cursor-not-allowed bg-gray-100"
@@ -94,13 +90,13 @@ const ImageUpload = ({
                   src={file}
                   alt="Preview"
                   onError={(e) => {
-                    e.target.onerror = null; 
-                    e.target.src = "/image_upload.jpg"; 
+                    e.target.onerror = null;
+                    e.target.src = "/image_upload.jpg";
                   }}
-                  className={`w-full min-h-24 h-auto object-contain border ${errorMessage ? "border-red-500" : "border-blue-400"
-                    } border-dashed max-h-64 rounded-md ${previewClassName}`}
+                  className={`w-full min-h-24 h-auto object-contain border ${
+                    errorMessage ? "border-red-500" : "border-blue-400"
+                  } border-dashed max-h-64 rounded-md ${previewClassName}`}
                 />
-
               </div>
               {!isDisabled && (
                 <div className="absolute top-0 right-0 flex space-x-2 p-2">
@@ -109,16 +105,13 @@ const ImageUpload = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       fileInputRef.current?.click();
-
                     }}
                     className="bg-blue-500 text-black rounded-full p-2 shadow-lg hover:bg-blue-600 transition-colors"
                     aria-label="Change image"
                     title="Change image"
                   >
-
                     <FaExchangeAlt size={12} />
                   </button>
-
                 </div>
               )}
             </div>
@@ -132,9 +125,7 @@ const ImageUpload = ({
                 <FaCloudUploadAlt size={24} />
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-gray-500">
-                  Click to browse files
-                </p>
+                <p className="text-xs text-gray-500">Click to browse files</p>
               </div>
               <div className="flex items-center text-xs text-gray-500">
                 <FaImage className="mr-1" />
@@ -145,9 +136,7 @@ const ImageUpload = ({
         )}
       </div>
 
-      {errorMessage && (
-        <p className="text-sm text-red-600">{errorMessage}</p>
-      )}
+      {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
     </div>
   );
 };

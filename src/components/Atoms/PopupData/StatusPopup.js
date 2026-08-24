@@ -2,7 +2,6 @@ import Button from "../buttons/button";
 import ButtonTransparent from "../ButtonTransparent/button";
 import { GrUpdate } from "react-icons/gr";
 
-
 const StatusPopup = ({ isOpen, onClose, onConfirm, heading }) => {
   if (!isOpen) return null;
 
@@ -15,16 +14,13 @@ const StatusPopup = ({ isOpen, onClose, onConfirm, heading }) => {
         </div>
         <p className="text-[17px] font-[600] text-black mb-4">{heading}</p>
         <div className="grid grid-cols-2  gap-4 ">
-          <ButtonTransparent
-            onClick={onClose}>
-            Cancel
-          </ButtonTransparent>
+          <ButtonTransparent onClick={onClose}>Cancel</ButtonTransparent>
           <Button
             onClick={() => {
               onConfirm();
               onClose();
-          
-            }}>
+            }}
+          >
             OK
           </Button>
         </div>
@@ -32,4 +28,4 @@ const StatusPopup = ({ isOpen, onClose, onConfirm, heading }) => {
     </div>
   );
 };
-export default StatusPopup
+export default StatusPopup;

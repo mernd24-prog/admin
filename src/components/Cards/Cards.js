@@ -18,7 +18,10 @@ export default function Cards({
   const iconNode = icon ? (
     typeof icon !== "string" ? (
       iconColor ? (
-        <span className="flex items-center justify-center text-sm" style={{ color: iconColor }}>
+        <span
+          className="flex items-center justify-center text-sm"
+          style={{ color: iconColor }}
+        >
           {icon}
         </span>
       ) : (

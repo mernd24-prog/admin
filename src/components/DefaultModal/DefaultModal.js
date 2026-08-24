@@ -1,51 +1,63 @@
-import React from 'react'
+import React from "react";
 
-import { IoIosCloseCircle } from 'react-icons/io'
-import Button from '../Atoms/buttons/button'
- 
- 
+import { IoIosCloseCircle } from "react-icons/io";
+import Button from "../Atoms/buttons/button";
+
 const Modal = ({
   isOpen,
   closeModal,
   children,
-  heading = '',
+  heading = "",
   transparentButtonClassName = "",
   buttonClassName = "",
   buttonStyle = {},
   modalClassName = "",
   headingClassName = "",
   childrenClassName = "",
-  onSubmit = () => { },
+  onSubmit = () => {},
   showFooter = true,
   showSubmitButton = true,
   showCancelButton = true,
   submitButtonChildren = "Submit",
-  cancelButtonChildren = "Cancel",closeButton=false
+  cancelButtonChildren = "Cancel",
+  closeButton = false,
 }) => {
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleSubmit = () => {
-    if (typeof onSubmit === 'function') {
-      onSubmit()
-      return
+    if (typeof onSubmit === "function") {
+      onSubmit();
+      return;
     }
-    closeModal()
-  }
- 
+    closeModal();
+  };
+
   return (
     <div className="fixed inset-0 bg-[rgba(31,27,95,0.35)] backdrop-blur-sm flex justify-center items-center z-50">
-      <div className={`admin-card bg-white w-11/12 lg:w-[900px] max-h-screen overflow-hidden ${modalClassName}`}>
+      <div
+        className={`admin-card bg-white w-11/12 lg:w-[900px] max-h-screen overflow-hidden ${modalClassName}`}
+      >
         <div className="admin-card-header flex justify-between items-center py-4 px-5">
-          <h2 className={`text-lg text-[var(--admin-ink)] font-semibold ${headingClassName}`}>{heading}</h2>
-          {closeButton&&(
-            <IoIosCloseCircle onClick={closeModal} className='text-2xl text-black-400 mr-3'/>
+          <h2
+            className={`text-lg text-[var(--admin-ink)] font-semibold ${headingClassName}`}
+          >
+            {heading}
+          </h2>
+          {closeButton && (
+            <IoIosCloseCircle
+              onClick={closeModal}
+              className="text-2xl text-black-400 mr-3"
+            />
           )}
         </div>
- 
-        <div className={`p-5 overflow-y-auto flex-1 ${childrenClassName}`} style={{ maxHeight: 'calc(100vh - 180px)' }}>
+
+        <div
+          className={`p-5 overflow-y-auto flex-1 ${childrenClassName}`}
+          style={{ maxHeight: "calc(100vh - 180px)" }}
+        >
           {children}
         </div>
- 
+
         {/* Footer */}
         {showFooter && (
           <div className="flex justify-end px-5 py-4 border-t border-[var(--admin-line)] bg-[var(--admin-surface-soft)]">
@@ -72,8 +84,7 @@ const Modal = ({
         )}
       </div>
     </div>
- 
-  )
-}
- 
-export default Modal
+  );
+};
+
+export default Modal;

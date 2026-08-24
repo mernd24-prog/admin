@@ -1,19 +1,20 @@
-import React, { useEffect } from 'react';
-import { MdWarning, MdError, MdInfo, MdCheckCircle } from 'react-icons/md';
-import { RxCross2 } from 'react-icons/rx';
+import React, { useEffect } from "react";
+import { MdWarning, MdError, MdInfo, MdCheckCircle } from "react-icons/md";
+import { RxCross2 } from "react-icons/rx";
 
 const ICON_MAP = {
-  warning: { Icon: MdWarning,      bg: 'bg-yellow-100', color: 'text-yellow-600' },
-  danger:  { Icon: MdError,        bg: 'bg-red-100',    color: 'text-red-600'    },
-  info:    { Icon: MdInfo,         bg: 'bg-blue-100',   color: 'text-blue-600'   },
-  success: { Icon: MdCheckCircle,  bg: 'bg-green-100',  color: 'text-green-600'  },
+  warning: { Icon: MdWarning, bg: "bg-yellow-100", color: "text-yellow-600" },
+  danger: { Icon: MdError, bg: "bg-red-100", color: "text-red-600" },
+  info: { Icon: MdInfo, bg: "bg-blue-100", color: "text-blue-600" },
+  success: { Icon: MdCheckCircle, bg: "bg-green-100", color: "text-green-600" },
 };
 
 const BTN_VARIANTS = {
-  danger:   'bg-red-600 hover:bg-red-700 text-white',
-  warning:  'bg-yellow-500 hover:bg-yellow-600 text-white',
-  primary:  'bg-[var(--admin-gold)] hover:bg-[var(--admin-gold-dark)] text-[var(--admin-navy)]',
-  success:  'bg-green-600 hover:bg-green-700 text-white',
+  danger: "bg-red-600 hover:bg-red-700 text-white",
+  warning: "bg-yellow-500 hover:bg-yellow-600 text-white",
+  primary:
+    "bg-[var(--admin-gold)] hover:bg-[var(--admin-gold-dark)] text-[var(--admin-navy)]",
+  success: "bg-green-600 hover:bg-green-700 text-white",
 };
 
 /**
@@ -36,12 +37,12 @@ const ConfirmModal = ({
   onClose,
   onCancel,
   onConfirm,
-  title = 'Are you sure?',
+  title = "Are you sure?",
   message,
   description,
-  variant = 'warning',
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  variant = "warning",
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
   loading = false,
   children,
 }) => {
@@ -51,9 +52,9 @@ const ConfirmModal = ({
 
   useEffect(() => {
     if (!visible || loading) return undefined;
-    const closeOnEscape = (event) => event.key === 'Escape' && handleClose?.();
-    document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
+    const closeOnEscape = (event) => event.key === "Escape" && handleClose?.();
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
   }, [handleClose, loading, visible]);
 
   if (!visible) return null;
@@ -70,7 +71,12 @@ const ConfirmModal = ({
       />
 
       {/* Dialog */}
-      <div role="alertdialog" aria-modal="true" aria-label={title} className="admin-card relative w-full max-w-md mx-4 p-6 animate-fade-in">
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={title}
+        className="admin-card relative w-full max-w-md mx-4 p-6 animate-fade-in"
+      >
         {/* Close */}
         <button
           onClick={handleClose}
@@ -82,12 +88,20 @@ const ConfirmModal = ({
 
         {/* Icon + title */}
         <div className="flex items-start gap-4 mb-4">
-          <span className={`flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 ${bg}`}>
+          <span
+            className={`flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 ${bg}`}
+          >
             <Icon size={22} className={color} />
           </span>
           <div>
-            <h3 className="text-base font-semibold text-[var(--admin-ink)]">{title}</h3>
-            {body && <div className="text-sm text-[var(--admin-muted)] mt-1">{body}</div>}
+            <h3 className="text-base font-semibold text-[var(--admin-ink)]">
+              {title}
+            </h3>
+            {body && (
+              <div className="text-sm text-[var(--admin-muted)] mt-1">
+                {body}
+              </div>
+            )}
           </div>
         </div>
 
@@ -112,7 +126,9 @@ const ConfirmModal = ({
                 <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                 Loading…
               </span>
-            ) : confirmLabel}
+            ) : (
+              confirmLabel
+            )}
           </button>
         </div>
       </div>

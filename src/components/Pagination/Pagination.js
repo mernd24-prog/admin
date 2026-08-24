@@ -34,12 +34,13 @@ const Pagination = ({
     }
   };
 
-  const options = useMemo(() =>
-    pageSizeOptions.map((size) => ({
-      value: size,
-      label: String(size),
-    })),
-    [pageSizeOptions]
+  const options = useMemo(
+    () =>
+      pageSizeOptions.map((size) => ({
+        value: size,
+        label: String(size),
+      })),
+    [pageSizeOptions],
   );
 
   const renderPageNumbers = () => {

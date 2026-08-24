@@ -3,15 +3,35 @@ import { MdCheckCircle } from "react-icons/md";
 import { dropdownApi } from "../../_helpers/dropdownApi";
 
 const optionLabel = (item = {}) =>
-  item.label || item.name || item.title || item.zipCode || item.pincode || item.code || String(item.value || "");
+  item.label ||
+  item.name ||
+  item.title ||
+  item.zipCode ||
+  item.pincode ||
+  item.code ||
+  String(item.value || "");
 
 const optionValue = (item = {}) =>
-  String(item.rawValue || item.zipCode || item.pincode || item.name || item.label || item.value || item.id || item._id || "").trim();
+  String(
+    item.rawValue ||
+      item.zipCode ||
+      item.pincode ||
+      item.name ||
+      item.label ||
+      item.value ||
+      item.id ||
+      item._id ||
+      "",
+  ).trim();
 
 const optionParentId = (item = {}) => item.id || item._id || item.value || "";
 const normalizeSelectedValues = (value) => {
-  if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
-  return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+  if (Array.isArray(value))
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 };
 
 const OptionMultiSelect = ({
@@ -60,9 +80,14 @@ const OptionMultiSelect = ({
           if (!disabled) setOpen((current) => !current);
         }}
       >
-        {!selectedValues.length ? <span className="text-sm text-gray-400">{placeholder}</span> : null}
+        {!selectedValues.length ? (
+          <span className="text-sm text-gray-400">{placeholder}</span>
+        ) : null}
         {selectedValues.map((item) => (
-          <span key={item} className="inline-flex max-w-full items-center gap-1 rounded-full bg-[var(--admin-blue)]/10 px-2 py-0.5 text-xs font-medium text-[var(--admin-blue)]">
+          <span
+            key={item}
+            className="inline-flex max-w-full items-center gap-1 rounded-full bg-[var(--admin-blue)]/10 px-2 py-0.5 text-xs font-medium text-[var(--admin-blue)]"
+          >
             <span className="truncate">{item}</span>
             <button
               type="button"
@@ -89,28 +114,41 @@ const OptionMultiSelect = ({
               autoFocus
             />
           </div>
-          {loading ? <div className="px-3 py-4 text-center text-sm text-gray-400">Loading...</div> : null}
-          {!loading && filteredOptions.map((item) => {
-            const selectedValue = getValue(item);
-            const selected = selectedValues.includes(selectedValue);
-            return (
-              <button
-                key={optionParentId(item) || selectedValue}
-                type="button"
-                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 ${selected ? "font-medium text-[var(--admin-blue)]" : "text-gray-700"}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  toggleOption(item);
-                }}
-              >
-                <span className={`flex h-4 w-4 items-center justify-center rounded border ${selected ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]" : "border-gray-300"}`}>
-                  {selected ? <MdCheckCircle className="text-xs text-white" /> : null}
-                </span>
-                {optionLabel(item)}
-              </button>
-            );
-          })}
-          {!loading && !filteredOptions.length ? <div className="px-3 py-4 text-center text-sm text-gray-400">{emptyText}</div> : null}
+          {loading ? (
+            <div className="px-3 py-4 text-center text-sm text-gray-400">
+              Loading...
+            </div>
+          ) : null}
+          {!loading &&
+            filteredOptions.map((item) => {
+              const selectedValue = getValue(item);
+              const selected = selectedValues.includes(selectedValue);
+              return (
+                <button
+                  key={optionParentId(item) || selectedValue}
+                  type="button"
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 ${selected ? "font-medium text-[var(--admin-blue)]" : "text-gray-700"}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleOption(item);
+                  }}
+                >
+                  <span
+                    className={`flex h-4 w-4 items-center justify-center rounded border ${selected ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]" : "border-gray-300"}`}
+                  >
+                    {selected ? (
+                      <MdCheckCircle className="text-xs text-white" />
+                    ) : null}
+                  </span>
+                  {optionLabel(item)}
+                </button>
+              );
+            })}
+          {!loading && !filteredOptions.length ? (
+            <div className="px-3 py-4 text-center text-sm text-gray-400">
+              {emptyText}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -132,19 +170,40 @@ const LocationValueSelector = ({
   type = "pincode",
   hint,
 }) => {
-  const [filters, setFilters] = useState({ countryId: "", stateId: "", cityId: "" });
-  const [options, setOptions] = useState({ countries: [], states: [], cities: [], pincodes: [] });
-  const [loading, setLoading] = useState({ countries: false, states: false, cities: false, pincodes: false });
+  const [filters, setFilters] = useState({
+    countryId: "",
+    stateId: "",
+    cityId: "",
+  });
+  const [options, setOptions] = useState({
+    countries: [],
+    states: [],
+    cities: [],
+    pincodes: [],
+  });
+  const [loading, setLoading] = useState({
+    countries: false,
+    states: false,
+    cities: false,
+    pincodes: false,
+  });
 
   useEffect(() => {
     let active = true;
     setLoading((current) => ({ ...current, countries: true }));
-    dropdownApi.getCountries({ limit: 100 })
+    dropdownApi
+      .getCountries({ limit: 100 })
       .then((items) => {
         if (!active) return;
         setOptions((current) => ({ ...current, countries: items || [] }));
-        const india = (items || []).find((item) => /india/i.test(optionLabel(item)));
-        setFilters((current) => current.countryId || !india ? current : { ...current, countryId: optionParentId(india) });
+        const india = (items || []).find((item) =>
+          /india/i.test(optionLabel(item)),
+        );
+        setFilters((current) =>
+          current.countryId || !india
+            ? current
+            : { ...current, countryId: optionParentId(india) },
+        );
       })
       .catch(() => {
         if (active) setOptions((current) => ({ ...current, countries: [] }));
@@ -152,19 +211,28 @@ const LocationValueSelector = ({
       .finally(() => {
         if (active) setLoading((current) => ({ ...current, countries: false }));
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
     if (!filters.countryId) {
-      setOptions((current) => ({ ...current, states: [], cities: [], pincodes: [] }));
+      setOptions((current) => ({
+        ...current,
+        states: [],
+        cities: [],
+        pincodes: [],
+      }));
       return undefined;
     }
     let active = true;
     setLoading((current) => ({ ...current, states: true }));
-    dropdownApi.getStates(filters.countryId, { limit: 100 })
+    dropdownApi
+      .getStates(filters.countryId, { limit: 100 })
       .then((items) => {
-        if (active) setOptions((current) => ({ ...current, states: items || [] }));
+        if (active)
+          setOptions((current) => ({ ...current, states: items || [] }));
       })
       .catch(() => {
         if (active) setOptions((current) => ({ ...current, states: [] }));
@@ -172,7 +240,9 @@ const LocationValueSelector = ({
       .finally(() => {
         if (active) setLoading((current) => ({ ...current, states: false }));
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [filters.countryId]);
 
   useEffect(() => {
@@ -182,9 +252,11 @@ const LocationValueSelector = ({
     }
     let active = true;
     setLoading((current) => ({ ...current, cities: true }));
-    dropdownApi.getCities(filters.stateId, { limit: 100 })
+    dropdownApi
+      .getCities(filters.stateId, { limit: 100 })
       .then((items) => {
-        if (active) setOptions((current) => ({ ...current, cities: items || [] }));
+        if (active)
+          setOptions((current) => ({ ...current, cities: items || [] }));
       })
       .catch(() => {
         if (active) setOptions((current) => ({ ...current, cities: [] }));
@@ -192,7 +264,9 @@ const LocationValueSelector = ({
       .finally(() => {
         if (active) setLoading((current) => ({ ...current, cities: false }));
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [filters.stateId]);
 
   useEffect(() => {
@@ -202,9 +276,11 @@ const LocationValueSelector = ({
     }
     let active = true;
     setLoading((current) => ({ ...current, pincodes: true }));
-    dropdownApi.getPincodes(filters.cityId, { limit: 100 })
+    dropdownApi
+      .getPincodes(filters.cityId, { limit: 100 })
       .then((items) => {
-        if (active) setOptions((current) => ({ ...current, pincodes: items || [] }));
+        if (active)
+          setOptions((current) => ({ ...current, pincodes: items || [] }));
       })
       .catch(() => {
         if (active) setOptions((current) => ({ ...current, pincodes: [] }));
@@ -212,7 +288,9 @@ const LocationValueSelector = ({
       .finally(() => {
         if (active) setLoading((current) => ({ ...current, pincodes: false }));
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [filters.cityId, type]);
 
   const patchFilter = (key, selectedValue) => {
@@ -224,7 +302,12 @@ const LocationValueSelector = ({
     }));
   };
 
-  const selectedOptions = type === "state" ? options.states : type === "city" ? options.cities : options.pincodes;
+  const selectedOptions =
+    type === "state"
+      ? options.states
+      : type === "city"
+        ? options.cities
+        : options.pincodes;
   const needsState = type === "city" || type === "pincode";
   const needsCity = type === "pincode";
 
@@ -232,20 +315,61 @@ const LocationValueSelector = ({
     <div className="space-y-2">
       <Field label={label} hint={hint}>
         <div className="grid gap-2 md:grid-cols-3">
-          <select className="admin-input" value={filters.countryId} onChange={(event) => patchFilter("countryId", event.target.value)}>
-            <option value="">{loading.countries ? "Loading countries..." : "Country"}</option>
-            {options.countries.map((item) => <option key={optionParentId(item) || optionLabel(item)} value={optionParentId(item)}>{optionLabel(item)}</option>)}
+          <select
+            className="admin-input"
+            value={filters.countryId}
+            onChange={(event) => patchFilter("countryId", event.target.value)}
+          >
+            <option value="">
+              {loading.countries ? "Loading countries..." : "Country"}
+            </option>
+            {options.countries.map((item) => (
+              <option
+                key={optionParentId(item) || optionLabel(item)}
+                value={optionParentId(item)}
+              >
+                {optionLabel(item)}
+              </option>
+            ))}
           </select>
           {needsState ? (
-            <select className="admin-input" value={filters.stateId} onChange={(event) => patchFilter("stateId", event.target.value)} disabled={!filters.countryId}>
-              <option value="">{loading.states ? "Loading states..." : "State"}</option>
-              {options.states.map((item) => <option key={optionParentId(item) || optionLabel(item)} value={optionParentId(item)}>{optionLabel(item)}</option>)}
+            <select
+              className="admin-input"
+              value={filters.stateId}
+              onChange={(event) => patchFilter("stateId", event.target.value)}
+              disabled={!filters.countryId}
+            >
+              <option value="">
+                {loading.states ? "Loading states..." : "State"}
+              </option>
+              {options.states.map((item) => (
+                <option
+                  key={optionParentId(item) || optionLabel(item)}
+                  value={optionParentId(item)}
+                >
+                  {optionLabel(item)}
+                </option>
+              ))}
             </select>
           ) : null}
           {needsCity ? (
-            <select className="admin-input" value={filters.cityId} onChange={(event) => patchFilter("cityId", event.target.value)} disabled={!filters.stateId}>
-              <option value="">{loading.cities ? "Loading cities..." : "City"}</option>
-              {options.cities.map((item) => <option key={optionParentId(item) || optionLabel(item)} value={optionParentId(item)}>{optionLabel(item)}</option>)}
+            <select
+              className="admin-input"
+              value={filters.cityId}
+              onChange={(event) => patchFilter("cityId", event.target.value)}
+              disabled={!filters.stateId}
+            >
+              <option value="">
+                {loading.cities ? "Loading cities..." : "City"}
+              </option>
+              {options.cities.map((item) => (
+                <option
+                  key={optionParentId(item) || optionLabel(item)}
+                  value={optionParentId(item)}
+                >
+                  {optionLabel(item)}
+                </option>
+              ))}
             </select>
           ) : null}
         </div>
@@ -253,11 +377,41 @@ const LocationValueSelector = ({
           value={value}
           onChange={onChange}
           options={selectedOptions}
-          disabled={type === "state" ? !filters.countryId : type === "city" ? !filters.stateId : !filters.cityId}
-          loading={type === "state" ? loading.states : type === "city" ? loading.cities : loading.pincodes}
-          placeholder={type === "state" ? "Select states..." : type === "city" ? "Select cities..." : "Select pincodes..."}
-          searchPlaceholder={type === "state" ? "Search states..." : type === "city" ? "Search cities..." : "Search pincodes..."}
-          emptyText={type === "state" ? "No states found" : type === "city" ? "No cities found" : "No pincodes found"}
+          disabled={
+            type === "state"
+              ? !filters.countryId
+              : type === "city"
+                ? !filters.stateId
+                : !filters.cityId
+          }
+          loading={
+            type === "state"
+              ? loading.states
+              : type === "city"
+                ? loading.cities
+                : loading.pincodes
+          }
+          placeholder={
+            type === "state"
+              ? "Select states..."
+              : type === "city"
+                ? "Select cities..."
+                : "Select pincodes..."
+          }
+          searchPlaceholder={
+            type === "state"
+              ? "Search states..."
+              : type === "city"
+                ? "Search cities..."
+                : "Search pincodes..."
+          }
+          emptyText={
+            type === "state"
+              ? "No states found"
+              : type === "city"
+                ? "No cities found"
+                : "No pincodes found"
+          }
         />
       </Field>
     </div>

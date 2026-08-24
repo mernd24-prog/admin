@@ -7,7 +7,11 @@ import { axiosPublic } from "../../_helpers/axiosProvider";
 const AUTH_TESTIMONIAL_PAGE_TYPE = "auth_testimonial";
 
 const normalizeTarget = (formType = "") =>
-  String(formType || "").toLowerCase().includes("register") ? "register" : "login";
+  String(formType || "")
+    .toLowerCase()
+    .includes("register")
+    ? "register"
+    : "login";
 
 const normalizeTestimonials = (pages = [], formType = "login") => {
   const target = normalizeTarget(formType);
@@ -17,8 +21,13 @@ const normalizeTestimonials = (pages = [], formType = "login") => {
       const pageTarget = meta.pageTarget || "all";
       if (pageTarget !== "all" && pageTarget !== target) return null;
       return {
-        profileImg: page.author?.avatar || page.image?.url || meta.avatarUrl || "/Img/auth-img/user1.jpeg",
-        name: page.title || page.author?.name || meta.name || "Sam Global Customer",
+        profileImg:
+          page.author?.avatar ||
+          page.image?.url ||
+          meta.avatarUrl ||
+          "/Img/auth-img/user1.jpeg",
+        name:
+          page.title || page.author?.name || meta.name || "Sam Global Customer",
         rating: Number(meta.rating || 5),
         description: page.description || page.body || meta.reviewText || "",
         googleRating: Number(meta.googleRating || 4.7),

@@ -1,5 +1,5 @@
-import React from 'react';
-import { usePermission } from '../../../_helpers/usePermission';
+import React from "react";
+import { usePermission } from "../../../_helpers/usePermission";
 
 /**
  * PermissionGuard

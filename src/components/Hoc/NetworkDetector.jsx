@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 function NetworkDetector(ComposedComponent) {
   const EnhancedComponent = (props) => {
     const [isDisconnected, setIsDisconnected] = useState(false);
 
     const handleConnectionChange = () => {
-      const condition = navigator.onLine ? 'online' : 'offline';
-      if (condition === 'online') {
+      const condition = navigator.onLine ? "online" : "offline";
+      if (condition === "online") {
         const webPing = setInterval(() => {
-          fetch('//google.com', { mode: 'no-cors' })
+          fetch("//google.com", { mode: "no-cors" })
             .then(() => {
               setIsDisconnected(false);
               clearInterval(webPing);
@@ -22,12 +22,12 @@ function NetworkDetector(ComposedComponent) {
 
     useEffect(() => {
       handleConnectionChange();
-      window.addEventListener('online', handleConnectionChange);
-      window.addEventListener('offline', handleConnectionChange);
+      window.addEventListener("online", handleConnectionChange);
+      window.addEventListener("offline", handleConnectionChange);
 
       return () => {
-        window.removeEventListener('online', handleConnectionChange);
-        window.removeEventListener('offline', handleConnectionChange);
+        window.removeEventListener("online", handleConnectionChange);
+        window.removeEventListener("offline", handleConnectionChange);
       };
     }, []);
 
@@ -35,7 +35,9 @@ function NetworkDetector(ComposedComponent) {
       <div>
         {isDisconnected && (
           <div className="internet-error">
-            <p className="flex justify-center items-center bg-red-500 text-black text-bold py-2">No Internet Connection</p>
+            <p className="flex justify-center items-center bg-red-500 text-black text-bold py-2">
+              No Internet Connection
+            </p>
           </div>
         )}
         <ComposedComponent {...props} />

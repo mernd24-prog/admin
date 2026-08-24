@@ -1044,7 +1044,10 @@ const VariantBuilder = ({
                           pattern="[0-9]*"
                           value={variant.sortOrder ?? ""}
                           onChange={(e) => {
-                            const digitsOnly = e.target.value.replace(/\D/g, "");
+                            const digitsOnly = e.target.value.replace(
+                              /\D/g,
+                              "",
+                            );
                             updateVariant(
                               idx,
                               "sortOrder",

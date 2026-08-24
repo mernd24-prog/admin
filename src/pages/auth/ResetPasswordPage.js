@@ -6,10 +6,7 @@ import Loader from "../../components/Loader/Loader";
 import FormSubmitButton from "../../components/Atoms/FormButton/FormSubmitButton";
 import { AUTH_FORM_TYPES } from "../../context/AuthLayoutContext";
 import AuthTermsCheckbox from "./components/AuthTermsCheckbox";
-import {
-  AUTH_INPUT_CLASS_NAME,
-  AUTH_LABEL_CLASS_NAME,
-} from "./authFormStyles";
+import { AUTH_INPUT_CLASS_NAME, AUTH_LABEL_CLASS_NAME } from "./authFormStyles";
 import { AUTH_ROUTES } from "./authRoutes";
 import { useAuthFlow } from "./useAuthFlow";
 import { useAuthPageMeta } from "./useAuthPageMeta";
@@ -80,7 +77,7 @@ const ResetPasswordPage = () => {
           >
             <AuthTermsCheckbox
               checked={auth.termsAccepted}
-              onChange={(event) => auth.setTermsAccepted(event.target.checked)}
+              onChange={(event) => auth.handleTermsChange(event.target.checked)}
             />
             <FormSubmitButton
               buttonLabel={auth.loading ? "Resetting..." : "Reset Password"}

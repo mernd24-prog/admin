@@ -147,7 +147,7 @@ const RegisterPage = () => {
           <div className="my-8">
             <AuthTermsCheckbox
               checked={auth.termsAccepted}
-              onChange={(event) => auth.setTermsAccepted(event.target.checked)}
+              onChange={(event) => auth.handleTermsChange(event.target.checked)}
             />
           </div>
 

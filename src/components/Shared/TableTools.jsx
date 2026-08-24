@@ -5,14 +5,25 @@ import { toast } from "sonner";
 import PermissionGuard from "../Atoms/PermissionGuard/PermissionGuard";
 import DefaultMiddleModal from "../Atoms/Modal/DefaultMiddleModal ";
 import Input from "../Atoms/Input/Input";
-import { exportToCsv, exportToExcel, findDuplicateRows, parseImportFile } from "../../_helpers/exportToCsv";
+import {
+  exportToCsv,
+  exportToExcel,
+  findDuplicateRows,
+  parseImportFile,
+} from "../../_helpers/exportToCsv";
 import { getRouteModuleCandidates } from "../../_helpers/rbacRoutes";
 
 const MaybeGuard = ({ module, action, children }) => {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
   const guardModule = inferredModule || module;
-  return guardModule ? <PermissionGuard module={guardModule} action={action} hide>{children}</PermissionGuard> : children;
+  return guardModule ? (
+    <PermissionGuard module={guardModule} action={action} hide>
+      {children}
+    </PermissionGuard>
+  ) : (
+    children
+  );
 };
 
 export const ExportButton = ({
@@ -31,15 +42,24 @@ export const ExportButton = ({
       toast.error("No records available to export");
       return;
     }
-    const options = { filename: `${filename}.${format === "excel" ? "xlsx" : "csv"}`, columns };
+    const options = {
+      filename: `${filename}.${format === "excel" ? "xlsx" : "csv"}`,
+      columns,
+    };
     if (format === "excel") exportToExcel(rows, options);
     else exportToCsv(rows, options);
-    toast.success(`${rows.length} record${rows.length === 1 ? "" : "s"} exported`);
+    toast.success(
+      `${rows.length} record${rows.length === 1 ? "" : "s"} exported`,
+    );
   };
 
   return (
     <MaybeGuard module={requiredModule} action={requiredAction}>
-      <button type="button" onClick={exportRows} className="admin-btn-secondary">
+      <button
+        type="button"
+        onClick={exportRows}
+        className="admin-btn-secondary"
+      >
         <MdFileDownload size={17} />
         {label || `Export ${format === "excel" ? "Excel" : "CSV"}`}
       </button>
@@ -62,7 +82,10 @@ export const ImportButton = ({
   const [rows, setRows] = useState([]);
   const [file, setFile] = useState(null);
   const [errors, setErrors] = useState([]);
-  const duplicateRows = useMemo(() => findDuplicateRows(rows, duplicateKey), [duplicateKey, rows]);
+  const duplicateRows = useMemo(
+    () => findDuplicateRows(rows, duplicateKey),
+    [duplicateKey, rows],
+  );
 
   const readFile = async (event) => {
     const nextFile = event.target.files?.[0] || event.target.value;
@@ -73,7 +96,14 @@ export const ImportButton = ({
       const rowErrors = validateRow
         ? nextRows.flatMap((row, index) => {
             const error = validateRow(row, index);
-            return error ? [{ row: index + 2, message: typeof error === "string" ? error : "Invalid row" }] : [];
+            return error
+              ? [
+                  {
+                    row: index + 2,
+                    message: typeof error === "string" ? error : "Invalid row",
+                  },
+                ]
+              : [];
           })
         : [];
       setRows(nextRows);
@@ -103,7 +133,11 @@ export const ImportButton = ({
   return (
     <MaybeGuard module={requiredModule} action={requiredAction}>
       <>
-        <button type="button" className="admin-btn-secondary" onClick={() => setOpen(true)}>
+        <button
+          type="button"
+          className="admin-btn-secondary"
+          onClick={() => setOpen(true)}
+        >
           <MdFileUpload size={17} /> {label}
         </button>
         <DefaultMiddleModal
@@ -114,17 +148,41 @@ export const ImportButton = ({
           loading={loading}
           submitButtonText={loading ? "Importing..." : "Import"}
         >
-          <Input type="drag-drop-upload" name="bulkFile" accept=".csv,.xlsx,.xls" onChange={readFile} placeholder="Drop or choose a CSV / Excel file" />
+          <Input
+            type="drag-drop-upload"
+            name="bulkFile"
+            accept=".csv,.xlsx,.xls"
+            onChange={readFile}
+            placeholder="Drop or choose a CSV / Excel file"
+          />
           {templateRows.length > 0 && (
-            <button type="button" className="mt-3 text-sm text-primary" onClick={() => exportToExcel(templateRows, { filename: `${templateFilename}.xlsx` })}>
+            <button
+              type="button"
+              className="mt-3 text-sm text-primary"
+              onClick={() =>
+                exportToExcel(templateRows, {
+                  filename: `${templateFilename}.xlsx`,
+                })
+              }
+            >
               Download template
             </button>
           )}
           {rows.length > 0 && (
             <div className="admin-import-summary">
-              <p>{rows.length} row{rows.length === 1 ? "" : "s"} found</p>
-              {duplicateRows.length > 0 && <p className="text-red-600">{duplicateRows.length} duplicate row(s) must be resolved.</p>}
-              {errors.slice(0, 5).map((item) => <p key={`${item.row}-${item.message}`} className="text-red-600">Row {item.row}: {item.message}</p>)}
+              <p>
+                {rows.length} row{rows.length === 1 ? "" : "s"} found
+              </p>
+              {duplicateRows.length > 0 && (
+                <p className="text-red-600">
+                  {duplicateRows.length} duplicate row(s) must be resolved.
+                </p>
+              )}
+              {errors.slice(0, 5).map((item) => (
+                <p key={`${item.row}-${item.message}`} className="text-red-600">
+                  Row {item.row}: {item.message}
+                </p>
+              ))}
             </div>
           )}
         </DefaultMiddleModal>
