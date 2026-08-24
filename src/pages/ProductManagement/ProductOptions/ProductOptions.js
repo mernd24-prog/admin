@@ -133,7 +133,14 @@ export default function ProductOptions() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [filters.search, filters.activationStatus?.value, list.search, list.filters.active, setSearch, setFilter]);
+  }, [
+    filters.search,
+    filters.activationStatus?.value,
+    list.search,
+    list.filters.active,
+    setSearch,
+    setFilter,
+  ]);
 
   const handleSearchClear = () => {
     setFilters({

@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdDelete, MdRefresh, MdReplay } from "react-icons/md";
+import { MdDelete, MdReplay } from "react-icons/md";
 import Input from "../../../components/Atoms/Input/Input";
 import {
   ConfirmModal,

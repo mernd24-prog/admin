@@ -299,7 +299,6 @@ const ProductCatalog = () => {
   });
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
   const sellerView = isSellerPanel();
-  // console.log("this is store list-->", selector?.product?.getAllStoreListData?.data?.data?.list)
   const sellerListData = transformArray(
     selector?.store?.getAllSellerListData?.data?.data?.list || [],
   );

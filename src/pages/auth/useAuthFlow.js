@@ -1089,7 +1089,6 @@ const handleLoginSubmit = useCallback(
           }
         }
       } catch (error) {
-        console.log(error);
         const apiMessage = getApiErrorMessage(
           error,
           "Registration failed. Please try again.",
