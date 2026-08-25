@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { BsCamera, BsSave } from "react-icons/bs";
 import { FiDownload, FiEdit3, FiEye, FiFileText } from "react-icons/fi";
 import { PiX } from "react-icons/pi";
@@ -30,6 +30,11 @@ const profileToForm = (user = {}) => {
   };
 };
 
+const FIELD_COL_SPAN_3 = "md:col-span-3";
+const FIELD_COL_SPAN_6 = "md:col-span-6";
+const FIELD_COL_SPAN_12 = "md:col-span-12";
+const PRIMARY_BUTTON_CLASS = "admin-btn-primary";
+
 const SELLER_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
 
 const parseDocumentMap = (value = {}) => {
@@ -46,7 +51,9 @@ const parseDocumentMap = (value = {}) => {
 
 const isPdfDocument = (url = "") =>
   /\.pdf(\?.*)?$/i.test(String(url || "")) ||
-  String(url || "").toLowerCase().includes("application/pdf");
+  String(url || "")
+    .toLowerCase()
+    .includes("application/pdf");
 
 const isImageDocument = (url = "") =>
   /\.(png|jpe?g|webp|gif|bmp|avif)(\?.*)?$/i.test(String(url || ""));
@@ -145,20 +152,37 @@ const getAddressValue = (address = {}, key) =>
   (key === "line2" ? address.addressLine2 : "") ||
   (key === "postalCode" ? address.zipCode || address.pincode : "");
 
-const DetailField = ({ label, value, className = "" }) => (
+const DetailField = ({ label, value, className = "", isEditing = false }) => (
   <div className={className}>
-    <label className="admin-label">{label}</label>
-    <input className="admin-input" value={formatValue(value)} readOnly />
+    <label className={`admin-label ${isEditing ? "text-slate-500" : ""}`}>
+      {label}
+    </label>
+    <input
+      className={`admin-input ${
+        isEditing
+          ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+          : ""
+      }`}
+      value={formatValue(value)}
+      readOnly
+    />
   </div>
 );
 
-const DocumentCard = ({ title, hint = "JPG, PNG or PDF", url, tone = "blue", onView }) => {
-  const toneClass = {
-    purple: "border-[#d7c4ff] bg-[#f5efff] text-[#7c3aed]",
-    red: "border-[#ffd8ca] bg-[#fff4ed] text-[#ef4444]",
-    green: "border-[#b9e9c6] bg-[#effcf3] text-[#15803d]",
-    blue: "border-[#b9cdfd] bg-[#eff5ff] text-[#2563eb]",
-  }[tone] || "border-[#b9cdfd] bg-[#eff5ff] text-[#2563eb]";
+const DocumentCard = ({
+  title,
+  hint = "JPG, PNG or PDF",
+  url,
+  tone = "blue",
+  onView,
+}) => {
+  const toneClass =
+    {
+      purple: "border-[#d7c4ff] bg-[#f5efff] text-[#7c3aed]",
+      red: "border-[#ffd8ca] bg-[#fff4ed] text-[#ef4444]",
+      green: "border-[#b9e9c6] bg-[#effcf3] text-[#15803d]",
+      blue: "border-[#b9cdfd] bg-[#eff5ff] text-[#2563eb]",
+    }[tone] || "border-[#b9cdfd] bg-[#eff5ff] text-[#2563eb]";
 
   return (
     <button
@@ -167,7 +191,9 @@ const DocumentCard = ({ title, hint = "JPG, PNG or PDF", url, tone = "blue", onV
       disabled={!url}
       className="group flex min-h-[150px] flex-col items-center justify-center rounded-lg border border-[#efd7a6] bg-white px-4 py-5 text-center transition hover:border-[#d9a33c] hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
     >
-      <span className={`flex h-[54px] w-[64px] items-center justify-center rounded-md border ${toneClass}`}>
+      <span
+        className={`flex h-[54px] w-[64px] items-center justify-center rounded-md border ${toneClass}`}
+      >
         <FiFileText className="h-7 w-7" />
       </span>
       <span className="mt-3 text-sm font-bold text-[#3b344a]">{title}</span>
@@ -260,19 +286,60 @@ const EditableField = ({
   value,
   onChange,
   disabled,
+  isEditing = false,
   className = "",
-}) => (
-  <div className={className}>
-    <label className="admin-label">{label}</label>
-    <input
-      className="admin-input"
-      name={name}
-      value={value || ""}
-      onChange={onChange}
-      disabled={disabled}
-    />
-  </div>
-);
+  multiline = false,
+  rows = 5,
+  inputRef,
+}) => {
+  const isEditableNow = isEditing && !disabled;
+  const isDisabledInEditMode = isEditing && disabled;
+
+  const inputClass = `admin-input transition-all ${
+    isEditableNow
+      ? "border-2 border-[var(--admin-gold)] bg-white !text-slate-900 font-medium shadow-sm ring-2 ring-[var(--admin-gold)]/30 focus:border-[var(--admin-gold)] focus:ring-4 focus:ring-[var(--admin-gold)]/20"
+      : isDisabledInEditMode
+        ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed font-normal"
+        : ""
+  }`;
+
+  return (
+    <div className={className}>
+      <label
+        className={`admin-label ${
+          isDisabledInEditMode
+            ? "text-slate-500"
+            : isEditableNow
+              ? "text-slate-900 font-semibold"
+              : ""
+        }`}
+      >
+        {label}
+      </label>
+
+      {multiline ? (
+        <textarea
+          ref={inputRef}
+          className={`${inputClass} min-h-[120px] resize-y py-3 leading-6`}
+          name={name}
+          value={value || ""}
+          onChange={onChange}
+          disabled={disabled}
+          rows={rows}
+        />
+      ) : (
+        <input
+          ref={inputRef}
+          className={inputClass}
+          name={name}
+          value={value || ""}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      )}
+    </div>
+  );
+};
 
 const ProfileSection = ({ number, title, children }) => (
   <section className="mt-9 first:mt-0">
@@ -292,7 +359,7 @@ const FieldGrid = ({ children }) => (
   </div>
 );
 
-const AddressBlock = ({ title, address }) => (
+const AddressBlock = ({ title, address, isEditing = false }) => (
   <div className="r">
     <p className="mb-4 text-xs font-semibold text-[var(--admin-navy)]">
       {title}
@@ -301,32 +368,38 @@ const AddressBlock = ({ title, address }) => (
       <DetailField
         label="Address Line 1"
         value={getAddressValue(address, "line1")}
-        className="md:col-span-6"
+        className={FIELD_COL_SPAN_6}
+        isEditing={isEditing}
       />
       <DetailField
         label="Address Line 2"
         value={getAddressValue(address, "line2")}
-        className="md:col-span-6"
+        className={FIELD_COL_SPAN_6}
+        isEditing={isEditing}
       />
       <DetailField
         label="City"
         value={address.city}
-        className="md:col-span-6"
+        className={FIELD_COL_SPAN_6}
+        isEditing={isEditing}
       />
       <DetailField
         label="State"
         value={address.state}
-        className="md:col-span-3"
+        className={FIELD_COL_SPAN_3}
+        isEditing={isEditing}
       />
       <DetailField
         label="Zip Code"
         value={getAddressValue(address, "postalCode")}
-        className="md:col-span-3"
+        className={FIELD_COL_SPAN_3}
+        isEditing={isEditing}
       />
       <DetailField
         label="Country"
         value={address.country}
-        className="md:col-span-6"
+        className={FIELD_COL_SPAN_6}
+        isEditing={isEditing}
       />
     </FieldGrid>
   </div>
@@ -345,6 +418,14 @@ const Profile = () => {
   const [updating, setUpdating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [previewDocument, setPreviewDocument] = useState(null);
+  const firstInputRef = useRef(null);
+
+  const handleStartEditing = () => {
+    setIsEditing(true);
+    setTimeout(() => {
+      firstInputRef.current?.focus();
+    }, 50);
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -360,7 +441,9 @@ const Profile = () => {
                 ENDPOINTS.sellers.profile,
               );
               setFormData(
-                profileToForm(mergeSellerProfileData(userProfile, sellerResponse)),
+                profileToForm(
+                  mergeSellerProfileData(userProfile, sellerResponse),
+                ),
               );
             } catch (sellerError) {
               console.error("Seller profile fetch failed:", sellerError);
@@ -384,6 +467,21 @@ const Profile = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name.includes(".")) {
+      const [parent, child] = name.split(".");
+
+      setFormData((prev) => ({
+        ...prev,
+        [parent]: {
+          ...(prev[parent] || {}),
+          [child]: value,
+        },
+      }));
+
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -488,35 +586,41 @@ const Profile = () => {
     }
   };
 
- const handleUpdate = async () => {
-  setUpdating(true);
-  try {
-    const apiPayload = {
-      user_image: formData?.user_image,
-      full_name: formData?.full_name,
-    };
-    const res = await dispatch(updateProfile(apiPayload)).unwrap();
-    if (res?.data) {
-      setFormData(profileToForm(res.data));
-      window.dispatchEvent(
-        new CustomEvent("profile:updated", { detail: res.data })
-      );
+  const handleUpdate = async () => {
+    setUpdating(true);
+    try {
+      const apiPayload = {
+        user_image: formData?.user_image,
+        full_name: formData?.full_name,
+        description: formData?.sellerProfile?.description || "",
+        profile: {
+          ...(formData?.profile || {}),
+          firstName: formData?.profile?.firstName || "",
+          lastName: formData?.profile?.lastName || "",
+        },
+      };
+      console.log("FINAL PROFILE PAYLOAD:", apiPayload);
+      const res = await dispatch(updateProfile(apiPayload)).unwrap();
+      if (res?.data) {
+        setFormData(profileToForm(res.data));
+        window.dispatchEvent(
+          new CustomEvent("profile:updated", { detail: res.data }),
+        );
 
-      setIsEditing(false);
-      toast.success("Profile updated successfully!");
+        setIsEditing(false);
+        toast.success("Profile updated successfully!");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Error updating profile");
+    } finally {
+      setUpdating(false);
     }
-  } catch (error) {
-    console.error(error);
-    toast.error(error?.message || "Error updating profile");
-  } finally {
-    setUpdating(false);
-  }
-};
+  };
 
   const handleCancel = () => {
     setIsEditing(false);
   };
-
   const profile = formData.profile || {};
   const sellerProfile = formData.sellerProfile || {};
   const sellerKyc = formData.sellerKyc || {};
@@ -636,20 +740,37 @@ const Profile = () => {
                   {formData.full_name || "Your Profile"}
                 </h2>
                 <p className="mt-1 text-xs text-slate-500">{formData.email}</p>
-                <span className="mt-2 inline-flex rounded-full border border-[#ead9bf] bg-[#fff5df] px-2.5 py-1 text-[10px] font-semibold capitalize text-[#a06a00]">
-                  {formData.role || "Account"}
-                </span>
               </div>
             </div>
-            {!isEditing && (
+            {!isEditing ? (
               <button
                 type="button"
-                onClick={() => setIsEditing(true)}
-                className="admin-btn-secondary"
+                onClick={handleStartEditing}
+                className={PRIMARY_BUTTON_CLASS}
               >
                 <FiEdit3 />
                 Edit Profile
               </button>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="admin-btn-secondary"
+                >
+                  <PiX />
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpdate}
+                  disabled={updating}
+                  className={PRIMARY_BUTTON_CLASS}
+                >
+                  <BsSave />
+                  {updating ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
             )}
           </div>
 
@@ -658,77 +779,90 @@ const Profile = () => {
             title="Personal / Owner Details"
           >
             <FieldGrid>
-              <EditableField
+              {/* <EditableField
                 label="Full Name"
                 name="full_name"
                 value={formData.full_name}
                 onChange={handleChange}
                 disabled={!isEditing}
-                className="md:col-span-6"
+                className={FIELD_COL_SPAN_6}
+              /> */}
+              <EditableField
+                label="First Name"
+                name="profile.firstName"
+                value={profile.firstName}
+                className={FIELD_COL_SPAN_3}
+                disabled={!isEditing}
+                isEditing={isEditing}
+                onChange={handleChange}
+                inputRef={firstInputRef}
+              />
+
+              <EditableField
+                label="Last Name"
+                name="profile.lastName"
+                value={profile.lastName}
+                className={FIELD_COL_SPAN_3}
+                disabled={!isEditing}
+                isEditing={isEditing}
+                onChange={handleChange}
               />
               <DetailField
                 label="Email Address"
                 value={formData.email}
-                className="md:col-span-6"
+                className={FIELD_COL_SPAN_6}
+                isEditing={isEditing}
               />
               {isSeller && (
                 <>
                   <DetailField
                     label="Date of Birth"
                     value={formatDate(sellerProfile.dateOfBirth, false)}
-                    className="md:col-span-6"
+                    className={FIELD_COL_SPAN_6}
+                    isEditing={isEditing}
                   />
                   <DetailField
                     label="City"
                     value={pickupAddress.city || businessAddress.city}
-                    className="md:col-span-3"
+                    className={FIELD_COL_SPAN_3}
+                    isEditing={isEditing}
                   />
                   <DetailField
                     label="Zip Code"
                     value={
                       pickupAddress.postalCode || businessAddress.postalCode
                     }
-                    className="md:col-span-3"
+                    className={FIELD_COL_SPAN_3}
+                    isEditing={isEditing}
                   />
                 </>
               )}
               <DetailField
                 label="Phone Number"
                 value={formData.phone}
-                className="md:col-span-6"
+                className={FIELD_COL_SPAN_6}
+                isEditing={isEditing}
+              />
+              <DetailField
+                label="Referral Code"
+                value={formData.referralCode}
+                className={FIELD_COL_SPAN_6}
+                isEditing={isEditing}
               />
               {/* <DetailField
                 label="Primary Contact Name"
                 value={sellerProfile.primaryContactName}
-                className="md:col-span-6"
+                className={FIELD_COL_SPAN_6}
               /> */}
-              <DetailField
-                label="First Name"
-                value={profile.firstName}
-                className="md:col-span-3"
-              />
-              <DetailField
-                label="Last Name"
-                value={profile.lastName}
-                className="md:col-span-3"
-              />
-              <DetailField
+
+              {/* <DetailField
                 label="Username"
                 value={formData.userName}
-                className="md:col-span-6"
-              />
-               <DetailField
-                label="Referral Code"
-                value={formData.referralCode}
-                className="md:col-span-6"
-              />
+                className={FIELD_COL_SPAN_6}
+              /> */}
             </FieldGrid>
           </ProfileSection>
 
-         
-      
-
-  
           {hasSellerProfile && (
             <ProfileSection
               number={nextSectionNumber()}
@@ -738,69 +872,81 @@ const Profile = () => {
                 <DetailField
                   label="Display Name"
                   value={sellerProfile.displayName}
-                  className="md:col-span-6"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
                 <DetailField
                   label="Legal Business Name"
                   value={sellerProfile.legalBusinessName}
-                  className="md:col-span-6"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
                 <DetailField
                   label="Business Type"
                   value={sellerProfile.businessType}
-                  className="md:col-span-6"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
-                <DetailField
+                {/* <DetailField
                   label="Registration Number"
                   value={sellerProfile.registrationNumber}
-                  className="md:col-span-3"
-                />
+                  className={FIELD_COL_SPAN_3}
+                  isEditing={isEditing}
+                /> */}
                 <DetailField
                   label="Business Website"
                   value={sellerProfile.businessWebsite}
-                  className="md:col-span-3"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
                 <DetailField
                   label="GST Number"
                   value={sellerProfile.gstNumber}
-                  className="md:col-span-6"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
                 <DetailField
                   label="PAN Number"
                   value={sellerProfile.panNumber}
-                  className="md:col-span-6"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
-                
+
                 <DetailField
                   label="Aadhaar Number"
                   value={sellerProfile.aadhaarNumber}
-                  className="md:col-span-6"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
-                
+
                 <DetailField
                   label="Support Email"
                   value={sellerProfile.supportEmail}
-                  className="md:col-span-6"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
                 <DetailField
                   label="Support Phone"
                   value={sellerProfile.supportPhone}
-                  className="md:col-span-6"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
-                <DetailField
+                <EditableField
                   label="Description"
+                  name="sellerProfile.description"
                   value={sellerProfile.description}
-                  className="md:col-span-6"
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  isEditing={isEditing}
+                  multiline
+                  rows={5}
+                  className={FIELD_COL_SPAN_12}
                 />
-          
-                
-               
               </FieldGrid>
-            
             </ProfileSection>
           )}
 
-     {hasSellerAddresses && (
+          {hasSellerAddresses && (
             <ProfileSection
               number={nextSectionNumber()}
               title="Seller Addresses"
@@ -810,82 +956,79 @@ const Profile = () => {
                   <AddressBlock
                     title="Business Address"
                     address={businessAddress}
+                    isEditing={isEditing}
                   />
                 )}
                 {hasAddressValue(pickupAddress) && (
                   <AddressBlock
                     title="Pickup Address"
                     address={pickupAddress}
+                    isEditing={isEditing}
                   />
                 )}
               </div>
             </ProfileSection>
           )}
 
-           {isSeller && hasValue(bankDetails) && (
+          {isSeller && hasValue(bankDetails) && (
             <ProfileSection number={nextSectionNumber()} title="Bank Details">
               <FieldGrid>
                 <DetailField
                   label="Account Holder Name"
                   value={bankDetails.accountHolderName}
-                  className="md:col-span-6"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
                 <DetailField
                   label="Account Number"
                   value={bankDetails.accountNumber}
-                  className="md:col-span-6"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
                 <DetailField
                   label="IFSC Code"
                   value={bankDetails.ifscCode}
-                  className="md:col-span-6"
+                  className={FIELD_COL_SPAN_6}
+                  isEditing={isEditing}
                 />
                 <DetailField
                   label="Bank Name"
                   value={bankDetails.bankName}
-                  className="md:col-span-3"
+                  className={FIELD_COL_SPAN_3}
+                  isEditing={isEditing}
                 />
                 <DetailField
                   label="Branch Name"
                   value={bankDetails.branchName}
-                  className="md:col-span-3"
+                  className={FIELD_COL_SPAN_3}
+                  isEditing={isEditing}
                 />
                 {/* <DetailField
                   label="Bank Rejection Reason"
                   value={sellerProfile.bankRejectionReason}
-                  className="md:col-span-12"
+                  className={FIELD_COL_SPAN_12}
                 /> */}
               </FieldGrid>
             </ProfileSection>
           )}
 
           {hasSellerProfile && (
-            <ProfileSection
-            number={nextSectionNumber()}
-            title="Documents"
-          >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
-              {documentCards.map((item) => (
-                <DocumentCard
-                  key={item.key}
-                  title={item.title}
-                  url={item.url}
-                  tone={item.tone}
-                  onView={setPreviewDocument}
-                />
-              ))}
-            </div>
-          </ProfileSection>
+            <ProfileSection number={nextSectionNumber()} title="Documents">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
+                {documentCards.map((item) => (
+                  <DocumentCard
+                    key={item.key}
+                    title={item.title}
+                    url={item.url}
+                    tone={item.tone}
+                    onView={setPreviewDocument}
+                  />
+                ))}
+              </div>
+            </ProfileSection>
           )}
 
-
-         
-
-     
-
-
-
-          {isEditing && (
+          {/* {isEditing && (
             <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[var(--admin-line)] pt-5 sm:flex-row sm:justify-end">
               <button
                 type="button"
@@ -905,7 +1048,7 @@ const Profile = () => {
                 {updating ? "Updating..." : "Update Profile"}
               </button>
             </div>
-          )}
+          )} */}
         </div>
       </div>
       <DocumentPreviewModal

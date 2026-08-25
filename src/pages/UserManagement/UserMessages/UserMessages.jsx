@@ -343,6 +343,9 @@ const UserMessages = () => {
     }
   };
 
+  const CLASS_FORM_INPUT =
+  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]";
+
   return (
     <div>
       <PageHeader
@@ -459,7 +462,7 @@ const UserMessages = () => {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, userId: e.target.value }))
                   }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  className={CLASS_FORM_INPUT}
                   placeholder="User ID or email"
                 />
               </div>
@@ -514,7 +517,7 @@ const UserMessages = () => {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, subject: e.target.value }))
                   }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  className={CLASS_FORM_INPUT}
                   placeholder="Notification subject"
                 />
               </div>
@@ -529,7 +532,7 @@ const UserMessages = () => {
                     setForm((f) => ({ ...f, message: e.target.value }))
                   }
                   rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] resize-none"
+                  className={`${CLASS_FORM_INPUT} resize-none`}
                   placeholder="Notification message (optional for templated notifications)"
                 />
               </div>

@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
@@ -61,6 +60,29 @@ const STATUS_COLOR = {
   failed: "red",
   rejected: "red",
 };
+
+const CLASS_TEXT_XS_MUTED = "text-xs text-gray-500";
+const CLASS_TEXT_XS_GRAY = "text-xs text-gray-600";
+const CLASS_TEXT_SM_GRAY = "text-sm text-gray-700";
+const CLASS_DETAIL_LABEL = "text-gray-500";
+const CLASS_DETAIL_CARD =
+  "rounded-lg border border-gray-100 bg-gray-50 p-3";
+const CLASS_DETAIL_VALUE = "font-medium text-gray-800";
+const CLASS_DETAIL_SECTION =
+  "border-t border-gray-100 pt-3";
+const CLASS_MODAL_BODY = "mt-3";
+const CLASS_INPUT_MODAL = "mt-3";
+const CLASS_ACTION_ICON_BLUE = "text-blue-600";
+const CLASS_ACTION_ICON_RED = "text-red-600";
+const CLASS_ACTION_ICON_GREEN = "text-green-600";
+const CLASS_ACTION_ICON_ORANGE = "text-orange-600";
+const CLASS_CONFIRM_NOTE_INPUT = "mt-3";
+const CLASS_MANUAL_REFUND_BODY = "p-4 space-y-4";
+const CLASS_MANUAL_REFUND_BUTTON =
+  "w-full py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-60";
+const CLASS_REFUND_STATUS_BASE =
+  "text-xs px-2 py-0.5 rounded-full";
+
 
 const FILTER_FIELDS = [
   { key: "search", type: "text", label: "Search", width: "w-56" },
@@ -374,7 +396,7 @@ const Cancellations = () => {
       key: "cancellationNumber",
       label: "Cancellation #",
       render: (v, row) => (
-        <span className="font-mono text-xs text-gray-600">
+        <span className={`font-mono ${CLASS_TEXT_XS_GRAY}`}>
           {v || String(row.id || "—").slice(-8)}
         </span>
       ),
@@ -399,7 +421,7 @@ const Cancellations = () => {
       label: "Refund Status",
       render: (v) => (
         <span
-          className={`text-xs px-2 py-0.5 rounded-full ${v === "completed" ? "bg-green-100 text-green-700" : v === "failed" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}
+          className={`${CLASS_REFUND_STATUS_BASE} ${v === "completed" ? "bg-green-100 text-green-700" : v === "failed" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}
         >
           {display(v)}
         </span>
@@ -409,7 +431,7 @@ const Cancellations = () => {
       key: "paymentProvider",
       label: "Refunded Through",
       render: (_, row) => (
-        <span className="text-xs text-gray-700">{refundSource(row)}</span>
+        <span className={CLASS_TEXT_SM_GRAY}>{refundSource(row)}</span>
       ),
     },
     {
@@ -423,9 +445,9 @@ const Cancellations = () => {
       render: (v, row) => (
         <div className="text-xs">
           {!isSeller && (
-            <div className="font-medium text-gray-800">{money(v)}</div>
+            <div className={CLASS_DETAIL_VALUE}>{money(v)}</div>
           )}
-          <div className="text-gray-500">
+          <div className={CLASS_DETAIL_LABEL}>
             {row.status === "requested"
               ? "Pending approval — no adjustment"
               : row.status === "rejected"
@@ -456,7 +478,7 @@ const Cancellations = () => {
       key: "createdAt",
       label: "Created",
       sortable: true,
-      render: (v) => <span className="text-xs text-gray-500">{fmt(v)}</span>,
+      render: (v) => <span className={CLASS_TEXT_XS_MUTED}>{fmt(v)}</span>,
     },
   ];
   const filters = isSeller
@@ -499,7 +521,7 @@ const Cancellations = () => {
             const actions = [
               {
                 label: "View Details",
-                icon: <MdVisibility size={16} className="text-blue-600" />,
+                icon: <MdVisibility size={16} className={CLASS_ACTION_ICON_BLUE} />,
                 onClick: () => setDetail(row),
               },
             ];
@@ -507,14 +529,14 @@ const Cancellations = () => {
             if (row.status === "requested" && (!isSeller || row.sellerCanReview)) {
               actions.push({
                 label: "Approve Cancellation",
-                icon: <MdCheckCircle size={16} className="text-blue-600" />,
+                icon: <MdCheckCircle size={16} className={CLASS_ACTION_ICON_BLUE} />,
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,
                 onClick: () => setApproveRequest({ open: true, item: row, note: "" }),
               });
               actions.push({
                 label: "Reject Cancellation",
-                icon: <MdCancel size={16} className="text-red-600" />,
+                icon: <MdCancel size={16} className={CLASS_ACTION_ICON_RED} />,
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,
                 onClick: () => setRejectRequest({ open: true, item: row, reason: "" }),
@@ -527,7 +549,7 @@ const Cancellations = () => {
             ) {
               actions.push({
                 label: "Retry Refund",
-                icon: <MdReplay size={16} className="text-orange-600" />,
+                icon: <MdReplay size={16} className={CLASS_ACTION_ICON_ORANGE} />,
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,
                 onClick: () =>
@@ -542,7 +564,7 @@ const Cancellations = () => {
             if (!isSeller && row.status === "manual_review") {
               if (row.paymentProvider === "razorpay" || row.providerRefundAmount <= 0) actions.push({
                 label: "Approve Refund",
-                icon: <MdCheckCircle size={16} className="text-blue-600" />,
+                icon: <MdCheckCircle size={16} className={CLASS_ACTION_ICON_BLUE} />,
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,
                 onClick: () => setApproveRefund({ open: true, item: row, note: "" }),
@@ -550,7 +572,7 @@ const Cancellations = () => {
               if (row.providerRefundAmount > 0 && row.paymentProvider !== "razorpay") {
                 actions.push({
                   label: "Complete Manual Refund",
-                  icon: <MdPayment size={16} className="text-green-600" />,
+                  icon: <MdPayment size={16} className={CLASS_ACTION_ICON_GREEN} />,
                   requiredModule: "orders",
                   requiredAction: ACTIONS.UPDATE,
                   onClick: () =>
@@ -585,48 +607,48 @@ const Cancellations = () => {
             )}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-gray-500">Cancellation #</p>
+                <p className={CLASS_DETAIL_LABEL}>Cancellation #</p>
                 <p className="font-mono text-xs">
                   {detail.cancellationNumber || detail.id}
                 </p>
               </div>
               <div>
-                <p className="text-gray-500">Order #</p>
+                <p className={CLASS_DETAIL_LABEL}>Order #</p>
                 <p><OrderLink orderId={detail.orderId || detail.order_id} orderNumber={detail.orderNumber || detail.order_number} /></p>
               </div>
               <div>
-                <p className="text-gray-500">Cancellation Status</p>
+                <p className={CLASS_DETAIL_LABEL}>Cancellation Status</p>
                 <StatusBadge
                   status={detail.status}
                   color={STATUS_COLOR[detail.status] || "gray"}
                 />
               </div>
               <div>
-                <p className="text-gray-500">Refund Status</p>
+                <p className={CLASS_DETAIL_LABEL}>Refund Status</p>
                 <p>{display(detail.refundStatus)}</p>
               </div>
               <div>
-                <p className="text-gray-500">Scope</p>
+                <p className={CLASS_DETAIL_LABEL}>Scope</p>
                 <p className="capitalize">{detail.scope || "—"}</p>
               </div>
               <div>
-                <p className="text-gray-500">
+                <p className={CLASS_DETAIL_LABEL}>
                   {isSeller ? "My Cancelled Item Value" : "Customer Refund"}
                 </p>
                 <p className="font-medium">{money(detail.refundAmount)}</p>
               </div>
               <div>
-                <p className="text-gray-500">Refunded Through</p>
+                <p className={CLASS_DETAIL_LABEL}>Refunded Through</p>
                 <p>{refundSource(detail)}</p>
               </div>
               {!isSeller && (
                 <div>
-                  <p className="text-gray-500">Seller Cancelled Value</p>
+                  <p className={CLASS_DETAIL_LABEL}>Seller Cancelled Value</p>
                   <p>{money(detail.sellerCancelledValue)}</p>
                 </div>
               )}
               <div>
-                <p className="text-gray-500">Seller Finance Impact</p>
+                <p className={CLASS_DETAIL_LABEL}>Seller Finance Impact</p>
                 <p>
                   {detail.sellerFinanceAdjustments.length
                     ? "Recovered from settlement"
@@ -634,27 +656,27 @@ const Cancellations = () => {
                 </p>
               </div>
               <div>
-                <p className="text-gray-500">Inventory</p>
+                <p className={CLASS_DETAIL_LABEL}>Inventory</p>
                 <StatusBadge status={detail.inventoryStatus || "pending"} />
               </div>
               <div>
-                <p className="text-gray-500">Shipment</p>
+                <p className={CLASS_DETAIL_LABEL}>Shipment</p>
                 <StatusBadge status={detail.shipmentStatus || "pending"} />
               </div>
               <div>
-                <p className="text-gray-500">Seller Finance</p>
+                <p className={CLASS_DETAIL_LABEL}>Seller Finance</p>
                 <StatusBadge status={detail.financeStatus || "pending"} />
               </div>
               <div>
-                <p className="text-gray-500">Reason</p>
+                <p className={CLASS_DETAIL_LABEL}>Reason</p>
                 <p>{display(detail.reason)}</p>
               </div>
               <div>
-                <p className="text-gray-500">Created</p>
+                <p className={CLASS_DETAIL_LABEL}>Created</p>
                 <p>{fmt(detail.createdAt)}</p>
               </div>
             </div>
-            <div className="border-t border-gray-100 pt-3">
+            <div className={CLASS_DETAIL_SECTION}>
               <p className="mb-2 font-semibold text-gray-800">
                 {detail.status === "requested"
                   ? (isSeller ? "My requested items" : "Requested items and quantities")
@@ -664,11 +686,11 @@ const Cancellations = () => {
                 {(detail.items || []).map((item) => (
                   <div
                     key={item.orderItemId || item.order_item_id}
-                    className="rounded-lg border border-gray-100 bg-gray-50 p-3"
+                    className={CLASS_DETAIL_CARD}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="font-medium text-gray-800">
+                        <div className={CLASS_DETAIL_VALUE}>
                           {item.productTitle || item.product_title || "Product"}
                         </div>
                         <div className="mt-1 text-xs text-gray-500">
@@ -688,7 +710,7 @@ const Cancellations = () => {
                   </div>
                 ))}
                 {!detail.items?.length && (
-                  <div className="text-xs text-gray-500">
+                  <div className={CLASS_TEXT_XS_MUTED}>
                     No cancelled items found.
                   </div>
                 )}
@@ -696,7 +718,7 @@ const Cancellations = () => {
             </div>
             {detail.note && (
               <div>
-                <p className="text-gray-500">Note</p>
+                <p className={CLASS_DETAIL_LABEL}>Note</p>
                 <p>{detail.note}</p>
               </div>
             )}
@@ -714,7 +736,7 @@ const Cancellations = () => {
         loading={actionLoading}
         confirmLabel="Approve Cancellation"
       >
-        <div className="mt-3">
+        <div className={CLASS_MODAL_BODY}>
           <Input
             label="Approval note (optional)"
             value={approveRequest.note}
@@ -732,7 +754,7 @@ const Cancellations = () => {
         loading={actionLoading}
         confirmLabel="Reject Cancellation"
       >
-        <div className="mt-3">
+        <div className={CLASS_MODAL_BODY}>
           <Input
             label="Rejection reason *"
             value={rejectRequest.reason}
@@ -751,7 +773,7 @@ const Cancellations = () => {
         loading={actionLoading}
         confirmLabel="Approve Refund"
       >
-        <div className="mt-3">
+        <div className={CLASS_MODAL_BODY}>
           <Input label="Approval note (optional)" value={approveRefund.note} onChange={(e) => setApproveRefund((p) => ({ ...p, note: e.target.value }))} />
         </div>
       </ConfirmModal>
@@ -766,7 +788,7 @@ const Cancellations = () => {
         loading={actionLoading}
         confirmLabel="Retry"
       >
-        <div className="mt-3">
+        <div className={CLASS_MODAL_BODY}>
           <Input
             label="Note (optional)"
             value={retryConfirm.note}
@@ -792,7 +814,7 @@ const Cancellations = () => {
         }
         title="Complete Manual Refund"
       >
-        <div className="p-4 space-y-4">
+        <div className={CLASS_MANUAL_REFUND_BODY}>
           <Input
             label="Reference ID *"
             value={manualRefund.referenceId}
@@ -820,7 +842,7 @@ const Cancellations = () => {
           <button
             onClick={handleManualRefund}
             disabled={actionLoading}
-            className="w-full py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-60"
+            className={CLASS_MANUAL_REFUND_BUTTON}
           >
             {actionLoading ? "Processing..." : "Complete Refund"}
           </button>

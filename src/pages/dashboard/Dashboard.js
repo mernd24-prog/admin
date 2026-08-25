@@ -72,6 +72,46 @@ const MONTH_LABELS = [
   "Dec",
 ];
 
+const CLASS_ADMIN_CARD = "admin-card";
+const CLASS_ADMIN_GOLD_BUTTON =
+  "inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]";
+const CLASS_TABLE_ROW =
+  "border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]";
+const CLASS_TABLE_BODY = "text-[12px] text-slate-600";
+const CLASS_TABLE_HEADER = "admin-table-head font-inter text-[12px]";
+const CLASS_MUTED_TEXT = "text-xs text-[var(--admin-muted)]";
+const CLASS_PAGE_TITLE =
+  "text-[18px] font-inter font-bold text-[var(--admin-ink)]";
+const CLASS_SECTION_TITLE =
+  "text-[17px] font-inter font-bold text-[var(--admin-ink)]";
+const CLASS_TABLE_ACTION =
+  "inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]";
+const CLASS_DROPDOWN_BUTTON =
+  "flex min-h-8 w-full items-center justify-between gap-2 rounded px-3 text-xs font-semibold transition bg-[#FFFDF8] border border-sidebarGold/60";
+const CLASS_DROPDOWN_OPTION =
+  "block w-full px-3 py-2 text-left text-xs font-semibold transition";
+const CLASS_CALENDAR_BUTTON =
+  "flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc]";
+const CLASS_CANCEL_BUTTON =
+  "inline-flex min-h-8 items-center justify-center rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60";
+const CLASS_APPLY_BUTTON =
+  "inline-flex min-h-8 min-w-[86px] items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-70";
+const CLASS_TABLE_HEADER_CELL = "px-4 py-3 font-semibold";
+const CLASS_TABLE_HEADER_PRODUCT_CELL = "px-5 py-3 font-semibold";
+const CLASS_TABLE_CELL = "px-4 py-3";
+const CLASS_TABLE_PRODUCT_CELL = "px-5 py-3";
+const CLASS_TABLE_INDEX_CELL = "px-4 py-3 text-start tabular-nums";
+const CLASS_TABLE_PRODUCT_TEXT = "px-5 py-3 font-medium text-slate-700";
+const CLASS_PRODUCT_LINK =
+  "line-clamp-1 max-w-[220px] break-normal font-semibold text-[var(--admin-ink)] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]";
+const CLASS_STATUS_BADGE =
+  "inline-flex rounded-full border px-2 py-1 text-[9px] font-semibold capitalize";
+const CLASS_CARD_HEADER =
+  "flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4";
+const CLASS_LEGEND_TEXT =
+  "text-[11px] font-medium text-[var(--admin-muted)]";
+
+
 const asNumber = (value) => {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
@@ -258,7 +298,7 @@ function GoldDropdown({
     >
       <button
         type="button"
-        className="flex min-h-8 w-full items-center justify-between gap-2 rounded px-3 text-xs font-semibold  transition bg-[#FFFDF8] border border-sidebarGold/60 "
+        className={CLASS_DROPDOWN_BUTTON}
         onClick={() => setOpen((current) => !current)}
       >
         <span className="flex min-w-0 items-center gap-2">
@@ -275,7 +315,7 @@ function GoldDropdown({
               <button
                 key={option.value}
                 type="button"
-                className={`block w-full px-3 py-2 text-left text-xs font-semibold transition ${
+                className={`${CLASS_DROPDOWN_OPTION} ${
                   isSelected ? "bg-darkInk text-white" : "  hover:bg-[#EEF3FF]"
                 }`}
                 onClick={() => {
@@ -397,7 +437,7 @@ function GoldDateRangeCalendar({
       <div className="mt-3 flex items-center justify-end gap-2">
         <button
           type="button"
-          className="inline-flex min-h-8 items-center justify-center rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className={CLASS_CANCEL_BUTTON}
           onClick={onCancel}
           disabled={loading}
         >
@@ -405,7 +445,7 @@ function GoldDateRangeCalendar({
         </button>
         <button
           type="button"
-          className="inline-flex min-h-8 min-w-[86px] items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-70"
+          className={CLASS_APPLY_BUTTON}
           disabled={!hasCompleteRange || loading}
           onClick={onApply}
         >
@@ -988,7 +1028,7 @@ export default function Dashboard() {
   return (
     <div className="admin-page min-h-screen">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[18px] font-inter font-bold text-[var(--admin-ink)]">
+        <h1 className={CLASS_PAGE_TITLE}>
           Merchant Insights
         </h1>
         <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
@@ -1050,15 +1090,15 @@ export default function Dashboard() {
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(280px,0.95fr)]">
-        <section className="admin-card p-5">
+        <section className={`${CLASS_ADMIN_CARD} p-5`}>
           <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--admin-line)] pb-3">
             <div>
-              <h2 className="text-[17px] font-inter font-bold text-[var(--admin-ink)]">
+              <h2 className={CLASS_SECTION_TITLE}>
                 Performance Overview
               </h2>
             </div>
           </div>
-          <div className="mb-4 flex flex-wrap items-center gap-5 text-[11px] font-medium text-[var(--admin-muted)]">
+          <div className={`mb-4 flex flex-wrap items-center gap-5 ${CLASS_LEGEND_TEXT}`}>
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
               {chartView === "performance" ? "Order" : "Units / Orders"}
@@ -1243,9 +1283,9 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="admin-card p-5">
+        <section className={`${CLASS_ADMIN_CARD} p-5`}>
           <div className="mb-4 border-b border-[var(--admin-line)] pb-3">
-            <h2 className="text-[17px] font-inter font-bold text-[var(--admin-ink)]">
+            <h2 className={CLASS_SECTION_TITLE}>
               Order Status
             </h2>
           </div>
@@ -1312,29 +1352,29 @@ export default function Dashboard() {
 
       {/* Tables */}
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <section className="admin-card overflow-hidden bg-white">
-          <div className="flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4">
-            <h2 className="text-[17px] font-bold font-inter text-[var(--admin-ink)]">
+        <section className={`${CLASS_ADMIN_CARD} overflow-hidden bg-white`}>
+          <div className={CLASS_CARD_HEADER}>
+            <h2 className={CLASS_SECTION_TITLE}>
               Top Products
             </h2>
             <button
               type="button"
-              className="inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+              className={CLASS_TABLE_ACTION}
               onClick={() => navigate("/app/product-catalog")}
             >
               See All
             </button>
           </div>
           <table className="w-full text-left">
-            <thead className="admin-table-head font-inter text-[12px]">
+            <thead className={CLASS_TABLE_HEADER}>
               <tr>
-                <th className=" px-4 py-3 font-semibold">S. No.</th>
-                <th className="px-5 py-3  font-semibold">Product</th>
-                <th className="px-4 py-3 font-semibold">Units Sold</th>
-                <th className="px-4 py-3 font-semibold">Revenue</th>
+                <th className={CLASS_TABLE_HEADER_CELL}>S. No.</th>
+                <th className={CLASS_TABLE_HEADER_PRODUCT_CELL}>Product</th>
+                <th className={CLASS_TABLE_HEADER_CELL}>Units Sold</th>
+                <th className={CLASS_TABLE_HEADER_CELL}>Revenue</th>
               </tr>
             </thead>
-            <tbody className="text-[12px] text-slate-600">
+            <tbody className={CLASS_TABLE_BODY}>
               {topProducts.length === 0 && (
                 <EmptyTableRow colSpan={4}>
                   No top products available.
@@ -1352,16 +1392,16 @@ export default function Dashboard() {
                 return (
                   <tr
                     key={productId || index}
-                    className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
+                    className={CLASS_TABLE_ROW}
                   >
-                    <td className="px-4 py-3 text-start tabular-nums">
+                    <td className={CLASS_TABLE_INDEX_CELL}>
                       {index + 1}.
                     </td>
-                    <td className="px-5 py-3 font-medium text-slate-700">
+                    <td className={CLASS_TABLE_PRODUCT_TEXT}>
                       {productId ? (
                         <Link
                           to={`/app/product-catalog/view/${productId}`}
-                          className="line-clamp-1 max-w-[220px] break-normal font-semibold text-[var(--admin-ink)] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]"
+                          className={CLASS_PRODUCT_LINK}
                           title={productName}
                         >
                           {productName}
@@ -1375,10 +1415,10 @@ export default function Dashboard() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={CLASS_TABLE_CELL}>
                       {formatNumber(product.units_sold ?? product.unitsSold)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={CLASS_TABLE_CELL}>
                       {formatCurrency(product.revenue)}
                     </td>
                   </tr>
@@ -1388,30 +1428,30 @@ export default function Dashboard() {
           </table>
         </section>
 
-        <section className="admin-card overflow-hidden bg-white">
-          <div className="flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4">
-            <h2 className="text-[17px] font-bold font-inter text-[var(--admin-ink)]">
+        <section className={`${CLASS_ADMIN_CARD} overflow-hidden bg-white`}>
+          <div className={CLASS_CARD_HEADER}>
+            <h2 className={CLASS_SECTION_TITLE}>
               Recent Orders
             </h2>
             <button
               type="button"
-              className="inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+              className={CLASS_TABLE_ACTION}
               onClick={() => navigate("/app/orders")}
             >
               See All
             </button>
           </div>
           <table className="w-full text-left">
-            <thead className="admin-table-head  font-inter text-[12px]">
+            <thead className={CLASS_TABLE_HEADER}>
               <tr>
-                <th className="px-4 py-3 font-semibold">S. No.</th>
-                <th className="px-4 py-3 font-semibold">Order ID</th>
-                <th className="px-4 py-3 font-semibold">Customer</th>
-                <th className="px-4 py-3 font-semibold">Amount</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className={CLASS_TABLE_HEADER_CELL}>S. No.</th>
+                <th className={CLASS_TABLE_HEADER_CELL}>Order ID</th>
+                <th className={CLASS_TABLE_HEADER_CELL}>Customer</th>
+                <th className={CLASS_TABLE_HEADER_CELL}>Amount</th>
+                <th className={CLASS_TABLE_HEADER_CELL}>Status</th>
               </tr>
             </thead>
-            <tbody className="text-[12px] text-slate-600">
+            <tbody className={CLASS_TABLE_BODY}>
               {recentOrders.length === 0 && (
                 <EmptyTableRow colSpan={6}>
                   No recent orders available.
@@ -1433,9 +1473,9 @@ export default function Dashboard() {
                 return (
                   <tr
                     key={orderId || index}
-                    className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
+                    className={CLASS_TABLE_ROW}
                   >
-                    <td className="px-4 py-3 text-start tabular-nums">
+                    <td className={CLASS_TABLE_INDEX_CELL}>
                       {index + 1}.
                     </td>
                     <td className="px-4 py-3 font-medium">
@@ -1445,7 +1485,7 @@ export default function Dashboard() {
                         className="font-semibold"
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={CLASS_TABLE_CELL}>
                       {formatLabel(
                         order.customerName ||
                           order.customer ||
@@ -1454,7 +1494,7 @@ export default function Dashboard() {
                           "-",
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={CLASS_TABLE_CELL}>
                       {formatCurrency(
                         order.seller_order_total ??
                           order.payable_amount ??
@@ -1462,9 +1502,9 @@ export default function Dashboard() {
                           order.total,
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={CLASS_TABLE_CELL}>
                       <span
-                        className={`inline-flex rounded-full border px-2 py-1 text-[9px] font-semibold capitalize ${statusStyle(status)}`}
+                        className={`${CLASS_STATUS_BADGE} ${statusStyle(status)}`}
                       >
                         {formatLabel(status)}
                       </span>
