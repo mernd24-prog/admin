@@ -47,7 +47,8 @@ export const getPanelMode = () => configuredMode;
 
 export const isSellerPanel = () => getPanelMode() === PANEL_MODES.SELLER;
 export const isAdminPanel = () => getPanelMode() === PANEL_MODES.ADMIN;
-export const isInfluencerPanel = () => getPanelMode() === PANEL_MODES.INFLUENCER;
+export const isInfluencerPanel = () =>
+  getPanelMode() === PANEL_MODES.INFLUENCER;
 
 export const PANEL_ROLE_RULES = {
   [PANEL_MODES.ADMIN]: {
