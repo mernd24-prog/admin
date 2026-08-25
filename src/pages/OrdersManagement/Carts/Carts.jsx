@@ -22,7 +22,11 @@ const FILTER_FIELDS = [
     type: "asyncDropdown",
     label: "Customer",
     width: "w-52",
-    load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }),
+    load: (search) =>
+      dropdownApi.getBuyers({
+        keyWord: search,
+        searchFields: "full_name,email",
+      }),
   },
   { key: "productId", type: "text", label: "Product SKU", width: "w-48" },
   {
@@ -30,7 +34,11 @@ const FILTER_FIELDS = [
     type: "asyncDropdown",
     label: "Seller",
     width: "w-52",
-    load: (search) => dropdownApi.getSellers({ keyWord: search, searchFields: "full_name,email,businessName" }),
+    load: (search) =>
+      dropdownApi.getSellers({
+        keyWord: search,
+        searchFields: "full_name,email,businessName",
+      }),
   },
   {
     key: "hasItems",
@@ -66,7 +74,11 @@ const normalizeListResponse = (response) => {
 const normalizeDetailResponse = (response) => response?.data?.data || null;
 
 const Carts = () => {
-  const list = useListPage({ defaultPageSize: 20, defaultSortKey: "updatedAt", defaultSortDir: "desc" });
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "updatedAt",
+    defaultSortDir: "desc",
+  });
   const { toQueryParams } = list;
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
@@ -121,10 +133,14 @@ const Carts = () => {
     setSelectedCart(cart);
     setDetailLoading(true);
     try {
-      const response = await axiosProvider.get(ENDPOINTS.carts.detail(cart._id));
+      const response = await axiosProvider.get(
+        ENDPOINTS.carts.detail(cart._id),
+      );
       setSelectedCart(normalizeDetailResponse(response));
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Failed to load cart details");
+      toast.error(
+        err?.response?.data?.message || "Failed to load cart details",
+      );
     } finally {
       setDetailLoading(false);
     }
@@ -173,17 +189,23 @@ const Carts = () => {
       {
         key: "lineCount",
         label: "Lines",
-        render: (value) => <span className="font-mono">{Number(value || 0)}</span>,
+        render: (value) => (
+          <span className="font-mono">{Number(value || 0)}</span>
+        ),
       },
       {
         key: "itemCount",
         label: "Qty",
-        render: (value) => <span className="font-mono">{Number(value || 0)}</span>,
+        render: (value) => (
+          <span className="font-mono">{Number(value || 0)}</span>
+        ),
       },
       {
         key: "wishlistCount",
         label: "Wishlist",
-        render: (value) => <span className="font-mono">{Number(value || 0)}</span>,
+        render: (value) => (
+          <span className="font-mono">{Number(value || 0)}</span>
+        ),
       },
       {
         key: "subtotal",
@@ -195,11 +217,19 @@ const Carts = () => {
         label: "Sample Items",
         render: (value = []) => (
           <div className="max-w-[340px] space-y-1">
-            {value.length ? value.map((item, index) => (
-              <p key={`${item.productId || index}-${item.variantSku || index}`} className="truncate text-xs text-gray-600">
-                {item.title || item.productId} {item.quantity ? `x${item.quantity}` : ""}
-              </p>
-            )) : <span className="text-xs text-gray-400">No items</span>}
+            {value.length ? (
+              value.map((item, index) => (
+                <p
+                  key={`${item.productId || index}-${item.variantSku || index}`}
+                  className="truncate text-xs text-gray-600"
+                >
+                  {item.title || item.productId}{" "}
+                  {item.quantity ? `x${item.quantity}` : ""}
+                </p>
+              ))
+            ) : (
+              <span className="text-xs text-gray-400">No items</span>
+            )}
           </div>
         ),
       },
@@ -212,7 +242,12 @@ const Carts = () => {
       {
         key: "status",
         label: "State",
-        render: (_, row) => <StatusBadge status={Number(row.lineCount || 0) > 0 ? "active" : "empty"} dot />,
+        render: (_, row) => (
+          <StatusBadge
+            status={Number(row.lineCount || 0) > 0 ? "active" : "empty"}
+            dot
+          />
+        ),
       },
       {
         key: "actions",
@@ -233,7 +268,10 @@ const Carts = () => {
                 type="button"
                 className="rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                 onClick={() => requestClear(row)}
-                disabled={Number(row.lineCount || 0) === 0 && Number(row.wishlistCount || 0) === 0}
+                disabled={
+                  Number(row.lineCount || 0) === 0 &&
+                  Number(row.wishlistCount || 0) === 0
+                }
               >
                 Clear
               </button>
@@ -245,18 +283,25 @@ const Carts = () => {
     [openDetail, requestClear],
   );
 
-  const detailItems = Array.isArray(selectedCart?.items) ? selectedCart.items : [];
+  const detailItems = Array.isArray(selectedCart?.items)
+    ? selectedCart.items
+    : [];
 
   return (
     <div>
       <PageHeader
         title="Cart Management"
         subtitle="Review active, abandoned, and empty customer carts before checkout."
-        breadcrumbs={[{ label: "Orders Management" }, { label: "Cart Management" }]}
+        breadcrumbs={[
+          { label: "Orders Management" },
+          { label: "Cart Management" },
+        ]}
         count={total}
         actions={
           <PermissionGuard module="carts" action={ACTIONS.EXPORT} hide>
-            <span className="text-xs text-[var(--admin-muted)]">Exports are available from the table tools.</span>
+            <span className="text-xs text-[var(--admin-muted)]">
+              Exports are available from the table tools.
+            </span>
           </PermissionGuard>
         }
       />
@@ -293,7 +338,10 @@ const Carts = () => {
       />
 
       {detailOpen && (
-        <div className="fixed inset-0 z-[9998] flex justify-end bg-black/25" onClick={() => setDetailOpen(false)}>
+        <div
+          className="fixed inset-0 z-[9998] flex justify-end bg-black/25"
+          onClick={() => setDetailOpen(false)}
+        >
           <aside
             className="h-full w-full max-w-2xl overflow-y-auto bg-white shadow-xl"
             onClick={(event) => event.stopPropagation()}
@@ -302,8 +350,12 @@ const Carts = () => {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs text-gray-400">Cart Detail</p>
-                  <h2 className="text-lg font-semibold text-[var(--admin-ink)]">{selectedCart?.userId || "-"}</h2>
-                  <p className="text-xs text-gray-500">Updated {formatDate(selectedCart?.updatedAt)}</p>
+                  <h2 className="text-lg font-semibold text-[var(--admin-ink)]">
+                    {selectedCart?.userId || "-"}
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    Updated {formatDate(selectedCart?.updatedAt)}
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -322,56 +374,104 @@ const Carts = () => {
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <div className="rounded border p-3">
                       <p className="text-xs text-gray-500">Lines</p>
-                      <p className="text-lg font-semibold">{detailItems.length}</p>
+                      <p className="text-lg font-semibold">
+                        {detailItems.length}
+                      </p>
                     </div>
                     <div className="rounded border p-3">
                       <p className="text-xs text-gray-500">Quantity</p>
-                      <p className="text-lg font-semibold">{detailItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)}</p>
+                      <p className="text-lg font-semibold">
+                        {detailItems.reduce(
+                          (sum, item) => sum + Number(item.quantity || 0),
+                          0,
+                        )}
+                      </p>
                     </div>
                     <div className="rounded border p-3">
                       <p className="text-xs text-gray-500">Wishlist</p>
-                      <p className="text-lg font-semibold">{selectedCart?.wishlist?.length || 0}</p>
+                      <p className="text-lg font-semibold">
+                        {selectedCart?.wishlist?.length || 0}
+                      </p>
                     </div>
                     <div className="rounded border p-3">
                       <p className="text-xs text-gray-500">Subtotal</p>
-                      <p className="text-lg font-semibold">{formatMoney(detailItems.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0))}</p>
+                      <p className="text-lg font-semibold">
+                        {formatMoney(
+                          detailItems.reduce(
+                            (sum, item) =>
+                              sum +
+                              Number(item.price || 0) *
+                                Number(item.quantity || 0),
+                            0,
+                          ),
+                        )}
+                      </p>
                     </div>
                   </div>
 
                   <div>
                     <h3 className="mb-2 text-sm font-semibold">Cart Items</h3>
                     <div className="overflow-hidden rounded border">
-                      {detailItems.length ? detailItems.map((item, index) => (
-                        <div key={`${item.productId || index}-${item.variantSku || index}`} className="flex gap-3 border-b p-3 last:border-b-0">
-                          {item.image ? (
-                            <img src={item.image} alt={item.title || "Product"} className="h-14 w-14 rounded object-cover" />
-                          ) : (
-                            <span className="flex h-14 w-14 items-center justify-center rounded bg-gray-100">
-                              <MdOutlineShoppingCart size={20} className="text-gray-400" />
-                            </span>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold">{item.title || item.productId}</p>
-                            <p className="text-xs text-gray-500">SKU: {item.variantSku || item.sku || "-"}</p>
-                            <p className="text-xs text-gray-500">Seller: {item.sellerId || "-"}</p>
-                            <div className="mt-1 flex flex-wrap gap-2 text-xs">
-                              <StatusBadge status={item.stockStatus || "unknown"} dot />
-                              <span>Available: {item.availableStock ?? "-"}</span>
-                              <span>Qty: {item.quantity}</span>
-                              <span>{formatMoney(item.price)}</span>
+                      {detailItems.length ? (
+                        detailItems.map((item, index) => (
+                          <div
+                            key={`${item.productId || index}-${item.variantSku || index}`}
+                            className="flex gap-3 border-b p-3 last:border-b-0"
+                          >
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.title || "Product"}
+                                className="h-14 w-14 rounded object-cover"
+                              />
+                            ) : (
+                              <span className="flex h-14 w-14 items-center justify-center rounded bg-gray-100">
+                                <MdOutlineShoppingCart
+                                  size={20}
+                                  className="text-gray-400"
+                                />
+                              </span>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold">
+                                {item.title || item.productId}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                SKU: {item.variantSku || item.sku || "-"}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Seller: {item.sellerId || "-"}
+                              </p>
+                              <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                                <StatusBadge
+                                  status={item.stockStatus || "unknown"}
+                                  dot
+                                />
+                                <span>
+                                  Available: {item.availableStock ?? "-"}
+                                </span>
+                                <span>Qty: {item.quantity}</span>
+                                <span>{formatMoney(item.price)}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )) : (
-                        <p className="p-4 text-sm text-gray-500">No cart items.</p>
+                        ))
+                      ) : (
+                        <p className="p-4 text-sm text-gray-500">
+                          No cart items.
+                        </p>
                       )}
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="mb-2 text-sm font-semibold">Wishlist Product IDs</h3>
+                    <h3 className="mb-2 text-sm font-semibold">
+                      Wishlist Product IDs
+                    </h3>
                     <div className="rounded border p-3 text-xs text-gray-600">
-                      {selectedCart?.wishlist?.length ? selectedCart.wishlist.join(", ") : "No wishlist products."}
+                      {selectedCart?.wishlist?.length
+                        ? selectedCart.wishlist.join(", ")
+                        : "No wishlist products."}
                     </div>
                   </div>
 
@@ -400,7 +500,8 @@ const Carts = () => {
         title="Clear customer cart?"
         message={
           <span>
-            This removes all items and wishlist entries from this cart. Enter a reason below.
+            This removes all items and wishlist entries from this cart. Enter a
+            reason below.
             <textarea
               className="admin-input admin-textarea mt-3 w-full"
               rows={3}
@@ -411,7 +512,11 @@ const Carts = () => {
               }}
               placeholder="Reason for clearing this cart"
             />
-            {clearError && <span className="mt-1 block text-xs text-red-600">{clearError}</span>}
+            {clearError && (
+              <span className="mt-1 block text-xs text-red-600">
+                {clearError}
+              </span>
+            )}
           </span>
         }
         variant="danger"
