@@ -535,11 +535,11 @@ const SellerPayouts = () => {
         Payout amounts come from delivered orders and their checkout fee snapshots. They cannot be typed manually.
       </div> */}
 
-      {error && (
+      {/* {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
         </div>
-      )}
+      )} */}
       <DataTable
         columns={columns}
         data={payload.list}

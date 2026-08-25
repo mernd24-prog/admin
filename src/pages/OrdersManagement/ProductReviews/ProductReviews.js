@@ -163,6 +163,9 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
   const createdByName = getCreatedByName(review, sellerView);
   const reviewDate = formatDateTime12Hour(review.createdAt, "—");
 
+  const CLASS_DETAIL_LABEL =
+  "text-xs font-medium uppercase text-gray-400";
+
   return (
     <>
       <div
@@ -189,13 +192,13 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
         <div className="flex-1 space-y-5 overflow-y-auto p-5">
           <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-4 text-sm">
             <div>
-              <p className="text-xs font-medium uppercase text-gray-400">
+              <p className={CLASS_DETAIL_LABEL}>
                 {sellerView ? "Created By" : "Buyer"}
               </p>
               <p className="mt-1 font-medium text-gray-800">{createdByName}</p>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase text-gray-400">
+              <p className={CLASS_DETAIL_LABEL}>
                 Status
               </p>
               <div className="mt-1">
@@ -207,7 +210,7 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
               </div>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase text-gray-400">
+              <p className={CLASS_DETAIL_LABEL}>
                 Rating
               </p>
               <div className="mt-1">
@@ -215,14 +218,14 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
               </div>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase text-gray-400">
+              <p className={CLASS_DETAIL_LABEL}>
                 Date
               </p>
               <p className="mt-1 text-gray-800">{reviewDate}</p>
             </div>
 
             <div>
-              <p className="text-xs font-medium uppercase text-gray-400">
+              <p className={CLASS_DETAIL_LABEL}>
                 Helpful Votes
               </p>
               <p className="mt-1 text-gray-800">{review.helpfulVotes || 0}</p>
@@ -230,16 +233,14 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
           </div>
 
           <section>
-            <p className="text-xs font-medium uppercase text-gray-400">Title</p>
+            <p className={CLASS_DETAIL_LABEL}>Title</p>
             <p className="mt-1 text-sm font-semibold text-gray-800">
               {review.title || "—"}
             </p>
           </section>
 
           <section>
-            <p className="text-xs font-medium uppercase text-gray-400">
-              Review
-            </p>
+            <p className={CLASS_DETAIL_LABEL}>Review</p>
             <p className="mt-2 whitespace-pre-wrap rounded-lg border border-gray-100 bg-white p-3 text-sm leading-6 text-gray-700">
               {review.reviewText || "—"}
             </p>
@@ -247,7 +248,7 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
 
           {Array.isArray(review.media) && review.media.length ? (
             <section>
-              <p className="text-xs font-medium uppercase text-gray-400">
+              <p className={CLASS_DETAIL_LABEL}>
                 Review Photos
               </p>
               <div className="mt-2 grid grid-cols-3 gap-2">

@@ -14,7 +14,10 @@ import ProductStatusBadge from "../../../../components/Product/ProductStatusBadg
 import ProductReviewModal from "../../../../components/Product/ProductReviewModal";
 import ConfirmModal from "../../../../components/Shared/ConfirmModal";
 // import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
-import { getProductImages, normalizeImageList } from "../../../../_helpers/productMedia";
+import {
+  getProductImages,
+  normalizeImageList,
+} from "../../../../_helpers/productMedia";
 import ImageGallery from "../../../../components/Atoms/ImageGallery/ImageGallery";
 import {
   formatDateTime12Hour,
@@ -28,21 +31,33 @@ const formatDisplayValue = (value) => {
   if (value === undefined || value === null || value === "") return "N/A";
   if (Array.isArray(value)) return value.length ? value.join(", ") : "N/A";
   if (typeof value === "object") {
-    return value.name || value.title || value.label || value.email || value._id || JSON.stringify(value);
+    return (
+      value.name ||
+      value.title ||
+      value.label ||
+      value.email ||
+      value._id ||
+      JSON.stringify(value)
+    );
   }
   return String(value);
 };
 
 const Row = ({ label, value }) => (
-  <div className="border-b border-gray-100 py-3">
-    <p className="text-xs uppercase text-gray-400">{label}</p>
-    <p className="text-sm text-gray-900 break-words">{formatLabel(formatDisplayValue(value))}</p>
+  <div className="group rounded-xl border border-transparent px-3 py-3 transition-colors hover:border-[var(--admin-gold)]/20 hover:bg-[var(--admin-surface-soft)]">
+    <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-gray-400">
+      {label}
+    </p>
+    <p className="break-words text-sm font-medium text-gray-800">
+      {formatLabel(formatDisplayValue(value))}
+    </p>
   </div>
 );
 
 const getShippingPincodeSummary = (shipping = {}) => {
   const mode = shipping?.serviceabilityMode || "inherit";
-  const allowed = shipping?.allowPincodes || shipping?.serviceablePincodes || [];
+  const allowed =
+    shipping?.allowPincodes || shipping?.serviceablePincodes || [];
   if (mode === "disabled") return "Delivery disabled for this product";
   if (mode === "allowlist") {
     return allowed.length
@@ -76,7 +91,11 @@ const refToLabel = (value) => {
 };
 
 const getSliceData = (sliceData) => {
-  const data = sliceData?.data?.data || sliceData?.normalized?.data || sliceData?.data || {};
+  const data =
+    sliceData?.data?.data ||
+    sliceData?.normalized?.data ||
+    sliceData?.data ||
+    {};
   if (Array.isArray(data)) return { list: data, total: data.length };
   return data;
 };
@@ -99,10 +118,12 @@ const hasVariants = (product = {}) =>
 const getDefaultVariant = (product = {}) => {
   const variants = Array.isArray(product?.variants) ? product.variants : [];
   if (!variants.length) return null;
-  return variants.find((variant) => variant?.isDefault === true) ||
+  return (
+    variants.find((variant) => variant?.isDefault === true) ||
     variants.find((variant) => variant?.status !== "inactive") ||
     variants[0] ||
-    null;
+    null
+  );
 };
 
 // const getEffectivePrice = (product = {}) => {
@@ -158,15 +179,17 @@ const ProductAdminDetails = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [duplicateConfirm, setDuplicateConfirm] = useState(false);
   const currentRole = normalizeRole(getStoredRole());
-  const isSellerRole = ["seller", "seller-admin", "seller-sub-admin"].includes(currentRole);
-
-  const REVIEWABLE_STATUSES = new Set(['pending_approval']);
-  const needsReview = !isSellerRole && (
-    REVIEWABLE_STATUSES.has(product?.status) ||
-      product?.revisionStatus === 'change_pending' ||
-      Boolean(product?.pendingRevisionId) ||
-      Boolean(product?.pendingRevision)
+  const isSellerRole = ["seller", "seller-admin", "seller-sub-admin"].includes(
+    currentRole,
   );
+
+  const REVIEWABLE_STATUSES = new Set(["pending_approval"]);
+  const needsReview =
+    !isSellerRole &&
+    (REVIEWABLE_STATUSES.has(product?.status) ||
+      product?.revisionStatus === "change_pending" ||
+      Boolean(product?.pendingRevisionId) ||
+      Boolean(product?.pendingRevision));
 
   const attributes =
     product.attributes instanceof Map
@@ -220,9 +243,16 @@ const ProductAdminDetails = () => {
     }
   }, [dispatch, id]);
 
-  const handleReviewSubmit = async (decision, rejectionReason, checklist, notes) => {
+  const handleReviewSubmit = async (
+    decision,
+    rejectionReason,
+    checklist,
+    notes,
+  ) => {
     if (isSellerRole) {
-      throw new Error("Product approval and revision review are admin-only actions.");
+      throw new Error(
+        "Product approval and revision review are admin-only actions.",
+      );
     }
     setReviewLoading(true);
     try {
@@ -283,16 +313,16 @@ const ProductAdminDetails = () => {
   return (
     <div>
       <Loader loading={selector.loading || reviewLoading || actionLoading} />
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-6 flex flex-col gap-4 px-1 py-2 sm:px-0 lg:flex-row lg:items-center lg:justify-between">
         <h3 className="text-sm text-gray-500">
           <Link
             to="/app/product-catalog"
-            className="hover:underline text-[var(--admin-blue)]"
+            className="font-medium text-[var(--admin-blue)] transition-colors hover:text-[var(--admin-gold)] hover:underline"
           >
             Product Catalog
           </Link>
-          {" / "}
-          <b className="text-gray-800">Product Details</b>
+          <span className="mx-2 text-black">/</span>
+          <b className="font-semibold text-gray-900">Product Details</b>
         </h3>
         <div className="flex flex-wrap items-center gap-2">
           {product.status && (
@@ -304,7 +334,7 @@ const ProductAdminDetails = () => {
           {needsReview && (
             <button
               onClick={() => setReviewOpen(true)}
-              className="px-4 py-2 text-sm rounded-md bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
+              className="inline-flex items-center justify-center rounded-lg bg-[var(--admin-blue)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2e3074] hover:shadow-md"
             >
               {pendingRevision ? "Review Revision" : "Review Product"}
             </button>
@@ -319,7 +349,7 @@ const ProductAdminDetails = () => {
           </PermissionGuard> */}
           <Link
             to={`/app/product-catalog/form/${id}`}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors"
+            className="flex items-center gap-2 rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--admin-gold-dark)] hover:shadow-md"
           >
             Edit
           </Link>
@@ -327,25 +357,45 @@ const ProductAdminDetails = () => {
       </div>
 
       {product.status === "rejected" && product.rejectionReason && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-md p-4">
-          <p className="text-sm font-semibold text-red-700 mb-1">
-            Rejection Reason
-          </p>
-          <p className="text-sm text-red-600">{product.rejectionReason}</p>
+        <div className="mb-5 overflow-hidden rounded-2xl border border-red-200 bg-white shadow-sm">
+          <div className="flex items-start gap-3 border-l-4 border-red-500 bg-red-50 px-4 py-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.08em] text-red-700">
+                Product rejected
+              </p>
+              <p className="mt-1 text-sm font-medium leading-6 text-red-600">
+                {product.rejectionReason}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
-          <h2 className="text-base font-semibold text-gray-800 mb-3">
-            Overview
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+        <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
+          <div className="flex flex-col gap-2 border-b border-gray-100 bg-gradient-to-r from-[var(--admin-surface-soft)] to-white px-5 pt-4 pb-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--admin-gold)]">
+                Product information
+              </p>
+              <h2 className="mt-1 text-lg font-bold text-gray-900">Overview</h2>
+            </div>
+            <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-500">
+              General details
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-1 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
             <Row label="Title" value={product.title} />
             <Row label="Seller" value={refToLabel(sellerDisplayName)} />
-            <Row label="Seller Email" value={product.sellerEmail || product.seller?.email} />
+            <Row
+              label="Seller Email"
+              value={product.sellerEmail || product.seller?.email}
+            />
             <Row label="Seller ID" value={refToLabel(product.sellerId)} />
-            <Row label="Organization" value={refToLabel(organizationDisplayName)} />
+            <Row
+              label="Organization"
+              value={refToLabel(organizationDisplayName)}
+            />
             <Row
               label="Category"
               value={
@@ -397,6 +447,76 @@ const ProductAdminDetails = () => {
           </div>
         </section>
 
+        {/* Analytics */}
+        {product.analytics && (
+          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
+            <div className="border-b border-gray-100 bg-gradient-to-r from-[var(--admin-surface-soft)] to-white px-5 pt-4 pb-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--admin-gold)]">
+                Performance
+              </p>
+              <h2 className="mt-1 text-lg font-bold text-gray-900">
+                Analytics
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4 lg:grid-cols-8">
+              {[
+                {
+                  label: "Total Views",
+                  value: (product.analytics.views || 0).toLocaleString("en-IN"),
+                },
+                {
+                  label: "Purchases",
+                  value: (product.analytics.purchases || 0).toLocaleString(
+                    "en-IN",
+                  ),
+                },
+                {
+                  label: "Revenue",
+                  value: `₹${(product.analytics.revenue || 0).toLocaleString("en-IN")}`,
+                },
+                {
+                  label: "Wishlists",
+                  value: (product.analytics.wishlistAdds || 0).toLocaleString(
+                    "en-IN",
+                  ),
+                },
+                {
+                  label: "Cart Adds",
+                  value: (product.analytics.cartAdds || 0).toLocaleString(
+                    "en-IN",
+                  ),
+                },
+                {
+                  label: "Returns",
+                  value: (product.analytics.returns || 0).toLocaleString(
+                    "en-IN",
+                  ),
+                },
+                {
+                  label: "Avg Rating",
+                  value: product.rating
+                    ? `${Number(product.rating).toFixed(1)} ★`
+                    : "No ratings",
+                },
+                {
+                  label: "Reviews",
+                  value: (product.reviewCount || 0).toLocaleString("en-IN"),
+                },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-center transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
+                >
+                  <p className="text-xs text-gray-400">{label}</p>
+                  <p className="text-base font-bold text-gray-800 mt-0.5">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* <section className="bg-white border border-gray-200 rounded-lg p-5">
           <h2 className="text-base font-semibold text-gray-800 mb-3">Images</h2>
           <div className="grid grid-cols-2 gap-2">
@@ -416,7 +536,7 @@ const ProductAdminDetails = () => {
         </section> */}
 
         {/* {product.complianceSnapshot && (
-          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
+          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
             <h2 className="text-base font-semibold text-gray-800 mb-3">
               Compliance Snapshot
             </h2>
@@ -451,7 +571,7 @@ const ProductAdminDetails = () => {
               {needsReview && (
                 <button
                   onClick={() => setReviewOpen(true)}
-                  className="px-4 py-2 text-sm rounded-md bg-[var(--admin-blue)] text-white hover:bg-[#2e3074]"
+                  className="inline-flex items-center justify-center rounded-lg bg-[var(--admin-blue)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2e3074] hover:shadow-md"
                 >
                   Review Revision
                 </button>
@@ -487,7 +607,7 @@ const ProductAdminDetails = () => {
         )} */}
 
         {/* {product.moderation && (
-          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
+          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
             <h2 className="text-base font-semibold text-gray-800 mb-3">
               Moderation
             </h2>
@@ -551,14 +671,14 @@ const ProductAdminDetails = () => {
         )} */}
 
         {/* {statusHistory.length > 0 && (
-          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
+          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
             <h2 className="text-base font-semibold text-gray-800 mb-3">
               Status History
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-gray-50">
+                  <tr className="border-b border-gray-200 bg-[var(--admin-surface-soft)]">
                     {["From", "To", "Revision", "Reason", "Fields", "Actor", "Date"].map((heading) => (
                       <th key={heading} className="p-3 text-left text-xs font-medium text-gray-600">
                         {heading}
@@ -568,7 +688,7 @@ const ProductAdminDetails = () => {
                 </thead>
                 <tbody>
                   {statusHistory.map((entry, index) => (
-                    <tr key={entry._id || index} className="border-b hover:bg-gray-50">
+                    <tr key={entry._id || index} className="border-b border-gray-100 transition-colors hover:bg-[var(--admin-surface-soft)]">
                       <td className="p-3">{formatLabel(entry.fromStatus, "N/A") }</td>
                       <td className="p-3">{formatLabel(entry.toStatus, "N/A") }</td>
                       <td className="p-3">
@@ -598,11 +718,16 @@ const ProductAdminDetails = () => {
         )} */}
 
         {Object.keys(attributes).length > 0 && (
-          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
-            <h2 className="text-base font-semibold text-gray-800 mb-3">
-              Attributes
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
+            <div className="border-b border-gray-100 bg-gradient-to-r from-[var(--admin-surface-soft)] to-white px-5 pt-4 pb-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--admin-gold)]">
+                Product specifications
+              </p>
+              <h2 className="mt-1 text-lg font-bold text-gray-900">
+                Attributes
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 gap-1 p-3 sm:p-4 md:grid-cols-3">
               {Object.entries(attributes).map(([key, value]) => (
                 <Row
                   key={key}
@@ -619,85 +744,132 @@ const ProductAdminDetails = () => {
         )}
 
         {product.variants?.length > 0 && (
-          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
-            <h2 className="text-base font-semibold text-gray-800 mb-3">
-              Variants ({product.variants.length})
-            </h2>
-            <div className="overflow-x-auto">
+          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
+            <div className="border-b border-gray-100 px-5 bg-gradient-to-r from-[var(--admin-surface-soft)] to-white pt-4 pb-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--admin-gold)]">
+                Product variants
+              </p>
+              <h2 className="mt-1 text-lg font-bold text-gray-900">
+                Variants ({product.variants.length})
+              </h2>
+            </div>
+
+            <div className="overflow-x-auto p-3 sm:p-4">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-gray-50">
-                    <th className="text-left p-3 font-medium text-gray-600">Image</th>
-                    <th className="text-left p-3 font-medium text-gray-600">
+                  <tr className="border-b border-gray-200 bg-[var(--admin-surface-soft)]">
+                    <th className="whitespace-nowrap p-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                      Image
+                    </th>
+                    <th className="whitespace-nowrap p-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
                       SKU
                     </th>
-                    <th className="text-left p-3 font-medium text-gray-600">
+                    <th className="whitespace-nowrap p-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
                       Price
                     </th>
-                    <th className="text-left p-3 font-medium text-gray-600">
+                    <th className="whitespace-nowrap p-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
                       MRP
                     </th>
-                    <th className="text-left p-3 font-medium text-gray-600">
+                    <th className="whitespace-nowrap p-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
                       Stock
                     </th>
-                    <th className="text-left p-3 font-medium text-gray-600">Attributes</th>
+                    <th className="whitespace-nowrap p-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                      Attributes
+                    </th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {product.variants.map((variant, i) => (
                     <tr
                       key={variant.sku || i}
-                      className="border-b hover:bg-gray-50"
+                      className="border-b border-gray-100 transition-colors last:border-b-0 hover:bg-[var(--admin-surface-soft)]"
                     >
-                      <td className="p-3">
-                        <div className="flex items-center gap-3" >
+                      <td className="p-3 align-middle">
+                        <div className="flex items-center gap-3">
                           {getVariantImage(variant) ? (
-                            <img
-                              src={getVariantImage(variant)}
-                              alt={variant.sku || variant.title || "Variant"}
-                              className="w-8 h-8 object-cover rounded border border-gray-200"
+                            <button
+                              type="button"
                               onClick={() => {
-                              setVariantGalleryImages(getVariantImagesList(variant));
-                              setVariantGalleryOpen(true);
-                            }}
-                            />
+                                setVariantGalleryImages(
+                                  getVariantImagesList(variant),
+                                );
+                                setVariantGalleryOpen(true);
+                              }}
+                              className="group relative h-10 w-10 overflow-hidden rounded-lg border border-gray-200 bg-white"
+                              title="View variant images"
+                            >
+                              <img
+                                src={getVariantImage(variant)}
+                                alt={variant.sku || variant.title || "Variant"}
+                                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                              />
+                            </button>
                           ) : (
-                            <span className="text-sm text-gray-400">—</span>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 text-sm text-gray-400">
+                              —
+                            </div>
                           )}
+
                           <button
                             type="button"
                             onClick={() => {
-                              setVariantGalleryImages(getVariantImagesList(variant));
+                              setVariantGalleryImages(
+                                getVariantImagesList(variant),
+                              );
                               setVariantGalleryOpen(true);
                             }}
-                            className="text-sm text-[var(--admin-blue)] hover:underline"
+                            className="text-xs font-semibold text-[var(--admin-blue)] transition-colors hover:text-[var(--admin-gold)] hover:underline"
                           >
                             View
                           </button>
                         </div>
                       </td>
-                      <td className="p-3">{variant.sku || "N/A"}</td>
-                      <td className="p-3">
-                        {variant.price !== undefined
-                          ? `₹${variant.price}`
-                          : "N/A"}
+
+                      <td className="p-3 align-middle">
+                        <span className="font-mono text-xs font-medium text-gray-700">
+                          {variant.sku || "N/A"}
+                        </span>
                       </td>
-                      <td className="p-3">
-                        {variant.mrp !== undefined ? `₹${variant.mrp}` : "N/A"}
+
+                      <td className="p-3 align-middle">
+                        <span className="font-semibold text-gray-900">
+                          {variant.price !== undefined
+                            ? `₹${Number(variant.price).toLocaleString("en-IN")}`
+                            : "N/A"}
+                        </span>
                       </td>
-                      <td className="p-3">{variant.stock ?? "N/A"}</td>
-                      <td className="p-3 text-gray-500">
+
+                      <td className="p-3 align-middle">
+                        <span className="text-gray-600">
+                          {variant.mrp !== undefined
+                            ? `₹${Number(variant.mrp).toLocaleString("en-IN")}`
+                            : "N/A"}
+                        </span>
+                      </td>
+
+                      <td className="p-3 align-middle">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${Number(variant.stock) > 0
+                              ? "bg-green-50 text-green-700"
+                              : "bg-red-50 text-red-600"
+                            }`}
+                        >
+                          {variant.stock ?? "N/A"}
+                        </span>
+                      </td>
+
+                      <td className="max-w-md p-3 align-middle text-xs leading-5 text-gray-500">
                         {variant.attributes
                           ? Object.entries(
-                              variant.attributes instanceof Map
-                                ? Object.fromEntries(variant.attributes)
-                                : variant.attributes,
-                            )
-                              .map(([k, v]) => `${k}: ${v}`)
-                              .join(", ")
+                            variant.attributes instanceof Map
+                              ? Object.fromEntries(variant.attributes)
+                              : variant.attributes,
+                          )
+                            .map(([k, v]) => `${k}: ${v}`)
+                            .join(", ")
                           : "N/A"}
                       </td>
-                     
                     </tr>
                   ))}
                 </tbody>
@@ -711,105 +883,122 @@ const ProductAdminDetails = () => {
           onClose={() => setVariantGalleryOpen(false)}
         />
 
-        {(product.dimensions || product.origin || product.warranty || product.shipping) && (
-          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
-            <h2 className="text-base font-semibold text-gray-800 mb-3">
-              Shipping & Compliance
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-              {product.shipping && (
-                <>
-                  <Row
-                    label="Delivery pincode rule"
-                    value={getShippingPincodeSummary(product.shipping)}
-                  />
-                  <Row
-                    label="Shipping charge"
-                    value={
-                      product.shipping.freeShipping
-                        ? "Free shipping"
-                        : product.shipping.shippingCharge ?? product.shipping.additionalCost
-                    }
-                  />
-                  <Row
-                    label="COD"
-                    value={
-                      product.shipping.codAvailable === false
-                        ? "Not available"
-                        : "Available"
-                    }
-                  />
-                </>
-              )}
-              {product.dimensions && (
-                <>
-                  <Row
-                    label="Dimensions (L×W×H)"
-                    value={
-                      [
-                        product.dimensions.length,
-                        product.dimensions.width,
-                        product.dimensions.height,
-                      ]
-                        .filter(Boolean)
-                        .join(" × ") +
+        {(product.dimensions ||
+          product.origin ||
+          product.warranty ||
+          product.shipping) && (
+            <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
+              <div className="border-b border-gray-100 bg-gradient-to-r from-[var(--admin-surface-soft)] to-white px-5 pt-4 pb-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--admin-gold)]">
+                  Operations
+                </p>
+                <h2 className="mt-1 text-lg font-bold text-gray-900">
+                  Shipping & Compliance
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 gap-1 p-3 sm:p-4 md:grid-cols-3">
+                {product.shipping && (
+                  <>
+                    <Row
+                      label="Delivery pincode rule"
+                      value={getShippingPincodeSummary(product.shipping)}
+                    />
+                    <Row
+                      label="Shipping charge"
+                      value={
+                        product.shipping.freeShipping
+                          ? "Free shipping"
+                          : (product.shipping.shippingCharge ??
+                            product.shipping.additionalCost)
+                      }
+                    />
+                    <Row
+                      label="COD"
+                      value={
+                        product.shipping.codAvailable === false
+                          ? "Not available"
+                          : "Available"
+                      }
+                    />
+                  </>
+                )}
+                {product.dimensions && (
+                  <>
+                    <Row
+                      label="Dimensions (L×W×H)"
+                      value={
+                        [
+                          product.dimensions.length,
+                          product.dimensions.width,
+                          product.dimensions.height,
+                        ]
+                          .filter(Boolean)
+                          .join(" × ") +
                         (product.dimensions.unit
                           ? ` ${product.dimensions.unit}`
                           : "") || null
-                    }
-                  />
+                      }
+                    />
+                    <Row
+                      label="Weight"
+                      value={
+                        product.dimensions.weight
+                          ? `${product.dimensions.weight} ${product.dimensions.weightUnit || "kg"}`
+                          : null
+                      }
+                    />
+                  </>
+                )}
+                {product.origin && (
                   <Row
-                    label="Weight"
+                    label="Origin"
                     value={
-                      product.dimensions.weight
-                        ? `${product.dimensions.weight} ${product.dimensions.weightUnit || "kg"}`
-                        : null
+                      [
+                        product.origin.city,
+                        product.origin.state,
+                        product.origin.country,
+                      ]
+                        .filter(Boolean)
+                        .join(", ") || null
                     }
                   />
-                </>
-              )}
-              {product.origin && (
-                <Row
-                  label="Origin"
-                  value={
-                    [
-                      product.origin.city,
-                      product.origin.state,
-                      product.origin.country,
-                    ]
-                      .filter(Boolean)
-                      .join(", ") || null
-                  }
-                />
-              )}
-              {product.warranty?.period && (
-                <Row
-                  label="Warranty"
-                  value={`${product.warranty.period} ${product.warranty.periodUnit || "months"} (${product.warranty.type || "manufacturer"})`}
-                />
-              )}
-              {product.warranty?.returnPolicy?.eligible !== undefined && (
-                <Row
-                  label="Return Policy"
-                  value={
-                    product.warranty.returnPolicy.eligible
-                      ? `Eligible — ${product.warranty.returnPolicy.days ?? product.warranty.returnPolicy.returnWindowDays ?? 0} days`
-                      : "Not eligible"
-                  }
-                />
-              )}
-            </div>
-          </section>
-        )}
+                )}
+                {product.warranty?.period && (
+                  <Row
+                    label="Warranty"
+                    value={`${product.warranty.period} ${product.warranty.periodUnit || "months"} (${product.warranty.type || "manufacturer"})`}
+                  />
+                )}
+                {product.warranty?.returnPolicy?.eligible !== undefined && (
+                  <Row
+                    label="Return Policy"
+                    value={
+                      product.warranty.returnPolicy.eligible
+                        ? `Eligible — ${product.warranty.returnPolicy.days ?? product.warranty.returnPolicy.returnWindowDays ?? 0} days`
+                        : "Not eligible"
+                    }
+                  />
+                )}
+              </div>
+            </section>
+          )}
 
         {/* Digital product details */}
         {product.productType === "digital" && product.digital && (
-          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
-            <h2 className="text-base font-semibold text-gray-800 mb-3">
-              Digital Product Details
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
+            <div className="border-b border-gray-100 px-5 pt-4 pb-1 bg-gradient-to-r from-[var(--admin-surface-soft)] to-white">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--admin-gold)]">
+                Digital information
+              </p>
+
+              <h2 className="mt-1 text-lg font-bold text-gray-900">
+                Digital Product Details
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 gap-1 p-3 sm:p-4 md:grid-cols-3">
               <Row label="File Type" value={product.digital.fileType} />
+
               <Row
                 label="File Size"
                 value={
@@ -818,6 +1007,7 @@ const ProductAdminDetails = () => {
                     : null
                 }
               />
+
               <Row
                 label="Download Limit"
                 value={
@@ -826,6 +1016,7 @@ const ProductAdminDetails = () => {
                     : "Unlimited"
                 }
               />
+
               <Row
                 label="Link Expiry"
                 value={
@@ -834,51 +1025,68 @@ const ProductAdminDetails = () => {
                     : "Never"
                 }
               />
+
               <Row label="License Type" value={product.digital.licenseType} />
+
               <Row label="Version" value={product.digital.version} />
+
               <Row label="Platform" value={product.digital.platform} />
+
               <Row
                 label="Requires Auth"
                 value={product.digital.requiresAuth ? "Yes" : "No"}
               />
-              {product.digital.fileUrl && (
-                <div className="border-b border-gray-100 py-3 md:col-span-3">
-                  <p className="text-xs uppercase text-gray-400">
-                    Download URL
-                  </p>
-                  <a
-                    href={product.digital.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm text-[var(--admin-blue)] hover:underline break-all"
-                  >
-                    {product.digital.fileUrl}
-                  </a>
-                </div>
-              )}
             </div>
+
+            {product.digital.fileUrl && (
+              <div className="border-t border-gray-100 px-5 py-4">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                  Download URL
+                </p>
+
+                <a
+                  href={product.digital.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="break-all text-sm font-medium text-[var(--admin-blue)] transition-colors hover:text-[var(--admin-gold)] hover:underline"
+                >
+                  {product.digital.fileUrl}
+                </a>
+              </div>
+            )}
           </section>
         )}
 
         {/* Subscription details */}
         {product.productType === "subscription" && product.subscription && (
-          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
-            <h2 className="text-base font-semibold text-gray-800 mb-3">
-              Subscription Details
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
+            <div className="border-b border-gray-100 px-5 pt-4 pb-1 bg-gradient-to-r from-[var(--admin-surface-soft)] to-white">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--admin-gold)]">
+                Subscription information
+              </p>
+
+              <h2 className="mt-1 text-lg font-bold text-gray-900">
+                Subscription Details
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 gap-1 p-3 sm:p-4 md:grid-cols-3">
               <Row
                 label="Billing Cycle"
                 value={product.subscription.billingCycle}
               />
+
               <Row
                 label="Recurring Price"
                 value={
                   product.subscription.recurringPrice !== undefined
-                    ? `₹${product.subscription.recurringPrice}`
+                    ? `₹${Number(
+                      product.subscription.recurringPrice,
+                    ).toLocaleString("en-IN")}`
                     : null
                 }
               />
+
               <Row
                 label="Trial Period"
                 value={
@@ -887,59 +1095,70 @@ const ProductAdminDetails = () => {
                     : "No trial"
                 }
               />
+
               <Row
                 label="Setup Fee"
                 value={
                   product.subscription.setupFee
-                    ? `₹${product.subscription.setupFee}`
+                    ? `₹${Number(product.subscription.setupFee).toLocaleString(
+                      "en-IN",
+                    )}`
                     : "Free"
                 }
               />
+
               <Row
                 label="Grace Period"
                 value={
                   product.subscription.gracePeriodDays
                     ? `${product.subscription.gracePeriodDays} days`
-                    : null
+                    : "None"
                 }
               />
+
               <Row
                 label="Auto-renew"
                 value={product.subscription.autoRenew ? "Enabled" : "Disabled"}
               />
+
               <Row
                 label="Pause Allowed"
                 value={product.subscription.pauseAllowed ? "Yes" : "No"}
               />
             </div>
+
             {product.subscription.features?.length > 0 && (
-              <div className="mt-3">
-                <p className="text-xs uppercase text-gray-400 mb-2">
+              <div className="border-t border-gray-100 px-5 py-4">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">
                   Plan Features
                 </p>
-                <ul className="space-y-1">
-                  {product.subscription.features.map((f, i) => (
-                    <li
-                      key={i}
-                      className="flex items-center gap-2 text-sm text-gray-700"
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {product.subscription.features.map((feature, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 rounded-lg border border-gray-100 bg-[var(--admin-surface-soft)] px-3 py-2.5 text-sm text-gray-700"
                     >
-                      <svg
-                        className="w-3.5 h-3.5 text-green-500 flex-shrink-0"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2.5}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      {f}
-                    </li>
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100">
+                        <svg
+                          className="h-3 w-3 text-green-600"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </span>
+
+                      <span className="break-words">{feature}</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
           </section>
@@ -948,68 +1167,113 @@ const ProductAdminDetails = () => {
         {/* Bundle items */}
         {product.productType === "bundle" &&
           product.bundleItems?.length > 0 && (
-            <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base font-semibold text-gray-800">
-                  Bundle Items ({product.bundleItems.length})
-                </h2>
-                {product.bundleDiscount > 0 && (
-                  <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
-                    {product.bundleDiscount}% bundle discount
-                  </span>
-                )}
+            <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
+              <div className="border-b border-gray-100 px-5 pt-4 pb-1 bg-gradient-to-r from-[var(--admin-surface-soft)] to-white">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--admin-gold)]">
+                      Bundle information
+                    </p>
+
+                    <h2 className="mt-1 text-lg font-bold text-gray-900">
+                      Bundle Items ({product.bundleItems.length})
+                    </h2>
+                  </div>
+
+                  {product.bundleDiscount > 0 && (
+                    <span className="inline-flex w-fit items-center rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700">
+                      {product.bundleDiscount}% bundle discount
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="overflow-x-auto">
+
+              <div className="overflow-x-auto p-3 sm:p-4">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50">
-                      <th className="text-left p-3 font-medium text-gray-600 text-xs">
+                    <tr className="border-b border-gray-200 bg-[var(--admin-surface-soft)]">
+                      <th className="whitespace-nowrap p-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
                         Product
                       </th>
-                      <th className="text-left p-3 font-medium text-gray-600 text-xs">
+
+                      <th className="whitespace-nowrap p-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
                         SKU
                       </th>
-                      <th className="text-right p-3 font-medium text-gray-600 text-xs">
+
+                      <th className="whitespace-nowrap p-3 text-right text-[11px] font-bold uppercase tracking-wide text-gray-500">
                         Qty
                       </th>
-                      <th className="text-right p-3 font-medium text-gray-600 text-xs">
+
+                      <th className="whitespace-nowrap p-3 text-right text-[11px] font-bold uppercase tracking-wide text-gray-500">
                         Unit Price
                       </th>
-                      <th className="text-right p-3 font-medium text-gray-600 text-xs">
+
+                      <th className="whitespace-nowrap p-3 text-right text-[11px] font-bold uppercase tracking-wide text-gray-500">
                         Subtotal
                       </th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {product.bundleItems.map((item, i) => (
                       <tr
                         key={item.productId || i}
-                        className="border-b hover:bg-gray-50"
+                        className="border-b border-gray-100 transition-colors last:border-b-0 hover:bg-[var(--admin-surface-soft)]"
                       >
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            {item.image && (
+                        <td className="p-3 align-middle">
+                          <div className="flex items-center gap-3">
+                            {item.image ? (
                               <img
                                 src={item.image}
-                                alt=""
-                                className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0"
+                                alt={item.title || "Bundle product"}
+                                className="h-10 w-10 flex-shrink-0 rounded-lg border border-gray-200 object-cover"
                               />
+                            ) : (
+                              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 text-xs text-gray-400">
+                                —
+                              </div>
                             )}
-                            <span className="text-gray-800">
-                              {item.title || item.productId}
-                            </span>
+
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-gray-800">
+                                {item.title || item.productId}
+                              </p>
+
+                              {item.productId && (
+                                <p className="mt-0.5 truncate text-[11px] text-gray-400">
+                                  ID: {item.productId}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </td>
-                        <td className="p-3 text-gray-500 font-mono text-xs">
-                          {item.sku || "—"}
+
+                        <td className="p-3 align-middle">
+                          <span className="font-mono text-xs font-medium text-gray-600">
+                            {item.sku || "—"}
+                          </span>
                         </td>
-                        <td className="p-3 text-right">{item.quantity}</td>
-                        <td className="p-3 text-right">
-                          ₹{Number(item.price || 0).toLocaleString("en-IN")}
+
+                        <td className="p-3 text-right align-middle">
+                          <span className="inline-flex min-w-8 justify-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
+                            {item.quantity}
+                          </span>
                         </td>
-                        <td className="p-3 text-right font-medium">
-                          ₹
-                          {(item.price * item.quantity).toLocaleString("en-IN")}
+
+                        <td className="p-3 text-right align-middle">
+                          <span className="font-medium text-gray-800">
+                            ₹{Number(item.price || 0).toLocaleString("en-IN")}
+                          </span>
+                        </td>
+
+                        <td className="p-3 text-right align-middle">
+                          <span className="font-semibold text-gray-900">
+                            ₹
+                            {(
+                              Number(item.price || 0) *
+                              Number(item.quantity || 0)
+                            ).toLocaleString("en-IN")}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -1022,29 +1286,44 @@ const ProductAdminDetails = () => {
         {/* SEO data */}
         {product.seo &&
           Object.keys(product.seo).some((k) => product.seo[k]) && (
-            <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
-              <h2 className="text-base font-semibold text-gray-800 mb-3">
-                SEO Metadata
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+            <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
+              <div
+                className="border-b border-gray-100 bg-gradient-to-r from-[var(--admin-surface-soft)] to-white px-5 pt-4
+pb-1"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--admin-gold)]">
+                  Search visibility
+                </p>
+
+                <h2 className="mt-1 text-lg font-bold text-gray-900">
+                  SEO Metadata
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 gap-1 p-3 sm:p-4 md:grid-cols-2">
                 <Row label="Meta Title" value={product.seo.metaTitle} />
+
                 <Row
                   label="Meta Description"
                   value={product.seo.metaDescription}
                 />
+
                 <Row label="Canonical URL" value={product.seo.canonicalUrl} />
+
                 <Row label="OG Title" value={product.seo.ogTitle} />
               </div>
+
               {product.seo.keywords?.length > 0 && (
-                <div className="border-b border-gray-100 py-3">
-                  <p className="text-xs uppercase text-gray-400 mb-2">
+                <div className="border-t border-gray-100 px-5 py-4">
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">
                     Keywords
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+
+                  <div className="flex flex-wrap gap-2">
                     {product.seo.keywords.map((kw) => (
                       <span
                         key={kw}
-                        className="px-2.5 py-0.5 bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] text-xs rounded-full"
+                        className="inline-flex items-center rounded-full border border-[var(--admin-gold)]/25 bg-[var(--admin-gold)]/10 px-3 py-1 text-xs font-medium text-[var(--admin-blue)]"
                       >
                         {kw}
                       </span>
@@ -1055,80 +1334,22 @@ const ProductAdminDetails = () => {
             </section>
           )}
 
-        {/* Analytics */}
-        {product.analytics && (
-          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
-            <h2 className="text-base font-semibold text-gray-800 mb-3">
-              Analytics
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[
-                {
-                  label: "Total Views",
-                  value: (product.analytics.views || 0).toLocaleString("en-IN"),
-                },
-                {
-                  label: "Purchases",
-                  value: (product.analytics.purchases || 0).toLocaleString(
-                    "en-IN",
-                  ),
-                },
-                {
-                  label: "Revenue",
-                  value: `₹${(product.analytics.revenue || 0).toLocaleString("en-IN")}`,
-                },
-                {
-                  label: "Wishlists",
-                  value: (product.analytics.wishlistAdds || 0).toLocaleString(
-                    "en-IN",
-                  ),
-                },
-                {
-                  label: "Cart Adds",
-                  value: (product.analytics.cartAdds || 0).toLocaleString(
-                    "en-IN",
-                  ),
-                },
-                {
-                  label: "Returns",
-                  value: (product.analytics.returns || 0).toLocaleString(
-                    "en-IN",
-                  ),
-                },
-                {
-                  label: "Avg Rating",
-                  value: product.rating
-                    ? `${Number(product.rating).toFixed(1)} ★`
-                    : "No ratings",
-                },
-                {
-                  label: "Reviews",
-                  value: (product.reviewCount || 0).toLocaleString("en-IN"),
-                },
-              ].map(({ label, value }) => (
-                <div
-                  key={label}
-                  className="text-center p-3 bg-gray-50 border border-gray-200 rounded-lg"
-                >
-                  <p className="text-xs text-gray-400">{label}</p>
-                  <p className="text-base font-bold text-gray-800 mt-0.5">
-                    {value}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* Tags */}
         {product.tags?.length > 0 && (
-          <section className="bg-white border border-gray-200 rounded-lg p-5 lg:col-span-3">
-            <h2 className="text-base font-semibold text-gray-800 mb-3">Tags</h2>
-            <div className="flex flex-wrap gap-1.5">
+          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-3">
+            <div className="border-b border-gray-100 px-5 pt-4 pb-1 bg-gradient-to-r from-[var(--admin-surface-soft)] to-white">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--admin-gold)]">
+                Product organization
+              </p>
+
+              <h2 className="mt-1 text-lg font-bold text-gray-900">Tags</h2>
+            </div>
+
+            <div className="flex flex-wrap gap-2 p-4 sm:p-5">
               {product.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex px-2.5 py-0.5 bg-[var(--admin-blue)] text-white text-xs rounded-full"
+                  className="inline-flex items-center rounded-full border border-[var(--admin-gold)]/25 bg-[var(--admin-gold)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--admin-blue)] transition-colors hover:border-[var(--admin-gold)]/50 hover:bg-[var(--admin-gold)]/15"
                 >
                   #{tag}
                 </span>

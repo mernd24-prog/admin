@@ -45,6 +45,31 @@ const IMPORT_COLUMNS = [
   "newSpecialPrice",
 ];
 const EDITABLE_IMPORT_COLUMN = "newSpecialPrice";
+
+const CLASS_PRODUCT_LINK =
+  "block truncate text-left font-semibold text-[var(--admin-ink)] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]";
+const CLASS_PRODUCT_SKU = "text-xs text-[var(--admin-muted)]";
+const CLASS_MONO_XS = "font-mono text-xs";
+const CLASS_MONO_SM = "font-mono text-sm";
+const CLASS_STATUS_BASE =
+  "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium";
+const CLASS_STATUS_ACTIVE =
+  "inline-flex rounded-lg px-2 py-1 text-xs font-medium bg-green-50 text-green-700";
+const CLASS_STATUS_INACTIVE =
+  "inline-flex rounded-lg px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700";
+const CLASS_STATUS_OTHER =
+  "inline-flex rounded-lg px-2 py-1 text-xs font-medium bg-yellow-50 text-yellow-700";
+const CLASS_STATUS_ERROR =
+  "inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700";
+const CLASS_STATUS_PENDING =
+  "inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700";
+const CLASS_SPECIAL_PRICE_INPUT =
+  "w-32 rounded-lg border px-2 py-1.5 text-sm";
+const CLASS_ALERT_CLOSE =
+  "shrink-0 rounded-md px-2 py-1 text-lg leading-none";
+const CLASS_ALERT =
+  "mb-4 flex items-start justify-between gap-3 rounded-lg px-4 py-3 text-sm";
+
 const READ_ONLY_IMPORT_COLUMNS = IMPORT_COLUMNS.filter(
   (column) => column !== EDITABLE_IMPORT_COLUMN,
 );
@@ -630,12 +655,12 @@ const SellerSpecialPriceManager = () => {
           <div className="w-[220px] max-w-[220px] min-w-0">
             <Link
               to={`/app/product-catalog/view/${row.productId}`}
-              className="block truncate text-left font-semibold text-[var(--admin-ink)] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]"
+              className={CLASS_PRODUCT_LINK}
               title={row.productName || "Untitled product"}
             >
               {row.productName || "Untitled product"}
             </Link>
-            <p className="text-xs text-[var(--admin-muted)]">
+            <p className={CLASS_PRODUCT_SKU}>
               {row.productSku || "N/A"}
             </p>
           </div>
@@ -650,7 +675,7 @@ const SellerSpecialPriceManager = () => {
         key: "variantSku",
         label: "SKU",
         render: (_, row) => (
-          <span className="font-mono text-xs">
+          <span className={CLASS_MONO_XS}>
             {row.variantSku || row.productSku || "N/A"}
           </span>
         ),
@@ -659,7 +684,7 @@ const SellerSpecialPriceManager = () => {
         key: "mrp",
         label: "MRP",
         render: (value) => (
-          <span className="font-mono text-sm">{formatMoney(value)}</span>
+          <span className={CLASS_MONO_SM}>{formatMoney(value)}</span>
         ),
       },
       {
@@ -681,7 +706,7 @@ const SellerSpecialPriceManager = () => {
         label: "Current Special",
         render: (value) =>
           value ? (
-            <span className="font-mono text-sm">{formatMoney(value)}</span>
+            <span className={CLASS_MONO_SM}>{formatMoney(value)}</span>
           ) : (
             "N/A"
           ),
@@ -701,7 +726,7 @@ const SellerSpecialPriceManager = () => {
                   : undefined
               }
               step="0.01"
-              className={`w-32 rounded-lg border px-2 py-1.5 text-sm ${
+              className={`${CLASS_SPECIAL_PRICE_INPUT} ${
                 hasError
                   ? "border-red-300 bg-red-50 text-red-800"
                   : "border-[var(--admin-line)]"
@@ -726,14 +751,14 @@ const SellerSpecialPriceManager = () => {
           } = getRowFlags(row);
           if (isZeroPrice) {
             return (
-              <span className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700">
+              <span className={CLASS_STATUS_ERROR}>
                 ⚠ Selling price is 0
               </span>
             );
           }
           if (hasError) {
             return (
-              <span className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700">
+              <span className={CLASS_STATUS_ERROR}>
                 {current < minimumSpecialPrice
                   ? `⚠ Minimum ${formatMoney(minimumSpecialPrice)}`
                   : "⚠ Special must be < Selling"}
@@ -742,7 +767,7 @@ const SellerSpecialPriceManager = () => {
           }
           if (isPending) {
             return (
-              <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
+              <span className={CLASS_STATUS_PENDING}>
                 ⟳ Pending
               </span>
             );
@@ -751,7 +776,7 @@ const SellerSpecialPriceManager = () => {
 
           return (
             <span
-              className={`inline-flex rounded-lg px-2 py-1 text-xs font-medium ${
+              className={`${CLASS_STATUS_BASE} ${
                 status === "active"
                   ? "bg-green-50 text-green-700"
                   : status === "inactive"
@@ -827,7 +852,7 @@ const SellerSpecialPriceManager = () => {
       />
 
       {importError ? (
-        <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className={`${CLASS_ALERT} border border-red-200 bg-red-50 text-red-700`}>
           <div>
             <p className="font-semibold">Import issue</p>
             <p className="mt-1 whitespace-pre-wrap">{importError}</p>
@@ -835,7 +860,7 @@ const SellerSpecialPriceManager = () => {
           <button
             type="button"
             aria-label="Close import issue"
-            className="shrink-0 rounded-md px-2 py-1 text-lg leading-none text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+            className={`${CLASS_ALERT_CLOSE} text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300`}
             onClick={() => setImportError("")}
           >
             ×
@@ -844,7 +869,7 @@ const SellerSpecialPriceManager = () => {
       ) : null}
 
       {importInfo ? (
-        <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+        <div className={`${CLASS_ALERT} border border-sky-200 bg-sky-50 text-sky-700`}>
           <div>
             <p className="font-semibold">Import info</p>
             <p className="mt-1 whitespace-pre-wrap">{importInfo}</p>
@@ -852,7 +877,7 @@ const SellerSpecialPriceManager = () => {
           <button
             type="button"
             aria-label="Close import info"
-            className="shrink-0 rounded-md px-2 py-1 text-lg leading-none text-sky-700 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+            className={`${CLASS_ALERT_CLOSE} text-sky-700 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300`}
             onClick={() => setImportInfo("")}
           >
             ×
@@ -861,7 +886,7 @@ const SellerSpecialPriceManager = () => {
       ) : null}
 
       {importSuccess ? (
-        <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className={`${CLASS_ALERT} border border-emerald-200 bg-emerald-50 text-emerald-700`}>
           <div>
             <p className="font-semibold">Import successful</p>
             <p className="mt-1 whitespace-pre-wrap">{importSuccess}</p>
@@ -869,7 +894,7 @@ const SellerSpecialPriceManager = () => {
           <button
             type="button"
             aria-label="Close import success"
-            className="shrink-0 rounded-md px-2 py-1 text-lg leading-none text-emerald-700 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+            className={`${CLASS_ALERT_CLOSE} text-emerald-700 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300`}
             onClick={() => setImportSuccess("")}
           >
             ×

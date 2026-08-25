@@ -32,12 +32,18 @@ const toProfileUpdateBody = (payload = {}) => {
     (Object.prototype.hasOwnProperty.call(payload, "avatarUrl") &&
       !payload.avatarUrl);
 
+  const description =
+    payload.description !== undefined
+      ? payload.description
+      : payload.sellerProfile?.description;
+
   return {
     profile: {
       firstName: profile.firstName || nameParts.firstName,
       lastName: profile.lastName || nameParts.lastName,
       ...(shouldClearAvatar ? { avatarUrl: null } : {}),
       ...(isUrl(avatarUrl) ? { avatarUrl } : {}),
+      ...(description !== undefined ? { description } : {}),
     },
   };
 };
