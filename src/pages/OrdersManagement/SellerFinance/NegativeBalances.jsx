@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
-import { MdCheckCircle, MdRefresh } from "react-icons/md";
+import { MdEdit, MdRefresh } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
@@ -29,18 +29,16 @@ const NEGATIVE_BALANCE_STATUSES = [
   "completed",
 ];
 
-const RESOLVE_ACTIONS = [
-  {
-    value: "offset_future_payout",
-    label: "Offset from future payouts",
-  },
+const RECOVERY_ACTIONS = [
   {
     value: "collected_from_seller",
-    label: "Collected directly from seller",
+    label: "Record external payment",
+    description: "Use only when the seller paid separately by bank transfer, UPI, or another verified method.",
   },
   {
     value: "platform_write_off",
-    label: "Platform write-off",
+    label: "Write off remaining amount",
+    description: "Stop recovery without collecting the balance. This should require an approved business reason.",
   },
 ];
 
@@ -71,7 +69,7 @@ const FILTER_FIELDS = [
 const EMPTY_ACTION = {
   open: false,
   settlement: null,
-  resolveAction: "offset_future_payout",
+  resolveAction: "collected_from_seller",
   referenceId: "",
   note: "",
 };
@@ -95,7 +93,7 @@ const valueOf = (row = {}, ...keys) => {
   return 0;
 };
 
-const money = (value) => `INR ${Number(value || 0).toFixed(2)}`;
+const money = (value) => `INR ${Math.abs(Number(value || 0)).toFixed(2)}`;
 const settlementId = (row) => row?._id || row?.id || row?.settlementId;
 
 const NegativeBalances = () => {
@@ -141,7 +139,7 @@ const NegativeBalances = () => {
     fetchBalances();
   }, [fetchBalances]);
 
-  const openResolve = (row) => {
+  const openManageRecovery = (row) => {
     setAction({
       ...EMPTY_ACTION,
       open: true,
@@ -151,6 +149,9 @@ const NegativeBalances = () => {
 
   const validateAction = () => {
     if (!settlementId(action.settlement)) return "Settlement ID is missing";
+    if (action.resolveAction === "collected_from_seller" && !action.referenceId.trim()) {
+      return "Payment reference ID is required";
+    }
     if (!action.note.trim()) return "Note is required";
     return "";
   };
@@ -161,10 +162,13 @@ const NegativeBalances = () => {
       toast.error(validationMessage);
       return;
     }
+    const isExternalPayment = action.resolveAction === "collected_from_seller";
     setConfirmAction({
       open: true,
-      title: "Resolve Negative Balance?",
-      message: `This will resolve the negative balance for settlement ${settlementId(action.settlement)}.`,
+      title: isExternalPayment ? "Confirm external payment?" : "Confirm write-off?",
+      message: isExternalPayment
+        ? `Confirm that ${money(action.settlement?.remainingAmount ?? action.settlement?.net_amount)} was received outside the payout system. This closes the amount owed.`
+        : `This permanently stops recovery of ${money(action.settlement?.remainingAmount ?? action.settlement?.net_amount)}. The amount will not be collected from this seller.`,
     });
   };
 
@@ -180,7 +184,11 @@ const NegativeBalances = () => {
           note: action.note,
         }),
       ).unwrap();
-      toast.success("Negative balance recovery updated");
+      toast.success(
+        action.resolveAction === "collected_from_seller"
+          ? "External seller payment recorded"
+          : "Remaining amount written off",
+      );
       setAction(EMPTY_ACTION);
       setConfirmAction({ open: false });
       await fetchBalances();
@@ -254,13 +262,14 @@ const NegativeBalances = () => {
       },
       {
         key: "negativeAmount",
-        label: "Outstanding",
+        label: "Amount originally owed",
         sortable: true,
         render: (value, row) =>
           money(
             valueOf(
               { value, ...row },
               "value",
+              "originalLiabilityAmount",
               "balance",
               "net_amount",
               "netAmount",
@@ -269,16 +278,33 @@ const NegativeBalances = () => {
           ),
       },
       {
-        key: "resolvedAmount",
-        label: "Recovered",
+        key: "remainingAmount",
+        label: "Still owed",
         sortable: false,
-        render: (value, row) => money(value ?? row.recoveredAmount ?? 0),
+        render: (value, row) => (
+          <div>
+            <div className="font-semibold text-red-600">
+              {money(value ?? row.remainingAmount ?? row.net_amount ?? row.netAmount ?? 0)}
+            </div>
+            {Number(row.recoveredAmount || 0) > 0 && (
+              <div className="mt-1 text-xs text-emerald-600">
+                {money(row.recoveredAmount)} already recovered
+              </div>
+            )}
+          </div>
+        ),
       },
       {
         key: "status",
         label: "Status",
         sortable: true,
-        render: (value) => <StatusBadge status={value} dot />,
+        render: (value) => (
+          <StatusBadge
+            status={value}
+            label={value === "pending" ? "Auto recovery active" : undefined}
+            dot
+          />
+        ),
       },
       {
         key: "createdAt",
@@ -309,10 +335,10 @@ const NegativeBalances = () => {
               <button
                 type="button"
                 className="admin-btn-secondary !px-2 !py-1"
-                onClick={() => openResolve(row)}
+                onClick={() => openManageRecovery(row)}
               >
-                <MdCheckCircle size={15} />
-                Resolve
+                <MdEdit size={15} />
+                Manage recovery
               </button>
             </PermissionGuard>
           );
@@ -326,11 +352,11 @@ const NegativeBalances = () => {
     <div>
       <Loader loading={loading} />
       <PageHeader
-        title="Negative Balances"
-        subtitle="Review and resolve seller accounts with negative payout balances"
+        title="Seller Amounts Owed"
+        subtitle="Money sellers owe the platform from collected COD, refunds, chargebacks, or other adjustments. These amounts reduce future payouts until recovered."
         breadcrumbs={[
           { label: "Seller Finance & Payouts" },
-          { label: "Negative Balances" },
+          { label: "Seller Amounts Owed" },
         ]}
         actions={
           <button type="button" onClick={fetchBalances}>
@@ -338,6 +364,13 @@ const NegativeBalances = () => {
           </button>
         }
       />
+
+      <div className="admin-card mb-4 border-l-4 border-l-blue-500 bg-blue-50/40 p-4 text-sm text-[var(--admin-ink)]">
+        <div className="font-semibold">Future-payout recovery is automatic</div>
+        <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
+          No admin action is needed for normal recovery. Use “Manage recovery” only when payment was received outside the platform or an authorized write-off is required.
+        </p>
+      </div>
 
       <DataTable
         columns={columns}
@@ -366,6 +399,7 @@ const NegativeBalances = () => {
           />
         }
         requiredModule="sellers/commissions"
+        emptyText="No sellers currently owe money to the platform."
         exportConfig={{
           filename: "negative-balances",
           columns,
@@ -373,11 +407,11 @@ const NegativeBalances = () => {
         }}
       />
 
-      {/* Resolve modal */}
+      {/* Exception recovery modal */}
       <DefaultModal
         isOpen={action.open}
         onClose={() => setAction(EMPTY_ACTION)}
-        title="Resolve Negative Balance"
+        title="Manage Recovery Exception"
         onSubmit={prepareAction}
         submitButtonText="Continue"
         closeButtonText="Cancel"
@@ -386,10 +420,10 @@ const NegativeBalances = () => {
         <div className="space-y-4">
           <div>
             <span className="mb-2 block text-sm font-medium text-gray-700">
-              Resolution Action
+              What happened?
             </span>
             <div className="space-y-2">
-              {RESOLVE_ACTIONS.map((opt) => (
+              {RECOVERY_ACTIONS.map((opt) => (
                 <label
                   key={opt.value}
                   className="flex cursor-pointer items-center gap-3 rounded border border-gray-200 p-3 hover:bg-gray-50"
@@ -407,25 +441,31 @@ const NegativeBalances = () => {
                     }
                     className="h-4 w-4 text-blue-600"
                   />
-                  <span className="text-sm text-gray-700">{opt.label}</span>
+                  <span>
+                    <span className="block text-sm font-medium text-gray-700">{opt.label}</span>
+                    <span className="mt-0.5 block text-xs leading-5 text-gray-500">{opt.description}</span>
+                  </span>
                 </label>
               ))}
             </div>
           </div>
 
-          <Input
-            labelName="Reference ID (optional)"
-            value={action.referenceId}
-            onChange={(e) =>
-              setAction((prev) => ({
-                ...prev,
-                referenceId: e.target.value,
-              }))
-            }
-          />
+          {action.resolveAction === "collected_from_seller" && (
+            <Input
+              labelName="Payment reference ID"
+              value={action.referenceId}
+              onChange={(e) =>
+                setAction((prev) => ({
+                  ...prev,
+                  referenceId: e.target.value,
+                }))
+              }
+              required
+            />
+          )}
 
           <Input
-            labelName="Note"
+            labelName={action.resolveAction === "platform_write_off" ? "Approved write-off reason" : "Payment note"}
             type="textarea"
             value={action.note}
             onChange={(e) =>

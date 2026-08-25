@@ -74,8 +74,13 @@ export const dropdownApi = {
   getHsnCodes: (params) => load("hsn-codes", params),
   getTaxes: (params) => load("taxes", params),
   getSystemOptions: (resource, params) => load(resource, params),
-  getSellers: (params) =>
-    loadProtected("sellers", ENDPOINTS.sellers.list, params, (item) => {
+  getSellers: (params = {}) =>
+    loadProtected("sellers", ENDPOINTS.sellers.list, {
+      ...params,
+      // Seller directories are server-searched and paginated. Never request
+      // an unbounded directory just to populate a dropdown.
+      limit: Math.min(Math.max(Number(params.limit) || 20, 1), 100),
+    }, (item) => {
       const name =
         item.displayName ||
         item.businessName ||

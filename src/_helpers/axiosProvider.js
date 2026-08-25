@@ -33,7 +33,7 @@ export const apiUrl = normalizedApiBase.endsWith("/api/v1")
 export const socketApiUrl =
   process.env.REACT_APP_SOCKET_URL ||
   process.env.VITE_SOCKET_URL ||
-  `${normalizedApiBase.replace(/\/api\/v1$/, "")}/socket`;
+  normalizedApiBase.replace(/\/api\/v1$/, "");
 
 const axiosPublic = axios.create({
   baseURL: apiUrl,

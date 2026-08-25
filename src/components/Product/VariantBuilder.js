@@ -50,6 +50,8 @@ const DISPLAY_TYPES = [
 const DEFAULT_VARIANT = {
   sku: "",
   title: "",
+  description: "",
+  shortDescription: "",
   price: "",
   mrp: "",
   salePrice: "",
@@ -1027,13 +1029,13 @@ const VariantBuilder = ({
                       </div> */}
 
                       <div className="space-y-1">
-                        <FieldLabel>Title Override</FieldLabel>
+                        <FieldLabel>Variant Title Detail</FieldLabel>
                         <SmallInput
                           value={variant.title || ""}
                           onChange={(e) =>
                             updateVariant(idx, "title", e.target.value)
                           }
-                          placeholder="Auto from attributes"
+                          placeholder="e.g. 20 L / Coral (added after product title)"
                         />
                       </div>
                       <div className="space-y-1">
@@ -1054,6 +1056,32 @@ const VariantBuilder = ({
                               digitsOnly === "" ? "" : Number(digitsOnly),
                             );
                           }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      <div className="space-y-1">
+                        <FieldLabel>Additional Short Description</FieldLabel>
+                        <textarea
+                          className="min-h-[72px] w-full resize-y rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-800 placeholder-gray-300 focus:border-[var(--admin-blue)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]/20"
+                          value={variant.shortDescription || ""}
+                          maxLength={500}
+                          onChange={(e) =>
+                            updateVariant(idx, "shortDescription", e.target.value)
+                          }
+                          placeholder="Optional variant detail. Added to the product short description."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>Additional Full Description</FieldLabel>
+                        <textarea
+                          className="min-h-[72px] w-full resize-y rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-800 placeholder-gray-300 focus:border-[var(--admin-blue)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]/20"
+                          value={variant.description || ""}
+                          onChange={(e) =>
+                            updateVariant(idx, "description", e.target.value)
+                          }
+                          placeholder="Optional variant detail. Added after the main product description."
                         />
                       </div>
                     </div>

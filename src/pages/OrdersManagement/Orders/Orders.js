@@ -26,6 +26,16 @@ import { getOrderList } from "../../../Redux/orderSlice";
 import { useListPage } from "../../../hooks/useListPage";
 import { MdPayments, MdShoppingCart, MdVisibility } from "react-icons/md";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import useRealtimeRefresh from "../../../hooks/useRealtimeRefresh";
+
+const PAYMENT_TYPE_OPTIONS = [
+  { value: "cod", label: "Cash on Delivery (COD)" },
+  { value: "razorpay", label: "Online (Razorpay)" },
+  { value: "stripe", label: "Online (Stripe)" },
+  { value: "manual_upi", label: "Manual UPI" },
+  { value: "manual_bank_transfer", label: "Bank Transfer" },
+  { value: "wallet_only", label: "Wallet Only" },
+];
 
 const FILTER_FIELDS = [
   {
@@ -41,6 +51,13 @@ const FILTER_FIELDS = [
     label: "Payment Status",
     width: "w-44",
     options: PAYMENT_STATUS_OPTIONS,
+  },
+  {
+    key: "paymentProvider",
+    type: "select",
+    label: "Payment Type",
+    width: "w-52",
+    options: PAYMENT_TYPE_OPTIONS,
   },
   {
     key: "deliveryStatus",
@@ -100,6 +117,7 @@ const getInitialQueryFilters = () => {
   return [
     "status",
     "paymentStatus",
+    "paymentProvider",
     "deliveryStatus",
     "buyerId",
     "sellerId",
@@ -492,8 +510,21 @@ const createColumns = (
   //   ),
   // },
   {
+    key: "payment_provider",
+    label: "Payment Type",
+    render: (v, row) => {
+      const provider = String(firstDefined(v, row.paymentProvider, "")).toLowerCase();
+      const label = PAYMENT_TYPE_OPTIONS.find((option) => option.value === provider)?.label;
+      return (
+        <span className="text-sm font-medium text-gray-700">
+          {label || (provider ? provider.replace(/_/g, " ") : "N/A")}
+        </span>
+      );
+    },
+  },
+  {
     key: "payment_status",
-    label: "Payment",
+    label: "Payment Status",
     render: (v, row) => (
       <StatusBadge status={firstDefined(v, row.paymentStatus)} dot />
     ),
@@ -528,6 +559,13 @@ const Orders = () => {
   const navigate = useNavigate();
   const { isSeller, isAdmin } = usePermission();
   const selector = useSelector((state) => state.order);
+  const realtimeRevision = useRealtimeRefresh([
+    "order",
+    "payment",
+    "shipment",
+    "return",
+    "refund",
+  ]);
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
@@ -623,6 +661,7 @@ const Orders = () => {
         search: params.search || undefined,
         status: params.status || undefined,
         paymentStatus: params.paymentStatus || undefined,
+        paymentProvider: params.paymentProvider || undefined,
         deliveryStatus: params.deliveryStatus || undefined,
         buyerId: params.buyerId || undefined,
         sellerId: params.sellerId || undefined,
@@ -645,6 +684,7 @@ const Orders = () => {
     list.sortKey,
     list.sortDir,
     list.filters,
+    realtimeRevision,
   ]);
 
   const filterFields = useMemo(

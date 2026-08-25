@@ -276,7 +276,7 @@ const ShipmentTracking = () => {
   const [sellerOptions, setSellerOptions] = useState([]);
   useEffect(() => {
     dropdownApi
-      .getSellers({ limit: 200 })
+      .getSellers({ limit: 100 })
       .then(setSellerOptions)
       .catch(() => {});
   }, []);

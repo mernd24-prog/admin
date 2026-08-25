@@ -2,16 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
-  MdAccountBalanceWallet,
-  MdHourglassTop,
-  MdLock,
-  MdPayments,
   MdRefresh,
 } from "react-icons/md";
 import PageHeader from "../../../components/Shared/PageHeader";
 import StatusBadge from "../../../components/Shared/StatusBadge";
 import Loader from "../../../components/Loader/Loader";
-import SummaryCard from "../../../components/Shared/SummaryCard";
 import DataTable from "../../../components/Shared/DataTable";
 import {OrderLink} from "../../../components/Shared/EntityLink";
 import { getMySellerWalletSummary, getSellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
@@ -30,15 +25,27 @@ import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 const unwrap = (value = {}) => value?.data?.data || value?.data || {};
 const money = (value, currency = "INR") =>
   formatCurrency(Number(value || 0), "₹0", currency);
+const owedMoney = (value, currency = "INR") =>
+  money(Math.abs(Number(value || 0)), currency);
+const releaseLabel = (item = {}) => {
+  const status = String(item.releaseStatus || item.status || "pending").toLowerCase();
+  const reason = String(item.releaseReason || "").toLowerCase();
+  if (["released", "paid", "completed"].includes(status)) return "Paid";
+  if (["processing", "approved", "in_process"].includes(status)) return "Payout processing";
+  if (["held", "blocked", "on_hold"].includes(status)) return "On hold";
+  if (["eligible", "available"].includes(status)) return "Available now";
+  if (reason.includes("return_window")) return "Return window open";
+  return "Waiting for release";
+};
 const receivableMeaning = (item = {}) => {
   const status = String(item.releaseStatus || item.status || "pending").toLowerCase();
   const reason = String(item.releaseReason || "").toLowerCase();
-  if (["released", "paid", "completed"].includes(status)) return "Included in a completed payout or balance adjustment.";
-  if (["processing", "approved"].includes(status)) return "Included in a payout that is currently being processed.";
+  if (["released", "paid", "completed"].includes(status)) return "This earning has already been settled.";
+  if (["processing", "approved", "in_process"].includes(status)) return "A payout containing this earning is being processed.";
   if (["held", "blocked", "on_hold"].includes(status)) return "Temporarily unavailable because of a return, refund, dispute, or payment hold.";
-  if (["eligible", "available"].includes(status)) return "Return window is closed and this earning is available for payout or liability adjustment.";
-  if (reason.includes("return_window")) return "Waiting for the product return window to close before this earning can be released.";
-  return "Earning is recorded but has not reached its payout release milestone yet.";
+  if (["eligible", "available"].includes(status)) return "Ready to cover an amount owed or be included in your next payout.";
+  if (reason.includes("return_window")) return "Becomes available after the product return window closes.";
+  return "Recorded, but the order has not yet reached its payout release date.";
 };
 const listFrom = (response = {}) => {
   const root = unwrap(response);
@@ -60,6 +67,11 @@ export default function SellerWallet() {
   const balances = wallet.balances || {};
   const counts = wallet.counts || {};
   const currency = wallet.currency || "INR";
+  const codAmountOwed = Math.abs(Number(balances.codLiabilityBalance || 0));
+  const otherAmountOwed = Math.abs(Number(balances.otherAdjustmentBalance || 0));
+  const totalAmountOwed = codAmountOwed + otherAmountOwed;
+  const pendingBalance = Math.max(0, Number(balances.pendingBalance || 0));
+  const estimatedAfterRelease = Math.max(0, pendingBalance - totalAmountOwed);
   const items = Array.isArray(wallet.items) ? wallet.items : [];
   const loading = Boolean(walletState.loading);
   const [savingPreference, setSavingPreference] = useState(false);
@@ -86,20 +98,24 @@ export default function SellerWallet() {
       },
       {
         key: "netAmount",
-        label: "Net receivable",
+        label: "Your earning",
         cellClassName: "font-semibold",
         render: (value, item) => money(value, item.currency || currency),
       },
       {
         key: "releaseStatus",
-        label: "Status",
+        label: "Where it stands",
         render: (value, item) => (
-          <StatusBadge status={value || item.status} dot />
+          <StatusBadge
+            status={value || item.status}
+            label={releaseLabel(item)}
+            dot
+          />
         ),
       },
       {
         key: "releaseReason",
-        label: "What this amount means",
+        label: "Why it is not paid yet",
         render: (value, item) => (
           <div className="min-w-[260px] max-w-[360px]">
             <div className="text-xs leading-5 text-gray-600">{receivableMeaning(item)}</div>
@@ -199,8 +215,8 @@ export default function SellerWallet() {
     <div>
       <Loader loading={loading} />
       <PageHeader
-        title={isSeller ? "Wallet" : "Seller Wallet"}
-        subtitle={isSeller ? "Understand what you earned, what is waiting, what you owe, and what can actually be paid out." : "Select a seller to review earnings, liabilities, adjustments, and payout readiness."}
+        title={isSeller ? "Earnings & payouts" : "Seller earnings & payouts"}
+        subtitle={isSeller ? "Track earnings from order delivery through the return window to your final payout." : "Select a seller to see what is waiting, what is owed, and what can be paid."}
         breadcrumbs={[{ label: isSeller ? "My Finance & Payouts" : "Seller Finance & Payouts" }, { label: "Wallet" }]}
         actions={
           <button
@@ -232,59 +248,47 @@ export default function SellerWallet() {
       ) : (
         <>
 
-      {Number(balances.codLiabilityBalance || 0) > 0 && (
-        <div className="admin-card mb-4 border-l-4 border-l-[var(--admin-gold)] p-4 text-sm text-[var(--admin-ink)]">
-          <div className="font-semibold">You currently hold {money(balances.codLiabilityBalance, currency)} of seller-collected COD cash.</div>
-          <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">It is adjusted from released earnings; any unpaid remainder carries forward.</p>
+      <section className="admin-card mb-5 overflow-hidden">
+        <div className="border-b border-[var(--admin-line)] px-5 py-4">
+          <h2 className="text-base font-semibold text-[var(--admin-ink)]">{isSeller ? "Where your money stands" : "Where this seller’s money stands"}</h2>
+          <p className="mt-1 text-xs text-[var(--admin-muted)]">Only “Payable now” can be sent today. Waiting earnings are not available until their release conditions are met.</p>
         </div>
-      )}
+        <div className="grid md:grid-cols-2 xl:grid-cols-4">
+          <div className="p-5 xl:border-r xl:border-[var(--admin-line)]">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">1. Waiting to be released</div>
+            <div className="mt-2 text-2xl font-bold text-[var(--admin-navy)]">{money(pendingBalance, currency)}</div>
+            <p className="mt-2 text-xs leading-5 text-[var(--admin-muted)]">From delivered orders still waiting for their payout date or return window.</p>
+            {wallet.nextEligibleAt && <p className="mt-1 text-xs font-medium text-[var(--admin-ink)]">Next expected release: {formatDateTime12Hour(wallet.nextEligibleAt)}</p>}
+          </div>
+          <div className="border-t border-[var(--admin-line)] p-5 md:border-l md:border-t-0 xl:border-l-0 xl:border-r">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">2. Available earnings</div>
+            <div className="mt-2 text-2xl font-bold text-[var(--admin-navy)]">{money(balances.availableBalance, currency)}</div>
+            <p className="mt-2 text-xs leading-5 text-[var(--admin-muted)]">Released earnings before amounts owed to the platform are deducted.</p>
+          </div>
+          <div className="border-t border-[var(--admin-line)] bg-red-50/50 p-5 xl:border-r xl:border-t-0">
+            <div className="text-xs font-semibold uppercase tracking-wide text-red-700">3. {isSeller ? "You owe" : "Seller owes"}</div>
+            <div className="mt-2 text-2xl font-bold text-red-700">{money(totalAmountOwed, currency)}</div>
+            <p className="mt-2 text-xs leading-5 text-red-700/80">Deducted from available or future released earnings before a payout is sent.</p>
+            {totalAmountOwed > 0 && <p className="mt-1 text-xs text-red-700">COD: {owedMoney(codAmountOwed, currency)} · Other: {owedMoney(otherAmountOwed, currency)}</p>}
+          </div>
+          <div className="border-t border-[var(--admin-line)] bg-emerald-50/60 p-5 md:border-l xl:border-l-0 xl:border-t-0">
+            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">4. Payable now</div>
+            <div className="mt-2 text-2xl font-bold text-emerald-700">{money(balances.effectiveAvailablePayout, currency)}</div>
+            <p className="mt-2 text-xs leading-5 text-emerald-700/80">The amount currently eligible to be sent using your payout preference.</p>
+          </div>
+        </div>
+        {pendingBalance > 0 && (
+          <div className="border-t border-[var(--admin-line)] bg-[var(--admin-soft)] px-5 py-3 text-xs text-[var(--admin-muted)]">
+            If all waiting earnings are released without returns or further adjustments, approximately <strong className="text-[var(--admin-ink)]">{money(estimatedAfterRelease, currency)}</strong> would remain after the current amount owed is recovered.
+          </div>
+        )}
+      </section>
 
-      <div className="admin-card mb-4 grid gap-3 p-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
-        <div><span className="block text-xs text-[var(--admin-muted)]">Available earnings</span><strong className="text-[var(--admin-ink)]">{money(balances.availableBalance, currency)}</strong></div>
-        <div><span className="block text-xs text-[var(--admin-muted)]">Less: COD liability</span><strong className="text-red-600">−{money(balances.codLiabilityBalance, currency)}</strong></div>
-        <div><span className="block text-xs text-[var(--admin-muted)]">Less: other adjustments</span><strong className="text-red-600">−{money(balances.otherAdjustmentBalance, currency)}</strong></div>
-        <div className="xl:border-l xl:border-[var(--admin-line)] xl:pl-4"><span className="block text-xs text-[var(--admin-muted)]">Payable now</span><strong className="text-[var(--admin-gold-dark)]">{money(balances.effectiveAvailablePayout, currency)}</strong></div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <SummaryCard
-          title="Seller wallet balance"
-          value={money(sellerWallet.availableBalance, currency)}
-          description={`${walletTransactions.length || 0} wallet payout credits`}
-          icon={<MdAccountBalanceWallet size={22} />}
-        />
-
-        <SummaryCard
-          title="Pending receivable"
-          value={money(balances.pendingBalance, currency)}
-          description={
-            wallet.nextEligibleAt
-              ? `Next release ${formatDateTime12Hour(wallet.nextEligibleAt)}`
-              : "Waiting for delivery or return window"
-          }
-          icon={<MdHourglassTop size={22} />}
-        />
-
-        <SummaryCard
-          title="On hold"
-          value={money(balances.blockedBalance, currency)}
-          description={`${counts.blocked || 0} entries under return, refund, or dispute hold`}
-          icon={<MdLock size={22} />}
-        />
-
-        <SummaryCard
-          title="Payout in process"
-          value={money(balances.inProcessBalance, currency)}
-          description={`${wallet.payouts?.inProcessCount || 0} payout requests processing`}
-          icon={<MdPayments size={22} />}
-        />
-
-        <SummaryCard
-          title="Total paid"
-          value={money(balances.paidBalance, currency)}
-          description={`${wallet.payouts?.paidCount || 0} completed payouts`}
-          icon={<MdPayments size={22} />}
-        />
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="admin-card p-4"><span className="text-xs text-[var(--admin-muted)]">Temporarily on hold</span><strong className="mt-1 block text-lg text-[var(--admin-ink)]">{money(balances.blockedBalance, currency)}</strong><span className="text-xs text-[var(--admin-muted)]">{counts.blocked || 0} order entries affected</span></div>
+        <div className="admin-card p-4"><span className="text-xs text-[var(--admin-muted)]">Payout being processed</span><strong className="mt-1 block text-lg text-[var(--admin-ink)]">{money(balances.inProcessBalance, currency)}</strong><span className="text-xs text-[var(--admin-muted)]">{wallet.payouts?.inProcessCount || 0} payout requests</span></div>
+        <div className="admin-card p-4"><span className="text-xs text-[var(--admin-muted)]">Paid to date</span><strong className="mt-1 block text-lg text-[var(--admin-ink)]">{money(balances.paidBalance, currency)}</strong><span className="text-xs text-[var(--admin-muted)]">{wallet.payouts?.paidCount || 0} completed payouts</span></div>
+        <div className="admin-card p-4"><span className="text-xs text-[var(--admin-muted)]">Internal seller wallet</span><strong className="mt-1 block text-lg text-[var(--admin-ink)]">{money(sellerWallet.availableBalance, currency)}</strong><span className="text-xs text-[var(--admin-muted)]">Only used when “Seller Wallet” is the payout destination</span></div>
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_320px]">
@@ -292,10 +296,10 @@ export default function SellerWallet() {
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <div>
               <h2 className="text-[18px] font-medium text-gray-900">
-                Receivable ledger
+                Earnings by order
               </h2>
               <p className="text-xs text-gray-500">
-                Order-level movement from pending to payout.
+                See the release state and reason for every order earning.
               </p>
             </div>
             <span className="text-xs text-gray-500">
@@ -409,11 +413,15 @@ export default function SellerWallet() {
               <strong>
                 {wallet.canRequestPayout
                   ? "Ready for payout"
+                  : totalAmountOwed > 0
+                    ? "Payout reduced by amount owed"
                   : "Not yet eligible"}
               </strong>
               <p className="mt-1 text-xs">
                 {wallet.canRequestPayout
                   ? "The available balance meets the payout policy."
+                  : totalAmountOwed > 0
+                    ? `${money(totalAmountOwed, currency)} is still owed. Future released earnings will be used to recover it before any payout is sent.`
                   : wallet.minimumPayoutShortfall > 0
                     ? `${money(wallet.minimumPayoutShortfall, currency)} more is needed to meet the minimum payout.`
                     : "Wait for pending or held amounts to become available."}
@@ -450,39 +458,6 @@ export default function SellerWallet() {
                 </p>
               )}
             </div>
-          </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <h2 className="text-[18px] font-medium text-gray-900">
-              Seller-collected COD liability
-            </h2>
-            <p className="mt-2 font-medium text-gray-900">
-              {money(balances.codLiabilityBalance, currency)}
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              {isSeller ? "COD cash held by you." : "COD cash held by this seller."} It is automatically deducted from released earnings and any remainder carries forward.
-            </p>
-          </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <h2 className="text-[18px] font-medium text-gray-900">
-              Other adjustments
-            </h2>
-            <p className="mt-2 font-medium text-gray-900">
-              {money(balances.otherAdjustmentBalance, currency)}
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              Refunds, chargebacks, corrections, and non-COD recoveries.
-            </p>
-          </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <h2 className="text-[18px] font-medium text-gray-900">
-              Total open balance
-            </h2>
-            <p className="mt-2 font-medium text-gray-900">
-              {money(balances.totalOpenBalance, currency)}
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              Pending, available, processing, and held receivables.
-            </p>
           </div>
         </aside>
       </div>

@@ -972,7 +972,7 @@ const SellerOrganizations = () => {
   const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
-    dropdownApi.getSellers({ limit: 200 })
+    dropdownApi.getSellers({ limit: 100 })
       .then(setSellerOptions)
       .catch(() => setSellerOptions([]));
   }, []);
@@ -988,7 +988,7 @@ const SellerOrganizations = () => {
   const loadOrganizations = useCallback(async () => {
     try {
       setLoading(true);
-      const params = Object.entries({ ...filters, limit: 200, offset: 0 }).reduce((result, [key, value]) => {
+      const params = Object.entries({ ...filters, limit: 100, offset: 0 }).reduce((result, [key, value]) => {
         if (value !== undefined && value !== null && value !== "") result[key] = value;
         return result;
       }, {});

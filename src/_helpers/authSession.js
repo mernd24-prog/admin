@@ -156,6 +156,9 @@ export const persistAuthTokens = ({ accessToken, refreshToken } = {}) => {
       }),
     );
   }
+  if (accessToken && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("auth:tokens-updated"));
+  }
 };
 
 export const forceLogout = (

@@ -28,6 +28,7 @@ import {OrderLink} from "../../../../components/Shared/EntityLink";
 import { ENDPOINTS } from "../../../../_helpers/endpoints";
 import { downloadApiFile } from "../../../../_helpers/downloadApi";
 import { usePermission } from "../../../../_helpers/usePermission";
+import useRealtimeRefresh from "../../../../hooks/useRealtimeRefresh";
 import {
   formatDateTime12Hour,
   formatLabel,
@@ -640,6 +641,53 @@ const getOrderItemVariantLabel = (item = {}) => {
     .map(([key, value]) => `${formatLabel(key)}: ${String(value).trim()}`)
     .join(" · ");
   return attributeLabel || "";
+};
+
+const composeProductVariantTitle = (productTitle, variantLabel) => {
+  const product = String(productTitle || "Product").trim();
+  const variant = String(variantLabel || "").trim();
+  if (!variant || variant.toLowerCase() === "default title") return product;
+  const normalizedProduct = product.toLowerCase();
+  const normalizedVariant = variant.toLowerCase();
+  if (normalizedProduct.includes(normalizedVariant)) return product;
+  if (normalizedVariant.includes(normalizedProduct)) return variant;
+  return `${product} - ${variant}`;
+};
+
+const findOrderItemForTaxLine = (taxItem = {}, items = [], index = 0) => {
+  const taxPricingLineId = String(firstDefined(
+    taxItem.pricingLineId,
+    taxItem.pricing_line_id,
+    "",
+  ) || "");
+  const taxProductId = String(firstDefined(taxItem.productId, taxItem.product_id, "") || "");
+  const taxVariantId = String(firstDefined(taxItem.variantId, taxItem.variant_id, "") || "");
+  const taxVariantSku = String(firstDefined(taxItem.variantSku, taxItem.variant_sku, "") || "");
+
+  const matchesProduct = (item) =>
+    !taxProductId || getItemProductId(item) === taxProductId;
+
+  const exactMatch = items.find((item) => {
+    if (!matchesProduct(item)) return false;
+    const itemTax = normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {});
+    const itemPricingLineId = String(firstDefined(
+      itemTax.pricingLineId,
+      itemTax.pricing_line_id,
+      item.pricing_line_id,
+      item.pricingLineId,
+      "",
+    ) || "");
+    const itemVariantId = String(firstDefined(item.variant_id, item.variantId, "") || "");
+    const itemVariantSku = String(firstDefined(item.variant_sku, item.variantSku, "") || "");
+    if (taxPricingLineId && itemPricingLineId === taxPricingLineId) return true;
+    if (taxVariantId && itemVariantId === taxVariantId) return true;
+    return Boolean(taxVariantSku && itemVariantSku === taxVariantSku);
+  });
+  if (exactMatch) return exactMatch;
+
+  const indexedItem = items[index];
+  if (indexedItem && matchesProduct(indexedItem)) return indexedItem;
+  return items.find(matchesProduct) || indexedItem || {};
 };
 
 const getReconciledItemTax = (item = {}) => {
@@ -1351,6 +1399,10 @@ const OrderSummary = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
+  const realtimeRevision = useRealtimeRefresh(
+    ["order", "payment", "shipment", "return", "refund", "invoice", "credit_note", "wallet"],
+    { orderId: id },
+  );
   const { can, isSeller, isAdmin, isSuperAdmin, role } = usePermission();
   const canOpenAdminProfiles = !isSeller;
 
@@ -1412,7 +1464,7 @@ const OrderSummary = () => {
   useEffect(() => {
     fetchOrderInfo();
     fetchUserData();
-  }, [fetchOrderInfo, fetchUserData]);
+  }, [fetchOrderInfo, fetchUserData, realtimeRevision]);
 
   const fetchOrderReturns = useCallback(async () => {
     if (!id) return;
@@ -1426,7 +1478,7 @@ const OrderSummary = () => {
 
   useEffect(() => {
     fetchOrderReturns();
-  }, [fetchOrderReturns]);
+  }, [fetchOrderReturns, realtimeRevision]);
 
   const order = state.orderInfo || {};
   const orderId = getOrderId(order);
@@ -1726,7 +1778,7 @@ const OrderSummary = () => {
           )}
           <MetricCard label="Payment Status" value={<StatusBadge status={firstDefined(order.payment_status, order.paymentStatus)} dot />} />
           <MetricCard label="Order Status" value={<StatusBadge status={order.status} dot />} />
-          <MetricCard label="Shipment" value={shipmentSummary} />
+          {/* <MetricCard label="Shipment" value={shipmentSummary} /> */}
           <MetricCard label="Items" value={`${items.length} item${items.length === 1 ? "" : "s"}`} />
         </div>
 
@@ -1941,12 +1993,18 @@ const OrderSummary = () => {
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 {taxBreakup.items.map((taxItem, index) => {
                   const taxProductId = firstDefined(taxItem.productId, taxItem.product_id);
-                  const orderItem = items.find(
-                    (item) => String(firstDefined(item.product_id, item.productId, "")) === String(taxProductId || ""),
-                  ) || items[index] || {};
+                  const orderItem = findOrderItemForTaxLine(taxItem, items, index);
                   const productSnapshot = normalizeJson(firstDefined(orderItem.product_snapshot, orderItem.productSnapshot), {});
                   const productId = firstDefined(taxProductId, orderItem.product_id, orderItem.productId, productSnapshot.id, productSnapshot._id);
-                  const productTitle = firstDefined(orderItem.product_title, orderItem.productTitle, productSnapshot.title, productId, `Item ${index + 1}`);
+                  const baseProductTitle = firstDefined(orderItem.product_title, orderItem.productTitle, productSnapshot.title, productId, `Item ${index + 1}`);
+                  const variantLabel = getOrderItemVariantLabel(orderItem);
+                  const productTitle = composeProductVariantTitle(baseProductTitle, variantLabel);
+                  const variantSku = firstDefined(
+                    orderItem.variant_sku,
+                    orderItem.variantSku,
+                    taxItem.variantSku,
+                    taxItem.variant_sku,
+                  );
                   const itemGstAmount = money(taxItem.taxAmount) + money(taxItem.cessAmount);
                   return (
                     <div key={`${productId || "tax"}-${index}`} className="rounded-md border border-[#e6ebf7] bg-white p-3 text-xs">
@@ -1961,6 +2019,11 @@ const OrderSummary = () => {
                             </DetailLink>
                           ) : (
                             <div className="font-semibold text-[#202337]">{productTitle}</div>
+                          )}
+                          {variantSku && (
+                            <div className="mt-1 font-medium text-[#2f6fed]">
+                              Variant SKU: {variantSku}
+                            </div>
                           )}
                           <div className="mt-1 text-[#65718b]">{getItemTaxLabel(taxItem, orderItem)} · Base {formatMoney(taxItem.taxableAmount)}</div>
                         </div>

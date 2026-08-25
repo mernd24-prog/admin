@@ -12,6 +12,7 @@ const toOrderListParams = (params = {}) => {
         ...(params.status ? { status: params.status } : {}),
         ...(params.orderType || params.order_type ? { orderType: params.orderType || params.order_type } : {}),
         ...(params.paymentStatus || params.payment_status ? { paymentStatus: params.paymentStatus || params.payment_status } : {}),
+        ...(params.paymentProvider || params.payment_provider ? { paymentProvider: params.paymentProvider || params.payment_provider } : {}),
         ...(params.deliveryStatus || params.delivery_status ? { deliveryStatus: params.deliveryStatus || params.delivery_status } : {}),
         ...(params.sellerId || params.seller_id ? { sellerId: params.sellerId || params.seller_id } : {}),
         ...(params.userId || params.buyerId ? { buyerId: params.userId || params.buyerId } : {}),
