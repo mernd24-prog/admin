@@ -9,7 +9,7 @@ import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { uploadFile } from "../../_helpers/globalFunctions";
 import Loader from "../../components/Loader/Loader";
-import { PageHeader } from "../../components/Shared";
+import { DocumentPreviewModal, PageHeader } from "../../components/Shared";
 import {
   formatDate as formatDateOnly,
   formatDateTime12Hour,
@@ -46,7 +46,9 @@ const parseDocumentMap = (value = {}) => {
 
 const isPdfDocument = (url = "") =>
   /\.pdf(\?.*)?$/i.test(String(url || "")) ||
-  String(url || "").toLowerCase().includes("application/pdf");
+  String(url || "")
+    .toLowerCase()
+    .includes("application/pdf");
 
 const isImageDocument = (url = "") =>
   /\.(png|jpe?g|webp|gif|bmp|avif)(\?.*)?$/i.test(String(url || ""));
@@ -152,13 +154,20 @@ const DetailField = ({ label, value, className = "" }) => (
   </div>
 );
 
-const DocumentCard = ({ title, hint = "JPG, PNG or PDF", url, tone = "blue", onView }) => {
-  const toneClass = {
-    purple: "border-[#d7c4ff] bg-[#f5efff] text-[#7c3aed]",
-    red: "border-[#ffd8ca] bg-[#fff4ed] text-[#ef4444]",
-    green: "border-[#b9e9c6] bg-[#effcf3] text-[#15803d]",
-    blue: "border-[#b9cdfd] bg-[#eff5ff] text-[#2563eb]",
-  }[tone] || "border-[#b9cdfd] bg-[#eff5ff] text-[#2563eb]";
+const DocumentCard = ({
+  title,
+  hint = "JPG, PNG or PDF",
+  url,
+  tone = "blue",
+  onView,
+}) => {
+  const toneClass =
+    {
+      purple: "border-[#d7c4ff] bg-[#f5efff] text-[#7c3aed]",
+      red: "border-[#ffd8ca] bg-[#fff4ed] text-[#ef4444]",
+      green: "border-[#b9e9c6] bg-[#effcf3] text-[#15803d]",
+      blue: "border-[#b9cdfd] bg-[#eff5ff] text-[#2563eb]",
+    }[tone] || "border-[#b9cdfd] bg-[#eff5ff] text-[#2563eb]";
 
   return (
     <button
@@ -167,7 +176,9 @@ const DocumentCard = ({ title, hint = "JPG, PNG or PDF", url, tone = "blue", onV
       disabled={!url}
       className="group flex min-h-[150px] flex-col items-center justify-center rounded-lg border border-[#efd7a6] bg-white px-4 py-5 text-center transition hover:border-[#d9a33c] hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
     >
-      <span className={`flex h-[54px] w-[64px] items-center justify-center rounded-md border ${toneClass}`}>
+      <span
+        className={`flex h-[54px] w-[64px] items-center justify-center rounded-md border ${toneClass}`}
+      >
         <FiFileText className="h-7 w-7" />
       </span>
       <span className="mt-3 text-sm font-bold text-[#3b344a]">{title}</span>
@@ -177,80 +188,6 @@ const DocumentCard = ({ title, hint = "JPG, PNG or PDF", url, tone = "blue", onV
         {url ? "View Document" : "Not Uploaded"}
       </span>
     </button>
-  );
-};
-
-const DocumentPreviewModal = ({ document, onClose }) => {
-  if (!document?.url) return null;
-  const canShowAsImage = isImageDocument(document.url);
-  const canShowAsPdf = isPdfDocument(document.url);
-
-  return (
-    <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
-      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--admin-line)] px-5 py-4">
-          <div className="min-w-0">
-            <p className="truncate text-base font-bold text-[var(--admin-navy)]">
-              {document.label}
-            </p>
-            <p className="truncate text-xs text-[var(--admin-muted)]">
-              {document.url}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <a
-              href={document.url}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="admin-btn-secondary min-h-[34px] px-3 text-xs"
-            >
-              <FiDownload />
-              Download
-            </a>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
-              aria-label="Close document preview"
-            >
-              <PiX className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-        <div className="min-h-[55vh] overflow-auto bg-[#f5f6fa] p-4">
-          {canShowAsImage ? (
-            <img
-              src={document.url}
-              alt={document.label}
-              className="mx-auto max-h-[72vh] max-w-full rounded-md bg-white object-contain shadow-sm"
-            />
-          ) : canShowAsPdf ? (
-            <iframe
-              title={document.label}
-              src={document.url}
-              className="h-[72vh] w-full rounded-md border border-[var(--admin-line)] bg-white"
-            />
-          ) : (
-            <div className="flex min-h-[55vh] flex-col items-center justify-center rounded-md bg-white p-6 text-center">
-              <FiFileText className="h-10 w-10 text-[var(--admin-muted)]" />
-              <p className="mt-3 text-sm font-semibold text-[var(--admin-navy)]">
-                Preview is not available for this file type.
-              </p>
-              <a
-                href={document.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 admin-btn-primary"
-              >
-                <FiEye />
-                Open Document
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
   );
 };
 
@@ -360,7 +297,9 @@ const Profile = () => {
                 ENDPOINTS.sellers.profile,
               );
               setFormData(
-                profileToForm(mergeSellerProfileData(userProfile, sellerResponse)),
+                profileToForm(
+                  mergeSellerProfileData(userProfile, sellerResponse),
+                ),
               );
             } catch (sellerError) {
               console.error("Seller profile fetch failed:", sellerError);
@@ -488,30 +427,30 @@ const Profile = () => {
     }
   };
 
- const handleUpdate = async () => {
-  setUpdating(true);
-  try {
-    const apiPayload = {
-      user_image: formData?.user_image,
-      full_name: formData?.full_name,
-    };
-    const res = await dispatch(updateProfile(apiPayload)).unwrap();
-    if (res?.data) {
-      setFormData(profileToForm(res.data));
-      window.dispatchEvent(
-        new CustomEvent("profile:updated", { detail: res.data })
-      );
+  const handleUpdate = async () => {
+    setUpdating(true);
+    try {
+      const apiPayload = {
+        user_image: formData?.user_image,
+        full_name: formData?.full_name,
+      };
+      const res = await dispatch(updateProfile(apiPayload)).unwrap();
+      if (res?.data) {
+        setFormData(profileToForm(res.data));
+        window.dispatchEvent(
+          new CustomEvent("profile:updated", { detail: res.data }),
+        );
 
-      setIsEditing(false);
-      toast.success("Profile updated successfully!");
+        setIsEditing(false);
+        toast.success("Profile updated successfully!");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Error updating profile");
+    } finally {
+      setUpdating(false);
     }
-  } catch (error) {
-    console.error(error);
-    toast.error(error?.message || "Error updating profile");
-  } finally {
-    setUpdating(false);
-  }
-};
+  };
 
   const handleCancel = () => {
     setIsEditing(false);
@@ -717,7 +656,7 @@ const Profile = () => {
                 value={formData.userName}
                 className="md:col-span-6"
               />
-               <DetailField
+              <DetailField
                 label="Referral Code"
                 value={formData.referralCode}
                 className="md:col-span-6"
@@ -725,10 +664,6 @@ const Profile = () => {
             </FieldGrid>
           </ProfileSection>
 
-         
-      
-
-  
           {hasSellerProfile && (
             <ProfileSection
               number={nextSectionNumber()}
@@ -770,13 +705,13 @@ const Profile = () => {
                   value={sellerProfile.panNumber}
                   className="md:col-span-6"
                 />
-                
+
                 <DetailField
                   label="Aadhaar Number"
                   value={sellerProfile.aadhaarNumber}
                   className="md:col-span-6"
                 />
-                
+
                 <DetailField
                   label="Support Email"
                   value={sellerProfile.supportEmail}
@@ -792,15 +727,11 @@ const Profile = () => {
                   value={sellerProfile.description}
                   className="md:col-span-6"
                 />
-          
-                
-               
               </FieldGrid>
-            
             </ProfileSection>
           )}
 
-     {hasSellerAddresses && (
+          {hasSellerAddresses && (
             <ProfileSection
               number={nextSectionNumber()}
               title="Seller Addresses"
@@ -822,7 +753,7 @@ const Profile = () => {
             </ProfileSection>
           )}
 
-           {isSeller && hasValue(bankDetails) && (
+          {isSeller && hasValue(bankDetails) && (
             <ProfileSection number={nextSectionNumber()} title="Bank Details">
               <FieldGrid>
                 <DetailField
@@ -860,30 +791,20 @@ const Profile = () => {
           )}
 
           {hasSellerProfile && (
-            <ProfileSection
-            number={nextSectionNumber()}
-            title="Documents"
-          >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
-              {documentCards.map((item) => (
-                <DocumentCard
-                  key={item.key}
-                  title={item.title}
-                  url={item.url}
-                  tone={item.tone}
-                  onView={setPreviewDocument}
-                />
-              ))}
-            </div>
-          </ProfileSection>
+            <ProfileSection number={nextSectionNumber()} title="Documents">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
+                {documentCards.map((item) => (
+                  <DocumentCard
+                    key={item.key}
+                    title={item.title}
+                    url={item.url}
+                    tone={item.tone}
+                    onView={setPreviewDocument}
+                  />
+                ))}
+              </div>
+            </ProfileSection>
           )}
-
-
-         
-
-     
-
-
 
           {isEditing && (
             <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[var(--admin-line)] pt-5 sm:flex-row sm:justify-end">
