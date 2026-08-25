@@ -11,3 +11,4 @@ export { default as FilterBar } from "./FilterBar";
 export { default as SummaryCard } from "./SummaryCard";
 export { ExportButton, ImportButton } from "./TableTools";
 export { default as DateRangePickerModal } from "./DateRangePickerModal";
+export { default as DocumentPreviewModal } from "./DocumentPreviewModal";

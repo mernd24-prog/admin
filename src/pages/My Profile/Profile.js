@@ -9,7 +9,7 @@ import { apiRequest } from "../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { uploadFile } from "../../_helpers/globalFunctions";
 import Loader from "../../components/Loader/Loader";
-import { PageHeader } from "../../components/Shared";
+import { DocumentPreviewModal, PageHeader } from "../../components/Shared";
 import {
   formatDate as formatDateOnly,
   formatDateTime12Hour,
@@ -203,80 +203,6 @@ const DocumentCard = ({
         {url ? "View Document" : "Not Uploaded"}
       </span>
     </button>
-  );
-};
-
-const DocumentPreviewModal = ({ document, onClose }) => {
-  if (!document?.url) return null;
-  const canShowAsImage = isImageDocument(document.url);
-  const canShowAsPdf = isPdfDocument(document.url);
-
-  return (
-    <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
-      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--admin-line)] px-5 py-4">
-          <div className="min-w-0">
-            <p className="truncate text-base font-bold text-[var(--admin-navy)]">
-              {document.label}
-            </p>
-            <p className="truncate text-xs text-[var(--admin-muted)]">
-              {document.url}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <a
-              href={document.url}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="admin-btn-secondary min-h-[34px] px-3 text-xs"
-            >
-              <FiDownload />
-              Download
-            </a>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
-              aria-label="Close document preview"
-            >
-              <PiX className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-        <div className="min-h-[55vh] overflow-auto bg-[#f5f6fa] p-4">
-          {canShowAsImage ? (
-            <img
-              src={document.url}
-              alt={document.label}
-              className="mx-auto max-h-[72vh] max-w-full rounded-md bg-white object-contain shadow-sm"
-            />
-          ) : canShowAsPdf ? (
-            <iframe
-              title={document.label}
-              src={document.url}
-              className="h-[72vh] w-full rounded-md border border-[var(--admin-line)] bg-white"
-            />
-          ) : (
-            <div className="flex min-h-[55vh] flex-col items-center justify-center rounded-md bg-white p-6 text-center">
-              <FiFileText className="h-10 w-10 text-[var(--admin-muted)]" />
-              <p className="mt-3 text-sm font-semibold text-[var(--admin-navy)]">
-                Preview is not available for this file type.
-              </p>
-              <a
-                href={document.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 admin-btn-primary"
-              >
-                <FiEye />
-                Open Document
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
   );
 };
 
