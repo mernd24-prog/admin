@@ -118,59 +118,67 @@ const ChangePassword = () => {
         }
       });
   };
+return (
+  <>
+    <Loader loading={selector?.loading} />
 
-  return (
-    <>
-      <Loader loading={selector?.loading} />
-      <div className="w-full max-h-screen flex justify-center items-center pt-10 px-4">
-        <div className="w-full max-w-4xl bg-white space-y-11">
-          <div className="border-b pb-4 mb-6 p-6">
-            <h3 className="text-xl font-semibold text-gray-800">
-              Change Password
-            </h3>
+    <div className="w-full px-4 py-8">
+      <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        {/* Header */}
+        <div className="border-b border-gray-200 px-6 py-5">
+          <h3 className="text-xl font-semibold text-gray-800">
+            Change Password
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Update your password to keep your account secure.
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
+            <FormInput
+              label="Current Password"
+              name="currentPassword"
+              type="password"
+              value={formData.currentPassword}
+              onChange={handleChange}
+              error={isSubmitted ? errors.currentPassword : ""}
+              required
+            />
+
+            <FormInput
+              label="New Password"
+              name="newPassword"
+              type="password"
+              value={formData.newPassword}
+              onChange={handleChange}
+              error={isSubmitted ? errors.newPassword : ""}
+              required
+            />
+
+            <FormInput
+              label="Confirm New Password"
+              name="confirmNewPassword"
+              type="password"
+              value={formData.confirmNewPassword}
+              onChange={handleChange}
+              error={isSubmitted ? errors.confirmNewPassword : ""}
+              required
+            />
           </div>
 
-          <form onSubmit={handleSubmit} noValidate>
-            <div className="grid md:grid-cols-2 grid-cols-1 gap-4 p-6">
-              <FormInput
-                label="Current Password"
-                name="currentPassword"
-                type="password"
-                value={formData.currentPassword}
-                onChange={handleChange}
-                error={isSubmitted ? errors.currentPassword : ""}
-                required
-              />
-              <FormInput
-                label="New Password"
-                name="newPassword"
-                type="password"
-                value={formData.newPassword}
-                onChange={handleChange}
-                error={isSubmitted ? errors.newPassword : ""}
-                required
-              />
-              <FormInput
-                label="Confirm New Password"
-                name="confirmNewPassword"
-                type="password"
-                value={formData.confirmNewPassword}
-                onChange={handleChange}
-                error={isSubmitted ? errors.confirmNewPassword : ""}
-                required
-              />
-            </div>
-
-            <div className="py-5 flex justify-end border-t p-6">
-              <Button type="submit" disabled={selector?.loading}>
-                {selector?.loading ? "Updating..." : "Update Password"}
-              </Button>
-            </div>
-          </form>
-        </div>
+          {/* Footer */}
+          <div className="flex justify-end border-t border-gray-200 bg-gray-50 px-6 py-4">
+            <Button type="submit" disabled={selector?.loading}>
+              {selector?.loading ? "Updating..." : "Update Password"}
+            </Button>
+          </div>
+        </form>
       </div>
-    </>
-  );
+    </div>
+  </>
+);
 };
 
 export default ChangePassword;

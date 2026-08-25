@@ -547,7 +547,8 @@ export default function CommerceSettings() {
       </div>
       <Section title="Platform COD Controls">
         <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-          Sellers manage COD pincodes and select who collects the cash. These controls apply platform-wide only.
+          Sellers manage COD pincodes and select who collects the cash. These
+          controls apply platform-wide only.
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <ToggleField
@@ -568,19 +569,25 @@ export default function CommerceSettings() {
             type="number"
             min="0"
             value={settings.cod.minOrderAmount ?? ""}
-            onChange={(value) => patchSettings("cod", { minOrderAmount: value })}
+            onChange={(value) =>
+              patchSettings("cod", { minOrderAmount: value })
+            }
           />
           <InputField
             label="Maximum COD Order (₹)"
             type="number"
             min="0"
             value={settings.cod.maxOrderAmount ?? ""}
-            onChange={(value) => patchSettings("cod", { maxOrderAmount: value })}
+            onChange={(value) =>
+              patchSettings("cod", { maxOrderAmount: value })
+            }
           />
           <ToggleField
             label="Require COD capture before payout"
             checked={settings.cod.payoutRequiresCapture}
-            onChange={(checked) => patchSettings("cod", { payoutRequiresCapture: checked })}
+            onChange={(checked) =>
+              patchSettings("cod", { payoutRequiresCapture: checked })
+            }
             hint="Prevents seller payout until collected COD is captured."
           />
         </div>
@@ -592,7 +599,8 @@ export default function CommerceSettings() {
             options={[option("return_window_closed", "Return window closed")]}
             value={
               [option("return_window_closed", "Return window closed")].find(
-                (item) => item.value === settings.finance.payoutReleaseMilestone,
+                (item) =>
+                  item.value === settings.finance.payoutReleaseMilestone,
               ) || null
             }
             onChange={(selected) =>
@@ -619,7 +627,10 @@ export default function CommerceSettings() {
               patchSettings("finance", {
                 payoutMode,
                 payoutManualApprovalRequired: payoutMode !== "auto_razorpayx",
-                payoutSchedule: payoutMode === "auto_razorpayx" ? "manual" : settings.finance.payoutSchedule,
+                payoutSchedule:
+                  payoutMode === "auto_razorpayx"
+                    ? "manual"
+                    : settings.finance.payoutSchedule,
               });
             }}
           />
@@ -633,8 +644,10 @@ export default function CommerceSettings() {
               [
                 option("razorpayx", "Bank / RazorpayX"),
                 option("seller_wallet", "Seller Wallet"),
-              ].find((item) => item.value === settings.finance.defaultPayoutDestination) ||
-              null
+              ].find(
+                (item) =>
+                  item.value === settings.finance.defaultPayoutDestination,
+              ) || null
             }
             onChange={(selected) =>
               patchSettings("finance", {
@@ -937,7 +950,6 @@ export default function CommerceSettings() {
                 })
               }
             />
-
           </div>
         </Section>
         <Section title="Payout Calculation">
