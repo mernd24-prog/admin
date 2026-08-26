@@ -21,6 +21,7 @@ import {
 import { getDashboardOverview } from "../../Redux/adminCoreSlice";
 import Cards from "../../components/Cards/Cards";
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
+import { GoldDateRangeCalendar } from "../../components/Shared/FilterBar";
 
 const EMPTY_PERFORMANCE = [
   { label: "Mon", value: 0, revenue: 0, averageOrderValue: 0 },
@@ -108,9 +109,7 @@ const CLASS_STATUS_BADGE =
   "inline-flex rounded-full border px-2 py-1 text-[9px] font-semibold capitalize";
 const CLASS_CARD_HEADER =
   "flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4";
-const CLASS_LEGEND_TEXT =
-  "text-[11px] font-medium text-[var(--admin-muted)]";
-
+const CLASS_LEGEND_TEXT = "text-[11px] font-medium text-[var(--admin-muted)]";
 
 const asNumber = (value) => {
   const number = Number(value);
@@ -329,136 +328,6 @@ function GoldDropdown({
           })}
         </div>
       )}
-    </div>
-  );
-}
-
-function GoldDateRangeCalendar({
-  dates,
-  viewDate,
-  onViewDateChange,
-  onSelectDate,
-  onApply,
-  onCancel,
-  loading,
-  className = "",
-}) {
-  const days = useMemo(() => buildCalendarDays(viewDate), [viewDate]);
-  const hasCompleteRange = Boolean(dates.fromDate && dates.toDate);
-  const today = new Date();
-  const todayValue = toInputDate(today);
-  const isCurrentMonth =
-    viewDate.getFullYear() === today.getFullYear() &&
-    viewDate.getMonth() === today.getMonth();
-
-  return (
-    <div
-      className={`w-full  rounded-lg border border-[var(--admin-gold)] bg-white p-3 shadow-xl ${className}`}
-    >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc]"
-          onClick={() => onViewDateChange(addMonths(viewDate, -1))}
-          disabled={loading}
-          aria-label="Previous month"
-        >
-          ‹
-        </button>
-        <div className="text-center">
-          <h2 className="text-sm font-bold text-[var(--admin-ink)]">
-            {monthFormatter.format(viewDate)}
-          </h2>
-          <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-            Select start and end date
-          </p>
-        </div>
-        <button
-          type="button"
-          className="flex h-8 w-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] text-sm font-bold text-[var(--admin-gold-dark)] hover:bg-[#fff3cc] disabled:cursor-not-allowed disabled:opacity-40"
-          onClick={() => onViewDateChange(addMonths(viewDate, 1))}
-          disabled={loading || isCurrentMonth}
-          aria-label="Next month"
-        >
-          ›
-        </button>
-      </div>
-
-      <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-[var(--admin-muted)]">
-        {WEEKDAY_LABELS.map((label) => (
-          <span key={label}>{label}</span>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((day) => {
-          const isFutureDate = day.value > todayValue;
-          const isStart = day.value === dates.fromDate;
-          const isEnd = day.value === dates.toDate;
-          const isSelected = isStart || isEnd;
-          const isInRange = isBetweenDates(
-            day.value,
-            dates.fromDate,
-            dates.toDate,
-          );
-          return (
-            <button
-              key={day.value}
-              type="button"
-              className={`flex h-9 items-center justify-center rounded text-xs font-semibold transition ${
-                isFutureDate
-                  ? "cursor-not-allowed text-slate-300 opacity-50"
-                  : isSelected
-                    ? "bg-[var(--admin-gold)] text-white shadow-sm"
-                    : isInRange
-                      ? "bg-[#fff3cc] text-[var(--admin-gold-dark)]"
-                      : day.isCurrentMonth
-                        ? "text-[var(--admin-ink)] hover:bg-[#fff8e6] hover:text-[var(--admin-gold-dark)]"
-                        : "text-slate-300 hover:bg-slate-50"
-              }`}
-              onClick={() => onSelectDate(day.value)}
-              disabled={loading || isFutureDate}
-              aria-label={
-                isFutureDate
-                  ? `${day.value} is unavailable because it is in the future`
-                  : undefined
-              }
-            >
-              {day.day}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-3 rounded border border-[#f1dfad] bg-[#fffaf0] px-3 py-2 text-[11px] font-semibold text-[var(--admin-gold-dark)]">
-        {dates.fromDate || "Start date"} - {dates.toDate || "End date"}
-      </div>
-
-      <div className="mt-3 flex items-center justify-end gap-2">
-        <button
-          type="button"
-          className={CLASS_CANCEL_BUTTON}
-          onClick={onCancel}
-          disabled={loading}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          className={CLASS_APPLY_BUTTON}
-          disabled={!hasCompleteRange || loading}
-          onClick={onApply}
-        >
-          {loading ? (
-            <span className="inline-flex items-center gap-2">
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--admin-gold)] border-t-transparent" />
-              Loading
-            </span>
-          ) : (
-            "Apply"
-          )}
-        </button>
-      </div>
     </div>
   );
 }
@@ -1028,9 +897,7 @@ export default function Dashboard() {
   return (
     <div className="admin-page min-h-screen">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className={CLASS_PAGE_TITLE}>
-          Merchant Insights
-        </h1>
+        <h1 className={CLASS_PAGE_TITLE}>Merchant Insights</h1>
         <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
           <div className="w-full  sm:w-[190px]">
             <FilterSelect
@@ -1071,6 +938,12 @@ export default function Dashboard() {
           onCancel={closeCustomPicker}
           loading={customApplying}
           className="shadow-none"
+          onClear={() =>
+            setCustomDates({
+              fromDate: "",
+              toDate: "",
+            })
+          }
         />
       </DateRangePickerModal>
 
@@ -1093,12 +966,12 @@ export default function Dashboard() {
         <section className={`${CLASS_ADMIN_CARD} p-5`}>
           <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--admin-line)] pb-3">
             <div>
-              <h2 className={CLASS_SECTION_TITLE}>
-                Performance Overview
-              </h2>
+              <h2 className={CLASS_SECTION_TITLE}>Performance Overview</h2>
             </div>
           </div>
-          <div className={`mb-4 flex flex-wrap items-center gap-5 ${CLASS_LEGEND_TEXT}`}>
+          <div
+            className={`mb-4 flex flex-wrap items-center gap-5 ${CLASS_LEGEND_TEXT}`}
+          >
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
               {chartView === "performance" ? "Order" : "Units / Orders"}
@@ -1285,9 +1158,7 @@ export default function Dashboard() {
 
         <section className={`${CLASS_ADMIN_CARD} p-5`}>
           <div className="mb-4 border-b border-[var(--admin-line)] pb-3">
-            <h2 className={CLASS_SECTION_TITLE}>
-              Order Status
-            </h2>
+            <h2 className={CLASS_SECTION_TITLE}>Order Status</h2>
           </div>
           <div className="grid items-center gap-4 sm:grid-cols-[160px_1fr] xl:grid-cols-1 2xl:grid-cols-[170px_1fr]">
             {statusTotal === 0 ? (
@@ -1354,9 +1225,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <section className={`${CLASS_ADMIN_CARD} overflow-hidden bg-white`}>
           <div className={CLASS_CARD_HEADER}>
-            <h2 className={CLASS_SECTION_TITLE}>
-              Top Products
-            </h2>
+            <h2 className={CLASS_SECTION_TITLE}>Top Products</h2>
             <button
               type="button"
               className={CLASS_TABLE_ACTION}
@@ -1390,13 +1259,8 @@ export default function Dashboard() {
                   product.name || product.title || "Untitled product";
 
                 return (
-                  <tr
-                    key={productId || index}
-                    className={CLASS_TABLE_ROW}
-                  >
-                    <td className={CLASS_TABLE_INDEX_CELL}>
-                      {index + 1}.
-                    </td>
+                  <tr key={productId || index} className={CLASS_TABLE_ROW}>
+                    <td className={CLASS_TABLE_INDEX_CELL}>{index + 1}.</td>
                     <td className={CLASS_TABLE_PRODUCT_TEXT}>
                       {productId ? (
                         <Link
@@ -1430,9 +1294,7 @@ export default function Dashboard() {
 
         <section className={`${CLASS_ADMIN_CARD} overflow-hidden bg-white`}>
           <div className={CLASS_CARD_HEADER}>
-            <h2 className={CLASS_SECTION_TITLE}>
-              Recent Orders
-            </h2>
+            <h2 className={CLASS_SECTION_TITLE}>Recent Orders</h2>
             <button
               type="button"
               className={CLASS_TABLE_ACTION}
@@ -1471,13 +1333,8 @@ export default function Dashboard() {
                   order.order_no ||
                   String(orderId || index + 1).slice(0, 10);
                 return (
-                  <tr
-                    key={orderId || index}
-                    className={CLASS_TABLE_ROW}
-                  >
-                    <td className={CLASS_TABLE_INDEX_CELL}>
-                      {index + 1}.
-                    </td>
+                  <tr key={orderId || index} className={CLASS_TABLE_ROW}>
+                    <td className={CLASS_TABLE_INDEX_CELL}>{index + 1}.</td>
                     <td className="px-4 py-3 font-medium">
                       <OrderLink
                         orderId={orderId}

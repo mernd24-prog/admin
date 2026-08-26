@@ -1,7 +1,13 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdCancel, MdCheckCircle, MdReplay, MdVisibility, MdPayment } from "react-icons/md";
+import {
+  MdCancel,
+  MdCheckCircle,
+  MdReplay,
+  MdVisibility,
+  MdPayment,
+} from "react-icons/md";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 // import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
@@ -65,11 +71,9 @@ const CLASS_TEXT_XS_MUTED = "text-xs text-gray-500";
 const CLASS_TEXT_XS_GRAY = "text-xs text-gray-600";
 const CLASS_TEXT_SM_GRAY = "text-sm text-gray-700";
 const CLASS_DETAIL_LABEL = "text-gray-500";
-const CLASS_DETAIL_CARD =
-  "rounded-lg border border-gray-100 bg-gray-50 p-3";
+const CLASS_DETAIL_CARD = "rounded-lg border border-gray-100 bg-gray-50 p-3";
 const CLASS_DETAIL_VALUE = "font-medium text-gray-800";
-const CLASS_DETAIL_SECTION =
-  "border-t border-gray-100 pt-3";
+const CLASS_DETAIL_SECTION = "border-t border-gray-100 pt-3";
 const CLASS_MODAL_BODY = "mt-3";
 const CLASS_INPUT_MODAL = "mt-3";
 const CLASS_ACTION_ICON_BLUE = "text-blue-600";
@@ -80,9 +84,16 @@ const CLASS_CONFIRM_NOTE_INPUT = "mt-3";
 const CLASS_MANUAL_REFUND_BODY = "p-4 space-y-4";
 const CLASS_MANUAL_REFUND_BUTTON =
   "w-full py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-60";
-const CLASS_REFUND_STATUS_BASE =
-  "text-xs px-2 py-0.5 rounded-full";
-
+const CLASS_REFUND_STATUS_BASE = "text-xs px-2 py-0.5 rounded-full";
+const CLASS_SECTION_TITLE = "mb-3 text-sm font-semibold text-gray-900";
+const CLASS_GRID_2_COL = "grid grid-cols-1 gap-3 sm:grid-cols-2";
+const CLASS_CARD_WHITE = "rounded-lg border border-gray-100 bg-white p-3";
+const CLASS_TEXT_SM_MEDIUM_GRAY = "mt-1 text-sm font-medium text-gray-800";
+const CLASS_AMOUNT_CARD = "rounded-xl border border-gray-200 p-4";
+const CLASS_AMOUNT_TITLE = "mt-1 text-lg font-bold text-gray-900";
+const CLASS_STATUS_CARD = "rounded-xl border border-gray-200 bg-white p-4";
+const CLASS_MT_2 = "mt-2";
+const CLASS_FONT_MEDIUM_GRAY = "font-medium text-gray-700";
 
 const FILTER_FIELDS = [
   { key: "search", type: "text", label: "Search", width: "w-56" },
@@ -169,7 +180,10 @@ const normalizeCancellation = (row = {}) => {
     shipmentStatus: row.shipmentStatus || row.shipment_status,
     financeStatus: row.financeStatus || row.finance_status,
     requestedByRole: row.requestedByRole || row.requested_by_role,
-    refundDestination: row.refundDestination || row.metadata?.refundDestination || "original_payment_method",
+    refundDestination:
+      row.refundDestination ||
+      row.metadata?.refundDestination ||
+      "original_payment_method",
     createdAt: row.createdAt || row.created_at,
     sellerScoped: Boolean(row.sellerScoped ?? row.seller_scoped),
     sellerCanReview: Boolean(row.sellerCanReview ?? row.seller_can_review),
@@ -246,9 +260,21 @@ const Cancellations = () => {
     proofUrl: "",
     note: "",
   });
-  const [approveRefund, setApproveRefund] = useState({ open: false, item: null, note: "" });
-  const [approveRequest, setApproveRequest] = useState({ open: false, item: null, note: "" });
-  const [rejectRequest, setRejectRequest] = useState({ open: false, item: null, reason: "" });
+  const [approveRefund, setApproveRefund] = useState({
+    open: false,
+    item: null,
+    note: "",
+  });
+  const [approveRequest, setApproveRequest] = useState({
+    open: false,
+    item: null,
+    note: "",
+  });
+  const [rejectRequest, setRejectRequest] = useState({
+    open: false,
+    item: null,
+    reason: "",
+  });
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchCancellations = useCallback(async () => {
@@ -338,10 +364,12 @@ const Cancellations = () => {
     if (isSeller || !approveRefund.item) return;
     try {
       setActionLoading(true);
-      await dispatch(approveCancellationRefund({
-        cancellationId: approveRefund.item._id || approveRefund.item.id,
-        note: approveRefund.note,
-      })).unwrap();
+      await dispatch(
+        approveCancellationRefund({
+          cancellationId: approveRefund.item._id || approveRefund.item.id,
+          note: approveRefund.note,
+        }),
+      ).unwrap();
       toast.success("Refund approved and submitted for processing");
       setApproveRefund({ open: false, item: null, note: "" });
       fetchCancellations();
@@ -356,10 +384,12 @@ const Cancellations = () => {
     if (!approveRequest.item) return;
     try {
       setActionLoading(true);
-      await dispatch(approveCancellation({
-        cancellationId: approveRequest.item._id || approveRequest.item.id,
-        note: approveRequest.note,
-      })).unwrap();
+      await dispatch(
+        approveCancellation({
+          cancellationId: approveRequest.item._id || approveRequest.item.id,
+          note: approveRequest.note,
+        }),
+      ).unwrap();
       toast.success("Selected item quantity cancellation approved");
       setApproveRequest({ open: false, item: null, note: "" });
       fetchCancellations();
@@ -377,10 +407,12 @@ const Cancellations = () => {
     }
     try {
       setActionLoading(true);
-      await dispatch(rejectCancellation({
-        cancellationId: rejectRequest.item._id || rejectRequest.item.id,
-        reason: rejectRequest.reason.trim(),
-      })).unwrap();
+      await dispatch(
+        rejectCancellation({
+          cancellationId: rejectRequest.item._id || rejectRequest.item.id,
+          reason: rejectRequest.reason.trim(),
+        }),
+      ).unwrap();
       toast.success("Cancellation request rejected");
       setRejectRequest({ open: false, item: null, reason: "" });
       fetchCancellations();
@@ -405,7 +437,10 @@ const Cancellations = () => {
       key: "orderId",
       label: "Order #",
       render: (v, row) => (
-        <OrderLink orderId={row.orderId || row.order_id || v} orderNumber={row.orderNumber || row.order_number} />
+        <OrderLink
+          orderId={row.orderId || row.order_id || v}
+          orderNumber={row.orderNumber || row.order_number}
+        />
       ),
     },
     {
@@ -444,27 +479,25 @@ const Cancellations = () => {
       label: isSeller ? "My Settlement Impact" : "Seller Impact",
       render: (v, row) => (
         <div className="text-xs">
-          {!isSeller && (
-            <div className={CLASS_DETAIL_VALUE}>{money(v)}</div>
-          )}
+          {!isSeller && <div className={CLASS_DETAIL_VALUE}>{money(v)}</div>}
           <div className={CLASS_DETAIL_LABEL}>
             {row.status === "requested"
               ? "Pending approval — no adjustment"
               : row.status === "rejected"
                 ? "No adjustment — request rejected"
                 : row.sellerFinanceAdjustments.length
-              ? "Recovered from settlement"
-              : [
-                    "pending_payment",
-                    "payment_failed",
-                    "confirmed",
-                    "processing",
-                    "packed",
-                    "ready_to_ship",
-                    "on_hold",
-                  ].includes(row.sourceOrderStatus)
-                ? "No payout — cancelled before settlement"
-                : display(row.financeStatus || "pending")}
+                  ? "Recovered from settlement"
+                  : [
+                        "pending_payment",
+                        "payment_failed",
+                        "confirmed",
+                        "processing",
+                        "packed",
+                        "ready_to_ship",
+                        "on_hold",
+                      ].includes(row.sourceOrderStatus)
+                    ? "No payout — cancelled before settlement"
+                    : display(row.financeStatus || "pending")}
           </div>
         </div>
       ),
@@ -501,11 +534,11 @@ const Cancellations = () => {
         ]}
       />
 
-      {error && (
+      {/* {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
           {error}
         </div>
-      )}
+      )} */}
 
       {loading ? (
         <Loader />
@@ -521,25 +554,34 @@ const Cancellations = () => {
             const actions = [
               {
                 label: "View Details",
-                icon: <MdVisibility size={16} className={CLASS_ACTION_ICON_BLUE} />,
+                icon: (
+                  <MdVisibility size={16} className={CLASS_ACTION_ICON_BLUE} />
+                ),
                 onClick: () => setDetail(row),
               },
             ];
 
-            if (row.status === "requested" && (!isSeller || row.sellerCanReview)) {
+            if (
+              row.status === "requested" &&
+              (!isSeller || row.sellerCanReview)
+            ) {
               actions.push({
                 label: "Approve Cancellation",
-                icon: <MdCheckCircle size={16} className={CLASS_ACTION_ICON_BLUE} />,
+                icon: (
+                  <MdCheckCircle size={16} className={CLASS_ACTION_ICON_BLUE} />
+                ),
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,
-                onClick: () => setApproveRequest({ open: true, item: row, note: "" }),
+                onClick: () =>
+                  setApproveRequest({ open: true, item: row, note: "" }),
               });
               actions.push({
                 label: "Reject Cancellation",
                 icon: <MdCancel size={16} className={CLASS_ACTION_ICON_RED} />,
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,
-                onClick: () => setRejectRequest({ open: true, item: row, reason: "" }),
+                onClick: () =>
+                  setRejectRequest({ open: true, item: row, reason: "" }),
               });
             }
 
@@ -549,7 +591,9 @@ const Cancellations = () => {
             ) {
               actions.push({
                 label: "Retry Refund",
-                icon: <MdReplay size={16} className={CLASS_ACTION_ICON_ORANGE} />,
+                icon: (
+                  <MdReplay size={16} className={CLASS_ACTION_ICON_ORANGE} />
+                ),
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,
                 onClick: () =>
@@ -562,17 +606,32 @@ const Cancellations = () => {
             }
 
             if (!isSeller && row.status === "manual_review") {
-              if (row.paymentProvider === "razorpay" || row.providerRefundAmount <= 0) actions.push({
-                label: "Approve Refund",
-                icon: <MdCheckCircle size={16} className={CLASS_ACTION_ICON_BLUE} />,
-                requiredModule: "orders",
-                requiredAction: ACTIONS.UPDATE,
-                onClick: () => setApproveRefund({ open: true, item: row, note: "" }),
-              });
-              if (row.providerRefundAmount > 0 && row.paymentProvider !== "razorpay") {
+              if (
+                row.paymentProvider === "razorpay" ||
+                row.providerRefundAmount <= 0
+              )
+                actions.push({
+                  label: "Approve Refund",
+                  icon: (
+                    <MdCheckCircle
+                      size={16}
+                      className={CLASS_ACTION_ICON_BLUE}
+                    />
+                  ),
+                  requiredModule: "orders",
+                  requiredAction: ACTIONS.UPDATE,
+                  onClick: () =>
+                    setApproveRefund({ open: true, item: row, note: "" }),
+                });
+              if (
+                row.providerRefundAmount > 0 &&
+                row.paymentProvider !== "razorpay"
+              ) {
                 actions.push({
                   label: "Complete Manual Refund",
-                  icon: <MdPayment size={16} className={CLASS_ACTION_ICON_GREEN} />,
+                  icon: (
+                    <MdPayment size={16} className={CLASS_ACTION_ICON_GREEN} />
+                  ),
                   requiredModule: "orders",
                   requiredAction: ACTIONS.UPDATE,
                   onClick: () =>
@@ -596,130 +655,258 @@ const Cancellations = () => {
       <DefaultModal
         isOpen={!!detail}
         onClose={() => setDetail(null)}
-        title="Cancellation Detail"
+        title="Cancellation Details"
       >
         {detail && (
-          <div className="p-4 space-y-3 text-sm">
-            {isSeller && detail.status === "requested" && !detail.sellerCanReview && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                This request contains products from multiple sellers. Only an admin can approve or reject the combined request.
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>Cancellation #</p>
-                <p className="font-mono text-xs">
-                  {detail.cancellationNumber || detail.id}
-                </p>
-              </div>
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>Order #</p>
-                <p><OrderLink orderId={detail.orderId || detail.order_id} orderNumber={detail.orderNumber || detail.order_number} /></p>
-              </div>
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>Cancellation Status</p>
-                <StatusBadge
-                  status={detail.status}
-                  color={STATUS_COLOR[detail.status] || "gray"}
-                />
-              </div>
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>Refund Status</p>
-                <p>{display(detail.refundStatus)}</p>
-              </div>
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>Scope</p>
-                <p className="capitalize">{detail.scope || "—"}</p>
-              </div>
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>
-                  {isSeller ? "My Cancelled Item Value" : "Customer Refund"}
-                </p>
-                <p className="font-medium">{money(detail.refundAmount)}</p>
-              </div>
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>Refunded Through</p>
-                <p>{refundSource(detail)}</p>
-              </div>
-              {!isSeller && (
-                <div>
-                  <p className={CLASS_DETAIL_LABEL}>Seller Cancelled Value</p>
-                  <p>{money(detail.sellerCancelledValue)}</p>
+          <div className="space-y-5 p-5">
+            {/* Multi-seller Warning */}
+            {isSeller &&
+              detail.status === "requested" &&
+              !detail.sellerCanReview && (
+                <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <div className="mt-0.5 text-amber-600">⚠</div>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-900">
+                      Admin approval required
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-amber-800">
+                      This request contains products from multiple sellers. Only
+                      an admin can approve or reject the combined request.
+                    </p>
+                  </div>
                 </div>
               )}
+
+            {/* Header Summary */}
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
               <div>
-                <p className={CLASS_DETAIL_LABEL}>Seller Finance Impact</p>
-                <p>
-                  {detail.sellerFinanceAdjustments.length
-                    ? "Recovered from settlement"
-                    : "No payout — cancelled before settlement"}
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Cancellation
+                </p>
+                <p className="mt-1 font-mono text-sm font-semibold text-gray-900">
+                  {detail.cancellationNumber || detail.id || "—"}
                 </p>
               </div>
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>Inventory</p>
-                <StatusBadge status={detail.inventoryStatus || "pending"} />
-              </div>
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>Shipment</p>
-                <StatusBadge status={detail.shipmentStatus || "pending"} />
-              </div>
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>Seller Finance</p>
-                <StatusBadge status={detail.financeStatus || "pending"} />
-              </div>
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>Reason</p>
-                <p>{display(detail.reason)}</p>
-              </div>
-              <div>
-                <p className={CLASS_DETAIL_LABEL}>Created</p>
-                <p>{fmt(detail.createdAt)}</p>
+
+              <StatusBadge
+                status={detail.status || "pending"}
+                color={STATUS_COLOR[detail.status] || "gray"}
+              />
+            </div>
+
+            {/* Reference Information */}
+            <div>
+              <h3 className={CLASS_SECTION_TITLE}>Reference Information</h3>
+
+              <div className={CLASS_GRID_2_COL}>
+                <div className={CLASS_CARD_WHITE}>
+                  <p className={CLASS_DETAIL_LABEL}>Order #</p>
+                  <div className="mt-1 text-sm font-medium">
+                    <OrderLink
+                      orderId={detail.orderId || detail.order_id}
+                      orderNumber={detail.orderNumber || detail.order_number}
+                    />
+                  </div>
+                </div>
+
+                <div className={CLASS_CARD_WHITE}>
+                  <p className={CLASS_DETAIL_LABEL}>Cancellation Status</p>
+                  <div className="mt-1">
+                    <StatusBadge
+                      status={detail.status || "pending"}
+                      color={STATUS_COLOR[detail.status] || "gray"}
+                    />
+                  </div>
+                </div>
+
+                <div className={CLASS_CARD_WHITE}>
+                  <p className={CLASS_DETAIL_LABEL}>Refund Status</p>
+                  <p className={CLASS_TEXT_SM_MEDIUM_GRAY}>
+                    {display(detail.refundStatus)}
+                  </p>
+                </div>
+
+                <div className={CLASS_CARD_WHITE}>
+                  <p className={CLASS_DETAIL_LABEL}>Scope</p>
+                  <p className="mt-1 text-sm font-medium capitalize text-gray-800">
+                    {detail.scope || "—"}
+                  </p>
+                </div>
+
+                <div className={CLASS_CARD_WHITE}>
+                  <p className={CLASS_DETAIL_LABEL}>Reason</p>
+                  <p className="mt-1 text-sm text-gray-800">
+                    {display(detail.reason)}
+                  </p>
+                </div>
+
+                <div className={CLASS_CARD_WHITE}>
+                  <p className={CLASS_DETAIL_LABEL}>Created</p>
+                  <p className={CLASS_TEXT_SM_MEDIUM_GRAY}>
+                    {fmt(detail.createdAt)}
+                  </p>
+                </div>
               </div>
             </div>
+
+            {/* Financial Information */}
+            <div>
+              <h3 className={CLASS_SECTION_TITLE}>Financial Impact</h3>
+
+              <div className={CLASS_GRID_2_COL}>
+                <div className={CLASS_AMOUNT_CARD}>
+                  <p className={CLASS_DETAIL_LABEL}>
+                    {isSeller ? "My Cancelled Item Value" : "Customer Refund"}
+                  </p>
+                  <p className={CLASS_AMOUNT_TITLE}>
+                    {money(detail.refundAmount)}
+                  </p>
+                </div>
+
+                {!isSeller && (
+                  <div className={CLASS_AMOUNT_CARD}>
+                    <p className={CLASS_DETAIL_LABEL}>Seller Cancelled Value</p>
+                    <p className={CLASS_AMOUNT_TITLE}>
+                      {money(detail.sellerCancelledValue)}
+                    </p>
+                  </div>
+                )}
+
+                <div className={CLASS_AMOUNT_CARD}>
+                  <p className={CLASS_DETAIL_LABEL}>Refunded Through</p>
+                  <p className={CLASS_TEXT_SM_MEDIUM_GRAY}>
+                    {refundSource(detail)}
+                  </p>
+                </div>
+
+                <div className={CLASS_AMOUNT_CARD}>
+                  <p className={CLASS_DETAIL_LABEL}>Seller Finance Impact</p>
+                  <p className={CLASS_TEXT_SM_MEDIUM_GRAY}>
+                    {detail.sellerFinanceAdjustments?.length
+                      ? "Recovered from settlement"
+                      : "No payout — cancelled before settlement"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Processing Status */}
+            <div>
+              <h3 className={CLASS_SECTION_TITLE}>Processing Status</h3>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className={CLASS_STATUS_CARD}>
+                  <p className={CLASS_DETAIL_LABEL}>Inventory</p>
+                  <div className={CLASS_MT_2}>
+                    <StatusBadge status={detail.inventoryStatus || "pending"} />
+                  </div>
+                </div>
+
+                <div className={CLASS_STATUS_CARD}>
+                  <p className={CLASS_DETAIL_LABEL}>Shipment</p>
+                  <div className={CLASS_MT_2}>
+                    <StatusBadge status={detail.shipmentStatus || "pending"} />
+                  </div>
+                </div>
+
+                <div className={CLASS_STATUS_CARD}>
+                  <p className={CLASS_DETAIL_LABEL}>Seller Finance</p>
+                  <div className={CLASS_MT_2}>
+                    <StatusBadge status={detail.financeStatus || "pending"} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cancellation Items */}
             <div className={CLASS_DETAIL_SECTION}>
-              <p className="mb-2 font-semibold text-gray-800">
-                {detail.status === "requested"
-                  ? (isSeller ? "My requested items" : "Requested items and quantities")
-                  : (isSeller ? "My cancelled items" : "Cancelled items")}
-              </p>
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {detail.status === "requested"
+                      ? isSeller
+                        ? "My Requested Items"
+                        : "Requested Items"
+                      : isSeller
+                        ? "My Cancelled Items"
+                        : "Cancelled Items"}
+                  </h3>
+
+                  {detail.items?.length > 0 && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      {detail.items.length}{" "}
+                      {detail.items.length === 1 ? "item" : "items"}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 {(detail.items || []).map((item) => (
                   <div
                     key={item.orderItemId || item.order_item_id}
-                    className={CLASS_DETAIL_CARD}
+                    className="rounded-xl border border-gray-200 bg-white p-4 transition hover:border-gray-300"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className={CLASS_DETAIL_VALUE}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-900">
                           {item.productTitle || item.product_title || "Product"}
-                        </div>
-                        <div className="mt-1 text-xs text-gray-500">
-                          SKU: {item.variantSku || item.variant_sku || "—"} ·
-                          Quantity: {item.quantity || 0}
+                        </p>
+
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                          <span>
+                            SKU:{" "}
+                            <span className={CLASS_FONT_MEDIUM_GRAY}>
+                              {item.variantSku || item.variant_sku || "—"}
+                            </span>
+                          </span>
+
+                          <span>
+                            Quantity:{" "}
+                            <span className={CLASS_FONT_MEDIUM_GRAY}>
+                              {item.quantity || 0}
+                            </span>
+                          </span>
                         </div>
                       </div>
-                      <div className="font-semibold text-gray-800">
-                        {money(
-                          item.refundAmount ??
-                            item.refund_amount ??
-                            item.itemAmount ??
-                            item.item_amount,
-                        )}
+
+                      <div className="shrink-0 text-right">
+                        <p className={CLASS_TEXT_XS_MUTED}>Refund</p>
+                        <p className="mt-1 text-sm font-bold text-gray-900">
+                          {money(
+                            item.refundAmount ??
+                              item.refund_amount ??
+                              item.itemAmount ??
+                              item.item_amount,
+                          )}
+                        </p>
                       </div>
                     </div>
                   </div>
                 ))}
+
                 {!detail.items?.length && (
-                  <div className={CLASS_TEXT_XS_MUTED}>
-                    No cancelled items found.
+                  <div className="rounded-lg border border-dashed border-gray-200 p-5 text-center">
+                    <p className={CLASS_TEXT_XS_MUTED}>
+                      No cancelled items found.
+                    </p>
                   </div>
                 )}
               </div>
             </div>
+
+            {/* Note */}
             {detail.note && (
               <div>
-                <p className={CLASS_DETAIL_LABEL}>Note</p>
-                <p>{detail.note}</p>
+                <h3 className="mb-2 text-sm font-semibold text-gray-900">
+                  Note
+                </h3>
+
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-sm leading-6 text-gray-700">
+                    {detail.note}
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -732,7 +919,9 @@ const Cancellations = () => {
         title="Approve item cancellation"
         description="Approve cancellation of the selected item quantities? Refund processing starts only after this approval."
         onConfirm={handleApproveRequest}
-        onCancel={() => setApproveRequest({ open: false, item: null, note: "" })}
+        onCancel={() =>
+          setApproveRequest({ open: false, item: null, note: "" })
+        }
         loading={actionLoading}
         confirmLabel="Approve Cancellation"
       >
@@ -740,7 +929,9 @@ const Cancellations = () => {
           <Input
             label="Approval note (optional)"
             value={approveRequest.note}
-            onChange={(e) => setApproveRequest((p) => ({ ...p, note: e.target.value }))}
+            onChange={(e) =>
+              setApproveRequest((p) => ({ ...p, note: e.target.value }))
+            }
           />
         </div>
       </ConfirmModal>
@@ -750,7 +941,9 @@ const Cancellations = () => {
         title="Reject item cancellation"
         description="Reject the selected item and quantity cancellation request? No refund will be initiated."
         onConfirm={handleRejectRequest}
-        onCancel={() => setRejectRequest({ open: false, item: null, reason: "" })}
+        onCancel={() =>
+          setRejectRequest({ open: false, item: null, reason: "" })
+        }
         loading={actionLoading}
         confirmLabel="Reject Cancellation"
       >
@@ -758,7 +951,9 @@ const Cancellations = () => {
           <Input
             label="Rejection reason *"
             value={rejectRequest.reason}
-            onChange={(e) => setRejectRequest((p) => ({ ...p, reason: e.target.value }))}
+            onChange={(e) =>
+              setRejectRequest((p) => ({ ...p, reason: e.target.value }))
+            }
           />
         </div>
       </ConfirmModal>
@@ -774,7 +969,13 @@ const Cancellations = () => {
         confirmLabel="Approve Refund"
       >
         <div className={CLASS_MODAL_BODY}>
-          <Input label="Approval note (optional)" value={approveRefund.note} onChange={(e) => setApproveRefund((p) => ({ ...p, note: e.target.value }))} />
+          <Input
+            label="Approval note (optional)"
+            value={approveRefund.note}
+            onChange={(e) =>
+              setApproveRefund((p) => ({ ...p, note: e.target.value }))
+            }
+          />
         </div>
       </ConfirmModal>
 

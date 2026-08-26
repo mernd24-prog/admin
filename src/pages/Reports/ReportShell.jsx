@@ -47,6 +47,7 @@ import { axiosPrivate } from "../../_helpers/axiosProvider";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
+import { GoldDateRangeCalendar } from "../../components/Shared/FilterBar";
 
 const CHART_GRID_COLOR = "#e9dfc9";
 const REPORT_GOLD = "#d6a323";
@@ -391,19 +392,19 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
     fromDate: filters?.fromDate || "",
     toDate: filters?.toDate || "",
   });
+
   const [viewDate, setViewDate] = useState(
     () => parseInputDate(filters?.fromDate || filters?.toDate) || new Date(),
   );
-  const days = useMemo(() => buildCalendarDays(viewDate), [viewDate]);
-  const today = toIsoDate(new Date());
-  const hasCompleteRange = Boolean(draftDates.fromDate && draftDates.toDate);
 
   useEffect(() => {
     if (!open) return;
+
     setDraftDates({
       fromDate: filters?.fromDate || "",
       toDate: filters?.toDate || "",
     });
+
     setViewDate(
       parseInputDate(filters?.fromDate || filters?.toDate) || new Date(),
     );
@@ -411,31 +412,72 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
 
   if (!open) return null;
 
-  const selectDate = (value) => {
+  const handleSelectDate = (value) => {
     const selectedDate = parseInputDate(value);
+
     if (!selectedDate) return;
+
     setViewDate(selectedDate);
+
     setDraftDates((current) => {
-      if (!current.fromDate || current.toDate)
-        return { fromDate: value, toDate: "" };
-      if (value < current.fromDate)
-        return { fromDate: value, toDate: current.fromDate };
-      return { ...current, toDate: value };
+      // First selection = start date
+      if (!current.fromDate || current.toDate) {
+        return {
+          fromDate: value,
+          toDate: "",
+        };
+      }
+
+      // If second date is before first date,
+      // automatically make it the start date.
+      if (value < current.fromDate) {
+        return {
+          fromDate: value,
+          toDate: current.fromDate,
+        };
+      }
+
+      // Second selection = end date
+      return {
+        ...current,
+        toDate: value,
+      };
     });
   };
 
-  const applyRange = () => {
-    if (!hasCompleteRange) return;
+  const handleApply = () => {
+    if (!draftDates.fromDate || !draftDates.toDate) {
+      return;
+    }
+
     const nextDates =
       draftDates.fromDate <= draftDates.toDate
         ? draftDates
-        : { fromDate: draftDates.toDate, toDate: draftDates.fromDate };
+        : {
+            fromDate: draftDates.toDate,
+            toDate: draftDates.fromDate,
+          };
+
     filters.setDateRange(nextDates.fromDate, nextDates.toDate);
+
     onClose();
   };
 
-  const selectToday = () => {
-    setDraftDates({ fromDate: today, toDate: today });
+  const handleClear = () => {
+    setDraftDates({
+      fromDate: "",
+      toDate: "",
+    });
+  };
+
+  const handleToday = () => {
+    const today = toIsoDate(new Date());
+
+    setDraftDates({
+      fromDate: today,
+      toDate: today,
+    });
+
     setViewDate(new Date());
   };
 
@@ -447,207 +489,17 @@ const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
       subtitle="Report data will update after apply."
       loading={loading}
     >
-      <div className="rounded-lg border border-[var(--admin-line)] bg-white p-4 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-navy)] hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)] hover:text-[var(--admin-gold-dark)] transition-all duration-200 active:scale-90 disabled:opacity-50"
-            onClick={() => setViewDate(addMonths(viewDate, -1))}
-            disabled={loading}
-            aria-label="Previous month"
-          >
-            <MdChevronLeft size={18} />
-          </button>
-          <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
-            <div className="flex items-center justify-center gap-1">
-              {/* Month dropdown */}
-              <select
-                value={viewDate.getMonth()}
-                onChange={(e) => {
-                  const nextDate = new Date(viewDate);
-                  nextDate.setDate(1);
-                  nextDate.setMonth(Number(e.target.value));
-                  setViewDate(nextDate);
-                }}
-                disabled={loading}
-                className="h-8 max-w-[110px] rounded border border-[var(--admin-gold)] bg-white px-1.5 text-xs font-semibold text-[var(--admin-ink)] outline-none focus:ring-1 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {[
-                  "January",
-                  "February",
-                  "March",
-                  "April",
-                  "May",
-                  "June",
-                  "July",
-                  "August",
-                  "September",
-                  "October",
-                  "November",
-                  "December",
-                ].map((month, index) => (
-                  <option key={month} value={index}>
-                    {month}
-                  </option>
-                ))}
-              </select>
-
-              {/* Year dropdown */}
-              <select
-                value={viewDate.getFullYear()}
-                onChange={(e) => {
-                  const nextDate = new Date(viewDate);
-                  nextDate.setDate(1);
-                  nextDate.setFullYear(Number(e.target.value));
-                  setViewDate(nextDate);
-                }}
-                disabled={loading}
-                className="h-8 rounded border border-[var(--admin-gold)] bg-white px-1.5 text-xs font-semibold text-[var(--admin-ink)] outline-none focus:ring-1 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {Array.from({ length: 21 }, (_, index) => {
-                  const currentYear = new Date().getFullYear();
-                  const year = currentYear - 10 + index;
-
-                  return (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            <p className="text-[10px] font-semibold leading-tight uppercase tracking-wider text-[var(--admin-muted)]">
-              Select start and end date
-            </p>
-          </div>
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-navy)] hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)] hover:text-[var(--admin-gold-dark)] transition-all duration-200 active:scale-90 disabled:opacity-50"
-            onClick={() => setViewDate(addMonths(viewDate, 1))}
-            disabled={loading}
-            aria-label="Next month"
-          >
-            <MdChevronRight size={18} />
-          </button>
-        </div>
-
-        <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[9px] font-extrabold uppercase tracking-wider text-[var(--admin-muted)] opacity-80">
-          {WEEKDAY_LABELS.map((label) => (
-            <span key={label}>{label}</span>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-1">
-          {days.map((day) => {
-            const isStart = day.value === draftDates.fromDate;
-            const isEnd = day.value === draftDates.toDate;
-            const isInRange = isBetweenDates(
-              day.value,
-              draftDates.fromDate,
-              draftDates.toDate,
-            );
-            const isDisabled = day.value > today;
-            const isToday = day.value === today;
-
-            let buttonClass =
-              "flex h-9 w-full items-center justify-center text-xs font-semibold transition-all duration-150 ";
-            if (isStart && isEnd) {
-              buttonClass +=
-                "rounded-full bg-[var(--admin-gold)] text-white shadow-sm";
-            } else if (isStart) {
-              buttonClass += draftDates.toDate
-                ? "rounded-l-full bg-[var(--admin-gold)] text-white shadow-sm"
-                : "rounded-full bg-[var(--admin-gold)] text-white shadow-sm";
-            } else if (isEnd) {
-              buttonClass +=
-                "rounded-r-full bg-[var(--admin-gold)] text-white shadow-sm";
-            } else if (isInRange) {
-              buttonClass +=
-                "bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] rounded-none";
-            } else if (day.isCurrentMonth) {
-              buttonClass +=
-                "rounded-full text-[var(--admin-ink)] enabled:hover:bg-slate-100";
-              if (isToday)
-                buttonClass +=
-                  " border border-[var(--admin-gold)] text-[var(--admin-gold-dark)] font-bold";
-            } else {
-              buttonClass +=
-                "rounded-full text-slate-300 enabled:hover:bg-slate-50";
-            }
-
-            return (
-              <button
-                key={day.value}
-                type="button"
-                className={`${buttonClass} disabled:cursor-not-allowed disabled:bg-transparent disabled:text-slate-200 disabled:shadow-none`}
-                onClick={() => selectDate(day.value)}
-                disabled={loading || isDisabled}
-              >
-                {day.day}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded-md border border-[var(--admin-line)] bg-[var(--admin-canvas)]/30 px-3 py-1.5 text-center">
-            <span className="block text-[9px] font-extrabold uppercase tracking-wider text-[var(--admin-muted)]">
-              From
-            </span>
-            <span className="text-xs font-bold text-[var(--admin-ink)]">
-              {draftDates.fromDate ? formatDateLabel(draftDates.fromDate) : "—"}
-            </span>
-          </div>
-          <div className="rounded-md border border-[var(--admin-line)] bg-[var(--admin-canvas)]/30 px-3 py-1.5 text-center">
-            <span className="block text-[9px] font-extrabold uppercase tracking-wider text-[var(--admin-muted)]">
-              To
-            </span>
-            <span className="text-xs font-bold text-[var(--admin-ink)]">
-              {draftDates.toDate ? formatDateLabel(draftDates.toDate) : "—"}
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex h-8 items-center justify-center rounded-md border border-[var(--admin-line)] bg-white px-3 text-xs font-semibold text-[var(--admin-navy)] hover:bg-slate-50 active:scale-95 transition-all duration-150 disabled:opacity-50"
-              onClick={selectToday}
-              disabled={loading}
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-8 items-center justify-center rounded-md border border-red-100 bg-red-50/20 px-3 text-xs font-semibold text-red-600 hover:bg-red-50 active:scale-95 transition-all duration-150 disabled:opacity-50"
-              onClick={() => setDraftDates({ fromDate: "", toDate: "" })}
-              disabled={loading || (!draftDates.fromDate && !draftDates.toDate)}
-            >
-              Clear
-            </button>
-          </div>
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              className="inline-flex h-8 items-center justify-center rounded-md border border-[var(--admin-line)] bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all duration-150 disabled:opacity-50"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-8 min-w-[76px] items-center justify-center rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold)] px-4 text-xs font-bold text-[var(--admin-navy)] shadow-sm hover:bg-[#ffe8a8] active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!hasCompleteRange || loading}
-              onClick={applyRange}
-            >
-              Apply
-            </button>
-          </div>
-        </div>
-      </div>
+      <GoldDateRangeCalendar
+        dates={draftDates}
+        viewDate={viewDate}
+        onViewDateChange={setViewDate}
+        onSelectDate={handleSelectDate}
+        onApply={handleApply}
+        onCancel={onClose}
+        onClear={handleClear}
+        onToday={handleToday}
+        loading={loading}
+      />
     </DateRangePickerModal>
   );
 };

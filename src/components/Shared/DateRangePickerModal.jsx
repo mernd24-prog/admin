@@ -1,5 +1,26 @@
 import React from "react";
 
+const MODAL_OVERLAY =
+  "fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4";
+
+const MODAL_CONTAINER =
+  "w-full max-w-[390px] rounded-xl border border-[var(--admin-gold)] bg-white shadow-2xl";
+
+const MODAL_HEADER =
+  "flex items-center justify-between border-b border-slate-100 px-5 py-4";
+
+const MODAL_TITLE =
+  "text-base font-medium text-[var(--admin-ink)]";
+
+const MODAL_SUBTITLE =
+  "mt-1 text-xs font-normal text-[var(--admin-muted)]";
+
+const CLOSE_BUTTON =
+  "flex h-8 w-8 items-center justify-center rounded-md text-lg font-normal text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50";
+
+const MODAL_CONTENT =
+  "px-5 py-5";
+
 /**
  * Reusable Date Range Picker Modal Container Component
  */
@@ -7,35 +28,27 @@ export const DateRangePickerModal = ({
   open,
   onClose,
   title = "Select Date Range",
-  subtitle = "Filter data will update after apply.",
+  subtitle,
   loading = false,
   children,
 }) => {
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4"
-      onClick={onClose}
-    >
+    <div className={MODAL_OVERLAY} onClick={onClose}>
       <div
-        className="w-full max-w-[380px] rounded-lg border border-[var(--admin-gold)] bg-white p-4 shadow-xl"
+        className={MODAL_CONTAINER}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className={MODAL_HEADER}>
           <div>
-            <h2 className="text-sm font-bold text-[var(--admin-ink)]">
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                {subtitle}
-              </p>
-            )}
+            <h2 className={MODAL_TITLE}>{title}</h2>
+            {/* {subtitle && <p className={MODAL_SUBTITLE}>{subtitle}</p>} */}
           </div>
+
           <button
             type="button"
-            className="rounded border border-transparent px-2 py-1 text-lg leading-none text-slate-400 hover:border-slate-200 hover:text-slate-700 disabled:opacity-50"
+            className={CLOSE_BUTTON}
             onClick={onClose}
             disabled={loading}
             aria-label="Close date range picker"
@@ -44,7 +57,7 @@ export const DateRangePickerModal = ({
           </button>
         </div>
 
-        {children}
+        <div className={MODAL_CONTENT}>{children}</div>
       </div>
     </div>
   );

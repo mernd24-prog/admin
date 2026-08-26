@@ -1,19 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
-import {
-  MdAdd,
-  MdOutlineClose,
-  MdSearch,
-  MdStar,
-  MdStarBorder,
-} from "react-icons/md";
+import { MdAdd, MdSearch, MdStar, MdStarBorder } from "react-icons/md";
 import { createProductReview } from "../../../../Redux/adminCoreSlice";
 import { ENDPOINTS } from "../../../../_helpers/endpoints";
 import { axiosPrivate } from "../../../../_helpers/axiosProvider";
 import { getStoredUser } from "../../../../_helpers/authStorage";
 import MultiImageUpload from "../../../../components/Atoms/ImageGallery/MultiImageUpload";
 import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
+import DefaultModal from "../../../../components/Atoms/Modal/DefaultRightSideModal";
 
 const STATUSES = [
   { value: "published", label: "Published" },
@@ -259,40 +254,21 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
   const [productDropdownOpen, setProductDropdownOpen] = useState(false);
   if (!isOpen) return null;
 
- return (
-  <div
-    className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-sm"
-    onClick={onClose}
-  >
-    <div
-      className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-      onClick={(event) => event.stopPropagation()}
+  return (
+    <DefaultModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={existingReview ? "Edit Product Review" : "Add Product Review"}
+      isButtonView={false}
+      width="600px"
     >
-      {/* Header */}
-      <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            {existingReview ? "Edit Product Review" : "Add Product Review"}
-          </h2>
+      <div className="space-y-5 pb-4">
+        <p className="-mt-1 text-xs text-gray-500">
+          {existingReview
+            ? "Update the selected product review details."
+            : "Add a review for a selected product."}
+        </p>
 
-          <p className="mt-1 text-sm text-gray-500">
-            {existingReview
-              ? "Update the selected product review details."
-              : "Add a review for a selected product."}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-        >
-          <MdOutlineClose size={21} />
-        </button>
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 space-y-5 overflow-x-hidden overflow-y-auto px-6 py-5">
         {/* Product */}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -346,7 +322,7 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
                   }))
                   .find(
                     (option) =>
-                      String(option.value) === String(form.productId || "")
+                      String(option.value) === String(form.productId || ""),
                   ) || null
               }
               onChange={(option) => {
@@ -411,7 +387,7 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
               value={
                 STATUSES.find(
                   (option) =>
-                    String(option.value) === String(form.status || "")
+                    String(option.value) === String(form.status || ""),
                 ) || null
               }
               onChange={(option) => {
@@ -494,37 +470,36 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
             isDisabled={saving}
           />
         </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4 mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={saving || loadingExisting}
+            className="inline-flex min-w-[135px] items-center justify-center gap-2 rounded-lg bg-[var(--admin-navy)] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <MdAdd size={18} />
+
+            {saving
+              ? "Saving..."
+              : existingReview
+                ? "Update Review"
+                : "Add Review"}
+          </button>
+        </div>
       </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50/70 px-6 py-4">
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={saving}
-          className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Cancel
-        </button>
-
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={saving || loadingExisting}
-          className="inline-flex min-w-[135px] items-center justify-center gap-2 rounded-lg bg-[var(--admin-navy)] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <MdAdd size={18} />
-
-          {saving
-            ? "Saving..."
-            : existingReview
-              ? "Update Review"
-              : "Add Review"}
-        </button>
-      </div>
-    </div>
-  </div>
-);
+    </DefaultModal>
+  );
 };
 
 export default AddProductReview;
