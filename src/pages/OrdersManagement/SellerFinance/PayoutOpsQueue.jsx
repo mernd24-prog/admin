@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import {
   MdBlock,
+  MdCheckCircle,
   MdClose,
   MdPause,
   MdPlayArrow,
@@ -48,12 +49,8 @@ const PAYOUT_STATUSES = [
 ];
 
 const PAYMENT_METHODS = [
-  { value: "", label: "Use seller preference" },
   { value: "razorpayx", label: "RazorpayX bank payout" },
   { value: "seller_wallet", label: "Seller Wallet" },
-  /*
-  // Old manual payout methods kept for fallback. Do not remove; re-enable if
-  // RazorpayX needs to be paused temporarily.
   { value: "bank_transfer", label: "Bank Transfer" },
   { value: "upi", label: "UPI" },
   { value: "neft", label: "NEFT" },
@@ -61,7 +58,6 @@ const PAYMENT_METHODS = [
   { value: "imps", label: "IMPS" },
   { value: "cheque", label: "Cheque" },
   { value: "manual", label: "Manual" },
-  */
 ];
 
 const availablePaymentMethods = (razorpayXEnabled) =>
@@ -303,10 +299,7 @@ const PayoutOpsQueue = () => {
 
   const openAction = (type, payout) => {
     const existingMethod = valueOf(payout, "paymentMethod", "payment_method");
-    const paymentMethod =
-      ["razorpayx", "seller_wallet"].includes(existingMethod)
-        ? existingMethod
-        : defaultPayoutMethod;
+    const paymentMethod = existingMethod || defaultPayoutMethod;
     setAction({
       ...EMPTY_ACTION,
       open: true,
@@ -386,7 +379,7 @@ const PayoutOpsQueue = () => {
             ...base,
             note: action.note,
             paymentMethod: paymentMethod || undefined,
-            autoProcess: true,
+            autoProcess: paymentMethod === "razorpayx",
           };
         }
         case "hold":
@@ -400,14 +393,18 @@ const PayoutOpsQueue = () => {
               action.paymentMethod ||
               valueOf(action.payout, "paymentMethod", "payment_method") ||
               undefined,
-            autoProcess: action.approve === true,
+            autoProcess:
+              action.approve === true &&
+              (action.paymentMethod ||
+                valueOf(action.payout, "paymentMethod", "payment_method")) ===
+                "razorpayx",
           };
         case "retry":
           return {
             ...base,
             paymentReference: action.paymentReference || undefined,
             paymentMethod: action.paymentMethod || undefined,
-            autoProcess: true,
+            autoProcess: action.paymentMethod === "razorpayx",
           };
         case "complete":
           return {
@@ -565,6 +562,11 @@ const PayoutOpsQueue = () => {
           const status = row.status;
           const method = valueOf(row, "paymentMethod", "payment_method");
           const isRazorpayX = method === "razorpayx";
+          const pendingActionLabel = isRazorpayX
+            ? "Start RazorpayX"
+            : method === "seller_wallet"
+              ? "Approve to Wallet"
+              : "Approve Offline Payout";
           const providerPayoutExists = hasRazorpayXProviderPayout(row);
           return (
             <div className="flex flex-wrap items-center gap-2">
@@ -581,7 +583,7 @@ const PayoutOpsQueue = () => {
                       onClick={() => openAction("approve", row)}
                     >
                       <MdPlayArrow size={15} />
-                      Start RazorpayX
+                      {pendingActionLabel}
                     </button>
                   </PermissionGuard>
                   <PermissionGuard
@@ -665,10 +667,6 @@ const PayoutOpsQueue = () => {
                       </button>
                     </PermissionGuard>
                   ) : (
-                    null
-                    /*
-                    // Old manual completion action hidden while RazorpayX is the
-                    // active payout path. Keep this block for quick fallback.
                     <PermissionGuard
                       module="sellers/commissions"
                       action={ACTIONS.UPDATE}
@@ -683,7 +681,6 @@ const PayoutOpsQueue = () => {
                         Complete
                       </button>
                     </PermissionGuard>
-                    */
                   )}
                   <PermissionGuard
                     module="sellers/commissions"
@@ -869,6 +866,14 @@ const PayoutOpsQueue = () => {
                     does not validate bank IFSC.
                   </span>
                 )}
+                {action.paymentMethod &&
+                  !["razorpayx", "seller_wallet"].includes(
+                    action.paymentMethod,
+                  ) && (
+                    <span className="mt-1 block text-xs text-amber-700">
+                      Approval only moves this payout to Processing. Transfer it externally, then use Complete and enter the UTR or transaction reference.
+                    </span>
+                  )}
               </label>
               <Input
                 labelName="Note (optional)"

@@ -424,9 +424,6 @@ const inputCls =
 
 const PAYMENT_METHODS = [
   { value: "razorpayx", label: "RazorpayX bank payout" },
-  /*
-  // Old manual payout methods kept for fallback. Do not remove; re-enable if
-  // RazorpayX needs to be paused temporarily.
   { value: "manual", label: "Manual / record later" },
   { value: "neft", label: "NEFT" },
   { value: "rtgs", label: "RTGS" },
@@ -434,7 +431,6 @@ const PAYMENT_METHODS = [
   { value: "upi", label: "UPI" },
   { value: "cheque", label: "Cheque" },
   { value: "bank_transfer", label: "Bank transfer" },
-  */
 ];
 
 const availablePaymentMethods = (razorpayXEnabled) =>
@@ -2282,11 +2278,11 @@ const SellerFinance = () => {
                     Starts RazorpayX payout; the provider payout ID is saved as the payment reference.
                   </p>
                 )}
-                {/*
-                  Old manual completion stays available by choosing one of the
-                  manual methods above if those methods are re-enabled in
-                  PAYMENT_METHODS.
-                */}
+                {completeModal.paymentMethod !== "razorpayx" && (
+                  <p className="text-xs text-amber-700">
+                    Record this only after confirming the external transfer. The UTR or transaction reference is required.
+                  </p>
+                )}
               </FieldRow>
               <FieldRow label="Internal Note">
                 <textarea

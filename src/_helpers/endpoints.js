@@ -320,6 +320,8 @@ export const ENDPOINTS = {
       `/admin/referral/influencers/${parentId}/children`,
     influencerStatus: (influencerId) =>
       `/admin/referral/influencers/${influencerId}/status`,
+    influencerChildPermission: (influencerId) =>
+      `/admin/referral/influencers/${influencerId}/child-permission`,
     promoteInfluencer: (influencerId) =>
       `/admin/referral/influencers/${influencerId}/promote`,
     codes: "/admin/referral/codes",

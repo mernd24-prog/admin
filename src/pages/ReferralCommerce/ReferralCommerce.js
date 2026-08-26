@@ -51,6 +51,7 @@ import {
   updateReferralCode,
   updateReferralBonusRule,
   updateReferralInfluencerStatus,
+  updateReferralInfluencerChildPermission,
   updateReferralRules,
 } from "../../Redux/referralCommerceSlice";
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
@@ -1504,6 +1505,33 @@ const ReferralCommerce = () => {
     }
   };
 
+  const toggleChildPermission = async (influencer) => {
+    const granting = !influencer.canCreateChildren;
+    try {
+      await dispatch(updateReferralInfluencerChildPermission({
+        influencerId: getId(influencer),
+        canCreateChildren: granting,
+        reason: granting ? "Granted by Admin" : "Revoked by Admin",
+      })).unwrap();
+      toast.success(granting
+        ? "Child account permission granted"
+        : "Child account permission revoked; registration QR is disabled");
+      await refreshAll();
+    } catch (error) {
+      toast.error(error || "Unable to update child account permission");
+    }
+  };
+
+  const copyRegistrationLink = async (influencer) => {
+    const link = influencer.childRegistration?.registrationUrl;
+    if (!link || !influencer.childRegistration?.shareable) {
+      toast.error("Grant child account permission before sharing this registration QR/link");
+      return;
+    }
+    await navigator.clipboard.writeText(link);
+    toast.success("Associate registration link copied");
+  };
+
   const toggleCodeStatus = async (code) => {
     try {
       await dispatch(
@@ -1700,7 +1728,9 @@ const ReferralCommerce = () => {
         actions={[
           {
             label:
-              item.status === "active"
+              item.status === "pending"
+                ? "Approve account"
+                : item.status === "active"
                 ? "Suspend partner"
                 : "Reactivate partner",
             icon:
@@ -1711,6 +1741,19 @@ const ReferralCommerce = () => {
                 item,
                 item.status === "active" ? "suspended" : "active",
               ),
+          },
+          {
+            label: item.canCreateChildren
+              ? "Revoke child creation"
+              : "Grant child creation",
+            icon: item.canCreateChildren ? <X size={14} /> : <UserPlus size={14} />,
+            onClick: () => toggleChildPermission(item),
+          },
+          {
+            label: "Copy registration link",
+            icon: <Share2 size={14} />,
+            hidden: !item.childRegistration?.shareable,
+            onClick: () => copyRegistrationLink(item),
           },
           {
             label: "Promote to Growth Partner",
@@ -2290,7 +2333,7 @@ const ReferralCommerce = () => {
           name="coinValue"
           type="number"
           min="0.000001"
-          step="0.01"
+          step="0.000001"
           value={rulesForm.coinValue}
           onChange={handleRulesField}
         />
