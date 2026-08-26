@@ -305,7 +305,7 @@ const SellerPayouts = () => {
         render: (_, row) => {
           const explanation = payoutExplanation(row);
           return (
-            <div className="min-w-[220px] max-w-[300px]">
+            <div>
               <div className={explanation.tone === "green" ? "font-semibold text-green-700" : explanation.tone === "amber" ? "font-semibold text-amber-700" : "font-semibold text-gray-700"}>{explanation.title}</div>
               <div className="mt-0.5 text-xs leading-5 text-gray-500">{explanation.detail}</div>
             </div>

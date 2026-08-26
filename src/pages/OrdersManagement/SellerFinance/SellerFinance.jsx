@@ -325,33 +325,57 @@ const IconButton = ({
   );
 };
 
-const TableShell = ({ title, headings, children, emptyText }) => {
+const TableShell = ({
+  title,
+  headings,
+  children,
+  emptyText,
+  loading = false,
+}) => {
   const rows = React.Children.toArray(children);
+
   const data = rows.map((row, index) => ({
     id: row.key || `${title}-${index}`,
     cells: React.Children.toArray(row.props.children),
     rowClassName: row.props.className || "",
   }));
+
   const columns = headings.map((heading, index) => ({
     key: `column-${index}`,
     label: heading,
+
     render: (_, record) => {
       const cell = record.cells[index];
-      if (!React.isValidElement(cell)) return cell;
 
-      const className = String(cell.props.className || "")
-        .replace(/\b(?:px|py|p)-\d+(?:\.\d+)?\b/g, "")
+      if (!React.isValidElement(cell)) {
+        return cell;
+      }
+
+      const className = String(
+        cell.props.className || "",
+      )
+        .replace(
+          /\b(?:px|py|p)-\d+(?:\.\d+)?\b/g,
+          "",
+        )
         .trim();
 
-      return <div className={className}>{cell.props.children}</div>;
+      return (
+        <div className={className}>
+          {cell.props.children}
+        </div>
+      );
     },
   }));
 
   return (
-    <section className="rounded-lg  border border-[#E6E6E6] bg-white ">
+    <section className="rounded-lg border border-[#E6E6E6] bg-white">
       <div className="border-b border-[#E6E6E6] px-4 py-3">
-        <h2 className="text-sm font-semibold text-[#202337]">{title}</h2>
+        <h2 className="text-sm font-semibold text-[#202337]">
+          {title}
+        </h2>
       </div>
+
       <DataTable
         columns={columns}
         data={data}
@@ -361,11 +385,11 @@ const TableShell = ({ title, headings, children, emptyText }) => {
         rowClassName={(record) => record.rowClassName}
         emptyText={emptyText}
         cardClassName="overflow-hidden"
+        loading={loading}
       />
     </section>
   );
 };
-
 const ModalOverlay = ({
   isOpen,
   onClose,
@@ -451,6 +475,7 @@ const SellerFinance = () => {
   const dispatch = useDispatch();
   const { isSeller } = usePermission();
   const financeState = useSelector((state) => state.sellerCommissions);
+  const [financeLoading, setFinanceLoading] = useState(true);
   const initialParams = useMemo(
     () => new URLSearchParams(window.location.search),
     [],
@@ -543,51 +568,81 @@ const SellerFinance = () => {
     note: "",
   });
 
-  const loadFinance = useCallback(async () => {
-    try {
-      const cleanSearch = String(filters.search || "")
-        .trim()
-        .replace(/^#/, "");
-      if (isSeller) {
-        const sellerFilters = {
-          status: filters.status,
-          search: cleanSearch,
-          limit: 100,
-        };
-        await Promise.all([
-          dispatch(getSellerCommissions(sellerFilters)).unwrap(),
-          dispatch(getSellerPayouts(sellerFilters)).unwrap(),
-          dispatch(
-            getMySellerSettlements({ ...sellerFilters, limit: 50 }),
-          ).unwrap(),
-          dispatch(getMySellerFinanceSummary(sellerFilters)).unwrap(),
-        ]);
-      } else {
-        const adminFilters = {
-          ...filters,
-          search: cleanSearch,
-        };
-        await Promise.all([
-          dispatch(getSellerFinanceSummary(adminFilters)).unwrap(),
-          dispatch(
-            getAdminSellerCommissions({ ...adminFilters, limit: 200 }),
-          ).unwrap(),
-          dispatch(
-            getAdminSellerPayouts({ ...adminFilters, limit: 200 }),
-          ).unwrap(),
-          dispatch(
-            getSellerSettlements({
-              sellerId: filters.sellerId,
-              organizationId: filters.organizationId,
-              limit: 50,
-            }),
-          ).unwrap(),
-        ]);
-      }
-    } catch (error) {
-      toast.error(error?.message || error || "Unable to load seller finance");
+const loadFinance = useCallback(async () => {
+  setFinanceLoading(true);
+
+  try {
+    const cleanSearch = String(filters.search || "")
+      .trim()
+      .replace(/^#/, "");
+
+    if (isSeller) {
+      const sellerFilters = {
+        status: filters.status,
+        search: cleanSearch,
+        limit: 100,
+      };
+
+      await Promise.all([
+        dispatch(getSellerCommissions(sellerFilters)).unwrap(),
+
+        dispatch(getSellerPayouts(sellerFilters)).unwrap(),
+
+        dispatch(
+          getMySellerSettlements({
+            ...sellerFilters,
+            limit: 50,
+          }),
+        ).unwrap(),
+
+        dispatch(
+          getMySellerFinanceSummary(sellerFilters),
+        ).unwrap(),
+      ]);
+    } else {
+      const adminFilters = {
+        ...filters,
+        search: cleanSearch,
+      };
+
+      await Promise.all([
+        dispatch(
+          getSellerFinanceSummary(adminFilters),
+        ).unwrap(),
+
+        dispatch(
+          getAdminSellerCommissions({
+            ...adminFilters,
+            limit: 200,
+          }),
+        ).unwrap(),
+
+        dispatch(
+          getAdminSellerPayouts({
+            ...adminFilters,
+            limit: 200,
+          }),
+        ).unwrap(),
+
+        dispatch(
+          getSellerSettlements({
+            sellerId: filters.sellerId,
+            organizationId: filters.organizationId,
+            limit: 50,
+          }),
+        ).unwrap(),
+      ]);
     }
-  }, [dispatch, filters, isSeller]);
+  } catch (error) {
+    toast.error(
+      error?.message ||
+        error ||
+        "Unable to load seller finance",
+    );
+  } finally {
+    setFinanceLoading(false);
+  }
+}, [dispatch, filters, isSeller]);
 
   useEffect(() => {
     loadFinance();
@@ -1465,108 +1520,142 @@ const SellerFinance = () => {
       </div>
 
       <div className={`${!isSeller && !filters.sellerId ? "hidden" : "mb-4"}`}>
-        <TableShell
-          title="Order Payout Eligibility"
-          headings={[
-            "Order",
-            "Delivered",
-            "Return Window Starts",
-            "Return Window Ends",
-            "Net Payable",
-            "Can Payout?",
-            "Reason",
-            ...(!isSeller ? ["Action"] : []),
-          ]}
-          emptyText="No order payout records found for this seller"
-        >
-          {actionableCommissions.length
-            ? actionableCommissions.map((row) => {
-                const decision = payoutDecision(row);
-                return (
-                  <tr key={`eligibility-${row.id}`}>
-                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
-                      <OrderLink
-                        orderId={row.order_id || row.orderId}
-                        orderNumber={row.orderNumber || row.order_number}
-                      />
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-xs">
-                      {row.deliveredAt ? (
-                        formatDateTime12Hour(row.deliveredAt, "-")
-                      ) : (
-                        <span className="text-amber-700">Not Delivered</span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-xs">
-                      {row.returnWindowStartsAt
-                        ? formatDateTime12Hour(row.returnWindowStartsAt, "-")
-                        : "Starts After Delivery"}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-xs">
-                      {row.returnWindowEndsAt
-                        ? formatDateTime12Hour(row.returnWindowEndsAt, "—")
-                        : "—"}
-                      {row.returnWindowEndsAt &&
-                        new Date(row.returnWindowEndsAt) > new Date() && (
-                          <div className="mt-1 font-semibold text-amber-700">
-                            {eligibilityCountdown(row.returnWindowEndsAt)}
-                          </div>
-                        )}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
-                      {money(
-                        Math.max(rowMoney(row, "net_amount", "netAmount"), 0),
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <StatusBadge
-                        status={
-                          decision.allowed
-                            ? "eligible"
-                            : decision.label === "Held"
-                              ? "held"
-                              : decision.label === "Refunded"
-                                ? "refunded"
-                                : "pending"
-                        }
-                        dot
-                      />
-                      <div className="mt-1 text-xs font-semibold">
-                        {decision.label}
-                      </div>
-                    </td>
-                    <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">
-                      {formatLabel(decision.reason)}
-                    </td>
-                    {!isSeller && (
-                      <td className="whitespace-nowrap px-4 py-3">
-                        {decision.allowed ? (
-                          <PermissionGuard
-                            module="sellers/commissions"
-                            action={ACTIONS.UPDATE}
-                            hide
-                          >
-                            <button
-                              type="button"
-                              className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white"
-                              onClick={() => openOrderPayoutModal(row)}
-                              disabled={submitting}
-                            >
-                              Payout This Order
-                            </button>
-                          </PermissionGuard>
-                        ) : (
-                          <span className="text-xs text-[#65718b]">
-                            Not Allowed
-                          </span>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })
-            : null}
-        </TableShell>
+  <TableShell
+  title="Order Payout Eligibility"
+  headings={[
+    "Order",
+    "Delivered",
+    "Return Window Starts",
+    "Return Window Ends",
+    "Net Payable",
+    "Can Payout?",
+    "Reason",
+    ...(!isSeller ? ["Action"] : []),
+  ]}
+  emptyText="No order payout records found for this seller"
+  loading={financeLoading}
+>
+  {actionableCommissions.map((row) => {
+    const decision = payoutDecision(row);
+
+    return (
+      <tr key={`eligibility-${row.id}`}>
+        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
+          <OrderLink
+            orderId={row.order_id || row.orderId}
+            orderNumber={
+              row.orderNumber || row.order_number
+            }
+          />
+        </td>
+
+        <td className="whitespace-nowrap px-4 py-3 text-xs">
+          {row.deliveredAt ? (
+            formatDateTime12Hour(
+              row.deliveredAt,
+              "-",
+            )
+          ) : (
+            <span className="text-amber-700">
+              Not Delivered
+            </span>
+          )}
+        </td>
+
+        <td className="whitespace-nowrap px-4 py-3 text-xs">
+          {row.returnWindowStartsAt
+            ? formatDateTime12Hour(
+                row.returnWindowStartsAt,
+                "-",
+              )
+            : "Starts After Delivery"}
+        </td>
+
+        <td className="whitespace-nowrap px-4 py-3 text-xs">
+          {row.returnWindowEndsAt
+            ? formatDateTime12Hour(
+                row.returnWindowEndsAt,
+                "—",
+              )
+            : "—"}
+
+          {row.returnWindowEndsAt &&
+            new Date(row.returnWindowEndsAt) >
+              new Date() && (
+              <div className="mt-1 font-semibold text-amber-700">
+                {eligibilityCountdown(
+                  row.returnWindowEndsAt,
+                )}
+              </div>
+            )}
+        </td>
+
+        <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
+          {money(
+            Math.max(
+              rowMoney(
+                row,
+                "net_amount",
+                "netAmount",
+              ),
+              0,
+            ),
+          )}
+        </td>
+
+        <td className="whitespace-nowrap px-4 py-3">
+          <StatusBadge
+            status={
+              decision.allowed
+                ? "eligible"
+                : decision.label === "Held"
+                  ? "held"
+                  : decision.label === "Refunded"
+                    ? "refunded"
+                    : "pending"
+            }
+            dot
+          />
+
+          <div className="mt-1 text-xs font-semibold">
+            {decision.label}
+          </div>
+        </td>
+
+        <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">
+          {formatLabel(decision.reason)}
+        </td>
+
+        {!isSeller && (
+          <td className="whitespace-nowrap px-4 py-3">
+            {decision.allowed ? (
+              <PermissionGuard
+                module="sellers/commissions"
+                action={ACTIONS.UPDATE}
+                hide
+              >
+                <button
+                  type="button"
+                  className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white"
+                  onClick={() =>
+                    openOrderPayoutModal(row)
+                  }
+                  disabled={submitting}
+                >
+                  Payout This Order
+                </button>
+              </PermissionGuard>
+            ) : (
+              <span className="text-xs text-[#65718b]">
+                Not Allowed
+              </span>
+            )}
+          </td>
+        )}
+      </tr>
+    );
+  })}
+</TableShell>
       </div>
 
       <details
