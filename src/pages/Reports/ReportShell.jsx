@@ -853,6 +853,30 @@ const performanceRowsFromAnalytics = ({
   ];
 };
 
+const RoundedReportBar = ({ x, y, width, height, fill, payload, value }) => {
+  const rawValue = asNumber(payload?.barValue ?? value);
+  if (rawValue <= 0 || !height || height <= 0) return null;
+
+  const barWidth = Math.min(width, 16);
+  const radius = barWidth / 2;
+  const offsetX = x + (width - barWidth) / 2;
+  const visibleHeight = Math.max(height, 18);
+  const offsetY = y + height - visibleHeight;
+
+  return (
+    <rect
+      x={offsetX}
+      y={offsetY}
+      width={barWidth}
+      height={visibleHeight}
+      rx={radius}
+      ry={radius}
+      fill={fill}
+      filter="url(#reportBarSoftShadow)"
+    />
+  );
+};
+
 const PerformanceOverview = ({
   title = "Sales Trend",
   rows = [],
@@ -875,7 +899,7 @@ const PerformanceOverview = ({
     barValue: asNumber(row[barKey]),
     lineValue: asNumber(row[lineKey]),
   }));
-  const barSize = composedRows.length <= 4 ? 24 : 30;
+  const barSize = composedRows.length <= 4 ? 54 : 42;
 
   return (
     <div className="admin-card overflow-hidden border-[var(--admin-line)] bg-white p-4 shadow-[0_12px_34px_rgba(31,27,95,0.06)]">
@@ -938,14 +962,37 @@ const PerformanceOverview = ({
                       stopOpacity={0.96}
                     />
                   </linearGradient>
+                  <filter
+                    id="reportBarSoftShadow"
+                    x="-20%"
+                    y="-20%"
+                    width="140%"
+                    height="140%"
+                  >
+                    <feDropShadow
+                      dx="0"
+                      dy="4"
+                      stdDeviation="4"
+                      floodColor={REPORT_GOLD_DARK}
+                      floodOpacity="0.18"
+                    />
+                  </filter>
                 </defs>
-                <CartesianGrid stroke={CHART_GRID_COLOR} strokeDasharray="0" />
+                <CartesianGrid
+                  stroke={CHART_GRID_COLOR}
+                  strokeDasharray="3 8"
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="label"
                   interval={0}
-                  tick={{ fontSize: 11, fill: "var(--admin-muted)" }}
+                  tick={{
+                    fontSize: 11,
+                    fill: "var(--admin-muted)",
+                  }}
                   axisLine={{ stroke: "#e9dfc9" }}
                   tickLine={false}
+                  minTickGap={8}
                 />
                 <YAxis
                   yAxisId="left"
@@ -968,13 +1015,19 @@ const PerformanceOverview = ({
                   cursor={{ fill: "rgba(214, 163, 35, 0.08)" }}
                   content={({ active, payload, label }) => {
                     if (!active || !payload?.length) return null;
+                    const visiblePayload = payload.filter(
+                      (item, index, list) =>
+                        list.findIndex(
+                          (entry) => entry.dataKey === item.dataKey,
+                        ) === index,
+                    );
                     return (
                       <div className="rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 shadow-[var(--admin-shadow-strong)]">
                         <p className="text-[12px] font-bold text-[var(--admin-navy)]">
                           {label}
                         </p>
                         <div className="mt-2 space-y-1">
-                          {payload.map((item) => {
+                          {visiblePayload.map((item) => {
                             const isBar = item.dataKey === "barValue";
                             return (
                               <p
@@ -1000,9 +1053,9 @@ const PerformanceOverview = ({
                   dataKey="barValue"
                   stackId="growth"
                   fill="url(#reportRevenueBar)"
-                  radius={[5, 5, 0, 0]}
                   barSize={barSize}
-                  minPointSize={includeZeroRows ? 4 : 0}
+                  minPointSize={0}
+                  shape={<RoundedReportBar />}
                 />
                 <Line
                   yAxisId="right"
@@ -1125,6 +1178,21 @@ const SummaryColumnChart = ({ title, items = [] }) => {
                       stopOpacity={0.98}
                     />
                   </linearGradient>
+                  <filter
+                    id="reportBarSoftShadow"
+                    x="-20%"
+                    y="-20%"
+                    width="140%"
+                    height="140%"
+                  >
+                    <feDropShadow
+                      dx="0"
+                      dy="4"
+                      stdDeviation="4"
+                      floodColor={REPORT_GOLD_DARK}
+                      floodOpacity="0.18"
+                    />
+                  </filter>
                 </defs>
                 <CartesianGrid stroke={CHART_GRID_COLOR} vertical={false} />
                 <XAxis
@@ -1164,8 +1232,8 @@ const SummaryColumnChart = ({ title, items = [] }) => {
                 <Bar
                   dataKey="chartValue"
                   fill="url(#summaryReportBar)"
-                  radius={[5, 5, 0, 0]}
-                  barSize={28}
+                  barSize={44}
+                  shape={<RoundedReportBar />}
                 />
                 <Line
                   type="monotone"

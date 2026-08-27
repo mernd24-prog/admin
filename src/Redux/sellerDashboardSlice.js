@@ -16,6 +16,7 @@ export const getSellerDashboard = createApiThunkPrivate(
     transformParams: (params = {}) => ({
       ...(params.fromDate ? { fromDate: params.fromDate } : {}),
       ...(params.toDate ? { toDate: params.toDate } : {}),
+      ...(params.granularity ? { granularity: params.granularity } : {}),
       ...(params.organizationId || getSelectedSellerOrganizationId()
         ? { organizationId: params.organizationId || getSelectedSellerOrganizationId() }
         : {}),
