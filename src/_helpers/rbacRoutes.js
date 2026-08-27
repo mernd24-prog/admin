@@ -430,6 +430,10 @@ export const MODULE_DEFAULT_ROUTES = {
   "seller-management": "seller-users",
   "my-organizations": "my-organizations",
   "sellers/commissions": "seller-finance",
+  "seller-finance-summary": "finance-overview",
+  "seller-finance-earnings": "finance-earnings",
+  "seller-finance-adjustments": "finance-adjustments",
+  "seller-finance-statements": "finance-statements",
   "promotion-funding-ledger": "promotion-funding-ledger",
   "seller-promotion-funding-ledger": "promotion-funding-ledger",
   "seller-cod-collections": "seller-cod-collections",
@@ -657,6 +661,10 @@ const ROUTE_MODULES = [
   [
     [
       "/seller-finance",
+      "/finance-overview",
+      "/finance-earnings",
+      "/finance-adjustments",
+      "/finance-statements",
       "/promotion-funding-ledger",
       "/seller-wallet",
       "/seller-cod-collections",

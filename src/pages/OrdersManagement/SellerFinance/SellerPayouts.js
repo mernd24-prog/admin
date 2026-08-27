@@ -21,6 +21,15 @@ import { downloadApiFile } from "../../../_helpers/downloadApi";
 import { exportToCsv } from "../../../_helpers/exportToCsv";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
+import {
+  FinanceMetricCard,
+  FinanceNav,
+  FinanceStatusBadge,
+  financeDateTime,
+  financeMoney,
+  sellerFinanceStatus,
+  shortReference,
+} from "./financeUi";
 
 const STATUSES = [
   "pending",
@@ -227,6 +236,45 @@ const SellerPayouts = () => {
   );
 
   const columns = useMemo(() => {
+    if (isSeller) {
+      return [
+        {
+          key: "id",
+          label: "Payout",
+          render: (value, row) => <span className="font-mono text-xs">{shortReference(value || row.payoutId, "#")}</span>,
+        },
+        {
+          key: "created_at",
+          label: "Date",
+          render: (value, row) => financeDateTime(row.processed_at || row.processedAt || value || row.createdAt),
+        },
+        {
+          key: "net_amount",
+          label: "Amount",
+          render: (value, row) => <strong>{financeMoney(value ?? row.netAmount, row.currency)}</strong>,
+        },
+        {
+          key: "destination",
+          label: "Destination",
+          render: (_, row) => {
+            const metadata = jsonOf(row.metadata);
+            const bank = metadata.bankName || row.bankName || (String(row.payment_method || row.paymentMethod || "").includes("wallet") ? "Seller wallet" : "Bank account");
+            const account = String(metadata.accountNumber || row.accountNumber || "");
+            return <span>{bank}{account ? ` ••••${account.slice(-4)}` : ""}</span>;
+          },
+        },
+        {
+          key: "status",
+          label: "Status",
+          render: (_, row) => <div><FinanceStatusBadge row={row} /><div className="mt-1 text-xs text-[var(--admin-muted)]">{sellerFinanceStatus(row).detail}</div></div>,
+        },
+        {
+          key: "actions",
+          label: "Action",
+          render: (_, row) => <button type="button" onClick={() => setDetail(row)} className="admin-btn-secondary !px-2 !py-1"><MdVisibility size={15} /> {sellerFinanceStatus(row).key === "failed" ? "View issue" : "View payout"}</button>,
+        },
+      ];
+    }
     const base = [
       ...(!isSeller
         ? [
@@ -507,10 +555,10 @@ const SellerPayouts = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="My Payouts"
+        title={isSeller ? "Payouts" : "Seller Payouts"}
         subtitle={
           isSeller
-            ? "See what was earned, what was adjusted, why it was adjusted, and how much was actually transferred."
+            ? "Track every transfer made to your payout account."
             : "Calculated seller payouts. Use Payout Operations to approve or complete them."
         }
         breadcrumbs={[{ label: "My Finance & Payouts" }, { label: "Payouts" }]}
@@ -524,6 +572,16 @@ const SellerPayouts = () => {
         }
       />
 
+      {isSeller && <FinanceNav />}
+
+      {isSeller && (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <FinanceMetricCard tone="green" label="Paid to date" value={financeMoney(payload.summary?.paidAmount || payload.list.filter((row) => sellerFinanceStatus(row).key === "paid").reduce((sum, row) => sum + Number(valueOf(row, "net_amount", "netAmount")), 0))} description="Successfully transferred." />
+          <FinanceMetricCard tone="blue" label="Processing" value={financeMoney(payload.summary?.processingAmount || payload.list.filter((row) => sellerFinanceStatus(row).key === "processing").reduce((sum, row) => sum + Number(valueOf(row, "net_amount", "netAmount")), 0))} description="Currently being transferred." />
+          <FinanceMetricCard tone="red" label="Failed" value={financeMoney(payload.summary?.failedAmount || payload.list.filter((row) => sellerFinanceStatus(row).key === "failed").reduce((sum, row) => sum + Number(valueOf(row, "net_amount", "netAmount")), 0))} description="Transfers that did not complete." />
+        </div>
+      )}
+
       {isSeller && (
         <div className="admin-card border-l-4 border-l-[var(--admin-gold)] px-4 py-3 text-sm text-[var(--admin-ink)]">
           <strong>Receivable − fees − COD/other adjustments = amount transferred.</strong>
@@ -535,11 +593,11 @@ const SellerPayouts = () => {
         Payout amounts come from delivered orders and their checkout fee snapshots. They cannot be typed manually.
       </div> */}
 
-      {/* {error && (
+      {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
         </div>
-      )} */}
+      )}
       <DataTable
         columns={columns}
         data={payload.list}
@@ -567,7 +625,7 @@ const SellerPayouts = () => {
         }
       />
 
-      {isSeller && (
+      {false && isSeller && (
         <section className="admin-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] px-5 py-4">
             <div className="flex items-center gap-3">

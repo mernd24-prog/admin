@@ -21,6 +21,8 @@ import {
   MdLocalOffer,
   MdAdminPanelSettings,
   MdReviews,
+  MdTrendingUp,
+  MdTune,
 } from "react-icons/md";
 import { CiSettings } from "react-icons/ci";
 import { getMyModulePermission } from "../../Redux/userManagementSlice";
@@ -91,6 +93,8 @@ const ICON_BY_NAME = {
   MdLocalOffer,
   MdAdminPanelSettings,
   MdReviews,
+  MdTrendingUp,
+  MdTune,
   CiSettings,
 };
 
@@ -413,6 +417,26 @@ const removeFestivalSidebarItems = (groups = []) =>
         String(group.label || "").toLowerCase() !== "festivals",
     );
 
+// Seller finance was previously exposed as several disconnected accounting
+// pages. Normalize old RBAC rows and cached login payloads to the current
+// seller-facing money flow so existing accounts do not need to be re-seeded or
+// sign out before the corrected navigation appears.
+const normalizeSellerFinanceNavigation = (groups = []) => {
+  const canonicalItems = [
+    { name: "Finance Overview", label: "Finance Overview", module_code: "finance-overview", module: "sellers/commissions", order: 91 },
+    { name: "Earnings", label: "Earnings", module_code: "finance-earnings", module: "sellers/commissions", order: 92 },
+    { name: "Adjustments", label: "Adjustments", module_code: "finance-adjustments", module: "sellers/commissions", order: 93 },
+    { name: "Payouts", label: "Payouts", module_code: "seller-payouts", module: "sellers/commissions", order: 94 },
+    { name: "Statements", label: "Statements", module_code: "finance-statements", module: "sellers/commissions", order: 95 },
+  ];
+  return groups.map((group) => {
+    const label = String(group.label || "").trim().toLowerCase();
+    const isFinanceGroup = ["my finance & payouts", "seller finance", "seller finance & payouts"].includes(label);
+    if (!isFinanceGroup) return group;
+    return { ...group, label: "My Finance & Payouts", subItems: canonicalItems, isSingleItem: false };
+  });
+};
+
 // ─── Sidebar state helpers ────────────────────────────────────────────────────
 const getStoredSidebarState = () => {
   try {
@@ -554,13 +578,19 @@ const Sidebar = ({
         trustBackend: true,
       });
       if (sellerPanel && sidebarTree.length)
-        return removeFestivalSidebarItems(sortSidebarGroups(sidebarTree, sellerPanel));
+        return normalizeSellerFinanceNavigation(
+          removeFestivalSidebarItems(sortSidebarGroups(sidebarTree, sellerPanel)),
+        );
       if (sidebarTree.length)
         return removeFestivalSidebarItems(sortSidebarGroups(sidebarTree, sellerPanel));
     }
 
     if (accessSidebar.length)
-      return removeFestivalSidebarItems(sortSidebarGroups(accessSidebar, sellerPanel));
+      return sellerPanel
+        ? normalizeSellerFinanceNavigation(
+            removeFestivalSidebarItems(sortSidebarGroups(accessSidebar, sellerPanel)),
+          )
+        : removeFestivalSidebarItems(sortSidebarGroups(accessSidebar, sellerPanel));
 
     return [];
   }, [

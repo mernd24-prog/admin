@@ -97,6 +97,18 @@ const Returns = React.lazy(
 const SellerFinance = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerFinance"),
 );
+const FinanceOverview = React.lazy(
+  () => import("../../pages/OrdersManagement/SellerFinance/FinanceOverview"),
+);
+const FinanceEarnings = React.lazy(
+  () => import("../../pages/OrdersManagement/SellerFinance/FinanceEarnings"),
+);
+const FinanceAdjustments = React.lazy(
+  () => import("../../pages/OrdersManagement/SellerFinance/FinanceAdjustments"),
+);
+const FinanceStatements = React.lazy(
+  () => import("../../pages/OrdersManagement/SellerFinance/FinanceStatements"),
+);
 const PromotionFundingLedger = React.lazy(
   () =>
     import("../../pages/OrdersManagement/SellerFinance/PromotionFundingLedger"),
@@ -566,12 +578,37 @@ function Layout() {
       { path: "/checkout-quote", render: () => <CheckoutQuote /> },
       { path: "/payments", render: () => <Payments /> },
       { path: "/cod-collections", render: () => <CodCollections /> },
-      { path: "/seller-finance", render: () => <SellerFinance /> },
+      {
+        path: "/seller-finance",
+        render: () =>
+          isSellerPanel() ? (
+            <Navigate to="/app/finance-overview" replace />
+          ) : (
+            <SellerFinance />
+          ),
+      },
+      { path: "/finance-overview", render: () => <FinanceOverview /> },
+      { path: "/finance-earnings", render: () => <FinanceEarnings /> },
+      { path: "/finance-adjustments", render: () => <FinanceAdjustments /> },
+      { path: "/finance-statements", render: () => <FinanceStatements /> },
       {
         path: "/promotion-funding-ledger",
-        render: () => <PromotionFundingLedger />,
+        render: () =>
+          isSellerPanel() ? (
+            <Navigate to="/app/finance-adjustments?type=promotions" replace />
+          ) : (
+            <PromotionFundingLedger />
+          ),
       },
-      { path: "/seller-wallet", render: () => <SellerWallet /> },
+      {
+        path: "/seller-wallet",
+        render: () =>
+          isSellerPanel() ? (
+            <Navigate to="/app/finance-overview" replace />
+          ) : (
+            <SellerWallet />
+          ),
+      },
       {
         path: "/seller-cod-collections",
         render: () => <SellerCodCollections />,
