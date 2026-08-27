@@ -253,6 +253,27 @@ const STATUS_COLORS = {
   pending: "#D6A323",
 };
 
+const RoundedDashboardBar = ({ x, y, width, height, fill, shadowId }) => {
+  if (!height || height <= 0) return null;
+
+  const barWidth = Math.min(width, 14);
+  const radius = barWidth / 2;
+  const offsetX = x + (width - barWidth) / 2;
+
+  return (
+    <rect
+      x={offsetX}
+      y={y}
+      width={barWidth}
+      height={height}
+      rx={radius}
+      ry={radius}
+      fill={fill}
+      filter={shadowId ? `url(#${shadowId})` : undefined}
+    />
+  );
+};
+
 function EmptyTableRow({ colSpan, children }) {
   return (
     <tr>
@@ -335,9 +356,13 @@ function GoldDropdown({
 export default function Dashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [range, setRange] = useState("today");
-  const [dateFilters, setDateFilters] = useState(() => getRangeDates("today"));
-  const [customDates, setCustomDates] = useState(() => getRangeDates("today"));
+  const [range, setRange] = useState("last_week");
+  const [dateFilters, setDateFilters] = useState(() =>
+    getRangeDates("last_week"),
+  );
+  const [customDates, setCustomDates] = useState(() =>
+    getRangeDates("last_week"),
+  );
   const [customCalendarViewDate, setCustomCalendarViewDate] = useState(
     () => new Date(),
   );
@@ -1104,6 +1129,38 @@ export default function Dashboard() {
                     data={activeChartData}
                     margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
                   >
+                    <defs>
+                      <filter
+                        id="dashboardOrdersBarShadow"
+                        x="-20%"
+                        y="-20%"
+                        width="140%"
+                        height="140%"
+                      >
+                        <feDropShadow
+                          dx="0"
+                          dy="4"
+                          stdDeviation="4"
+                          floodColor="#37B446"
+                          floodOpacity="0.16"
+                        />
+                      </filter>
+                      <filter
+                        id="dashboardRevenueBarShadow"
+                        x="-20%"
+                        y="-20%"
+                        width="140%"
+                        height="140%"
+                      >
+                        <feDropShadow
+                          dx="0"
+                          dy="4"
+                          stdDeviation="4"
+                          floodColor="#B98514"
+                          floodOpacity="0.18"
+                        />
+                      </filter>
+                    </defs>
                     <CartesianGrid vertical={false} stroke="#EADFCE" />
                     <XAxis
                       dataKey="label"
@@ -1130,13 +1187,19 @@ export default function Dashboard() {
                         chartView === "top_products" ? "Units Sold" : "Orders"
                       }
                       fill="#37B446"
-                      radius={[4, 4, 0, 0]}
+                      barSize={38}
+                      shape={
+                        <RoundedDashboardBar shadowId="dashboardOrdersBarShadow" />
+                      }
                     />
                     <Bar
                       dataKey="revenue"
                       name="Revenue"
                       fill="#D6A323"
-                      radius={[4, 4, 0, 0]}
+                      barSize={38}
+                      shape={
+                        <RoundedDashboardBar shadowId="dashboardRevenueBarShadow" />
+                      }
                     />
                   </BarChart>
                 )}
