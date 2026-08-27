@@ -114,16 +114,30 @@ const shipmentStepLabel = (value = "") =>
   displayStatus(value);
 const getTrackingActionOptions = (currentStatus = "initiated") => {
   const nextStatuses = FULFILLMENT_TRANSITIONS[currentStatus] || [];
-  return FULFILLMENT_STATUS_OPTIONS.filter(
+  const options = FULFILLMENT_STATUS_OPTIONS.filter(
     (option) =>
       nextStatuses.includes(option.value) && option.value !== "cancelled",
   );
+  if (currentStatus === "in_transit") {
+    return [
+      { value: "in_transit", label: "Update in-transit ETA" },
+      ...options,
+    ];
+  }
+  return options;
 };
 const getDefaultTrackingStatus = (currentStatus = "initiated") =>
   getTrackingActionOptions(currentStatus)[0]?.value || currentStatus;
 const getInitialQuery = (key) =>
   new URLSearchParams(window.location.search).get(key) || "";
 const initialShipmentId = getInitialQuery("shipmentId");
+const toDateTimeLocal = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+};
 
 const ActionButton = ({
   children,
@@ -289,6 +303,7 @@ const ShipmentTracking = () => {
     courierName: "",
     awbNumber: "",
     trackingUrl: "",
+    expectedDeliveryAt: "",
   });
   const [trackingErrors, setTrackingErrors] = useState({});
   const [cancellationAction, setCancellationAction] = useState({
@@ -348,6 +363,7 @@ const ShipmentTracking = () => {
         courierName: row.courier_name || "",
         awbNumber: row.awb_number || row.tracking_number || "",
         trackingUrl: row.tracking_url || "",
+        expectedDeliveryAt: toDateTimeLocal(row.expected_delivery_at || row.expectedDeliveryAt),
       });
       try {
         setLoading(true);
@@ -364,6 +380,7 @@ const ShipmentTracking = () => {
           awbNumber:
             nextShipment.awb_number || nextShipment.tracking_number || "",
           trackingUrl: nextShipment.tracking_url || "",
+          expectedDeliveryAt: toDateTimeLocal(nextShipment.expected_delivery_at || nextShipment.expectedDeliveryAt),
         });
       } catch (requestError) {
         toast.error(
@@ -434,6 +451,12 @@ const ShipmentTracking = () => {
           "Allowed: letters, numbers, -, _, and / only.";
       }
 
+      if (!trackingAction.expectedDeliveryAt) {
+        nextErrors.expectedDeliveryAt = "Expected delivery date is required.";
+      } else if (new Date(trackingAction.expectedDeliveryAt).getTime() <= Date.now()) {
+        nextErrors.expectedDeliveryAt = "Expected delivery must be in the future.";
+      }
+
     }
 
     if (trackingUrl) {
@@ -477,6 +500,9 @@ const ShipmentTracking = () => {
           awbNumber: trackingAction.awbNumber,
           trackingNumber: trackingAction.awbNumber,
           trackingUrl: trackingAction.trackingUrl,
+          expectedDeliveryAt: trackingAction.expectedDeliveryAt
+            ? new Date(trackingAction.expectedDeliveryAt).toISOString()
+            : undefined,
           eventTime,
           shippedAt: trackingAction.status === "in_transit" ? eventTime : undefined,
         }),
@@ -631,9 +657,14 @@ const ShipmentTracking = () => {
       },
       {
         key: "expected_delivery_at",
-        label: "Expected",
+        label: "Expected / Delivered",
         sortable: true,
-        render: (value) => formatDateTime12Hour(value, "N/A"),
+        render: (value, row) => formatDateTime12Hour(
+          row.status === "delivered"
+            ? row.delivered_at || row.deliveredAt || value
+            : value,
+          "N/A",
+        ),
       },
     ];
     return isSeller
@@ -774,6 +805,17 @@ const ShipmentTracking = () => {
                 </strong>
               </div>
               <div className="sm:text-right">
+                {selectedShipment?.status === "delivered" ? "Delivered at" : "Expected delivery"}:{" "}
+                <strong className="font-medium text-gray-700">
+                  {formatDateTime12Hour(
+                    selectedShipment?.status === "delivered"
+                      ? selectedShipment?.delivered_at || selectedShipment?.deliveredAt
+                      : selectedShipment?.expected_delivery_at || selectedShipment?.expectedDeliveryAt,
+                    "Not added",
+                  )}
+                </strong>
+              </div>
+              <div className="sm:col-span-2 sm:text-right">
                 Tracking URL:{" "}
                 {selectedShipment?.tracking_url ? (
                   <a
@@ -998,6 +1040,32 @@ const ShipmentTracking = () => {
                           }}
                         />
                         <FieldError message={trackingErrors.awbNumber} />
+                      </label>
+                      <label className="grid min-w-0 gap-1 text-xs text-gray-500">
+                        <span>
+                          Expected Delivery Date{" "}
+                          <span className="text-red-500" aria-hidden="true">*</span>
+                        </span>
+                        <input
+                          className={`min-w-0 w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.expectedDeliveryAt ? "border-red-400" : "border-gray-200"}`}
+                          type="datetime-local"
+                          min={toDateTimeLocal(new Date())}
+                          value={trackingAction.expectedDeliveryAt}
+                          required
+                          aria-required="true"
+                          aria-invalid={Boolean(trackingErrors.expectedDeliveryAt)}
+                          onChange={(event) => {
+                            setTrackingAction((prev) => ({
+                              ...prev,
+                              expectedDeliveryAt: event.target.value,
+                            }));
+                            setTrackingErrors((prev) => ({
+                              ...prev,
+                              expectedDeliveryAt: "",
+                            }));
+                          }}
+                        />
+                        <FieldError message={trackingErrors.expectedDeliveryAt} />
                       </label>
                       <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-gray-600">
                         Tracking URL

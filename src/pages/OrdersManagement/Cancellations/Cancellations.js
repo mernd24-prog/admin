@@ -390,7 +390,7 @@ const Cancellations = () => {
           note: approveRequest.note,
         }),
       ).unwrap();
-      toast.success("Selected item quantity cancellation approved");
+      toast.success("Selected product cancellation approved");
       setApproveRequest({ open: false, item: null, note: "" });
       fetchCancellations();
     } catch (err) {
@@ -526,7 +526,7 @@ const Cancellations = () => {
         subtitle={
           isSeller
             ? "View cancellations and settlement impact for only your products."
-            : "Manage full-order and item/quantity cancellations and customer refunds"
+            : "Manage full-order and product-line cancellations and customer refunds"
         }
         breadcrumbs={[
           { label: isSeller ? "Seller Orders" : "Returns & Cancellations" },
@@ -939,7 +939,7 @@ const Cancellations = () => {
       <ConfirmModal
         isOpen={rejectRequest.open}
         title="Reject item cancellation"
-        description="Reject the selected item and quantity cancellation request? No refund will be initiated."
+        description="Reject the selected product cancellation request? No refund will be initiated."
         onConfirm={handleRejectRequest}
         onCancel={() =>
           setRejectRequest({ open: false, item: null, reason: "" })
@@ -962,7 +962,7 @@ const Cancellations = () => {
       <ConfirmModal
         isOpen={approveRefund.open}
         title="Approve cancellation refund"
-        description={`Approve the ${approveRefund.item?.scope === "partial" ? "selected item/quantity" : "full order"} refund and submit the eligible amount to Razorpay?`}
+        description={`Approve the ${approveRefund.item?.scope === "partial" ? "selected product" : "full order"} refund and submit the eligible amount to Razorpay?`}
         onConfirm={handleApproveRefund}
         onCancel={() => setApproveRefund({ open: false, item: null, note: "" })}
         loading={actionLoading}

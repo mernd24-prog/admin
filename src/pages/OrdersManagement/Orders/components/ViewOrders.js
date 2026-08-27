@@ -1648,9 +1648,9 @@ const OrderSummary = () => {
     }
     const cancellationItems = Object.entries(formData.cancelItems || {})
       .filter(([, quantity]) => Number(quantity) > 0)
-      .map(([orderItemId, quantity]) => ({ orderItemId, quantity: Number(quantity) }));
+      .map(([orderItemId]) => ({ orderItemId }));
     if (formData.status === "cancelled" && !cancellationItems.length) {
-      toast.error("Select at least one item quantity to cancel");
+      toast.error("Select at least one product to cancel");
       return;
     }
     try {
@@ -2588,7 +2588,7 @@ const OrderSummary = () => {
                   </select>
                 </label>
               </div>
-              <div className="text-xs font-semibold uppercase text-[#65718b]">Cancellation quantities</div>
+              <div className="text-xs font-semibold uppercase text-[#65718b]">Products to cancel</div>
               {items.map((item) => {
                 const itemId = String(item.id);
                 const remaining = Number(item.quantity || 0) - Number(item.cancelled_quantity || 0);
@@ -2602,11 +2602,9 @@ const OrderSummary = () => {
                       return { ...prev, cancelItems: next };
                     })} />
                     <span className="min-w-0 flex-1 truncate">{firstDefined(item.product_title, item.product_id)}</span>
-                    <input type="number" min="1" max={remaining} disabled={!selected} className="w-20 rounded border px-2 py-1" value={selected ? formData.cancelItems[itemId] : ""} onChange={(event) => setFormData((prev) => ({
-                      ...prev,
-                      cancelItems: { ...prev.cancelItems, [itemId]: Math.min(Math.max(Number(event.target.value || 1), 1), remaining) },
-                    }))} />
-                    <span className="text-xs text-[#65718b]">of {remaining}</span>
+                    <span className={`rounded px-2 py-1 text-xs font-semibold ${selected ? "bg-red-50 text-red-700" : "bg-[#f4f5f8] text-[#65718b]"}`}>
+                      {selected ? `Cancel all ${remaining}` : `${remaining} available`}
+                    </span>
                   </div>
                 );
               })}
