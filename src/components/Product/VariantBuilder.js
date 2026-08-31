@@ -983,19 +983,25 @@ const VariantBuilder = ({
                       <div className="space-y-1">
                         <FieldLabel>Stock</FieldLabel>
                         <SmallInput
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           min={0}
                           value={variant.stock ?? ""}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const digitsOnly = e.target.value.replace(
+                              /\D/g,
+                              "",
+                            );
+
                             updateVariant(
                               idx,
                               "stock",
-                              e.target.value === ""
-                                ? ""
-                                : Number(e.target.value),
-                            )
-                          }
+                              digitsOnly === "" ? "" : Number(digitsOnly),
+                            );
+                          }}
                         />
+
                         <p className="text-[10px] text-gray-400">
                           Managed in Inventory later too.
                         </p>
@@ -1068,7 +1074,11 @@ const VariantBuilder = ({
                           value={variant.shortDescription || ""}
                           maxLength={500}
                           onChange={(e) =>
-                            updateVariant(idx, "shortDescription", e.target.value)
+                            updateVariant(
+                              idx,
+                              "shortDescription",
+                              e.target.value,
+                            )
                           }
                           placeholder="Optional variant detail. Added to the product short description."
                         />

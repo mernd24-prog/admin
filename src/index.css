@@ -338,15 +338,15 @@ select:active {
   ):not([type="hidden"]),
 .admin-shell select[data-has-value="true"],
 .admin-shell textarea[data-has-value="true"] {
-  border-color: #b9c8ea;
+  /* border-color: #b9c8ea; */
   background-color: #fffaf1;
   color: var(--admin-ink);
   font-weight: 500;
 }
 
 .admin-input:focus {
-  border-color: var(--admin-blue);
-  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.11);
+  border-color: var(--admin-gold);
+  box-shadow: 0 0 0 3px rgba(203, 156, 45, 0.15);
 }
 
 /* Product create/edit uses the gold brand accent for every form focus state. */
@@ -545,8 +545,8 @@ body .admin-shell .product-catalog-form input.product-tag-input:not([type="check
 }
 
 .admin-table-search-input.admin-input:focus {
-  border-color: var(--admin-blue);
-  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.11);
+  border-color: var(--admin-gold);
+  box-shadow: 0 0 0 3px rgba(203, 156, 45, 0.15);
 }
 
 @media (max-width: 639px) {
@@ -1924,4 +1924,12 @@ label {
   .kyc-content-wrapper {
     height: calc(100vh - 75px);
   }
+}
+.admin-filter-select__control--is-focused {
+  border-color: var(--admin-gold) !important;
+  box-shadow: 0 0 0 3px rgba(203, 156, 45, 0.15) !important;
+}
+
+.admin-filter-select__control--menu-is-open {
+  border-color: var(--admin-gold) !important;
 }

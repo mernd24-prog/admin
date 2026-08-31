@@ -62,7 +62,9 @@ const getConversationItems = (query = {}) => {
       : [];
 
   followUpMessages.forEach((item, index) => {
-    const isSeller = item.senderType === "seller" || item.senderType === "customer";
+    const isSeller =
+      item.senderType === "seller" || item.senderType === "customer";
+
     items.push({
       key: `reply-${item.createdAt || index}`,
       type: isSeller ? "seller" : "admin",
@@ -74,6 +76,7 @@ const getConversationItems = (query = {}) => {
   });
 
   const hasLatestNote = String(query.adminNotes || "").trim();
+
   const latestNoteAlreadyIncluded = items.some(
     (item) => item.type === "admin" && item.message.trim() === hasLatestNote,
   );
@@ -139,8 +142,10 @@ const SellerHelpSupport = () => {
 
   const validationError = useMemo(() => {
     if (!form.category) return "Select a query category first.";
-    if (form.subject.trim().length < 5) return "Subject must be at least 5 characters.";
-    if (form.message.trim().length < 10) return "Message must be at least 10 characters.";
+    if (form.subject.trim().length < 5)
+      return "Subject must be at least 5 characters.";
+    if (form.message.trim().length < 10)
+      return "Message must be at least 10 characters.";
     return "";
   }, [form]);
 
@@ -178,7 +183,9 @@ const SellerHelpSupport = () => {
     setSelectedQuery(query);
     try {
       setDetailLoading(true);
-      const response = await axiosProvider.get(ENDPOINTS.support.myDetail(query.queryId));
+      const response = await axiosProvider.get(
+        ENDPOINTS.support.myDetail(query.queryId),
+      );
       setSelectedQuery(response?.data?.data || query);
     } catch (requestError) {
       toast.error(requestError?.message || "Failed to load query details");
@@ -211,42 +218,77 @@ const SellerHelpSupport = () => {
     }
   }, [fetchQueries, replyMessage, selectedQuery]);
 
-  const columns = useMemo(() => [
-    { key: "queryId", label: "Query ID", render: (value) => <span className="font-semibold">{value}</span> },
-    { key: "category", label: "Category", render: (value) => categoryLabel(value) },
-    { key: "subject", label: "Subject" },
-    {
-      key: "messagePreview",
-      label: "Message Preview",
-      render: (value, row) => {
-        const preview = value || row.message || "";
-        return (
-          <span className="block max-w-xs truncate" >
-            {truncateText(preview)}
+  const columns = useMemo(
+    () => [
+      {
+        key: "queryId",
+        label: "Query ID",
+        render: (value) => (
+          <span className="font-semibold text-[var(--admin-navy)]">
+            {value}
           </span>
-        );
+        ),
       },
-    },
-    { key: "status", label: "Status", render: (value) => <StatusBadge status={value} label={statusLabel(value)} dot /> },
-    { key: "createdAt", label: "Created Date", render: (value) => formatDateTime12Hour(value) },
-    {
-      key: "_actions",
-      label: "Actions",
-      render: (_, row) => (
-        <button
-          type="button"
-          onClick={() => handleViewDetails(row)}
-          className="inline-flex items-center gap-1 rounded-md border border-[var(--admin-navy)] px-2.5 py-1.5 text-xs font-medium text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-navy)] hover:text-white"
-        >
-          <MdVisibility size={15} />
-          View Details
-        </button>
-      ),
-    },
-  ], [handleViewDetails]);
+
+      {
+        key: "category",
+        label: "Category",
+        render: (value) => (
+          <span className="text-[var(--admin-ink)]">
+            {categoryLabel(value)}
+          </span>
+        ),
+      },
+
+      {
+        key: "subject",
+        label: "Subject",
+      },
+
+      {
+        key: "messagePreview",
+        label: "Message Preview",
+        render: (value, row) => {
+          const preview = value || row.message || "";
+          return (
+            <span className="block max-w-xs truncate text-[var(--admin-muted)]">
+              {truncateText(preview)}
+            </span>
+          );
+        },
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (value) => (
+          <StatusBadge status={value} label={statusLabel(value)} dot />
+        ),
+      },
+      {
+        key: "createdAt",
+        label: "Created Date",
+        render: (value) => formatDateTime12Hour(value),
+      },
+      {
+        key: "_actions",
+        label: "Actions",
+        render: (_, row) => (
+          <button
+            type="button"
+            onClick={() => handleViewDetails(row)}
+            className="admin-btn-secondary inline-flex min-h-[32px] items-center gap-1.5 px-3 py-1.5 text-xs transition-all hover:bg-[var(--admin-gold-soft)] hover:text-[var(--admin-gold-dark)] hover:border-[var(--admin-gold)]"
+          >
+            <MdVisibility size={15} />
+            View Details
+          </button>
+        ),
+      },
+    ],
+    [handleViewDetails],
+  );
 
   return (
-    <div>
+    <div className="admin-page">
       <PageHeader
         title="Help & Support"
         breadcrumbs={[{ label: "Support" }, { label: "Help & Support" }]}
@@ -258,6 +300,7 @@ const SellerHelpSupport = () => {
         actions={
           <button
             type="button"
+            className="admin-btn-primary inline-flex items-center gap-2"
             onClick={() => {
               if (showQueryForm) {
                 setSelectedCategory("");
@@ -273,62 +316,112 @@ const SellerHelpSupport = () => {
       />
 
       {showQueryForm ? (
-        <>
-          <div className="mb-6 rounded-md border border-[var(--admin-line)] bg-white p-4 sm:p-5">
-            <h2 className="mb-3 text-base font-semibold text-[var(--admin-ink)]">1. Select Query Category</h2>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              {SELLER_QUERY_CATEGORIES.map((category) => (
-                <button
-                  key={category.value}
-                  type="button"
-                  className={`rounded-md border px-3 py-3 text-left text-sm font-semibold transition ${
-                    selectedCategory === category.value
-                      ? "border-[var(--admin-blue)] bg-[var(--admin-blue)] text-white"
-                      : "border-[var(--admin-line)] bg-[var(--admin-surface-soft)] text-[var(--admin-ink)] hover:bg-[var(--admin-blue-soft)]"
-                  }`}
-                  onClick={() => {
-                    setSelectedCategory(category.value);
-                    setForm((prev) => ({ ...prev, category: category.value }));
-                  }}
-                >
-                  {category.label}
-                </button>
-              ))}
+        <div className="space-y-5">
+          {/* Category */}
+          <div className="admin-card p-4 sm:p-5">
+            <div className="mb-4">
+              <h2 className="text-base font-semibold text-[var(--admin-navy)]">
+                1. Select Query Category
+              </h2>
+
+              <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                Choose the category that best matches your issue.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {SELLER_QUERY_CATEGORIES.map((category) => {
+                const isSelected = selectedCategory === category.value;
+
+                return (
+                  <button
+                    key={category.value}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(category.value);
+
+                      setForm((prev) => ({
+                        ...prev,
+                        category: category.value,
+                      }));
+                    }}
+                    className={`rounded-[var(--admin-radius-sm)] border px-4 py-3 text-left text-sm font-semibold transition-all ${
+                      isSelected
+                        ? "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] shadow-sm"
+                        : "border-[var(--admin-line)] bg-[var(--admin-surface-soft)] text-[var(--admin-ink)] hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span>{category.label}</span>
+
+                      {isSelected && (
+                        <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <form onSubmit={submitQuery} className="rounded-md border border-[var(--admin-line)] bg-white p-4 sm:p-5">
-            <h2 className="mb-4 text-base font-semibold text-[var(--admin-ink)]">2. Submit Query Details</h2>
+          {/* Query Form */}
+          <form onSubmit={submitQuery} className="admin-card p-4 sm:p-5">
+            <div className="mb-5">
+              <h2 className="text-base font-semibold text-[var(--admin-navy)]">
+                2. Submit Query Details
+              </h2>
+
+              <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                Provide the details so the support team can assist you.
+              </p>
+            </div>
+
             <div className="grid gap-4">
-              <label className="text-sm font-semibold text-[var(--admin-ink)]">
+              {/* Selected Category */}
+              <label className="block text-sm font-semibold text-[var(--admin-ink)]">
                 Selected Category
                 <input
-                  className="mt-1 w-full rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2 text-sm"
+                  className="admin-input mt-1 cursor-default"
                   value={categoryLabel(form.category)}
                   readOnly
                 />
               </label>
-              <label className="text-sm font-semibold text-[var(--admin-ink)]">
+
+              {/* Subject */}
+              <label className="block text-sm font-semibold text-[var(--admin-ink)]">
                 Subject
                 <input
-                  className="mt-1 w-full rounded-md border border-[var(--admin-line)] px-3 py-2 text-sm"
+                  className="admin-input mt-1"
                   value={form.subject}
-                  onChange={(event) => setForm((prev) => ({ ...prev, subject: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      subject: event.target.value,
+                    }))
+                  }
                   maxLength={220}
                   placeholder="Short summary of the issue"
                 />
               </label>
-              <label className="text-sm font-semibold text-[var(--admin-ink)]">
+
+              {/* Message */}
+              <label className="block text-sm font-semibold text-[var(--admin-ink)]">
                 Message
                 <textarea
-                  className="mt-1 min-h-[140px] w-full rounded-md border border-[var(--admin-line)] px-3 py-2 text-sm"
+                  className="mt-1 min-h-[140px] w-full resize-y rounded-[var(--admin-radius-sm)] border border-[var(--admin-field-line)] bg-[var(--admin-field)] px-3 py-2.5 text-sm text-[var(--admin-ink)] outline-none transition placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[rgba(203,156,45,0.15)]"
                   value={form.message}
-                  onChange={(event) => setForm((prev) => ({ ...prev, message: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      message: event.target.value,
+                    }))
+                  }
                   maxLength={5000}
                   placeholder="Explain what happened and include order/product/payment references when relevant."
                 />
               </label>
-              <div className="flex justify-end gap-2">
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   className="admin-btn-secondary"
@@ -340,13 +433,18 @@ const SellerHelpSupport = () => {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="button-primary" disabled={submitting}>
+
+                <button
+                  type="submit"
+                  className="admin-btn-primary"
+                  disabled={submitting}
+                >
                   {submitting ? "Submitting..." : "Submit Query"}
                 </button>
               </div>
             </div>
           </form>
-        </>
+        </div>
       ) : (
         <DataTable
           columns={columns}
@@ -371,62 +469,121 @@ const SellerHelpSupport = () => {
         />
       )}
 
+      {/* Query Details */}
       <DefaultModal
         isOpen={Boolean(selectedQuery)}
         onClose={() => {
           setSelectedQuery(null);
           setReplyMessage("");
         }}
-        title={selectedQuery?.queryId ? `Query ${selectedQuery.queryId}` : "Query Details"}
+        title={
+          selectedQuery?.queryId
+            ? `Query ${selectedQuery.queryId}`
+            : "Query Details"
+        }
         isButtonView={false}
       >
         {detailLoading ? (
           <QueryDetailsSkeleton />
         ) : selectedQuery ? (
           <div className="space-y-5">
-            <div className="grid gap-3 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4 text-sm sm:grid-cols-2">
+            {/* Query Information */}
+            <div className="grid gap-4 rounded-[var(--admin-radius-sm)] border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4 text-sm sm:grid-cols-2">
               <Info label="Query ID" value={selectedQuery.queryId || "N/A"} />
+
               <Info label="Status" value={statusLabel(selectedQuery.status)} />
-              <Info label="Category" value={categoryLabel(selectedQuery.category)} />
-              <Info label="Created" value={formatDateTime12Hour(selectedQuery.createdAt)} />
-              <Info label="Updated" value={formatDateTime12Hour(selectedQuery.updatedAt)} />
-              <Info label="Resolved" value={formatDateTime12Hour(selectedQuery.resolvedAt)} />
+
+              <Info
+                label="Category"
+                value={categoryLabel(selectedQuery.category)}
+              />
+
+              <Info
+                label="Created"
+                value={formatDateTime12Hour(selectedQuery.createdAt)}
+              />
+
+              <Info
+                label="Updated"
+                value={formatDateTime12Hour(selectedQuery.updatedAt)}
+              />
+
+              <Info
+                label="Resolved"
+                value={formatDateTime12Hour(selectedQuery.resolvedAt)}
+              />
             </div>
 
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Subject</p>
-              <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">{selectedQuery.subject || "N/A"}</p>
+            {/* Subject */}
+            <div className="rounded-[var(--admin-radius-sm)] border border-[var(--admin-line)] bg-[var(--admin-surface)] p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
+                Subject
+              </p>
+
+              <p className="mt-1.5 text-sm font-semibold text-[var(--admin-navy)]">
+                {selectedQuery.subject || "N/A"}
+              </p>
             </div>
 
+            {/* Conversation */}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">Ticket Conversation</p>
-              <div className="mt-3 space-y-3">
+              <div className="mb-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
+                  Ticket Conversation
+                </p>
+
+                <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                  View your messages and support responses.
+                </p>
+              </div>
+
+              <div className="space-y-3">
                 {getConversationItems(selectedQuery).map((item) => {
                   const isSellerMessage = item.type === "seller";
+
                   return (
                     <div
                       key={item.key}
-                      className={`flex ${isSellerMessage ? "justify-end" : "justify-start"}`}
+                      className={`flex ${
+                        isSellerMessage ? "justify-end" : "justify-start"
+                      }`}
                     >
                       <div
-                        className={`max-w-[88%] rounded-md border px-3 py-2 text-sm shadow-sm ${
+                        className={`max-w-[88%] rounded-[var(--admin-radius-sm)] border px-4 py-3 text-sm shadow-sm ${
                           isSellerMessage
-                            ? "border-[var(--admin-blue)] bg-[var(--admin-blue)] text-white"
-                            : "border-[var(--admin-line)] bg-white text-[var(--admin-ink)]"
+                            ? "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-ink)]"
+                            : "border-[var(--admin-line)] bg-[var(--admin-surface)] text-[var(--admin-ink)]"
                         }`}
                       >
-                        <div className="mb-1 flex flex-wrap items-center gap-2">
-                          <span className={`text-xs font-semibold ${isSellerMessage ? "text-white" : "text-[var(--admin-ink)]"}`}>
+                        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                          <span
+                            className={`
+                              text-xs
+                              font-semibold
+                              ${
+                                isSellerMessage
+                                  ? "text-[var(--admin-gold-dark)]"
+                                  : "text-[var(--admin-navy)]"
+                              }
+                            `}
+                          >
                             {item.title}
                           </span>
+
                           {!isSellerMessage ? (
-                            <StatusBadge status={item.status} label={statusLabel(item.status)} dot />
+                            <StatusBadge
+                              status={item.status}
+                              label={statusLabel(item.status)}
+                              dot
+                            />
                           ) : null}
                         </div>
-                        <p className={`whitespace-pre-wrap leading-6 ${isSellerMessage ? "text-white" : "text-[var(--admin-ink)]"}`}>
+
+                        <p className="whitespace-pre-wrap leading-6 text-[var(--admin-ink)]">
                           {item.message || "No note added."}
                         </p>
-                        <p className={`mt-1 text-[11px] ${isSellerMessage ? "text-white/80" : "text-[var(--admin-muted)]"}`}>
+
+                        <p className="mt-1.5 text-[11px] text-[var(--admin-muted)]">
                           {formatDateTime12Hour(item.timestamp)}
                         </p>
                       </div>
@@ -436,11 +593,12 @@ const SellerHelpSupport = () => {
               </div>
             </div>
 
-            <div className="rounded-md border border-[var(--admin-line)] bg-white p-3">
+            {/* Reply */}
+            <div className="rounded-[var(--admin-radius-sm)] border border-[var(--admin-line)] bg-[var(--admin-surface)] p-4">
               <label className="block text-sm font-semibold text-[var(--admin-ink)]">
                 Add Reply
                 <textarea
-                  className="mt-2 min-h-[96px] w-full rounded-md border border-[var(--admin-line)] px-3 py-2 text-sm leading-6 focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20"
+                  className="mt-2 min-h-[100px] w-full resize-y rounded-[var(--admin-radius-sm)] border border-[var(--admin-field-line)] bg-[var(--admin-field)] px-3 py-2.5 text-sm leading-6 text-[var(--admin-ink)] outline-none transition placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[rgba(203,156,45,0.15)] disabled:cursor-not-allowed disabled:opacity-60"
                   value={replyMessage}
                   onChange={(event) => setReplyMessage(event.target.value)}
                   maxLength={5000}
@@ -448,14 +606,16 @@ const SellerHelpSupport = () => {
                   disabled={replySubmitting}
                 />
               </label>
+
               <div className="mt-3 flex justify-end">
                 <button
                   type="button"
-                  className="button-primary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="admin-btn-primary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={submitReply}
                   disabled={replySubmitting || !replyMessage.trim()}
                 >
                   <MdSend size={16} />
+
                   {replySubmitting ? "Sending..." : "Send Reply"}
                 </button>
               </div>
@@ -469,8 +629,13 @@ const SellerHelpSupport = () => {
 
 const Info = ({ label, value }) => (
   <div>
-    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">{label}</p>
-    <p className="mt-1 break-words text-sm text-[var(--admin-ink)]">{value}</p>
+    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
+      {label}
+    </p>
+
+    <p className="mt-1 break-words text-sm font-medium text-[var(--admin-ink)]">
+      {value}
+    </p>
   </div>
 );
 

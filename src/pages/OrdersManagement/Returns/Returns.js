@@ -619,32 +619,32 @@ const Returns = () => {
     [list.filters, list.search, payload.list],
   );
 
-  const fetchReturns = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const params = toQueryParams();
-      const hasLocalSearch = Boolean(params.search || params.orderId);
-      delete params.search;
-      delete params.orderId;
-      await dispatch(
-        getAdminReturns({
-          ...params,
-          limit: hasLocalSearch ? 200 : params.limit,
-          offset: hasLocalSearch ? 0 : (params.page - 1) * params.limit,
-        }),
-      ).unwrap();
-    } catch (requestError) {
-      const message =
-        requestError?.message || requestError || "Failed to load returns";
-      setError(message);
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [dispatch, toQueryParams]);
+ const fetchReturns = useCallback(async () => {
+  try {
+    setLoading(true);
+    setError("");
+    const params = toQueryParams();
+    const hasLocalSearch = Boolean(params.search || params.orderId);
+    // delete params.search;
 
-  useEffect(() => {
+    await dispatch(
+      getAdminReturns({
+        ...params,
+        limit: hasLocalSearch ? 200 : params.limit,
+        offset: hasLocalSearch ? 0 : (params.page - 1) * params.limit,
+      }),
+    ).unwrap();
+  } catch (requestError) {
+    const message =
+      requestError?.message || requestError || "Failed to load returns";
+    setError(message);
+    toast.error(message);
+  } finally {
+    setLoading(false);
+  }
+}, [dispatch, toQueryParams]);
+
+ useEffect(() => {
     fetchReturns();
   }, [fetchReturns]);
 
