@@ -703,17 +703,143 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
   );
 };
 
+/* ─────────────── Debounced Text Filter ─────────────── */
+
+const DebouncedTextFilter = ({
+  field,
+  value,
+  onChange,
+  id,
+  wrapperClass,
+}) => {
+  const [inputValue, setInputValue] = useState(value ?? "");
+
+  const debounceRef = useRef(null);
+
+  /*
+   * Keep the input in sync when the value is changed externally.
+   *
+   * Example:
+   * - Reset filters
+   * - Clear button
+   * - Pagination reset
+   */
+  useEffect(() => {
+    setInputValue(value ?? "");
+  }, [value]);
+
+  /*
+   * Cleanup timer when component unmounts.
+   */
+  useEffect(() => {
+    return () => {
+      clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const handleChange = useCallback(
+    (e) => {
+      const nextValue = e.target.value;
+
+      /*
+       * IMPORTANT:
+       * Update local state immediately.
+       *
+       * This allows continuous typing without
+       * waiting for debounce.
+       */
+      setInputValue(nextValue);
+
+      /*
+       * Cancel previous debounce.
+       */
+      clearTimeout(debounceRef.current);
+
+      /*
+       * Wait 400ms after the user stops typing.
+       */
+      debounceRef.current = setTimeout(() => {
+        onChange(field.key, nextValue);
+      }, 400);
+    },
+    [field.key, onChange],
+  );
+
+  const handleClear = useCallback(() => {
+    clearTimeout(debounceRef.current);
+
+    setInputValue("");
+
+    onChange(field.key, "");
+  }, [field.key, onChange]);
+
+  return (
+    <div className={wrapperClass}>
+      {field.label && (
+        <label
+          htmlFor={id}
+          className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
+        >
+          {field.label}
+        </label>
+      )}
+
+      <div className="relative">
+        {field.type === "search" && (
+          <MdSearch
+            size={14}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-muted)]"
+          />
+        )}
+
+        <input
+          id={id}
+          type="text"
+          value={inputValue}
+          onChange={handleChange}
+          placeholder={
+            field.placeholder ||
+            `Search ${field.label || ""}…`
+          }
+          className={`admin-input min-h-9 w-full text-sm ${
+            field.type === "search"
+              ? "!pl-9"
+              : ""
+          }`}
+        />
+
+        {inputValue && field.showClear !== false && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+            aria-label={`Clear ${field.label || "search"}`}
+          >
+            <MdClear size={16} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 /* ─────────────── FilterField ─────────────── */
 const FilterField = ({ field, value, onChange, values }) => {
   const id = useId();
   const wrapperClass = "flex min-w-0 flex-col gap-1 w-full";
 
+  /* ─────────────── Async Dropdown ─────────────── */
   if (field.type === "asyncDropdown") {
     return (
-      <AsyncDropdownFilter field={field} value={value} onChange={onChange} />
+      <AsyncDropdownFilter
+        field={field}
+        value={value}
+        onChange={onChange}
+      />
     );
   }
 
+  /* ─────────────── Select ─────────────── */
   if (field.type === "select") {
     const selectedOption =
       (field.options || []).find(
@@ -725,18 +851,23 @@ const FilterField = ({ field, value, onChange, values }) => {
         {field.label && (
           <label
             htmlFor={id}
-            className="text-[10px]  font-medium text-gray-400 uppercase tracking-wide px-0.5"
+            className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
           >
             {field.label}
           </label>
         )}
+
         <FilterSelect
           options={field.options || []}
           value={selectedOption}
-          onChange={(opt) => onChange(field.key, opt ? opt.value : "")}
-          placeholder={field.placeholder || `All ${field.label || ""}`}
+          onChange={(opt) =>
+            onChange(field.key, opt ? opt.value : "")
+          }
+          placeholder={
+            field.placeholder || `All ${field.label || ""}`
+          }
           isSearchable={field.isSearchable ?? true}
-          isClearable={true}
+          isClearable
           inputId={id}
           className="!mb-0"
         />
@@ -744,58 +875,52 @@ const FilterField = ({ field, value, onChange, values }) => {
     );
   }
 
+  /* ─────────────── Text / Search ─────────────── */
   if (field.type === "text" || field.type === "search") {
     return (
-      <div className={wrapperClass}>
-        {field.label && (
-          <label
-            htmlFor={id}
-            className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5"
-          >
-            {field.label}
-          </label>
-        )}
-        <div className="relative">
-          {field.type === "search" && (
-            <MdSearch
-              size={14}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-muted)]"
-            />
-          )}
-          <input
-            id={id}
-            type="text"
-            value={value ?? ""}
-            onChange={(e) => onChange(field.key, e.target.value)}
-            placeholder={field.placeholder || `Search ${field.label}…`}
-            className={`admin-input min-h-9 w-full text-sm ${field.type === "search" ? "!pl-9" : ""}`}
-          />
-        </div>
-      </div>
+      <DebouncedTextFilter
+        field={field}
+        value={value}
+        onChange={onChange}
+        id={id}
+        wrapperClass={wrapperClass}
+      />
     );
   }
 
+  /* ─────────────── Date ─────────────── */
   if (field.type === "date") {
     const today = new Date().toISOString().split("T")[0];
+
     const maxDate = field.maxDate ?? today;
-    const isEndDate = field.key === "endDate" || field.key === "toDate";
+
+    const isEndDate =
+      field.key === "endDate" ||
+      field.key === "toDate";
+
     const minDate =
-      isEndDate && values?.fromDate ? values.fromDate : field.minDate;
+      isEndDate && values?.fromDate
+        ? values.fromDate
+        : field.minDate;
+
     return (
       <div className={wrapperClass}>
         {field.label && (
           <label
             htmlFor={id}
-            className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5"
+            className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
           >
             {field.label}
           </label>
         )}
+
         <input
           id={id}
           type="date"
           value={value ?? ""}
-          onChange={(e) => onChange(field.key, e.target.value)}
+          onChange={(e) =>
+            onChange(field.key, e.target.value)
+          }
           min={minDate}
           max={maxDate}
           className="admin-input min-h-9 w-full text-sm"
@@ -804,6 +929,7 @@ const FilterField = ({ field, value, onChange, values }) => {
     );
   }
 
+  /* ─────────────── Date Range ─────────────── */
   if (field.type === "daterange") {
     return (
       <DateRangeFilter
@@ -833,31 +959,36 @@ const FilterBar = ({
     () => (filters.length ? filters : fields || []),
     [fields, filters],
   );
+
   const resolvedValues = useMemo(
     () => listPage?.filters || values,
     [listPage?.filters, values],
   );
-  const resolvedOnChange = onChange || listPage?.setFilter;
+
   const resolvedOnClear = useCallback(() => {
     if (onClear) {
       onClear();
     } else {
       listPage?.clearFilters?.();
     }
+
     listPage?.clearSearch?.();
   }, [listPage, onClear]);
-  // const resolvedActiveCount = activeCount || listPage?.activeFilterCount || 0;
 
+  // IMPORTANT:
+  // normalizedFilters MUST come before resolvedOnChange
   const normalizedFilters = useMemo(() => {
     const nextFilters = [];
 
     for (let index = 0; index < resolvedFilters.length; index += 1) {
       const field = resolvedFilters[index];
       const nextField = resolvedFilters[index + 1];
+
       const rangePair = isDateRangeStart(field, nextField);
 
       if (rangePair) {
         const [startKey, endKey] = rangePair;
+
         nextFilters.push({
           ...field,
           key: `${startKey}__${endKey}`,
@@ -867,7 +998,10 @@ const FilterBar = ({
           endKey: nextField.key || endKey,
           minDate: field.minDate,
           maxDate: nextField.maxDate ?? field.maxDate,
-          disableFuture: field.disableFuture ?? nextField.disableFuture ?? true,
+          disableFuture:
+            field.disableFuture ??
+            nextField.disableFuture ??
+            true,
           width:
             field.rangeWidth ||
             nextField.rangeWidth ||
@@ -875,6 +1009,7 @@ const FilterBar = ({
             nextField.width ||
             "w-full",
         });
+
         index += 1;
         continue;
       }
@@ -883,20 +1018,43 @@ const FilterBar = ({
         nextFilters.push(field);
         continue;
       }
+
       const lowerKey = String(field.key || "").toLowerCase();
+
       if (lowerKey === "from" || lowerKey === "startdate") {
-        nextFilters.push({ ...field, key: "startDate" });
+        nextFilters.push({
+          ...field,
+          key: "startDate",
+        });
         continue;
       }
+
       if (lowerKey === "to" || lowerKey === "enddate") {
-        nextFilters.push({ ...field, key: "endDate" });
+        nextFilters.push({
+          ...field,
+          key: "endDate",
+        });
         continue;
       }
+
       nextFilters.push(field);
     }
 
     return nextFilters;
   }, [resolvedFilters]);
+
+  // NOW normalizedFilters exists, so this is safe
+const resolvedOnChange = useCallback(
+  (key, value) => {
+    if (listPage?.setFilter) {
+      listPage.setFilter(key, value);
+      return;
+    }
+
+    onChange?.(key, value);
+  },
+  [listPage, onChange],
+);
 
   const resolvedActiveCount = useMemo(() => {
     return normalizedFilters.reduce((count, field) => {
@@ -904,7 +1062,6 @@ const FilterBar = ({
         const startValue = resolvedValues[field.startKey];
         const endValue = resolvedValues[field.endKey];
 
-        // From Date + To Date count as one filter
         if (startValue || endValue) {
           return count + 1;
         }
@@ -927,17 +1084,23 @@ const FilterBar = ({
     }, 0);
   }, [normalizedFilters, resolvedValues]);
 
-  if (!normalizedFilters.length) return null;
+  if (!normalizedFilters.length) {
+    return null;
+  }
 
   return (
     <div className="border-b border-[var(--admin-line)] bg-[#FFFDF8] px-3 py-3 sm:px-4">
       <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
           <MdFilterList size={16} />
+
           Filters
+
           <span
             className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--admin-gold)] px-1.5 text-[10px] font-bold text-[var(--admin-navy)] transition-opacity ${
-              resolvedActiveCount > 0 ? "opacity-100" : "opacity-0"
+              resolvedActiveCount > 0
+                ? "opacity-100"
+                : "opacity-0"
             }`}
             aria-hidden={resolvedActiveCount === 0}
           >
@@ -949,10 +1112,17 @@ const FilterBar = ({
           <button
             type="button"
             onClick={resolvedOnClear}
-            disabled={loading || resolvedActiveCount === 0}
-            tabIndex={resolvedActiveCount > 0 ? 0 : -1}
+            disabled={
+              loading ||
+              resolvedActiveCount === 0
+            }
+            tabIndex={
+              resolvedActiveCount > 0 ? 0 : -1
+            }
             className={`inline-flex h-8 items-center gap-1 rounded-md border border-red-100 bg-white px-2.5 text-xs font-semibold text-red-500 transition-opacity hover:bg-red-50 hover:text-red-700 disabled:pointer-events-none ${
-              resolvedActiveCount > 0 ? "opacity-100" : "opacity-0"
+              resolvedActiveCount > 0
+                ? "opacity-100"
+                : "opacity-0"
             }`}
             aria-hidden={resolvedActiveCount === 0}
           >
@@ -962,7 +1132,7 @@ const FilterBar = ({
         )}
       </div>
 
-      <div className="grid  grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {normalizedFilters.map((field) => (
           <FilterField
             key={field.key}
