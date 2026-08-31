@@ -195,6 +195,23 @@ const getReturnItemOrderItemId = (item = {}) =>
 const getReturnItemProductId = (item = {}) =>
   String(firstDefined(item.productId, item.product_id, item.product?.id, item.product?._id, "") || "");
 
+const getReturnItemVariantId = (item = {}) =>
+  String(firstDefined(item.variantId, item.variant_id, item.variant?.id, item.variant?._id, "") || "");
+
+const getReturnItemVariantSku = (item = {}) =>
+  String(firstDefined(item.variantSku, item.variant_sku, item.productSku, item.product_sku, item.sku, "") || "");
+
+const impactKeysForReturnItem = (item = {}) => {
+  const preciseKeys = [
+    ["item", getReturnItemOrderItemId(item)],
+    ["variant", getReturnItemVariantId(item)],
+    ["sku", getReturnItemVariantSku(item)],
+  ].filter(([, value]) => Boolean(value));
+  if (preciseKeys.length) return preciseKeys.map(([type, value]) => `${type}:${value}`);
+  const productId = getReturnItemProductId(item);
+  return productId ? [`product:${productId}`] : [];
+};
+
 const getReturnItemVariantText = (item = {}) => {
   const snapshot = normalizeJson(firstDefined(item.productSnapshot, item.product_snapshot), {});
   const variant = normalizeJson(firstDefined(item.variantSnapshot, item.variant_snapshot, snapshot.variant), {});
@@ -225,9 +242,7 @@ const buildReturnImpactByItem = (returnRequests = []) => {
   (Array.isArray(returnRequests) ? returnRequests : []).forEach((returnRequest) => {
     if (!shouldCountReturnForPayout(returnRequest)) return;
     (Array.isArray(returnRequest.items) ? returnRequest.items : []).forEach((item) => {
-      const itemId = getReturnItemOrderItemId(item);
-      const productId = getReturnItemProductId(item);
-      const keys = [itemId, productId].filter(Boolean);
+      const keys = impactKeysForReturnItem(item);
       if (!keys.length) return;
       const quantity = getReturnItemQuantity(item);
       const refundAmount = money(firstDefined(item.refundAmount, item.refund_amount, item.eligibleRefundAmount, item.eligible_refund_amount, 0));
@@ -252,9 +267,7 @@ const buildCancellationImpactByItem = (cancellations = []) => {
     if (["rejected", "declined"].includes(status)) return;
     const items = firstDefined(cancellation.items, cancellation.cancelledItems, cancellation.cancellation_items, []);
     (Array.isArray(items) ? items : []).forEach((item) => {
-      const itemId = getReturnItemOrderItemId(item);
-      const productId = getReturnItemProductId(item);
-      const keys = [itemId, productId].filter(Boolean);
+      const keys = impactKeysForReturnItem(item);
       if (!keys.length) return;
       const quantity = getCancellationItemQuantity(item);
       const refundAmount = money(firstDefined(item.refundAmount, item.refund_amount, item.amount, item.totalAmount, item.total_amount, 0));
@@ -779,9 +792,17 @@ const buildSimpleItemPayoutRows = (seller = {}, sellerItems = [], commissionReco
   return sellerItems.map((item) => {
     const orderItemId = getOrderItemId(item);
     const productId = getItemProductId(item);
+    const variantId = String(firstDefined(item.variant_id, item.variantId, "") || "");
+    const variantSku = String(firstDefined(item.variant_sku, item.variantSku, item.product_sku, item.productSku, "") || "");
     const itemQuantity = getOrderItemQuantity(item);
-    const returnImpact = returnImpactByItem[orderItemId] || returnImpactByItem[productId] || {};
-    const cancellationImpact = cancellationImpactByItem[orderItemId] || cancellationImpactByItem[productId] || {};
+    const impactLookupKeys = [
+      orderItemId && `item:${orderItemId}`,
+      variantId && `variant:${variantId}`,
+      variantSku && `sku:${variantSku}`,
+      productId && `product:${productId}`,
+    ].filter(Boolean);
+    const returnImpact = impactLookupKeys.map((key) => returnImpactByItem[key]).find(Boolean) || {};
+    const cancellationImpact = impactLookupKeys.map((key) => cancellationImpactByItem[key]).find(Boolean) || {};
     const returnedQuantity = Math.min(itemQuantity, money(returnImpact.quantity || 0));
     const directCancelledQuantity = money(firstDefined(item.cancelled_quantity, item.cancelledQuantity, 0));
     const cancelledQuantity = Math.min(Math.max(0, itemQuantity - returnedQuantity), Math.max(directCancelledQuantity, money(cancellationImpact.quantity || 0)));

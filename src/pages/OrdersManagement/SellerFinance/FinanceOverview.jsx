@@ -7,7 +7,7 @@ import PageHeader from "../../../components/Shared/PageHeader";
 import Loader from "../../../components/Loader/Loader";
 import { getMySellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
 import {
-  FinanceMetricCard, FinanceNav, FinanceStatusBadge, MoneyEquation,
+  FinanceMetricCard, FinanceNav, FinancePageGuide, FinanceStatusBadge, MoneyEquation,
   financeDateTime, financeMoney, sellerFinanceStatus, unwrapFinance,
 } from "./financeUi";
 
@@ -39,6 +39,7 @@ export default function FinanceOverview() {
     <Loader loading={Boolean(state.loading)} />
     <PageHeader title="Finance" subtitle="See what you've earned, what's waiting, what needs attention, and what can be paid to you now." breadcrumbs={[{ label: "My Finance & Payouts" }, { label: "Overview" }]} actions={<button type="button" className="admin-btn-secondary" onClick={load}><MdRefresh /> Refresh</button>} />
     <FinanceNav />
+    <FinancePageGuide step="1" title="Start with your current balance" description="This is the simplest view of your money. Check what is payable now, then follow anything waiting or needing attention." points={["Payable now is ready for transfer", "Waiting moves after release conditions"]} />
     <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
       <FinanceMetricCard featured tone="green" label="Payable now" value={financeMoney(balances.effectiveAvailablePayout, currency)} description="Available to be transferred to your selected payout account." />
       <MoneyEquation available={balances.availableBalance} owed={owed} payable={balances.effectiveAvailablePayout} currency={currency} />

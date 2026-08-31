@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { MdDownload, MdRefresh } from "react-icons/md";
+import { MdDownload, MdReceiptLong, MdRefresh } from "react-icons/md";
 import PageHeader from "../../../components/Shared/PageHeader";
 import DataTable from "../../../components/Shared/DataTable";
 import { getMySellerSettlements } from "../../../Redux/sellerCommissionsSlice";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
-import { FinanceNav, FinanceStatusBadge, financeDateTime, financeList, financeMoney, financeValue, shortReference } from "./financeUi";
+import { FinanceNav, FinancePageGuide, FinanceStatusBadge, financeDateTime, financeList, financeMoney, financeValue, shortReference } from "./financeUi";
 
 export default function FinanceStatements() {
   const dispatch = useDispatch();
@@ -26,5 +26,5 @@ export default function FinanceStatements() {
     { key: "generated", label: "Generated on", render: (_, row) => financeDateTime(row.settlement_date || row.settlementDate || row.created_at) },
     { key: "download", label: "Statement", render: (_, row) => <button type="button" disabled={downloading === row.id} className="admin-btn-secondary !px-2 !py-1" onClick={() => download(row)}><MdDownload /> {downloading === row.id ? "Preparing…" : "PDF"}</button> },
   ], [download, downloading]);
-  return <div className="space-y-5"><PageHeader title="Statements" subtitle="Download records of your completed payouts and financial adjustments." breadcrumbs={[{ label: "My Finance & Payouts" }, { label: "Statements" }]} actions={<button type="button" className="admin-btn-secondary" onClick={load}><MdRefresh /> Refresh</button>} /><FinanceNav /><DataTable columns={columns} data={rows} loading={Boolean(state.loading)} totalCount={rows.length} pageSize={20} rowKey="id" emptyText="No statements yet. Statements appear after a payout or settlement is completed." /></div>;
+  return <div className="space-y-5"><PageHeader title="Statements" subtitle="Download records of your completed payouts and financial adjustments." breadcrumbs={[{ label: "My Finance & Payouts" }, { label: "Statements" }]} actions={<button type="button" className="admin-btn-secondary" onClick={load}><MdRefresh /> Refresh</button>} /><FinanceNav /><FinancePageGuide step="5" icon={MdReceiptLong} title="Keep a record of completed money movements" description="Statements are generated after a payout or settlement completes. Download the PDF for accounts, reconciliation or support." points={["Match using the payout reference", "Download PDF for your records"]} /><DataTable columns={columns} data={rows} loading={Boolean(state.loading)} totalCount={rows.length} pageSize={20} rowKey="id" emptyText="No statements yet. Statements appear after a payout or settlement is completed." /></div>;
 }

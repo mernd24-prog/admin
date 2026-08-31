@@ -417,26 +417,6 @@ const removeFestivalSidebarItems = (groups = []) =>
         String(group.label || "").toLowerCase() !== "festivals",
     );
 
-// Seller finance was previously exposed as several disconnected accounting
-// pages. Normalize old RBAC rows and cached login payloads to the current
-// seller-facing money flow so existing accounts do not need to be re-seeded or
-// sign out before the corrected navigation appears.
-const normalizeSellerFinanceNavigation = (groups = []) => {
-  const canonicalItems = [
-    { name: "Finance Overview", label: "Finance Overview", module_code: "finance-overview", module: "sellers/commissions", order: 91 },
-    { name: "Earnings", label: "Earnings", module_code: "finance-earnings", module: "sellers/commissions", order: 92 },
-    { name: "Adjustments", label: "Adjustments", module_code: "finance-adjustments", module: "sellers/commissions", order: 93 },
-    { name: "Payouts", label: "Payouts", module_code: "seller-payouts", module: "sellers/commissions", order: 94 },
-    { name: "Statements", label: "Statements", module_code: "finance-statements", module: "sellers/commissions", order: 95 },
-  ];
-  return groups.map((group) => {
-    const label = String(group.label || "").trim().toLowerCase();
-    const isFinanceGroup = ["my finance & payouts", "seller finance", "seller finance & payouts"].includes(label);
-    if (!isFinanceGroup) return group;
-    return { ...group, label: "My Finance & Payouts", subItems: canonicalItems, isSingleItem: false };
-  });
-};
-
 // ─── Sidebar state helpers ────────────────────────────────────────────────────
 const getStoredSidebarState = () => {
   try {
@@ -491,7 +471,7 @@ const Sidebar = ({
   const [userData, setUserData] = useState(null);
   const dynamicSidebarModules = useMemo(() => {
     const sd = adminCoreSelector?.rbacSidebarModulesData;
-    return mergeSidebarModuleTrees(
+    const backendModules = firstArray(
       sd?.data?.normalized?.data,
       sd?.normalized?.normalized?.data,
       sd?.normalized?.data,
@@ -499,6 +479,12 @@ const Sidebar = ({
       sd?.data?.list,
       sd?.data?.data,
       sd?.data,
+    );
+    // Once the API has answered, it is the sole source of sidebar modules.
+    // Login/local-storage copies are only an offline/initial-render fallback;
+    // allowing them to merge after the API made stale modules override RBAC.
+    if (backendModules.length) return mergeSidebarModuleTrees(backendModules);
+    return mergeSidebarModuleTrees(
       userData?.sidebarModules,
       userData?.rbacSidebarModules,
       getStoredUser()?.sidebarModules,
@@ -578,19 +564,17 @@ const Sidebar = ({
         trustBackend: true,
       });
       if (sellerPanel && sidebarTree.length)
-        return normalizeSellerFinanceNavigation(
-          removeFestivalSidebarItems(sortSidebarGroups(sidebarTree, sellerPanel)),
+        return removeFestivalSidebarItems(
+          sortSidebarGroups(sidebarTree, sellerPanel),
         );
       if (sidebarTree.length)
         return removeFestivalSidebarItems(sortSidebarGroups(sidebarTree, sellerPanel));
     }
 
     if (accessSidebar.length)
-      return sellerPanel
-        ? normalizeSellerFinanceNavigation(
-            removeFestivalSidebarItems(sortSidebarGroups(accessSidebar, sellerPanel)),
-          )
-        : removeFestivalSidebarItems(sortSidebarGroups(accessSidebar, sellerPanel));
+      return removeFestivalSidebarItems(
+        sortSidebarGroups(accessSidebar, sellerPanel),
+      );
 
     return [];
   }, [
@@ -803,7 +787,6 @@ const Sidebar = ({
                   location.pathname.startsWith(`${path}/`)
                 );
               });
-
               if (item.isSingleItem) {
                 const sub = item.subItems[0];
                 const path = `/app/${sub.module_code}`;
