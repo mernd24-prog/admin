@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 
 import { toast } from "sonner";
@@ -194,19 +200,40 @@ const ShipmentTracking = () => {
   const { isSeller } = usePermission();
   const selector = useSelector((state) => state.delivery);
   const shipmentPayload = unwrapList(selector.shipmentsData);
+  const initialOrderId = getInitialQuery("orderId");
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
     defaultFilters: {
-      orderId: getInitialQuery("orderId"),
+      orderNumber: getInitialQuery("orderNumber") || getInitialQuery("orderId"),
       sellerId: getInitialQuery("sellerId"),
       search: initialShipmentId,
     },
   });
-  const { toQueryParams } = list;
+  const { toQueryParams, filters, setFilter } = list;
 
- 
+  const hasResolvedInitialRef = useRef(false);
+
+  useEffect(() => {
+    if (hasResolvedInitialRef.current) return;
+    if (
+      !initialShipmentId &&
+      initialOrderId &&
+      shipmentPayload.list.length > 0
+    ) {
+      const match =
+        shipmentPayload.list.find(
+          (item) =>
+            item.order_id === initialOrderId || item.orderId === initialOrderId,
+        ) || shipmentPayload.list[0];
+      const realOrderNum = match?.orderNumber || match?.order_number;
+      if (realOrderNum) {
+        hasResolvedInitialRef.current = true;
+        setFilter("orderNumber", realOrderNum);
+      }
+    }
+  }, [shipmentPayload.list, initialOrderId, initialShipmentId, setFilter]);
 
   const FILTER_FIELDS = isSeller
     ? [
@@ -234,7 +261,7 @@ const ShipmentTracking = () => {
         // { key: "toDate", type: "date", label: "To" },
       ]
     : [
-        { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+        { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
         { key: "returnId", type: "text", label: "Return #", width: "w-44" },
         {
           key: "shipmentType",
@@ -312,12 +339,23 @@ const ShipmentTracking = () => {
     reason: "",
   });
   const [lastCancellation, setLastCancellation] = useState(null);
-  const selectedPaymentStatus = String(selectedShipment?.payment_status || selectedShipment?.paymentStatus || "").toLowerCase();
-  const selectedPaymentProvider = String(selectedShipment?.payment_provider || selectedShipment?.paymentProvider || "").toLowerCase();
-  const selectedShipmentPaid = selectedPaymentStatus === "captured" ||
-    (selectedPaymentProvider === "cod" && selectedPaymentStatus === "authorized");
+  const selectedPaymentStatus = String(
+    selectedShipment?.payment_status || selectedShipment?.paymentStatus || "",
+  ).toLowerCase();
+  const selectedPaymentProvider = String(
+    selectedShipment?.payment_provider ||
+      selectedShipment?.paymentProvider ||
+      "",
+  ).toLowerCase();
+  const selectedShipmentPaid =
+    selectedPaymentStatus === "captured" ||
+    (selectedPaymentProvider === "cod" &&
+      selectedPaymentStatus === "authorized");
   const trackingActionOptions = useMemo(
-    () => selectedShipmentPaid ? getTrackingActionOptions(selectedShipment?.status || "initiated") : [],
+    () =>
+      selectedShipmentPaid
+        ? getTrackingActionOptions(selectedShipment?.status || "initiated")
+        : [],
     [selectedShipment?.status, selectedShipmentPaid],
   );
   const filterFields = useMemo(
@@ -363,7 +401,9 @@ const ShipmentTracking = () => {
         courierName: row.courier_name || "",
         awbNumber: row.awb_number || row.tracking_number || "",
         trackingUrl: row.tracking_url || "",
-        expectedDeliveryAt: toDateTimeLocal(row.expected_delivery_at || row.expectedDeliveryAt),
+        expectedDeliveryAt: toDateTimeLocal(
+          row.expected_delivery_at || row.expectedDeliveryAt,
+        ),
       });
       try {
         setLoading(true);
@@ -380,7 +420,10 @@ const ShipmentTracking = () => {
           awbNumber:
             nextShipment.awb_number || nextShipment.tracking_number || "",
           trackingUrl: nextShipment.tracking_url || "",
-          expectedDeliveryAt: toDateTimeLocal(nextShipment.expected_delivery_at || nextShipment.expectedDeliveryAt),
+          expectedDeliveryAt: toDateTimeLocal(
+            nextShipment.expected_delivery_at ||
+              nextShipment.expectedDeliveryAt,
+          ),
         });
       } catch (requestError) {
         toast.error(
@@ -447,16 +490,17 @@ const ShipmentTracking = () => {
       ) {
         nextErrors.awbNumber = "Tracking reference must be 5–50 characters.";
       } else if (!/^[A-Za-z0-9_/-]+$/.test(trackingAction.awbNumber)) {
-        nextErrors.awbNumber =
-          "Allowed: letters, numbers, -, _, and / only.";
+        nextErrors.awbNumber = "Allowed: letters, numbers, -, _, and / only.";
       }
 
       if (!trackingAction.expectedDeliveryAt) {
         nextErrors.expectedDeliveryAt = "Expected delivery date is required.";
-      } else if (new Date(trackingAction.expectedDeliveryAt).getTime() <= Date.now()) {
-        nextErrors.expectedDeliveryAt = "Expected delivery must be in the future.";
+      } else if (
+        new Date(trackingAction.expectedDeliveryAt).getTime() <= Date.now()
+      ) {
+        nextErrors.expectedDeliveryAt =
+          "Expected delivery must be in the future.";
       }
-
     }
 
     if (trackingUrl) {
@@ -504,7 +548,8 @@ const ShipmentTracking = () => {
             ? new Date(trackingAction.expectedDeliveryAt).toISOString()
             : undefined,
           eventTime,
-          shippedAt: trackingAction.status === "in_transit" ? eventTime : undefined,
+          shippedAt:
+            trackingAction.status === "in_transit" ? eventTime : undefined,
         }),
       ).unwrap();
 
@@ -526,12 +571,7 @@ const ShipmentTracking = () => {
     } finally {
       setLoading(false);
     }
-  }, [
-    dispatch,
-    refreshSelectedShipment,
-    selectedShipment,
-    trackingAction,
-  ]);
+  }, [dispatch, refreshSelectedShipment, selectedShipment, trackingAction]);
 
   const handleSellerCancellation = useCallback(async () => {
     if (!selectedShipment?.order_id) return;
@@ -595,7 +635,11 @@ const ShipmentTracking = () => {
                 {row.awb_number || row.tracking_number || row.id}
               </div>
               <div className="text-xs text-gray-400">
-                <OrderLink orderId={row.order_id || row.orderId} orderNumber={row.orderNumber || row.order_number} prefix="Order #" />
+                <OrderLink
+                  orderId={row.order_id || row.orderId}
+                  orderNumber={row.orderNumber || row.order_number}
+                  prefix="Order #"
+                />
 
                 {row.return_id && (
                   <span className="text-gray-400">
@@ -608,6 +652,7 @@ const ShipmentTracking = () => {
           </div>
         ),
       },
+
       {
         key: "seller_id",
         label: "Seller",
@@ -659,12 +704,13 @@ const ShipmentTracking = () => {
         key: "expected_delivery_at",
         label: "Expected / Delivered",
         sortable: true,
-        render: (value, row) => formatDateTime12Hour(
-          row.status === "delivered"
-            ? row.delivered_at || row.deliveredAt || value
-            : value,
-          "N/A",
-        ),
+        render: (value, row) =>
+          formatDateTime12Hour(
+            row.status === "delivered"
+              ? row.delivered_at || row.deliveredAt || value
+              : value,
+            "N/A",
+          ),
       },
     ];
     return isSeller
@@ -743,7 +789,16 @@ const ShipmentTracking = () => {
                     Order Shipment
                   </div>
                   <div className="truncate text-lg font-semibold text-gray-950">
-                    <OrderLink orderId={selectedShipment?.order_id || selectedShipment?.orderId} orderNumber={selectedShipment?.orderNumber || selectedShipment?.order_number} className="block text-lg" />
+                    <OrderLink
+                      orderId={
+                        selectedShipment?.order_id || selectedShipment?.orderId
+                      }
+                      orderNumber={
+                        selectedShipment?.orderNumber ||
+                        selectedShipment?.order_number
+                      }
+                      className="block text-lg"
+                    />
                   </div>
                 </div>
               </div>
@@ -805,12 +860,17 @@ const ShipmentTracking = () => {
                 </strong>
               </div>
               <div className="sm:text-right">
-                {selectedShipment?.status === "delivered" ? "Delivered at" : "Expected delivery"}:{" "}
+                {selectedShipment?.status === "delivered"
+                  ? "Delivered at"
+                  : "Expected delivery"}
+                :{" "}
                 <strong className="font-medium text-gray-700">
                   {formatDateTime12Hour(
                     selectedShipment?.status === "delivered"
-                      ? selectedShipment?.delivered_at || selectedShipment?.deliveredAt
-                      : selectedShipment?.expected_delivery_at || selectedShipment?.expectedDeliveryAt,
+                      ? selectedShipment?.delivered_at ||
+                          selectedShipment?.deliveredAt
+                      : selectedShipment?.expected_delivery_at ||
+                          selectedShipment?.expectedDeliveryAt,
                     "Not added",
                   )}
                 </strong>
@@ -1044,7 +1104,9 @@ const ShipmentTracking = () => {
                       <label className="grid min-w-0 gap-1 text-xs text-gray-500">
                         <span>
                           Expected Delivery Date{" "}
-                          <span className="text-red-500" aria-hidden="true">*</span>
+                          <span className="text-red-500" aria-hidden="true">
+                            *
+                          </span>
                         </span>
                         <input
                           className={`min-w-0 w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.expectedDeliveryAt ? "border-red-400" : "border-gray-200"}`}
@@ -1053,7 +1115,9 @@ const ShipmentTracking = () => {
                           value={trackingAction.expectedDeliveryAt}
                           required
                           aria-required="true"
-                          aria-invalid={Boolean(trackingErrors.expectedDeliveryAt)}
+                          aria-invalid={Boolean(
+                            trackingErrors.expectedDeliveryAt,
+                          )}
                           onChange={(event) => {
                             setTrackingAction((prev) => ({
                               ...prev,
@@ -1065,7 +1129,9 @@ const ShipmentTracking = () => {
                             }));
                           }}
                         />
-                        <FieldError message={trackingErrors.expectedDeliveryAt} />
+                        <FieldError
+                          message={trackingErrors.expectedDeliveryAt}
+                        />
                       </label>
                       <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-gray-600">
                         Tracking URL
@@ -1120,16 +1186,21 @@ const ShipmentTracking = () => {
               <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
                 {!selectedShipmentPaid ? (
                   <div>
-                    <div className="font-semibold text-amber-800">Awaiting payment</div>
+                    <div className="font-semibold text-amber-800">
+                      Awaiting payment
+                    </div>
                     <div className="mt-1 text-xs text-gray-500">
-                      Shipment processing is locked until online payment is captured or COD is authorized.
+                      Shipment processing is locked until online payment is
+                      captured or COD is authorized.
                     </div>
                   </div>
                 ) : isSeller &&
-                selectedShipment?.status === "cancelled" &&
-                String(
-                  lastCancellation?.order_id || lastCancellation?.orderId || "",
-                ) !== String(selectedShipment?.order_id || "") ? (
+                  selectedShipment?.status === "cancelled" &&
+                  String(
+                    lastCancellation?.order_id ||
+                      lastCancellation?.orderId ||
+                      "",
+                  ) !== String(selectedShipment?.order_id || "") ? (
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-amber-800">

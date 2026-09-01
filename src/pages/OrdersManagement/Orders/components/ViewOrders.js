@@ -978,8 +978,8 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
                     Variant: {row.variantLabel}
                   </div>
                 )}
-                <div className="mt-1 text-xs text-[#65718b]">
-                  {row.status}
+                <div className="mt-1  text-xs text-[#65718b]">
+                  {formatLabel(row.status)}
                   {row.orderedQuantity > 1 && (
                     <span>
                       {" "}· Ordered {row.orderedQuantity}
@@ -1841,13 +1841,13 @@ const OrderSummary = () => {
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs">
                       <span className="rounded-full bg-white px-2.5 py-1 text-[#202337] ring-1 ring-[#eadfbd]">
-                        Package: {displayStatus(packageStatus)}
+                        Package: {formatLabel(displayStatus(packageStatus))}
                       </span>
                       <span className="rounded-full bg-white px-2.5 py-1 text-[#202337] ring-1 ring-[#eadfbd]">
-                        Returns: {displayStatus(firstDefined(returnLifecycle.status, "none"))}
+                        Returns: {formatLabel(displayStatus(firstDefined(returnLifecycle.status, "none")))}
                       </span>
                       <span className="rounded-full bg-white px-2.5 py-1 text-[#202337] ring-1 ring-[#eadfbd]">
-                        Payout: {displayStatus(firstDefined(groupSettlement.payoutStatus, groupSettlement.commissionStatus, "pending"))}
+                        Payout: {formatLabel(displayStatus(firstDefined(groupSettlement.payoutStatus, groupSettlement.commissionStatus, "pending")))}
                       </span>
                       {groupSettlement.eligibleAt && (
                         <span className="rounded-full bg-white px-2.5 py-1 text-[#202337] ring-1 ring-[#eadfbd]">
@@ -2191,7 +2191,7 @@ const OrderSummary = () => {
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">Returns & Wallet</h3>
               {returns.length || walletTransactions.length ? (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1">
+                <div className="grid grid-cols-1  gap-3 md:grid-cols-2 xl:grid-cols-1">
                   {returns.length ? (
                   <div className="space-y-3">
                     {returns.map((returnRequest) => (
@@ -2214,7 +2214,7 @@ const OrderSummary = () => {
                           <RelatedCard
                             key={returnRequest.id || returnRequest._id}
                             title="Return request"
-                            subtitle={displayStatus(returnRequest.reason)}
+                            subtitle={displayStatus(formatLabel(returnRequest.reason))}
                             status={returnRequest.status}
                             rows={[
                               { label: "Refund", value: formatMoney(firstDefined(returnRequest.refundAmount, returnRequest.refundBreakup?.totalRefundAmount)) },
@@ -2230,14 +2230,14 @@ const OrderSummary = () => {
                             ) : null}
                           >
                             {Array.isArray(returnRequest.items) && returnRequest.items.length > 0 && (
-                              <div className="space-y-2 rounded-md bg-[#fffaf0] p-2 text-xs">
+                              <div className="space-y-2 rounded-md  bg-[#fffaf0] p-2 text-xs">
                                 <div className="font-semibold uppercase text-[#65718b]">Returned item-wise impact</div>
                                 {returnRequest.items.map((item, index) => (
                                   <div key={firstDefined(item.orderItemId, item.order_item_id, item.productId, item.product_id, index)} className="flex items-start justify-between gap-3 border-t border-[#efe6cd] pt-2 first:border-t-0 first:pt-0">
                                     <div className="min-w-0">
                                       <div className="font-medium text-[#202337]">{getReturnItemTitle(item)}</div>
                                       <div className="text-[#65718b]">
-                                        Returned qty {getReturnItemQuantity(item)}
+                                        Returned Qty {getReturnItemQuantity(item)}
                                         {getReturnItemVariantText(item) ? ` · ${getReturnItemVariantText(item)}` : ""}
                                         {getReturnItemOrderItemId(item) ? ` · Item ${getReturnItemOrderItemId(item).slice(0, 8)}` : ""}
                                       </div>
