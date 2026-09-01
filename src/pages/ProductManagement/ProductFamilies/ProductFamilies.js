@@ -31,6 +31,7 @@ import {
 import { getList } from "../../../Redux/productSlice";
 import { getAllSellerList } from "../../../Redux/StoreSlice";
 import { transformArray } from "../../../_helpers/globalFunctions";
+import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 
 const idFromRecord = (item = {}) =>
   item?.familyCode || item?.code || item?.id || "";
@@ -462,227 +463,234 @@ const ProductFamilies = () => {
         </section>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto overflow-x-hidden">
-            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">
-              {formData._editingId
-                ? "Edit Product Family"
-                : "Add Product Family"}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <FormInput
-                label="Family Code"
-                name="familyCode"
-                value={formData.familyCode}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, familyCode: e.target.value }))
-                }
-                error={errors.familyCode}
-                disabled={Boolean(formData._editingId)}
-              />
-              <FormInput
-                label="Title"
-                name="title"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, title: e.target.value }))
-                }
-                error={errors.title}
-              />
-              <FilterSelect
-                label="Category *"
-                options={categoryOptions}
-                value={
-                  categoryOptions.find(
-                    (opt) =>
-                      String(opt.value) === String(formData.category || ""),
-                  ) || null
-                }
-                onChange={(option) => {
-                  setFormData((p) => ({ ...p, category: option?.value || "" }));
-                  setErrors((p) => ({ ...p, category: undefined }));
-                }}
-                error={errors.category}
-                placeholder="Select category"
-              />
-              <FilterSelect
-                label="Seller (optional)"
-                options={sellerOptions}
-                value={
-                  sellerOptions.find(
-                    (opt) =>
-                      String(opt.value) === String(formData.sellerId || ""),
-                  ) || null
-                }
-                onChange={(option) =>
-                  setFormData((p) => ({ ...p, sellerId: option?.value || "" }))
-                }
-                placeholder="Select seller"
-              />
+      <DefaultModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onSubmit={handleSubmit}
+        title={
+          formData._editingId ? "Edit Product Family" : "Add Product Family"
+        }
+        submitButtonText="Save"
+        closeButtonText="Cancel"
+        isButtonView={true}
+        loading={saving}
+        width="600px"
+      >
+        <div className="space-y-4">
+          <FormInput
+            label="Family Code"
+            name="familyCode"
+            value={formData.familyCode}
+            onChange={(e) =>
+              setFormData((p) => ({
+                ...p,
+                familyCode: e.target.value,
+              }))
+            }
+            error={errors.familyCode}
+            disabled={Boolean(formData._editingId)}
+          />
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">
-                    Variant Axes
-                  </label>
-                  <button
-                    type="button"
-                    className="text-xs text-[var(--admin-gold)] hover:underline"
-                    onClick={() =>
-                      setFormData((p) => ({
-                        ...p,
-                        variantAxes: [...(p.variantAxes || []), ""],
-                      }))
-                    }
-                  >
-                    + Add Axis
-                  </button>
-                </div>
-                {(formData.variantAxes || []).map((axis, idx) => (
-                  <div
-                    key={`axis-${idx}`}
-                    className="relative flex items-center"
-                  >
-                    <input
-                      className="w-full border border-gray-300 rounded-lg pl-3 pr-8 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                      value={axis}
-                      onChange={(e) =>
-                        setFormData((p) => ({
-                          ...p,
-                          variantAxes: (p.variantAxes || []).map((v, i) =>
-                            i === idx ? e.target.value : v,
-                          ),
-                        }))
-                      }
-                      placeholder="e.g. color, size"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
-                      onClick={() =>
-                        setFormData((p) => ({
-                          ...p,
-                          variantAxes: (p.variantAxes || []).filter(
-                            (_, i) => i !== idx,
-                          ) || [""],
-                        }))
-                      }
-                      title="Remove axis"
-                    >
-                      <MdClose size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+          <FormInput
+            label="Title"
+            name="title"
+            value={formData.title}
+            onChange={(e) =>
+              setFormData((p) => ({
+                ...p,
+                title: e.target.value,
+              }))
+            }
+            error={errors.title}
+          />
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">
-                    Base Attributes
-                  </label>
-                  <button
-                    type="button"
-                    className="text-xs text-[var(--admin-gold)] hover:underline"
-                    onClick={() =>
-                      setFormData((p) => ({
-                        ...p,
-                        baseAttributes: [
-                          ...(p.baseAttributes || []),
-                          emptyAttribute,
-                        ],
-                      }))
-                    }
-                  >
-                    + Add Attribute
-                  </button>
-                </div>
-                {(formData.baseAttributes || []).map((row, idx) => (
-                  <div key={`attr-${idx}`} className="grid grid-cols-2 gap-2">
-                    <input
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                      placeholder="key"
-                      value={row.key}
-                      onChange={(e) =>
-                        setFormData((p) => ({
-                          ...p,
-                          baseAttributes: (p.baseAttributes || []).map(
-                            (r, i) =>
-                              i === idx ? { ...r, key: e.target.value } : r,
-                          ),
-                        }))
-                      }
-                    />
-                    <div className="relative flex items-center">
-                      <input
-                        className="w-full border border-gray-300 rounded-lg pl-3 pr-8 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                        placeholder="value"
-                        value={row.value}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            baseAttributes: (p.baseAttributes || []).map(
-                              (r, i) =>
-                                i === idx ? { ...r, value: e.target.value } : r,
-                            ),
-                          }))
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
-                        onClick={() =>
-                          setFormData((p) => ({
-                            ...p,
-                            baseAttributes: (p.baseAttributes || []).filter(
-                              (_, i) => i !== idx,
-                            ) || [emptyAttribute],
-                          }))
-                        }
-                        title="Remove attribute"
-                      >
-                        <MdClose size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <FilterSelect
+            label="Category *"
+            options={categoryOptions}
+            value={
+              categoryOptions.find(
+                (opt) => String(opt.value) === String(formData.category || ""),
+              ) || null
+            }
+            onChange={(option) => {
+              setFormData((p) => ({
+                ...p,
+                category: option?.value || "",
+              }));
 
-              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
-                <span className="text-sm font-medium text-gray-700">
-                  Active
-                </span>
-                <ToggleButton
-                  isToggle={formData.status === "active"}
-                  handleClick={() =>
+              setErrors((p) => ({
+                ...p,
+                category: undefined,
+              }));
+            }}
+            error={errors.category}
+            placeholder="Select category"
+          />
+
+          <FilterSelect
+            label="Seller (optional)"
+            options={sellerOptions}
+            value={
+              sellerOptions.find(
+                (opt) => String(opt.value) === String(formData.sellerId || ""),
+              ) || null
+            }
+            onChange={(option) =>
+              setFormData((p) => ({
+                ...p,
+                sellerId: option?.value || "",
+              }))
+            }
+            placeholder="Select seller"
+          />
+
+          {/* Variant Axes */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">
+                Variant Axes
+              </label>
+
+              <button
+                type="button"
+                className="text-xs text-[var(--admin-gold)] hover:underline"
+                onClick={() =>
+                  setFormData((p) => ({
+                    ...p,
+                    variantAxes: [...(p.variantAxes || []), ""],
+                  }))
+                }
+              >
+                + Add Axis
+              </button>
+            </div>
+
+            {(formData.variantAxes || []).map((axis, idx) => (
+              <div key={`axis-${idx}`} className="relative flex items-center">
+                <input
+                  className="w-full rounded-lg border border-gray-300 py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
+                  value={axis}
+                  onChange={(e) =>
                     setFormData((p) => ({
                       ...p,
-                      status: p.status === "active" ? "inactive" : "active",
+                      variantAxes: (p.variantAxes || []).map((v, i) =>
+                        i === idx ? e.target.value : v,
+                      ),
+                    }))
+                  }
+                  placeholder="e.g. color, size"
+                />
+
+                <button
+                  type="button"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-red-500"
+                  onClick={() =>
+                    setFormData((p) => ({
+                      ...p,
+                      variantAxes: (p.variantAxes || []).filter(
+                        (_, i) => i !== idx,
+                      ) || [""],
+                    }))
+                  }
+                  title="Remove axis"
+                >
+                  <MdClose size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Base Attributes */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">
+                Base Attributes
+              </label>
+
+              <button
+                type="button"
+                className="text-xs text-[var(--admin-gold)] hover:underline"
+                onClick={() =>
+                  setFormData((p) => ({
+                    ...p,
+                    baseAttributes: [
+                      ...(p.baseAttributes || []),
+                      emptyAttribute,
+                    ],
+                  }))
+                }
+              >
+                + Add Attribute
+              </button>
+            </div>
+
+            {(formData.baseAttributes || []).map((row, idx) => (
+              <div key={`attr-${idx}`} className="grid grid-cols-2 gap-2">
+                <input
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
+                  placeholder="key"
+                  value={row.key}
+                  onChange={(e) =>
+                    setFormData((p) => ({
+                      ...p,
+                      baseAttributes: (p.baseAttributes || []).map((r, i) =>
+                        i === idx ? { ...r, key: e.target.value } : r,
+                      ),
                     }))
                   }
                 />
-              </div>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] transition-colors disabled:opacity-60"
-                >
-                  Save
-                </button>
+                <div className="relative flex items-center">
+                  <input
+                    className="w-full rounded-lg border border-gray-300 py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
+                    placeholder="value"
+                    value={row.value}
+                    onChange={(e) =>
+                      setFormData((p) => ({
+                        ...p,
+                        baseAttributes: (p.baseAttributes || []).map((r, i) =>
+                          i === idx ? { ...r, value: e.target.value } : r,
+                        ),
+                      }))
+                    }
+                  />
+
+                  <button
+                    type="button"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-red-500"
+                    onClick={() =>
+                      setFormData((p) => ({
+                        ...p,
+                        baseAttributes: (p.baseAttributes || []).filter(
+                          (_, i) => i !== idx,
+                        ) || [emptyAttribute],
+                      }))
+                    }
+                    title="Remove attribute"
+                  >
+                    <MdClose size={16} />
+                  </button>
+                </div>
               </div>
-            </form>
+            ))}
+          </div>
+
+          {/* Active */}
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-2.5">
+            <span className="text-sm font-medium text-gray-700">Active</span>
+
+            <ToggleButton
+              isToggle={formData.status === "active"}
+              handleClick={() =>
+                setFormData((p) => ({
+                  ...p,
+                  status: p.status === "active" ? "inactive" : "active",
+                }))
+              }
+            />
           </div>
         </div>
-      )}
+      </DefaultModal>
 
       <ConfirmModal
         open={Boolean(toggleTarget)}

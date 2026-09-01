@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 // import ReactSelect from 'react-select';
-import FormInput from '../../../../components/Atoms/FormInput/FormInput';
-import { RxCross2 } from 'react-icons/rx';
-import Button from '../../../../components/Atoms/buttons/button';
-import TransparentButton from '../../../../components/Atoms/buttons/TransParentButton'
-import FilterSelect from '../../../../components/Atoms/FilterSelect/FilterSelect';
-import ImageUpload from '../../../../components/Atoms/ImageGallery/ImageUpload';
-import { toast } from 'sonner';
-import { uploadFile } from '../../../../_helpers/globalFunctions';
-import Loader from '../../../../components/Loader/Loader';
-import ToggleButton from '../../../../components/Atoms/ToggleButton/ToggleButton';
-import Input from '../../../../components/Atoms/Input/Input';
+import FormInput from "../../../../components/Atoms/FormInput/FormInput";
+import { RxCross2 } from "react-icons/rx";
+import Button from "../../../../components/Atoms/buttons/button";
+import TransparentButton from "../../../../components/Atoms/buttons/TransParentButton";
+import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
+import ImageUpload from "../../../../components/Atoms/ImageGallery/ImageUpload";
+import { toast } from "sonner";
+import { uploadFile } from "../../../../_helpers/globalFunctions";
+import Loader from "../../../../components/Loader/Loader";
+import ToggleButton from "../../../../components/Atoms/ToggleButton/ToggleButton";
+import Input from "../../../../components/Atoms/Input/Input";
+import DefaultModal from "../../../../components/Atoms/Modal/DefaultRightSideModal";
 
 const CategorySetup = ({
   isOpen,
@@ -25,13 +26,13 @@ const CategorySetup = ({
   errors, // Added errors prop
   setErrors, // Added setErrors prop
   isEditing, // Added isEditing prop
-  handleDashboardVisible
+  handleDashboardVisible,
 }) => {
   const [localErrors, setLocalErrors] = useState({
-    categoryName: '',
+    categoryName: "",
   });
-  const [isLoading, setIsLoading] = useState(false)
-  
+  const [isLoading, setIsLoading] = useState(false);
+
   // Sync errors with parent component
   useEffect(() => {
     if (errors) {
@@ -40,14 +41,14 @@ const CategorySetup = ({
   }, [errors]);
 
   const validateField = (name, value) => {
-    let error = '';
+    let error = "";
 
     switch (name) {
-      case 'categoryName':
+      case "categoryName":
         if (!value.trim()) {
-          error = 'Category name is required';
+          error = "Category name is required";
         } else if (value.length > 50) {
-          error = 'Category name must be less than 50 characters';
+          error = "Category name must be less than 50 characters";
         }
         break;
       default:
@@ -63,33 +64,33 @@ const CategorySetup = ({
     // Validate the field
     const error = validateField(name, value);
 
-    setLocalErrors(prev => ({
+    setLocalErrors((prev) => ({
       ...prev,
-      [name]: error
+      [name]: error,
     }));
 
     setFormData((prevState) => ({
       ...prevState,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSelectChange = (selectedOption, name) => {
     setFormData((prevState) => ({
       ...prevState,
-      [name]: selectedOption
+      [name]: selectedOption,
     }));
   };
 
   const validateForm = () => {
     const newErrors = {
-      categoryName: validateField('categoryName', formData.categoryName),
+      categoryName: validateField("categoryName", formData.categoryName),
     };
 
     setLocalErrors(newErrors);
 
     // Return true if no errors
-    return !Object.values(newErrors).some(error => error !== '');
+    return !Object.values(newErrors).some((error) => error !== "");
   };
 
   const handleLocalSubmit = () => {
@@ -100,33 +101,36 @@ const CategorySetup = ({
 
   const handleImageUpload = async (file, fieldName) => {
     if (!file) return;
-    const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg', 'image/webp'];
-    const allowedExtensions = ['png', 'jpg', 'jpeg', 'webp'];
-    const fileExtension = file.name?.split('.').pop()?.toLowerCase();
-    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-      toast.error('Only JPG/PNG/WEBP files are allowed');
+    const allowedTypes = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
+    const allowedExtensions = ["png", "jpg", "jpeg", "webp"];
+    const fileExtension = file.name?.split(".").pop()?.toLowerCase();
+    if (
+      !allowedTypes.includes(file.type) &&
+      !allowedExtensions.includes(fileExtension)
+    ) {
+      toast.error("Only JPG/PNG/WEBP files are allowed");
       return;
     }
 
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-      toast.error('File size should not exceed 5MB');
+      toast.error("File size should not exceed 5MB");
       return;
     }
 
     try {
-      setIsLoading(true)
-      const uploadedImageUrl = await uploadFile(file, 'THUMBNAILS');
+      setIsLoading(true);
+      const uploadedImageUrl = await uploadFile(file, "THUMBNAILS");
       setFormData((prev) => ({
         ...prev,
         [fieldName]: uploadedImageUrl,
-      }))
-      toast.success('Image uploaded successfully');
+      }));
+      toast.success("Image uploaded successfully");
     } catch (error) {
-      toast.error(error || 'Failed to upload image');
-      console.error('File upload error:', error);
+      toast.error(error || "Failed to upload image");
+      console.error("File upload error:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   };
 
@@ -141,33 +145,17 @@ const CategorySetup = ({
         ></div>
       )}
 
-      {/* Responsive Slide-in Category Setup Drawer */}
-      <div
-        className={`fixed top-0 right-0 h-full 
-          w-full sm:w-[500px] md:w-[500px] lg:w-[500px] 
-          max-w-full sm:max-w-[500px]
-          bg-white shadow-xl transform transition-transform duration-300 ease-in-out 
-          border-l border-gray-200 z-50 
-          ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+      {/* Category Setup Side Drawer */}
+      <DefaultModal
+        isOpen={isOpen}
+        onClose={handleClose}
+        onSubmit={handleLocalSubmit}
+        title={isEditing ? "Edit Category" : "Add New Category"}
+        submitButtonText={isEditing ? "Update" : "Submit"}
+        closeButtonText="Reset"
+        isButtonView={true}
       >
-        {/* Header - Responsive padding */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 truncate pr-2">
-            {isEditing ? 'Edit Category' : 'Add New Category'}
-          </h2>
-          <button 
-            onClick={handleClose} 
-            className="text-gray-500 hover:text-gray-700 flex-shrink-0 p-1"
-          >
-            <RxCross2 size={20} className="sm:w-[22px] sm:h-[22px]" />
-          </button>
-        </div>
-
-        {/* Form Content - Responsive padding and spacing */}
-        <div className="px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 
-          h-[calc(100vh-140px)] sm:h-[calc(100vh-120px)] 
-          overflow-hidden overflow-y-auto">
-
+        <div className="space-y-4 sm:space-y-6">
           {/* Category Name */}
           <div>
             <FormInput
@@ -176,68 +164,72 @@ const CategorySetup = ({
               value={formData?.categoryName}
               onChange={handleChange}
               error={localErrors.categoryName}
-              className={localErrors.categoryName ? 'border-red-500' : ''}
+              className={localErrors.categoryName ? "border-red-500" : ""}
               required
             />
           </div>
 
+          {/* Category Icon */}
           <div>
             <ImageUpload
               id="category-icon"
               label="Icon"
               file={formData?.iconUrl}
-              onChange={(file) => handleImageUpload(file, 'iconUrl')}
+              onChange={(file) => handleImageUpload(file, "iconUrl")}
               accept="image/jpeg,image/jpg,image/png,image/webp"
             />
           </div>
 
+          {/* Banner Image */}
           <div>
             <ImageUpload
               id="category-banner"
               label="Banner Image"
               file={formData?.bannerUrl}
-              onChange={(file) => handleImageUpload(file, 'bannerUrl')}
+              onChange={(file) => handleImageUpload(file, "bannerUrl")}
               accept="image/jpeg,image/jpg,image/png,image/webp"
             />
           </div>
 
           {/* Parent Category */}
           <div>
-            <label className="block mb-1 text-[#1E293B] text-sm font-medium">
+            <label className="mb-1 block text-[#1E293B] text-sm font-medium">
               Parent Category
             </label>
+
             <FilterSelect
               options={parentCategories}
               value={formData?.parentCategory}
-              onChange={(selectedOption) => handleSelectChange(selectedOption, 'parentCategory')}
+              onChange={(selectedOption) =>
+                handleSelectChange(selectedOption, "parentCategory")
+              }
               placeholder="Select parent category"
               className="w-full"
             />
           </div>
 
           {/* Publish Toggle */}
-          <div className="flex items-center justify-between p-3 sm:p-4 border rounded-lg">
-            <span className="font-medium text-gray-800 text-sm sm:text-base">
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 sm:p-4">
+            <span className="text-sm font-medium text-gray-800 sm:text-base">
               Publish
             </span>
-            <ToggleButton 
-              isToggle={isPublish} 
-              handleClick={handleIsPublish} 
-            />
+
+            <ToggleButton isToggle={isPublish} handleClick={handleIsPublish} />
           </div>
 
           {/* Dashboard Visible Toggle */}
-          <div className="flex items-center justify-between p-3 sm:p-4 border rounded-lg">
-            <span className="font-medium text-gray-800 text-sm sm:text-base">
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 sm:p-4">
+            <span className="text-sm font-medium text-gray-800 sm:text-base">
               Dashboard Visible
             </span>
-            <ToggleButton 
-              isToggle={formData?.isDashboardVisible} 
-              handleClick={handleDashboardVisible} 
+
+            <ToggleButton
+              isToggle={formData?.isDashboardVisible}
+              handleClick={handleDashboardVisible}
             />
           </div>
 
-          {/* Priority Input - Conditional */}
+          {/* Priority */}
           {formData?.isDashboardVisible && (
             <div>
               <Input
@@ -245,28 +237,12 @@ const CategorySetup = ({
                 name="priority"
                 onChange={handleChange}
                 labelName="Priority"
-                type='number'
+                type="number"
               />
             </div>
           )}
         </div>
-
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 
-          p-3 sm:p-4 flex flex-col-reverse sm:flex-row 
-          justify-between items-stretch sm:items-center gap-3 sm:gap-0 z-10">
-          <TransparentButton 
-            onClick={handleResetForm} 
-            label='Reset'
-            className="w-full sm:w-auto"
-          />
-          <Button 
-            onClick={handleLocalSubmit}
-            className="w-full sm:w-auto"
-          >
-            {isEditing ? 'Update' : 'Submit'}
-          </Button>
-        </div>
-      </div>
+      </DefaultModal>
     </>
   );
 };

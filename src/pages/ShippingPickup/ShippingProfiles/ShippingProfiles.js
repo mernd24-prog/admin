@@ -18,7 +18,6 @@ import {
   MdStar,
   MdStarBorder,
 } from "react-icons/md";
-import DefaultModal from "../../../components/Atoms/Modal/DefaultMiddleModal ";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import {
   ConfirmModal,
@@ -47,6 +46,7 @@ import {
   updateShippingProfileTemplate,
 } from "../../../Redux/deliverySlice";
 import { MdKeyboardArrowDown } from "react-icons/md";
+import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -521,7 +521,6 @@ function ProfileForm({
             </p>
           </div>
         )}
-
       </section>
 
       {/* Charges */}
@@ -1155,7 +1154,8 @@ export default function ShippingProfiles() {
   };
 
   useEffect(() => {
-    const requestedId = new URLSearchParams(window.location.search).get("edit") || "";
+    const requestedId =
+      new URLSearchParams(window.location.search).get("edit") || "";
     if (!requestedId || openedEditProfileRef.current === requestedId) return;
     const requestedProfile = profilesPayload.list.find(
       (profile) => String(profileId(profile)) === String(requestedId),

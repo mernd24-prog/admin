@@ -258,11 +258,15 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
     <DefaultModal
       isOpen={isOpen}
       onClose={onClose}
+      onSubmit={handleSubmit}
       title={existingReview ? "Edit Product Review" : "Add Product Review"}
-      isButtonView={false}
+      isButtonView={true}
+      submitButtonText={existingReview ? "Update Review" : "Add Review"}
+      closeButtonText="Cancel"
+      loading={saving || loadingExisting}
       width="600px"
     >
-      <div className="space-y-5 pb-4">
+      <div className="space-y-5">
         <p className="-mt-1 text-xs text-gray-500">
           {existingReview
             ? "Update the selected product review details."
@@ -469,33 +473,6 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
             type="PRODUCT_REVIEWS"
             isDisabled={saving}
           />
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4 mt-6">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={saving || loadingExisting}
-            className="inline-flex min-w-[135px] items-center justify-center gap-2 rounded-lg bg-[var(--admin-navy)] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <MdAdd size={18} />
-
-            {saving
-              ? "Saving..."
-              : existingReview
-                ? "Update Review"
-                : "Add Review"}
-          </button>
         </div>
       </div>
     </DefaultModal>
