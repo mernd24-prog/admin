@@ -1575,8 +1575,14 @@ const OrderSummary = () => {
   const shipments = Array.isArray(relations.shipments) ? relations.shipments : [];
   const walletTransactions = Array.isArray(relations.walletTransactions) ? relations.walletTransactions : [];
   const cancellations = Array.isArray(relations.cancellations) ? relations.cancellations : [];
-  const invoice = relations.invoice || relations.taxInvoice || null;
   const returns = Array.isArray(state.returns) ? state.returns : [];
+  const hasPendingItemRequest = cancellations.some((request) =>
+    !["completed", "failed", "rejected"].includes(String(request.status || "").toLowerCase()),
+  ) || returns.some((request) => ["requested", "pending", "under_review"].includes(String(request.status || "").toLowerCase()));
+  const displayedOrderStatus = hasPendingItemRequest && ["delivered", "fulfilled"].includes(String(order.status || "").toLowerCase())
+    ? "partially_delivered"
+    : order.status;
+  const invoice = relations.invoice || relations.taxInvoice || null;
   const sellerGroups = useMemo(() => Object.values(groupItemsBySeller(items, relations)), [items, relations]);
   const sellerSettlements = useMemo(() => {
     const savedSettlements = Array.isArray(relations.sellerSettlements) ? relations.sellerSettlements : [];
@@ -1798,7 +1804,7 @@ const OrderSummary = () => {
             </>
           )}
           <MetricCard label="Payment Status" value={<StatusBadge status={firstDefined(order.payment_status, order.paymentStatus)} dot />} />
-          <MetricCard label="Order Status" value={<StatusBadge status={order.status} dot />} />
+          <MetricCard label="Order Status" value={<StatusBadge status={displayedOrderStatus} dot />} />
           {/* <MetricCard label="Shipment" value={shipmentSummary} /> */}
           <MetricCard label="Items" value={`${items.length} item${items.length === 1 ? "" : "s"}`} />
         </div>
@@ -1884,6 +1890,18 @@ const OrderSummary = () => {
                 </div>
                 {group.items.map((item) => {
                   const itemTax = getReconciledItemTax(item);
+                  const itemCancellation = cancellations.find((request) =>
+                    (request.items || []).some((entry) =>
+                      String(firstDefined(entry.orderItemId, entry.order_item_id, "")) === String(getItemKey(item)),
+                    ),
+                  );
+                  const cancellationDisplayStatus = itemCancellation?.status === "requested"
+                    ? "cancellation_requested"
+                    : itemCancellation?.status === "rejected"
+                      ? null
+                      : itemCancellation?.status && itemCancellation.status !== "completed"
+                        ? "cancellation_approved"
+                        : null;
                   const productSnapshot = normalizeJson(firstDefined(item.product_snapshot, item.productSnapshot), {});
                   const productTitle = firstDefined(item.product_title, item.productTitle, productSnapshot.title, item.product_id, "Product");
                   const variantLabel = getOrderItemVariantLabel(item);
@@ -1917,6 +1935,9 @@ const OrderSummary = () => {
                       <div className="md:col-span-2">
                         <StatusBadge
                           status={firstDefined(
+                            item.effective_status,
+                            item.effectiveStatus,
+                            cancellationDisplayStatus,
                             item.cancellation_status,
                             item.delivery_status,
                             item.deliveryStatus,
@@ -1946,7 +1967,7 @@ const OrderSummary = () => {
           <aside className="space-y-4">
             <Panel title={isSeller ? "Seller Order Summary" : "Customer Payment Breakup"}>
               <InfoRow label="Order Date" value={formatDate(order.created_at)} />
-              <InfoRow label="Status" value={<StatusBadge status={order.status} dot />} />
+              <InfoRow label="Status" value={<StatusBadge status={displayedOrderStatus} dot />} />
               <InfoRow label="Return Window" value={formatDateTime12Hour(firstDefined(order.return_eligible_until, order.returnEligibleUntil), "Starts after delivery")} />
               <InfoRow
                 label={isSeller ? "Payment Collection" : "Payment Method"}
