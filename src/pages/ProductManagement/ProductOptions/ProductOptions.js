@@ -21,6 +21,7 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import { useListPage } from "../../../hooks/useListPage";
 import useDropdownOptions from "../../../hooks/useDropdownOptions";
+import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 
 const DISPLAY_TYPE_META = {
   button: { label: "Button", color: "bg-blue-100 text-blue-700" },
@@ -429,203 +430,159 @@ export default function ProductOptions() {
         </section>
       </div>
 
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-5 backdrop-blur-sm"
-          onClick={closeModal}
-        >
-          <div
-            className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between border-b border-gray-200 px-6 py-4">
-              <div>
-                <h2 className="text-base font-semibold text-gray-900">
-                  {editing ? "Edit Option Master" : "New Option Master"}
-                </h2>
+      {/* Add / Edit Option Master Side Drawer */}
+      <DefaultModal
+        isOpen={Boolean(modalOpen)}
+        onClose={closeModal}
+        onSubmit={handleSave}
+        title={editing ? "Edit Option Master" : "New Option Master"}
+        isButtonView={true}
+        submitButtonText={editing ? "Update" : "Create"}
+        closeButtonText="Cancel"
+        loading={saving}
+        width="600px"
+      >
+        <div className="space-y-4">
+          {/* Name */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Name <span className="text-red-500">*</span>
+            </label>
 
-                <p className="mt-0.5 text-xs text-gray-500">
-                  {editing
-                    ? "Update option master details and display settings."
-                    : "Create a new option master for product variants."}
+            <input
+              autoFocus
+              value={form.name}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  name: e.target.value,
+                  slug: f.slug || slugify(e.target.value),
+                }))
+              }
+              placeholder="e.g. Color, Size, RAM, Material"
+              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:ring-0 ${
+                errors.name
+                  ? "border-red-400 focus:border-red-400"
+                  : "border-gray-300 focus:border-[var(--admin-gold)]"
+              }`}
+            />
+
+            {errors.name && (
+              <p className="mt-1 text-xs text-red-500">{errors.name}</p>
+            )}
+          </div>
+
+          {/* Slug */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Slug
+            </label>
+
+            <input
+              value={form.slug}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  slug: slugify(e.target.value),
+                }))
+              }
+              placeholder="e.g. size, color, storage"
+              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:ring-0 ${
+                errors.slug
+                  ? "border-red-400 focus:border-red-400"
+                  : "border-gray-300 focus:border-[var(--admin-gold)]"
+              }`}
+            />
+
+            {errors.slug && (
+              <p className="mt-1 text-xs text-red-500">{errors.slug}</p>
+            )}
+          </div>
+
+          {/* Display Type */}
+          <div className="border-t border-gray-100 pt-4">
+            <div className="mb-2.5">
+              <label className="block text-sm font-semibold text-gray-900">
+                Display Type
+              </label>
+
+              <p className="mt-0.5 text-xs text-gray-500">
+                Choose how values appear on product and variant forms.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {displayTypes.options.map((dt) => {
+                const isSelected = form.displayType === dt.value;
+
+                return (
+                  <button
+                    key={dt.value}
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        displayType: dt.value,
+                      }))
+                    }
+                    className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
+                      isSelected
+                        ? "border-[var(--admin-gold)] bg-[var(--admin-gold)]/10 font-medium text-[var(--admin-navy)]"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-[var(--admin-gold)] hover:bg-gray-50"
+                    }`}
+                  >
+                    {dt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="border-t border-gray-100 pt-4">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Description
+              <span className="ml-1 font-normal text-gray-400">(Optional)</span>
+            </label>
+
+            <textarea
+              rows={2}
+              value={form.description}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  description: e.target.value,
+                }))
+              }
+              placeholder="e.g. Available color options for this product"
+              className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--admin-gold)] focus:ring-0"
+            />
+          </div>
+
+          {/* Active */}
+          <div className="border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2.5">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Active</p>
+
+                <p className="text-xs text-gray-400">
+                  Visible to sellers when enabled.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={closeModal}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-6 py-4">
-              {/* Name */}
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Name <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  autoFocus
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      name: e.target.value,
-                      slug: f.slug || slugify(e.target.value),
-                    }))
-                  }
-                  placeholder="e.g. Color, Size, RAM, Material"
-                  className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:ring-0 ${
-                    errors.name
-                      ? "border-red-400 focus:border-red-400"
-                      : "border-gray-300 focus:border-[var(--admin-gold)]"
-                  }`}
-                />
-                {errors.name && (
-                  <p className="mt-1 text-xs text-red-500">{errors.name}</p>
-                )}
-              </div>
-
-              {/* Slug */}
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Slug
-                </label>
-
-                <input
-                  value={form.slug}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      slug: slugify(e.target.value),
-                    }))
-                  }
-                  placeholder="e.g. size, color, storage"
-                  className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:ring-0 ${
-                    errors.slug
-                      ? "border-red-400 focus:border-red-400"
-                      : "border-gray-300 focus:border-[var(--admin-gold)]"
-                  }`}
-                />
-                {errors.slug && (
-                  <p className="mt-1 text-xs text-red-500">{errors.slug}</p>
-                )}
-              </div>
-
-              {/* Display Type */}
-              <div className="border-t border-gray-100 pt-4">
-                <div className="mb-2.5">
-                  <label className="block text-sm font-semibold text-gray-900">
-                    Display Type
-                  </label>
-
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    Choose how values appear on product and variant forms.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  {displayTypes.options.map((dt) => {
-                    const isSelected = form.displayType === dt.value;
-
-                    return (
-                      <button
-                        key={dt.value}
-                        type="button"
-                        onClick={() =>
-                          setForm((f) => ({
-                            ...f,
-                            displayType: dt.value,
-                          }))
-                        }
-                        className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
-                          isSelected
-                            ? "border-[var(--admin-gold)] bg-[var(--admin-gold)]/10 font-medium text-[var(--admin-navy)]"
-                            : "border-gray-300 bg-white text-gray-700 hover:border-[var(--admin-gold)] hover:bg-gray-50"
-                        }`}
-                      >
-                        {dt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="border-t border-gray-100 pt-4">
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Description
-                  <span className="ml-1 font-normal text-gray-400">
-                    (Optional)
-                  </span>
-                </label>
-
-                <textarea
-                  rows={2}
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      description: e.target.value,
-                    }))
-                  }
-                  placeholder="e.g. Available color options for this product"
-                  className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--admin-gold)] focus:ring-0"
-                />
-              </div>
-
-              {/* Active */}
-              <div className="border-t border-gray-100 pt-4">
-                <div className="flex items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2.5 transition focus-within:border-[var(--admin-gold)]">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Active</p>
-
-                    <p className="text-xs text-gray-400">
-                      Visible to sellers when enabled.
-                    </p>
-                  </div>
-
-                  <ToggleButton
-                    isToggle={form.active}
-                    handleClick={() =>
-                      setForm((f) => ({
-                        ...f,
-                        active: !f.active,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 bg-gray-50/70 px-6 py-3">
-              <button
-                type="button"
-                onClick={closeModal}
-                disabled={saving}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="inline-flex min-w-[100px] items-center justify-center rounded-lg bg-[var(--admin-navy)] px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving ? "Saving..." : editing ? "Update" : "Create"}
-              </button>
+              <ToggleButton
+                isToggle={form.active}
+                handleClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    active: !f.active,
+                  }))
+                }
+              />
             </div>
           </div>
         </div>
-      )}
+      </DefaultModal>
 
       <ConfirmModal
         open={Boolean(deleteTarget)}
