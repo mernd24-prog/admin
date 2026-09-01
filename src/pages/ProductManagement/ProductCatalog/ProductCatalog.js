@@ -23,7 +23,6 @@ import {
   duplicateProduct,
   enableDisableProductCatalogs,
   getProductById,
-  getProductModerationQueue,
   getProductRevisions,
   getProducts,
   getList as getCategoryList,
@@ -356,6 +355,9 @@ const ProductCatalog = () => {
               ],
           }
         : {}),
+      ...(isChangePendingFilter
+        ? { revisionStatus: "change_pending" }
+        : {}),
     }),
     [
       appliedFilters,
@@ -370,33 +372,7 @@ const ProductCatalog = () => {
   const fetchProductsList = useCallback(async () => {
     setLoading(true);
     try {
-      const response = isChangePendingFilter
-        ? await dispatch(
-            getProductModerationQueue({
-              status: "change_pending",
-              page: list.page,
-              limit: list.pageSize,
-              sortBy: getSortByParam(list.sortKey, list.sortDir),
-              sortDir: list.sortDir,
-              ...(isSellerPanelUser
-                ? { organizationId: getSelectedSellerOrganizationId() }
-                : {}),
-              ...(appliedFilters?.category?.value
-                ? { category: appliedFilters.category.value }
-                : {}),
-              ...(appliedFilters?.search ? { q: appliedFilters.search } : {}),
-              ...(appliedFilters?.sellerName?.value
-                ? { sellerId: appliedFilters.sellerName.value }
-                : {}),
-              ...(appliedFilters?.dateFrom
-                ? { dateFrom: appliedFilters.dateFrom }
-                : {}),
-              ...(appliedFilters?.dateTo
-                ? { dateTo: appliedFilters.dateTo }
-                : {}),
-            }),
-          )
-        : await dispatch(getProducts(buildProductQuery(list.page)));
+      const response = await dispatch(getProducts(buildProductQuery(list.page)));
       setApiRes(response?.payload?.data || { list: [], total: 0 });
     } catch (err) {
       toast.error("Failed to fetch products");

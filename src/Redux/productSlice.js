@@ -33,6 +33,7 @@ const toProductListParams = (params = {}) => ({
     ...(params.keyWord || params.search || params.q ? { q: params.keyWord || params.search || params.q } : {}),
     ...(params.category ? { category: params.category } : {}),
     ...(params.status ? { status: params.status } : {}),
+    ...(params.revisionStatus ? { revisionStatus: params.revisionStatus } : {}),
     ...(params.sellerId ? { sellerId: params.sellerId } : {}),
     ...(params.organizationId ? { organizationId: params.organizationId } : {}),
     ...(params.storeId ? { storeId: params.storeId } : {}),
@@ -244,7 +245,7 @@ const initialState = {
     getAllWarrantyListData: {}, getAllTaxListData: {}, getAllBatchListData: {},
     createProductsData: {}, getProductsData: {}, updateProductsData: {}, enableDisableProductCatalogsData: {}, updateProductsByIdData: {},
     deleteProductsData: {}, approveDisapproveData: {}, getAllProductsData: {}, createCategoryData: {},
-    getHsnListData: {}, createHsnData: {}, updateHsnData: {}, enableDisableHsnData: {}, softDeleteHsnData: {}, getAllHsnData: {}, productModerationQueueData: {},
+    getHsnListData: {}, createHsnData: {}, updateHsnData: {}, enableDisableHsnData: {}, softDeleteHsnData: {}, getAllHsnData: {},
     getProductRevisionsData: {}, reviewProductRevisionData: {},
     getCategoryAttributesData: {}, updateCategoryAttributesData: {},
     productPrefillData: {},
@@ -585,21 +586,6 @@ export const approveDisapprove = createApiThunkPrivate('approveDisapprove', (pay
 export const getAllProducts = createApiThunkPrivate('getAllProducts', ENDPOINTS.products.listForPanel, 'GET', true, {
     transformParams: toProductListParams,
 })
-export const getProductModerationQueue = createApiThunkPrivate('getProductModerationQueue', ENDPOINTS.products.moderationQueue, 'GET', true, {
-    transformParams: (params = {}) => ({
-        ...(params.status ? { status: params.status } : {}),
-        ...(params.keyWord || params.search || params.q ? { q: params.keyWord || params.search || params.q } : {}),
-        ...(params.category ? { category: params.category } : {}),
-        ...(params.sellerId ? { sellerId: params.sellerId } : {}),
-        ...(params.productType ? { productType: params.productType } : {}),
-        ...(params.dateFrom ? { dateFrom: params.dateFrom } : {}),
-        ...(params.dateTo ? { dateTo: params.dateTo } : {}),
-        ...(params.page ? { page: Number(params.page) } : {}),
-        ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
-        ...(params.sortBy ? { sortBy: params.sortBy } : {}),
-        ...(params.sortDir ? { sortDir: params.sortDir } : {}),
-    }),
-})
 export const getProductRevisions = createApiThunkPrivate('getProductRevisions', (payload) => ENDPOINTS.products.revisions(firstProductId(payload)), 'GET', true, {
     transformParams: (params = {}) => ({
         ...(params.status ? { status: params.status } : {}),
@@ -775,7 +761,6 @@ const countrySlice = createSlice({
         createExtraReducersForThunk(builder, approveDisapprove, 'approveDisapproveData')
         createExtraReducersForThunk(builder, getAllBatchList, 'getAllBatchListData')
         createExtraReducersForThunk(builder, getAllProducts, 'getAllProductsData')
-        createExtraReducersForThunk(builder, getProductModerationQueue, 'productModerationQueueData')
         createExtraReducersForThunk(builder, getProductRevisions, 'getProductRevisionsData')
         createExtraReducersForThunk(builder, reviewProductRevision, 'reviewProductRevisionData')
         createExtraReducersForThunk(builder, createCategory, 'createCategoryData')

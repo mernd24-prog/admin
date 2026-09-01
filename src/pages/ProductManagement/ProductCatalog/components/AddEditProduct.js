@@ -342,6 +342,11 @@ export default function ProductManagementUI() {
     [prefillData],
   );
 
+  const collectionOptions = useMemo(
+    () => prefillList("collections").filter((item) => (item.active ?? item.isActive) !== false),
+    [prefillList],
+  );
+
   const toSelectId = (record = {}) =>
     String(
       record.categoryKey ||
@@ -3233,14 +3238,14 @@ export default function ProductManagementUI() {
       {
         id: "tags",
         title: "Tags & Discovery",
-        description: "Tags, badges, and discoverability settings.",
+        description: "Tags and discoverability settings.",
         icon: <BsMenuApp />,
         component: (
           <div className="space-y-6">
             <div className="product-form-section-header">
               <h3>Tags &amp; Discovery</h3>
               <p>
-                Tags, badges, and discoverability settings.
+                Tags and discoverability settings.
               </p>
             </div>
             <div className="space-y-2">
@@ -3254,6 +3259,23 @@ export default function ProductManagementUI() {
                 placeholder="Add tag…"
                 maxTags={20}
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="admin-label">Collections</label>
+              <p className="text-xs text-gray-500">Place this product in one or more curated customer collections.</p>
+              {collectionOptions.length ? (
+                <div className="grid gap-2 rounded-xl border border-[var(--admin-line)] p-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {collectionOptions.map((collection) => {
+                    const value = String(collection._id || collection.slug || collection.name);
+                    const selected = Array.isArray(formData?.collectionIds) && formData.collectionIds.includes(value);
+                    return <label key={value} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-gray-50">
+                      <input type="checkbox" checked={selected} onChange={() => setFormData((prev) => ({ ...prev, collectionIds: selected ? (prev.collectionIds || []).filter((id) => id !== value) : [...(prev.collectionIds || []), value] }))} />
+                      <span className="text-sm">{collection.name}</span>
+                    </label>;
+                  })}
+                </div>
+              ) : <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-700">No active collections. Create one from Catalog Management → Collections.</p>}
             </div>
 
             {/* <div className="rounded-xl border border-[var(--admin-line)] bg-white p-4">
@@ -3310,6 +3332,7 @@ export default function ProductManagementUI() {
     ],
     [
       formData,
+      collectionOptions,
       formattedData,
       createSelectOptions,
       handleChange,

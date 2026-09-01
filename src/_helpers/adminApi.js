@@ -20,7 +20,7 @@ export const DEFAULT_PLATFORM_MODULES = [
   "subscriptions",
   "rbac",
   "warranty",
-  "badges",
+  "collections",
   "loyalty",
   "recommendations",
   "returns",

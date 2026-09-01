@@ -149,7 +149,6 @@ export const ENDPOINTS = {
       (productId) => `/admin/products/${productId}`,
       (productId) => `/products/manage/${productId}`,
     ),
-    moderationQueue: "/admin/products/moderation-queue",
     moderate: (productId) => `/admin/products/${productId}/moderate`,
     revisions: byPanelFn(
       (productId) => `/admin/products/${productId}/revisions`,
@@ -505,9 +504,8 @@ export const ENDPOINTS = {
       `/admin/platform/product-variants/${variantId}`,
     brands: "/admin/platform/brands",
     brand: (brandId) => `/admin/platform/brands/${brandId}`,
-    badges: "/admin/platform/badges",
-    badge: (badgeId) => `/admin/platform/badges/${badgeId}`,
-    badgesActive: "/admin/platform/badges/active",
+    collections: "/admin/platform/collections",
+    collection: (collectionId) => `/admin/platform/collections/${collectionId}`,
     warrantyTemplates: "/admin/platform/warranty-templates",
     warrantyTemplate: (templateId) =>
       `/admin/platform/warranty-templates/${templateId}`,

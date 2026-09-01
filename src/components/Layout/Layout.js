@@ -82,9 +82,7 @@ const Orders = React.lazy(
 const Carts = React.lazy(
   () => import("../../pages/OrdersManagement/Carts/Carts"),
 );
-const CheckoutQuote = React.lazy(
-  () => import("../../pages/OrdersManagement/CheckoutQuote/CheckoutQuote"),
-);
+ 
 const Payments = React.lazy(
   () => import("../../pages/OrdersManagement/Payments/Payments"),
 );
@@ -157,10 +155,7 @@ const ProductCategories = React.lazy(
 const OrderSummary = React.lazy(
   () => import("../../pages/OrdersManagement/Orders/components/ViewOrders"),
 );
-const SubscriptionOrders = React.lazy(
-  () =>
-    import("../../pages/OrdersManagement/SubscriptionOrders/SubscriptionOrders"),
-);
+ 
 const ManageCountry = React.lazy(
   () => import("../../pages/UserManagement/ManageCountry/ManageCountry"),
 );
@@ -279,16 +274,12 @@ const WalletTransactions = React.lazy(
   () =>
     import("../../pages/OrdersManagement/WalletTransactions/WalletTransactions"),
 );
-const ProductModerationQueue = React.lazy(
-  () =>
-    import("../../pages/ProductManagement/ProductModerationQueue/ProductModerationQueue"),
-);
+
 const NotificationTemplates = React.lazy(
   () =>
     import("../../pages/UserManagement/NotificationAdmin/NotificationTemplates"),
 );
 
-const BadgesPage = React.lazy(() => import("../../pages/Admin/Badge/Badges"));
 const AnalyticsEvents = React.lazy(
   () => import("../../pages/Reports/AnalyticsEvents"),
 );
@@ -575,7 +566,7 @@ function Layout() {
       { path: "/inventory-audit", redirectTo: "/app/inventory" },
       { path: "/orders", render: () => <Orders /> },
       { path: "/carts", render: () => <Carts /> },
-      { path: "/checkout-quote", render: () => <CheckoutQuote /> },
+    
       { path: "/payments", render: () => <Payments /> },
       { path: "/cod-collections", render: () => <CodCollections /> },
       {
@@ -641,7 +632,6 @@ function Layout() {
       { path: "/shipping-profiles", render: () => <ShippingProfiles /> },
       { path: "/categories", render: () => <ProductCategories /> },
       { path: "/category-attributes", redirectTo: "/app/categories" },
-      { path: "/subscription-orders", render: () => <SubscriptionOrders /> },
 
       { path: "/view-orders", render: () => <OrderSummary /> },
       {
@@ -751,7 +741,6 @@ function Layout() {
         render: () => <NotificationTemplates />,
       },
       { path: "/cancellations", render: () => <Cancellations /> },
-      { path: "/badges", render: () => <BadgesPage /> },
       { path: "/tax-invoices", render: () => <TaxInvoices /> },
       {
         path: "/tax-invoices/:invoiceId",
@@ -774,10 +763,7 @@ function Layout() {
       { path: "/system-health", render: () => <SystemHealth /> },
       { path: "/queue-management", render: () => <QueueManagement /> },
       { path: "/dead-letter-queue", render: () => <DeadLetterQueue /> },
-      {
-        path: "/product-moderation-queue",
-        render: () => <ProductModerationQueue />,
-      },
+
       { path: "/analytics", render: () => <AnalyticsDashboard /> },
       { path: "/reports-sales", render: () => <SalesReport /> },
       { path: "/reports-products", render: () => <ProductAnalytics /> },

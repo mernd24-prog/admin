@@ -26,7 +26,6 @@ const initialState = {
   adminVendorsData: {},
   updateVendorStatusData: {},
   reviewSellerKycData: {},
-  adminProductModerationQueueData: {},
   moderateAdminProductData: {},
   adminOrdersData: {},
   adminPaymentsData: {},
@@ -189,7 +188,6 @@ const pickQuery = (keys = []) => (params = {}) =>
 
 const listAccessModuleQueryKeys = ["role", "roleId", "roleSlug", "userId", "active", "includePermissions"];
 const listOrderQueryKeys = ["status", "sellerId", "fromDate", "toDate", "limit", "offset"];
-const moderationQueueQueryKeys = ["status", "category", "page", "limit"];
 const updateModerationKeys = ["status", "rejectionReason", "checklist"];
 
 const toApiKeyBody = (payload = {}) => ({
@@ -463,14 +461,6 @@ export const reviewAdminSellerKyc = createApiThunkPrivate(
   { transformBody: toKycReviewBody }
 );
 
-export const getAdminProductModerationQueue = createApiThunkPrivate(
-  "adminCore/getAdminProductModerationQueue",
-  ENDPOINTS.products.moderationQueue,
-  "GET",
-  true,
-  { transformParams: pickQuery(moderationQueueQueryKeys) }
-);
-
 export const moderateAdminProduct = createApiThunkPrivate(
   "adminCore/moderateAdminProduct",
   (payload) => ENDPOINTS.products.moderate(payload?.productId || firstId(payload)),
@@ -670,7 +660,6 @@ const adminCoreSlice = createSlice({
       [getAdminVendors, "adminVendorsData"],
       [updateAdminVendorStatus, "updateVendorStatusData"],
       [reviewAdminSellerKyc, "reviewSellerKycData"],
-      [getAdminProductModerationQueue, "adminProductModerationQueueData"],
       [moderateAdminProduct, "moderateAdminProductData"],
       [getAdminOrders, "adminOrdersData"],
       [getAdminPayments, "adminPaymentsData"],

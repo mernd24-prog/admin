@@ -979,6 +979,16 @@ const Returns = () => {
         ),
       },
       {
+        key: "orderNumber",
+        label: "Order",
+        sortable: true,
+        render: (_, row) => (
+          <div>
+            <OrderLink orderId={row.orderId || row.order_id} orderNumber={row.orderNumber || row.order_number} />
+          </div>
+        ),
+      },
+      {
         key: "buyerId",
         label: "Buyer",
         sortable: true,

@@ -240,7 +240,7 @@ const MODULE_LABELS = {
   "users-addresses": "User Addresses",
   preferences: "Preferences",
   collections: "Collections",
-  badges: "Badges & Ribbons",
+  
   "wallet-management": "Wallet Management",
   "notification-templates": "Notification Templates",
   "fraud-cases": "Fraud Cases",
@@ -629,7 +629,7 @@ const ROUTE_MODULES = [
   ],
 
   // Orders Management
-  [["/orders", "/orders/view", "/view-orders", "/checkout-quote"], ["orders"]],
+  [["/orders", "/orders/view", "/view-orders" ], ["orders"]],
   [["/carts"], ["carts"]],
   [["/product-reviews"], ["reviews", "orders"]],
   [["/subscription-orders"], ["subscriptions", "orders"]],
