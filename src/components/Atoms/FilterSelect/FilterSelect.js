@@ -1,5 +1,6 @@
-import Select from "react-select";
+import Select, { components } from "react-select";
 import AsyncSelect from "react-select/async";
+import { ChevronDown } from "lucide-react";
 
 const customStyles = (error, controlHeight) => ({
   control: (provided, state) => ({
@@ -23,57 +24,67 @@ const customStyles = (error, controlHeight) => ({
       borderColor: error ? "var(--admin-danger)" : "",
     },
   }),
+
   valueContainer: (provided) => ({
     ...provided,
     padding: "2px 8px",
   }),
+
   placeholder: (provided) => ({
     ...provided,
     color: "var(--admin-muted)",
     fontSize: "0.875rem",
     paddingLeft: "2px",
   }),
+
   singleValue: (provided) => ({
     ...provided,
     color: "var(--admin-ink)",
     fontSize: "0.875rem",
     paddingLeft: "2px",
   }),
+
   input: (provided) => ({
     ...provided,
     margin: 0,
     paddingBottom: 0,
     paddingTop: 0,
   }),
+
   multiValue: (provided) => ({
     ...provided,
     minWidth: 0,
     maxWidth: "100%",
   }),
+
   multiValueLabel: (provided) => ({
     ...provided,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   }),
+
   dropdownIndicator: (provided) => ({
     ...provided,
     padding: "0 8px 0 4px",
-    // color: hasError ? '#DC3545' : '#718096',
   }),
+
   indicatorsContainer: (provided) => ({
     ...provided,
     flexShrink: 0,
   }),
+
   indicatorSeparator: () => ({
     display: "none",
   }),
+
   menu: (provided) => ({
     ...provided,
     borderRadius: 8,
     zIndex: 10050,
     position: "absolute",
   }),
+
   option: (provided, state) => ({
     ...provided,
     backgroundColor: state.isSelected
@@ -87,30 +98,57 @@ const customStyles = (error, controlHeight) => ({
     whiteSpace: "normal",
     wordBreak: "break-word",
   }),
+
   menuList: (provided) => ({
     ...provided,
     scrollbarColor: "#1F1B5F transparent",
     scrollbarWidth: "thin",
+
     "&::-webkit-scrollbar": {
       width: "6px",
       height: "6px",
     },
+
     "&::-webkit-scrollbar-track": {
       background: "transparent",
     },
+
     "&::-webkit-scrollbar-thumb": {
       background: "#1F1B5F",
       borderRadius: "4px",
     },
+
     "&::-webkit-scrollbar-thumb:hover": {
       background: "#16134a",
     },
   }),
+
   menuPortal: (provided) => ({
     ...provided,
     zIndex: 10050,
   }),
 });
+
+/**
+ * Custom dropdown arrow
+ * Rotates when the react-select menu is open.
+ */
+const CustomDropdownIndicator = (props) => {
+  const { selectProps } = props;
+  const isOpen = selectProps.menuIsOpen;
+
+  return (
+    <components.DropdownIndicator {...props}>
+      <ChevronDown
+        size={18}
+        strokeWidth={2}
+        className={`transition-transform duration-200 ${
+          isOpen ? "rotate-180" : "rotate-0"
+        }`}
+      />
+    </components.DropdownIndicator>
+  );
+};
 
 const FilterSelect = ({
   label,
@@ -118,7 +156,9 @@ const FilterSelect = ({
   value,
   onChange,
   isDisabled = false,
-  placeholder = label ? label : "Search by User's Name or Username",
+  placeholder = label
+    ? label
+    : "Search by User's Name or Username",
   isMulti = false,
   error = "",
   required,
@@ -137,18 +177,20 @@ const FilterSelect = ({
   controlHeight,
 }) => {
   const SelectComponent = loadOptions ? AsyncSelect : Select;
+
   const menuPortalTarget =
     typeof document !== "undefined" ? document.body : undefined;
 
   return (
-    <div className={` relative  ${className}`}>
+    <div className={`relative ${className}`}>
       {label && (
         <label htmlFor={inputId} className="admin-label">
           {label}
           {required && <span className="admin-required">*</span>}
         </label>
       )}
-      <div className="relative text-sm min-w-0 ">
+
+      <div className="relative text-sm min-w-0">
         <SelectComponent
           styles={customStyles(error, controlHeight)}
           className="capitalize"
@@ -156,8 +198,14 @@ const FilterSelect = ({
           inputId={inputId}
           name={name}
           {...(loadOptions
-            ? { loadOptions, defaultOptions, cacheOptions }
-            : { options })}
+            ? {
+                loadOptions,
+                defaultOptions,
+                cacheOptions,
+              }
+            : {
+                options,
+              })}
           value={value}
           onChange={onChange}
           onBlur={onBlur}
@@ -171,13 +219,21 @@ const FilterSelect = ({
           menuPortalTarget={menuPortalTarget}
           menuPosition="fixed"
           aria-invalid={Boolean(error)}
+          components={{
+            DropdownIndicator: CustomDropdownIndicator,
+          }}
         />
+
         {error ? (
           <p className="admin-field-error" role="alert">
             {error}
           </p>
         ) : (
-          helperText && <p className="admin-field-help">{helperText}</p>
+          helperText && (
+            <p className="admin-field-help">
+              {helperText}
+            </p>
+          )
         )}
       </div>
     </div>
