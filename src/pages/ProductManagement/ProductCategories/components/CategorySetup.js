@@ -16,6 +16,10 @@ import FormSection from "../../../../components/Atoms/FormSection/FormSection";
 import FormToggleRow from "../../../../components/Atoms/FormToggleRow/FormToggleRow";
 import FormSelectGroup from "../../../../components/Atoms/FormSelectGroup/FormSelectGroup";
 
+const CATEGORY_IMAGE_ACCEPT =
+  "image/jpeg,image/jpg,image/png,image/webp,image/svg+xml";
+const CATEGORY_IMAGE_HELPER_TEXT = "Supports: JPEG, PNG, WEBP, SVG";
+
 const CategorySetup = ({
   isOpen,
   handleClose,
@@ -104,14 +108,20 @@ const CategorySetup = ({
 
   const handleImageUpload = async (file, fieldName) => {
     if (!file) return;
-    const allowedTypes = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
-    const allowedExtensions = ["png", "jpg", "jpeg", "webp"];
+    const allowedTypes = [
+      "image/png",
+      "image/jpg",
+      "image/jpeg",
+      "image/webp",
+      "image/svg+xml",
+    ];
+    const allowedExtensions = ["png", "jpg", "jpeg", "webp", "svg"];
     const fileExtension = file.name?.split(".").pop()?.toLowerCase();
     if (
       !allowedTypes.includes(file.type) &&
       !allowedExtensions.includes(fileExtension)
     ) {
-      toast.error("Only JPG/PNG/WEBP files are allowed");
+      toast.error("Only JPG/PNG/WEBP/SVG files are allowed");
       return;
     }
 
@@ -176,40 +186,29 @@ const CategorySetup = ({
                 required
               />
 
-              {/* Parent Category */}
-              <FormSelectGroup
-                label="Parent Category"
-                options={parentCategories}
-                value={formData?.parentCategory}
-                onChange={(selectedOption) =>
-                  handleSelectChange(selectedOption, "parentCategory")
-                }
-                placeholder="Select parent category"
-              />
-            </div>
-          </FormSection>
+          {/* Category Icon */}
+          <div>
+            <ImageUpload
+              id="category-icon"
+              label="Icon"
+              file={formData?.iconUrl}
+              onChange={(file) => handleImageUpload(file, "iconUrl")}
+              accept={CATEGORY_IMAGE_ACCEPT}
+              helperText={CATEGORY_IMAGE_HELPER_TEXT}
+            />
+          </div>
 
-          {/* ==================== Category Images ==================== */}
-          <FormSection
-            title="Category Images"
-            description="Upload an icon and banner image for this category."
-          >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* Category Icon */}
-              <ImageUpload
-                id="category-icon"
-                label="Category Icon"
-                subtext="Recommended: PNG or WEBP"
-                file={formData?.iconUrl}
-                onChange={(file) => handleImageUpload(file, "iconUrl")}
-                onRemove={() =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    iconUrl: "",
-                  }))
-                }
-                accept="image/jpeg,image/jpg,image/png,image/webp"
-              />
+          {/* Banner Image */}
+          <div>
+            <ImageUpload
+              id="category-banner"
+              label="Banner Image"
+              file={formData?.bannerUrl}
+              onChange={(file) => handleImageUpload(file, "bannerUrl")}
+              accept={CATEGORY_IMAGE_ACCEPT}
+              helperText={CATEGORY_IMAGE_HELPER_TEXT}
+            />
+          </div>
 
               {/* Banner Image */}
               <ImageUpload

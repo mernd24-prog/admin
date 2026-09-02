@@ -19,11 +19,17 @@ const ImageUpload = ({
   labelClassName = "",
   previewClassName = "",
   iconClassName = "",
-  dropzoneClassName = "",
-  required = false,
+  helperText,
+  required,
 }) => {
-  const fileInputRef = useRef(null);
-  const displayError = errorMessage || error;
+  const fileInputRef = useRef();
+  const supportedFormats =
+    helperText ||
+    `Supports: ${
+      String(accept).includes("image/svg+xml")
+        ? "JPEG, PNG, WEBP, SVG"
+        : "JPEG, PNG, WEBP"
+    }`;
 
   const handleFileChange = (e) => {
     if (isDisabled || isLoading) return;
@@ -154,7 +160,7 @@ const ImageUpload = ({
               <p className="text-xs font-medium text-gray-700">Click to browse or drop file</p>
               <div className="flex items-center justify-center text-[11px] text-gray-400">
                 <FaImage className="mr-1" />
-                <span>Supports: JPEG, PNG, WEBP</span>
+                <span>{supportedFormats}</span>
               </div>
             </div>
           </div>

@@ -6,6 +6,10 @@ import DefaultModal from '../../../../../components/Atoms/Modal/DefaultRightSide
 import FormToggleRow from '../../../../../components/Atoms/FormToggleRow/FormToggleRow'
 import Input from '../../../../../components/Atoms/Input/Input'
 
+const CATEGORY_IMAGE_ACCEPT =
+    "image/jpeg,image/jpg,image/png,image/webp,image/svg+xml";
+const CATEGORY_IMAGE_HELPER_TEXT = "Supports: JPEG, PNG, WEBP, SVG";
+
 const toTitleCase = (str) =>
     str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
 
@@ -42,8 +46,8 @@ const AddCategoryModal = ({
                     subtext="Recommended: PNG or WEBP"
                     file={formData?.iconUrl}
                     onChange={(file) => handleFileUpload(file, 'iconUrl')}
-                    onRemove={() => handleFileUpload('', 'iconUrl')}
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    accept={CATEGORY_IMAGE_ACCEPT}
+                    helperText={CATEGORY_IMAGE_HELPER_TEXT}
                 />
                 <ImageUpload
                     id="category-banner"
@@ -51,8 +55,8 @@ const AddCategoryModal = ({
                     subtext="Recommended: JPG, PNG or WEBP"
                     file={formData?.bannerUrl}
                     onChange={(file) => handleFileUpload(file, 'bannerUrl')}
-                    onRemove={() => handleFileUpload('', 'bannerUrl')}
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    accept={CATEGORY_IMAGE_ACCEPT}
+                    helperText={CATEGORY_IMAGE_HELPER_TEXT}
                 />
 
                 <FormSelectGroup
