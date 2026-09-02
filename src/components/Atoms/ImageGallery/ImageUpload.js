@@ -19,10 +19,14 @@ const ImageUpload = ({
   labelClassName = "",
   previewClassName = "",
   iconClassName = "",
+  dropzoneClassName = "",
   helperText,
   required,
 }) => {
   const fileInputRef = useRef();
+  const displayError =
+    errorMessage ||
+    (typeof error === "string" ? error : error?.message || "");
   const supportedFormats =
     helperText ||
     `Supports: ${
