@@ -409,6 +409,10 @@ export const toUserUpdateBody = (payload = {}) => {
         : {}),
     };
   }
+  // Allow updating password when provided (admin-initiated password change)
+  if (payload.password) {
+    body.password = payload.password;
+  }
   return body;
 };
 

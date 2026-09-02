@@ -147,6 +147,26 @@ const Sellers = () => {
       else if (formData.password !== formData.confirmPassword)
         errs.confirmPassword = "Passwords do not match";
     }
+    // When editing, password fields are optional — validate only if any is provided
+    if (isEdit && (formData.password?.trim() || formData.confirmPassword?.trim())) {
+      if (formData.password?.trim()) {
+        if (formData.password.length < 8)
+          errs.password = "At least 8 characters";
+        else if (formData.password.length > 15)
+          errs.password = "Max 15 characters";
+        else if (!/[A-Z]/.test(formData.password))
+          errs.password = "At least one uppercase letter";
+        else if (!/[a-z]/.test(formData.password))
+          errs.password = "At least one lowercase letter";
+        else if (!/[0-9]/.test(formData.password))
+          errs.password = "At least one number";
+        else if (!/[^A-Za-z0-9]/.test(formData.password))
+          errs.password = "At least one special character";
+      }
+      if (!formData.confirmPassword?.trim()) errs.confirmPassword = "Please confirm your password";
+      else if (formData.password !== formData.confirmPassword)
+        errs.confirmPassword = "Passwords do not match";
+    }
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -194,14 +214,17 @@ const Sellers = () => {
     if (!validateForm(true)) return;
     setSaving(true);
     try {
-      const res = await dispatch(
-        updateSeller({
-          _id: formData._id,
-          full_name: formData.full_name.trim(),
-          email: formData.email.trim(),
-          isDisable: formData.isDisable,
-        }),
-      ).unwrap();
+      const payload = {
+        _id: formData._id,
+        full_name: formData.full_name.trim(),
+        email: formData.email.trim(),
+        isDisable: formData.isDisable,
+      };
+      if (formData.password?.trim()) {
+        payload.password = formData.password;
+        payload.confirmPassword = formData.confirmPassword;
+      }
+      const res = await dispatch(updateSeller(payload)).unwrap();
       if (res.error) {
         toast.error(res.error);
         return;
@@ -593,6 +616,27 @@ const Sellers = () => {
             required
             disabled
           />
+          <div className="grid grid-cols-2 gap-4">
+            <FormInput
+              label="New Password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              error={errors.password}
+              maxLength={15}
+              helperText="Leave blank to keep current password. 8–15 chars with uppercase, lowercase, number and special character"
+            />
+            <FormInput
+              label="Confirm New Password"
+              name="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
+              error={errors.confirmPassword}
+              maxLength={15}
+            />
+          </div>
           <div className="flex items-center justify-between rounded border border-gray-200 p-3">
             <p className="text-sm font-medium text-gray-700">Active</p>
             <ToggleButton
