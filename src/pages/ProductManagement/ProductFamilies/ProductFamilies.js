@@ -476,84 +476,111 @@ const ProductFamilies = () => {
         loading={saving}
         width="600px"
       >
-        <div className="space-y-4">
-          <FormInput
-            label="Family Code"
-            name="familyCode"
-            value={formData.familyCode}
-            onChange={(e) =>
-              setFormData((p) => ({
-                ...p,
-                familyCode: e.target.value,
-              }))
-            }
-            error={errors.familyCode}
-            disabled={Boolean(formData._editingId)}
-          />
+        <div className="space-y-5">
+          {/* ==================== Basic Information ==================== */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-[#1E293B]">
+                Basic Information
+              </h3>
 
-          <FormInput
-            label="Title"
-            name="title"
-            value={formData.title}
-            onChange={(e) =>
-              setFormData((p) => ({
-                ...p,
-                title: e.target.value,
-              }))
-            }
-            error={errors.title}
-          />
+              <p className="mt-1 text-xs text-gray-500">
+                Enter the basic details for this product family.
+              </p>
+            </div>
 
-          <FilterSelect
-            label="Category *"
-            options={categoryOptions}
-            value={
-              categoryOptions.find(
-                (opt) => String(opt.value) === String(formData.category || ""),
-              ) || null
-            }
-            onChange={(option) => {
-              setFormData((p) => ({
-                ...p,
-                category: option?.value || "",
-              }));
+            <div className="space-y-4">
+              {/* Family Code */}
+              <FormInput
+                label="Family Code"
+                name="familyCode"
+                value={formData.familyCode}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    familyCode: e.target.value,
+                  }))
+                }
+                error={errors.familyCode}
+                disabled={Boolean(formData._editingId)}
+              />
 
-              setErrors((p) => ({
-                ...p,
-                category: undefined,
-              }));
-            }}
-            error={errors.category}
-            placeholder="Select category"
-          />
+              {/* Title */}
+              <FormInput
+                label="Title"
+                name="title"
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    title: e.target.value,
+                  }))
+                }
+                error={errors.title}
+              />
 
-          <FilterSelect
-            label="Seller (optional)"
-            options={sellerOptions}
-            value={
-              sellerOptions.find(
-                (opt) => String(opt.value) === String(formData.sellerId || ""),
-              ) || null
-            }
-            onChange={(option) =>
-              setFormData((p) => ({
-                ...p,
-                sellerId: option?.value || "",
-              }))
-            }
-            placeholder="Select seller"
-          />
+              {/* Category */}
+              <FilterSelect
+                label="Category *"
+                options={categoryOptions}
+                value={
+                  categoryOptions.find(
+                    (opt) =>
+                      String(opt.value) === String(formData.category || ""),
+                  ) || null
+                }
+                onChange={(option) => {
+                  setFormData((p) => ({
+                    ...p,
+                    category: option?.value || "",
+                  }));
 
-          {/* Variant Axes */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Variant Axes
-              </label>
+                  setErrors((p) => ({
+                    ...p,
+                    category: undefined,
+                  }));
+                }}
+                error={errors.category}
+                placeholder="Select category"
+              />
+
+              {/* Seller */}
+              <FilterSelect
+                label="Seller (optional)"
+                options={sellerOptions}
+                value={
+                  sellerOptions.find(
+                    (opt) =>
+                      String(opt.value) === String(formData.sellerId || ""),
+                  ) || null
+                }
+                onChange={(option) =>
+                  setFormData((p) => ({
+                    ...p,
+                    sellerId: option?.value || "",
+                  }))
+                }
+                placeholder="Select seller"
+              />
+            </div>
+          </div>
+
+          {/* ==================== Variant Axes ==================== */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-[#1E293B]">
+                  Variant Axes
+                </h3>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  Define the options used to create product variants.
+                </p>
+              </div>
 
               <button
                 type="button"
-                className="text-xs text-[var(--admin-gold)] hover:underline"
+                className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-[var(--admin-gold)] transition hover:bg-[#CB9C2D]/10"
                 onClick={() =>
                   setFormData((p) => ({
                     ...p,
@@ -565,51 +592,59 @@ const ProductFamilies = () => {
               </button>
             </div>
 
-            {(formData.variantAxes || []).map((axis, idx) => (
-              <div key={`axis-${idx}`} className="relative flex items-center">
-                <input
-                  className="w-full rounded-lg border border-gray-300 py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                  value={axis}
-                  onChange={(e) =>
-                    setFormData((p) => ({
-                      ...p,
-                      variantAxes: (p.variantAxes || []).map((v, i) =>
-                        i === idx ? e.target.value : v,
-                      ),
-                    }))
-                  }
-                  placeholder="e.g. color, size"
-                />
+            <div className="space-y-2.5">
+              {(formData.variantAxes || []).map((axis, idx) => (
+                <div key={`axis-${idx}`} className="relative flex items-center">
+                  <input
+                    className="w-full rounded-lg border border-gray-300 py-2.5 pl-3 pr-9 text-sm text-gray-800 outline-none transition focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
+                    value={axis}
+                    onChange={(e) =>
+                      setFormData((p) => ({
+                        ...p,
+                        variantAxes: (p.variantAxes || []).map((v, i) =>
+                          i === idx ? e.target.value : v,
+                        ),
+                      }))
+                    }
+                    placeholder="e.g. Color, Size"
+                  />
 
-                <button
-                  type="button"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-red-500"
-                  onClick={() =>
-                    setFormData((p) => ({
-                      ...p,
-                      variantAxes: (p.variantAxes || []).filter(
-                        (_, i) => i !== idx,
-                      ) || [""],
-                    }))
-                  }
-                  title="Remove axis"
-                >
-                  <MdClose size={16} />
-                </button>
-              </div>
-            ))}
+                  <button
+                    type="button"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                    onClick={() =>
+                      setFormData((p) => ({
+                        ...p,
+                        variantAxes: (p.variantAxes || []).filter(
+                          (_, i) => i !== idx,
+                        ) || [""],
+                      }))
+                    }
+                    title="Remove axis"
+                  >
+                    <MdClose size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Base Attributes */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Base Attributes
-              </label>
+          {/* ==================== Base Attributes ==================== */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-[#1E293B]">
+                  Base Attributes
+                </h3>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  Add default attributes for products in this family.
+                </p>
+              </div>
 
               <button
                 type="button"
-                className="text-xs text-[var(--admin-gold)] hover:underline"
+                className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-[var(--admin-gold)] transition hover:bg-[#CB9C2D]/10"
                 onClick={() =>
                   setFormData((p) => ({
                     ...p,
@@ -624,70 +659,98 @@ const ProductFamilies = () => {
               </button>
             </div>
 
-            {(formData.baseAttributes || []).map((row, idx) => (
-              <div key={`attr-${idx}`} className="grid grid-cols-2 gap-2">
-                <input
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                  placeholder="key"
-                  value={row.key}
-                  onChange={(e) =>
-                    setFormData((p) => ({
-                      ...p,
-                      baseAttributes: (p.baseAttributes || []).map((r, i) =>
-                        i === idx ? { ...r, key: e.target.value } : r,
-                      ),
-                    }))
-                  }
-                />
-
-                <div className="relative flex items-center">
+            <div className="space-y-2.5">
+              {(formData.baseAttributes || []).map((row, idx) => (
+                <div
+                  key={`attr-${idx}`}
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+                >
+                  {/* Key */}
                   <input
-                    className="w-full rounded-lg border border-gray-300 py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                    placeholder="value"
-                    value={row.value}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
+                    placeholder="Attribute key"
+                    value={row.key}
                     onChange={(e) =>
                       setFormData((p) => ({
                         ...p,
                         baseAttributes: (p.baseAttributes || []).map((r, i) =>
-                          i === idx ? { ...r, value: e.target.value } : r,
+                          i === idx
+                            ? {
+                                ...r,
+                                key: e.target.value,
+                              }
+                            : r,
                         ),
                       }))
                     }
                   />
 
-                  <button
-                    type="button"
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-red-500"
-                    onClick={() =>
-                      setFormData((p) => ({
-                        ...p,
-                        baseAttributes: (p.baseAttributes || []).filter(
-                          (_, i) => i !== idx,
-                        ) || [emptyAttribute],
-                      }))
-                    }
-                    title="Remove attribute"
-                  >
-                    <MdClose size={16} />
-                  </button>
+                  {/* Value + Remove */}
+                  <div className="relative flex items-center">
+                    <input
+                      className="w-full rounded-lg border border-gray-300 py-2.5 pl-3 pr-9 text-sm text-gray-800 outline-none transition focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
+                      placeholder="Attribute value"
+                      value={row.value}
+                      onChange={(e) =>
+                        setFormData((p) => ({
+                          ...p,
+                          baseAttributes: (p.baseAttributes || []).map(
+                            (r, i) =>
+                              i === idx
+                                ? {
+                                    ...r,
+                                    value: e.target.value,
+                                  }
+                                : r,
+                          ),
+                        }))
+                      }
+                    />
+
+                    <button
+                      type="button"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                      onClick={() =>
+                        setFormData((p) => ({
+                          ...p,
+                          baseAttributes: (p.baseAttributes || []).filter(
+                            (_, i) => i !== idx,
+                          ) || [emptyAttribute],
+                        }))
+                      }
+                      title="Remove attribute"
+                    >
+                      <MdClose size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          {/* Active */}
-          <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-2.5">
-            <span className="text-sm font-medium text-gray-700">Active</span>
+          {/* ==================== Status ==================== */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="pr-4">
+                <h3 className="text-sm font-semibold text-[#1E293B]">
+                  Family Status
+                </h3>
 
-            <ToggleButton
-              isToggle={formData.status === "active"}
-              handleClick={() =>
-                setFormData((p) => ({
-                  ...p,
-                  status: p.status === "active" ? "inactive" : "active",
-                }))
-              }
-            />
+                <p className="mt-1 text-xs text-gray-500">
+                  Enable or disable this product family.
+                </p>
+              </div>
+
+              <ToggleButton
+                isToggle={formData.status === "active"}
+                handleClick={() =>
+                  setFormData((p) => ({
+                    ...p,
+                    status: p.status === "active" ? "inactive" : "active",
+                  }))
+                }
+              />
+            </div>
           </div>
         </div>
       </DefaultModal>

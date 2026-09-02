@@ -37,6 +37,8 @@ import {
 } from "react-icons/md";
 import { ButtonLoader } from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
 
 // const FILTER_FIELDS = [
 //   {
@@ -740,190 +742,115 @@ const Brands = () => {
         loading={saving || uploadingType !== null}
         width="600px"
       >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Brand Name */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Brand Name <span className="text-red-500">*</span>
-            </label>
-
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  name: e.target.value,
-                }));
-
-                if (errors.name) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    name: undefined,
-                  }));
-                }
-              }}
-              className={`w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition ${
-                errors.name
-                  ? "border-red-400 focus:ring-2 focus:ring-red-100"
-                  : "border-gray-300 focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
-              }`}
-              placeholder="e.g. Apple, Samsung"
-              maxLength={50}
-            />
-
-            {errors.name && (
-              <p className="mt-1 text-xs text-red-500">{errors.name}</p>
-            )}
-          </div>
-
-          {/* Brand Logo */}
-          <div>
-            <div className="mb-2">
-              <label className="text-sm font-medium text-gray-700">
-                Brand Logo <span className="text-red-500">*</span>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* ==================== Basic Information ==================== */}
+          <FormSection
+            title="Basic Information"
+            description="Enter the basic details for this brand."
+          >
+            {/* Brand Name */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Brand Name <span className="text-red-500">*</span>
               </label>
 
-              <p className="mt-0.5 text-xs text-gray-500">
-                Recommended format: PNG or WEBP
-              </p>
-            </div>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    name: e.target.value,
+                  }));
 
-            {uploadingType === "BRANDS" ? (
-              <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
-                <ButtonLoader />
-                <span className="text-xs font-medium text-gray-500">
-                  Uploading logo...
-                </span>
-              </div>
-            ) : (logoPreview || formData.logo) && !logoError ? (
-              <div className="relative flex min-h-[150px] items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4">
-                <img
-                  src={logoPreview || formData.logo}
-                  alt="Brand Logo"
-                  onLoad={() => setLogoError(false)}
-                  onError={() => {
-                    if (!logoPreview) {
-                      setLogoError(true);
-                    }
-                  }}
-                  className="max-h-28 max-w-[80%] object-contain"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (logoPreview) {
-                      URL.revokeObjectURL(logoPreview);
-                    }
-
-                    setLogoPreview("");
-                    setLogoError(false);
-
-                    setFormData((prev) => ({
+                  if (errors.name) {
+                    setErrors((prev) => ({
                       ...prev,
-                      logo: "",
+                      name: undefined,
                     }));
-                  }}
-                  className="absolute right-3 top-3 rounded-md border border-red-100 bg-white px-2.5 py-1.5 text-xs font-medium text-red-500 shadow-sm transition hover:bg-red-50"
-                >
-                  Remove
-                </button>
-              </div>
-            ) : (
+                  }
+                }}
+                className={`w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition ${
+                  errors.name
+                    ? "border-red-400 focus:ring-2 focus:ring-red-100"
+                    : "border-gray-300 focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
+                }`}
+                placeholder="e.g. Apple, Samsung"
+                maxLength={50}
+              />
+
+              {errors.name && (
+                <p className="mt-1.5 text-xs text-red-500">{errors.name}</p>
+              )}
+            </div>
+          </FormSection>
+
+          {/* ==================== Brand Images ==================== */}
+          <FormSection
+            title="Brand Images"
+            description="Upload the logo and thumbnail for this brand."
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* ==================== Brand Logo ==================== */}
               <ImageUpload
                 id="brand-logo"
-                label="Upload Logo"
+                label="Brand Logo"
+                subtext="Recommended: PNG or WEBP"
+                required
+                file={logoPreview || formData.logo}
                 onChange={(file) => handleBrandImageUpload(file, "BRANDS")}
+                onRemove={() => {
+                  if (logoPreview) {
+                    URL.revokeObjectURL(logoPreview);
+                  }
+                  setLogoPreview("");
+                  setLogoError(false);
+                  setFormData((prev) => ({
+                    ...prev,
+                    logo: "",
+                  }));
+                }}
+                isLoading={uploadingType === "BRANDS"}
+                loadingText="Uploading logo..."
                 isDisabled={uploadingType !== null}
+                errorMessage={errors.logo}
               />
-            )}
 
-            {errors.logo && (
-              <p className="mt-1.5 text-xs text-red-500">{errors.logo}</p>
-            )}
-          </div>
-
-          {/* Thumbnail */}
-          <div>
-            <div className="mb-2">
-              <label className="text-sm font-medium text-gray-700">
-                Thumbnail <span className="text-red-500">*</span>
-              </label>
-
-              <p className="mt-0.5 text-xs text-gray-500">
-                Used as the brand thumbnail across the catalog.
-              </p>
-            </div>
-
-            {uploadingType === "BRAND_THUMBNAIL" ? (
-              <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
-                <ButtonLoader />
-                <span className="text-xs font-medium text-gray-500">
-                  Uploading thumbnail...
-                </span>
-              </div>
-            ) : (thumbnailPreview || formData.thumbnails) && !thumbnailError ? (
-              <div className="relative flex min-h-[150px] items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4">
-                <img
-                  src={thumbnailPreview || formData.thumbnails}
-                  alt="Brand Thumbnail"
-                  onLoad={() => setThumbnailError(false)}
-                  onError={() => {
-                    if (!thumbnailPreview) {
-                      setThumbnailError(true);
-                    }
-                  }}
-                  className="max-h-28 max-w-[80%] object-contain"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (thumbnailPreview) {
-                      URL.revokeObjectURL(thumbnailPreview);
-                    }
-
-                    setThumbnailPreview("");
-                    setThumbnailError(false);
-
-                    setFormData((prev) => ({
-                      ...prev,
-                      thumbnails: "",
-                    }));
-                  }}
-                  className="absolute right-3 top-3 rounded-md border border-red-100 bg-white px-2.5 py-1.5 text-xs font-medium text-red-500 shadow-sm transition hover:bg-red-50"
-                >
-                  Remove
-                </button>
-              </div>
-            ) : (
+              {/* ==================== Brand Thumbnail ==================== */}
               <ImageUpload
                 id="brand-thumbnail"
-                label="Upload Thumbnail"
+                label="Thumbnail"
+                subtext="Used across the catalog."
+                required
+                file={thumbnailPreview || formData.thumbnails}
                 onChange={(file) =>
                   handleBrandImageUpload(file, "BRAND_THUMBNAIL")
                 }
+                onRemove={() => {
+                  if (thumbnailPreview) {
+                    URL.revokeObjectURL(thumbnailPreview);
+                  }
+                  setThumbnailPreview("");
+                  setThumbnailError(false);
+                  setFormData((prev) => ({
+                    ...prev,
+                    thumbnails: "",
+                  }));
+                }}
+                isLoading={uploadingType === "BRAND_THUMBNAIL"}
+                loadingText="Uploading thumbnail..."
                 isDisabled={uploadingType !== null}
+                errorMessage={errors.thumbnails}
               />
-            )}
-
-            {errors.thumbnails && (
-              <p className="mt-1.5 text-xs text-red-500">{errors.thumbnails}</p>
-            )}
-          </div>
-
-          {/* Status */}
-          <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3.5">
-            <div>
-              <p className="text-sm font-medium text-gray-700">Brand Status</p>
-
-              <p className="mt-0.5 text-xs text-gray-500">
-                Enable or disable this brand.
-              </p>
             </div>
+          </FormSection>
 
-            <ToggleButton
+          {/* ==================== Status ==================== */}
+          <FormSection
+            title="Brand Status"
+            description="Enable or disable this brand."
+          >
+            <FormToggleRow
               isToggle={!formData.isDisable}
               handleClick={() =>
                 setFormData((prev) => ({
@@ -932,7 +859,7 @@ const Brands = () => {
                 }))
               }
             />
-          </div>
+          </FormSection>
         </form>
       </DefaultModal>
       <ConfirmModal
