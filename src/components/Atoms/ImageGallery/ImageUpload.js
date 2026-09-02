@@ -1,43 +1,53 @@
 import React, { useRef } from "react";
-import { FaCloudUploadAlt, FaImage, FaExchangeAlt } from "react-icons/fa";
+import { FaCloudUploadAlt, FaImage, FaExchangeAlt, FaTrash } from "react-icons/fa";
+import { ButtonLoader } from "../../Loader/Loader";
 
 const ImageUpload = ({
   id = "default-image-upload",
-  label = "Upload Image",
-  accept = "image/*",
+  label = "",
+  subtext = "",
+  accept = "image/jpeg,image/jpg,image/png,image/webp",
   file,
   onChange,
+  onRemove,
+  isLoading = false,
+  loadingText = "Uploading...",
   errorMessage = "",
+  error = "",
   isDisabled = false,
   containerClassName = "",
   labelClassName = "",
   previewClassName = "",
   iconClassName = "",
-  required,
+  dropzoneClassName = "",
+  required = false,
 }) => {
-  const fileInputRef = useRef();
+  const fileInputRef = useRef(null);
+  const displayError = errorMessage || error;
 
   const handleFileChange = (e) => {
-    if (isDisabled) return;
-    const selectedFile = e.target.files[0];
+    if (isDisabled || isLoading) return;
+    const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      onChange(selectedFile);
-      e.target.value = null;
+      onChange?.(selectedFile);
+      e.target.value = "";
     }
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
-    if (isDisabled) return;
-    const droppedFile = e.dataTransfer.files[0];
+    if (isDisabled || isLoading) return;
+    const droppedFile = e.dataTransfer.files?.[0];
     if (droppedFile) {
-      onChange(droppedFile);
+      onChange?.(droppedFile);
     }
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
-    e.currentTarget.classList.add("ring-2", "ring-blue-400");
+    if (!isDisabled && !isLoading) {
+      e.currentTarget.classList.add("ring-2", "ring-blue-400");
+    }
   };
 
   const handleDragLeave = (e) => {
@@ -46,97 +56,113 @@ const ImageUpload = ({
   };
 
   return (
-    <div className={`space-y-2 ${containerClassName}`}>
-      {/* Label */}
-      <label className="label block text-sm font-medium text-gray-700 mb-1">
-        {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </label>
+    <div className={`rounded-lg border border-dashed border-gray-300 p-3 bg-white ${containerClassName}`}>
+      {/* Label and Subtext */}
+      {label && (
+        <div className="mb-2">
+          <label className={`block text-sm font-medium text-gray-700 ${labelClassName}`}>
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+          {subtext && <p className="mt-0.5 text-xs text-gray-500">{subtext}</p>}
+        </div>
+      )}
 
-      {/* Dropzone */}
-      <div
-        className={`relative border-2 border-dashed rounded-lg transition-all duration-200 ${
-          file ? "border-transparent" : "border-gray-300"
-        } ${
-          errorMessage ? "border-red-500" : file ? "" : "hover:border-blue-400"
-        } ${
-          isDisabled
-            ? "opacity-70 cursor-not-allowed bg-gray-100"
-            : "bg-white cursor-pointer"
-        }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={(e) => {
-          handleDrop(e);
-          handleDragLeave(e);
-        }}
-        onClick={() => !isDisabled && fileInputRef.current?.click()}
-      >
-        <input
-          type="file"
-          id={id}
-          accept={accept}
-          className="hidden"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          disabled={isDisabled}
-        />
+      {/* Input File Element */}
+      <input
+        type="file"
+        id={id}
+        accept={accept}
+        className="hidden"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        disabled={isDisabled || isLoading}
+      />
 
-        {file ? (
-          <div className="p-2">
-            <div className="relative group">
-              <div className="overflow-hidden rounded-md">
-                <img
-                  src={file}
-                  alt="Preview"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "/image_upload.jpg";
+      {/* Main Box: Loading / Preview / Dropzone */}
+      {isLoading ? (
+        <div className="flex h-[155px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50">
+          <ButtonLoader />
+          <span className="text-xs font-medium text-gray-500">{loadingText}</span>
+        </div>
+      ) : file ? (
+        <div className="relative group flex h-[155px] items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 bg-gray-50 p-2">
+          <img
+            src={file}
+            alt={label || "Preview"}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "/image_upload.jpg";
+            }}
+            className={`h-full w-full object-contain ${previewClassName}`}
+          />
+
+          {!isDisabled && (
+            <div className="absolute top-2 right-2 flex items-center space-x-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+                className="rounded-md border border-gray-200 bg-white p-1.5 text-xs text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-blue-600"
+                aria-label="Change image"
+                title="Change image"
+              >
+                <FaExchangeAlt size={12} />
+              </button>
+
+              {onRemove && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove();
                   }}
-                  className={`w-full min-h-24 h-auto object-contain border ${
-                    errorMessage ? "border-red-500" : "border-blue-400"
-                  } border-dashed max-h-64 rounded-md ${previewClassName}`}
-                />
-              </div>
-              {!isDisabled && (
-                <div className="absolute top-0 right-0 flex space-x-2 p-2">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      fileInputRef.current?.click();
-                    }}
-                    className="bg-blue-500 text-black rounded-full p-2 shadow-lg hover:bg-blue-600 transition-colors"
-                    aria-label="Change image"
-                    title="Change image"
-                  >
-                    <FaExchangeAlt size={12} />
-                  </button>
-                </div>
+                  className="rounded-md border border-red-100 bg-white p-1.5 text-xs text-red-500 shadow-sm transition hover:bg-red-50"
+                  aria-label="Remove image"
+                  title="Remove image"
+                >
+                  <FaTrash size={12} />
+                </button>
               )}
             </div>
-          </div>
-        ) : (
-          <div className="p-6 text-center">
-            <div className="flex flex-col items-center justify-center space-y-3">
-              <div
-                className={`p-3 rounded-full bg-blue-50 text-blue-500 ${iconClassName}`}
-              >
-                <FaCloudUploadAlt size={24} />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-gray-500">Click to browse files</p>
-              </div>
-              <div className="flex items-center text-xs text-gray-500">
+          )}
+        </div>
+      ) : (
+        <div
+          className={`relative border-2 border-dashed rounded-lg transition-all duration-200 h-[155px] flex flex-col items-center justify-center p-4 text-center ${
+            displayError ? "border-red-500" : "border-gray-200 hover:border-blue-400"
+          } ${
+            isDisabled
+              ? "opacity-70 cursor-not-allowed bg-gray-100"
+              : "bg-white cursor-pointer hover:bg-gray-50/50"
+          } ${dropzoneClassName}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => {
+            handleDrop(e);
+            handleDragLeave(e);
+          }}
+          onClick={() => !isDisabled && !isLoading && fileInputRef.current?.click()}
+        >
+          <div className="flex flex-col items-center justify-center space-y-2">
+            <div className={`p-2.5 rounded-full bg-blue-50 text-blue-500 ${iconClassName}`}>
+              <FaCloudUploadAlt size={22} />
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-xs font-medium text-gray-700">Click to browse or drop file</p>
+              <div className="flex items-center justify-center text-[11px] text-gray-400">
                 <FaImage className="mr-1" />
                 <span>Supports: JPEG, PNG, WEBP</span>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
+      {/* Error Message */}
+      {displayError && <p className="mt-1.5 text-xs text-red-500">{displayError}</p>}
     </div>
   );
 };

@@ -442,76 +442,89 @@ export default function ProductOptions() {
         loading={saving}
         width="600px"
       >
-        <div className="space-y-4">
-          {/* Name */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Name <span className="text-red-500">*</span>
-            </label>
+        <div className="space-y-5">
+          {/* ==================== Basic Information ==================== */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-[#1E293B]">
+                Basic Information
+              </h3>
+              <p className="mt-1 text-xs text-gray-500">
+                Enter the basic details for this option master.
+              </p>
+            </div>
 
-            <input
-              autoFocus
-              value={form.name}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  name: e.target.value,
-                  slug: f.slug || slugify(e.target.value),
-                }))
-              }
-              placeholder="e.g. Color, Size, RAM, Material"
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:ring-0 ${
-                errors.name
-                  ? "border-red-400 focus:border-red-400"
-                  : "border-gray-300 focus:border-[var(--admin-gold)]"
-              }`}
-            />
+            <div className="space-y-4">
+              {/* Name */}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[#1E293B]">
+                  Name <span className="text-red-500">*</span>
+                </label>
 
-            {errors.name && (
-              <p className="mt-1 text-xs text-red-500">{errors.name}</p>
-            )}
+                <input
+                  autoFocus
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      name: e.target.value,
+                      slug: f.slug || slugify(e.target.value),
+                    }))
+                  }
+                  placeholder="e.g. Color, Size, RAM, Material"
+                  className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:ring-2 ${
+                    errors.name
+                      ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                      : "border-gray-300 focus:border-[var(--admin-gold)] focus:ring-[var(--admin-gold)]/20"
+                  }`}
+                />
+
+                {errors.name && (
+                  <p className="mt-1.5 text-xs text-red-500">{errors.name}</p>
+                )}
+              </div>
+
+              {/* Slug */}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[#1E293B]">
+                  Slug
+                </label>
+
+                <input
+                  value={form.slug}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      slug: slugify(e.target.value),
+                    }))
+                  }
+                  placeholder="e.g. size, color, storage"
+                  className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:ring-2 ${
+                    errors.slug
+                      ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                      : "border-gray-300 focus:border-[var(--admin-gold)] focus:ring-[var(--admin-gold)]/20"
+                  }`}
+                />
+
+                {errors.slug && (
+                  <p className="mt-1.5 text-xs text-red-500">{errors.slug}</p>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Slug */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Slug
-            </label>
-
-            <input
-              value={form.slug}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  slug: slugify(e.target.value),
-                }))
-              }
-              placeholder="e.g. size, color, storage"
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:ring-0 ${
-                errors.slug
-                  ? "border-red-400 focus:border-red-400"
-                  : "border-gray-300 focus:border-[var(--admin-gold)]"
-              }`}
-            />
-
-            {errors.slug && (
-              <p className="mt-1 text-xs text-red-500">{errors.slug}</p>
-            )}
-          </div>
-
-          {/* Display Type */}
-          <div className="border-t border-gray-100 pt-4">
-            <div className="mb-2.5">
-              <label className="block text-sm font-semibold text-gray-900">
+          {/* ==================== Display Type ==================== */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-[#1E293B]">
                 Display Type
-              </label>
-
-              <p className="mt-0.5 text-xs text-gray-500">
+              </h3>
+              <p className="mt-1 text-xs text-gray-500">
                 Choose how values appear on product and variant forms.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {displayTypes.options.map((dt) => {
                 const isSelected = form.displayType === dt.value;
 
@@ -525,7 +538,7 @@ export default function ProductOptions() {
                         displayType: dt.value,
                       }))
                     }
-                    className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
+                    className={`rounded-lg border px-3 py-2.5 text-left text-sm transition ${
                       isSelected
                         ? "border-[var(--admin-gold)] bg-[var(--admin-gold)]/10 font-medium text-[var(--admin-navy)]"
                         : "border-gray-300 bg-white text-gray-700 hover:border-[var(--admin-gold)] hover:bg-gray-50"
@@ -538,15 +551,19 @@ export default function ProductOptions() {
             </div>
           </div>
 
-          {/* Description */}
-          <div className="border-t border-gray-100 pt-4">
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Description
-              <span className="ml-1 font-normal text-gray-400">(Optional)</span>
-            </label>
+          {/* ==================== Description ==================== */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-[#1E293B]">
+                Description
+              </h3>
+              <p className="mt-1 text-xs text-gray-500">
+                Add an optional description to explain this option.
+              </p>
+            </div>
 
             <textarea
-              rows={2}
+              rows={3}
               value={form.description}
               onChange={(e) =>
                 setForm((f) => ({
@@ -555,18 +572,20 @@ export default function ProductOptions() {
                 }))
               }
               placeholder="e.g. Available color options for this product"
-              className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--admin-gold)] focus:ring-0"
+              className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
             />
           </div>
 
-          {/* Active */}
-          <div className="border-t border-gray-100 pt-4">
-            <div className="flex items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2.5">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Active</p>
+          {/* ==================== Status ==================== */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="pr-4">
+                <h3 className="text-sm font-semibold text-[#1E293B]">
+                  Option Status
+                </h3>
 
-                <p className="text-xs text-gray-400">
-                  Visible to sellers when enabled.
+                <p className="mt-1 text-xs text-gray-500">
+                  Enable or disable this option for sellers.
                 </p>
               </div>
 
@@ -583,7 +602,6 @@ export default function ProductOptions() {
           </div>
         </div>
       </DefaultModal>
-
       <ConfirmModal
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}

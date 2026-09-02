@@ -12,6 +12,9 @@ import Loader from "../../../../components/Loader/Loader";
 import ToggleButton from "../../../../components/Atoms/ToggleButton/ToggleButton";
 import Input from "../../../../components/Atoms/Input/Input";
 import DefaultModal from "../../../../components/Atoms/Modal/DefaultRightSideModal";
+import FormSection from "../../../../components/Atoms/FormSection/FormSection";
+import FormToggleRow from "../../../../components/Atoms/FormToggleRow/FormToggleRow";
+import FormSelectGroup from "../../../../components/Atoms/FormSelectGroup/FormSelectGroup";
 
 const CategorySetup = ({
   isOpen,
@@ -155,83 +158,107 @@ const CategorySetup = ({
         closeButtonText="Reset"
         isButtonView={true}
       >
-        <div className="space-y-4 sm:space-y-6">
-          {/* Category Name */}
-          <div>
-            <FormInput
-              label="Category Name"
-              name="categoryName"
-              value={formData?.categoryName}
-              onChange={handleChange}
-              error={localErrors.categoryName}
-              className={localErrors.categoryName ? "border-red-500" : ""}
-              required
-            />
-          </div>
+        <div className="space-y-5">
+          {/* ==================== Basic Information ==================== */}
+          <FormSection
+            title="Basic Information"
+            description="Enter the basic details for this category."
+          >
+            <div className="space-y-4">
+              {/* Category Name */}
+              <FormInput
+                label="Category Name"
+                name="categoryName"
+                value={formData?.categoryName}
+                onChange={handleChange}
+                error={localErrors.categoryName}
+                className={localErrors.categoryName ? "border-red-500" : ""}
+                required
+              />
 
-          {/* Category Icon */}
-          <div>
-            <ImageUpload
-              id="category-icon"
-              label="Icon"
-              file={formData?.iconUrl}
-              onChange={(file) => handleImageUpload(file, "iconUrl")}
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-            />
-          </div>
+              {/* Parent Category */}
+              <FormSelectGroup
+                label="Parent Category"
+                options={parentCategories}
+                value={formData?.parentCategory}
+                onChange={(selectedOption) =>
+                  handleSelectChange(selectedOption, "parentCategory")
+                }
+                placeholder="Select parent category"
+              />
+            </div>
+          </FormSection>
 
-          {/* Banner Image */}
-          <div>
-            <ImageUpload
-              id="category-banner"
-              label="Banner Image"
-              file={formData?.bannerUrl}
-              onChange={(file) => handleImageUpload(file, "bannerUrl")}
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-            />
-          </div>
+          {/* ==================== Category Images ==================== */}
+          <FormSection
+            title="Category Images"
+            description="Upload an icon and banner image for this category."
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Category Icon */}
+              <ImageUpload
+                id="category-icon"
+                label="Category Icon"
+                subtext="Recommended: PNG or WEBP"
+                file={formData?.iconUrl}
+                onChange={(file) => handleImageUpload(file, "iconUrl")}
+                onRemove={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    iconUrl: "",
+                  }))
+                }
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+              />
 
-          {/* Parent Category */}
-          <div>
-            <label className="mb-1 block text-[#1E293B] text-sm font-medium">
-              Parent Category
-            </label>
+              {/* Banner Image */}
+              <ImageUpload
+                id="category-banner"
+                label="Banner Image"
+                subtext="Recommended: JPG, PNG or WEBP"
+                file={formData?.bannerUrl}
+                onChange={(file) => handleImageUpload(file, "bannerUrl")}
+                onRemove={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    bannerUrl: "",
+                  }))
+                }
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+              />
+            </div>
+          </FormSection>
 
-            <FilterSelect
-              options={parentCategories}
-              value={formData?.parentCategory}
-              onChange={(selectedOption) =>
-                handleSelectChange(selectedOption, "parentCategory")
-              }
-              placeholder="Select parent category"
-              className="w-full"
-            />
-          </div>
+          {/* ==================== Visibility Settings ==================== */}
+          <FormSection
+            title="Visibility Settings"
+            description="Control where this category will be visible."
+          >
+            <div className="space-y-3">
+              {/* Publish */}
+              <FormToggleRow
+                title="Publish"
+                description="Make this category available to customers."
+                isToggle={isPublish}
+                handleClick={handleIsPublish}
+              />
 
-          {/* Publish Toggle */}
-          <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 sm:p-4">
-            <span className="text-sm font-medium text-gray-800 sm:text-base">
-              Publish
-            </span>
+              {/* Dashboard Visible */}
+              <FormToggleRow
+                title="Dashboard Visible"
+                description="Show this category on the dashboard."
+                isToggle={formData?.isDashboardVisible}
+                handleClick={handleDashboardVisible}
+              />
+            </div>
+          </FormSection>
 
-            <ToggleButton isToggle={isPublish} handleClick={handleIsPublish} />
-          </div>
-
-          {/* Dashboard Visible Toggle */}
-          <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 sm:p-4">
-            <span className="text-sm font-medium text-gray-800 sm:text-base">
-              Dashboard Visible
-            </span>
-
-            <ToggleButton
-              isToggle={formData?.isDashboardVisible}
-              handleClick={handleDashboardVisible}
-            />
-          </div>
-
-          {/* Priority */}
+          {/* ==================== Priority ==================== */}
           {formData?.isDashboardVisible && (
-            <div>
+            <FormSection
+              title="Display Priority"
+              description="Set the order in which this category appears on the dashboard."
+            >
               <Input
                 value={formData?.priority}
                 name="priority"
@@ -239,7 +266,7 @@ const CategorySetup = ({
                 labelName="Priority"
                 type="number"
               />
-            </div>
+            </FormSection>
           )}
         </div>
       </DefaultModal>

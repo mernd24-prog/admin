@@ -1,9 +1,9 @@
 import React from 'react'
 import FormInput from '../../../../../components/Atoms/FormInput/FormInput'
 import ImageUpload from '../../../../../components/Atoms/ImageGallery/ImageUpload'
-import FilterSelect from '../../../../../components/Atoms/FilterSelect/FilterSelect'
+import FormSelectGroup from '../../../../../components/Atoms/FormSelectGroup/FormSelectGroup'
 import DefaultModal from '../../../../../components/Atoms/Modal/DefaultRightSideModal'
-import ToggleButton from '../../../../../components/Atoms/ToggleButton/ToggleButton'
+import FormToggleRow from '../../../../../components/Atoms/FormToggleRow/FormToggleRow'
 import Input from '../../../../../components/Atoms/Input/Input'
 
 const toTitleCase = (str) =>
@@ -39,38 +39,35 @@ const AddCategoryModal = ({
                 <ImageUpload
                     id="category-icon"
                     label="Icon"
+                    subtext="Recommended: PNG or WEBP"
                     file={formData?.iconUrl}
                     onChange={(file) => handleFileUpload(file, 'iconUrl')}
+                    onRemove={() => handleFileUpload('', 'iconUrl')}
                     accept="image/jpeg,image/jpg,image/png,image/webp"
                 />
                 <ImageUpload
                     id="category-banner"
                     label="Banner Image"
+                    subtext="Recommended: JPG, PNG or WEBP"
                     file={formData?.bannerUrl}
                     onChange={(file) => handleFileUpload(file, 'bannerUrl')}
+                    onRemove={() => handleFileUpload('', 'bannerUrl')}
                     accept="image/jpeg,image/jpg,image/png,image/webp"
                 />
 
-                <div className="mb-4">
-                    <label className="block mb-1 text-[#1E293B] text-[14px]">Parent Category</label>
-                    <FilterSelect
-                        options={parentCategories}
-                        value={formData?.parentCategory}
-                        onChange={(selectedOption) => handleSelectChange(selectedOption, 'parentCategory')}
-                        placeholder="Select parent category"
-                        className="w-full"
-                    />
-                </div>
+                <FormSelectGroup
+                    label="Parent Category"
+                    options={parentCategories}
+                    value={formData?.parentCategory}
+                    onChange={(selectedOption) => handleSelectChange(selectedOption, 'parentCategory')}
+                    placeholder="Select parent category"
+                />
 
-                <div className="flex items-center justify-between p-3 sm:p-4 border rounded-lg">
-                    <span className="font-medium text-gray-800 text-sm sm:text-base">
-                        Dashboard Visible
-                    </span>
-                    <ToggleButton
-                        isToggle={formData?.isDashboardVisible}
-                        handleClick={handleDashboardVisible}
-                    />
-                </div>
+                <FormToggleRow
+                    title="Dashboard Visible"
+                    isToggle={formData?.isDashboardVisible}
+                    handleClick={handleDashboardVisible}
+                />
                 {formData?.isDashboardVisible && (
                     <div>
                         <Input

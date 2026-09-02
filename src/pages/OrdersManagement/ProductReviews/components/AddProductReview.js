@@ -256,26 +256,34 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
 
   return (
     <DefaultModal
-      isOpen={isOpen}
-      onClose={onClose}
-      onSubmit={handleSubmit}
-      title={existingReview ? "Edit Product Review" : "Add Product Review"}
-      isButtonView={true}
-      submitButtonText={existingReview ? "Update Review" : "Add Review"}
-      closeButtonText="Cancel"
-      loading={saving || loadingExisting}
-      width="600px"
-    >
-      <div className="space-y-5">
-        <p className="-mt-1 text-xs text-gray-500">
+  isOpen={isOpen}
+  onClose={onClose}
+  onSubmit={handleSubmit}
+  title={existingReview ? "Edit Product Review" : "Add Product Review"}
+  isButtonView={true}
+  submitButtonText={existingReview ? "Update Review" : "Add Review"}
+  closeButtonText="Cancel"
+  loading={saving || loadingExisting}
+  width="600px"
+>
+  <div className="space-y-5">
+    {/* ==================== Review Information ==================== */}
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-[#1E293B]">
+          Review Information
+        </h3>
+        <p className="mt-1 text-xs text-gray-500">
           {existingReview
             ? "Update the selected product review details."
             : "Add a review for a selected product."}
         </p>
+      </div>
 
+      <div className="space-y-4">
         {/* Product */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+          <label className="mb-1.5 block text-sm font-medium text-[#1E293B]">
             Product <span className="text-red-500">*</span>
           </label>
 
@@ -297,7 +305,7 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
                   }
                 }}
                 placeholder="Search product"
-                className="w-full rounded-lg border border-gray-300 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-[var(--admin-gold)] focus:ring-0"
+                className="w-full rounded-lg border border-gray-300 py-2.5 pl-9 pr-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
               />
             </div>
 
@@ -305,7 +313,7 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
               type="button"
               onClick={() => searchProducts(query)}
               disabled={searching}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:border-[var(--admin-gold)] hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {searching ? "Searching..." : "Search"}
             </button>
@@ -326,7 +334,8 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
                   }))
                   .find(
                     (option) =>
-                      String(option.value) === String(form.productId || ""),
+                      String(option.value) ===
+                      String(form.productId || ""),
                   ) || null
               }
               onChange={(option) => {
@@ -366,7 +375,7 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Reviewer */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            <label className="mb-1.5 block text-sm font-medium text-[#1E293B]">
               Reviewer Name
             </label>
 
@@ -375,7 +384,7 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
               onChange={set("buyerName")}
               maxLength={120}
               placeholder="Admin name"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--admin-gold)] focus:ring-0"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
             />
 
             <p className="mt-1 text-[11px] text-gray-400">
@@ -391,7 +400,8 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
               value={
                 STATUSES.find(
                   (option) =>
-                    String(option.value) === String(form.status || ""),
+                    String(option.value) ===
+                    String(form.status || ""),
                 ) || null
               }
               onChange={(option) => {
@@ -406,10 +416,24 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
             />
           </div>
         </div>
+      </div>
+    </div>
 
+    {/* ==================== Rating & Content ==================== */}
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-[#1E293B]">
+          Rating & Content
+        </h3>
+        <p className="mt-1 text-xs text-gray-500">
+          Add the rating and written feedback for the product.
+        </p>
+      </div>
+
+      <div className="space-y-4">
         {/* Rating */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+          <label className="mb-1.5 block text-sm font-medium text-[#1E293B]">
             Rating <span className="text-red-500">*</span>
           </label>
 
@@ -428,7 +452,7 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
 
         {/* Title */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+          <label className="mb-1.5 block text-sm font-medium text-[#1E293B]">
             Title
           </label>
 
@@ -437,14 +461,14 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
             onChange={set("title")}
             maxLength={200}
             placeholder="Enter review title"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--admin-gold)] focus:ring-0"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
           />
         </div>
 
         {/* Review */}
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-[#1E293B]">
               Review <span className="text-red-500">*</span>
             </label>
 
@@ -459,23 +483,36 @@ const AddProductReview = ({ isOpen, onClose, onCreated }) => {
             onChange={set("reviewText")}
             maxLength={2000}
             placeholder="Write review..."
-            className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--admin-gold)] focus:ring-0"
-          />
-        </div>
-
-        {/* Images */}
-        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
-          <MultiImageUpload
-            label="Review Photos"
-            images={form.media}
-            setImages={setMedia}
-            maxFiles={5}
-            type="PRODUCT_REVIEWS"
-            isDisabled={saving}
+            className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
           />
         </div>
       </div>
-    </DefaultModal>
+    </div>
+
+    {/* ==================== Review Photos ==================== */}
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-[#1E293B]">
+          Review Photos
+        </h3>
+        <p className="mt-1 text-xs text-gray-500">
+          Upload product photos that should appear with this review.
+        </p>
+      </div>
+
+      <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50/60 p-3">
+        <MultiImageUpload
+          label="Review Photos"
+          images={form.media}
+          setImages={setMedia}
+          maxFiles={5}
+          type="PRODUCT_REVIEWS"
+          isDisabled={saving}
+        />
+      </div>
+    </div>
+  </div>
+</DefaultModal>
   );
 };
 
