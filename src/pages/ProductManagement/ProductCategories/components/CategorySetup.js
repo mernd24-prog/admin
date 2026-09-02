@@ -186,29 +186,21 @@ const CategorySetup = ({
                 required
               />
 
-          {/* Category Icon */}
-          <div>
-            <ImageUpload
-              id="category-icon"
-              label="Icon"
-              file={formData?.iconUrl}
-              onChange={(file) => handleImageUpload(file, "iconUrl")}
-              accept={CATEGORY_IMAGE_ACCEPT}
-              helperText={CATEGORY_IMAGE_HELPER_TEXT}
-            />
-          </div>
-
-          {/* Banner Image */}
-          <div>
-            <ImageUpload
-              id="category-banner"
-              label="Banner Image"
-              file={formData?.bannerUrl}
-              onChange={(file) => handleImageUpload(file, "bannerUrl")}
-              accept={CATEGORY_IMAGE_ACCEPT}
-              helperText={CATEGORY_IMAGE_HELPER_TEXT}
-            />
-          </div>
+              {/* Category Icon */}
+              <ImageUpload
+                id="category-icon"
+                label="Icon"
+                file={formData?.iconUrl}
+                onChange={(file) => handleImageUpload(file, "iconUrl")}
+                accept={CATEGORY_IMAGE_ACCEPT}
+                helperText={CATEGORY_IMAGE_HELPER_TEXT}
+                onRemove={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    iconUrl: "",
+                  }))
+                }
+              />
 
               {/* Banner Image */}
               <ImageUpload
