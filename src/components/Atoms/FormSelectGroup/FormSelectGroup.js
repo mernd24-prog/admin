@@ -23,14 +23,19 @@ const FormSelectGroup = ({
   return (
     <div className={`space-y-1.5 ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-[#1E293B]">
+        <label
+          htmlFor={id}
+          className="block text-sm font-medium text-[#1E293B]"
+        >
           {label}
           {required && <span className="ml-1 text-red-500">*</span>}
         </label>
       )}
 
       {description && (
-        <p className="text-xs text-gray-500">{description}</p>
+        <p className="text-xs text-gray-500">
+          {description}
+        </p>
       )}
 
       <FilterSelect
@@ -50,7 +55,9 @@ const FormSelectGroup = ({
       />
 
       {error && (
-        <p className="mt-1 text-xs text-red-500">{error}</p>
+        <p className="mt-1 text-xs text-red-500">
+          {error}
+        </p>
       )}
     </div>
   );

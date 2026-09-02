@@ -381,157 +381,201 @@ const CreditNotes = () => {
       )}
 
       {/* Detail */}
-      <DefaultModal
-        isOpen={!!detail}
-        onClose={() => setDetail(null)}
-        title="Credit Note Details"
-      >
-        {detail && (
-          <div className="space-y-5 p-5">
-            {/* Header Summary */}
-            <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Credit Note
-                </p>
-                <p className="mt-1 font-mono text-sm font-semibold text-gray-900">
-                  {pick(detail, "creditNoteNumber", "credit_note_number") ||
-                    "—"}
-                </p>
-              </div>
+  <DefaultModal
+  isOpen={!!detail}
+  onClose={() => setDetail(null)}
+  title="Credit Note Details"
+>
+  {detail && (
+    <div className="space-y-5">
+      {/* Header Summary */}
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className={CLASS_TEXT_XS_MUTED}>
+              Credit Note Number
+            </p>
 
-              <StatusBadge
-                status={detail.status || "issued"}
-                color={detail.status === "cancelled" ? "red" : "green"}
+            <p className="mt-1 font-mono text-sm font-semibold text-gray-900">
+              {pick(detail, "creditNoteNumber", "credit_note_number") || "—"}
+            </p>
+          </div>
+
+          <StatusBadge
+            status={detail.status || "issued"}
+            color={detail.status === "cancelled" ? "red" : "green"}
+          />
+        </div>
+      </div>
+
+      {/* Reference Information */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-gray-900">
+            Reference Information
+          </h3>
+
+          <p className="mt-1 text-xs text-gray-500">
+            Details related to the order and credit note reference.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className={CLASS_CARD_WHITE}>
+            <p className={CLASS_TEXT_XS_MUTED}>Order ID</p>
+
+            <div className="mt-1 text-sm font-medium text-gray-900">
+              <OrderLink
+                orderId={pick(detail, "orderId", "order_id")}
+                orderNumber={pick(detail, "orderNumber", "order_number")}
               />
             </div>
-
-            {/* Reference Information */}
-            <div>
-              <h3 className={CLASS_SECTION_TITLE}>Reference Information</h3>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className={CLASS_CARD_WHITE}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Order ID</p>
-                  <div className="mt-1 text-sm font-medium text-gray-900">
-                    <OrderLink
-                      orderId={pick(detail, "orderId", "order_id")}
-                      orderNumber={pick(detail, "orderNumber", "order_number")}
-                    />
-                  </div>
-                </div>
-
-                <div className={CLASS_CARD_WHITE}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Organization ID</p>
-                  <p className={CLASS_CODE_VALUE}>
-                    {pick(detail, "organizationId", "organization_id") || "—"}
-                  </p>
-                </div>
-
-                <div className={CLASS_CARD_WHITE}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Reference Type</p>
-                  <p className="mt-1 text-sm font-medium capitalize text-gray-800">
-                    {pick(detail, "referenceType", "reference_type") || "—"}
-                  </p>
-                </div>
-
-                <div className={CLASS_CARD_WHITE}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Reference ID</p>
-                  <p className={CLASS_CODE_VALUE}>
-                    {pick(detail, "referenceId", "reference_id") || "—"}
-                  </p>
-                </div>
-
-                <div className={CLASS_CARD_WHITE}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Buyer ID</p>
-                  <p className={CLASS_CODE_VALUE}>
-                    {pick(detail, "buyerId", "buyer_id") || "—"}
-                  </p>
-                </div>
-
-                <div className={CLASS_CARD_WHITE}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Created</p>
-                  <p className="mt-1 text-sm font-medium text-gray-800">
-                    {fmt(
-                      pick(
-                        detail,
-                        "createdAt",
-                        "issuedAt",
-                        "created_at",
-                        "issued_at",
-                      ),
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Amount Summary */}
-            <div>
-              <h3 className={CLASS_SECTION_TITLE}>Amount Details</h3>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className={CLASS_AMOUNT_CARD}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Taxable Amount</p>
-                  <p className={CLASS_AMOUNT_VALUE}>
-                    {money(pick(detail, "taxableAmount", "taxable_amount"))}
-                  </p>
-                </div>
-
-                <div className={CLASS_AMOUNT_CARD}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Tax Amount</p>
-                  <p className={CLASS_AMOUNT_VALUE}>
-                    {money(pick(detail, "taxAmount", "tax_amount"))}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-[#CB9C2D]/30 bg-[#CB9C2D]/10 p-4">
-                  <p className="text-xs font-medium text-gray-600">
-                    Total Credit
-                  </p>
-                  <p className="mt-1 text-lg font-bold text-gray-900">
-                    {money(pick(detail, "totalAmount", "total_amount"))}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Reason */}
-            {detail.reason && (
-              <div>
-                <h3 className="mb-2 text-sm font-semibold text-gray-900">
-                  Reason
-                </h3>
-
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                  <p className="text-sm leading-6 text-gray-700">
-                    {detail.reason}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Footer */}
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={() => downloadCreditNote(detail)}
-                disabled={
-                  downloadingId ===
-                  pick(detail, "id", "creditNoteId", "credit_note_id")
-                }
-                className="inline-flex items-center gap-2 rounded-lg bg-[#CB9C2D] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#b88b25] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <MdDownload size={17} />
-                {downloadingId ===
-                pick(detail, "id", "creditNoteId", "credit_note_id")
-                  ? "Downloading..."
-                  : "Download PDF"}
-              </button>
-            </div>
           </div>
-        )}
-      </DefaultModal>
+
+          <div className={CLASS_CARD_WHITE}>
+            <p className={CLASS_TEXT_XS_MUTED}>Organization ID</p>
+
+            <p className={CLASS_CODE_VALUE}>
+              {pick(detail, "organizationId", "organization_id") || "—"}
+            </p>
+          </div>
+
+          <div className={CLASS_CARD_WHITE}>
+            <p className={CLASS_TEXT_XS_MUTED}>Reference Type</p>
+
+            <p className="mt-1 text-sm font-medium capitalize text-gray-800">
+              {pick(detail, "referenceType", "reference_type") || "—"}
+            </p>
+          </div>
+
+          <div className={CLASS_CARD_WHITE}>
+            <p className={CLASS_TEXT_XS_MUTED}>Reference ID</p>
+
+            <p className={CLASS_CODE_VALUE}>
+              {pick(detail, "referenceId", "reference_id") || "—"}
+            </p>
+          </div>
+
+          <div className={CLASS_CARD_WHITE}>
+            <p className={CLASS_TEXT_XS_MUTED}>Buyer ID</p>
+
+            <p className={CLASS_CODE_VALUE}>
+              {pick(detail, "buyerId", "buyer_id") || "—"}
+            </p>
+          </div>
+
+          <div className={CLASS_CARD_WHITE}>
+            <p className={CLASS_TEXT_XS_MUTED}>Created</p>
+
+            <p className="mt-1 text-sm font-medium text-gray-800">
+              {fmt(
+                pick(
+                  detail,
+                  "createdAt",
+                  "issuedAt",
+                  "created_at",
+                  "issued_at",
+                ),
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Amount Details */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-gray-900">
+            Amount Details
+          </h3>
+
+          <p className="mt-1 text-xs text-gray-500">
+            Breakdown of the credit note amount.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className={CLASS_AMOUNT_CARD}>
+            <p className={CLASS_TEXT_XS_MUTED}>
+              Taxable Amount
+            </p>
+
+            <p className={CLASS_AMOUNT_VALUE}>
+              {money(
+                pick(detail, "taxableAmount", "taxable_amount"),
+              )}
+            </p>
+          </div>
+
+          <div className={CLASS_AMOUNT_CARD}>
+            <p className={CLASS_TEXT_XS_MUTED}>
+              Tax Amount
+            </p>
+
+            <p className={CLASS_AMOUNT_VALUE}>
+              {money(
+                pick(detail, "taxAmount", "tax_amount"),
+              )}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-[#CB9C2D]/30 bg-[#CB9C2D]/10 p-4">
+            <p className="text-xs font-medium text-gray-600">
+              Total Credit
+            </p>
+
+            <p className="mt-1 text-lg font-bold text-gray-900">
+              {money(
+                pick(detail, "totalAmount", "total_amount"),
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Reason */}
+      {detail.reason && (
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <div className="mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">
+              Reason
+            </h3>
+
+            <p className="mt-1 text-xs text-gray-500">
+              Reason provided for issuing this credit note.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <p className="text-sm leading-6 text-gray-700">
+              {detail.reason}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Footer Action */}
+      <div className="flex justify-end pt-2">
+        <button
+          type="button"
+          onClick={() => downloadCreditNote(detail)}
+          disabled={
+            downloadingId ===
+            pick(detail, "id", "creditNoteId", "credit_note_id")
+          }
+          className="inline-flex items-center gap-2 rounded-lg bg-[#CB9C2D] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#b88b25] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <MdDownload size={17} />
+
+          {downloadingId ===
+          pick(detail, "id", "creditNoteId", "credit_note_id")
+            ? "Downloading..."
+            : "Download PDF"}
+        </button>
+      </div>
+    </div>
+  )}
+</DefaultModal>
 
       {/* Create modal */}
       <DefaultModal
