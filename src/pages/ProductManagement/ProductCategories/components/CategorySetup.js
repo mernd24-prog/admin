@@ -13,6 +13,10 @@ import ToggleButton from "../../../../components/Atoms/ToggleButton/ToggleButton
 import Input from "../../../../components/Atoms/Input/Input";
 import DefaultModal from "../../../../components/Atoms/Modal/DefaultRightSideModal";
 
+const CATEGORY_IMAGE_ACCEPT =
+  "image/jpeg,image/jpg,image/png,image/webp,image/svg+xml";
+const CATEGORY_IMAGE_HELPER_TEXT = "Supports: JPEG, PNG, WEBP, SVG";
+
 const CategorySetup = ({
   isOpen,
   handleClose,
@@ -101,14 +105,20 @@ const CategorySetup = ({
 
   const handleImageUpload = async (file, fieldName) => {
     if (!file) return;
-    const allowedTypes = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
-    const allowedExtensions = ["png", "jpg", "jpeg", "webp"];
+    const allowedTypes = [
+      "image/png",
+      "image/jpg",
+      "image/jpeg",
+      "image/webp",
+      "image/svg+xml",
+    ];
+    const allowedExtensions = ["png", "jpg", "jpeg", "webp", "svg"];
     const fileExtension = file.name?.split(".").pop()?.toLowerCase();
     if (
       !allowedTypes.includes(file.type) &&
       !allowedExtensions.includes(fileExtension)
     ) {
-      toast.error("Only JPG/PNG/WEBP files are allowed");
+      toast.error("Only JPG/PNG/WEBP/SVG files are allowed");
       return;
     }
 
@@ -176,7 +186,8 @@ const CategorySetup = ({
               label="Icon"
               file={formData?.iconUrl}
               onChange={(file) => handleImageUpload(file, "iconUrl")}
-              accept="image/jpeg,image/jpg,image/png,image/webp"
+              accept={CATEGORY_IMAGE_ACCEPT}
+              helperText={CATEGORY_IMAGE_HELPER_TEXT}
             />
           </div>
 
@@ -187,7 +198,8 @@ const CategorySetup = ({
               label="Banner Image"
               file={formData?.bannerUrl}
               onChange={(file) => handleImageUpload(file, "bannerUrl")}
-              accept="image/jpeg,image/jpg,image/png,image/webp"
+              accept={CATEGORY_IMAGE_ACCEPT}
+              helperText={CATEGORY_IMAGE_HELPER_TEXT}
             />
           </div>
 

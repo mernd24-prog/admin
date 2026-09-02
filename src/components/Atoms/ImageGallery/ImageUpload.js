@@ -13,9 +13,17 @@ const ImageUpload = ({
   labelClassName = "",
   previewClassName = "",
   iconClassName = "",
+  helperText,
   required,
 }) => {
   const fileInputRef = useRef();
+  const supportedFormats =
+    helperText ||
+    `Supports: ${
+      String(accept).includes("image/svg+xml")
+        ? "JPEG, PNG, WEBP, SVG"
+        : "JPEG, PNG, WEBP"
+    }`;
 
   const handleFileChange = (e) => {
     if (isDisabled) return;
@@ -129,7 +137,7 @@ const ImageUpload = ({
               </div>
               <div className="flex items-center text-xs text-gray-500">
                 <FaImage className="mr-1" />
-                <span>Supports: JPEG, PNG, WEBP</span>
+                <span>{supportedFormats}</span>
               </div>
             </div>
           </div>

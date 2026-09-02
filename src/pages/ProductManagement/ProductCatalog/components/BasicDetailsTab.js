@@ -517,6 +517,24 @@ export default function BasicDetailsTab({
 
   const handleFileUploadCategory = async (file, fieldName) => {
     if (!file) return;
+    const allowedTypes = [
+      "image/png",
+      "image/jpg",
+      "image/jpeg",
+      "image/webp",
+      "image/svg+xml",
+    ];
+    const allowedExtensions = ["png", "jpg", "jpeg", "webp", "svg"];
+    const fileExtension = file.name?.split(".").pop()?.toLowerCase();
+
+    if (
+      !allowedTypes.includes(file.type) &&
+      !allowedExtensions.includes(fileExtension)
+    ) {
+      toast.error("Only JPG, PNG, WEBP, or SVG images allowed");
+      return;
+    }
+
     try {
       setIsLoading(true);
       const uploadedImageUrl = await uploadFile(file, "THUMBNAILS");
