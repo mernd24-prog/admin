@@ -221,7 +221,6 @@ const MODULE_LABELS = {
   referral: "Referral Commerce",
   loyalty: "Loyalty",
   recommendations: "Recommendations",
-  fraud: "Fraud Management",
   deals: "Deal Management",
   "payments-finance": "Payments & Finance",
   "shipping-fulfilment": "Shipping & Fulfilment",
@@ -243,14 +242,12 @@ const MODULE_LABELS = {
   
   "wallet-management": "Wallet Management",
   "notification-templates": "Notification Templates",
-  "fraud-cases": "Fraud Cases",
   // Tax & Finance
   "tax-invoices": "Tax Invoice Management",
   "credit-notes": "Credit Note Management",
   // Subscription plans
   "subscription-plans": "Subscription Plan Management",
   // Payment config
-  chargebacks: "Chargeback Management",
   // Payouts
   "seller-payouts": "Seller Payout Management",
   "seller-cod-collections": "COD Collections",
@@ -333,7 +330,6 @@ const MODULE_TABS = {
   cms: "Settings",
   cms_pages: "Settings",
   "cms-pages": "Settings",
-  fraud: "Payments & Finance",
   deals: "Marketing",
   "deal-management": "Marketing",
   cancellations: "Returns & Cancellations",
@@ -347,14 +343,11 @@ const MODULE_TABS = {
   badges: "Marketing",
   "wallet-management": "Payments & Finance",
   "notification-templates": "Marketing",
-  "fraud-cases": "Payments & Finance",
   // Tax & Finance
   "tax-invoices": "Invoices & Taxation",
   "credit-notes": "Invoices & Taxation",
   // Subscription plans
   "subscription-plans": "Commerce Settings",
-  // Payment config & chargebacks
-  chargebacks: "Payments & Finance",
   // Payouts
   "seller-payouts": "Seller Finance & Payouts",
   "seller-cod-collections": "Seller Finance & Payouts",
@@ -466,8 +459,6 @@ export const MODULE_DEFAULT_ROUTES = {
   zip_codes: "zip-codes",
   delivery: "shipment-tracking",
   // Settings / misc
-  fraud: "fraud-cases",
-  "fraud-cases": "fraud-cases",
   deals: "deal-management",
   "deal-management": "deal-management",
   cancellations: "cancellations",
@@ -488,7 +479,6 @@ export const MODULE_DEFAULT_ROUTES = {
   // Subscription plans
   "subscription-plans": "subscription-plans",
   // Payment config
-  chargebacks: "chargebacks",
   // Payouts
   "seller-payouts": "seller-payouts",
   "payout-ops-queue": "payout-ops-queue",
@@ -638,11 +628,6 @@ const ROUTE_MODULES = [
   [
     ["/payments", "/cod-collections"],
     ["payments", "wallets", "orders"],
-  ],
-  [["/chargebacks"], ["payments", "orders"]],
-  [
-    ["/fraud-cases", "/fraud"],
-    ["fraud", "payments"],
   ],
   [["/wallet-management", "/wallet-transactions"], ["wallets"]],
 

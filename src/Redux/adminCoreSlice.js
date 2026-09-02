@@ -56,7 +56,6 @@ const initialState = {
   realtimeAnalyticsData: {},
   adminMarketplaceAnalyticsData: {},
   returnsAnalyticsData: {},
-  chargebacksData: {},
   apiKeysData: {},
   createApiKeyData: {},
   webhooksData: {},
@@ -515,8 +514,6 @@ export const getDeliveryServiceability = createApiThunkPrivate("adminCore/getDel
 export const getRealtimeAnalytics = createApiThunkPrivate("adminCore/getRealtimeAnalytics", ENDPOINTS.analytics.realtime, "GET", true, { transformParams: pickQuery(["hours"]) });
 export const getAdminMarketplaceAnalytics = createApiThunkPrivate("adminCore/getAdminMarketplaceAnalytics", ENDPOINTS.analytics.adminDashboard, "GET", true, { transformParams: pickQuery(["fromDate", "toDate", "sellerId", "granularity"]) });
 export const getReturnsAnalytics = createApiThunkPrivate("adminCore/getReturnsAnalytics", ENDPOINTS.analytics.returns, "GET", true, { transformParams: pickQuery(["fromDate", "toDate"]) });
-export const getChargebacks = createApiThunkPrivate("adminCore/getChargebacks", ENDPOINTS.analytics.chargebacks, "GET", true, { transformParams: pickQuery(["status", "fromDate", "toDate", "limit", "offset"]) });
-
 export const getApiKeys = createApiThunkPrivate("adminCore/getApiKeys", ENDPOINTS.platform.apiKeys, "GET", true, { transformParams: pickQuery(["ownerId", "status", "limit", "offset"]) });
 export const createApiKey = createApiThunkPrivate("adminCore/createApiKey", ENDPOINTS.platform.apiKeys, "POST", false, { transformBody: toApiKeyBody });
 export const getWebhooks = createApiThunkPrivate("adminCore/getWebhooks", ENDPOINTS.platform.webhooks, "GET", true, { transformParams: pickQuery(["ownerId", "status", "limit", "offset"]) });
@@ -699,7 +696,6 @@ const adminCoreSlice = createSlice({
       [getRealtimeAnalytics, "realtimeAnalyticsData"],
       [getAdminMarketplaceAnalytics, "adminMarketplaceAnalyticsData"],
       [getReturnsAnalytics, "returnsAnalyticsData"],
-      [getChargebacks, "chargebacksData"],
       [getApiKeys, "apiKeysData"],
       [createApiKey, "createApiKeyData"],
       [getWebhooks, "webhooksData"],

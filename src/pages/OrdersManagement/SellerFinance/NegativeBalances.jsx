@@ -353,7 +353,7 @@ const NegativeBalances = () => {
       <Loader loading={loading} />
       <PageHeader
         title="Seller Amounts Owed"
-        subtitle="Money sellers owe the platform from collected COD, refunds, chargebacks, or other adjustments. These amounts reduce future payouts until recovered."
+        subtitle="Money sellers owe the platform from collected COD, refunds, or other adjustments. These amounts reduce future payouts until recovered."
         breadcrumbs={[
           { label: "Seller Finance & Payouts" },
           { label: "Seller Amounts Owed" },

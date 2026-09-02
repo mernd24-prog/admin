@@ -26,25 +26,14 @@ import {
 } from "react-icons/md";
 import { CiSettings } from "react-icons/ci";
 import { getMyModulePermission } from "../../Redux/userManagementSlice";
-import {
-  getAccessModules,
-  getRbacSidebarModules,
-} from "../../Redux/adminCoreSlice";
+import { getRbacSidebarModules } from "../../Redux/adminCoreSlice";
 import {
   getAccessToken,
-  getStoredSidebarModules,
   getStoredRole,
   getStoredUser,
-  normalizeRole,
 } from "../../_helpers/authStorage";
 import { RxCross2 } from "react-icons/rx";
 import { isSellerPanel } from "../../_helpers/panelConfig";
-import {
-  MODULE_TAB_ORDER,
-  getAccessModuleRouteEntries,
-  isSellerBlockedModule,
-  isSellerBlockedRoute,
-} from "../../_helpers/rbacRoutes";
 import BrandLogo from "../BrandLogo/BrandLogo";
 import NeedHelpCard from "../Shared/NeedHelpCard";
 
@@ -107,27 +96,6 @@ const toRouteCode = (routePath = "") =>
     .replace(/^\/+/, "")
     .replace(/\/+$/, "");
 
-const HIDDEN_SIDEBAR_ROUTE_CODES = new Set([
-  "seller-organizations",
-  "warehouse",
-  "threshold-products",
-  "category-attributes",
-  "seller-kyc",
-  "seller-bank",
-  "seller-onboarding",
-  "seller-status",
-  "shipping-packages",
-  "pickup-addresses",
-  "shipping-company-users",
-]);
-
-const normalizeModuleCode = (value = "") =>
-  String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/_/g, "-");
-
 const flattenSidebarChildren = (items = [], prefix = "", includeParent = true) =>
   items.flatMap((item) => {
     const label = includeParent && prefix
@@ -140,7 +108,7 @@ const flattenSidebarChildren = (items = [], prefix = "", includeParent = true) =
       includeParent,
     );
     const self =
-      route && !HIDDEN_SIDEBAR_ROUTE_CODES.has(route)
+      route
         ? [
             {
               name: label,
@@ -153,23 +121,6 @@ const flattenSidebarChildren = (items = [], prefix = "", includeParent = true) =
         : [];
     return [...self, ...children];
   });
-
-const filterSellerSidebarItems = (items = []) =>
-  (Array.isArray(items) ? items : [])
-    .map((item) => {
-      const route = toRouteCode(item.routePath);
-      const moduleCode =
-        item.metadata?.requiredModule ||
-        item.requiredModule ||
-        item.moduleKey ||
-        item.slug;
-      const children = filterSellerSidebarItems(item.children || []);
-      const blocked =
-        isSellerBlockedRoute(route) || isSellerBlockedModule(moduleCode);
-      if (blocked && !children.length) return null;
-      return { ...item, children };
-    })
-    .filter(Boolean);
 
 const firstArray = (...values) =>
   values.find((value) => Array.isArray(value)) || [];
@@ -210,36 +161,8 @@ const mergeSidebarModuleTrees = (...sources) => {
   );
 };
 
-const filterSidebarTreeByAccess = (items = [], options = {}) => {
-  if (options.trustBackend) return items;
-
-  return items
-    .map((item) => {
-      const requiredModule = normalizeModuleCode(
-        item.metadata?.requiredModule ||
-          item.requiredModule ||
-          item.moduleKey ||
-          item.slug,
-      );
-      const children = filterSidebarTreeByAccess(item.children || [], options);
-      const allowedModules = options.allowedModules || new Set();
-      const selfAllowed =
-        options.superAdmin ||
-        allowedModules.has(requiredModule) ||
-        allowedModules.has(normalizeModuleCode(item.moduleKey)) ||
-        allowedModules.has(normalizeModuleCode(item.slug)) ||
-        !requiredModule;
-      if (!selfAllowed && !children.length) return null;
-      return { ...item, children };
-    })
-    .filter(Boolean);
-};
-
 const buildDynamicSidebarData = (modules = [], options = {}) =>
-  filterSidebarTreeByAccess(
-    options.sellerPanel ? filterSellerSidebarItems(modules) : modules,
-    options,
-  )
+  modules
     .map((item) => {
       const subItems = flattenSidebarChildren(
         item.children || [],
@@ -249,7 +172,6 @@ const buildDynamicSidebarData = (modules = [], options = {}) =>
       const route = toRouteCode(item.routePath);
       const isSingleItem =
         Boolean(route) &&
-        !HIDDEN_SIDEBAR_ROUTE_CODES.has(route) &&
         subItems.length === 0;
       return {
         label: item.moduleName || item.name,
@@ -267,155 +189,6 @@ const buildDynamicSidebarData = (modules = [], options = {}) =>
       };
     })
     .filter((item) => item.subItems.length > 0);
-
-const hasAssignedView = (module = {}) =>
-  module.assigned === true ||
-  (Array.isArray(module.permissions) &&
-    module.permissions.some(
-      (permission) =>
-        String(permission.action || "").toLowerCase() === "view" &&
-        permission.assigned === true,
-    ));
-
-const tabOrderIndex = (tab) => {
-  const index = MODULE_TAB_ORDER.indexOf(tab);
-  return index === -1 ? MODULE_TAB_ORDER.length : index;
-};
-
-const SELLER_SECTION_ORDER = [
-  "seller dashboard",
-  "dashboard",
-  "seller catalog",
-  "catalog",
-  "seller inventory",
-  "inventory",
-  "seller invoices",
-  "invoices",
-  "seller tax",
-  "seller marketing",
-  "marketing",
-  "seller orders",
-  "orders",
-  "seller shipping",
-  "shipping",
-  "seller access",
-  "my finance & payouts",
-  "seller finance",
-  "my reports",
-  "seller reports",
-  "help & support",
-];
-
-const sellerSectionOrderIndex = (label = "") => {
-  const normalized = String(label || "")
-    .trim()
-    .toLowerCase();
-  const index = SELLER_SECTION_ORDER.indexOf(normalized);
-  return index === -1 ? SELLER_SECTION_ORDER.length : index;
-};
-
-const sortSidebarGroups = (groups = [], sellerPanel = false) =>
-  [...groups].sort((left, right) => {
-    const leftOrder = sellerPanel
-      ? sellerSectionOrderIndex(left.label)
-      : tabOrderIndex(left.label);
-    const rightOrder = sellerPanel
-      ? sellerSectionOrderIndex(right.label)
-      : tabOrderIndex(right.label);
-    return (
-      leftOrder - rightOrder ||
-      String(left.label).localeCompare(String(right.label))
-    );
-  });
-
-const buildAccessModuleSidebarData = (modules = [], options = {}) => {
-  const seenRoutes = new Set();
-  const entries = (Array.isArray(modules) ? modules : [])
-    .filter((module) => {
-      const slug = normalizeModuleCode(
-        module.slug ||
-          module.moduleKey ||
-          module.moduleSlug ||
-          module.metadata?.requiredModule,
-      );
-      return (
-        options.superAdmin ||
-        hasAssignedView(module) ||
-        options.allowedModules?.has(slug)
-      );
-    })
-    .flatMap((module) => getAccessModuleRouteEntries(module, options))
-    .filter((entry) => {
-      if (!entry.route || HIDDEN_SIDEBAR_ROUTE_CODES.has(entry.route)) {
-        return false;
-      }
-      if (
-        options.sellerPanel &&
-        (isSellerBlockedRoute(entry.route) ||
-          isSellerBlockedModule(entry.module))
-      ) {
-        return false;
-      }
-      if (seenRoutes.has(entry.route)) return false;
-      seenRoutes.add(entry.route);
-      return true;
-    });
-
-  const grouped = entries.reduce((acc, entry) => {
-    const tab = entry.tab || "Settings";
-    if (!acc[tab]) acc[tab] = [];
-    acc[tab].push({
-      name: entry.label,
-      label: entry.label,
-      module_code: entry.route,
-      module: entry.module,
-      order: entry.order,
-    });
-    return acc;
-  }, {});
-
-  return Object.entries(grouped)
-    .sort(
-      ([left], [right]) =>
-        tabOrderIndex(left) - tabOrderIndex(right) || left.localeCompare(right),
-    )
-    .map(([tab, subItems]) => {
-      const sortedItems = subItems.sort(
-        (left, right) =>
-          Number(left.order || 0) - Number(right.order || 0) ||
-          String(left.label).localeCompare(String(right.label)),
-      );
-      return {
-        label: tab,
-        icon: getIconForTab(tab),
-        subItems: sortedItems,
-        isSingleItem:
-          tab.toLowerCase() === "dashboard" && sortedItems.length === 1,
-      };
-    })
-    .filter((item) => item.subItems.length > 0);
-};
-
-// Festivals are intentionally not part of either panel navigation. Filter the
-// module as well as an empty Festivals group so stale RBAC/sidebar data stored
-// in a session or returned by an older backend cannot make it reappear.
-const removeFestivalSidebarItems = (groups = []) =>
-  groups
-    .map((group) => ({
-      ...group,
-      subItems: (group.subItems || []).filter((item) => {
-        const moduleCode = String(
-          item.module_code || item.moduleCode || item.module || item.route || "",
-        ).toLowerCase();
-        const label = String(item.label || item.name || "").toLowerCase();
-        return moduleCode !== "festivals" && label !== "festivals";
-      }),
-    }))
-    .filter(
-      (group) =>
-        group.subItems.length > 0 &&
-        String(group.label || "").toLowerCase() !== "festivals",
-    );
 
 // ─── Sidebar state helpers ────────────────────────────────────────────────────
 const getStoredSidebarState = () => {
@@ -466,7 +239,6 @@ const Sidebar = ({
 }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const userSelector = useSelector((state) => state.user);
   const adminCoreSelector = useSelector((state) => state.adminCore);
   const [userData, setUserData] = useState(null);
   const dynamicSidebarModules = useMemo(() => {
@@ -480,27 +252,8 @@ const Sidebar = ({
       sd?.data?.data,
       sd?.data,
     );
-    // Once the API has answered, it is the sole source of sidebar modules.
-    // Login/local-storage copies are only an offline/initial-render fallback;
-    // allowing them to merge after the API made stale modules override RBAC.
-    if (backendModules.length) return mergeSidebarModuleTrees(backendModules);
-    return mergeSidebarModuleTrees(
-      userData?.sidebarModules,
-      userData?.rbacSidebarModules,
-      getStoredUser()?.sidebarModules,
-      getStoredSidebarModules(),
-    );
-  }, [adminCoreSelector?.rbacSidebarModulesData, userData]);
-  const accessModules = useMemo(() => {
-    const sd = adminCoreSelector?.accessModulesData;
-    const payload =
-      sd?.data?.data ||
-      sd?.normalized?.data ||
-      sd?.data?.normalized?.data ||
-      sd?.data ||
-      {};
-    return firstArray(payload?.modules, payload?.list, payload?.items, payload);
-  }, [adminCoreSelector?.accessModulesData]);
+    return mergeSidebarModuleTrees(backendModules);
+  }, [adminCoreSelector?.rbacSidebarModulesData]);
   const sellerPanel = isSellerPanel();
 
   const [activeTab, setActiveTab] = useState(null);
@@ -513,77 +266,11 @@ const Sidebar = ({
 
   const location = useLocation();
   const sidebarRef = useRef(null);
-  const currentRole = normalizeRole(userData?.role || getStoredRole());
-  const isSuperAdmin = currentRole === "super-admin";
-  const permissionModules =
-    userSelector?.getMyModulePermissionData?.data?.data?.modules;
-  const assignedSidebarModules = useMemo(() => {
-    const modules = Array.isArray(permissionModules) ? permissionModules : [];
-    return new Set(
-      modules
-        .filter(
-          (module) =>
-            (module.permissions || []).some(
-              (permission) =>
-                String(permission.action || "").toLowerCase() === "view" &&
-                permission.assigned === true,
-            ) ||
-            (!Array.isArray(module.permissions) && module.assigned !== false),
-        )
-        .flatMap((module) => [
-          module.slug,
-          module.moduleKey,
-          module.moduleSlug,
-          module.metadata?.routeKey,
-          module.metadata?.requiredModule,
-        ])
-        .filter(Boolean)
-        .map(normalizeModuleCode),
-    );
-  }, [permissionModules]);
-
   // ── Build sidebar data ───────────────────────────────────────────────────
   const sidebarData = useMemo(() => {
-    // The seller navigation intentionally keeps its access-module fallback.
-    // Admin navigation is owned by the backend sidebar tree so stale frontend
-    // mappings cannot create duplicate or non-routable menu entries.
-    const accessSidebar =
-      sellerPanel && Array.isArray(accessModules) && accessModules.length
-        ? buildAccessModuleSidebarData(accessModules, {
-            sellerPanel,
-            superAdmin: isSuperAdmin,
-            allowedModules: assignedSidebarModules,
-          })
-        : [];
-
-    if (Array.isArray(dynamicSidebarModules) && dynamicSidebarModules.length) {
-      const sidebarTree = buildDynamicSidebarData(dynamicSidebarModules, {
-        superAdmin: isSuperAdmin,
-        allowedModules: assignedSidebarModules,
-        sellerPanel,
-        trustBackend: true,
-      });
-      if (sellerPanel && sidebarTree.length)
-        return removeFestivalSidebarItems(
-          sortSidebarGroups(sidebarTree, sellerPanel),
-        );
-      if (sidebarTree.length)
-        return removeFestivalSidebarItems(sortSidebarGroups(sidebarTree, sellerPanel));
-    }
-
-    if (accessSidebar.length)
-      return removeFestivalSidebarItems(
-        sortSidebarGroups(accessSidebar, sellerPanel),
-      );
-
-    return [];
-  }, [
-    sellerPanel,
-    accessModules,
-    dynamicSidebarModules,
-    isSuperAdmin,
-    assignedSidebarModules,
-  ]);
+    if (!dynamicSidebarModules.length) return [];
+    return buildDynamicSidebarData(dynamicSidebarModules, { sellerPanel });
+  }, [sellerPanel, dynamicSidebarModules]);
 
   // ── Effects ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -601,21 +288,6 @@ const Sidebar = ({
     if (getAccessToken() && (userData?.userId || userData?.role)) {
       dispatch(
         getMyModulePermission({ _id: userData.userId, role: userData.role }),
-      );
-    }
-    if (getAccessToken() && (userData?.role || getStoredRole())) {
-      const role = userData?.role || getStoredRole();
-      const userId = userData?.userId;
-      dispatch(
-        getAccessModules({
-          role,
-          includePermissions: true,
-          ...(!["seller", "admin", "super-admin"].includes(
-            normalizeRole(role),
-          ) && userId
-            ? { userId }
-            : {}),
-        }),
       );
     }
     if (getAccessToken()) {

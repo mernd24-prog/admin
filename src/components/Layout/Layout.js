@@ -82,7 +82,7 @@ const Orders = React.lazy(
 const Carts = React.lazy(
   () => import("../../pages/OrdersManagement/Carts/Carts"),
 );
- 
+
 const Payments = React.lazy(
   () => import("../../pages/OrdersManagement/Payments/Payments"),
 );
@@ -155,7 +155,7 @@ const ProductCategories = React.lazy(
 const OrderSummary = React.lazy(
   () => import("../../pages/OrdersManagement/Orders/components/ViewOrders"),
 );
- 
+
 const ManageCountry = React.lazy(
   () => import("../../pages/UserManagement/ManageCountry/ManageCountry"),
 );
@@ -237,9 +237,7 @@ const DealManagement = React.lazy(
 const DealPayouts = React.lazy(
   () => import("../../pages/Promotions/DealManagement/DealPayouts"),
 );
-const DealSponsorships = React.lazy(
-  () => import("../../pages/Promotions/DealManagement/DealSponsorships"),
-);
+
 const Cancellations = React.lazy(
   () => import("../../pages/OrdersManagement/Cancellations/Cancellations"),
 );
@@ -251,12 +249,6 @@ const CreditNotes = React.lazy(() => import("../../pages/Tax/CreditNotes"));
 const SubscriptionPlans = React.lazy(
   () =>
     import("../../pages/OrdersManagement/SubscriptionOrders/SubscriptionPlans"),
-);
-const Chargebacks = React.lazy(
-  () => import("../../pages/OrdersManagement/Payments/Chargebacks"),
-);
-const FraudCases = React.lazy(
-  () => import("../../pages/OrdersManagement/Payments/FraudCases"),
 );
 const SellerPayouts = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerPayouts"),
@@ -469,22 +461,22 @@ function Layout() {
       modules.forEach((module) => {
         const moduleCode = normalizeModule(
           module.slug ||
-            module.moduleKey ||
-            module.moduleSlug ||
-            module.module ||
-            module.module_code?.module_code ||
-            module.module_code ||
-            module.metadata?.requiredModule,
+          module.moduleKey ||
+          module.moduleSlug ||
+          module.module ||
+          module.module_code?.module_code ||
+          module.module_code ||
+          module.metadata?.requiredModule,
         );
 
         if (!moduleCode) return;
 
         const hasViewAction = Array.isArray(module.permissions)
           ? module.permissions.some(
-              (permission) =>
-                String(permission.action || "").toLowerCase() === "view" &&
-                permission.assigned === true,
-            )
+            (permission) =>
+              String(permission.action || "").toLowerCase() === "view" &&
+              permission.assigned === true,
+          )
           : module.assigned !== false;
         const isAssigned = module.assigned !== false && hasViewAction;
 
@@ -566,7 +558,7 @@ function Layout() {
       { path: "/inventory-audit", redirectTo: "/app/inventory" },
       { path: "/orders", render: () => <Orders /> },
       { path: "/carts", render: () => <Carts /> },
-    
+
       { path: "/payments", render: () => <Payments /> },
       { path: "/cod-collections", render: () => <CodCollections /> },
       {
@@ -733,7 +725,6 @@ function Layout() {
       { path: "/users-addresses", render: () => <Users /> },
       { path: "/preferences", render: () => <Preferences /> },
       { path: "/deal-management", render: () => <DealManagement /> },
-      { path: "/fraud-cases", render: () => <FraudCases /> },
       { path: "/wallet-management", render: () => <WalletTransactions /> },
       { path: "/wallet-transactions", render: () => <WalletTransactions /> },
       {
@@ -749,12 +740,10 @@ function Layout() {
       },
       { path: "/credit-notes", render: () => <CreditNotes /> },
       { path: "/subscription-plans", render: () => <SubscriptionPlans /> },
-      { path: "/chargebacks", render: () => <Chargebacks /> },
       { path: "/seller-payouts", render: () => <SellerPayouts /> },
       { path: "/payout-ops-queue", render: () => <PayoutOpsQueue /> },
       { path: "/negative-balances", render: () => <NegativeBalances /> },
       { path: "/deal-payouts", render: () => <DealPayouts /> },
-      { path: "/deal-sponsorships", render: () => <DealSponsorships /> },
 
       { path: "/analytics-events", render: () => <AnalyticsEvents /> },
       { path: "/api-keys", render: () => <ApiKeys /> },
@@ -863,9 +852,8 @@ function Layout() {
       </div>
 
       <div
-        className={`relative flex flex-col flex-1 overflow-hidden !bg-[var(--admin-shell)] ${
-          navbarOpen ? "" : "lg:ml-0"
-        }`}
+        className={`relative flex flex-col flex-1 overflow-hidden !bg-[var(--admin-shell)] ${navbarOpen ? "" : "lg:ml-0"
+          }`}
       >
         {/* Inner corner notch — sidebar/header junction */}
         <div
@@ -888,9 +876,8 @@ function Layout() {
         />
 
         <main
-          className={`flex-1 overflow-y-auto overflow-x-hidden bg-[var(--admin-canvas)] sidebar-scrollbar admin-inner-shadow rounded-tl-2xl ${
-            hasPermanentOpen ? "" : "pt-[58px]"
-          }`}
+          className={`flex-1 overflow-y-auto overflow-x-hidden bg-[var(--admin-canvas)] sidebar-scrollbar admin-inner-shadow rounded-tl-2xl ${hasPermanentOpen ? "" : "pt-[58px]"
+            }`}
         >
           <Suspense fallback={<PageSkeletonLoader />}>
             <div className="admin-page-transition">

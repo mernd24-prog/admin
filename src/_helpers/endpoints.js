@@ -445,7 +445,6 @@ export const ENDPOINTS = {
     sellerDashboard: "/analytics/seller-dashboard",
     realtime: "/admin/analytics/realtime",
     returns: "/admin/returns/analytics",
-    chargebacks: "/admin/chargebacks",
   },
   operationsReports: {
     orders: "/admin/reports/orders/export",

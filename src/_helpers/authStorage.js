@@ -312,8 +312,6 @@ export const hasModuleAccess = (moduleCode) => {
       "payouts",
       "payments-finance",
       "cod-collections",
-      "chargebacks",
-      "fraud-cases",
     ],
     wallets: [
       "wallets",
@@ -479,7 +477,6 @@ export const hasModuleAccess = (moduleCode) => {
     ],
     reviews: ["reviews", "product-reviews"],
     warranty: ["warranty", "warranty-templates"],
-    fraud: ["fraud", "chargebacks"],
     system: ["system", "settings"],
   };
 
