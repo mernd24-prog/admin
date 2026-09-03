@@ -49,6 +49,7 @@ const RegisterVerifyOtpPage = () => {
           resendCooldown={auth.resendCooldown}
           resendOtpLabel={auth.resendOtpLabel}
           onResendOtp={auth.handleResendOtp}
+          phone={auth.formFields.phone}
         />
       </FormLayout>
     </div>
