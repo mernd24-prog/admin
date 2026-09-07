@@ -27,6 +27,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import Loader from "../../../components/Loader/Loader";
+import { SellerDetailsSkeletonLoader } from "../../../components/Loader/SkeletonLoader";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import {
   getAdminUserDetails,
@@ -1248,6 +1249,7 @@ const UserDetails = () => {
 
   // edit form state
   const [editSeller, setEditSeller] = useState({
+    fullName: "",
     displayName: "",
     legalBusinessName: "",
     businessType: "",
@@ -1383,7 +1385,13 @@ const UserDetails = () => {
   }, [id, shouldShowAdminAccess, user.role]);
 
   useEffect(() => {
+    const calculatedFullName =
+      [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
+      user.full_name ||
+      user.fullName ||
+      "";
     setEditSeller({
+      fullName: calculatedFullName,
       displayName: sellerProfile.displayName || "",
       legalBusinessName: sellerProfile.legalBusinessName || "",
       businessType: sellerProfile.businessType || "",
@@ -1391,6 +1399,10 @@ const UserDetails = () => {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    profile.firstName,
+    profile.lastName,
+    user.full_name,
+    user.fullName,
     sellerProfile.displayName,
     sellerProfile.legalBusinessName,
     sellerProfile.businessType,
@@ -1608,14 +1620,19 @@ const UserDetails = () => {
     if (savingProfile) return;
     setSavingProfile(true);
     try {
+      const nameParts = (editSeller.fullName || "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
       const firstName =
+        nameParts[0] ||
         profile.firstName ||
         editSeller.displayName?.split(/\s+/)?.[0] ||
         "Seller";
       const lastName =
+        nameParts.slice(1).join(" ") ||
         profile.lastName ||
-        editSeller.displayName?.split(/\s+/)?.slice(1).join(" ") ||
-        "User";
+        "";
       const res = await dispatch(
         updateSeller({
           _id: id,
@@ -1624,6 +1641,7 @@ const UserDetails = () => {
             lastName,
             avatarUrl: editSeller.avatarUrl || "",
           },
+          fullName: editSeller.fullName,
           displayName: editSeller.displayName,
           legalBusinessName: editSeller.legalBusinessName,
           businessType: editSeller.businessType,
@@ -1707,7 +1725,10 @@ const UserDetails = () => {
         onClose={() => setPreviewDocument(null)}
       />
 
-      <div className="space-y-4">
+      {selector.loading && (!user || !user._id) ? (
+        <SellerDetailsSkeletonLoader />
+      ) : (
+        <div className="space-y-4">
         {/* Breadcrumb + Account Status */}
         <div className="flex items-center justify-between">
           <h3 className="text-sm text-gray-500">
@@ -1864,14 +1885,14 @@ const UserDetails = () => {
                     <FormInput
                       label="Full Name"
                       name="fullName"
-                      value={
-                        [profile.firstName, profile.lastName]
-                          .filter(Boolean)
-                          .join(" ") || ""
+                      value={editSeller.fullName}
+                      onChange={(e) =>
+                        setEditSeller((p) => ({
+                          ...p,
+                          fullName: e.target.value,
+                        }))
                       }
-                      readOnly
-                      disabled
-                      helperText="Name from the seller's account profile."
+                      helperText="Update seller full name."
                     />
 
                     <FormInput
@@ -2795,6 +2816,7 @@ const UserDetails = () => {
           </>
         )}
       </div>
+      )}
     </>
   );
 };

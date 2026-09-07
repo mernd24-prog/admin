@@ -312,6 +312,8 @@ export const ENDPOINTS = {
       `/admin/referral/influencers/${influencerId}/status`,
     influencerChildPermission: (influencerId) =>
       `/admin/referral/influencers/${influencerId}/child-permission`,
+    influencerVerification: (influencerId) =>
+      `/admin/referral/influencers/${influencerId}/verification`,
     promoteInfluencer: (influencerId) =>
       `/admin/referral/influencers/${influencerId}/promote`,
     codes: "/admin/referral/codes",

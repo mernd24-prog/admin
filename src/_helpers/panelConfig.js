@@ -41,7 +41,11 @@ const configuredMode = Object.values(PANEL_MODES).includes(requestedMode)
   ? requestedMode
   : PANEL_MODES.ADMIN;
 
+<<<<<<< HEAD
 // const configuredMode =PANEL_MODES.SELLER;
+=======
+const configuredMode = PANEL_MODES.ADMIN;
+>>>>>>> origin/aditi-dev
 
 export const getPanelMode = () => configuredMode;
 

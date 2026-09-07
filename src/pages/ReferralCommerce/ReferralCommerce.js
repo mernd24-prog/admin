@@ -48,6 +48,7 @@ import {
   markReferralPayoutPaid,
   promoteReferralInfluencer,
   rejectReferralPayout,
+  reviewReferralInfluencerVerification,
   updateReferralCode,
   updateReferralBonusRule,
   updateReferralInfluencerStatus,
@@ -1025,7 +1026,7 @@ const ReferralCommerce = () => {
         ? { status: nextStatus }
         : {}),
     });
-    const responses = await Promise.all([
+    await Promise.all([
       dispatch(getReferralSummary()),
       dispatch(getReferralHierarchy()),
       dispatch(
@@ -1522,6 +1523,25 @@ const ReferralCommerce = () => {
     }
   };
 
+  const reviewInfluencerVerification = async (influencer, section, decision) => {
+    const reason = decision === "rejected"
+      ? window.prompt(`Reason for rejecting ${section === "kyc" ? "KYC documents" : "bank details"}:`)
+      : "";
+    if (decision === "rejected" && !reason?.trim()) return;
+    try {
+      await dispatch(reviewReferralInfluencerVerification({
+        influencerId: getId(influencer),
+        section,
+        decision,
+        reason: reason?.trim() || null,
+      })).unwrap();
+      toast.success(`${section === "kyc" ? "KYC" : "Bank"} ${decision}`);
+      await refreshAll();
+    } catch (error) {
+      toast.error(error || `Unable to review ${section}`);
+    }
+  };
+
   const copyRegistrationLink = async (influencer) => {
     const link = influencer.childRegistration?.registrationUrl;
     if (!link || !influencer.childRegistration?.shareable) {
@@ -1722,10 +1742,66 @@ const ReferralCommerce = () => {
     ),
     hierarchy: `Level ${item.level || 1}`,
     wallet: formatCoins(item.wallet?.availableBalance),
+    documents: (() => {
+      const documents = item.metadata?.details?.documents || {};
+      const links = [
+        ["PAN", documents.panCardUrl],
+        ["Aadhaar", documents.aadhaarCardUrl],
+        ["Cheque", documents.cancelledChequeUrl],
+      ].filter(([, url]) => url);
+      return links.length ? (
+        <div className="flex flex-wrap gap-1">
+          {links.map(([label, url]) => (
+            <a key={label} href={url} target="_blank" rel="noreferrer" className="text-xs text-indigo-700 underline">
+              {label}
+            </a>
+          ))}
+        </div>
+      ) : "-";
+    })(),
+    bankDetails: (() => {
+      const payout = item.metadata?.details?.payout || {};
+      if (payout.method === "upi" && payout.upiId) return `UPI: ${payout.upiId}`;
+      if (!payout.accountNumber) return "-";
+      return (
+        <div className="text-xs">
+          <div>{payout.bankName || "Bank"}</div>
+          <div className="font-mono">••••{String(payout.accountNumber).slice(-4)} · {payout.ifscCode}</div>
+        </div>
+      );
+    })(),
+    kyc: <StatusPill value={item.kycStatus || "not_submitted"} />,
+    bank: <StatusPill value={item.payoutProfileStatus || "not_submitted"} />,
     status: <StatusPill value={item.status} />,
     actions: (
       <RowActions
         actions={[
+          {
+            label: "Approve KYC",
+            icon: <Check size={14} />,
+            hidden: item.kycStatus !== "submitted" && item.kycStatus !== "rejected",
+            onClick: () => reviewInfluencerVerification(item, "kyc", "verified"),
+          },
+          {
+            label: "Reject KYC",
+            icon: <X size={14} />,
+            danger: true,
+            hidden: item.kycStatus !== "submitted" && item.kycStatus !== "verified",
+            onClick: () => reviewInfluencerVerification(item, "kyc", "rejected"),
+          },
+          {
+            label: "Verify Bank",
+            icon: <Check size={14} />,
+            hidden: item.payoutProfileStatus !== "submitted" && item.payoutProfileStatus !== "rejected",
+            onClick: () => reviewInfluencerVerification(item, "bank", "verified"),
+          },
+          {
+            label: "Reject Bank",
+            icon: <X size={14} />,
+            danger: true,
+            hidden: item.payoutProfileStatus !== "submitted" && item.payoutProfileStatus !== "verified",
+            onClick: () => reviewInfluencerVerification(item, "bank", "rejected"),
+          },
           {
             label:
               item.status === "pending"
@@ -2924,6 +3000,10 @@ const ReferralCommerce = () => {
             { key: "code", label: "Referral Code" },
             { key: "hierarchy", label: "Hierarchy" },
             { key: "wallet", label: "Available Coins" },
+            { key: "documents", label: "Documents" },
+            { key: "bankDetails", label: "Bank Details" },
+            { key: "kyc", label: "KYC" },
+            { key: "bank", label: "Bank" },
             { key: "status", label: "Status" },
             { key: "actions", label: "Actions" },
           ]}

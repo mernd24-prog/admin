@@ -10,6 +10,7 @@ const initialState = {
   createChildData: {},
   updateInfluencerStatusData: {},
   updateInfluencerChildPermissionData: {},
+  reviewInfluencerVerificationData: {},
   promoteInfluencerData: {},
   codesData: {},
   createCodeData: {},
@@ -105,6 +106,14 @@ export const updateReferralInfluencerStatus = createApiThunkPrivate(
 export const updateReferralInfluencerChildPermission = createApiThunkPrivate(
   "referralCommerce/updateInfluencerChildPermission",
   (payload) => ENDPOINTS.referral.influencerChildPermission(idOf(payload, "influencerId")),
+  "PATCH",
+  false,
+  { transformBody: (payload = {}) => omit(payload, ["influencerId", "id", "_id"]) }
+);
+
+export const reviewReferralInfluencerVerification = createApiThunkPrivate(
+  "referralCommerce/reviewInfluencerVerification",
+  (payload) => ENDPOINTS.referral.influencerVerification(idOf(payload, "influencerId")),
   "PATCH",
   false,
   { transformBody: (payload = {}) => omit(payload, ["influencerId", "id", "_id"]) }
@@ -285,6 +294,7 @@ const referralCommerceSlice = createSlice({
       [createReferralChild, "createChildData"],
       [updateReferralInfluencerStatus, "updateInfluencerStatusData"],
       [updateReferralInfluencerChildPermission, "updateInfluencerChildPermissionData"],
+      [reviewReferralInfluencerVerification, "reviewInfluencerVerificationData"],
       [promoteReferralInfluencer, "promoteInfluencerData"],
       [getReferralCodes, "codesData"],
       [createReferralCode, "createCodeData"],
