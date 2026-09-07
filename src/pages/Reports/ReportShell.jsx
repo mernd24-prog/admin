@@ -45,6 +45,11 @@ import {
 } from "../../components/Shared";
 import { axiosPrivate } from "../../_helpers/axiosProvider";
 import { downloadApiFile } from "../../_helpers/downloadApi";
+import {
+  exportToCsv,
+  exportToCsvSections,
+  exportToExcelWorkbook,
+} from "../../_helpers/exportToCsv";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 import { GoldDateRangeCalendar } from "../../components/Shared/FilterBar";
@@ -515,6 +520,10 @@ export const ReportShell = ({
   onRefresh,
   exportEndpoint,
   exportFilename,
+  exportRows,
+  exportColumns,
+  exportCsvSections,
+  exportExcelSheets,
   showFilters = true,
 }) => {
   const [exporting, setExporting] = useState(false);
@@ -525,6 +534,24 @@ export const ReportShell = ({
       : "Select date range";
 
   const handleExport = async () => {
+    if (exportCsvSections?.length) {
+      exportToCsvSections(exportCsvSections, exportFilename || "report.csv");
+      return;
+    }
+
+    if (exportExcelSheets?.length) {
+      exportToExcelWorkbook(exportExcelSheets, exportFilename || "report.xlsx");
+      return;
+    }
+
+    if (exportRows?.length) {
+      exportToCsv(exportRows, {
+        filename: exportFilename || "report.csv",
+        columns: exportColumns,
+      });
+      return;
+    }
+
     if (!exportEndpoint) return;
     try {
       setExporting(true);
@@ -549,10 +576,17 @@ export const ReportShell = ({
         subtitle={subtitle}
         breadcrumbs={breadcrumbs}
         actions={
-          exportEndpoint && (
-            <button type="button" onClick={handleExport} disabled={exporting}>
+          (exportEndpoint ||
+            exportRows?.length ||
+            exportCsvSections?.length ||
+            exportExcelSheets?.length) && (
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting || loading}
+            >
               <MdFileDownload size={16} />{" "}
-              {exporting ? "Exporting" : "Export CSV"}
+              {loading ? "Loading" : exporting ? "Exporting" : "Export Report"}
             </button>
           )
         }
@@ -1386,6 +1420,31 @@ export const SalesReport = () => {
     },
   ];
 
+  const salesExportRows = listFrom(data.performance).map((item) => ({
+    date: item.date || item.day || item.label || "Selected range",
+    products: asNumber(
+      item.products ?? item.productCount ?? item.totalProducts,
+    ),
+    orders: asNumber(
+      item.orders ?? item.orderCount ?? item.totalOrders ?? item.count,
+    ),
+    revenue: asNumber(
+      item.revenue ?? item.gmv ?? item.gmvAmount ?? item.totalRevenue,
+    ),
+    views: asNumber(item.views ?? item.productViews ?? item.totalViews),
+  }));
+
+  if (!salesExportRows.length) {
+    salesExportRows.push({
+      date: `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(filters.toDate)}`,
+      products: fallbackProductRows.length,
+      refundAmount: refundAmount,
+      orders: totalOrders,
+      revenue: totalRevenue,
+      views: totalProductViews,
+    });
+  }
+
   return (
     <ReportShell
       title={sellerView ? "Sales Report" : "Sales Reports"}
@@ -1403,8 +1462,17 @@ export const SalesReport = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
-      exportEndpoint={sellerView ? null : ENDPOINTS.operationsReports.orders}
-      exportFilename={sellerView ? null : "sales-report.csv"}
+      exportEndpoint={null}
+      exportFilename="sales-report.csv"
+      exportRows={salesExportRows}
+      exportColumns={[
+        { key: "date", label: "Date" },
+        { key: "products", label: "Products" },
+        { key: "refundAmount", label: "Refund Amount" },
+        { key: "orders", label: "Orders" },
+        { key: "revenue", label: "Revenue" },
+        { key: "views", label: "Views" },
+      ]}
     >
       <SummaryColumnChart
         title="Sales Report Summary"
@@ -1546,6 +1614,39 @@ export const ProductAnalytics = () => {
     },
   ];
 
+  const productSummaryRows = [
+    {
+      field: "Report Name",
+      value: sellerView ? "Product Report" : "Product Analytics",
+    },
+    {
+      field: "Date Range",
+      value: `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(filters.toDate)}`,
+    },
+    { field: "Generated On", value: formatDateLabel(toIsoDate(new Date())) },
+    { field: "Total Products", value: asNumber(inventory.totalProducts) },
+    { field: "Product Views", value: viewsTotal },
+    { field: "Cart Adds", value: cartAddTotal },
+    { field: "Out of Stock", value: asNumber(inventory.outOfStockCount) },
+  ];
+
+  const productDetailRows = rows.map((row, index) => ({
+    serialNumber: index + 1,
+    productName: row.title,
+    sku: row.sku,
+    price: row.price,
+    purchases: row.purchases,
+    revenue: row.revenue,
+    productViews: row.views,
+    cartAdds: row.cartAdds,
+    wishlistAdds: row.wishlistAdds,
+  }));
+  const productDatePart = (value) =>
+    formatDateLabel(value).replace(/\s+/g, "-");
+  const productExportFilename = `Product_Report_${productDatePart(
+    filters.fromDate,
+  )}_to_${productDatePart(filters.toDate)}.xlsx`;
+
   return (
     <ReportShell
       title={sellerView ? "Product Report" : "Product Analytics"}
@@ -1563,8 +1664,35 @@ export const ProductAnalytics = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
-      exportEndpoint={sellerView ? null : ENDPOINTS.operationsReports.products}
-      exportFilename={sellerView ? null : "product-analytics.csv"}
+      exportEndpoint={null}
+      exportFilename={productExportFilename}
+      exportExcelSheets={[
+        {
+          name: "Product Summary",
+          title: "Product Summary",
+          data: productSummaryRows,
+          columns: [
+            { key: "field", label: "Field" },
+            { key: "value", label: "Value" },
+          ],
+        },
+        {
+          name: "Product Details",
+          title: "Product Details",
+          data: productDetailRows,
+          columns: [
+            { key: "serialNumber", label: "S.No" },
+            { key: "productName", label: "Product Name" },
+            { key: "sku", label: "SKU" },
+            { key: "price", label: "Price" },
+            { key: "purchases", label: "Purchases" },
+            { key: "revenue", label: "Revenue" },
+            { key: "productViews", label: "Product Views" },
+            { key: "cartAdds", label: "Cart Adds" },
+            { key: "wishlistAdds", label: "Wishlist Adds" },
+          ],
+        },
+      ]}
     >
       <div className="space-y-4">
         <PerformanceOverview
@@ -1697,6 +1825,38 @@ export const InventoryAnalytics = () => {
     },
   ];
 
+  const inventoryProductRows = lowStockRows.map((row, index) => ({
+    serialNumber: index + 1,
+    productName: row.title,
+    sku: row.sku,
+    stock: row.stock,
+    reserved: row.reservedStock,
+    available: row.availableStock,
+    status: row.availableStock > 0 ? "In Stock" : "Out of Stock",
+  }));
+
+  const inventorySummaryRows = [
+    {
+      field: "Report Name",
+      value: sellerView ? "Inventory Report" : "Inventory Analytics",
+    },
+    {
+      field: "Date Range",
+      value: `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(filters.toDate)}`,
+    },
+    { field: "Total Products", value: asNumber(statsData.totalProducts) },
+    { field: "Total Stock", value: asNumber(statsData.totalStock) },
+    { field: "Reserved Stock", value: asNumber(statsData.totalReserved) },
+    {
+      field: "Available Stock",
+      value: Math.max(
+        0,
+        asNumber(statsData.totalStock) - asNumber(statsData.totalReserved),
+      ),
+    },
+    { field: "Low Stock Items", value: asNumber(statsData.lowStockCount) },
+  ];
+
   return (
     <ReportShell
       title={sellerView ? "Inventory Report" : "Inventory Analytics"}
@@ -1714,8 +1874,36 @@ export const InventoryAnalytics = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
-      exportEndpoint={sellerView ? null : ENDPOINTS.operationsReports.inventory}
-      exportFilename={sellerView ? null : "inventory-report.csv"}
+      exportEndpoint={null}
+      exportFilename={`Inventory_Report_${formatDateLabel(filters.fromDate).replace(
+        /\s+/g,
+        "-",
+      )}_to_${formatDateLabel(filters.toDate).replace(/\s+/g, "-")}.xlsx`}
+      exportExcelSheets={[
+        {
+          name: "Inventory Summary",
+          title: "Inventory Summary",
+          data: inventorySummaryRows,
+          columns: [
+            { key: "field", label: "Field" },
+            { key: "value", label: "Value" },
+          ],
+        },
+        {
+          name: "Inventory Products",
+          title: "Inventory Products",
+          data: inventoryProductRows,
+          columns: [
+            { key: "serialNumber", label: "S.No" },
+            { key: "productName", label: "Product Name" },
+            { key: "sku", label: "SKU" },
+            { key: "stock", label: "Stock" },
+            { key: "reserved", label: "Reserved" },
+            { key: "available", label: "Available" },
+            { key: "status", label: "Status" },
+          ],
+        },
+      ]}
     >
       <div className="space-y-4">
         <PerformanceOverview

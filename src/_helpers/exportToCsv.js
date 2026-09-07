@@ -46,6 +46,35 @@ export const exportToCsv = (
   return true;
 };
 
+export const exportToCsvSections = (
+  sections = [],
+  filename = "export.csv",
+) => {
+  if (!sections.length) return false;
+
+  const escape = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const lines = [];
+
+  sections.forEach(({ title, data = [], columns = [] }, sectionIndex) => {
+    if (title) lines.push(escape(title));
+    const rows = normalizeExportRows(data, columns);
+    if (rows.length) {
+      const headers = Object.keys(rows[0]);
+      lines.push(headers.map(escape).join(","));
+      rows.forEach((row) => {
+        lines.push(headers.map((key) => escape(row[key])).join(","));
+      });
+    }
+    if (sectionIndex < sections.length - 1) lines.push("");
+  });
+
+  download(
+    new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8;" }),
+    filename,
+  );
+  return true;
+};
+
 export const exportToExcel = (
   data = [],
   { filename = "export.xlsx", columns = [], sheetName = "Data" } = {},
@@ -56,6 +85,23 @@ export const exportToExcel = (
   );
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  XLSX.writeFile(workbook, filename);
+  return true;
+};
+
+export const exportToExcelWorkbook = (
+  sheets = [],
+  filename = "export.xlsx",
+) => {
+  if (!sheets.length) return false;
+
+  const workbook = XLSX.utils.book_new();
+  sheets.forEach(({ name, data = [], columns = [] }) => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      normalizeExportRows(data, columns),
+    );
+    XLSX.utils.book_append_sheet(workbook, worksheet, name);
+  });
   XLSX.writeFile(workbook, filename);
   return true;
 };
