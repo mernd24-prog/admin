@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   MdAccountBalanceWallet,
@@ -9,6 +9,9 @@ import {
   MdTune,
 } from "react-icons/md";
 import StatusBadge from "../../../components/Shared/StatusBadge";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import { DateRangePickerModal } from "../../../components/Shared";
+import { GoldDateRangeCalendar } from "../../../components/Shared/FilterBar";
 import { formatCurrency, formatDate } from "../../../utils/formatters";
 
 export const unwrapFinance = (payload = {}) => payload?.data?.data || payload?.data || {};
@@ -46,6 +49,156 @@ export const financeDateTime = (value, fallback = "—") => {
     day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true,
   });
 };
+
+export const FINANCE_RANGE_OPTIONS = [
+  { label: "Today", value: "today" },
+  { label: "This Week", value: "this_week" },
+  { label: "This Month", value: "this_month" },
+  { label: "Last Month", value: "last_month" },
+  { label: "Custom Range", value: "custom" },
+];
+
+const toInputDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getFinanceRangeDates = (range) => {
+  const today = new Date();
+  const start = new Date(today);
+  const end = new Date(today);
+  const day = today.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+
+  if (range === "this_week") start.setDate(today.getDate() + mondayOffset);
+  if (range === "this_month") start.setDate(1);
+  if (range === "last_month") {
+    start.setMonth(today.getMonth() - 1, 1);
+    end.setMonth(today.getMonth(), 0);
+  }
+
+  return { fromDate: toInputDate(start), toDate: toInputDate(end) };
+};
+
+const parseFinanceInputDate = (value) => {
+  if (!value) return null;
+  const [year, month, day] = String(value).split("-").map(Number);
+  return year && month && day ? new Date(year, month - 1, day) : null;
+};
+
+export const formatFinanceRangeLabel = ({ fromDate, toDate } = {}) => {
+  if (!fromDate || !toDate) return "Custom Range";
+  const format = (value) =>
+    new Date(`${value}T00:00:00`).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  return `${format(fromDate)} - ${format(toDate)}`;
+};
+
+export const useFinanceDateRange = (initialRange = "this_month") => {
+  const [range, setRange] = useState(initialRange);
+  const [dateFilters, setDateFilters] = useState(() =>
+    getFinanceRangeDates(initialRange),
+  );
+  const [customDates, setCustomDates] = useState(() =>
+    getFinanceRangeDates(initialRange),
+  );
+  const [customPickerOpen, setCustomPickerOpen] = useState(false);
+  const [customCalendarViewDate, setCustomCalendarViewDate] = useState(
+    () => new Date(),
+  );
+
+  const handleRangeChange = (nextRange) => {
+    if (nextRange === "custom") {
+      setCustomDates(dateFilters);
+      setCustomCalendarViewDate(new Date());
+      setCustomPickerOpen(true);
+      return;
+    }
+    const nextDates = getFinanceRangeDates(nextRange);
+    setRange(nextRange);
+    setDateFilters(nextDates);
+    setCustomDates(nextDates);
+  };
+
+  const handleCustomDateSelect = (value) => {
+    const selectedDate = parseFinanceInputDate(value);
+    if (!selectedDate || value > toInputDate(new Date())) return;
+    setCustomCalendarViewDate(selectedDate);
+    setCustomDates((current) => {
+      if (!current.fromDate || current.toDate) {
+        return { fromDate: value, toDate: "" };
+      }
+      return value < current.fromDate
+        ? { fromDate: value, toDate: current.fromDate }
+        : { ...current, toDate: value };
+    });
+  };
+
+  const applyCustomDateRange = () => {
+    if (!customDates.fromDate || !customDates.toDate) return false;
+    setRange("custom");
+    setDateFilters(customDates);
+    setCustomPickerOpen(false);
+    return true;
+  };
+
+  return {
+    range,
+    dateFilters,
+    customDates,
+    customPickerOpen,
+    customCalendarViewDate,
+    selectedRangeOption:
+      range === "custom"
+        ? { label: formatFinanceRangeLabel(dateFilters), value: "custom" }
+        : FINANCE_RANGE_OPTIONS.find((option) => option.value === range),
+    handleRangeChange,
+    handleCustomDateSelect,
+    applyCustomDateRange,
+    closeCustomPicker: () => setCustomPickerOpen(false),
+    setCustomDates,
+    setCustomCalendarViewDate,
+  };
+};
+
+export const FinanceDateRangeFilter = ({ dateRange, loading = false }) => (
+  <>
+    <div className="w-full sm:w-[190px]">
+      <FilterSelect
+        options={FINANCE_RANGE_OPTIONS}
+        value={dateRange.selectedRangeOption}
+        onChange={(option) => option && dateRange.handleRangeChange(option.value)}
+        placeholder="Select date range"
+        isSearchable={false}
+        isClearable={false}
+      />
+    </div>
+    <DateRangePickerModal
+      open={dateRange.customPickerOpen}
+      onClose={dateRange.closeCustomPicker}
+      title="Select Finance Date Range"
+      subtitle="Finance data will update after applying the range."
+      loading={loading}
+    >
+      <GoldDateRangeCalendar
+        dates={dateRange.customDates}
+        viewDate={dateRange.customCalendarViewDate}
+        onViewDateChange={dateRange.setCustomCalendarViewDate}
+        onSelectDate={dateRange.handleCustomDateSelect}
+        onApply={dateRange.applyCustomDateRange}
+        onCancel={dateRange.closeCustomPicker}
+        onClear={() => dateRange.setCustomDates({ fromDate: "", toDate: "" })}
+        loading={loading}
+        className="shadow-none"
+      />
+    </DateRangePickerModal>
+  </>
+);
 
 export const sellerFinanceStatus = (rowOrStatus = {}) => {
   const row = typeof rowOrStatus === "object" ? rowOrStatus : { status: rowOrStatus };

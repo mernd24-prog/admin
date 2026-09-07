@@ -7,8 +7,9 @@ import PageHeader from "../../../components/Shared/PageHeader";
 import Loader from "../../../components/Loader/Loader";
 import { getMySellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
 import {
-  FinanceMetricCard, FinanceNav, FinancePageGuide, FinanceStatusBadge, MoneyEquation,
-  financeDateTime, financeMoney, sellerFinanceStatus, unwrapFinance,
+  FinanceDateRangeFilter, FinanceMetricCard, FinanceNav, FinancePageGuide,
+  FinanceStatusBadge, MoneyEquation, financeDateTime, financeMoney,
+  sellerFinanceStatus, unwrapFinance, useFinanceDateRange,
 } from "./financeUi";
 
 export default function FinanceOverview() {
@@ -21,12 +22,74 @@ export default function FinanceOverview() {
   const currency = wallet.currency || "INR";
   const items = Array.isArray(wallet.items) ? wallet.items : [];
   const payouts = wallet.payouts || {};
+  const dateRange = useFinanceDateRange();
+  const { dateFilters } = dateRange;
   const owed = Math.abs(Number(balances.codLiabilityBalance || 0)) + Math.abs(Number(balances.otherAdjustmentBalance || 0));
   const load = useCallback(async () => {
-    try { await dispatch(getMySellerWalletSummary({ limit: 8, offset: 0 })).unwrap(); }
+    try {
+      await dispatch(
+        getMySellerWalletSummary({
+          fromDate: dateFilters.fromDate,
+          toDate: dateFilters.toDate,
+          limit: 8,
+          offset: 0,
+        }),
+      ).unwrap();
+    }
     catch (error) { toast.error(error?.message || error || "Unable to load finance overview"); }
-  }, [dispatch]);
+  }, [dateFilters, dispatch]);
   useEffect(() => { load(); }, [load]);
+
+  const financeSummary = wallet.summary || wallet.earningsSummary || {};
+  const previousSummary =
+    wallet.previousPeriod || financeSummary.previousPeriod || {};
+  const comparison = wallet.comparison || financeSummary.comparison || {};
+  const sumItems = (keys) =>
+    items.reduce((total, item) => {
+      const value = keys.find(
+        (key) => item?.[key] !== undefined && item?.[key] !== null,
+      );
+      return total + Number(value ? item[value] : 0);
+    }, 0);
+  const grossEarnings = Number(
+    financeSummary.grossEarnings ??
+      wallet.grossEarnings ??
+      balances.grossEarnings ??
+      sumItems(["grossAmount", "gross_amount", "amount"]),
+  );
+  const netEarnings = Number(
+    financeSummary.netEarnings ??
+      wallet.netEarnings ??
+      balances.netEarnings ??
+      sumItems(["netAmount", "net_amount"]),
+  );
+  const deductions = Number(
+    financeSummary.deductions ??
+      financeSummary.adjustments ??
+      wallet.deductions ??
+      wallet.adjustments ??
+      Math.max(0, grossEarnings - netEarnings),
+  );
+  const previousNetEarnings = Number(
+    previousSummary.netEarnings ??
+      previousSummary.net ??
+      wallet.previousNetEarnings ??
+      financeSummary.previousNetEarnings,
+  );
+  const percentageChangeValue =
+    financeSummary.percentageChange ??
+    financeSummary.changePercentage ??
+    comparison.percentageChange ??
+    comparison.changePercentage ??
+    wallet.percentageChange ??
+    wallet.changePercentage;
+  const percentageChange = Number(percentageChangeValue);
+  const calculatedPercentageChange =
+    Number.isFinite(percentageChangeValue ? percentageChange : NaN)
+      ? percentageChange
+      : previousNetEarnings
+        ? ((netEarnings - previousNetEarnings) / Math.abs(previousNetEarnings)) * 100
+        : null;
 
   const journey = [
     ["Delivered", wallet.deliveredAmount || balances.deliveredBalance, counts.delivered || 0, "Order items delivered", ""],
@@ -37,7 +100,25 @@ export default function FinanceOverview() {
   ];
   return <div className="space-y-5">
     <Loader loading={Boolean(state.loading)} />
-    <PageHeader title="Finance" subtitle="See what you've earned, what's waiting, what needs attention, and what can be paid to you now." breadcrumbs={[{ label: "My Finance & Payouts" }, { label: "Overview" }]} actions={<button type="button" className="admin-btn-secondary" onClick={load}><MdRefresh /> Refresh</button>} />
+    <PageHeader
+      title="Finance"
+      subtitle="See what you've earned, what's waiting, what needs attention, and what can be paid to you now."
+      breadcrumbs={[{ label: "My Finance & Payouts" }, { label: "Overview" }]}
+      actions={(
+        <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+          <FinanceDateRangeFilter dateRange={dateRange} loading={Boolean(state.loading)} />
+          <button
+            type="button"
+            className="admin-btn-secondary"
+            onClick={load}
+            disabled={Boolean(state.loading)}
+          >
+            <MdRefresh className={state.loading ? "animate-spin" : ""} />
+            {state.loading ? "Refreshing" : "Refresh"}
+          </button>
+        </div>
+      )}
+    />
     <FinanceNav />
     <FinancePageGuide step="1" title="Start with your current balance" description="This is the simplest view of your money. Check what is payable now, then follow anything waiting or needing attention." points={["Payable now is ready for transfer", "Waiting moves after release conditions"]} />
     <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
@@ -49,6 +130,42 @@ export default function FinanceOverview() {
       <FinanceMetricCard label="On hold" value={financeMoney(balances.blockedBalance, currency)} description="Temporarily unavailable because of a return, refund, dispute, or another hold." />
       <FinanceMetricCard tone="green" label="Paid" value={financeMoney(balances.paidBalance, currency)} description="Successfully transferred to your payout destination." />
     </div>
+    <section className="admin-card p-5">
+      <div className="mb-4 border-b border-[var(--admin-line)] pb-3">
+        <h2 className="font-semibold">Earnings Summary</h2>
+        <p className="mt-1 text-xs text-[var(--admin-muted)]">
+          Earnings and deductions for the selected date range.
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div>
+          <span className="text-xs text-[var(--admin-muted)]">Net Earnings</span>
+          <strong className="mt-1 block text-lg text-emerald-700">
+            {financeMoney(netEarnings, currency)}
+          </strong>
+        </div>
+        <div>
+          <span className="text-xs text-[var(--admin-muted)]">Gross Earnings</span>
+          <strong className="mt-1 block text-lg text-[var(--admin-navy)]">
+            {financeMoney(grossEarnings, currency)}
+          </strong>
+        </div>
+        <div>
+          <span className="text-xs text-[var(--admin-muted)]">Deductions / Adjustments</span>
+          <strong className="mt-1 block text-lg text-amber-700">
+            {financeMoney(deductions, currency)}
+          </strong>
+        </div>
+        <div>
+          <span className="text-xs text-[var(--admin-muted)]">Change vs Previous Period</span>
+          <strong className={`mt-1 block text-lg ${calculatedPercentageChange === null ? "text-[var(--admin-muted)]" : calculatedPercentageChange >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+            {calculatedPercentageChange === null
+              ? "N/A"
+              : `${calculatedPercentageChange >= 0 ? "+" : ""}${calculatedPercentageChange.toFixed(1)}%`}
+          </strong>
+        </div>
+      </div>
+    </section>
     <section className="admin-card overflow-hidden">
       <div className="border-b border-[var(--admin-line)] px-5 py-4"><h2 className="font-semibold">Money journey</h2><p className="mt-1 text-xs text-[var(--admin-muted)]">Follow earnings from delivery to your payout destination.</p></div>
       <div className="grid divide-y divide-[var(--admin-line)] md:grid-cols-5 md:divide-x md:divide-y-0">
