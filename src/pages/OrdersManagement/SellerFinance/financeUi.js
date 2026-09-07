@@ -95,32 +95,35 @@ const FINANCE_JOURNEY = [
 ];
 
 export const FinanceNav = () => (
-  <section className="mb-5 rounded-xl border border-[var(--admin-line)] bg-[var(--admin-shell)] p-3 shadow-[0_2px_10px_rgba(31,27,95,0.04)]">
-    <div className="mb-3 px-1">
-      <h2 className="text-sm font-semibold text-[var(--admin-navy)]">Your money journey</h2>
-      <p className="mt-0.5 text-xs text-[var(--admin-muted)]">Move from earnings to completed payout records.</p>
+  <section className="finance-journey mb-5 rounded-xl border border-[var(--admin-navy)] bg-[var(--admin-navy)] p-3 shadow-[0_12px_28px_rgba(31,27,95,0.14)]">
+    <div className="mb-3 flex items-end justify-between gap-3 px-1">
+      <div>
+        <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--admin-gold)]">Finance workspace</span>
+        <h2 className="mt-1 text-sm font-semibold text-white">Your money journey</h2>
+      </div>
+      <p className="hidden text-right text-xs text-white/60 sm:block">From earnings to completed payout records.</p>
     </div>
     <nav className="flex items-stretch gap-1 overflow-x-auto pb-1" aria-label="Finance journey">
       {FINANCE_JOURNEY.map(({ to, label, helper, icon: Icon }, index) => (
         <React.Fragment key={to}>
           <NavLink
             to={to}
-            className={({ isActive }) => `group relative flex min-h-[72px] min-w-[190px] flex-1 items-center gap-3 rounded-lg border px-3 py-2.5 transition-all xl:min-w-0 ${isActive ? "border-[var(--admin-gold)] bg-[var(--admin-navy)] text-white shadow-[0_5px_12px_rgba(31,27,95,0.14)]" : "border-[var(--admin-line)] bg-white text-[var(--admin-ink)] hover:border-[var(--admin-gold)] hover:shadow-sm"}`}
+            className={({ isActive }) => `group relative flex min-h-[72px] min-w-[190px] flex-1 items-center gap-3 rounded-lg border px-3 py-2.5 transition-all xl:min-w-0 ${isActive ? "border-[var(--admin-gold)] bg-white/10 text-white shadow-[inset_0_0_0_1px_rgba(214,163,35,0.2)]" : "border-white/10 bg-white/[0.06] text-white/80 hover:border-[var(--admin-gold)]/70 hover:bg-white/10"}`}
           >
             {({ isActive }) => (
               <>
-                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-white/10 text-[var(--admin-gold)]" : "bg-[var(--admin-gold-soft)] text-[var(--admin-blue)]"}`}>
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-[var(--admin-gold)] text-[var(--admin-navy)]" : "bg-white/10 text-[var(--admin-gold)]"}`}>
                   <Icon size={18} />
                 </span>
                 <span className="min-w-0">
-                  <span className={`block text-[10px] font-bold uppercase tracking-wide ${isActive ? "text-white/65" : "text-[var(--admin-muted)]"}`}>Step {index + 1}</span>
+                  <span className="block text-[10px] font-bold uppercase tracking-wide text-[var(--admin-gold)]">Step {index + 1}</span>
                   <span className="block truncate text-sm font-semibold">{label}</span>
-                  <span className={`block truncate text-[10px] font-normal ${isActive ? "text-white/70" : "text-[var(--admin-muted)]"}`}>{helper}</span>
+                  <span className="block truncate text-[10px] font-normal text-white/60">{helper}</span>
                 </span>
               </>
             )}
           </NavLink>
-          {index < FINANCE_JOURNEY.length - 1 && <span className="hidden shrink-0 items-center text-[var(--admin-gold-dark)] xl:flex" aria-hidden="true"><MdChevronRight size={18} /></span>}
+          {index < FINANCE_JOURNEY.length - 1 && <span className="hidden shrink-0 items-center text-white/30 xl:flex" aria-hidden="true"><MdChevronRight size={18} /></span>}
         </React.Fragment>
       ))}
     </nav>
@@ -128,15 +131,15 @@ export const FinanceNav = () => (
 );
 
 export const FinanceChoiceFilters = ({ label = "Show", options = [], value = "", onChange }) => (
-  <section className="rounded-xl border border-[var(--admin-line)] bg-white px-4 py-3 shadow-[0_2px_8px_rgba(31,27,95,0.03)]" aria-label={label}>
+  <section className="finance-filter rounded-xl border border-[var(--admin-line)] bg-white px-4 py-3 shadow-[0_5px_16px_rgba(31,27,95,0.04)]" aria-label={label}>
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
       <div className="shrink-0">
-        <span className="block text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">{label}</span>
-        <span className="mt-0.5 block text-[10px] text-[var(--admin-muted)]">Choose what you want to review</span>
+        <span className="block text-xs font-bold uppercase tracking-[0.12em] text-[var(--admin-navy)]">{label}</span>
+        <span className="mt-0.5 block text-[10px] text-[var(--admin-muted)]">Narrow your view</span>
       </div>
       <div className="flex gap-2 overflow-x-auto lg:border-l lg:border-[var(--admin-line)] lg:pl-4">
         {options.map(([key, optionLabel, count]) => (
-          <button key={optionLabel} type="button" onClick={() => onChange(key)} className={`whitespace-nowrap rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors ${value === key ? "border-[var(--admin-navy)] bg-[var(--admin-navy)] text-white shadow-sm" : "border-[var(--admin-line)] bg-[var(--admin-shell)] text-[var(--admin-muted)] hover:border-[var(--admin-gold)] hover:bg-white hover:text-[var(--admin-navy)]"}`}>
+          <button key={optionLabel} type="button" onClick={() => onChange(key)} className={`whitespace-nowrap rounded-md border px-3.5 py-2 text-xs font-semibold transition-all ${value === key ? "border-[var(--admin-navy)] bg-[var(--admin-navy)] text-white shadow-sm" : "border-transparent bg-[var(--admin-surface-soft)] text-[var(--admin-muted)] hover:border-[var(--admin-gold)] hover:bg-white hover:text-[var(--admin-navy)]"}`}>
             {optionLabel}{count !== undefined && <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${value === key ? "bg-white/15" : "bg-white"}`}>{count}</span>}
           </button>
         ))}
@@ -158,8 +161,7 @@ export const FinanceEmptyState = ({ title, description }) => (
 );
 
 export const FinancePageGuide = ({ step, title, description, points = [], icon: Icon = MdAccountBalanceWallet }) => (
-  <section className="relative overflow-hidden rounded-xl border border-[var(--admin-gold)] bg-gradient-to-r from-[var(--admin-gold-soft)] via-white to-white px-5 py-4 shadow-[0_3px_12px_rgba(31,27,95,0.05)]">
-    <div className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-[var(--admin-gold)]/10" aria-hidden="true" />
+  <section className="finance-guide relative overflow-hidden rounded-xl border border-[var(--admin-gold)] bg-gradient-to-r from-[var(--admin-gold-soft)] via-white to-white px-5 py-4 shadow-[0_8px_22px_rgba(31,27,95,0.06)]">
     <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-navy)] text-[var(--admin-gold)] shadow-sm"><Icon size={22} /></span>
@@ -179,7 +181,7 @@ export const FinancePageGuide = ({ step, title, description, points = [], icon: 
 export const FinanceMetricCard = ({ label, value, description, tone = "neutral", featured = false, action }) => {
   const toneClass = { green: "text-emerald-700", red: "text-red-700", amber: "text-amber-700", blue: "text-[var(--admin-blue)]", neutral: "text-[var(--admin-navy)]" }[tone];
   const accentClass = { green: "bg-emerald-500", red: "bg-red-500", amber: "bg-amber-500", blue: "bg-[var(--admin-blue)]", neutral: "bg-[var(--admin-gold)]" }[tone];
-  return <div className={`admin-card relative overflow-hidden p-5 ${featured ? "border-[var(--admin-gold)] bg-gradient-to-br from-[var(--admin-gold-soft)] to-white" : "bg-white"}`}>
+  return <div className={`finance-metric admin-card relative overflow-hidden p-5 ${featured ? "border-[var(--admin-gold)] bg-gradient-to-br from-[var(--admin-gold-soft)] to-white" : "bg-white"}`}>
     <span className={`absolute inset-y-0 left-0 w-1 ${accentClass}`} />
     <div className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">{label}</div>
     <div className={`mt-2 text-2xl font-bold ${toneClass}`}>{value}</div>
@@ -189,7 +191,7 @@ export const FinanceMetricCard = ({ label, value, description, tone = "neutral",
 };
 
 export const MoneyEquation = ({ available, owed, payable, currency = "INR" }) => (
-  <div className="admin-card grid items-center gap-3 p-5 text-center sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
+  <div className="finance-equation admin-card grid items-center gap-3 p-5 text-center sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
     <div><span className="text-xs text-[var(--admin-muted)]">Available earnings</span><strong className="mt-1 block text-xl">{financeMoney(available, currency)}</strong></div>
     <span className="text-xl text-[var(--admin-muted)]">−</span>
     <div><span className="text-xs text-[var(--admin-muted)]">Amount you owe</span><strong className="mt-1 block text-xl text-red-700">{financeMoney(owed, currency)}</strong></div>

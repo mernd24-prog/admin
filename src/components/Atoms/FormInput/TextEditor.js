@@ -44,6 +44,7 @@ export const TextEditor = React.memo(
     label = "",
     height = "200px",
     maxLength = null,
+    showErrorBorder = true,
   }) => {
     const quillRef = useRef(null);
 
@@ -51,21 +52,38 @@ export const TextEditor = React.memo(
       () => ({
         toolbar: {
           container: TOOLBAR_OPTIONS,
+
           handlers: {
             image: function () {
               const input = document.createElement("input");
+
               input.setAttribute("type", "file");
-              input.setAttribute("accept", "image/jpeg,image/png,image/webp");
+              input.setAttribute(
+                "accept",
+                "image/jpeg,image/png,image/webp"
+              );
+
               input.click();
+
               input.onchange = async () => {
-                const file = input.files[0];
+                const file = input.files?.[0];
+
                 if (!file) return;
+
                 try {
                   const url = await uploadFile(file, "CMS");
+
                   const quill = quillRef.current?.getEditor();
+
                   if (quill) {
                     const range = quill.getSelection(true);
-                    quill.insertEmbed(range.index, "image", url);
+
+                    quill.insertEmbed(
+                      range.index,
+                      "image",
+                      url
+                    );
+
                     quill.setSelection(range.index + 1);
                   }
                 } catch {
@@ -75,17 +93,19 @@ export const TextEditor = React.memo(
             },
           },
         },
+
         clipboard: {
           matchVisual: false,
         },
       }),
-      [],
+      []
     );
 
     const handleChange = useCallback(
       (content, delta, source, editor) => {
         if (maxLength && editor?.getLength) {
           const textLength = editor.getLength() - 1;
+
           if (textLength <= maxLength) {
             onChange(content);
           }
@@ -93,33 +113,46 @@ export const TextEditor = React.memo(
           onChange(content);
         }
       },
-      [onChange, maxLength],
+      [onChange, maxLength]
     );
 
     const characterCount = useMemo(() => {
       if (!value || !maxLength) return null;
+
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = value;
+
       return tempDiv.textContent?.length || 0;
     }, [value, maxLength]);
 
     return (
       <div className={`text-editor-wrapper w-full ${className}`}>
+        {/* Label */}
         {label && (
           <label className="block text-sm font-medium text-gray-700 mb-2">
             {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
+
+            {required && (
+              <span className="text-red-500 ml-1">*</span>
+            )}
           </label>
         )}
 
         <div className="relative">
+          {/* Editor Container */}
           <div
             className={`
-            border rounded-lg overflow-hidden
-            ${error ? "border-red-500" : "border-gray-300"}
-            ${readOnly ? "bg-gray-50" : "bg-white"}
-            focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500
-          `}
+              text-editor-container
+              border
+              rounded-lg
+              overflow-hidden
+              ${
+                error && showErrorBorder
+                  ? "border-red-500"
+                  :  "border-[var(--admin-field-line)]"
+              }
+              ${readOnly ? "bg-gray-50" : "bg-white"}
+            `}
             style={{ minHeight: height }}
           >
             <ReactQuill
@@ -135,10 +168,15 @@ export const TextEditor = React.memo(
             />
           </div>
 
+          {/* Character Count */}
           {maxLength && (
             <div className="flex justify-end mt-1">
               <span
-                className={`text-xs ${characterCount > maxLength * 0.9 ? "text-red-500" : "text-gray-500"}`}
+                className={`text-xs ${
+                  characterCount > maxLength * 0.9
+                    ? "text-red-500"
+                    : "text-gray-500"
+                }`}
               >
                 {characterCount}/{maxLength}
               </span>
@@ -146,33 +184,137 @@ export const TextEditor = React.memo(
           )}
         </div>
 
-        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+        {/* Error Message */}
+        {error && (
+          <p className="text-red-500 text-xs mt-1">
+            {error}
+          </p>
+        )}
 
-        <style jsx>{`
-          .text-editor-wrapper :global(.ql-editor) {
+        {/* Quill Custom Styles */}
+        <style>{`
+          /*
+           * Outer editor container
+           */
+          .text-editor-wrapper .text-editor-container {
+            transition:
+              border-color 0.2s ease,
+              box-shadow 0.2s ease;
+          }
+
+          /*
+           * Gold border + soft gold shadow on focus
+           */
+          .text-editor-wrapper
+            .text-editor-container:focus-within {
+            border-color: #cb9c2d !important;
+            box-shadow:
+              0 0 0 2px rgba(203, 156, 45, 0.12);
+          }
+
+          /*
+           * Remove Quill's default toolbar border.
+           * Keep only the divider between toolbar and editor.
+           */
+        .text-editor-wrapper .ql-toolbar.ql-snow {
+  display: block;
+  padding: 8px;
+  border: none !important;
+  border-bottom: 1px solid var(--admin-field-line) !important;
+}
+
+          /*
+           * Remove Quill's default editor/container border.
+           */
+          .text-editor-wrapper .ql-container.ql-snow {
+            border: none !important;
+            border-top: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+            border-left: none !important;
+          }
+
+          /*
+           * Remove any border from the editor area.
+           */
+          .text-editor-wrapper .ql-editor {
             min-height: ${height};
             font-family: inherit;
             font-size: 14px;
             line-height: 1.5;
             padding: 12px 15px;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
           }
 
-          .text-editor-wrapper :global(.ql-toolbar) {
-            border-bottom: 1px solid #e5e7eb;
+          .text-editor-wrapper .ql-editor:focus {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
           }
 
-          .text-editor-wrapper :global(.ql-container) {
-            border: none;
+          /*
+           * Extra protection against Quill's default border.
+           */
+          .text-editor-wrapper .ql-container {
+            border: none !important;
           }
 
-          .text-editor-wrapper :global(.ql-editor.ql-blank::before) {
+          /*
+           * Placeholder
+           */
+          .text-editor-wrapper
+            .ql-editor.ql-blank::before {
             color: #9ca3af;
             font-style: normal;
+          }
+
+          /*
+           * Toolbar hover / active color
+           */
+          .text-editor-wrapper .ql-toolbar button:hover,
+          .text-editor-wrapper .ql-toolbar button.ql-active,
+          .text-editor-wrapper
+            .ql-toolbar
+            .ql-picker-label:hover,
+          .text-editor-wrapper
+            .ql-toolbar
+            .ql-picker-label.ql-active {
+            color: #cb9c2d;
+          }
+
+          /*
+           * Toolbar icon stroke
+           */
+          .text-editor-wrapper
+            .ql-toolbar
+            button:hover
+            .ql-stroke,
+          .text-editor-wrapper
+            .ql-toolbar
+            button.ql-active
+            .ql-stroke {
+            stroke: #cb9c2d;
+          }
+
+          /*
+           * Toolbar icon fill
+           */
+          .text-editor-wrapper
+            .ql-toolbar
+            button:hover
+            .ql-fill,
+          .text-editor-wrapper
+            .ql-toolbar
+            button.ql-active
+            .ql-fill {
+            fill: #cb9c2d;
           }
         `}</style>
       </div>
     );
-  },
+  }
 );
 
 TextEditor.displayName = "TextEditor";
