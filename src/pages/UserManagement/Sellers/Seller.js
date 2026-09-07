@@ -433,8 +433,6 @@ const Sellers = () => {
 
   return (
     <div>
-      <Loader loading={selector.loading} />
-
       <PageHeader
         title="Sellers"
         subtitle="Manage seller accounts and onboarding"

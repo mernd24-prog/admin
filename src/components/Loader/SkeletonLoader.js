@@ -187,6 +187,68 @@ export const QueryDetailsSkeleton = () => (
     </div>
   </div>
 );
+
+export const SellerDetailsSkeletonLoader = () => (
+  <div className="space-y-4" aria-label="Loading seller details">
+    <div className="flex items-center justify-between">
+      <SkeletonLoader height={20} width={200} />
+      <SkeletonLoader height={26} width={100} />
+    </div>
+
+    <div className="flex flex-wrap gap-2 pb-2">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <SkeletonLoader key={i} height={38} width={150} />
+      ))}
+    </div>
+
+    <div className="rounded-lg border border-gray-200 bg-white p-5 space-y-6">
+      <div>
+        <SkeletonLoader height={20} width={130} />
+        <div className="mt-1">
+          <SkeletonLoader height={14} width={280} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px,1fr]">
+        <div className="flex flex-col items-center text-center rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-3">
+          <SkeletonLoader circle height={96} width={96} />
+          <SkeletonLoader height={18} width={120} />
+          <SkeletonLoader height={14} width={140} />
+          <SkeletonLoader height={12} width={160} />
+          <div className="mt-4 w-full">
+            <SkeletonLoader height={36} />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <SkeletonLoader height={14} width={100} />
+              <div className="mt-1.5"><SkeletonLoader height={40} /></div>
+            </div>
+            <div>
+              <SkeletonLoader height={14} width={130} />
+              <div className="mt-1.5"><SkeletonLoader height={40} /></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <SkeletonLoader height={14} width={140} />
+              <div className="mt-1.5"><SkeletonLoader height={40} /></div>
+            </div>
+            <div>
+              <SkeletonLoader height={14} width={110} />
+              <div className="mt-1.5"><SkeletonLoader height={40} /></div>
+            </div>
+          </div>
+          <div className="flex justify-end pt-4">
+            <SkeletonLoader height={40} width={120} />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 // import React from 'react';
 // import Skeleton from 'react-loading-skeleton';
 // import 'react-loading-skeleton/dist/skeleton.css';

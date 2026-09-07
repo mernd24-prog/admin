@@ -757,7 +757,6 @@ const SellerUsers = () => {
 
   return (
     <>
-      <Loader loading={loading} />
       <div>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm text-gray-500">
@@ -831,6 +830,7 @@ const SellerUsers = () => {
               "Actions",
             ]}
             data={rows}
+            loading={loading}
             totalData={activeData.total || rows.length}
             totalSize={PAGE_SIZE}
             currentPage={page}
