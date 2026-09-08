@@ -10,6 +10,7 @@ import {
   updatePlatformOption,
   deletePlatformOption,
 } from "../../../Redux/adminCoreSlice";
+import { reviewProductOptionSubmission } from "../../../Redux/productSlice";
 import {
   PageHeader,
   DataTable,
@@ -269,6 +270,30 @@ export default function ProductOptions() {
     }
   };
 
+  const handleReview = async (row, action) => {
+    const rejectionReason =
+      action === "reject"
+        ? window.prompt("Why is this Option Master being rejected?")
+        : "";
+    if (action === "reject" && !rejectionReason?.trim()) return;
+    setSaving(true);
+    try {
+      await dispatch(
+        reviewProductOptionSubmission({
+          id: idOf(row),
+          action,
+          rejectionReason: rejectionReason || "",
+        }),
+      ).unwrap();
+      toast.success(`Option Master ${action === "approve" ? "approved" : "rejected"}`);
+      load();
+    } catch (err) {
+      toast.error(err?.message || "Review failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -304,6 +329,18 @@ export default function ProductOptions() {
             {v || "—"}
           </span>
         ),
+      },
+      {
+        key: "approvalStatus",
+        label: "Approval",
+        render: (value, row) => {
+          const status = value || (row.submittedBySellerId ? "pending" : "approved");
+          return (
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${status === "approved" ? "bg-emerald-100 text-emerald-700" : status === "rejected" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+              {status}
+            </span>
+          );
+        },
       },
       {
         key: "active",
@@ -402,6 +439,23 @@ export default function ProductOptions() {
             requiredModule="products"
             cardClassName="overflow-hidden rounded-none border-0 shadow-none"
             rowActions={(row) => [
+              ...(row.approvalStatus === "pending"
+                ? [
+                    {
+                      label: "Approve submission",
+                      requiredModule: "products",
+                      requiredAction: ACTIONS.UPDATE,
+                      onClick: () => handleReview(row, "approve"),
+                    },
+                    {
+                      label: "Reject submission",
+                      danger: true,
+                      requiredModule: "products",
+                      requiredAction: ACTIONS.UPDATE,
+                      onClick: () => handleReview(row, "reject"),
+                    },
+                  ]
+                : []),
               {
                 label: "Manage Values",
                 icon: <MdListAlt size={16} className="text-blue-600" />,

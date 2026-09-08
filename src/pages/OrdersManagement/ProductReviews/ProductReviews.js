@@ -21,13 +21,14 @@ import {
   FilterBar,
   ConfirmModal,
   BulkActionBar,
-  UserLink,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import {
   deleteProductReview,
   getProductReviews,
+  getProductReviewSummaries,
+  getProductReviewSummaryReviews,
   updateProductReview,
   bulkUpdateProductReviews,
 } from "../../../Redux/adminCoreSlice";
@@ -148,139 +149,172 @@ const initials = (value = "") =>
 const cssImageUrl = (value) =>
   `url("${String(value || "").replace(/"/g, "%22")}")`;
 
-const getReviewsPayload = (state = {}) => {
-  const payload = state?.productReviewsData?.data?.data || {};
-  const list = payload?.list || payload?.items || [];
+const getProductReviewSummaryPayload = (state = {}) => {
+  const payload = state?.productReviewSummariesData?.data || {};
+  const source = payload?.data && !payload?.list && !payload?.items ? payload.data : payload;
+  const list = Array.isArray(source?.list)
+    ? source.list
+    : Array.isArray(source?.items)
+      ? source.items
+      : [];
+
   return {
     list: Array.isArray(list) ? list : [],
-    total: Number(payload?.total || list.length || 0),
+    total: Number(source?.total || payload?.total || list.length || 0),
+    summary: source?.summary || payload?.summary || {},
   };
 };
 
-const ReviewDetailsDrawer = ({ review, onClose, sellerView = false }) => {
+const ReviewDetailsDrawer = ({ review, onClose, sellerView = false, detailReviews = [], detailStats = {}, detailLoading = false, onReviewAction }) => {
   if (!review) return null;
-  const productName = getProductName(review) || "Product not found";
-  const createdByName = getCreatedByName(review, sellerView);
-  const reviewDate = formatDateTime12Hour(review.createdAt, "—");
 
-  const CLASS_DETAIL_LABEL =
-  "text-xs font-medium uppercase text-gray-400";
+  const productName = getProductName(review) || "Product not found";
+  const reviewDate = formatDateTime12Hour(review.createdAt, "—");
+  const isSummary = !review.reviewText && !review.buyerName && !review.buyerId && !review.status;
+  const summaryAverage = Number(review.averageRating || detailStats.avgRating || 0);
+  const totalReviews = Number(review.reviewCount || detailStats.count || detailReviews.length || 0);
+
+  const CLASS_DETAIL_LABEL = "text-xs font-medium uppercase text-gray-400";
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-xl flex-col bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-800">
-              Review Details
+              {isSummary ? "Product Review Details" : "Review Details"}
             </h2>
             <p className="mt-0.5 text-xs text-gray-500">{productName}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
-            aria-label="Close"
-          >
+          <button onClick={onClose} className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800" aria-label="Close">
             <MdClose size={22} />
           </button>
         </div>
 
         <div className="flex-1 space-y-5 overflow-y-auto p-5">
-          <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-4 text-sm">
-            <div>
-              <p className={CLASS_DETAIL_LABEL}>
-                {sellerView ? "Created By" : "Buyer"}
-              </p>
-              <p className="mt-1 font-medium text-gray-800">{createdByName}</p>
-            </div>
-            <div>
-              <p className={CLASS_DETAIL_LABEL}>
-                Status
-              </p>
-              <div className="mt-1">
-                <StatusBadge
-                  status={review.status || "pending"}
-                  dot
-                  variant={STATUS_COLOR[review.status] || "default"}
-                />
+          {isSummary ? (
+            <div className="rounded-lg bg-gray-50 p-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className={CLASS_DETAIL_LABEL}>Average Rating</p>
+                  <div className="mt-1"><StarRating rating={summaryAverage} /></div>
+                </div>
+                <div>
+                  <p className={CLASS_DETAIL_LABEL}>Total Reviews</p>
+                  <p className="mt-1 font-medium text-gray-800">{totalReviews}</p>
+                </div>
+                <div>
+                  <p className={CLASS_DETAIL_LABEL}>Published</p>
+                  <p className="mt-1 text-gray-800">{review.publishedCount || 0}</p>
+                </div>
+                <div>
+                  <p className={CLASS_DETAIL_LABEL}>Pending</p>
+                  <p className="mt-1 text-gray-800">{review.pendingCount || 0}</p>
+                </div>
               </div>
             </div>
-            <div>
-              <p className={CLASS_DETAIL_LABEL}>
-                Rating
-              </p>
-              <div className="mt-1">
-                <StarRating rating={Number(review.rating) || 0} />
+          ) : (
+            <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-4 text-sm">
+              <div>
+                <p className={CLASS_DETAIL_LABEL}>{sellerView ? "Created By" : "Buyer"}</p>
+                <p className="mt-1 font-medium text-gray-800">{getCreatedByName(review, sellerView)}</p>
+              </div>
+              <div>
+                <p className={CLASS_DETAIL_LABEL}>Status</p>
+                <div className="mt-1"><StatusBadge status={review.status || "pending"} dot variant={STATUS_COLOR[review.status] || "default"} /></div>
+              </div>
+              <div>
+                <p className={CLASS_DETAIL_LABEL}>Rating</p>
+                <div className="mt-1"><StarRating rating={Number(review.rating) || 0} /></div>
+              </div>
+              <div>
+                <p className={CLASS_DETAIL_LABEL}>Date</p>
+                <p className="mt-1 text-gray-800">{reviewDate}</p>
+              </div>
+              <div>
+                <p className={CLASS_DETAIL_LABEL}>Helpful Votes</p>
+                <p className="mt-1 text-gray-800">{review.helpfulVotes || 0}</p>
               </div>
             </div>
-            <div>
-              <p className={CLASS_DETAIL_LABEL}>
-                Date
-              </p>
-              <p className="mt-1 text-gray-800">{reviewDate}</p>
-            </div>
+          )}
 
-            <div>
-              <p className={CLASS_DETAIL_LABEL}>
-                Helpful Votes
-              </p>
-              <p className="mt-1 text-gray-800">{review.helpfulVotes || 0}</p>
-            </div>
-          </div>
-
-          <section>
-            <p className={CLASS_DETAIL_LABEL}>Title</p>
-            <p className="mt-1 text-sm font-semibold text-gray-800">
-              {review.title || "—"}
-            </p>
-          </section>
-
-          <section>
-            <p className={CLASS_DETAIL_LABEL}>Review</p>
-            <p className="mt-2 whitespace-pre-wrap rounded-lg border border-gray-100 bg-white p-3 text-sm leading-6 text-gray-700">
-              {review.reviewText || "—"}
-            </p>
-          </section>
-
-          {Array.isArray(review.media) && review.media.length ? (
+          {isSummary ? (
             <section>
-              <p className={CLASS_DETAIL_LABEL}>
-                Review Photos
-              </p>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {review.media.map((url) => (
-                  <a
-                    key={url}
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block overflow-hidden rounded border"
-                  >
-                    <img
-                      src={url}
-                      alt="Review media"
-                      className="h-24 w-full object-cover"
-                    />
-                  </a>
-                ))}
+              <div className="mb-2 flex items-center justify-between">
+                <p className={CLASS_DETAIL_LABEL}>Reviews</p>
+                {detailLoading && <span className="text-xs text-gray-500">Loading…</span>}
+              </div>
+              <div className="space-y-3">
+                {detailReviews.length ? detailReviews.map((row) => (
+                  <div key={row._id || row.id} className="rounded-lg border border-gray-200 bg-white p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-700">{getCreatedByName(row, sellerView)}</div>
+                        <div className="mt-1"><StarRating rating={Number(row.rating) || 0} /></div>
+                      </div>
+                      <StatusBadge status={row.status || "pending"} dot variant={STATUS_COLOR[row.status] || "default"} />
+                    </div>
+                    {row.title && <div className="mt-2 text-xs font-semibold text-gray-700">{row.title}</div>}
+                    <div className="mt-2 text-xs leading-5 text-gray-600">{row.reviewText || "—"}</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {(row.status === "published" ? [
+                        { label: "Hide", value: "hidden" },
+                      ] : [
+                        { label: "Publish", value: "published" },
+                        { label: "Hide", value: "hidden" },
+                      ]).map((action) => (
+                        <button
+                          key={action.value}
+                          type="button"
+                          onClick={() => onReviewAction?.(row, action.value)}
+                          className="rounded bg-gray-100 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-200"
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )) : (
+                  <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
+                    No reviews yet for this product.
+                  </div>
+                )}
               </div>
             </section>
-          ) : null}
+          ) : (
+            <>
+              <section>
+                <p className={CLASS_DETAIL_LABEL}>Title</p>
+                <p className="mt-1 text-sm font-semibold text-gray-800">{review.title || "—"}</p>
+              </section>
 
-          {review.adminReply?.text ? (
-            <section className="rounded-lg border border-blue-100 bg-blue-50 p-3">
-              <p className="text-xs font-medium uppercase text-blue-500">
-                Admin Reply
-              </p>
-              <p className="mt-1 text-sm text-blue-900">
-                {review.adminReply.text}
-              </p>
-            </section>
-          ) : null}
+              <section>
+                <p className={CLASS_DETAIL_LABEL}>Review</p>
+                <p className="mt-2 whitespace-pre-wrap rounded-lg border border-gray-100 bg-white p-3 text-sm leading-6 text-gray-700">{review.reviewText || "—"}</p>
+              </section>
+
+              {Array.isArray(review.media) && review.media.length ? (
+                <section>
+                  <p className={CLASS_DETAIL_LABEL}>Review Photos</p>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {review.media.map((url) => (
+                      <a key={url} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded border">
+                        <img src={url} alt="Review media" className="h-24 w-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              {review.adminReply?.text ? (
+                <section className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+                  <p className="text-xs font-medium uppercase text-blue-500">Admin Reply</p>
+                  <p className="mt-1 text-sm text-blue-900">{review.adminReply.text}</p>
+                </section>
+              ) : null}
+            </>
+          )}
         </div>
       </aside>
     </>
@@ -308,9 +342,13 @@ const ProductReviews = () => {
   const [error, setError] = useState("");
   const [toggleLoadingId, setToggleLoadingId] = useState(null);
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [detailReviews, setDetailReviews] = useState([]);
+  const [detailStats, setDetailStats] = useState({ avgRating: 0, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [userData, setUserData] = useState(() => getSessionUserData());
 
-  const { list: items, total } = getReviewsPayload(reviewsData);
+  const { list: items, total } = getProductReviewSummaryPayload(reviewsData);
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
   const sellerView = isSellerPanel();
 
@@ -323,14 +361,13 @@ const ProductReviews = () => {
     setLoading(true);
     setError("");
     dispatch(
-      getProductReviews({
+      getProductReviewSummaries({
         page: params.page,
         limit: params.limit,
         search: params.search || undefined,
         status: params.status || undefined,
         rating: params.rating ? Number(params.rating) : undefined,
         productId: params.productId || undefined,
-        buyerId: params.buyerId || undefined,
         sortBy: params.sortBy,
         sortDir: params.sortDir,
         sellerScope: isSellerPanelUser || undefined,
@@ -338,11 +375,54 @@ const ProductReviews = () => {
     )
       .unwrap()
       .catch((err) => {
-        const msg = err?.message || "Failed to load reviews";
+        const msg = err?.message || "Failed to load product reviews";
         setError(msg);
         toast.error(msg);
       })
       .finally(() => setLoading(false));
+  };
+
+  const fetchReviewDetails = async (productId) => {
+    if (!productId) return;
+    setDetailLoading(true);
+    try {
+      const response = await dispatch(
+        getProductReviewSummaryReviews({
+          productId,
+          page: 1,
+          limit: 100,
+          sellerScope: isSellerPanelUser || undefined,
+        }),
+      ).unwrap();
+
+      const payload = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response?.items)
+          ? response.items
+          : Array.isArray(response?.list)
+            ? response.list
+            : Array.isArray(response?.data?.items)
+              ? response.data.items
+              : Array.isArray(response?.data?.list)
+                ? response.data.list
+                : [];
+
+      const meta = response?.meta || response?.data?.meta || {};
+      const summary = meta?.summary || response?.summary || response?.data?.summary || response?.stats || response?.data?.stats || {};
+      const list = Array.isArray(payload) ? payload : [];
+
+      setDetailReviews(list);
+      setDetailStats({
+        avgRating: Number(summary.avgRating || 0),
+        count: Number(summary.count || list.length || 0),
+        distribution: summary.distribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      });
+    } catch (err) {
+      toast.error(err?.message || "Failed to load review details");
+      setDetailReviews([]);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -406,6 +486,20 @@ const ProductReviews = () => {
     }
   };
 
+  const handleViewProductReviews = async (row) => {
+    const productId = row?.productId || row?._id || row?.id;
+    if (!productId) return;
+    setSelectedProduct(row);
+    setViewTarget(row);
+    await fetchReviewDetails(productId);
+  };
+
+  const handleReviewAction = async (review, newStatus) => {
+    await updateReviewStatus(review, newStatus, newStatus === "published" ? "Review approved" : "Review hidden");
+    const productId = review.productId || viewTarget?.productId || viewTarget?._id || viewTarget?.id;
+    if (productId) await fetchReviewDetails(productId);
+  };
+
   const handleDelete = async () => {
     const reviewId = deleteConfirm.review?._id || deleteConfirm.review?.id;
     if (!reviewId) return;
@@ -444,141 +538,46 @@ const ProductReviews = () => {
       key: "productId",
       label: "Product",
       render: (v, row) => {
-        const productImage =
-          row.productImage || row.product?.image || row.media?.[0];
+        const productImage = row.productImage || row.product?.image || row.image;
         const productName = getProductName(row) || "Product";
         return (
           <div className="flex items-center gap-2 min-w-0">
             {productImage && (
-              <span
-                role="img"
-                aria-label={productName}
-                className="w-9 h-9 rounded border flex-shrink-0 bg-cover bg-center"
-                style={{ backgroundImage: cssImageUrl(productImage) }}
-              />
+              <span role="img" aria-label={productName} className="w-9 h-9 rounded border flex-shrink-0 bg-cover bg-center" style={{ backgroundImage: cssImageUrl(productImage) }} />
             )}
             <div className="min-w-0">
-              <span className="block max-w-[180px] truncate text-xs font-medium text-gray-700">
-                {productName || "Product not found"}
-              </span>
+              <span className="block max-w-[180px] truncate text-xs font-medium text-gray-700">{productName || "Product not found"}</span>
             </div>
           </div>
         );
       },
     },
     {
-      key: "buyerId",
-      label: sellerView ? "Created By" : "Buyer",
-      render: (v, row) => {
-        const buyerImage = row.buyerImage || row.buyerAvatarUrl;
-        const buyerName = getCreatedByName(row, sellerView);
-        const showBuyerDetails = !(sellerView && isPlatformCreatedReview(row));
-        return (
-          <div className="flex items-center gap-2 min-w-0">
-            {buyerImage && showBuyerDetails ? (
-              <span
-                role="img"
-                aria-label={buyerName}
-                className="w-8 h-8 rounded-full border flex-shrink-0 bg-cover bg-center"
-                style={{ backgroundImage: cssImageUrl(buyerImage) }}
-              />
-            ) : (
-              <span className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 text-xs font-semibold grid place-items-center flex-shrink-0">
-                {initials(buyerName)}
-              </span>
-            )}
-            <div className="min-w-0">
-              {showBuyerDetails ? (
-                <UserLink
-                  userId={v || row.buyer_id || row.buyer?.id || row.buyer?._id}
-                  userName={buyerName}
-                  className="block max-w-[150px] truncate text-xs"
-                />
-              ) : (
-                <span className="block max-w-[150px] truncate text-xs font-medium text-gray-700">
-                  {buyerName}
-                </span>
-              )}
-              {showBuyerDetails &&
-                row.buyer?.email &&
-                row.buyer.email !== buyerName && (
-                  <span className="block max-w-[150px] truncate text-[10px] text-gray-400">
-                    {row.buyer.email}
-                  </span>
-                )}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      key: "rating",
-      label: "Rating",
+      key: "averageRating",
+      label: "Average Rating",
       sortable: true,
       render: (v) => <StarRating rating={Number(v) || 0} />,
     },
     {
-      key: "reviewText",
-      label: "Review",
+      key: "reviewCount",
+      label: "Reviews",
+      render: (v) => <span className="text-xs font-medium text-gray-700">{v || 0}</span>,
+    },
+    {
+      key: "publishedCount",
+      label: "Status",
       render: (v, row) => (
-        <div className="max-w-[220px]">
-          {row.title && (
-            <div className="text-xs font-semibold text-gray-700 truncate">
-              {row.title}
-            </div>
-          )}
-          <div className="text-xs text-gray-500 line-clamp-2">{v || "—"}</div>
-          {row.adminReply?.text && (
-            <div className="mt-1 flex items-start gap-1 text-xs text-[var(--admin-navy)]">
-              <MdReply size={12} className="mt-0.5 flex-shrink-0" />
-              <span className="line-clamp-1">{row.adminReply.text}</span>
-            </div>
-          )}
+        <div className="flex flex-wrap gap-1 text-[10px] text-gray-600">
+          <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">{row.publishedCount || 0} live</span>
+          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">{row.pendingCount || 0} pending</span>
         </div>
       ),
     },
     {
-      key: "status",
-      label: "Status",
-      render: (v, row) => (
-        <button
-          onClick={() => handleToggleStatus(row)}
-          disabled={toggleLoadingId === (row._id || row.id)}
-          className="disabled:opacity-50"
-          title={
-            isSellerPanelUser
-              ? (v || "pending") === "published"
-                ? "Hide this review"
-                : "Approve this review"
-              : "Click to toggle published/hidden"
-          }
-        >
-          <StatusBadge
-            status={v || "pending"}
-            dot
-            variant={STATUS_COLOR[v] || "default"}
-          />
-        </button>
-      ),
-    },
-    {
-      key: "helpfulVotes",
-      label: "Likes",
-      render: (v) => (
-        <span className="flex items-center gap-1 text-xs text-gray-500">
-          👍 {v || 0}
-        </span>
-      ),
-    },
-    {
-      key: "createdAt",
-      label: "Date",
+      key: "latestReviewAt",
+      label: "Last Review",
       sortable: true,
-      render: (v) => (
-        <span className="text-xs text-gray-400">
-          {formatDateTime12Hour(v, "—")}
-        </span>
-      ),
+      render: (v) => <span className="text-xs text-gray-400">{v ? formatDateTime12Hour(v, "—") : "—"}</span>,
     },
   ];
 
@@ -700,9 +699,9 @@ const ProductReviews = () => {
         rowActions={(row) => {
           const actions = [
             {
-              label: "View Review",
+              label: "View Details",
               icon: <MdVisibility size={16} className="text-blue-600" />,
-              onClick: () => setViewTarget(row),
+              onClick: () => handleViewProductReviews(row),
             },
           ];
 
@@ -720,25 +719,9 @@ const ProductReviews = () => {
                 icon: <MdDelete size={16} className="text-red-600" />,
                 requiredModule: "reviews",
                 requiredAction: ACTIONS.DELETE,
-                onClick: () =>
-                  setDeleteConfirm({
-                    open: true,
-                    review: row,
-                  }),
+                onClick: () => setDeleteConfirm({ open: true, review: row }),
               },
             );
-          } else if ((row.status || "pending") === "published") {
-            actions.push({
-              label: "Hide Review",
-              icon: <MdVisibilityOff size={16} className="text-amber-600" />,
-              onClick: () => updateReviewStatus(row, "hidden", "Review hidden"),
-            });
-          } else {
-            actions.push({
-              label: "Approve Review",
-              icon: <MdCheckCircle size={16} className="text-green-600" />,
-              onClick: () => updateReviewStatus(row, "published", "Review approved"),
-            });
           }
 
           return actions;
@@ -754,10 +737,100 @@ const ProductReviews = () => {
         reviewData={editTarget}
       />
 
+      {selectedProduct && (
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex flex-col gap-2 border-b border-gray-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">Product</p>
+              <h3 className="mt-1 text-lg font-semibold text-gray-800">{getProductName(selectedProduct)}</h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedProduct(null);
+                setViewTarget(null);
+                setDetailReviews([]);
+                setDetailStats({ avgRating: 0, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
+              }}
+              className="rounded border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            >
+              Close details
+            </button>
+          </div>
+
+          <div className="mb-5 grid gap-3 md:grid-cols-4">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">Average Rating</p>
+              <div className="mt-2"><StarRating rating={Number(selectedProduct.averageRating || detailStats.avgRating || 0)} /></div>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">Total Reviews</p>
+              <p className="mt-2 text-lg font-semibold text-gray-800">{Number(selectedProduct.reviewCount || detailStats.count || detailReviews.length || 0)}</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">Published</p>
+              <p className="mt-2 text-lg font-semibold text-gray-800">{selectedProduct.publishedCount || 0}</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">Pending</p>
+              <p className="mt-2 text-lg font-semibold text-gray-800">{selectedProduct.pendingCount || 0}</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {detailLoading ? (
+              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">Loading reviews…</div>
+            ) : detailReviews.length ? (
+              detailReviews.map((row) => (
+                <div key={row._id || row.id} className="rounded-lg border border-gray-200 bg-white p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-800">{getCreatedByName(row, sellerView)}</span>
+                        <StatusBadge status={row.status || "pending"} dot variant={STATUS_COLOR[row.status] || "default"} />
+                      </div>
+                      <div className="mt-2"><StarRating rating={Number(row.rating) || 0} /></div>
+                    </div>
+                    <div className="text-xs text-gray-500">{formatDateTime12Hour(row.createdAt, "—")}</div>
+                  </div>
+
+                  {row.title && <div className="mt-3 text-sm font-semibold text-gray-800">{row.title}</div>}
+                  <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-600">{row.reviewText || "—"}</div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {(row.status === "published" ? [{ label: "Hide", value: "hidden" }] : [{ label: "Publish", value: "published" }, { label: "Hide", value: "hidden" }]).map((action) => (
+                      <button
+                        key={action.value}
+                        type="button"
+                        onClick={() => handleReviewAction(row, action.value)}
+                        className="rounded bg-gray-100 px-2.5 py-1.5 text-[11px] font-medium text-gray-700 hover:bg-gray-200"
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">No reviews yet for this product.</div>
+            )}
+          </div>
+        </div>
+      )}
+
       <ReviewDetailsDrawer
         review={viewTarget}
-        onClose={() => setViewTarget(null)}
+        onClose={() => {
+          setViewTarget(null);
+          setSelectedProduct(null);
+          setDetailReviews([]);
+          setDetailStats({ avgRating: 0, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
+        }}
         sellerView={sellerView}
+        detailReviews={detailReviews}
+        detailStats={detailStats}
+        detailLoading={detailLoading}
+        onReviewAction={handleReviewAction}
       />
 
       <AddProductReview

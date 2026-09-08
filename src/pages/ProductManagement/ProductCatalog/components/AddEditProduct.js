@@ -9,6 +9,8 @@ import {
   getProductById,
   updateProductsById,
   getCategoryAttributes,
+  getAvailableProductOptionsForSeller,
+  submitProductOptionForApproval,
 } from "../../../../Redux/productSlice";
 import {
   getPlatformOptions,
@@ -111,6 +113,40 @@ const SELLER_PANEL_ROLES = new Set([
   "seller-sub-admin",
 ]);
 const MAX_COMMON_PRODUCT_IMAGES = 8;
+const slugifyVariantAxis = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+const getVariantAxisKey = (axis = {}) =>
+  String(axis.slug || slugifyVariantAxis(axis.name)).trim();
+const getVariantAxisValue = (variant = {}, axis = {}) => {
+  const attributes = variant.attributes || {};
+  const key = getVariantAxisKey(axis);
+  const candidateKeys = [
+    key,
+    String(axis.name || "").trim().toLowerCase(),
+    key.replace(/-/g, "_"),
+  ].filter(Boolean);
+  const matchingKey = candidateKeys.find((candidate) => attributes[candidate] != null);
+  return matchingKey ? attributes[matchingKey] : "";
+};
+const getVariantCombinationKey = (variant = {}, axes = []) =>
+  axes
+    .map(
+      (axis) =>
+        `${getVariantAxisKey(axis)}=${String(getVariantAxisValue(variant, axis)).trim().toLowerCase()}`,
+    )
+    .join("|");
+const normalizeVariantAttributes = (variant = {}, axes = []) =>
+  axes.reduce((attributes, axis) => {
+    const value = getVariantAxisValue(variant, axis);
+    if (value !== "" && value !== null && value !== undefined) {
+      attributes[getVariantAxisKey(axis)] = value;
+    }
+    return attributes;
+  }, {});
 const getSessionUser = () => {
   if (typeof window === "undefined") return null;
   try {
@@ -301,6 +337,7 @@ export default function ProductManagementUI() {
   const initialPrefillStartedRef = useRef(false);
   const requestedProductIdRef = useRef(null);
   const [saving, setSaving] = useState(false);
+  const sellerPanelMode = isSellerPanel();
   const [shippingProfileOptions, setShippingProfileOptions] = useState([]);
   const [allowedPincodeInput, setAllowedPincodeInput] = useState("");
 
@@ -842,7 +879,7 @@ export default function ProductManagementUI() {
   // Load platform attribute options once on mount
   useEffect(() => {
     const cachedOptions = prefillList("productOptions");
-    if (cachedOptions.length) {
+    if (cachedOptions.length && !sellerPanelMode) {
       const valuesByOptionId = prefillData.optionValuesByOptionId || {};
       setPlatformOptions(cachedOptions);
       setPlatformValues(valuesByOptionId);
@@ -852,16 +889,34 @@ export default function ProductManagementUI() {
       return;
     }
 
-    dispatch(getPlatformOptions({ limit: 100, active: true }))
+    dispatch(
+      sellerPanelMode
+        ? getAvailableProductOptionsForSeller()
+        : getPlatformOptions({ limit: 100, active: true }),
+    )
       .unwrap()
       .then((res) => {
         const list = Array.isArray(res?.data)
           ? res.data
           : res?.data?.list || res?.data?.items || [];
         setPlatformOptions(list);
+        if (sellerPanelMode) {
+          setPlatformValues((previous) => ({
+            ...previous,
+            ...Object.fromEntries(
+              list.map((option) => [
+                String(option._id || option.id),
+                Array.isArray(option.values) ? option.values : [],
+              ]),
+            ),
+          }));
+          list.forEach((option) =>
+            fetchedOptionIds.current.add(String(option._id || option.id)),
+          );
+        }
       })
       .catch(() => {});
-  }, [dispatch, prefillData.optionValuesByOptionId, prefillList]);
+  }, [dispatch, sellerPanelMode, prefillData.optionValuesByOptionId, prefillList]);
 
   // When a platform-linked axis is added to variantAxes, load its values
   useEffect(() => {
@@ -1343,6 +1398,17 @@ export default function ProductManagementUI() {
 
     // Variant field validation
     if (Array.isArray(variantsData) && variantsData.length) {
+      const skuCounts = variantsData.reduce((counts, variant) => {
+        const sku = String(variant?.sku || "").trim().toLowerCase();
+        if (sku) counts.set(sku, (counts.get(sku) || 0) + 1);
+        return counts;
+      }, new Map());
+      const combinationCounts = variantsData.reduce((counts, variant) => {
+        const key = getVariantCombinationKey(variant, variantAxes);
+        if (key) counts.set(key, (counts.get(key) || 0) + 1);
+        return counts;
+      }, new Map());
+
       const variantErrors = variantsData.reduce((result, variant, index) => {
         const fieldErrors = {};
 
@@ -1365,6 +1431,36 @@ export default function ProductManagementUI() {
 
         if (!String(variant?.sku || "").trim()) {
           fieldErrors.sku = "SKU is required.";
+        } else if (
+          skuCounts.get(String(variant.sku).trim().toLowerCase()) > 1
+        ) {
+          fieldErrors.sku = "SKU must be unique across variants.";
+        }
+
+        const attributeErrors = variantAxes.reduce((axisErrors, axis) => {
+          const axisKey = getVariantAxisKey(axis);
+          const value = getVariantAxisValue(variant, axis);
+          if (axis.required && !String(value || "").trim()) {
+            axisErrors[axisKey] = `${axis.name || axisKey} is required.`;
+          } else if (
+            value &&
+            Array.isArray(axis.values) &&
+            axis.values.length &&
+            !axis.values.some(
+              (allowedValue) => String(allowedValue) === String(value),
+            )
+          ) {
+            axisErrors[axisKey] = `${value} is not an allowed ${axis.name || axisKey} value.`;
+          }
+          return axisErrors;
+        }, {});
+        const combinationKey = getVariantCombinationKey(variant, variantAxes);
+        if (combinationKey && combinationCounts.get(combinationKey) > 1) {
+          attributeErrors._combination =
+            "This option combination is already used by another variant.";
+        }
+        if (Object.keys(attributeErrors).length) {
+          fieldErrors.attributes = attributeErrors;
         }
 
         if (price <= 0) {
@@ -1915,7 +2011,7 @@ export default function ProductManagementUI() {
     const variableOptionAxes = variantAxes
       .map((axis, index) => ({
         name: axis.name,
-        slug: axis.slug,
+        slug: getVariantAxisKey(axis),
         platformOptionId: axis.platformOptionId,
         displayType: axis.displayType,
         values: Array.isArray(axis.values) ? axis.values : [],
@@ -1946,6 +2042,7 @@ export default function ProductManagementUI() {
       variantsData.length ? variantsData : legacyVariants
     ).map((variant, index) => ({
       ...variant,
+      attributes: normalizeVariantAttributes(variant, variableOptionAxes),
       sku:
         variant.sku ||
         `${updatedFormData.sku || updatedFormData.name || "SKU"}-${index + 1}`,
@@ -2518,6 +2615,33 @@ export default function ProductManagementUI() {
     setVariantsData(nextVariants);
   }, []);
 
+  const handleProductOptionSubmission = useCallback(
+    async (submission) => {
+      const response = await dispatch(
+        submitProductOptionForApproval(submission),
+      ).unwrap();
+      const option = response?.data?.data || response?.data || response;
+      if (!option?._id && !option?.id) {
+        throw new Error("Option Master submission returned no identifier");
+      }
+      const optionId = String(option._id || option.id);
+      setPlatformOptions((previous) => [
+        ...previous.filter(
+          (item) => String(item._id || item.id) !== optionId,
+        ),
+        option,
+      ]);
+      setPlatformValues((previous) => ({
+        ...previous,
+        [optionId]: Array.isArray(option.values) ? option.values : [],
+      }));
+      fetchedOptionIds.current.add(optionId);
+      toast.success("Option Master submitted for approval");
+      return option;
+    },
+    [dispatch],
+  );
+
   const handleVariantErrorClear = useCallback((variantIndex, field) => {
     setError((current) => {
       if (!current || typeof current !== "object" || !current.variants) {
@@ -2782,6 +2906,8 @@ export default function ProductManagementUI() {
               platformOptions={platformOptions}
               platformValues={platformValues}
               onOptionSearch={handleOptionSearch}
+              canSubmitOption={isSellerPanelUser}
+              onSubmitOption={handleProductOptionSubmission}
               errors={error?.variants}
               onClearError={handleVariantErrorClear}
             />

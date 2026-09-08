@@ -65,6 +65,36 @@ const DEFAULT_VARIANT = {
   images: [],
 };
 
+const slugifyVariantAxis = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const getAxisKey = (option = {}) =>
+  String(option.slug || slugifyVariantAxis(option.name)).trim();
+
+const getVariantAttributeValue = (variant = {}, option = {}) => {
+  const attributes = variant.attributes || {};
+  const canonicalKey = getAxisKey(option);
+  const legacyKeys = [
+    canonicalKey,
+    String(option.name || "").trim().toLowerCase(),
+    canonicalKey.replace(/-/g, "_"),
+  ].filter(Boolean);
+
+  const matchingKey = legacyKeys.find((key) => attributes[key] != null);
+  return matchingKey ? attributes[matchingKey] : "";
+};
+
+const getCombinationKey = (variant = {}, optionAxes = []) =>
+  optionAxes
+    .map((option) =>
+      `${getAxisKey(option)}=${String(getVariantAttributeValue(variant, option)).trim().toLowerCase()}`,
+    )
+    .join("|");
+
 const FieldLabel = ({ children }) => (
   <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">
     {children}
@@ -87,6 +117,8 @@ const VariantBuilder = ({
   onChange,
   onOptionsChange,
   onOptionSearch,
+  canSubmitOption = false,
+  onSubmitOption,
   errors = {},
   onClearError,
 }) => {
@@ -97,6 +129,13 @@ const VariantBuilder = ({
   const [expandedVariants, setExpandedVariants] = useState(new Set());
   const [uploadingVariants, setUploadingVariants] = useState(new Set());
   const [bulkValues, setBulkValues] = useState({});
+  const [showOptionSubmission, setShowOptionSubmission] = useState(false);
+  const [optionSubmission, setOptionSubmission] = useState({
+    name: "",
+    displayType: "button",
+    values: "",
+  });
+  const [submittingOption, setSubmittingOption] = useState(false);
   const optionSearchRef = useRef(null);
   const dragOptionIdx = useRef(null);
   const dragVariantIdx = useRef(null);
@@ -127,16 +166,46 @@ const VariantBuilder = ({
       ...options,
       {
         name: po.name,
+        slug: po.slug || slugifyVariantAxis(po.name),
         platformOptionId: po._id || po.id,
         displayType: po.displayType || "button",
         values: [],
         valueCodes: {},
-        required: false,
+        required: true,
         sortOrder: options.length,
       },
     ]);
     setOptionSearch("");
     setShowOptionDropdown(false);
+  };
+  const submitNewOption = async () => {
+    const values = Array.from(
+      new Set(
+        optionSubmission.values
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean),
+      ),
+    );
+    if (!optionSubmission.name.trim() || !values.length) {
+      toast.error("Enter an option name and at least one comma-separated value");
+      return;
+    }
+    setSubmittingOption(true);
+    try {
+      const option = await onSubmitOption({
+        name: optionSubmission.name.trim(),
+        displayType: optionSubmission.displayType,
+        values,
+      });
+      addOptionFromPlatform(option);
+      setOptionSubmission({ name: "", displayType: "button", values: "" });
+      setShowOptionSubmission(false);
+    } catch (error) {
+      toast.error(error?.message || "Could not submit Option Master");
+    } finally {
+      setSubmittingOption(false);
+    }
   };
   const removeOption = (idx) =>
     onOptionsChange(options.filter((_, i) => i !== idx));
@@ -202,15 +271,15 @@ const VariantBuilder = ({
       if (!axes.length) return [{}];
       const [head, ...tail] = axes;
       return head.values.flatMap((v) =>
-        cartesian(tail).map((c) => ({ [head.name.toLowerCase()]: v, ...c })),
+        cartesian(tail).map((c) => ({ [getAxisKey(head)]: v, ...c })),
       );
     };
     const existingMap = new Map(
-      variants.map((v) => [JSON.stringify(v.attributes), v]),
+      variants.map((v) => [getCombinationKey(v, options), v]),
     );
     onChange(
       cartesian(options).map((attributes, idx) => {
-        const key = JSON.stringify(attributes);
+        const key = getCombinationKey({ attributes }, options);
         const existing = existingMap.get(key);
         if (existing) return existing;
         return {
@@ -235,6 +304,18 @@ const VariantBuilder = ({
     onChange(
       variants.map((v, i) => (i === idx ? { ...v, [field]: value } : v)),
     );
+  };
+  const updateVariantAttribute = (idx, option, value) => {
+    const canonicalKey = getAxisKey(option);
+    const legacyKeys = [
+      String(option.name || "").trim().toLowerCase(),
+      canonicalKey.replace(/-/g, "_"),
+    ].filter((key) => key && key !== canonicalKey);
+    const nextAttributes = { ...(variants[idx]?.attributes || {}) };
+    legacyKeys.forEach((key) => delete nextAttributes[key]);
+    if (value === "") delete nextAttributes[canonicalKey];
+    else nextAttributes[canonicalKey] = value;
+    updateVariant(idx, "attributes", nextAttributes);
   };
   const removeVariant = (idx) => {
     onChange(variants.filter((_, i) => i !== idx));
@@ -587,8 +668,24 @@ const VariantBuilder = ({
                   </button>
                 ))}
                 {optionSearch.trim() && !filteredPlatformOptions.length && (
-                  <div className="px-4 py-3 text-sm text-gray-400 text-center">
-                    No matching option found
+                  <div className="px-4 py-3 text-center">
+                    <p className="text-sm text-gray-400">No matching option found</p>
+                    {canSubmitOption && (
+                      <button
+                        type="button"
+                        className="mt-2 text-xs font-semibold text-[var(--admin-blue)] hover:underline"
+                        onClick={() => {
+                          setOptionSubmission((previous) => ({
+                            ...previous,
+                            name: optionSearch.trim(),
+                          }));
+                          setShowOptionSubmission(true);
+                          setShowOptionDropdown(false);
+                        }}
+                      >
+                        + Submit “{optionSearch.trim()}” for approval
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -600,6 +697,62 @@ const VariantBuilder = ({
             />
           )}
         </div>
+
+        {showOptionSubmission && (
+          <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Submit new Option Master</p>
+              <p className="text-xs text-gray-500">
+                Only your seller account can use it while Admin approval is pending.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <FieldLabel>Option name *</FieldLabel>
+                <SmallInput
+                  value={optionSubmission.name}
+                  onChange={(event) =>
+                    setOptionSubmission((previous) => ({ ...previous, name: event.target.value }))
+                  }
+                  placeholder="e.g. Sleeve Length"
+                />
+              </div>
+              <div>
+                <FieldLabel>Display type</FieldLabel>
+                <select
+                  className="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs"
+                  value={optionSubmission.displayType}
+                  onChange={(event) =>
+                    setOptionSubmission((previous) => ({ ...previous, displayType: event.target.value }))
+                  }
+                >
+                  {DISPLAY_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <FieldLabel>Initial values *</FieldLabel>
+              <SmallInput
+                value={optionSubmission.values}
+                onChange={(event) =>
+                  setOptionSubmission((previous) => ({ ...previous, values: event.target.value }))
+                }
+                placeholder="Short, Long, Three Quarter"
+              />
+              <p className="mt-1 text-[10px] text-gray-500">Separate values with commas.</p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowOptionSubmission(false)} className="rounded-md border bg-white px-3 py-1.5 text-xs">
+                Cancel
+              </button>
+              <button type="button" disabled={submittingOption} onClick={submitNewOption} className="rounded-md bg-[var(--admin-blue)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+                {submittingOption ? "Submitting…" : "Submit and use"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Generate CTA */}
         {totalCombinations > 0 && (
@@ -856,6 +1009,69 @@ const VariantBuilder = ({
                 {/* Expanded panel */}
                 {isExpanded && (
                   <div className="border-t border-gray-100 bg-gray-50 px-4 py-4 space-y-5">
+                    {options.length > 0 && (
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs font-semibold text-gray-700">
+                            Variant combination
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            Choose the option values that uniquely identify this SKU.
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {options.map((option) => {
+                            const axisKey = getAxisKey(option);
+                            const selectedValue = getVariantAttributeValue(
+                              variant,
+                              option,
+                            );
+                            const attributeError =
+                              variantErrors.attributes?.[axisKey];
+                            return (
+                              <div className="space-y-1" key={axisKey}>
+                                <FieldLabel>
+                                  {option.name}{option.required ? " *" : ""}
+                                </FieldLabel>
+                                <select
+                                  name={`variants.${idx}.attributes.${axisKey}`}
+                                  data-error-field={attributeError ? "variants" : undefined}
+                                  aria-invalid={Boolean(attributeError)}
+                                  className={`w-full rounded-md border bg-white px-2 py-1.5 text-xs text-gray-800 focus:outline-none focus:ring-1 ${attributeError ? "border-red-400 focus:ring-red-200" : "border-gray-200 focus:border-[var(--admin-blue)] focus:ring-[var(--admin-blue)]/20"}`}
+                                  value={selectedValue}
+                                  onChange={(event) =>
+                                    updateVariantAttribute(
+                                      idx,
+                                      option,
+                                      event.target.value,
+                                    )
+                                  }
+                                >
+                                  <option value="">
+                                    {option.required ? "Select value" : "Not applicable"}
+                                  </option>
+                                  {(option.values || []).map((value) => (
+                                    <option key={value} value={value}>
+                                      {value}
+                                    </option>
+                                  ))}
+                                </select>
+                                {attributeError && (
+                                  <p className="text-[10px] text-red-600" role="alert">
+                                    {attributeError}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {variantErrors.attributes?._combination && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.attributes._combination}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {/* Core fields grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                       <div className="space-y-1">
@@ -1204,6 +1420,7 @@ const VariantBuilder = ({
       {/* Add manually */}
       <button
         type="button"
+        disabled={!options.length || options.some((option) => !(option.values || []).length)}
         onClick={() =>
           onChange([
             ...variants,
@@ -1215,10 +1432,15 @@ const VariantBuilder = ({
             },
           ])
         }
-        className="w-full py-3 border-2 border-dashed border-black/25 rounded-xl text-sm text-gray-800   transition-colors font-medium"
+        className="w-full py-3 border-2 border-dashed border-black/25 rounded-xl text-sm text-gray-800 transition-colors font-medium disabled:cursor-not-allowed disabled:opacity-45"
       >
         + Add Variant Manually
       </button>
+      {(!options.length || options.some((option) => !(option.values || []).length)) && (
+        <p className="-mt-4 text-center text-[11px] text-amber-700">
+          Add at least one variant option and select its values before adding a manual variant.
+        </p>
+      )}
 
       {variants.length > 0 && (
         <p className="text-[11px] text-gray-400 text-center">

@@ -445,6 +445,23 @@ export const getAllBatchList = createApiThunkPrivate('batch/getAllDocuments', EN
 })
 
 //product-options
+export const submitProductOptionForApproval = createApiThunkPrivate('product-option/submitForApproval', ENDPOINTS.productOptions.submissions, 'POST', false, {
+    transformBody: (payload = {}) => ({
+        name: String(payload.name || '').trim(),
+        displayType: payload.displayType || 'button',
+        description: String(payload.description || '').trim(),
+        values: (payload.values || []).map((value) =>
+            typeof value === 'string' ? { name: value.trim() } : value
+        ).filter((value) => value.name),
+    }),
+})
+export const getAvailableProductOptionsForSeller = createApiThunkPrivate('product-option/getAvailableForSeller', ENDPOINTS.productOptions.availableMine, 'GET', true)
+export const reviewProductOptionSubmission = createApiThunkPrivate('product-option/reviewSubmission', (payload) => ENDPOINTS.productOptions.approval(firstId(payload)), 'PATCH', false, {
+    transformBody: (payload = {}) => ({
+        action: payload.action,
+        rejectionReason: payload.rejectionReason || '',
+    }),
+})
 export const getListProduct = createApiThunkPrivate('product-option/getList', ENDPOINTS.platform.productOptions, 'GET', true, {
     transformParams: (params = {}) => toListParams(params),
 })

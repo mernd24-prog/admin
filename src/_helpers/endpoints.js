@@ -21,6 +21,12 @@ export const ENDPOINTS = {
     approval: (brandId) => `/admin/platform/brands/${brandId}/approval`,
     approvalBulk: "/admin/platform/brands/approval",
   },
+  productOptions: {
+    submissions: "/platform/product-options/submissions",
+    mySubmissions: "/platform/product-options/submissions/mine",
+    availableMine: "/platform/product-options/available/mine",
+    approval: (optionId) => `/admin/platform/product-options/${optionId}/approval`,
+  },
   auth: {
     register: "/auth/register",
     login: "/auth/login",
@@ -530,6 +536,14 @@ export const ENDPOINTS = {
     productReviews: byPanel(
       "/admin/platform/product-reviews",
       "/sellers/me/product-reviews",
+    ),
+    productReviewSummaries: byPanel(
+      "/admin/platform/product-review-summaries",
+      "/sellers/me/product-review-summaries",
+    ),
+    productReviewSummaryReviews: (productId) => byPanel(
+      `/admin/platform/product-review-summaries/${productId}/reviews`,
+      `/sellers/me/product-review-summaries/${productId}/reviews`,
     ),
     sellerProductReviews: "/sellers/me/product-reviews",
     productReview: (reviewId) => `/admin/platform/product-reviews/${reviewId}`,
