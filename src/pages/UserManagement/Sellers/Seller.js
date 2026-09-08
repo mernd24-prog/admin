@@ -332,66 +332,134 @@ const Sellers = () => {
       {
         key: "_onboarding",
         label: "Onboarding",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
         render: (_, row) => (
-          <StatusBadge
-            status={
-              row?.onboarding?.status ||
-              row?.sellerProfile?.onboardingStatus ||
-              "pending"
-            }
-            size="sm"
-          />
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                const sellerId = row?._id || row?.id;
+                if (sellerId) navigate(`/app/seller/view/${sellerId}`);
+              }}
+              className="inline-flex rounded-full transition-transform hover:scale-105 active:scale-95 focus:outline-none"
+              title="View seller onboarding details"
+            >
+              <StatusBadge
+                status={
+                  row?.onboarding?.status ||
+                  row?.sellerProfile?.onboardingStatus ||
+                  "pending"
+                }
+                size="sm"
+                dot
+                className="min-w-[108px] shadow-[0_1px_2px_rgba(0,0,0,0.04)] cursor-pointer"
+              />
+            </button>
+          </div>
         ),
       },
       {
         key: "_kyc",
         label: "KYC",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
         render: (_, row) => (
-          <StatusBadge
-            status={
-              row?.onboarding?.kycStatus ||
-              row?.sellerProfile?.kycStatus ||
-              "pending"
-            }
-            size="sm"
-          />
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                const sellerId = row?._id || row?.id;
+                if (sellerId) navigate(`/app/seller/view/${sellerId}`);
+              }}
+              className="inline-flex rounded-full transition-transform hover:scale-105 active:scale-95 focus:outline-none"
+              title="View seller KYC details"
+            >
+              <StatusBadge
+                status={
+                  row?.onboarding?.kycStatus ||
+                  row?.sellerProfile?.kycStatus ||
+                  "pending"
+                }
+                size="sm"
+                dot
+                className="min-w-[108px] shadow-[0_1px_2px_rgba(0,0,0,0.04)] cursor-pointer"
+              />
+            </button>
+          </div>
         ),
       },
       {
         key: "_bank",
         label: "Bank",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
         render: (_, row) => (
-          <StatusBadge
-            status={
-              row?.onboarding?.bankVerificationStatus ||
-              row?.sellerProfile?.bankVerificationStatus ||
-              "pending"
-            }
-            size="sm"
-          />
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                const sellerId = row?._id || row?.id;
+                if (sellerId) navigate(`/app/seller/view/${sellerId}`);
+              }}
+              className="inline-flex rounded-full transition-transform hover:scale-105 active:scale-95 focus:outline-none"
+              title="View seller bank details"
+            >
+              <StatusBadge
+                status={
+                  row?.onboarding?.bankVerificationStatus ||
+                  row?.sellerProfile?.bankVerificationStatus ||
+                  "pending"
+                }
+                size="sm"
+                dot
+                className="min-w-[108px] shadow-[0_1px_2px_rgba(0,0,0,0.04)] cursor-pointer"
+              />
+            </button>
+          </div>
         ),
       },
       {
         key: "_golive",
         label: "Go Live",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
         render: (_, row) => (
-          <StatusBadge
-            status={getGoLiveStatus(row)}
-            label={getGoLiveLabel(row)}
-            size="sm"
-          />
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                const sellerId = row?._id || row?.id;
+                if (sellerId) navigate(`/app/seller/view/${sellerId}`);
+              }}
+              className="inline-flex rounded-full transition-transform hover:scale-105 active:scale-95 focus:outline-none"
+              title="View seller go-live details"
+            >
+              <StatusBadge
+                status={getGoLiveStatus(row)}
+                label={getGoLiveLabel(row)}
+                size="sm"
+                dot
+                className="min-w-[108px] shadow-[0_1px_2px_rgba(0,0,0,0.04)] cursor-pointer"
+              />
+            </button>
+          </div>
         ),
       },
       {
         key: "isDisable",
         label: "Status",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
         render: (v, row) => (
           <PermissionGuard module="sellers" action={ACTIONS.STATUS_CHANGE} hide>
-            <ToggleButton
-              isToggle={!v}
-              handleClick={() => setStatusTarget(row)}
-              size="sm"
-            />
+            <div className="flex justify-center">
+              <ToggleButton
+                isToggle={!v}
+                handleClick={() => setStatusTarget(row)}
+                size="sm"
+              />
+            </div>
           </PermissionGuard>
         ),
       },

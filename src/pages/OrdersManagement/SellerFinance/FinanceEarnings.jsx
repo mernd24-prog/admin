@@ -1,32 +1,31 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
+  MdAccountBalanceWallet,
+  MdCheckCircle,
+  MdHourglassEmpty,
+  MdPauseCircle,
+  MdPayments,
   MdRefresh,
   MdTrendingUp,
   MdVisibility,
 } from "react-icons/md";
+import Cards from "../../../components/Cards/Cards";
 
 import PageHeader from "../../../components/Shared/PageHeader";
 import DataTable from "../../../components/Shared/DataTable";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import { OrderLink } from "../../../components/Shared/EntityLink";
 
-import {
-  getSellerCommissions,
-} from "../../../Redux/sellerCommissionsSlice";
+import { getSellerCommissions } from "../../../Redux/sellerCommissionsSlice";
 
 import {
   CalculationRows,
   FinanceDateRangeFilter,
   FinanceChoiceFilters,
-  FinanceNav,
+  // FinanceNav,
   FinancePageGuide,
   FinanceStatusBadge,
   financeDateTime,
@@ -62,8 +61,7 @@ export default function FinanceEarnings() {
   const dispatch = useDispatch();
 
   const state = useSelector(
-    (store) =>
-      store.sellerCommissions?.myCommissionsData || {}
+    (store) => store.sellerCommissions?.myCommissionsData || {},
   );
 
   const rows = financeList(state);
@@ -86,14 +84,10 @@ export default function FinanceEarnings() {
           toDate: dateFilters.toDate,
           limit: 100,
           offset: 0,
-        })
+        }),
       ).unwrap();
     } catch (error) {
-      toast.error(
-        error?.message ||
-          error ||
-          "Unable to load earnings"
-      );
+      toast.error(error?.message || error || "Unable to load earnings");
     }
   }, [dateFilters, dispatch]);
 
@@ -106,12 +100,7 @@ export default function FinanceEarnings() {
 
     if (id && rows.length) {
       setDetail(
-        rows.find(
-          (row) =>
-            String(
-              row.id || row.commissionId
-            ) === id
-        ) || null
+        rows.find((row) => String(row.id || row.commissionId) === id) || null,
       );
     }
   }, [params, rows]);
@@ -120,16 +109,12 @@ export default function FinanceEarnings() {
    * FILTERED ROWS
    */
   const filtered = useMemo(() => {
-    const needle = search
-      .trim()
-      .toLowerCase();
+    const needle = search.trim().toLowerCase();
 
     return rows.filter((row) => {
-      const mapped =
-        sellerFinanceStatus(row).key;
+      const mapped = sellerFinanceStatus(row).key;
 
-      const statusMatch =
-        !status || mapped === status;
+      const statusMatch = !status || mapped === status;
 
       const searchMatch =
         !needle ||
@@ -147,16 +132,9 @@ export default function FinanceEarnings() {
           .toLowerCase()
           .includes(needle);
 
-      return (
-        statusMatch &&
-        searchMatch
-      );
+      return statusMatch && searchMatch;
     });
-  }, [
-    rows,
-    search,
-    status,
-  ]);
+  }, [rows, search, status]);
 
   /*
    * STATUS SUMMARY
@@ -164,31 +142,20 @@ export default function FinanceEarnings() {
   const statusSummary = useMemo(() => {
     return rows.reduce(
       (result, row) => {
-        const key =
-          sellerFinanceStatus(row).key;
+        const key = sellerFinanceStatus(row).key;
 
         const amount = Number(
-          financeValue(
-            row,
-            "net_amount",
-            "netAmount"
-          ) || 0
+          financeValue(row, "net_amount", "netAmount") || 0,
         );
 
         result[key] = {
-          count:
-            (result[key]?.count || 0) + 1,
-          amount:
-            (result[key]?.amount || 0) +
-            amount,
+          count: (result[key]?.count || 0) + 1,
+          amount: (result[key]?.amount || 0) + amount,
         };
 
         result.all = {
-          count:
-            (result.all?.count || 0) + 1,
-          amount:
-            (result.all?.amount || 0) +
-            amount,
+          count: (result.all?.count || 0) + 1,
+          amount: (result.all?.amount || 0) + amount,
         };
 
         return result;
@@ -198,7 +165,7 @@ export default function FinanceEarnings() {
           count: 0,
           amount: 0,
         },
-      }
+      },
     );
   }, [rows]);
 
@@ -208,25 +175,17 @@ export default function FinanceEarnings() {
   const filteredSummary = useMemo(() => {
     return filtered.reduce(
       (result, row) => {
-        const key =
-          sellerFinanceStatus(row).key;
+        const key = sellerFinanceStatus(row).key;
 
         const amount = Number(
-          financeValue(
-            row,
-            "net_amount",
-            "netAmount"
-          ) || 0
+          financeValue(row, "net_amount", "netAmount") || 0,
         );
 
         result.total += amount;
 
         result[key] = {
-          count:
-            (result[key]?.count || 0) + 1,
-          amount:
-            (result[key]?.amount || 0) +
-            amount,
+          count: (result[key]?.count || 0) + 1,
+          amount: (result[key]?.amount || 0) + amount,
         };
 
         return result;
@@ -249,7 +208,7 @@ export default function FinanceEarnings() {
           count: 0,
           amount: 0,
         },
-      }
+      },
     );
   }, [filtered]);
 
@@ -263,14 +222,8 @@ export default function FinanceEarnings() {
         label: "Order",
         render: (_, row) => (
           <OrderLink
-            orderId={
-              row.orderId ||
-              row.order_id
-            }
-            orderNumber={
-              row.orderNumber ||
-              row.order_number
-            }
+            orderId={row.orderId || row.order_id}
+            orderNumber={row.orderNumber || row.order_number}
           />
         ),
       },
@@ -283,8 +236,7 @@ export default function FinanceEarnings() {
             <strong className="block max-w-[260px] truncate">
               {row.productTitle ||
                 row.productName ||
-                row.metadata
-                  ?.productTitle ||
+                row.metadata?.productTitle ||
                 "Order earning"}
             </strong>
 
@@ -306,21 +258,13 @@ export default function FinanceEarnings() {
             "gross_amount",
             "grossAmount",
             "item_amount",
-            "itemAmount"
+            "itemAmount",
           );
 
-          return amount !== undefined &&
-            amount !== null ? (
-            <span>
-              {financeMoney(
-                amount,
-                row.currency
-              )}
-            </span>
+          return amount !== undefined && amount !== null ? (
+            <span>{financeMoney(amount, row.currency)}</span>
           ) : (
-            <span className="text-[var(--admin-muted)]">
-              —
-            </span>
+            <span className="text-[var(--admin-muted)]">—</span>
           );
         },
       },
@@ -331,12 +275,8 @@ export default function FinanceEarnings() {
         render: (_, row) => (
           <strong>
             {financeMoney(
-              financeValue(
-                row,
-                "net_amount",
-                "netAmount"
-              ),
-              row.currency
+              financeValue(row, "net_amount", "netAmount"),
+              row.currency,
             )}
           </strong>
         ),
@@ -345,9 +285,7 @@ export default function FinanceEarnings() {
       {
         key: "status",
         label: "Status",
-        render: (_, row) => (
-          <FinanceStatusBadge row={row} />
-        ),
+        render: (_, row) => <FinanceStatusBadge row={row} />,
       },
 
       {
@@ -362,7 +300,7 @@ export default function FinanceEarnings() {
                   row.eligibleAt ||
                   row.eligible_at ||
                   row.returnWindowEndsAt ||
-                  row.return_window_ends_at
+                  row.return_window_ends_at,
               )}
             </span>
 
@@ -384,18 +322,9 @@ export default function FinanceEarnings() {
               setDetail(row);
 
               setParams((previous) => {
-                const next =
-                  new URLSearchParams(
-                    previous
-                  );
+                const next = new URLSearchParams(previous);
 
-                next.set(
-                  "earning",
-                  String(
-                    row.id ||
-                      row.commissionId
-                  )
-                );
+                next.set("earning", String(row.id || row.commissionId));
 
                 return next;
               });
@@ -407,7 +336,7 @@ export default function FinanceEarnings() {
         ),
       },
     ],
-    [setParams]
+    [setParams],
   );
 
   return (
@@ -444,7 +373,7 @@ export default function FinanceEarnings() {
         }
       />
 
-      <FinanceNav />
+      {/* <FinanceNav /> */}
 
       {/* PAGE GUIDE */}
       <FinancePageGuide
@@ -459,114 +388,86 @@ export default function FinanceEarnings() {
       />
 
       {/* SUMMARY CARDS */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="rounded-lg border border-[var(--admin-border)] bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--admin-muted)]">
-            Total earnings
-          </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <Cards
+          label="Total earnings"
+          value={financeMoney(filteredSummary.total, rows[0]?.currency)}
+          helper={`${filtered.length} earning${filtered.length !== 1 ? "s" : ""}`}
+          icon={<MdAccountBalanceWallet size={18} />}
+          iconBg="#e3d4ff"
+          iconColor="#8d5cf6"
+          onClick={() => {
+            setParams((previous) => {
+              const next = new URLSearchParams(previous);
+              next.delete("status");
+              return next;
+            });
+          }}
+        />
 
-          <h3 className="mt-2 text-xl font-bold text-[var(--admin-ink)]">
-            {financeMoney(
-              filteredSummary.total,
-              rows[0]?.currency
-            )}
-          </h3>
+        <Cards
+          label="Waiting"
+          value={financeMoney(filteredSummary.waiting.amount, rows[0]?.currency)}
+          helper={`${filteredSummary.waiting.count} order${filteredSummary.waiting.count !== 1 ? "s" : ""}`}
+          icon={<MdHourglassEmpty size={18} />}
+          iconBg="#ffe5b5"
+          iconColor="#f5a300"
+          onClick={() => {
+            setParams((previous) => {
+              const next = new URLSearchParams(previous);
+              next.set("status", "waiting");
+              return next;
+            });
+          }}
+        />
 
-          <p className="mt-1 text-xs text-[var(--admin-muted)]">
-            {filtered.length} earning
-            {filtered.length !== 1
-              ? "s"
-              : ""}
-          </p>
-        </div>
+        <Cards
+          label="Available"
+          value={financeMoney(filteredSummary.available.amount, rows[0]?.currency)}
+          helper={`${filteredSummary.available.count} earning${filteredSummary.available.count !== 1 ? "s" : ""}`}
+          icon={<MdCheckCircle size={18} />}
+          iconBg="#cce8c9"
+          iconColor="#1d9b50"
+          onClick={() => {
+            setParams((previous) => {
+              const next = new URLSearchParams(previous);
+              next.set("status", "available");
+              return next;
+            });
+          }}
+        />
 
-        <div className="rounded-lg border border-[var(--admin-border)] bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--admin-muted)]">
-            Waiting
-          </p>
+        <Cards
+          label="On hold"
+          value={financeMoney(filteredSummary.held.amount, rows[0]?.currency)}
+          helper={`${filteredSummary.held.count} earning${filteredSummary.held.count !== 1 ? "s" : ""}`}
+          icon={<MdPauseCircle size={18} />}
+          iconBg="#ffd4d2"
+          iconColor="#ff4b55"
+          onClick={() => {
+            setParams((previous) => {
+              const next = new URLSearchParams(previous);
+              next.set("status", "held");
+              return next;
+            });
+          }}
+        />
 
-          <h3 className="mt-2 text-xl font-bold text-[var(--admin-ink)]">
-            {financeMoney(
-              filteredSummary.waiting.amount,
-              rows[0]?.currency
-            )}
-          </h3>
-
-          <p className="mt-1 text-xs text-[var(--admin-muted)]">
-            {filteredSummary.waiting.count}{" "}
-            order
-            {filteredSummary.waiting.count !==
-            1
-              ? "s"
-              : ""}
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-[var(--admin-border)] bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--admin-muted)]">
-            Available
-          </p>
-
-          <h3 className="mt-2 text-xl font-bold text-[var(--admin-ink)]">
-            {financeMoney(
-              filteredSummary.available.amount,
-              rows[0]?.currency
-            )}
-          </h3>
-
-          <p className="mt-1 text-xs text-[var(--admin-muted)]">
-            {filteredSummary.available.count}{" "}
-            earning
-            {filteredSummary.available.count !==
-            1
-              ? "s"
-              : ""}
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-[var(--admin-border)] bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--admin-muted)]">
-            On hold
-          </p>
-
-          <h3 className="mt-2 text-xl font-bold text-[var(--admin-ink)]">
-            {financeMoney(
-              filteredSummary.held.amount,
-              rows[0]?.currency
-            )}
-          </h3>
-
-          <p className="mt-1 text-xs text-[var(--admin-muted)]">
-            {filteredSummary.held.count}{" "}
-            earning
-            {filteredSummary.held.count !==
-            1
-              ? "s"
-              : ""}
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-[var(--admin-border)] bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--admin-muted)]">
-            Paid
-          </p>
-
-          <h3 className="mt-2 text-xl font-bold text-[var(--admin-ink)]">
-            {financeMoney(
-              filteredSummary.paid.amount,
-              rows[0]?.currency
-            )}
-          </h3>
-
-          <p className="mt-1 text-xs text-[var(--admin-muted)]">
-            {filteredSummary.paid.count}{" "}
-            earning
-            {filteredSummary.paid.count !==
-            1
-              ? "s"
-              : ""}
-          </p>
-        </div>
+        <Cards
+          label="Paid"
+          value={financeMoney(filteredSummary.paid.amount, rows[0]?.currency)}
+          helper={`${filteredSummary.paid.count} earning${filteredSummary.paid.count !== 1 ? "s" : ""}`}
+          icon={<MdPayments size={18} />}
+          iconBg="#cce8c9"
+          iconColor="#1d9b50"
+          onClick={() => {
+            setParams((previous) => {
+              const next = new URLSearchParams(previous);
+              next.set("status", "paid");
+              return next;
+            });
+          }}
+        />
       </div>
 
       {/* STATUS FILTERS */}
@@ -575,10 +476,7 @@ export default function FinanceEarnings() {
         value={status}
         onChange={(key) =>
           setParams((previous) => {
-            const next =
-              new URLSearchParams(
-                previous
-              );
+            const next = new URLSearchParams(previous);
 
             if (key) {
               next.set("status", key);
@@ -589,27 +487,22 @@ export default function FinanceEarnings() {
             return next;
           })
         }
-        options={FILTERS.map(
-          ([key, label]) => {
-            const summary =
-              key === ""
-                ? statusSummary.all
-                : statusSummary[key] || {
-                    count: 0,
-                    amount: 0,
-                  };
+        options={FILTERS.map(([key, label]) => {
+          const summary =
+            key === ""
+              ? statusSummary.all
+              : statusSummary[key] || {
+                  count: 0,
+                  amount: 0,
+                };
 
-            return [
-              key,
-              label,
-              summary.count,
-              financeMoney(
-                summary.amount,
-                rows[0]?.currency
-              ),
-            ];
-          }
-        )}
+          return [
+            key,
+            label,
+            summary.count,
+            financeMoney(summary.amount, rows[0]?.currency),
+          ];
+        })}
       />
 
       {/* SEARCH + TABLE */}
@@ -619,9 +512,7 @@ export default function FinanceEarnings() {
         loading={Boolean(state.loading)}
         totalCount={filtered.length}
         pageSize={20}
-        rowKey={(row) =>
-          row.id || row.commissionId
-        }
+        rowKey={(row) => row.id || row.commissionId}
         searchPlaceholder="Search order or product"
         onSearch={setSearch}
         emptyText={
@@ -638,10 +529,7 @@ export default function FinanceEarnings() {
           setDetail(null);
 
           setParams((previous) => {
-            const next =
-              new URLSearchParams(
-                previous
-              );
+            const next = new URLSearchParams(previous);
 
             next.delete("earning");
 
@@ -650,11 +538,7 @@ export default function FinanceEarnings() {
         }}
         title={`Order #${
           detail?.orderNumber ||
-          String(
-            detail?.orderId ||
-              detail?.order_id ||
-              ""
-          ).slice(0, 12)
+          String(detail?.orderId || detail?.order_id || "").slice(0, 12)
         }`}
         isButtonView={false}
       >
@@ -671,15 +555,12 @@ export default function FinanceEarnings() {
                   <p className="mt-1 font-semibold">
                     {detail.productTitle ||
                       detail.productName ||
-                      detail.metadata
-                        ?.productTitle ||
+                      detail.metadata?.productTitle ||
                       "Order earning"}
                   </p>
                 </div>
 
-                <FinanceStatusBadge
-                  row={detail}
-                />
+                <FinanceStatusBadge row={detail} />
               </div>
 
               <div className="mt-4 flex items-end justify-between">
@@ -690,12 +571,8 @@ export default function FinanceEarnings() {
 
                   <strong className="mt-1 block text-2xl">
                     {financeMoney(
-                      financeValue(
-                        detail,
-                        "net_amount",
-                        "netAmount"
-                      ),
-                      detail.currency
+                      financeValue(detail, "net_amount", "netAmount"),
+                      detail.currency,
                     )}
                   </strong>
                 </div>
@@ -705,16 +582,12 @@ export default function FinanceEarnings() {
                     Quantity
                   </span>
 
-                  <strong className="mt-1 block">
-                    {detail.quantity || 1}
-                  </strong>
+                  <strong className="mt-1 block">{detail.quantity || 1}</strong>
                 </div>
               </div>
 
               <p className="mt-3 text-xs text-[var(--admin-muted)]">
-                {sellerFinanceStatus(
-                  detail
-                ).detail}
+                {sellerFinanceStatus(detail).detail}
               </p>
             </div>
 
@@ -732,7 +605,7 @@ export default function FinanceEarnings() {
                       detail.eligibleAt ||
                       detail.eligible_at ||
                       detail.returnWindowEndsAt ||
-                      detail.return_window_ends_at
+                      detail.return_window_ends_at,
                   )}
                 </p>
               </div>
@@ -743,9 +616,7 @@ export default function FinanceEarnings() {
                 </span>
 
                 <div className="mt-2">
-                  <FinanceStatusBadge
-                    row={detail}
-                  />
+                  <FinanceStatusBadge row={detail} />
                 </div>
               </div>
             </div>
@@ -756,9 +627,7 @@ export default function FinanceEarnings() {
                 How your earning was calculated
               </h3>
 
-              <CalculationRows
-                row={detail}
-              />
+              <CalculationRows row={detail} />
             </div>
           </div>
         )}

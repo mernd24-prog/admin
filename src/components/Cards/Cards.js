@@ -6,13 +6,17 @@ import { formatLabel } from "../../utils/formatters";
 export default function Cards({
   icon,
   label,
+  title,
   value,
   helper,
+  description,
   trend,
   iconBg = "#dde6d9",
   iconColor,
   trendNegative = false,
   onClick,
+  className = "",
+  ...props
 }) {
   const trendColor = trendNegative ? "text-red-500 " : "text-emerald-500";
   const iconNode = icon ? (
@@ -41,38 +45,44 @@ export default function Cards({
     )
   ) : null;
 
-  const description =
-    trend || helper ? (
-      <p className="text-[9px] font-medium text-[#36363f]">
-        {trend && (
-          <span
-            className={`inline-flex  items-center gap-1 font-bold ${trendColor}`}
-          >
-            {trendNegative ? (
-              <IoMdTrendingDown className="h-3 w-3" />
-            ) : (
-              <IoTrendingUp className="h-3 w-3" />
+  const descNode =
+    description !== undefined
+      ? description
+      : trend || helper
+        ? (
+          <p className="text-[9px] font-medium text-[#36363f]">
+            {trend && (
+              <span
+                className={`inline-flex items-center gap-1 font-bold ${trendColor}`}
+              >
+                {trendNegative ? (
+                  <IoMdTrendingDown className="h-3 w-3" />
+                ) : (
+                  <IoTrendingUp className="h-3 w-3" />
+                )}
+                {trend}
+              </span>
+            )}{" "}
+            {helper && (
+              <span>
+                {formatLabel(String(helper).replace("last month", "Last month"))}
+              </span>
             )}
-            {trend}
-          </span>
-        )}{" "}
-        {helper && (
-          <span>
-            {formatLabel(String(helper).replace("last month", "Last month"))}
-          </span>
-        )}
-      </p>
-    ) : null;
+          </p>
+        )
+        : null;
 
   return (
     <SummaryCard
-      title={label}
+      title={label || title}
       value={value}
-      description={description}
+      description={descNode}
       icon={iconNode}
       iconClassName="right-0 top-0 h-9 w-10 rounded-none rounded-bl-[10px] border-0"
       iconStyle={{ backgroundColor: iconBg }}
       onClick={onClick}
+      className={className}
+      {...props}
     />
   );
 }

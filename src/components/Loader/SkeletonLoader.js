@@ -249,62 +249,104 @@ export const SellerDetailsSkeletonLoader = () => (
     </div>
   </div>
 );
-// import React from 'react';
-// import Skeleton from 'react-loading-skeleton';
-// import 'react-loading-skeleton/dist/skeleton.css';
+export const OrganizationSkeletonLoader = ({ actionLabel }) => (
+  <div
+    className="mb-4 rounded-lg border border-gray-200 overflow-hidden bg-white animate-pulse"
+    aria-label="Loading store organization"
+  >
+    {actionLabel && (
+      <div className="flex items-center gap-2.5 bg-blue-50 px-4 py-2.5 border-b border-blue-100 text-xs font-semibold text-blue-700">
+        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <span>Updating store status ({actionLabel})… Please wait.</span>
+      </div>
+    )}
 
-// export const SkeletonLoader = ({ count = 1, height = 20, width, circle = false }) => {
-//   return (
-//     <Skeleton
-//       count={count}
-//       height={height}
-//       width={width}
-//       circle={circle}
-//       baseColor="#f3f3f3"
-//       highlightColor="#ecebeb"
-//     />
-//   );
-// };
+    {/* Header */}
+    <div className="flex flex-wrap items-start justify-between gap-3 bg-gray-50 px-4 py-3 border-b border-gray-200">
+      <div className="space-y-1.5">
+        <SkeletonLoader height={18} width={200} />
+        <SkeletonLoader height={12} width={130} />
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <SkeletonLoader key={i} height={24} width={80} />
+        ))}
+      </div>
+    </div>
 
-// export const TableSkeletonLoader = ({ columns = 5, rows = 10 }) => {
-//   return (
-//     <div className="w-full">
-//       <div className="hidden w-full border-b-[#ebedf0] lg:block overflow-hidden overflow-x-auto overflow-y-auto">
-//         <table className="w-full text-left border-b table-auto">
-//           <thead className="bg-[#F5F6FA] border-b-[1px] border-[#D2D2D2] h-16">
-//             <tr>
-//               {Array(columns).fill(0).map((_, index) => (
-//                 <th key={index} className="p-2">
-//                   <SkeletonLoader width={100} />
-//                 </th>
-//               ))}
-//             </tr>
-//           </thead>
-//           <tbody className="divide-y divide-gray-200">
-//             {Array(rows).fill(0).map((_, rowIndex) => (
-//               <tr key={rowIndex}>
-//                 {Array(columns).fill(0).map((_, cellIndex) => (
-//                   <td key={cellIndex} className="p-2">
-//                     <SkeletonLoader width={Math.random() * 100 + 50} />
-//                   </td>
-//                 ))}
-//               </tr>
-//             ))}
-//           </tbody>
-//         </table>
-//       </div>
-//       <div className="mt-4 overflow-hidden overflow-y-auto lg:hidden">
-//         {Array(5).fill(0).map((_, index) => (
-//           <div key={index} className="p-4 mb-4 bg-white border border-[#dbdbdb]">
-//             {Array(columns).fill(0).map((_, cellIndex) => (
-//               <div key={cellIndex} className="flex items-center justify-between pb-3 mb-3 border-b border-gray-200">
-//                 <SkeletonLoader width={80} />
-//                 <SkeletonLoader width={120} />
-//               </div>
-//             ))}
-//           </div>
-//         ))}
-//       </div>
-//     </div>
-//   );
-// };
+    <div className="divide-y divide-gray-100 px-4">
+      {/* Contact info */}
+      <div className="py-4">
+        <SkeletonLoader height={14} width={150} />
+        <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="space-y-1">
+              <SkeletonLoader height={11} width={80} />
+              <SkeletonLoader height={16} width={160} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Business identity */}
+      <div className="py-4">
+        <SkeletonLoader height={14} width={130} />
+        <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="space-y-1">
+              <SkeletonLoader height={11} width={70} />
+              <SkeletonLoader height={16} width={140} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Addresses */}
+      <div className="py-4">
+        <SkeletonLoader height={14} width={100} />
+        <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-lg border border-gray-100 p-3 space-y-2 bg-gray-50/50"
+            >
+              <SkeletonLoader height={14} width={100} />
+              <SkeletonLoader height={12} width="90%" />
+              <SkeletonLoader height={12} width="70%" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* KYC Documents */}
+      <div className="py-4">
+        <SkeletonLoader height={14} width={120} />
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex flex-col items-center rounded-xl border border-gray-100 p-4 text-center bg-gray-50/40 space-y-2"
+            >
+              <SkeletonLoader height={32} width={32} />
+              <SkeletonLoader height={14} width={100} />
+              <SkeletonLoader height={10} width={70} />
+              <div className="pt-2 w-full">
+                <SkeletonLoader height={28} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="py-4">
+        <SkeletonLoader height={12} width={180} />
+        <div className="mt-3 flex flex-wrap gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonLoader key={i} height={32} width={110} />
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);

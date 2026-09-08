@@ -1,7 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdDownload, MdPayments, MdReceiptLong, MdVisibility } from "react-icons/md";
+import {
+  MdCheckCircle,
+  MdDownload,
+  MdErrorOutline,
+  MdPayments,
+  MdReceiptLong,
+  MdSync,
+  MdVisibility,
+} from "react-icons/md";
+import Cards from "../../../components/Cards/Cards";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   DataTable,
@@ -22,8 +31,7 @@ import { exportToCsv } from "../../../_helpers/exportToCsv";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import {
-  FinanceMetricCard,
-  FinanceNav,
+  // FinanceNav,
   FinancePageGuide,
   FinanceStatusBadge,
   financeDateTime,
@@ -117,7 +125,9 @@ const payoutExplanation = (row = {}) => {
     0,
   );
   const net = Number(valueOf(row, "net_amount", "netAmount") || 0);
-  const method = String(valueOf(row, "payment_method", "paymentMethod") || "").toLowerCase();
+  const method = String(
+    valueOf(row, "payment_method", "paymentMethod") || "",
+  ).toLowerCase();
   if (metadata.offsetOnly || method === "ledger_offset") {
     return {
       title: "No bank transfer",
@@ -132,10 +142,22 @@ const payoutExplanation = (row = {}) => {
       tone: "amber",
     };
   }
-  if (["completed", "processed"].includes(String(row.status || "").toLowerCase())) {
-    return { title: "Transfer completed", detail: "Net payout was released through the selected payout destination.", tone: "green" };
+  if (
+    ["completed", "processed"].includes(String(row.status || "").toLowerCase())
+  ) {
+    return {
+      title: "Transfer completed",
+      detail:
+        "Net payout was released through the selected payout destination.",
+      tone: "green",
+    };
   }
-  return { title: "Transfer not completed", detail: "This payout is waiting for approval, processing, or provider confirmation.", tone: "gray" };
+  return {
+    title: "Transfer not completed",
+    detail:
+      "This payout is waiting for approval, processing, or provider confirmation.",
+    tone: "gray",
+  };
 };
 
 const settlementExplanation = (row = {}) => {
@@ -148,11 +170,18 @@ const settlementExplanation = (row = {}) => {
   if (source === "ledger_offset_only") {
     return "Payout closed with no transfer because all available earnings were used for COD/negative balance.";
   }
-  if (source === "seller_direct_cod_recovery" || metadata.adjustmentType === "cod_recovery") {
-    const remaining = Number(metadata.remainingAmount ?? metadata.recoveryAmount ?? amount);
+  if (
+    source === "seller_direct_cod_recovery" ||
+    metadata.adjustmentType === "cod_recovery"
+  ) {
+    const remaining = Number(
+      metadata.remainingAmount ?? metadata.recoveryAmount ?? amount,
+    );
     return `${money(remaining, row.currency)} seller-collected COD is still owed to the platform and will carry forward.`;
   }
-  return row.notes || "Settlement movement created from the payout calculation.";
+  return (
+    row.notes || "Settlement movement created from the payout calculation."
+  );
 };
 
 const getInitialPayoutFilters = () => {
@@ -242,37 +271,82 @@ const SellerPayouts = () => {
         {
           key: "id",
           label: "Payout",
-          render: (value, row) => <span className="font-mono text-xs">{shortReference(value || row.payoutId, "#")}</span>,
+          render: (value, row) => (
+            <span className="font-mono text-xs">
+              {shortReference(value || row.payoutId, "#")}
+            </span>
+          ),
         },
         {
           key: "created_at",
           label: "Date",
-          render: (value, row) => financeDateTime(row.processed_at || row.processedAt || value || row.createdAt),
+          render: (value, row) =>
+            financeDateTime(
+              row.processed_at || row.processedAt || value || row.createdAt,
+            ),
         },
         {
           key: "net_amount",
           label: "Amount",
-          render: (value, row) => <strong>{financeMoney(value ?? row.netAmount, row.currency)}</strong>,
+          render: (value, row) => (
+            <strong>
+              {financeMoney(value ?? row.netAmount, row.currency)}
+            </strong>
+          ),
         },
         {
           key: "destination",
           label: "Destination",
           render: (_, row) => {
             const metadata = jsonOf(row.metadata);
-            const bank = metadata.bankName || row.bankName || (String(row.payment_method || row.paymentMethod || "").includes("wallet") ? "Seller wallet" : "Bank account");
-            const account = String(metadata.accountNumber || row.accountNumber || "");
-            return <span>{bank}{account ? ` ••••${account.slice(-4)}` : ""}</span>;
+            const bank =
+              metadata.bankName ||
+              row.bankName ||
+              (String(row.payment_method || row.paymentMethod || "").includes(
+                "wallet",
+              )
+                ? "Seller wallet"
+                : "Bank account");
+            const account = String(
+              metadata.accountNumber || row.accountNumber || "",
+            );
+            return (
+              <span>
+                {bank}
+                {account ? ` ••••${account.slice(-4)}` : ""}
+              </span>
+            );
           },
         },
         {
           key: "status",
           label: "Status",
-          render: (_, row) => <div><FinanceStatusBadge row={row} /><div className="mt-1 text-xs text-[var(--admin-muted)]">{sellerFinanceStatus(row).detail}</div></div>,
+          render: (_, row) => (
+            <div>
+              <FinanceStatusBadge row={row} />
+              <div className="mt-1 text-xs text-[var(--admin-muted)]">
+                {sellerFinanceStatus(row).detail}
+              </div>
+            </div>
+          ),
         },
         {
           key: "actions",
           label: "Action",
-          render: (_, row) => <button type="button" onClick={() => setDetail(row)} className="admin-btn-secondary !px-2 !py-1"><MdVisibility size={15} /> {sellerFinanceStatus(row).key === "failed" ? "View issue" : "View payout"}</button>,
+          headerClassName: "whitespace-nowrap",
+          cellClassName: "whitespace-nowrap",
+          render: (_, row) => (
+            <button
+              type="button"
+              onClick={() => setDetail(row)}
+              className="admin-btn-secondary inline-flex items-center gap-1.5 !px-2.5 !py-1 whitespace-nowrap"
+            >
+              <MdVisibility size={15} />{" "}
+              {sellerFinanceStatus(row).key === "failed"
+                ? "View issue"
+                : "View"}
+            </button>
+          ),
         },
       ];
     }
@@ -313,7 +387,9 @@ const SellerPayouts = () => {
         label: "Fees & deductions",
         render: (_, row) => {
           const breakdown = breakdownOf(row);
-          const commission = Number(valueOf(row, "commission_amount", "commissionAmount"));
+          const commission = Number(
+            valueOf(row, "commission_amount", "commissionAmount"),
+          );
           const commissionTax = Number(valueOf(row, "tax_amount", "taxAmount"));
           const withholding =
             Number(breakdown.gstTcsAmount || 0) +
@@ -324,9 +400,34 @@ const SellerPayouts = () => {
             Number(breakdown.shippingDeductionAmount || 0);
           return (
             <div className="min-w-[190px] space-y-0.5 text-xs">
-              <div className="flex justify-between gap-4"><span className="text-[var(--admin-muted)]">Commission + GST</span><span className="font-medium text-red-600">−{money(commission + commissionTax, row.currency)}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-[var(--admin-muted)]">TCS / TDS</span><span className="text-red-600">−{money(withholding, row.currency)}</span></div>
-              {(refund !== 0 || shipping !== 0) && <div className="flex justify-between gap-4"><span className="text-[var(--admin-muted)]">Refund / shipping</span><span className={shipping - refund >= 0 ? "text-green-700" : "text-red-600"}>{signedMoney(shipping - refund, row.currency)}</span></div>}
+              <div className="flex justify-between gap-4">
+                <span className="text-[var(--admin-muted)]">
+                  Commission + GST
+                </span>
+                <span className="font-medium text-red-600">
+                  −{money(commission + commissionTax, row.currency)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-[var(--admin-muted)]">TCS / TDS</span>
+                <span className="text-red-600">
+                  −{money(withholding, row.currency)}
+                </span>
+              </div>
+              {(refund !== 0 || shipping !== 0) && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-[var(--admin-muted)]">
+                    Refund / shipping
+                  </span>
+                  <span
+                    className={
+                      shipping - refund >= 0 ? "text-green-700" : "text-red-600"
+                    }
+                  >
+                    {signedMoney(shipping - refund, row.currency)}
+                  </span>
+                </div>
+              )}
             </div>
           );
         },
@@ -336,7 +437,15 @@ const SellerPayouts = () => {
         label: "COD / other adjustment",
         render: (value, row) => {
           const amount = Number(value ?? row.adjustmentAmount ?? 0);
-          return <span className={amount < 0 ? "font-medium text-red-600" : "text-green-700"}>{signedMoney(amount, row.currency)}</span>;
+          return (
+            <span
+              className={
+                amount < 0 ? "font-medium text-red-600" : "text-green-700"
+              }
+            >
+              {signedMoney(amount, row.currency)}
+            </span>
+          );
         },
       },
       {
@@ -355,8 +464,20 @@ const SellerPayouts = () => {
           const explanation = payoutExplanation(row);
           return (
             <div>
-              <div className={explanation.tone === "green" ? "font-semibold text-green-700" : explanation.tone === "amber" ? "font-semibold text-amber-700" : "font-semibold text-gray-700"}>{explanation.title}</div>
-              <div className="mt-0.5 text-xs leading-5 text-gray-500">{explanation.detail}</div>
+              <div
+                className={
+                  explanation.tone === "green"
+                    ? "font-semibold text-green-700"
+                    : explanation.tone === "amber"
+                      ? "font-semibold text-amber-700"
+                      : "font-semibold text-gray-700"
+                }
+              >
+                {explanation.title}
+              </div>
+              <div className="mt-0.5 text-xs leading-5 text-gray-500">
+                {explanation.detail}
+              </div>
             </div>
           );
         },
@@ -373,12 +494,14 @@ const SellerPayouts = () => {
       },
       {
         key: "actions",
-        label: "",
+        label: "Action",
+        headerClassName: "whitespace-nowrap",
+        cellClassName: "whitespace-nowrap",
         render: (_, row) => (
           <button
             type="button"
             onClick={() => setDetail(row)}
-            className="admin-btn-secondary !px-2 !py-1"
+            className="admin-btn-secondary inline-flex items-center gap-1.5 !px-2.5 !py-1 whitespace-nowrap"
           >
             <MdVisibility size={15} /> View
           </button>
@@ -435,14 +558,20 @@ const SellerPayouts = () => {
       {
         label: "COD / other adjustment",
         value: (row) =>
-          signedMoney(valueOf(row, "adjustment_amount", "adjustmentAmount"), row.currency),
+          signedMoney(
+            valueOf(row, "adjustment_amount", "adjustmentAmount"),
+            row.currency,
+          ),
       },
       {
         label: "Amount to transfer",
         value: (row) =>
           money(valueOf(row, "net_amount", "netAmount"), row.currency),
       },
-      { label: "Outcome / reason", value: (row) => payoutExplanation(row).detail },
+      {
+        label: "Outcome / reason",
+        value: (row) => payoutExplanation(row).detail,
+      },
       {
         label: "Period",
         value: (row) =>
@@ -526,7 +655,10 @@ const SellerPayouts = () => {
         value: (row) =>
           money(valueOf(row, "net_amount", "netAmount"), row.currency),
       },
-      { label: "Movement / reason", value: (row) => settlementExplanation(row) },
+      {
+        label: "Movement / reason",
+        value: (row) => settlementExplanation(row),
+      },
       { label: "Status", value: (row) => formatLabel(row.status || "pending") },
       {
         label: "Recorded on",
@@ -573,22 +705,88 @@ const SellerPayouts = () => {
         }
       />
 
-      {isSeller && <FinanceNav />}
+      {/* {isSeller && <FinanceNav />} */}
 
-      {isSeller && <FinancePageGuide step="4" icon={MdPayments} title="Track money sent to your payout account" description="Follow each transfer from processing to completion. If a transfer fails, open it to see the reason before contacting support." points={["Processing means transfer has started", "Paid means the transfer completed"]} />}
+      {isSeller && (
+        <FinancePageGuide
+          step="4"
+          icon={MdPayments}
+          title="Track money sent to your payout account"
+          description="Follow each transfer from processing to completion. If a transfer fails, open it to see the reason before contacting support."
+          points={[
+            "Processing means transfer has started",
+            "Paid means the transfer completed",
+          ]}
+        />
+      )}
 
       {isSeller && (
         <div className="grid gap-3 sm:grid-cols-3">
-          <FinanceMetricCard tone="green" label="Paid to date" value={financeMoney(payload.summary?.paidAmount || payload.list.filter((row) => sellerFinanceStatus(row).key === "paid").reduce((sum, row) => sum + Number(valueOf(row, "net_amount", "netAmount")), 0))} description="Successfully transferred." />
-          <FinanceMetricCard tone="blue" label="Processing" value={financeMoney(payload.summary?.processingAmount || payload.list.filter((row) => sellerFinanceStatus(row).key === "processing").reduce((sum, row) => sum + Number(valueOf(row, "net_amount", "netAmount")), 0))} description="Currently being transferred." />
-          <FinanceMetricCard tone="red" label="Failed" value={financeMoney(payload.summary?.failedAmount || payload.list.filter((row) => sellerFinanceStatus(row).key === "failed").reduce((sum, row) => sum + Number(valueOf(row, "net_amount", "netAmount")), 0))} description="Transfers that did not complete." />
+          <Cards
+            label="Paid to date"
+            value={financeMoney(
+              payload.summary?.paidAmount ||
+                payload.list
+                  .filter((row) => sellerFinanceStatus(row).key === "paid")
+                  .reduce(
+                    (sum, row) =>
+                      sum + Number(valueOf(row, "net_amount", "netAmount")),
+                    0,
+                  ),
+            )}
+            description="Successfully transferred."
+            icon={<MdCheckCircle size={18} />}
+            iconBg="#cce8c9"
+            iconColor="#1d9b50"
+          />
+          <Cards
+            label="Processing"
+            value={financeMoney(
+              payload.summary?.processingAmount ||
+                payload.list
+                  .filter(
+                    (row) => sellerFinanceStatus(row).key === "processing",
+                  )
+                  .reduce(
+                    (sum, row) =>
+                      sum + Number(valueOf(row, "net_amount", "netAmount")),
+                    0,
+                  ),
+            )}
+            description="Currently being transferred."
+            icon={<MdSync size={18} />}
+            iconBg="#e0e7ff"
+            iconColor="#4338ca"
+          />
+          <Cards
+            label="Failed"
+            value={financeMoney(
+              payload.summary?.failedAmount ||
+                payload.list
+                  .filter((row) => sellerFinanceStatus(row).key === "failed")
+                  .reduce(
+                    (sum, row) =>
+                      sum + Number(valueOf(row, "net_amount", "netAmount")),
+                    0,
+                  ),
+            )}
+            description="Transfers that did not complete."
+            icon={<MdErrorOutline size={18} />}
+            iconBg="#ffd4d2"
+            iconColor="#ff4b55"
+          />
         </div>
       )}
 
       {isSeller && (
         <div className="admin-card border-l-4 border-l-[var(--admin-gold)] px-4 py-3 text-sm text-[var(--admin-ink)]">
-          <strong>Receivable − fees − COD/other adjustments = amount transferred.</strong>
-          <span className="ml-1 text-[var(--admin-muted)]">A completed ₹0 payout means earnings were fully adjusted; check the outcome column.</span>
+          <strong>
+            Receivable − fees − COD/other adjustments = amount transferred.
+          </strong>
+          <span className="ml-1 text-[var(--admin-muted)]">
+            A completed ₹0 payout means earnings were fully adjusted; check the
+            outcome column.
+          </span>
         </div>
       )}
 
@@ -680,9 +878,12 @@ const SellerPayouts = () => {
                       Number(breakdown.shippingReimbursementAmount || 0) -
                       Number(breakdown.shippingDeductionAmount || 0);
                     const feesAndTaxes =
-                      Number(valueOf(row, "commission_amount", "commissionAmount")) +
+                      Number(
+                        valueOf(row, "commission_amount", "commissionAmount"),
+                      ) +
                       Number(valueOf(row, "tax_amount", "taxAmount")) +
-                      taxWithheld - shippingNet;
+                      taxWithheld -
+                      shippingNet;
                     return (
                       <tr
                         key={row.id}
@@ -695,7 +896,12 @@ const SellerPayouts = () => {
                           >
                             #{String(row.id || "").slice(0, 8) || "—"}
                           </span>
-                          <div className="mt-1 text-[10px] text-[var(--admin-muted)]">Payout #{String(valueOf(row, "payout_id", "payoutId") || "—").slice(0, 8)}</div>
+                          <div className="mt-1 text-[10px] text-[var(--admin-muted)]">
+                            Payout #
+                            {String(
+                              valueOf(row, "payout_id", "payoutId") || "—",
+                            ).slice(0, 8)}
+                          </div>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3">
                           {money(
@@ -706,7 +912,9 @@ const SellerPayouts = () => {
                         <td className="whitespace-nowrap px-4 py-3 text-red-600">
                           −{money(Math.max(feesAndTaxes, 0), row.currency)}
                         </td>
-                        <td className={`whitespace-nowrap px-4 py-3 font-semibold ${Number(valueOf(row, "net_amount", "netAmount")) < 0 ? "text-red-600" : "text-green-700"}`}>
+                        <td
+                          className={`whitespace-nowrap px-4 py-3 font-semibold ${Number(valueOf(row, "net_amount", "netAmount")) < 0 ? "text-red-600" : "text-green-700"}`}
+                        >
                           {money(
                             valueOf(row, "net_amount", "netAmount"),
                             row.currency,
@@ -890,9 +1098,15 @@ const SellerPayouts = () => {
                       </span>
                     </div>
                   </div>
-                  <div className={`rounded-lg border p-4 ${payoutExplanation(detail).tone === "green" ? "border-green-200 bg-green-50 text-green-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
-                    <div className="font-semibold">{payoutExplanation(detail).title}</div>
-                    <p className="mt-1 text-xs leading-5">{payoutExplanation(detail).detail}</p>
+                  <div
+                    className={`rounded-lg border p-4 ${payoutExplanation(detail).tone === "green" ? "border-green-200 bg-green-50 text-green-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}
+                  >
+                    <div className="font-semibold">
+                      {payoutExplanation(detail).title}
+                    </div>
+                    <p className="mt-1 text-xs leading-5">
+                      {payoutExplanation(detail).detail}
+                    </p>
                   </div>
                 </>
               );

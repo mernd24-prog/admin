@@ -12,7 +12,6 @@ import {
   MdReplay,
   MdSync,
 } from "react-icons/md";
-import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
@@ -34,7 +33,7 @@ import {
   cancelSellerPayout,
   syncRazorpayXPayout,
 } from "../../../Redux/sellerCommissionsSlice";
-import { ACTIONS } from "../../../_helpers/usePermission";
+import { usePermission, ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import { apiRequest } from "../../../_helpers/apiConfig";
@@ -231,6 +230,8 @@ const payoutFailureReason = (row = {}) => {
 
 const PayoutOpsQueue = () => {
   const dispatch = useDispatch();
+  const { can } = usePermission();
+  const canUpdate = can("sellers/commissions", ACTIONS.UPDATE);
   const selector = useSelector((state) => state.sellerCommissions);
   const payload = unwrapList(selector.payoutOperationsQueueData);
   const list = useListPage({
@@ -297,19 +298,22 @@ const PayoutOpsQueue = () => {
     fetchQueue();
   }, [fetchQueue, fetchRuntime]);
 
-  const openAction = (type, payout) => {
-    const existingMethod = valueOf(payout, "paymentMethod", "payment_method");
-    const paymentMethod = existingMethod || defaultPayoutMethod;
-    setAction({
-      ...EMPTY_ACTION,
-      open: true,
-      type,
-      title: ACTION_TITLES[type] || "Update Payout",
-      payout,
-      paymentMethod,
-      paymentReference: paymentMethod === "razorpayx" ? "" : "",
-    });
-  };
+  const openAction = useCallback(
+    (type, payout) => {
+      const existingMethod = valueOf(payout, "paymentMethod", "payment_method");
+      const paymentMethod = existingMethod || defaultPayoutMethod;
+      setAction({
+        ...EMPTY_ACTION,
+        open: true,
+        type,
+        title: ACTION_TITLES[type] || "Update Payout",
+        payout,
+        paymentMethod,
+        paymentReference: paymentMethod === "razorpayx" ? "" : "",
+      });
+    },
+    [defaultPayoutMethod],
+  );
 
   const validateAction = () => {
     if (!payoutId(action.payout)) return "Payout ID is missing";
@@ -555,171 +559,105 @@ const PayoutOpsQueue = () => {
           return formatDateTime12Hour(createdAt, "N/A");
         },
       },
-      {
-        key: "actions",
-        label: "Actions",
-        render: (_, row) => {
-          const status = row.status;
-          const method = valueOf(row, "paymentMethod", "payment_method");
-          const isRazorpayX = method === "razorpayx";
-          const pendingActionLabel = isRazorpayX
-            ? "Start RazorpayX"
-            : method === "seller_wallet"
-              ? "Approve to Wallet"
-              : "Approve Offline Payout";
-          const providerPayoutExists = hasRazorpayXProviderPayout(row);
-          return (
-            <div className="flex flex-wrap items-center gap-2">
-              {status === "pending" && (
-                <>
-                  <PermissionGuard
-                    module="sellers/commissions"
-                    action={ACTIONS.UPDATE}
-                    hide
-                  >
-                    <button
-                      type="button"
-                      className="admin-btn-secondary !px-2 !py-1"
-                      onClick={() => openAction("approve", row)}
-                    >
-                      <MdPlayArrow size={15} />
-                      {pendingActionLabel}
-                    </button>
-                  </PermissionGuard>
-                  <PermissionGuard
-                    module="sellers/commissions"
-                    action={ACTIONS.UPDATE}
-                    hide
-                  >
-                    <button
-                      type="button"
-                      className="admin-btn-secondary !px-2 !py-1 text-yellow-600"
-                      onClick={() => openAction("hold", row)}
-                    >
-                      <MdPause size={15} />
-                      Hold
-                    </button>
-                  </PermissionGuard>
-                </>
-              )}
-              {status === "on_hold" && (
-                <PermissionGuard
-                  module="sellers/commissions"
-                  action={ACTIONS.UPDATE}
-                  hide
-                >
-                  <button
-                    type="button"
-                    className="admin-btn-secondary !px-2 !py-1"
-                    onClick={() => openAction("release", row)}
-                  >
-                    <MdPlayArrow size={15} />
-                    Release Hold
-                  </button>
-                </PermissionGuard>
-              )}
-              {status === "failed" && (
-                <PermissionGuard
-                  module="sellers/commissions"
-                  action={ACTIONS.UPDATE}
-                  hide
-                >
-                  <button
-                    type="button"
-                    className="admin-btn-secondary !px-2 !py-1"
-                    onClick={() => openAction("retry", row)}
-                  >
-                    <MdReplay size={15} />
-                    Retry
-                  </button>
-                </PermissionGuard>
-              )}
-              {status === "processing" && (
-                <>
-                  {isRazorpayX && providerPayoutExists ? (
-                    <PermissionGuard
-                      module="sellers/commissions"
-                      action={ACTIONS.UPDATE}
-                      hide
-                    >
-                      <button
-                        type="button"
-                        className="admin-btn-secondary !px-2 !py-1"
-                        onClick={() => handleSyncRazorpayX(row)}
-                      >
-                        <MdSync size={15} />
-                        Sync Status
-                      </button>
-                    </PermissionGuard>
-                  ) : isRazorpayX ? (
-                    <PermissionGuard
-                      module="sellers/commissions"
-                      action={ACTIONS.UPDATE}
-                      hide
-                    >
-                      <button
-                        type="button"
-                        className="admin-btn-secondary !px-2 !py-1"
-                        onClick={() => openAction("approve", row)}
-                      >
-                        <MdReplay size={15} />
-                        Retry RazorpayX
-                      </button>
-                    </PermissionGuard>
-                  ) : (
-                    <PermissionGuard
-                      module="sellers/commissions"
-                      action={ACTIONS.UPDATE}
-                      hide
-                    >
-                      <button
-                        type="button"
-                        className="admin-btn-secondary !px-2 !py-1"
-                        onClick={() => openAction("complete", row)}
-                      >
-                        <MdCheckCircle size={15} />
-                        Complete
-                      </button>
-                    </PermissionGuard>
-                  )}
-                  <PermissionGuard
-                    module="sellers/commissions"
-                    action={ACTIONS.UPDATE}
-                    hide
-                  >
-                    <button
-                      type="button"
-                      className="admin-btn-secondary !px-2 !py-1 text-red-600"
-                      onClick={() => openAction("fail", row)}
-                    >
-                      <MdBlock size={15} />
-                      Fail
-                    </button>
-                  </PermissionGuard>
-                </>
-              )}
-              {!["completed", "cancelled"].includes(status) && (
-                <PermissionGuard
-                  module="sellers/commissions"
-                  action={ACTIONS.UPDATE}
-                  hide
-                >
-                  <button
-                    type="button"
-                    className="admin-btn-secondary !px-2 !py-1 text-red-600"
-                    onClick={() => openAction("cancel", row)}
-                  >
-                    <MdClose size={15} />
-                    Cancel
-                  </button>
-                </PermissionGuard>
-              )}
-            </div>
-          );
-        },
-      },
     ],
-    [handleSyncRazorpayX],
+    [],
+  );
+
+  const rowActions = useCallback(
+    (row) => {
+      if (!canUpdate) return [];
+
+      const status = row.status;
+      const method = valueOf(row, "paymentMethod", "payment_method");
+      const isRazorpayX = method === "razorpayx";
+      const pendingActionLabel = isRazorpayX
+        ? "Start RazorpayX"
+        : method === "seller_wallet"
+          ? "Approve to Wallet"
+          : "Approve Offline Payout";
+      const providerPayoutExists = hasRazorpayXProviderPayout(row);
+
+      const items = [];
+
+      if (status === "pending") {
+        items.push({
+          label: pendingActionLabel,
+          icon: <MdPlayArrow size={16} className="text-emerald-600" />,
+          disabled: loading,
+          onClick: () => openAction("approve", row),
+        });
+        items.push({
+          label: "Hold",
+          icon: <MdPause size={16} className="text-yellow-600" />,
+          disabled: loading,
+          onClick: () => openAction("hold", row),
+        });
+      }
+
+      if (status === "on_hold") {
+        items.push({
+          label: "Release Hold",
+          icon: <MdPlayArrow size={16} className="text-emerald-600" />,
+          disabled: loading,
+          onClick: () => openAction("release", row),
+        });
+      }
+
+      if (status === "failed") {
+        items.push({
+          label: "Retry",
+          icon: <MdReplay size={16} className="text-blue-600" />,
+          disabled: loading,
+          onClick: () => openAction("retry", row),
+        });
+      }
+
+      if (status === "processing") {
+        if (isRazorpayX && providerPayoutExists) {
+          items.push({
+            label: "Sync Status",
+            icon: <MdSync size={16} className="text-blue-600" />,
+            disabled: loading,
+            onClick: () => handleSyncRazorpayX(row),
+          });
+        } else if (isRazorpayX) {
+          items.push({
+            label: "Retry RazorpayX",
+            icon: <MdReplay size={16} className="text-blue-600" />,
+            disabled: loading,
+            onClick: () => openAction("approve", row),
+          });
+        } else {
+          items.push({
+            label: "Complete",
+            icon: <MdCheckCircle size={16} className="text-emerald-600" />,
+            disabled: loading,
+            onClick: () => openAction("complete", row),
+          });
+        }
+
+        items.push({
+          label: "Fail",
+          icon: <MdBlock size={16} className="text-red-600" />,
+          danger: true,
+          disabled: loading,
+          onClick: () => openAction("fail", row),
+        });
+      }
+
+      if (!["completed", "cancelled"].includes(status)) {
+        items.push({
+          label: "Cancel",
+          icon: <MdClose size={16} className="text-red-600" />,
+          danger: true,
+          disabled: loading,
+          onClick: () => openAction("cancel", row),
+        });
+      }
+
+      return items;
+    },
+    [canUpdate, handleSyncRazorpayX, loading, openAction],
   );
 
   return (
@@ -754,6 +692,8 @@ const PayoutOpsQueue = () => {
         sortKey={list.sortKey}
         sortDir={list.sortDir}
         onRefresh={fetchQueue}
+        rowActions={rowActions}
+        rowKey={payoutId}
         error={error}
         filterBar={
           <FilterBar

@@ -1,5 +1,6 @@
 import Select, { components } from "react-select";
 import AsyncSelect from "react-select/async";
+import CreatableSelect from "react-select/creatable";
 import { ChevronDown } from "lucide-react";
 
 const customStyles = (error, controlHeight) => ({
@@ -160,6 +161,7 @@ const FilterSelect = ({
     ? label
     : "Search by User's Name or Username",
   isMulti = false,
+  isCreatable = false,
   error = "",
   required,
   name,
@@ -175,8 +177,18 @@ const FilterSelect = ({
   cacheOptions = true,
   formatOptionLabel,
   controlHeight,
+  noOptionsMessage = isCreatable
+    ? ({ inputValue }) =>
+        inputValue
+          ? `Press Enter to add "${inputValue}"`
+          : "Type values or select from list"
+    : undefined,
 }) => {
-  const SelectComponent = loadOptions ? AsyncSelect : Select;
+  const SelectComponent = loadOptions
+    ? AsyncSelect
+    : isCreatable
+      ? CreatableSelect
+      : Select;
 
   const menuPortalTarget =
     typeof document !== "undefined" ? document.body : undefined;
@@ -219,6 +231,7 @@ const FilterSelect = ({
           menuPortalTarget={menuPortalTarget}
           menuPosition="fixed"
           aria-invalid={Boolean(error)}
+          noOptionsMessage={noOptionsMessage}
           components={{
             DropdownIndicator: CustomDropdownIndicator,
           }}
