@@ -171,9 +171,19 @@ export default function SellerWallet() {
 
   useEffect(() => {
     if (isSeller) return;
-    dropdownApi.getSellers({ limit: 100 }).then(setSellerOptions).catch(() => {
-      toast.error("Unable to load sellers");
-    });
+    dropdownApi
+      .getSellers({ limit: 100 })
+      .then((sellers) => {
+        const options = Array.isArray(sellers) ? sellers : [];
+        setSellerOptions(options);
+        setSelectedSellerId((prev) => {
+          if (prev) return prev;
+          return options[0]?.value ? String(options[0].value) : "";
+        });
+      })
+      .catch(() => {
+        toast.error("Unable to load sellers");
+      });
   }, [isSeller]);
 
   useEffect(() => {

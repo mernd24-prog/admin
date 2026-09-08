@@ -1403,7 +1403,7 @@ const loadFinance = useCallback(async () => {
                         : "—"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-2 whitespace-nowrap">
                         {seller.eligible > 0 && (
                           <PermissionGuard
                             module="sellers/commissions"
@@ -1412,7 +1412,7 @@ const loadFinance = useCallback(async () => {
                           >
                             <button
                               type="button"
-                              className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                              className="whitespace-nowrap rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
                               onClick={() => handleSellerEligiblePayout(seller)}
                               disabled={submitting}
                             >
@@ -1420,20 +1420,20 @@ const loadFinance = useCallback(async () => {
                             </button>
                           </PermissionGuard>
                         )}
-                      <button
-                        type="button"
-                        className="rounded-md bg-[#2f6fed] px-3 py-2 text-xs font-semibold text-white"
-                        onClick={() => {
-                          updateFilter("sellerId", seller.sellerId);
-                          setProcessModal((prev) => ({
-                            ...prev,
-                            sellerId: seller.sellerId,
-                            organizationId: "",
-                          }));
-                        }}
-                      >
-                        View Seller
-                      </button>
+                        <button
+                          type="button"
+                          className="whitespace-nowrap rounded-md bg-[#2f6fed] px-3 py-2 text-xs font-semibold text-white"
+                          onClick={() => {
+                            updateFilter("sellerId", seller.sellerId);
+                            setProcessModal((prev) => ({
+                              ...prev,
+                              sellerId: seller.sellerId,
+                              organizationId: "",
+                            }));
+                          }}
+                        >
+                          View Seller
+                        </button>
                       </div>
                     </td>
                   </tr>

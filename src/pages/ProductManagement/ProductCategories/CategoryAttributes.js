@@ -23,6 +23,7 @@ import {
   getPlatformOptionValues,
 } from "../../../Redux/adminCoreSlice";
 import OrangeButton from "../../../components/Atoms/buttons/OrangeButton";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const EMPTY_ATTRIBUTE = {
   key: "",
@@ -55,9 +56,165 @@ const CHECKBOX_FIELDS = [
   { key: "isSearchable", label: "Searchable" },
 ];
 
-const idOf = (record = {}) => record?._id || record?.id || "";
-const valueName = (record = {}) =>
-  record.name || record.label || record.value || "";
+const cleanId = (val) => {
+  if (!val) return "";
+  if (typeof val === "object") return String(val._id || val.id || "");
+  return String(val).trim();
+};
+
+const idOf = (record = {}) => cleanId(record?._id || record?.id);
+
+const valueName = (record) => {
+  if (record == null) return "";
+  if (typeof record === "string" || typeof record === "number") return String(record).trim();
+  return String(
+    record.name ||
+    record.label ||
+    record.value ||
+    record.valueCode ||
+    record.title ||
+    ""
+  ).trim();
+};
+
+const extractList = (res) => {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  const candidates = [
+    res?.data?.data,
+    res?.data?.items,
+    res?.data?.list,
+    res?.data?.results,
+    res?.data?.normalized?.data,
+    res?.normalized?.data,
+    res?.data,
+    res?.items,
+    res?.list,
+    res?.results,
+    res?.raw?.data,
+  ];
+  for (const c of candidates) {
+    if (Array.isArray(c)) return c;
+  }
+  return [];
+};
+
+/* ─── Standard Presets & Suggestion Masters ────────────────────────────── */
+const DEFAULT_OPTION_MASTERS = [
+  { value: "master_size", label: "Size / Paper Size" },
+  { value: "master_ruling", label: "Ruling Type" },
+  { value: "master_pages", label: "Number of Pages" },
+  { value: "master_cover", label: "Cover & Binding" },
+  { value: "master_gsm", label: "Paper GSM / Quality" },
+  { value: "master_color", label: "Color" },
+];
+
+const PRESET_VALUES_BY_MASTER = {
+  master_size: ["A4", "A5", "B5", "A6", "Pocket Size", "5 x 7 Inches", "6 x 9 Inches", "Small", "Medium", "Large"],
+  master_ruling: ["Ruled", "Unruled", "Single Line", "Double Line", "Four Line", "Square / Grid", "Dot Grid"],
+  master_pages: ["80 Pages", "100 Pages", "120 Pages", "160 Pages", "192 Pages", "200 Pages", "240 Pages", "300 Pages", "400 Pages"],
+  master_cover: ["Hardcover", "Softcover", "Spiral Bound", "Wiro Bound", "Stitched", "Leather Bound", "Paperback"],
+  master_gsm: ["70 GSM", "80 GSM", "90 GSM", "100 GSM", "120 GSM"],
+  master_color: ["Black", "Blue", "Brown", "Red", "Green", "Grey", "Tan", "Multicolour", "Yellow", "White"],
+};
+
+const SUGGESTIONS_BY_KEYWORD = {
+  rule: ["Ruled", "Unruled", "Single Line", "Double Line", "Four Line", "Square / Grid", "Dot Grid"],
+  ruling: ["Ruled", "Unruled", "Single Line", "Double Line", "Four Line", "Square / Grid", "Dot Grid"],
+  line: ["Ruled", "Unruled", "Single Line", "Double Line", "Four Line", "Square / Grid", "Dot Grid"],
+  page: ["80 Pages", "100 Pages", "120 Pages", "160 Pages", "192 Pages", "200 Pages", "240 Pages", "300 Pages", "400 Pages"],
+  size: ["A4", "A5", "B5", "A6", "Pocket Size", "5 x 7 Inches", "6 x 9 Inches", "Small", "Medium", "Large"],
+  paper: ["A4", "A5", "B5", "70 GSM", "80 GSM", "90 GSM", "100 GSM", "Recycled Paper", "Bond Paper"],
+  cover: ["Hardcover", "Softcover", "Spiral Bound", "Wiro Bound", "Stitched", "Leather Bound", "Paperback"],
+  bind: ["Hardcover", "Softcover", "Spiral Bound", "Wiro Bound", "Stitched", "Leather Bound", "Paperback"],
+  color: ["Black", "Blue", "Brown", "Red", "Green", "Grey", "Tan", "Multicolour", "Yellow", "White"],
+  gsm: ["70 GSM", "80 GSM", "90 GSM", "100 GSM", "120 GSM"],
+  material: ["Leather", "Paper", "Cardboard", "Kraft Paper", "Plastic / Poly"],
+};
+
+const NOTEBOOK_COMMON_OPTIONS = [
+  "Ruled",
+  "Unruled",
+  "Single Line",
+  "Square / Grid",
+  "Dot Grid",
+  "A4",
+  "A5",
+  "B5",
+  "A6",
+  "Pocket Size",
+  "5 x 7 Inches",
+  "80 Pages",
+  "100 Pages",
+  "160 Pages",
+  "192 Pages",
+  "200 Pages",
+  "300 Pages",
+  "400 Pages",
+  "Hardcover",
+  "Softcover",
+  "Spiral Bound",
+  "Wiro Bound",
+  "Leather Bound",
+  "Paperback",
+  "70 GSM",
+  "80 GSM",
+  "90 GSM",
+  "100 GSM",
+];
+
+const NOTEBOOK_ATTRIBUTE_PRESETS = [
+  {
+    id: "ruling",
+    buttonLabel: "+ Ruling Type",
+    key: "ruling",
+    label: "Ruling Type",
+    type: "select",
+    platformOptionId: "master_ruling",
+    options: ["Ruled", "Unruled", "Single Line", "Square / Grid", "Dot Grid"],
+    isFilterable: true,
+  },
+  {
+    id: "pages",
+    buttonLabel: "+ Number of Pages",
+    key: "number_of_pages",
+    label: "Number of Pages",
+    type: "select",
+    platformOptionId: "master_pages",
+    options: ["80 Pages", "100 Pages", "160 Pages", "192 Pages", "200 Pages", "300 Pages", "400 Pages"],
+    isFilterable: true,
+  },
+  {
+    id: "size",
+    buttonLabel: "+ Paper Size",
+    key: "paper_size",
+    label: "Paper Size",
+    type: "select",
+    platformOptionId: "master_size",
+    options: ["A4", "A5", "B5", "A6", "Pocket Size", "5 x 7 Inches"],
+    isFilterable: true,
+  },
+  {
+    id: "cover",
+    buttonLabel: "+ Cover & Binding",
+    key: "cover_binding",
+    label: "Cover & Binding",
+    type: "select",
+    platformOptionId: "master_cover",
+    options: ["Hardcover", "Softcover", "Spiral Bound", "Wiro Bound", "Leather Bound"],
+    isFilterable: true,
+  },
+  {
+    id: "gsm",
+    buttonLabel: "+ Paper GSM",
+    key: "paper_gsm",
+    label: "Paper GSM",
+    type: "select",
+    platformOptionId: "master_gsm",
+    options: ["70 GSM", "80 GSM", "90 GSM", "100 GSM"],
+    isFilterable: true,
+  },
+];
 
 const toCategoryOptions = (categories = []) => {
   const options = [];
@@ -126,151 +283,240 @@ const AttributeRow = ({
   platformOptionChoices,
   optionValues,
   onLoadOptionValues,
-}) => (
-  <div className="border border-gray-200 rounded-lg p-4 bg-white">
-    <div className="flex items-start justify-between mb-3">
-      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        Attribute #{index + 1}
-      </span>
-      <button
-        type="button"
-        onClick={() => onRemove(index)}
-        className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700"
-      >
-        <MdDelete size={14} /> Remove
-      </button>
-    </div>
+}) => {
+  const currentOptionId = cleanId(attribute.platformOptionId);
 
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <Input
-        labelName="Key"
-        value={attribute.key}
-        onChange={(e) => onUpdate(index, "key", e.target.value)}
-        placeholder="e.g. color"
-      />
-      <Input
-        labelName="Label"
-        value={attribute.label}
-        onChange={(e) => onUpdate(index, "label", e.target.value)}
-        placeholder="e.g. Color"
-      />
-      <FilterSelect
-        label="Type"
-        options={typeOptions}
-        value={typeOptions.find((item) => item.value === attribute.type)}
-        onChange={(option) => {
-          const nextType = option?.value || "text";
-          onUpdate(index, "type", nextType);
-          if (nextType !== "select" && nextType !== "multi_select") {
-            onUpdate(index, "platformOptionId", "");
-            onUpdate(index, "options", []);
-            onUpdate(index, "allowCustomOptions", false);
-            onUpdate(index, "customOptionsText", "");
+  // Auto-fetch option values if optionId is set/selected from server but not loaded yet
+  useEffect(() => {
+    if (
+      currentOptionId &&
+      !currentOptionId.startsWith("master_") &&
+      (!optionValues[currentOptionId] || optionValues[currentOptionId].length === 0)
+    ) {
+      onLoadOptionValues(currentOptionId);
+    }
+  }, [currentOptionId, optionValues, onLoadOptionValues]);
+
+  const masterValues = useMemo(() => {
+    if (!currentOptionId) return [];
+    if (currentOptionId.startsWith("master_") && PRESET_VALUES_BY_MASTER[currentOptionId]) {
+      return PRESET_VALUES_BY_MASTER[currentOptionId];
+    }
+    const fromState = optionValues[currentOptionId] || [];
+    if (fromState.length > 0) return fromState;
+    // Check if matching master preset exists by name
+    const choice = platformOptionChoices.find((c) => c.value === currentOptionId);
+    const label = (choice?.label || "").toLowerCase();
+    for (const [mKey, vals] of Object.entries(PRESET_VALUES_BY_MASTER)) {
+      const mLabel = mKey.replace("master_", "");
+      if (label.includes(mLabel)) return vals;
+    }
+    return [];
+  }, [currentOptionId, optionValues, platformOptionChoices]);
+
+  const existingOptions = Array.isArray(attribute.options) ? attribute.options : [];
+
+  // Match keyword suggestions based on attribute.key and attribute.label
+  const keywordMatches = useMemo(() => {
+    const text = `${attribute.key || ""} ${attribute.label || ""}`.toLowerCase();
+    const matches = new Set();
+    Object.entries(SUGGESTIONS_BY_KEYWORD).forEach(([keyword, vals]) => {
+      if (text.includes(keyword)) {
+        vals.forEach((v) => matches.add(v));
+      }
+    });
+    return Array.from(matches);
+  }, [attribute.key, attribute.label]);
+
+  // Build combined options list for the Allowed Values dropdown
+  const allowedSelectOptions = useMemo(() => {
+    const map = new Map();
+
+    // 1. If master values exist, put them first
+    masterValues.forEach((item) => {
+      const name = valueName(item);
+      if (name) map.set(name, { value: name, label: name });
+    });
+
+    // 2. Add keyword suggestions
+    keywordMatches.forEach((val) => {
+      const name = valueName(val);
+      if (name && !map.has(name)) {
+        map.set(name, { value: name, label: name });
+      }
+    });
+
+    // 3. Add existing selected options so they are always selectable and displayed
+    existingOptions.forEach((item) => {
+      const name = valueName(item);
+      if (name && !map.has(name)) {
+        map.set(name, { value: name, label: name });
+      }
+    });
+
+    // 4. Always ensure common notebook options are present as choices
+    NOTEBOOK_COMMON_OPTIONS.forEach((val) => {
+      if (!map.has(val)) {
+        map.set(val, { value: val, label: val });
+      }
+    });
+
+    // 5. Add any option values loaded from other platform options
+    Object.values(optionValues).forEach((valList) => {
+      if (Array.isArray(valList)) {
+        valList.forEach((item) => {
+          const name = valueName(item);
+          if (name && !map.has(name)) {
+            map.set(name, { value: name, label: name });
           }
-        }}
-      />
-      {(attribute.type === "select" || attribute.type === "multi_select") && (
-        <>
-          <FilterSelect
-            label="Product Option Master"
-            options={platformOptionChoices}
-            value={
-              platformOptionChoices.find(
-                (item) => item.value === attribute.platformOptionId,
-              ) || null
-            }
-            onChange={(option) => {
-              const optionId = option?.value || "";
-              onUpdate(index, "platformOptionId", optionId);
-              onUpdate(index, "options", []);
-              if (optionId) onLoadOptionValues(optionId);
-            }}
-            placeholder="Select Size, Color, Storage..."
-          />
-          <div className="md:col-span-2">
-            <FilterSelect
-              label="Allowed Values"
-              isMulti
-              options={(optionValues[attribute.platformOptionId] || []).map(
-                (item) => ({
-                  value: valueName(item),
-                  label: valueName(item),
-                }),
-              )}
-              value={(optionValues[attribute.platformOptionId] || [])
-                .filter((item) =>
-                  (attribute.options || []).includes(valueName(item)),
-                )
-                .map((item) => ({
-                  value: valueName(item),
-                  label: valueName(item),
-                }))}
-              onChange={(selected) =>
-                onUpdate(
-                  index,
-                  "options",
-                  (selected || []).map((item) => item.value),
-                )
-              }
-              placeholder={
-                attribute.platformOptionId
-                  ? "Search and select reusable values..."
-                  : "Select an option master first"
-              }
-              isDisabled={!attribute.platformOptionId}
-            />
-            <label className="mt-2 flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={Boolean(attribute.allowCustomOptions)}
-                onChange={(e) =>
-                  onUpdate(index, "allowCustomOptions", e.target.checked)
-                }
-                className="w-3.5 h-3.5 accent-[var(--admin-blue)]"
-              />
-              Allow custom category-specific values
-            </label>
-            {attribute.allowCustomOptions && (
-              <Input
-                labelName="Custom Values (comma separated)"
-                value={attribute.customOptionsText || ""}
-                onChange={(e) =>
-                  onUpdate(index, "customOptionsText", e.target.value)
-                }
-                placeholder="Use only for exceptional values"
-              />
-            )}
-          </div>
-        </>
-      )}
-      {attribute.type === "number" && (
-        <Input
-          labelName="Unit"
-          value={attribute.unit}
-          onChange={(e) => onUpdate(index, "unit", e.target.value)}
-          placeholder="e.g. kg, cm"
-        />
-      )}
-    </div>
+        });
+      }
+    });
 
-    <div className="mt-3 flex flex-wrap gap-4">
-      {CHECKBOX_FIELDS.map(({ key, label }) => (
-        <label
-          key={key}
-          className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none"
+    return Array.from(map.values());
+  }, [masterValues, keywordMatches, existingOptions, optionValues]);
+
+  const currentSelectValue = useMemo(() => {
+    return existingOptions
+      .map((item) => {
+        const name = valueName(item);
+        return name ? { value: name, label: name } : null;
+      })
+      .filter(Boolean);
+  }, [existingOptions]);
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4 bg-white">
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+          Attribute #{index + 1}
+        </span>
+        <button
+          type="button"
+          onClick={() => onRemove(index)}
+          className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700"
         >
-          <input
-            type="checkbox"
-            checked={Boolean(attribute[key])}
-            onChange={(e) => onUpdate(index, key, e.target.checked)}
-            className="w-4 h-4 accent-[var(--admin-blue)] rounded"
+          <MdDelete size={14} /> Remove
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Input
+          labelName="Key"
+          value={attribute.key}
+          onChange={(e) => onUpdate(index, "key", e.target.value)}
+          placeholder="e.g. ruling or pages"
+        />
+        <Input
+          labelName="Label"
+          value={attribute.label}
+          onChange={(e) => onUpdate(index, "label", e.target.value)}
+          placeholder="e.g. Ruling Type or Pages"
+        />
+        <FilterSelect
+          label="Type"
+          options={typeOptions}
+          value={typeOptions.find((item) => item.value === attribute.type)}
+          onChange={(option) => {
+            const nextType = option?.value || "text";
+            onUpdate(index, "type", nextType);
+            if (nextType !== "select" && nextType !== "multi_select") {
+              onUpdate(index, "platformOptionId", "");
+              onUpdate(index, "options", []);
+              onUpdate(index, "allowCustomOptions", false);
+              onUpdate(index, "customOptionsText", "");
+            }
+          }}
+        />
+        {(attribute.type === "select" || attribute.type === "multi_select") && (
+          <>
+            <FilterSelect
+              label="Product Option Master"
+              options={platformOptionChoices}
+              value={
+                platformOptionChoices.find(
+                  (item) => item.value === currentOptionId,
+                ) || null
+              }
+              onChange={(option) => {
+                const nextOptionId = option?.value ? String(option.value) : "";
+                onUpdate(index, "platformOptionId", nextOptionId);
+                if (nextOptionId) onLoadOptionValues(nextOptionId);
+              }}
+              placeholder="Select Size, Color, Ruling, Pages..."
+              isClearable
+            />
+            <div className="md:col-span-2">
+              <FilterSelect
+                label="Allowed Values"
+                isMulti
+                isCreatable
+                options={allowedSelectOptions}
+                value={currentSelectValue}
+                onChange={(selected) => {
+                  const values = (selected || [])
+                    .map((item) =>
+                      typeof item === "object" ? valueName(item) : String(item),
+                    )
+                    .filter(Boolean);
+                  onUpdate(index, "options", values);
+                }}
+                placeholder="Select from options or type custom values..."
+                helperText="Click to select allowed values from the list, or type a custom value and press Enter"
+              />
+              <label className="mt-2 flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={Boolean(attribute.allowCustomOptions)}
+                  onChange={(e) =>
+                    onUpdate(index, "allowCustomOptions", e.target.checked)
+                  }
+                  className="w-3.5 h-3.5 accent-[var(--admin-blue)]"
+                />
+                Allow custom category-specific values
+              </label>
+              {attribute.allowCustomOptions && (
+                <Input
+                  labelName="Custom Values (comma separated)"
+                  value={attribute.customOptionsText || ""}
+                  onChange={(e) =>
+                    onUpdate(index, "customOptionsText", e.target.value)
+                  }
+                  placeholder="e.g. 100 Pages, 200 Pages, Spiral Bound"
+                />
+              )}
+            </div>
+          </>
+        )}
+        {attribute.type === "number" && (
+          <Input
+            labelName="Unit"
+            value={attribute.unit}
+            onChange={(e) => onUpdate(index, "unit", e.target.value)}
+            placeholder="e.g. kg, cm"
           />
-          {label}
-        </label>
-      ))}
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-4">
+        {CHECKBOX_FIELDS.map(({ key, label }) => (
+          <label
+            key={key}
+            className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none"
+          >
+            <input
+              type="checkbox"
+              checked={Boolean(attribute[key])}
+              onChange={(e) => onUpdate(index, key, e.target.checked)}
+              className="w-4 h-4 accent-[var(--admin-blue)] rounded"
+            />
+            {label}
+          </label>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /* ─── Category Listing Row ───────────────────────────────────────────────── */
 const CategoryRow = ({ option, attrCount, onEdit, loadingKey }) => {
@@ -375,72 +621,166 @@ const CategoryAttributesPanel = ({
   const [platformOptions, setPlatformOptions] = useState([]);
   const [optionValues, setOptionValues] = useState({});
 
-  useEffect(() => {
-    dispatch(getList({ tree: true, limit: 100 }));
-    dispatch(getPlatformOptions({ limit: 100, active: true }))
-      .unwrap()
-      .then((res) => {
-        const raw = res?.data;
-        setPlatformOptions(
-          Array.isArray(raw) ? raw : raw?.list || raw?.items || [],
-        );
-      })
-      .catch(() => {});
-  }, [dispatch]);
-
-  const platformOptionChoices = useMemo(
-    () =>
-      platformOptions.map((item) => ({
-        value: String(idOf(item)),
-        label: item.name || item.slug || String(idOf(item)),
-      })),
-    [platformOptions],
-  );
-
   const loadedInitialCategoryRef = useRef("");
 
   const loadOptionValues = useCallback(
-    (optionId) => {
-      if (!optionId || optionValues[optionId]) return;
-      dispatch(getPlatformOptionValues({ optionId, limit: 100, active: true }))
-        .unwrap()
-        .then((res) => {
-          const raw = res?.data;
-          setOptionValues((prev) => ({
-            ...prev,
-            [optionId]: Array.isArray(raw)
-              ? raw
-              : raw?.list || raw?.items || [],
-          }));
-        })
-        .catch(() => {});
+    async (rawOptionId) => {
+      const optionId = cleanId(rawOptionId);
+      if (!optionId) return;
+      if (optionId.startsWith("master_")) {
+        setOptionValues((prev) => ({
+          ...prev,
+          [optionId]: PRESET_VALUES_BY_MASTER[optionId] || [],
+        }));
+        return;
+      }
+      if (optionValues[optionId] && optionValues[optionId].length > 0) return;
+
+      let foundList = null;
+
+      try {
+        const res = await dispatch(
+          getPlatformOptionValues({
+            optionId,
+            option_id: optionId,
+            limit: 200,
+          }),
+        ).unwrap();
+        const list = extractList(res);
+        if (Array.isArray(list) && list.length > 0) {
+          foundList = list;
+        }
+      } catch (err) {
+        console.warn("getPlatformOptionValues error:", err);
+      }
+
+      if (!foundList || foundList.length === 0) {
+        try {
+          const dropdownRes = await dropdownApi.getProductOptionValues(optionId);
+          const list = extractList(dropdownRes);
+          if (Array.isArray(list) && list.length > 0) {
+            foundList = list;
+          }
+        } catch (err) {
+          console.warn("dropdownApi.getProductOptionValues error:", err);
+        }
+      }
+
+      setOptionValues((prev) => ({
+        ...prev,
+        [optionId]: foundList || [],
+      }));
     },
     [dispatch, optionValues],
   );
 
+  useEffect(() => {
+    dispatch(getList({ tree: true, limit: 100 }));
+    dispatch(getPlatformOptions({ limit: 200 }))
+      .unwrap()
+      .then((res) => {
+        const list = extractList(res);
+        if (list.length > 0) {
+          setPlatformOptions(list);
+          list.forEach((opt) => {
+            const optId = cleanId(opt);
+            if (optId) loadOptionValues(optId);
+          });
+        } else {
+          dropdownApi
+            .getProductOptions()
+            .then((dRes) => {
+              const dList = extractList(dRes);
+              setPlatformOptions(dList);
+              dList.forEach((opt) => {
+                const optId = cleanId(opt);
+                if (optId) loadOptionValues(optId);
+              });
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {
+        dropdownApi
+          .getProductOptions()
+          .then((dRes) => {
+            const dList = extractList(dRes);
+            setPlatformOptions(dList);
+            dList.forEach((opt) => {
+              const optId = cleanId(opt);
+              if (optId) loadOptionValues(optId);
+            });
+          })
+          .catch(() => {});
+      });
+  }, [dispatch, loadOptionValues]);
+
+  const platformOptionChoices = useMemo(() => {
+    const map = new Map();
+    // 1. Add server platform options
+    platformOptions.forEach((item) => {
+      const id = cleanId(item);
+      const name = item.name || item.slug || item.title || id;
+      if (id && name) map.set(id, { value: id, label: name });
+    });
+    // 2. Add default option masters
+    DEFAULT_OPTION_MASTERS.forEach(({ value, label }) => {
+      const exists = Array.from(map.values()).some(
+        (opt) =>
+          opt.label.toLowerCase().includes(label.toLowerCase()) ||
+          label.toLowerCase().includes(opt.label.toLowerCase()),
+      );
+      if (!exists) {
+        map.set(value, { value, label });
+      }
+    });
+    return Array.from(map.values());
+  }, [platformOptions]);
+
   const openEditor = useCallback(
     (option) => {
       setLoadingKey(option.value);
-      dispatch(getCategoryAttributes({ categoryKey: option.value }))
+      dispatch(
+        getCategoryAttributes({
+          categoryKey: option.value,
+          categoryId: option.value,
+          _id: option.value,
+          id: option.value,
+        }),
+      )
         .unwrap()
         .then((res) => {
-          const schema = res?.data?.attributeSchema || [];
-          setAttributes(
-            schema.map((item) => ({
+          const schema =
+            res?.data?.attributeSchema ||
+            res?.data?.data?.attributeSchema ||
+            res?.attributeSchema ||
+            (Array.isArray(res?.data) ? res.data : []);
+          const formattedSchema = schema.map((item) => {
+            const optId = cleanId(item.platformOptionId || item.optionId);
+            const rawOpts = Array.isArray(item.options)
+              ? item.options
+              : String(item.options || "")
+                  .split(",")
+                  .map((o) => o.trim())
+                  .filter(Boolean);
+            return {
               ...EMPTY_ATTRIBUTE,
               ...item,
-              options: Array.isArray(item.options)
-                ? item.options
-                : String(item.options || "")
-                    .split(",")
-                    .map((o) => o.trim())
-                    .filter(Boolean),
-            })),
-          );
-          schema.forEach((item) => {
-            if (item.platformOptionId) loadOptionValues(item.platformOptionId);
+              platformOptionId: optId,
+              options: rawOpts.map((o) => valueName(o)).filter(Boolean),
+            };
           });
-          setAttrCounts((prev) => ({ ...prev, [option.value]: schema.length }));
+
+          setAttributes(formattedSchema);
+          formattedSchema.forEach((item) => {
+            if (item.platformOptionId) {
+              loadOptionValues(item.platformOptionId);
+            }
+          });
+          setAttrCounts((prev) => ({
+            ...prev,
+            [option.value]: formattedSchema.length,
+          }));
           setSelectedCategory(option);
           setView("edit");
         })
@@ -504,30 +844,39 @@ const CategoryAttributesPanel = ({
     const duplicateKeys = [];
     const payload = attributes
       .filter((item) => item.key && item.label)
-      .map((item) => ({
-        key: item.key
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9_]/g, "_"),
-        label: item.label.trim(),
-        type: item.type,
-        required: Boolean(item.required),
-        platformOptionId: item.platformOptionId || "",
-        options: [
-          ...(Array.isArray(item.options) ? item.options : []),
-          ...(item.allowCustomOptions
-            ? String(item.customOptionsText || "")
-                .split(",")
-                .map((o) => o.trim())
-                .filter(Boolean)
-            : []),
-        ],
-        allowCustomOptions: Boolean(item.allowCustomOptions),
-        unit: item.unit || null,
-        isVariantAttribute: Boolean(item.isVariantAttribute),
-        isFilterable: Boolean(item.isFilterable),
-        isSearchable: Boolean(item.isSearchable),
-      }));
+      .map((item) => {
+        const rawOptions = Array.isArray(item.options) ? item.options : [];
+        const customFromText = item.allowCustomOptions
+          ? String(item.customOptionsText || "")
+              .split(",")
+              .map((o) => o.trim())
+              .filter(Boolean)
+          : [];
+        const uniqueOptions = Array.from(
+          new Set(
+            [...rawOptions, ...customFromText]
+              .map((o) => valueName(o))
+              .filter(Boolean),
+          ),
+        );
+
+        return {
+          key: item.key
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9_]/g, "_"),
+          label: item.label.trim(),
+          type: item.type,
+          required: Boolean(item.required),
+          platformOptionId: cleanId(item.platformOptionId),
+          options: uniqueOptions,
+          allowCustomOptions: Boolean(item.allowCustomOptions),
+          unit: item.unit || null,
+          isVariantAttribute: Boolean(item.isVariantAttribute),
+          isFilterable: Boolean(item.isFilterable),
+          isSearchable: Boolean(item.isSearchable),
+        };
+      });
 
     payload.forEach((item) => {
       if (keySet.has(item.key)) duplicateKeys.push(item.key);
@@ -556,6 +905,9 @@ const CategoryAttributesPanel = ({
       await dispatch(
         updateCategoryAttributes({
           categoryKey: selectedCategory.value,
+          categoryId: selectedCategory.value,
+          _id: selectedCategory.value,
+          id: selectedCategory.value,
           attributeSchema: payload,
         }),
       ).unwrap();
@@ -684,23 +1036,90 @@ const CategoryAttributesPanel = ({
         <span className="text-blue-500 mt-0.5">ℹ</span>
         <p className="text-xs text-blue-800">
           These attributes control which fields appear when adding/editing
-          products under <strong>{categoryName}</strong>. Only filled attributes
-          (key + label) will be saved.
+          products under <strong>{categoryName}</strong>. You can choose from presets below or add custom attributes.
         </p>
+      </div>
+
+      {/* Quick Notebook Presets */}
+      <div className="mb-4 p-3 bg-blue-50/70 border border-blue-200 rounded-lg">
+        <p className="text-xs font-semibold text-blue-900 mb-2">
+          Notebook Attribute Presets: Click to quickly add standard attributes with allowed values
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {NOTEBOOK_ATTRIBUTE_PRESETS.map((preset) => {
+            const alreadyAdded = attributes.some((a) => a.key === preset.key);
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                disabled={alreadyAdded}
+                onClick={() => {
+                  setAttributes((prev) => [
+                    ...prev,
+                    {
+                      ...EMPTY_ATTRIBUTE,
+                      key: preset.key,
+                      label: preset.label,
+                      type: preset.type,
+                      platformOptionId: preset.platformOptionId,
+                      options: [...preset.options],
+                      isFilterable: true,
+                      isSearchable: true,
+                    },
+                  ]);
+                  toast.success(`Added ${preset.label} with standard allowed values`);
+                }}
+                className={`text-xs px-3 py-1.5 rounded-md font-medium transition-all ${
+                  alreadyAdded
+                    ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                    : "bg-white text-[var(--admin-blue)] border border-[var(--admin-blue)]/30 hover:bg-[var(--admin-blue)] hover:text-white shadow-sm"
+                }`}
+              >
+                {preset.buttonLabel} {alreadyAdded ? "(Added)" : ""}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Attribute editor */}
       {attributes.length === 0 ? (
-        <div className="bg-white border border-dashed border-gray-300 rounded-lg py-14 text-center">
+        <div className="bg-white border border-dashed border-gray-300 rounded-lg py-12 text-center">
           <p className="text-gray-400 text-sm mb-3">
             No attributes defined for this category yet.
           </p>
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            {NOTEBOOK_ATTRIBUTE_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => {
+                  setAttributes([
+                    {
+                      ...EMPTY_ATTRIBUTE,
+                      key: preset.key,
+                      label: preset.label,
+                      type: preset.type,
+                      platformOptionId: preset.platformOptionId,
+                      options: [...preset.options],
+                      isFilterable: true,
+                      isSearchable: true,
+                    },
+                  ]);
+                  toast.success(`Added ${preset.label} with standard allowed values`);
+                }}
+                className="text-xs px-3 py-1.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-600 hover:text-white transition-colors"
+              >
+                {preset.buttonLabel}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-[var(--admin-blue)] text-white text-sm hover:bg-[#2f3070]"
             onClick={() => setAttributes([{ ...EMPTY_ATTRIBUTE }])}
           >
-            <MdAdd size={15} /> Add First Attribute
+            <MdAdd size={15} /> Add Custom Attribute
           </button>
         </div>
       ) : (

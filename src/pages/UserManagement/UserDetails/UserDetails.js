@@ -27,7 +27,10 @@ import {
   FiX,
 } from "react-icons/fi";
 import Loader from "../../../components/Loader/Loader";
-import { SellerDetailsSkeletonLoader } from "../../../components/Loader/SkeletonLoader";
+import {
+  SellerDetailsSkeletonLoader,
+  OrganizationSkeletonLoader,
+} from "../../../components/Loader/SkeletonLoader";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import {
   getAdminUserDetails,
@@ -79,12 +82,36 @@ const CopyableReferenceRow = ({ label, value, onCopy }) => (
   </div>
 );
 
-const DetailPill = ({ label, value }) => (
-  <div className="rounded-md border border-gray-200 bg-white p-3">
+const DetailPill = ({
+  label,
+  value,
+  children,
+  className = "",
+  copyable = false,
+  onCopy,
+}) => (
+  <div
+    className={`rounded-md border border-gray-200 bg-white p-3 transition-colors hover:border-gray-300 ${className}`}
+  >
     <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
-    <p className="mt-1 break-words text-sm font-medium text-gray-900">
-      {value || "—"}
-    </p>
+    <div className="mt-1 flex items-center justify-between gap-2">
+      {children ? (
+        <div className="min-w-0 flex-1">{children}</div>
+      ) : (
+        <p className="min-w-0 flex-1 break-words text-sm font-medium text-gray-900">
+          {value || "—"}
+        </p>
+      )}
+      {copyable && value && onCopy && (
+        <button
+          type="button"
+          className="shrink-0 rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          onClick={() => onCopy(value)}
+        >
+          Copy
+        </button>
+      )}
+    </div>
   </div>
 );
 
@@ -1118,6 +1145,7 @@ const UserDetails = () => {
   const [organizations, setOrganizations] = useState([]);
   const [organizationsLoading, setOrganizationsLoading] = useState(false);
   const [reviewingOrgId, setReviewingOrgId] = useState(null);
+  const [reviewingAction, setReviewingAction] = useState(null);
   const [orgDecisionModal, setOrgDecisionModal] = useState({
     open: false,
     organization: null,
@@ -1305,6 +1333,15 @@ const UserDetails = () => {
       toast.success("Reference ID copied");
     } catch {
       toast.error("Unable to copy reference ID");
+    }
+  }, []);
+  const handleCopyText = useCallback(async (value, label = "Item") => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error(`Unable to copy ${label.toLowerCase()}`);
     }
   }, []);
   const assignedModuleCards = useMemo(() => {
@@ -1562,6 +1599,7 @@ const UserDetails = () => {
     }
 
     setReviewingOrgId(organizationId);
+    setReviewingAction(action);
     try {
       const response = await apiRequest(
         "PATCH",
@@ -1574,6 +1612,7 @@ const UserDetails = () => {
       toast.error(error?.message || "Failed to update organization");
     } finally {
       setReviewingOrgId(null);
+      setReviewingAction(null);
     }
   };
 
@@ -1629,10 +1668,7 @@ const UserDetails = () => {
         profile.firstName ||
         editSeller.displayName?.split(/\s+/)?.[0] ||
         "Seller";
-      const lastName =
-        nameParts.slice(1).join(" ") ||
-        profile.lastName ||
-        "";
+      const lastName = nameParts.slice(1).join(" ") || profile.lastName || "";
       const res = await dispatch(
         updateSeller({
           _id: id,
@@ -1729,42 +1765,42 @@ const UserDetails = () => {
         <SellerDetailsSkeletonLoader />
       ) : (
         <div className="space-y-4">
-        {/* Breadcrumb + Account Status */}
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm text-gray-500">
-            <Link to="/app/home" className="hover:underline">
-              Home
-            </Link>{" "}
-            / <b className="text-gray-800">User Details</b>
-          </h3>
-          <StatusBadge value={accountStatus} />
-        </div>
+          {/* Breadcrumb + Account Status */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm text-gray-500">
+              <Link to="/app/home" className="hover:underline">
+                Home
+              </Link>{" "}
+              / <b className="text-gray-800">User Details</b>
+            </h3>
+            <StatusBadge value={accountStatus} />
+          </div>
 
-        {/* Tabs Navigation */}
-        <div className="flex flex-wrap gap-2 pb-2">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-2 text-sm font-medium rounded-xl border transition-all duration-200 ${
-                  isActive
-                    ? "bg-[#1f1b5f] border-[#1f1b5f] text-white shadow-sm"
-                    : "bg-white border-[#e2d5c3] text-[#526484] hover:border-[#1f1b5f] hover:text-[#1f1b5f]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+          {/* Tabs Navigation */}
+          <div className="flex flex-wrap gap-2 pb-2">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-5 py-2 text-sm font-medium rounded-xl border transition-all duration-200 ${
+                    isActive
+                      ? "bg-[#1f1b5f] border-[#1f1b5f] text-white shadow-sm"
+                      : "bg-white border-[#e2d5c3] text-[#526484] hover:border-[#1f1b5f] hover:text-[#1f1b5f]"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Seller Account & Profile Edit */}
-        {activeTab === "profile" && (
-          <section className="bg-white border border-gray-200 rounded-lg p-5">
-            {/* <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          {/* Seller Account & Profile Edit */}
+          {activeTab === "profile" && (
+            <section className="bg-white border border-gray-200 rounded-lg p-5">
+              {/* <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-gray-800">
                   Seller Account Profile
@@ -1782,7 +1818,7 @@ const UserDetails = () => {
               />
             </div> */}
 
-            {/* <div className="mb-4">
+              {/* <div className="mb-4">
               <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
                 <Row
                   label="Full Name"
@@ -1804,107 +1840,107 @@ const UserDetails = () => {
               </div>
             </div> */}
 
-            {/* Editable Fields */}
-            <form className="" onSubmit={handleSaveSellerProfile}>
-              <div className="my-6">
-                <h3 className="text-sm font-semibold text-gray-700">
-                  Edit Profile
-                </h3>
-                <p className="mt-0.5 text-xs text-gray-500">
-                  Update seller image and business display details.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px,1fr]">
-                {/* Seller image */}
-                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                  <div className="flex flex-col items-center text-center">
-                    {/* Image with cross icon */}
-                    <div className="relative">
-                      <img
-                        src={editSeller.avatarUrl || "/Img/user.png"}
-                        alt="Seller"
-                        className="h-24 w-24 rounded-full border border-gray-200 bg-white object-cover shadow-sm"
-                      />
-
-                      {editSeller.avatarUrl && (
-                        <button
-                          type="button"
-                          aria-label="Remove seller image"
-                          title="Remove image"
-                          onClick={() =>
-                            setEditSeller((prev) => ({
-                              ...prev,
-                              avatarUrl: "",
-                            }))
-                          }
-                          className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-white bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600"
-                        >
-                          <PiX className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    <p className="mt-3 text-sm font-semibold text-gray-800">
-                      {[profile.firstName, profile.lastName]
-                        .filter(Boolean)
-                        .join(" ") ||
-                        editSeller.displayName ||
-                        sellerProfile.displayName ||
-                        "Seller"}
-                    </p>
-
-                    <p className="mt-1 max-w-full truncate text-xs text-gray-500">
-                      {editSeller.displayName ||
-                        sellerProfile.displayName ||
-                        ""}
-                    </p>
-
-                    <p className="mt-0.5 max-w-full truncate text-xs text-gray-400">
-                      {user.email || "Login email unavailable"}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 flex items-center gap-2">
-                    <label className="inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-[var(--admin-gold)] px-2.5 py-2 text-center text-xs font-semibold text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-gold-dark)]">
-                      <MdCloudUpload size={16} />
-                      <span>Upload</span>
-
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleSellerAvatarUpload}
-                      />
-                    </label>
-                  </div>
+              {/* Editable Fields */}
+              <form className="" onSubmit={handleSaveSellerProfile}>
+                <div className="my-6">
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Edit Profile
+                  </h3>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Update seller image and business display details.
+                  </p>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <FormInput
-                      label="Full Name"
-                      name="fullName"
-                      value={editSeller.fullName}
-                      onChange={(e) =>
-                        setEditSeller((p) => ({
-                          ...p,
-                          fullName: e.target.value,
-                        }))
-                      }
-                      helperText="Update seller full name."
-                    />
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px,1fr]">
+                  {/* Seller image */}
+                  <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                    <div className="flex flex-col items-center text-center">
+                      {/* Image with cross icon */}
+                      <div className="relative">
+                        <img
+                          src={editSeller.avatarUrl || "/Img/user.png"}
+                          alt="Seller"
+                          className="h-24 w-24 rounded-full border border-gray-200 bg-white object-cover shadow-sm"
+                        />
 
-                    <FormInput
-                      label="Seller Login Email"
-                      name="email"
-                      value={user.email || ""}
-                      readOnly
-                      disabled
-                      helperText="Login email cannot be changed here."
-                    />
+                        {editSeller.avatarUrl && (
+                          <button
+                            type="button"
+                            aria-label="Remove seller image"
+                            title="Remove image"
+                            onClick={() =>
+                              setEditSeller((prev) => ({
+                                ...prev,
+                                avatarUrl: "",
+                              }))
+                            }
+                            className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-white bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600"
+                          >
+                            <PiX className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
 
-                    {/* <FormInput
+                      <p className="mt-3 text-sm font-semibold text-gray-800">
+                        {[profile.firstName, profile.lastName]
+                          .filter(Boolean)
+                          .join(" ") ||
+                          editSeller.displayName ||
+                          sellerProfile.displayName ||
+                          "Seller"}
+                      </p>
+
+                      <p className="mt-1 max-w-full truncate text-xs text-gray-500">
+                        {editSeller.displayName ||
+                          sellerProfile.displayName ||
+                          ""}
+                      </p>
+
+                      <p className="mt-0.5 max-w-full truncate text-xs text-gray-400">
+                        {user.email || "Login email unavailable"}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-2">
+                      <label className="inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-[var(--admin-gold)] px-2.5 py-2 text-center text-xs font-semibold text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-gold-dark)]">
+                        <MdCloudUpload size={16} />
+                        <span>Upload</span>
+
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleSellerAvatarUpload}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <FormInput
+                        label="Full Name"
+                        name="fullName"
+                        value={editSeller.fullName}
+                        onChange={(e) =>
+                          setEditSeller((p) => ({
+                            ...p,
+                            fullName: e.target.value,
+                          }))
+                        }
+                        helperText="Update seller full name."
+                      />
+
+                      <FormInput
+                        label="Seller Login Email"
+                        name="email"
+                        value={user.email || ""}
+                        readOnly
+                        disabled
+                        helperText="Login email cannot be changed here."
+                      />
+
+                      {/* <FormInput
                       label="Display Name"
                       name="displayName"
                       value={editSeller.displayName}
@@ -1916,426 +1952,469 @@ const UserDetails = () => {
                       }
                     /> */}
 
-                    <FormInput
-                      label="Legal Business Name"
-                      name="legalBusinessName"
-                      value={editSeller.legalBusinessName}
-                      onChange={(e) =>
-                        setEditSeller((p) => ({
-                          ...p,
-                          legalBusinessName: e.target.value,
-                        }))
+                      <FormInput
+                        label="Legal Business Name"
+                        name="legalBusinessName"
+                        value={editSeller.legalBusinessName}
+                        onChange={(e) =>
+                          setEditSeller((p) => ({
+                            ...p,
+                            legalBusinessName: e.target.value,
+                          }))
+                        }
+                      />
+
+                      <FormInput
+                        label="Business Type"
+                        name="businessType"
+                        value={formatLabel(editSeller.businessType)}
+                        readOnly
+                        disabled
+                        helperText="Business type cannot be changed here."
+                      />
+                    </div>
+
+                    <div className="mt-5 flex justify-end pt-4">
+                      <button
+                        type="submit"
+                        disabled={savingProfile}
+                        onClick={handleSaveSellerProfile}
+                        className="rounded-md bg-[var(--admin-gold)] px-4 py-2 text-sm font-semibold text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {savingProfile ? "Saving..." : "Save Profile"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </section>
+          )}
+
+          {/* ── Account & Access ─────────────────────────────────────────────── */}
+          {activeTab === "account" && (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <section
+                  className={`bg-white border border-gray-200 rounded-lg p-5 ${shouldShowAdminAccess ? "lg:col-span-2" : "lg:col-span-3"}`}
+                >
+                  <div className="mb-4">
+                    <h2 className="text-base font-semibold text-gray-800">
+                      Account
+                    </h2>
+                    <p className="mt-1 text-xs text-gray-500">
+                      User account credentials, role details, and activity timestamps.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* <DetailPill label="User ID" value={user._id || user.id || user.userId} copyable onCopy={(val) => handleCopyText(val, "User ID")} /> */}
+                    <DetailPill
+                      label="Full Name"
+                      value={
+                        [profile.firstName, profile.lastName]
+                          .filter(Boolean)
+                          .join(" ") ||
+                        getDisplayName(user) ||
+                        "—"
                       }
                     />
-
-                    <FormInput
-                      label="Business Type"
-                      name="businessType"
-                      value={formatLabel(editSeller.businessType)}
-                      readOnly
-                      disabled
-                      helperText="Business type cannot be changed here."
+                    <DetailPill
+                      label="Email"
+                      value={user.email}
+                      copyable={Boolean(user.email)}
+                      onCopy={(val) => handleCopyText(val, "Email")}
+                    />
+                    <DetailPill
+                      label="Phone"
+                      value={user.phone}
+                      copyable={Boolean(user.phone)}
+                      onCopy={(val) => handleCopyText(val, "Phone")}
+                    />
+                    <DetailPill
+                      label="Role"
+                      value={formatLabel(user.role)}
+                    />
+                    <DetailPill label="Status">
+                      <div className="flex items-center">
+                        <StatusBadge value={accountStatus} />
+                      </div>
+                    </DetailPill>
+                    <DetailPill
+                      label="Created At"
+                      value={formatDateTime(user.createdAt)}
+                    />
+                    <DetailPill
+                      label="Last Login"
+                      value={lastLoginDisplay || "N/A"}
+                      className="md:col-span-2"
                     />
                   </div>
+                </section>
 
-                  <div className="mt-5 flex justify-end pt-4">
-                    <button
-                      type="submit"
-                      disabled={savingProfile}
-                      onClick={handleSaveSellerProfile}
-                      className="rounded-md bg-[var(--admin-gold)] px-4 py-2 text-sm font-semibold text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {savingProfile ? "Saving..." : "Save Profile"}
-                    </button>
-                  </div>
-                </div>
+                {shouldShowAdminAccess && (
+                  <section className="bg-white border border-gray-200 rounded-lg p-5">
+                    <div className="mb-4">
+                      <h2 className="text-base font-semibold text-gray-800">
+                        Access
+                      </h2>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Administrative scope and module assignments.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      <DetailPill
+                        label="Assigned Groups"
+                        value={assignedModuleGroups
+                          .map((group) => group.tabName)
+                          .join(", ")}
+                      />
+                      <DetailPill
+                        label="Module Count"
+                        value={
+                          assignedModuleCards.length
+                            ? `${assignedModuleCards.length}`
+                            : ""
+                        }
+                      />
+                      <DetailPill label="Owner Admin" value={ownerAdminDisplay} />
+                      {user.ownerSellerId && (
+                        <DetailPill label="Owner Seller" value={user.ownerSellerId} />
+                      )}
+                    </div>
+                  </section>
+                )}
               </div>
-            </form>
-          </section>
-        )}
-
-        {/* ── Account & Access ─────────────────────────────────────────────── */}
-        {activeTab === "account" && (
-          <>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <section
-                className={`bg-white border border-gray-200 rounded-lg p-5 ${shouldShowAdminAccess ? "lg:col-span-2" : "lg:col-span-3"}`}
-              >
-                <h2 className="text-base font-semibold text-gray-800 mb-3">
-                  Account
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                  {/* <Row label="User ID" value={user._id || user.id || user.userId} /> */}
-                  <Row
-                    label="Full Name"
-                    value={
-                      [profile.firstName, profile.lastName]
-                        .filter(Boolean)
-                        .join(" ") ||
-                      getDisplayName(user) ||
-                      "-"
-                    }
-                  />
-                  <Row label="Email" value={user.email} />
-                  <Row label="Phone" value={user.phone} />
-                  <Row label="Role" value={formatLabel(user.role)} />
-                  <Row label="Status" value={formatLabel(accountStatus)} />
-                  <Row
-                    label="Created At"
-                    value={formatDateTime(user.createdAt)}
-                  />
-                  <Row
-                    label="Last Login"
-                    value={lastLoginDisplay || "N/A"}
-                    className="md:col-span-2"
-                  />
-                </div>
-              </section>
 
               {shouldShowAdminAccess && (
                 <section className="bg-white border border-gray-200 rounded-lg p-5">
-                  <h2 className="text-base font-semibold text-gray-800 mb-3">
-                    Access
-                  </h2>
-                  <Row
-                    label="Assigned Groups"
-                    value={assignedModuleGroups
-                      .map((group) => group.tabName)
-                      .join(", ")}
-                  />
-                  <Row
-                    label="Module Count"
-                    value={
-                      assignedModuleCards.length
-                        ? `${assignedModuleCards.length}`
-                        : ""
-                    }
-                  />
-                  <Row label="Owner Admin" value={ownerAdminDisplay} />
-                  {user.ownerSellerId && (
-                    <Row label="Owner Seller" value={user.ownerSellerId} />
+                  <div className=" flex items-center justify-between gap-3">
+                    <h2 className="text-base font-semibold text-gray-800">
+                      Module Access List
+                    </h2>
+                    {accessModulesLoading && (
+                      <span className="text-xs text-gray-400">
+                        Loading access...
+                      </span>
+                    )}
+                  </div>
+                  {assignedModuleGroups.length ? (
+                    <div className="space-y-4">
+                      {assignedModuleGroups.map((group) => (
+                        <div
+                          key={group.tabName}
+                          className="rounded-lg border border-gray-200"
+                        >
+                          <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3">
+                            <div>
+                              <h3 className="text-sm font-semibold text-gray-900">
+                                {group.tabName}
+                              </h3>
+                              <p className="text-xs text-gray-400">
+                                {group.items.length} sub-module
+                                {group.items.length !== 1 ? "s" : ""}
+                              </p>
+                            </div>
+                            <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                              Active
+                            </span>
+                          </div>
+                          <div className="divide-y divide-gray-100">
+                            {group.items.map((module) => (
+                              <div
+                                key={module.id}
+                                className="grid grid-cols-1 gap-3 px-4 py-3 md:grid-cols-[minmax(180px,260px),1fr]"
+                              >
+                                <div>
+                                  <p className="font-medium text-gray-900">
+                                    {module.name}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    {module.id}
+                                  </p>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {(module.permissions.length
+                                    ? module.permissions
+                                    : ["View"]
+                                  ).map((permission) => (
+                                    <span
+                                      key={`${module.id}-${permission}`}
+                                      className="inline-flex items-center rounded-md border border-[var(--admin-gold)]/40 bg-[var(--admin-gold)]/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-[#8A5A1F]"
+                                    >
+                                      {permission}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">
+                      No assigned modules found for this user.
+                    </p>
                   )}
                 </section>
               )}
-            </div>
+            </>
+          )}
 
-            {shouldShowAdminAccess && (
-              <section className="bg-white border border-gray-200 rounded-lg p-5">
-                <div className=" flex items-center justify-between gap-3">
-                  <h2 className="text-base font-semibold text-gray-800">
-                    Module Access List
-                  </h2>
-                  {accessModulesLoading && (
-                    <span className="text-xs text-gray-400">
-                      Loading access...
-                    </span>
-                  )}
-                </div>
-                {assignedModuleGroups.length ? (
-                  <div className="space-y-4">
-                    {assignedModuleGroups.map((group) => (
-                      <div
-                        key={group.tabName}
-                        className="rounded-lg border border-gray-200"
-                      >
-                        <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3">
-                          <div>
-                            <h3 className="text-sm font-semibold text-gray-900">
-                              {group.tabName}
-                            </h3>
-                            <p className="text-xs text-gray-400">
-                              {group.items.length} sub-module
-                              {group.items.length !== 1 ? "s" : ""}
-                            </p>
-                          </div>
-                          <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
-                            Active
-                          </span>
-                        </div>
-                        <div className="divide-y divide-gray-100">
-                          {group.items.map((module) => (
-                            <div
-                              key={module.id}
-                              className="grid grid-cols-1 gap-3 px-4 py-3 md:grid-cols-[minmax(180px,260px),1fr]"
-                            >
-                              <div>
-                                <p className="font-medium text-gray-900">
-                                  {module.name}
-                                </p>
-                                <p className="text-xs text-gray-400">
-                                  {module.id}
-                                </p>
-                              </div>
-                              <div className="flex flex-wrap gap-1.5">
-                                {(module.permissions.length
-                                  ? module.permissions
-                                  : ["View"]
-                                ).map((permission) => (
-                                  <span
-                                    key={`${module.id}-${permission}`}
-                                    className="inline-flex items-center rounded-md border border-[var(--admin-gold)]/40 bg-[var(--admin-gold)]/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-[#8A5A1F]"
-                                  >
-                                    {permission}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+          {/* ── Seller Section ───────────────────────────────────────────────── */}
+          {isSeller && (
+            <>
+              {/* Verification Status Overview */}
+              {activeTab === "verification" && (
+                <section className="bg-white border border-gray-200 rounded-lg p-5">
+                  <div className="mb-4">
+                    <h2 className="text-base font-semibold text-gray-800">
+                      Verification Status
+                    </h2>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Track seller readiness from onboarding through go-live
+                      approval.
+                    </p>
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-400">
-                    No assigned modules found for this user.
-                  </p>
-                )}
-              </section>
-            )}
-          </>
-        )}
 
-        {/* ── Seller Section ───────────────────────────────────────────────── */}
-        {isSeller && (
-          <>
-            {/* Verification Status Overview */}
-            {activeTab === "verification" && (
-              <section className="bg-white border border-gray-200 rounded-lg p-5">
-                <div className="mb-4">
-                  <h2 className="text-base font-semibold text-gray-800">
-                    Verification Status
-                  </h2>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Track seller readiness from onboarding through go-live
-                    approval.
-                  </p>
-                </div>
+                  <VerificationProgress
+                    stages={[
+                      {
+                        label: "Onboarding",
+                        value:
+                          onboarding.status || sellerProfile.onboardingStatus,
+                      },
+                      {
+                        label:
+                          organizationSummary.total > 1 ? "Org KYC" : "KYC",
+                        value:
+                          organizationSummary.total > 1
+                            ? organizationSummary.kycLabel
+                            : kycStatus,
+                        status:
+                          organizationSummary.total > 1
+                            ? organizationSummary.kycStatus
+                            : kycStatus,
+                      },
+                      {
+                        label:
+                          organizationSummary.total > 1 ? "Org Bank" : "Bank",
+                        value:
+                          organizationSummary.total > 1
+                            ? organizationSummary.bankLabel
+                            : bankStatus,
+                        status:
+                          organizationSummary.total > 1
+                            ? organizationSummary.bankStatus
+                            : bankStatus,
+                      },
+                      {
+                        label: "Go Live",
+                        value: goLiveLabel,
+                        status: goLiveStatus,
+                      },
+                    ]}
+                  />
 
-                <VerificationProgress
-                  stages={[
-                    {
-                      label: "Onboarding",
-                      value:
-                        onboarding.status || sellerProfile.onboardingStatus,
-                    },
-                    {
-                      label: organizationSummary.total > 1 ? "Org KYC" : "KYC",
-                      value:
-                        organizationSummary.total > 1
-                          ? organizationSummary.kycLabel
-                          : kycStatus,
-                      status:
-                        organizationSummary.total > 1
-                          ? organizationSummary.kycStatus
-                          : kycStatus,
-                    },
-                    {
-                      label:
-                        organizationSummary.total > 1 ? "Org Bank" : "Bank",
-                      value:
-                        organizationSummary.total > 1
-                          ? organizationSummary.bankLabel
-                          : bankStatus,
-                      status:
-                        organizationSummary.total > 1
-                          ? organizationSummary.bankStatus
-                          : bankStatus,
-                    },
-                    {
-                      label: "Go Live",
-                      value: goLiveLabel,
-                      status: goLiveStatus,
-                    },
-                  ]}
-                />
-
-                {/* Action Buttons — shown only for legacy sellers without organizations */}
-                {organizationSummary.total === 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      className="px-3 py-1.5 text-xs rounded-md bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
-                      onClick={() =>
-                        setKycModal({ open: true, defaultDecision: "verified" })
-                      }
-                    >
-                      Approve KYC
-                    </button>
-                    <button
-                      className="px-3 py-1.5 text-xs rounded-md bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
-                      onClick={() =>
-                        setKycModal({ open: true, defaultDecision: "rejected" })
-                      }
-                    >
-                      Reject KYC
-                    </button>
-                    <button
-                      className="px-3 py-1.5 text-xs rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100"
-                      onClick={() =>
-                        setKycModal({
-                          open: true,
-                          defaultDecision: "under_review",
-                        })
-                      }
-                    >
-                      Mark KYC Under Review
-                    </button>
-                    <>
-                      <div className="w-px bg-gray-200 mx-1 self-stretch" />
+                  {/* Action Buttons — shown only for legacy sellers without organizations */}
+                  {organizationSummary.total === 0 && (
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        className="px-3 py-1.5 text-xs rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                        className="px-3 py-1.5 text-xs rounded-md bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
                         onClick={() =>
-                          setBankModal({
+                          setKycModal({
                             open: true,
                             defaultDecision: "verified",
                           })
                         }
                       >
-                        Verify Bank
+                        Approve KYC
                       </button>
                       <button
-                        className="px-3 py-1.5 text-xs rounded-md bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100"
+                        className="px-3 py-1.5 text-xs rounded-md bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
                         onClick={() =>
-                          setBankModal({
+                          setKycModal({
                             open: true,
                             defaultDecision: "rejected",
                           })
                         }
                       >
-                        Reject Bank
+                        Reject KYC
                       </button>
-                    </>
-                    <>
-                      <div className="w-px bg-gray-200 mx-1 self-stretch" />
                       <button
-                        className="px-3 py-1.5 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={handleGoLive}
-                        disabled={goLiveStatus === "live"}
+                        className="px-3 py-1.5 text-xs rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100"
+                        onClick={() =>
+                          setKycModal({
+                            open: true,
+                            defaultDecision: "under_review",
+                          })
+                        }
                       >
-                        Approve Go Live
+                        Mark KYC Under Review
                       </button>
-                    </>
-                  </div>
-                )}
+                      <>
+                        <div className="w-px bg-gray-200 mx-1 self-stretch" />
+                        <button
+                          className="px-3 py-1.5 text-xs rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                          onClick={() =>
+                            setBankModal({
+                              open: true,
+                              defaultDecision: "verified",
+                            })
+                          }
+                        >
+                          Verify Bank
+                        </button>
+                        <button
+                          className="px-3 py-1.5 text-xs rounded-md bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100"
+                          onClick={() =>
+                            setBankModal({
+                              open: true,
+                              defaultDecision: "rejected",
+                            })
+                          }
+                        >
+                          Reject Bank
+                        </button>
+                      </>
+                      <>
+                        <div className="w-px bg-gray-200 mx-1 self-stretch" />
+                        <button
+                          className="px-3 py-1.5 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={handleGoLive}
+                          disabled={goLiveStatus === "live"}
+                        >
+                          Approve Go Live
+                        </button>
+                      </>
+                    </div>
+                  )}
 
-                {/* KYC rejection reason alert (live on profile) */}
-                {onboarding.kycRejectionReason && (
-                  <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-3">
-                    <p className="text-xs font-semibold text-red-700">
-                      KYC Rejection Reason
-                    </p>
-                    <p className="text-sm text-red-600 mt-0.5">
-                      {onboarding.kycRejectionReason}
-                    </p>
-                  </div>
-                )}
+                  {/* KYC rejection reason alert (live on profile) */}
+                  {onboarding.kycRejectionReason && (
+                    <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-3">
+                      <p className="text-xs font-semibold text-red-700">
+                        KYC Rejection Reason
+                      </p>
+                      <p className="text-sm text-red-600 mt-0.5">
+                        {onboarding.kycRejectionReason}
+                      </p>
+                    </div>
+                  )}
 
-                {/* Bank rejection reason alert */}
-                {bankRejectionReason && (
-                  <div className="mt-3 bg-orange-50 border border-orange-200 rounded-md p-3">
-                    <p className="text-xs font-semibold text-orange-700">
-                      Bank Rejection Reason
-                    </p>
-                    <p className="text-sm text-orange-600 mt-0.5">
-                      {bankRejectionReason}
-                    </p>
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* Onboarding Checklist */}
-            {/* <OnboardingChecklist checklist={checklist} /> */}
-
-            {activeTab === "apiReferences" &&
-              verificationReferenceRows.length > 0 && (
-                <section className="bg-white border border-gray-200 rounded-lg p-5">
-                  <div className="mb-4">
-                    <h2 className="text-base font-semibold text-gray-800">
-                      APITXT Verification References
-                    </h2>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Provider reference IDs received during seller KYC
-                      verification.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 w-full">
-                    {verificationReferenceRows.map((item) => (
-                      <CopyableReferenceRow
-                        key={item.label}
-                        label={item.label}
-                        value={item.value}
-                        onCopy={handleCopyReference}
-                      />
-                    ))}
-                  </div>
+                  {/* Bank rejection reason alert */}
+                  {bankRejectionReason && (
+                    <div className="mt-3 bg-orange-50 border border-orange-200 rounded-md p-3">
+                      <p className="text-xs font-semibold text-orange-700">
+                        Bank Rejection Reason
+                      </p>
+                      <p className="text-sm text-orange-600 mt-0.5">
+                        {bankRejectionReason}
+                      </p>
+                    </div>
+                  )}
                 </section>
               )}
 
-            {activeTab === "apiDetails" &&
-              verificationDetailCards.length > 0 && (
+              {/* Onboarding Checklist */}
+              {/* <OnboardingChecklist checklist={checklist} /> */}
+
+              {activeTab === "apiReferences" &&
+                verificationReferenceRows.length > 0 && (
+                  <section className="bg-white border border-gray-200 rounded-lg p-5">
+                    <div className="mb-4">
+                      <h2 className="text-base font-semibold text-gray-800">
+                        APITXT Verification References
+                      </h2>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Provider reference IDs received during seller KYC
+                        verification.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 w-full">
+                      {verificationReferenceRows.map((item) => (
+                        <CopyableReferenceRow
+                          key={item.label}
+                          label={item.label}
+                          value={item.value}
+                          onCopy={handleCopyReference}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+              {activeTab === "apiDetails" &&
+                verificationDetailCards.length > 0 && (
+                  <section className="bg-white border border-gray-200 rounded-lg p-5">
+                    <div className="mb-4">
+                      <h2 className="text-base font-semibold text-gray-800">
+                        APITXT Verification Details
+                      </h2>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Admin-only provider details captured during seller KYC
+                        checks.
+                      </p>
+                    </div>
+                    <div className="space-y-4">
+                      {verificationDetailCards.map((card) => (
+                        <VerificationDetailsCard
+                          key={card.key}
+                          title={card.title}
+                          details={card.details}
+                          onCopy={handleCopyReference}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+              {activeTab === "store" && (
                 <section className="bg-white border border-gray-200 rounded-lg p-5">
-                  <div className="mb-4">
-                    <h2 className="text-base font-semibold text-gray-800">
-                      APITXT Verification Details
-                    </h2>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Admin-only provider details captured during seller KYC
-                      checks.
-                    </p>
+                  <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-base font-semibold text-gray-800">
+                        Store Information
+                      </h2>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Legal entities used for GST, invoices, products, orders,
+                        and payouts.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      onClick={loadSellerOrganizations}
+                      disabled={organizationsLoading || reviewingOrgId !== null}
+                    >
+                      Refresh
+                    </button>
                   </div>
-                  <div className="space-y-4">
-                    {verificationDetailCards.map((card) => (
-                      <VerificationDetailsCard
-                        key={card.key}
-                        title={card.title}
-                        details={card.details}
-                        onCopy={handleCopyReference}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
 
-            {activeTab === "store" && (
-              <section className="bg-white border border-gray-200 rounded-lg p-5">
-                <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-base font-semibold text-gray-800">
-                      Store Information
-                    </h2>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Legal entities used for GST, invoices, products, orders,
-                      and payouts.
+                  {organizationsLoading && !organizations.length && (
+                    <OrganizationSkeletonLoader />
+                  )}
+                  {!organizationsLoading && !organizations.length && (
+                    <p className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-700">
+                      No organization is available for this seller yet.
                     </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
-                    onClick={loadSellerOrganizations}
-                    disabled={organizationsLoading}
-                  >
-                    Refresh
-                  </button>
-                </div>
-
-                {organizationsLoading && (
-                  <p className="py-4 text-center text-sm text-gray-400">
-                    Loading organizations…
-                  </p>
-                )}
-                {!organizationsLoading && !organizations.length && (
-                  <p className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-700">
-                    No organization is available for this seller yet.
-                  </p>
-                )}
-                {!organizationsLoading &&
-                  organizations.map((organization) => {
+                  )}
+                  {organizations.map((organization) => {
                     const organizationId =
                       organization.id || organization.organizationId;
-                    const bank = organization.bankDetails || {};
-                    const documents = organization.documents || {};
                     const isReviewing = reviewingOrgId === organizationId;
                     const anyReviewing = reviewingOrgId !== null;
+
+                    if (isReviewing) {
+                      return (
+                        <OrganizationSkeletonLoader
+                          key={organizationId}
+                          actionLabel={reviewingAction?.label}
+                        />
+                      );
+                    }
+
+                    const bank = organization.bankDetails || {};
+                    const documents = organization.documents || {};
                     const hasAddresses =
                       organization.billingAddress ||
                       organization.pickupAddress ||
@@ -2780,29 +2859,37 @@ const UserDetails = () => {
                               </p>
                               <div className="flex flex-wrap gap-2">
                                 {getOrgContextActions(organization).map(
-                                  (action) => (
-                                    <button
-                                      key={action.id}
-                                      type="button"
-                                      className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${ORG_ACTION_CLS[action.cls] || ORG_ACTION_CLS.gray}`}
-                                      onClick={() =>
-                                        handleOrganizationAction(
-                                          organization,
-                                          action,
-                                        )
-                                      }
-                                      disabled={anyReviewing}
-                                    >
-                                      {isReviewing ? (
-                                        "…"
-                                      ) : (
-                                        <>
-                                          {ACTION_ICONS[action.id]}
-                                          <span>{action.label}</span>
-                                        </>
-                                      )}
-                                    </button>
-                                  ),
+                                  (action) => {
+                                    const isActionLoading =
+                                      reviewingOrgId === organizationId &&
+                                      reviewingAction?.id === action.id;
+                                    return (
+                                      <button
+                                        key={action.id}
+                                        type="button"
+                                        className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${ORG_ACTION_CLS[action.cls] || ORG_ACTION_CLS.gray}`}
+                                        onClick={() =>
+                                          handleOrganizationAction(
+                                            organization,
+                                            action,
+                                          )
+                                        }
+                                        disabled={anyReviewing}
+                                      >
+                                        {isActionLoading ? (
+                                          <>
+                                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                            <span>{action.label}…</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            {ACTION_ICONS[action.id]}
+                                            <span>{action.label}</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    );
+                                  },
                                 )}
                               </div>
                             </div>
@@ -2811,11 +2898,11 @@ const UserDetails = () => {
                       </div>
                     );
                   })}
-              </section>
-            )}
-          </>
-        )}
-      </div>
+                </section>
+              )}
+            </>
+          )}
+        </div>
       )}
     </>
   );
