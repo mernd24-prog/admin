@@ -1485,21 +1485,26 @@ export const SalesReport = () => {
 export const ProductAnalytics = () => {
   const filters = useReportFilters();
   const sellerView = isSellerPanel();
+
   const loadData = useCallback(
     async ({ fromDate, toDate }) => {
-      const [topProducts, inventoryStats, catalogProducts] = await Promise.all([
-        fetchJson(ENDPOINTS.products.analyticsTop, {
-          limit: 10,
-          metric: sellerView ? "views" : "purchases",
-          fromDate,
-          toDate,
-        }),
-        fetchJson(ENDPOINTS.products.inventoryStats),
-        fetchJson(ENDPOINTS.products.listForPanel, {
-          limit: 100,
-          includeAllStatuses: true,
-        }).catch(() => []),
-      ]);
+      const [topProducts, inventoryStats, catalogProducts] =
+        await Promise.all([
+          fetchJson(ENDPOINTS.products.analyticsTop, {
+            limit: 100,
+            metric: sellerView ? "views" : "purchases",
+            fromDate,
+            toDate,
+          }),
+
+          fetchJson(ENDPOINTS.products.inventoryStats),
+
+          fetchJson(ENDPOINTS.products.listForPanel, {
+            limit: 100,
+            includeAllStatuses: true,
+          }).catch(() => []),
+        ]);
+
       return {
         topProducts: listFrom(topProducts),
         inventoryStats,
@@ -1508,204 +1513,602 @@ export const ProductAnalytics = () => {
     },
     [sellerView],
   );
-  const { data, loading, error, refresh } = useApiReport(loadData, filters);
+
+  const { data, loading, error, refresh } = useApiReport(
+    loadData,
+    filters,
+  );
+
   const products = listFrom(data.topProducts);
   const catalogProducts = listFrom(data.catalogProducts);
   const inventory = data.inventoryStats || {};
+
+  /*
+   * Map analytics data by product ID
+   */
   const analyticsById = new Map(
     products.map((product) => [
-      String(product._id || product.id || product.productId),
+      String(
+        product._id ||
+          product.id ||
+          product.productId,
+      ),
       product,
     ]),
   );
+
+  /*
+   * Merge catalog product information
+   * with analytics information.
+   */
   const displayProducts = catalogProducts.length
     ? catalogProducts.map((product) => {
+        const productId = String(
+          product._id ||
+            product.id ||
+            product.productId,
+        );
+
         const analyticsProduct =
-          analyticsById.get(
-            String(product._id || product.id || product.productId),
-          ) || product;
+          analyticsById.get(productId) || product;
+
         return {
           ...product,
-          analytics: analyticsProduct.analytics || product.analytics || {},
+          analytics:
+            analyticsProduct.analytics ||
+            product.analytics ||
+            {},
         };
       })
     : products;
 
-  const baseRows = displayProducts.map((product) => ({
-    id: product._id || product.id || product.productId,
-    title: product.title || product.name || "Untitled",
-    label: truncateLabel(product.title || product.name || "Untitled", 18),
-    chartLabel: truncateLabel(product.title || product.name || "Untitled", 26),
-    sku: product.sku || product.skuCode || "-",
-    price: formatCurrency(
-      product.price || product.sellingPrice || product.salePrice,
-    ),
-    purchases: asNumber(product.analytics?.purchases),
-    revenue: asNumber(product.analytics?.revenue),
-    views: asNumber(product.analytics?.views),
-    uniqueViews: asNumber(product.analytics?.uniqueViews),
-    cartAdds: asNumber(product.analytics?.cartAdds),
-    wishlistAdds: asNumber(product.analytics?.wishlistAdds),
-    orderCount: asNumber(product.analytics?.orderCount),
-    conversionRate: asNumber(product.analytics?.conversionRate),
-  }));
-  const totalProductsCount = asNumber(inventory.totalProducts);
+  /*
+   * Product rows used by:
+   * - Chart
+   * - Product table
+   * - Excel export
+   */
+  const baseRows = displayProducts.map((product) => {
+    const analytics = product.analytics || {};
+
+    const purchases = asNumber(analytics.purchases);
+    const revenue = asNumber(analytics.revenue);
+    const views = asNumber(analytics.views);
+    const uniqueViews = asNumber(analytics.uniqueViews);
+    const impressions = asNumber(analytics.impressions);
+    const cartAdds = asNumber(analytics.cartAdds);
+    const wishlistAdds = asNumber(analytics.wishlistAdds);
+    const orderCount = asNumber(analytics.orderCount);
+
+    return {
+      id:
+        product._id ||
+        product.id ||
+        product.productId,
+
+      title:
+        product.title ||
+        product.name ||
+        "Untitled",
+
+      label: truncateLabel(
+        product.title ||
+          product.name ||
+          "Untitled",
+        18,
+      ),
+
+      chartLabel: truncateLabel(
+        product.title ||
+          product.name ||
+          "Untitled",
+        26,
+      ),
+
+      sku:
+        product.sku ||
+        product.skuCode ||
+        "-",
+
+      price: formatCurrency(
+        product.price ||
+          product.sellingPrice ||
+          product.salePrice ||
+          0,
+      ),
+
+      purchases,
+      revenue,
+      views,
+      uniqueViews,
+      impressions,
+      cartAdds,
+      wishlistAdds,
+      orderCount,
+
+      lastViewedAt:
+        analytics.lastViewedAt || null,
+
+      status:
+        product.status || "-",
+    };
+  });
+
+  /*
+   * If inventory has more products than the
+   * analytics API returned, add empty rows.
+   */
+  const totalProductsCount = asNumber(
+    inventory.totalProducts,
+  );
+
   const rows =
     totalProductsCount > baseRows.length
       ? [
           ...baseRows,
           ...Array.from(
-            { length: totalProductsCount - baseRows.length },
+            {
+              length:
+                totalProductsCount -
+                baseRows.length,
+            },
             (_, index) => ({
               id: `missing-product-${index + 1}`,
-              title: `Product ${baseRows.length + index + 1}`,
-              label: `Product ${baseRows.length + index + 1}`,
-              chartLabel: `Product ${baseRows.length + index + 1}`,
+
+              title: `Product ${
+                baseRows.length +
+                index +
+                1
+              }`,
+
+              label: `Product ${
+                baseRows.length +
+                index +
+                1
+              }`,
+
+              chartLabel: `Product ${
+                baseRows.length +
+                index +
+                1
+              }`,
+
               sku: "-",
               price: formatCurrency(0),
+
               purchases: 0,
               revenue: 0,
               views: 0,
+              uniqueViews: 0,
+              impressions: 0,
+              cartAdds: 0,
+              wishlistAdds: 0,
+              orderCount: 0,
+
+              lastViewedAt: null,
+              status: "-",
             }),
           ),
         ]
       : baseRows;
+
+  /*
+   * Overall totals
+   */
   const purchaseTotal = rows.reduce(
-    (sum, product) => sum + asNumber(product.purchases),
-    0,
-  );
-  const revenueTotal = rows.reduce(
-    (sum, product) => sum + asNumber(product.revenue),
-    0,
-  );
-  const viewsTotal = rows.reduce(
-    (sum, product) => sum + asNumber(product.views),
-    0,
-  );
-  const cartAddTotal = rows.reduce(
-    (sum, product) => sum + asNumber(product.cartAdds),
+    (sum, product) =>
+      sum + asNumber(product.purchases),
     0,
   );
 
+  const revenueTotal = rows.reduce(
+    (sum, product) =>
+      sum + asNumber(product.revenue),
+    0,
+  );
+
+  const viewsTotal = rows.reduce(
+    (sum, product) =>
+      sum + asNumber(product.views),
+    0,
+  );
+
+  const uniqueViewsTotal = rows.reduce(
+    (sum, product) =>
+      sum + asNumber(product.uniqueViews),
+    0,
+  );
+
+  const impressionsTotal = rows.reduce(
+    (sum, product) =>
+      sum + asNumber(product.impressions),
+    0,
+  );
+
+  const cartAddTotal = rows.reduce(
+    (sum, product) =>
+      sum + asNumber(product.cartAdds),
+    0,
+  );
+
+  const wishlistAddTotal = rows.reduce(
+    (sum, product) =>
+      sum + asNumber(product.wishlistAdds),
+    0,
+  );
+
+  const orderCountTotal = rows.reduce(
+    (sum, product) =>
+      sum + asNumber(product.orderCount),
+    0,
+  );
+
+  /*
+   * Dashboard cards
+   */
   const stats = [
     {
       label: "Total Products",
-      value: formatNumber(inventory.totalProducts),
+      value: formatNumber(
+        inventory.totalProducts,
+      ),
       sub: "Current catalog",
     },
+
     {
-      label: sellerView ? "Product Views" : "Top Product Purchases",
-      value: formatNumber(sellerView ? viewsTotal : purchaseTotal),
-      sub: sellerView ? "Filtered product activity" : "Top 10 products",
+      label: "Product Views",
+      value: formatNumber(viewsTotal),
+      sub: "Tracked product views",
     },
+
     {
-      label: sellerView ? "Cart Adds" : "Top Product Revenue",
-      value: sellerView
-        ? formatNumber(cartAddTotal)
-        : formatCurrency(revenueTotal),
-      sub: sellerView
-        ? "Tracked product analytics"
-        : "Tracked product analytics",
+      label: "Cart Adds",
+      value: formatNumber(cartAddTotal),
+      sub: "Products added to cart",
     },
+
+    {
+      label: "Purchases",
+      value: formatNumber(purchaseTotal),
+      sub: "Total product purchases",
+    },
+
+    {
+      label: "Total Revenue",
+      value: formatCurrency(revenueTotal),
+      sub: "Revenue generated",
+    },
+
     {
       label: "Out of Stock",
-      value: formatNumber(inventory.outOfStockCount),
+      value: formatNumber(
+        inventory.outOfStockCount,
+      ),
       sub: "Current inventory",
     },
   ];
 
+  /*
+   * Product Summary Excel sheet
+   */
   const productSummaryRows = [
     {
       field: "Report Name",
-      value: sellerView ? "Product Report" : "Product Analytics",
+      value: sellerView
+        ? "Product Report"
+        : "Product Analytics",
     },
+
     {
       field: "Date Range",
-      value: `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(filters.toDate)}`,
+      value: `${formatDateLabel(
+        filters.fromDate,
+      )} - ${formatDateLabel(
+        filters.toDate,
+      )}`,
     },
-    { field: "Generated On", value: formatDateLabel(toIsoDate(new Date())) },
-    { field: "Total Products", value: asNumber(inventory.totalProducts) },
-    { field: "Product Views", value: viewsTotal },
-    { field: "Cart Adds", value: cartAddTotal },
-    { field: "Out of Stock", value: asNumber(inventory.outOfStockCount) },
+
+    {
+      field: "Generated On",
+      value: formatDateLabel(
+        toIsoDate(new Date()),
+      ),
+    },
+
+    {
+      field: "Total Products",
+      value: asNumber(
+        inventory.totalProducts,
+      ),
+    },
+
+    {
+      field: "Product Views",
+      value: viewsTotal,
+    },
+
+    {
+      field: "Unique Views",
+      value: uniqueViewsTotal,
+    },
+
+    {
+      field: "Impressions",
+      value: impressionsTotal,
+    },
+
+    {
+      field: "Cart Adds",
+      value: cartAddTotal,
+    },
+
+    {
+      field: "Wishlist Adds",
+      value: wishlistAddTotal,
+    },
+
+    {
+      field: "Purchases",
+      value: purchaseTotal,
+    },
+
+    {
+      field: "Order Count",
+      value: orderCountTotal,
+    },
+
+    {
+      field: "Total Revenue",
+      value: revenueTotal,
+    },
+
+    {
+      field: "Out of Stock",
+      value: asNumber(
+        inventory.outOfStockCount,
+      ),
+    },
   ];
 
-  const productDetailRows = rows.map((row, index) => ({
-    serialNumber: index + 1,
-    productName: row.title,
-    sku: row.sku,
-    price: row.price,
-    purchases: row.purchases,
-    revenue: row.revenue,
-    productViews: row.views,
-    cartAdds: row.cartAdds,
-    wishlistAdds: row.wishlistAdds,
-  }));
+  /*
+   * Product Details Excel rows
+   */
+  const productDetailRows = rows.map(
+    (row, index) => ({
+      serialNumber: index + 1,
+
+      productName: row.title,
+
+      sku: row.sku,
+
+      price: row.price,
+
+      productViews: row.views,
+
+      uniqueViews: row.uniqueViews,
+
+      impressions: row.impressions,
+
+      cartAdds: row.cartAdds,
+
+      wishlistAdds: row.wishlistAdds,
+
+      purchases: row.purchases,
+
+      orderCount: row.orderCount,
+
+      revenue: row.revenue,
+
+      lastViewed:
+        row.lastViewedAt
+          ? formatDateLabel(
+              row.lastViewedAt,
+            )
+          : "-",
+
+      status: row.status,
+    }),
+  );
+
+  /*
+   * Excel file name
+   */
   const productDatePart = (value) =>
-    formatDateLabel(value).replace(/\s+/g, "-");
+    formatDateLabel(value).replace(
+      /\s+/g,
+      "-",
+    );
+
   const productExportFilename = `Product_Report_${productDatePart(
     filters.fromDate,
-  )}_to_${productDatePart(filters.toDate)}.xlsx`;
+  )}_to_${productDatePart(
+    filters.toDate,
+  )}.xlsx`;
 
   return (
     <ReportShell
-      title={sellerView ? "Product Report" : "Product Analytics"}
+      title={
+        sellerView
+          ? "Product Report"
+          : "Product Analytics"
+      }
+
       subtitle={
         sellerView
           ? "Top-selling products and catalog health for your seller account."
           : "Top-selling products and current catalog health from product analytics APIs"
       }
+
       breadcrumbs={[
-        { label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" },
-        { label: sellerView ? "Product Report" : "Product Analytics" },
+        {
+          label: sellerView
+            ? SELLER_REPORT_CRUMB
+            : "Reports & Analytics",
+        },
+
+        {
+          label: sellerView
+            ? "Product Report"
+            : "Product Analytics",
+        },
       ]}
+
       stats={stats}
+
       loading={loading}
+
       error={error}
+
       filters={filters}
+
       onRefresh={refresh}
+
       exportEndpoint={null}
-      exportFilename={productExportFilename}
+
+      exportFilename={
+        productExportFilename
+      }
+
       exportExcelSheets={[
+        /*
+         * ==========================
+         * PRODUCT SUMMARY
+         * ==========================
+         */
         {
           name: "Product Summary",
+
           title: "Product Summary",
+
           data: productSummaryRows,
+
           columns: [
-            { key: "field", label: "Field" },
-            { key: "value", label: "Value" },
+            {
+              key: "field",
+              label: "Field",
+            },
+
+            {
+              key: "value",
+              label: "Value",
+            },
           ],
         },
+
+        /*
+         * ==========================
+         * PRODUCT DETAILS
+         * ==========================
+         */
         {
           name: "Product Details",
+
           title: "Product Details",
+
           data: productDetailRows,
+
           columns: [
-            { key: "serialNumber", label: "S.No" },
-            { key: "productName", label: "Product Name" },
-            { key: "sku", label: "SKU" },
-            { key: "price", label: "Price" },
-            { key: "purchases", label: "Purchases" },
-            { key: "revenue", label: "Revenue" },
-            { key: "productViews", label: "Product Views" },
-            { key: "cartAdds", label: "Cart Adds" },
-            { key: "wishlistAdds", label: "Wishlist Adds" },
+            {
+              key: "serialNumber",
+              label: "S.No",
+            },
+
+            {
+              key: "productName",
+              label: "Product Name",
+            },
+
+            {
+              key: "sku",
+              label: "SKU",
+            },
+
+            {
+              key: "price",
+              label: "Price",
+            },
+
+            {
+              key: "productViews",
+              label: "Product Views",
+            },
+
+            {
+              key: "uniqueViews",
+              label: "Unique Views",
+            },
+
+            {
+              key: "impressions",
+              label: "Impressions",
+            },
+
+            {
+              key: "cartAdds",
+              label: "Cart Adds",
+            },
+
+            {
+              key: "wishlistAdds",
+              label: "Wishlist Adds",
+            },
+
+            {
+              key: "purchases",
+              label: "Purchases",
+            },
+
+            {
+              key: "orderCount",
+              label: "Order Count",
+            },
+
+            {
+              key: "revenue",
+              label: "Revenue",
+            },
+
+            {
+              key: "lastViewed",
+              label: "Last Viewed",
+            },
+
+            {
+              key: "status",
+              label: "Status",
+            },
           ],
         },
       ]}
     >
       <div className="space-y-4">
+
+        {/* ==========================
+            TOP PRODUCT GRAPH
+            ========================== */}
         <PerformanceOverview
           title="Top Product Growth"
           rows={rows}
           barKey="revenue"
-          lineKey={sellerView ? "views" : "purchases"}
+          lineKey={
+            sellerView
+              ? "views"
+              : "purchases"
+          }
           barLabel="Revenue"
-          lineLabel={sellerView ? "Views" : "Purchases"}
+          lineLabel={
+            sellerView
+              ? "Views"
+              : "Purchases"
+          }
           barFormatter={formatCurrency}
           lineFormatter={formatNumber}
           includeZeroRows
         />
+
+        {/* ==========================
+            PRODUCT DETAILS TABLE
+            ========================== */}
         <ReportTable
           title="Top Product Details"
           rows={rows}
@@ -1713,46 +2116,73 @@ export const ProductAnalytics = () => {
             {
               key: "title",
               label: "Product",
+
               render: (value) => (
                 <span className="font-semibold text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">
                   {value}
                 </span>
               ),
             },
-            { key: "sku", label: "SKU" },
-            { key: "price", label: "Price" },
+
+            {
+              key: "sku",
+              label: "SKU",
+            },
+
+            {
+              key: "price",
+              label: "Price",
+            },
+
             {
               key: "purchases",
               label: "Purchases",
-              render: (value) => formatNumber(value),
+
+              render: (value) =>
+                formatNumber(value),
             },
+
             {
               key: "revenue",
               label: "Revenue",
-              render: (value) => formatCurrency(value),
+
+              render: (value) =>
+                formatCurrency(value),
             },
+
             {
               key: "views",
               label: "Views",
-              render: (value) => formatNumber(value),
+
+              render: (value) =>
+                formatNumber(value),
             },
+
             ...(sellerView
               ? [
                   {
                     key: "cartAdds",
                     label: "Cart Adds",
-                    render: (value) => formatNumber(value),
+
+                    render: (value) =>
+                      formatNumber(value),
                   },
+
                   {
                     key: "wishlistAdds",
                     label: "Wishlist",
-                    render: (value) => formatNumber(value),
+
+                    render: (value) =>
+                      formatNumber(value),
                   },
                 ]
               : []),
           ]}
+
           getRowLink={(row) =>
-            row.id ? `/app/product-catalog/view/${row.id}` : null
+            row.id
+              ? `/app/product-catalog/view/${row.id}`
+              : null
           }
         />
       </div>
@@ -1763,11 +2193,19 @@ export const ProductAnalytics = () => {
 export const InventoryAnalytics = () => {
   const filters = useReportFilters();
   const sellerView = isSellerPanel();
+
+  // Low stock business rule
+  const LOW_STOCK_THRESHOLD = 10;
+
   const loadData = useCallback(async ({ fromDate, toDate }) => {
     const dateParams = { fromDate, toDate };
+
     if (isSellerPanel()) {
       const [stats, products] = await Promise.all([
-        fetchJson(ENDPOINTS.products.inventoryStats, dateParams),
+        fetchJson(
+          ENDPOINTS.products.inventoryStats,
+          dateParams
+        ),
         fetchJson(ENDPOINTS.products.listForPanel, {
           limit: 10,
           page: 1,
@@ -1775,137 +2213,493 @@ export const InventoryAnalytics = () => {
           sortDir: "asc",
         }),
       ]);
-      return { stats, lowStock: listFrom(products) };
+
+      return {
+        stats,
+        lowStock: listFrom(products),
+      };
     }
+
     const [stats, lowStock] = await Promise.all([
-      fetchJson(ENDPOINTS.inventory.stats, dateParams),
+      fetchJson(
+        ENDPOINTS.inventory.stats,
+        dateParams
+      ),
       fetchJson(ENDPOINTS.inventory.lowStock, {
         ...dateParams,
         limit: 10,
         page: 1,
       }),
     ]);
-    return { stats, lowStock: listFrom(lowStock) };
-  }, []);
-  const { data, loading, error, refresh } = useApiReport(loadData, filters);
-  const statsData = data.stats || {};
-  const lowStockRows = listFrom(data.lowStock).map((product) => ({
-    id: product._id || product.id,
-    title: product.title || product.name || "Untitled",
-    label: truncateLabel(product.title || product.name || "Untitled", 18),
-    sku: product.sku || "-",
-    stock: asNumber(product.stock),
-    reservedStock: asNumber(product.reservedStock),
-    availableStock: Math.max(
-      0,
-      asNumber(product.stock) - asNumber(product.reservedStock),
-    ),
-  }));
 
+    return {
+      stats,
+      lowStock: listFrom(lowStock),
+    };
+  }, []);
+
+  const { data, loading, error, refresh } = useApiReport(
+    loadData,
+    filters
+  );
+
+  const statsData = data.stats || {};
+
+  /*
+   * Product-level data
+   * Used for the UI table and graph.
+   */
+  const lowStockRows = listFrom(data.lowStock).map(
+    (product) => ({
+      id: product._id || product.id,
+
+      productTitle:
+        product.title ||
+        product.name ||
+        "Untitled",
+
+      title:
+        product.title ||
+        product.name ||
+        "Untitled",
+
+      label: truncateLabel(
+        product.title ||
+          product.name ||
+          "Untitled",
+        18
+      ),
+
+      sku: product.sku || "-",
+
+      stock: asNumber(product.stock),
+
+      reservedStock: asNumber(
+        product.reservedStock
+      ),
+
+      availableStock: Math.max(
+        0,
+        asNumber(product.stock) -
+          asNumber(product.reservedStock)
+      ),
+    })
+  );
+
+  /*
+   * Export rows
+   *
+   * Variants are expanded ONLY for Excel export.
+   * The UI table remains product-level.
+   */
+  const inventoryExportRows =
+    listFrom(data.lowStock).flatMap(
+      (product) => {
+        const productName =
+          product.title ||
+          product.name ||
+          "Untitled";
+
+        const variants = Array.isArray(
+          product.variants
+        )
+          ? product.variants
+          : [];
+
+        /*
+         * Product without variants
+         */
+        if (!variants.length) {
+          const stock = asNumber(
+            product.stock
+          );
+
+          const reserved = asNumber(
+            product.reservedStock
+          );
+
+          const available = Math.max(
+            0,
+            stock - reserved
+          );
+
+          return [
+            {
+              productName,
+              variant: "-",
+              sku: product.sku || "-",
+              stock,
+              reserved,
+              available,
+
+              status:
+                available === 0
+                  ? "Out of Stock"
+                  : available <
+                    LOW_STOCK_THRESHOLD
+                  ? "Low Stock"
+                  : "In Stock",
+            },
+          ];
+        }
+
+        /*
+         * Product with variants
+         */
+        return variants.map((variant) => {
+          const stock = asNumber(
+            variant.stock
+          );
+
+          const reserved = asNumber(
+            variant.reservedStock
+          );
+
+          const available = Math.max(
+            0,
+            stock - reserved
+          );
+
+          const variantName =
+            variant.title ||
+            Object.values(
+              variant.attributes || {}
+            )
+              .filter(Boolean)
+              .join(" / ") ||
+            "Default";
+
+          return {
+            productName,
+
+            variant: variantName,
+
+            sku: variant.sku || "-",
+
+            stock,
+
+            reserved,
+
+            available,
+
+            status:
+              available === 0
+                ? "Out of Stock"
+                : available <
+                  LOW_STOCK_THRESHOLD
+                ? "Low Stock"
+                : "In Stock",
+          };
+        });
+      }
+    );
+
+  /*
+   * Add serial numbers to Excel rows
+   */
+  const numberedInventoryExportRows =
+    inventoryExportRows.map(
+      (row, index) => ({
+        serialNumber: index + 1,
+        ...row,
+      })
+    );
+
+  /*
+   * Dashboard statistics
+   */
   const stats = [
     {
       label: "Total Products",
-      value: formatNumber(statsData.totalProducts),
+      value: formatNumber(
+        statsData.totalProducts
+      ),
       sub: "Inventory-tracked products",
     },
+
     {
       label: "Total Stock",
-      value: formatNumber(statsData.totalStock),
+      value: formatNumber(
+        statsData.totalStock
+      ),
       sub: "Units on hand",
     },
+
     {
       label: "Reserved Stock",
-      value: formatNumber(statsData.totalReserved),
+      value: formatNumber(
+        statsData.totalReserved
+      ),
       sub: "Allocated to orders",
     },
+
     {
       label: "Low Stock Items",
-      value: formatNumber(statsData.lowStockCount),
-      sub: "At or below threshold",
+      value: formatNumber(
+        statsData.lowStockCount
+      ),
+      sub: `Below ${LOW_STOCK_THRESHOLD} units`,
     },
   ];
 
-  const inventoryProductRows = lowStockRows.map((row, index) => ({
-    serialNumber: index + 1,
-    productName: row.title,
-    sku: row.sku,
-    stock: row.stock,
-    reserved: row.reservedStock,
-    available: row.availableStock,
-    status: row.availableStock > 0 ? "In Stock" : "Out of Stock",
-  }));
-
+  /*
+   * Inventory Summary Excel sheet
+   */
   const inventorySummaryRows = [
     {
       field: "Report Name",
-      value: sellerView ? "Inventory Report" : "Inventory Analytics",
+      value: sellerView
+        ? "Inventory Report"
+        : "Inventory Analytics",
     },
+
     {
       field: "Date Range",
-      value: `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(filters.toDate)}`,
+      value: `${formatDateLabel(
+        filters.fromDate
+      )} - ${formatDateLabel(
+        filters.toDate
+      )}`,
     },
-    { field: "Total Products", value: asNumber(statsData.totalProducts) },
-    { field: "Total Stock", value: asNumber(statsData.totalStock) },
-    { field: "Reserved Stock", value: asNumber(statsData.totalReserved) },
+
+    {
+      field: "Total Products",
+      value: asNumber(
+        statsData.totalProducts
+      ),
+    },
+
+    {
+      field: "Total Stock",
+      value: asNumber(
+        statsData.totalStock
+      ),
+    },
+
+    {
+      field: "Reserved Stock",
+      value: asNumber(
+        statsData.totalReserved
+      ),
+    },
+
     {
       field: "Available Stock",
       value: Math.max(
         0,
-        asNumber(statsData.totalStock) - asNumber(statsData.totalReserved),
+        asNumber(
+          statsData.totalStock
+        ) -
+          asNumber(
+            statsData.totalReserved
+          )
       ),
     },
-    { field: "Low Stock Items", value: asNumber(statsData.lowStockCount) },
+
+    // NEW
+    {
+      field: "Low Stock Threshold",
+      value: LOW_STOCK_THRESHOLD,
+    },
+
+    {
+      field: "Low Stock Items",
+      value: asNumber(
+        statsData.lowStockCount
+      ),
+    },
   ];
 
   return (
     <ReportShell
-      title={sellerView ? "Inventory Report" : "Inventory Analytics"}
+      title={
+        sellerView
+          ? "Inventory Report"
+          : "Inventory Analytics"
+      }
+
       subtitle={
         sellerView
           ? "Current stock health and low-stock products for your seller account."
           : "Current stock health and low-stock products from inventory APIs"
       }
+
       breadcrumbs={[
-        { label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" },
-        { label: sellerView ? "Inventory Report" : "Inventory Analytics" },
+        {
+          label: sellerView
+            ? SELLER_REPORT_CRUMB
+            : "Reports & Analytics",
+        },
+
+        {
+          label: sellerView
+            ? "Inventory Report"
+            : "Inventory Analytics",
+        },
       ]}
+
       stats={stats}
+
       loading={loading}
+
       error={error}
+
       filters={filters}
+
       onRefresh={refresh}
+
       exportEndpoint={null}
-      exportFilename={`Inventory_Report_${formatDateLabel(filters.fromDate).replace(
+
+      exportFilename={`Inventory_Report_${formatDateLabel(
+        filters.fromDate
+      ).replace(
         /\s+/g,
-        "-",
-      )}_to_${formatDateLabel(filters.toDate).replace(/\s+/g, "-")}.xlsx`}
+        "-"
+      )}_to_${formatDateLabel(
+        filters.toDate
+      ).replace(
+        /\s+/g,
+        "-"
+      )}.xlsx`}
+
       exportExcelSheets={[
+        /*
+         * Inventory Summary Sheet
+         */
         {
           name: "Inventory Summary",
+
           title: "Inventory Summary",
+
           data: inventorySummaryRows,
+
           columns: [
-            { key: "field", label: "Field" },
-            { key: "value", label: "Value" },
+            {
+              key: "field",
+              label: "Field",
+            },
+
+            {
+              key: "value",
+              label: "Value",
+            },
           ],
         },
+
+        /*
+         * Inventory Products Sheet
+         *
+         * Product variants are shown here.
+         */
         {
           name: "Inventory Products",
+
           title: "Inventory Products",
-          data: inventoryProductRows,
+
+          data: numberedInventoryExportRows,
+
           columns: [
-            { key: "serialNumber", label: "S.No" },
-            { key: "productName", label: "Product Name" },
-            { key: "sku", label: "SKU" },
-            { key: "stock", label: "Stock" },
-            { key: "reserved", label: "Reserved" },
-            { key: "available", label: "Available" },
-            { key: "status", label: "Status" },
+            {
+              key: "serialNumber",
+              label: "S.No",
+            },
+
+            {
+              key: "productName",
+              label: "Product Name",
+            },
+
+            {
+              key: "variant",
+              label: "Variant",
+            },
+
+            {
+              key: "sku",
+              label: "SKU",
+            },
+
+            {
+              key: "stock",
+              label: "Stock",
+            },
+
+            {
+              key: "reserved",
+              label: "Reserved",
+            },
+
+            {
+              key: "available",
+              label: "Available",
+            },
+
+            {
+              key: "status",
+              label: "Status",
+            },
           ],
+
+          /*
+           * Status-wise Excel cell colors
+           */
+          cellStyles: {
+            Status: {
+              "Out of Stock": {
+                fill: {
+                  fgColor: {
+                    rgb: "FECACA",
+                  },
+                },
+
+                font: {
+                  color: {
+                    rgb: "991B1B",
+                  },
+
+                  bold: true,
+                },
+              },
+
+              "Low Stock": {
+                fill: {
+                  fgColor: {
+                    rgb: "FEF08A",
+                  },
+                },
+
+                font: {
+                  color: {
+                    rgb: "854D0E",
+                  },
+
+                  bold: true,
+                },
+              },
+
+              "In Stock": {
+                fill: {
+                  fgColor: {
+                    rgb: "BBF7D0",
+                  },
+                },
+
+                font: {
+                  color: {
+                    rgb: "166534",
+                  },
+
+                  bold: true,
+                },
+              },
+            },
+          },
         },
       ]}
     >
       <div className="space-y-4">
+
+        {/* Product-level graph */}
         <PerformanceOverview
           title="Inventory Stock Growth"
           rows={lowStockRows}
@@ -1916,48 +2710,82 @@ export const InventoryAnalytics = () => {
           barFormatter={formatNumber}
           lineFormatter={formatNumber}
         />
+
+        {/* Product-level table */}
         <ReportTable
-          title={sellerView ? "Inventory Products" : "Low Stock Products"}
-          rows={lowStockRows}
-          emptyTitle={
-            sellerView ? "No inventory products" : "No low-stock products"
+          title={
+            sellerView
+              ? "Inventory Products"
+              : "Low Stock Products"
           }
+
+          rows={lowStockRows}
+
+          emptyTitle={
+            sellerView
+              ? "No inventory products"
+              : "No low-stock products"
+          }
+
           emptyText={
             sellerView
               ? "No products are available in your inventory yet."
-              : "Your inventory is healthy for the selected range. Products will appear here when available stock reaches the low-stock threshold."
+              : `Your inventory is healthy for the selected range. Products will appear here when available stock falls below ${LOW_STOCK_THRESHOLD} units.`
           }
+
           columns={[
             {
-              key: "title",
+              key: "productTitle",
+
               label: "Product",
+
               render: (value) => (
                 <span className="font-semibold text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">
                   {value}
                 </span>
               ),
             },
-            { key: "sku", label: "SKU" },
+
+            {
+              key: "sku",
+              label: "SKU",
+            },
+
             {
               key: "stock",
+
               label: "Stock",
-              render: (value) => formatNumber(value),
+
+              render: (value) =>
+                formatNumber(value),
             },
+
             {
               key: "reservedStock",
+
               label: "Reserved",
-              render: (value) => formatNumber(value),
+
+              render: (value) =>
+                formatNumber(value),
             },
+
             {
               key: "availableStock",
+
               label: "Available",
-              render: (value) => formatNumber(value),
+
+              render: (value) =>
+                formatNumber(value),
             },
           ]}
+
           getRowLink={(row) =>
-            row.id ? `/app/product-catalog/view/${row.id}` : null
+            row.id
+              ? `/app/product-catalog/view/${row.id}`
+              : null
           }
         />
+
       </div>
     </ReportShell>
   );

@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import * as XLSXStyle from "xlsx-js-style";
 
 const download = (blob, filename) => {
   const url = URL.createObjectURL(blob);
@@ -96,13 +97,366 @@ export const exportToExcelWorkbook = (
   if (!sheets.length) return false;
 
   const workbook = XLSX.utils.book_new();
-  sheets.forEach(({ name, data = [], columns = [] }) => {
-    const worksheet = XLSX.utils.json_to_sheet(
-      normalizeExportRows(data, columns),
-    );
-    XLSX.utils.book_append_sheet(workbook, worksheet, name);
-  });
-  XLSX.writeFile(workbook, filename);
+
+  sheets.forEach(
+    ({
+      name,
+      data = [],
+      columns = [],
+      cellStyles = {},
+    }) => {
+      const normalizedRows = normalizeExportRows(
+        data,
+        columns,
+      );
+
+      /*
+       * =====================================
+       * HEADERS
+       * =====================================
+       */
+
+      const headers = columns
+        .filter(
+          (column) =>
+            column.exportable !== false,
+        )
+        .map(
+          (column) =>
+            column.label || column.key,
+        );
+
+      /*
+       * =====================================
+       * DATA ROWS
+       * =====================================
+       */
+
+      const dataRows = normalizedRows.map(
+        (row) =>
+          headers.map(
+            (header) => row[header],
+          ),
+      );
+
+      /*
+       * =====================================
+       * CREATE WORKSHEET
+       *
+       * Row 1 -> Header
+       * Row 2 -> Blank
+       * Row 3+ -> Data
+       * =====================================
+       */
+
+      const worksheet = XLSX.utils.aoa_to_sheet([
+        headers,
+        [],
+        ...dataRows,
+      ]);
+
+      /*
+       * =====================================
+       * HEADER STYLE
+       * =====================================
+       */
+
+      headers.forEach(
+        (header, columnIndex) => {
+          const cellRef =
+            XLSX.utils.encode_cell({
+              r: 0,
+              c: columnIndex,
+            });
+
+          const cell = worksheet[cellRef];
+
+          if (!cell) return;
+
+          cell.s = {
+            font: {
+              bold: true,
+              sz: 11,
+            },
+
+            fill: {
+              patternType: "solid",
+              fgColor: {
+                rgb: "FFF3D6",
+              },
+            },
+
+            alignment: {
+              horizontal: "center",
+              vertical: "center",
+            },
+
+            border: {
+              top: {
+                style: "thin",
+                color: {
+                  rgb: "FFD6A3",
+                },
+              },
+
+              bottom: {
+                style: "thin",
+                color: {
+                  rgb: "FFD6A3",
+                },
+              },
+
+              left: {
+                style: "thin",
+                color: {
+                  rgb: "FFD6A3",
+                },
+              },
+
+              right: {
+                style: "thin",
+                color: {
+                  rgb: "FFD6A3",
+                },
+              },
+            },
+          };
+        },
+      );
+
+      /*
+       * =====================================
+       * DATA CELL BASE STYLE
+       *
+       * Keep all data values left aligned.
+       * This prevents numbers from being
+       * automatically right aligned.
+       * =====================================
+       */
+
+      dataRows.forEach(
+        (row, rowIndex) => {
+          row.forEach(
+            (value, columnIndex) => {
+              const cellRef =
+                XLSX.utils.encode_cell({
+                  r: rowIndex + 2,
+                  c: columnIndex,
+                });
+
+              const cell =
+                worksheet[cellRef];
+
+              if (!cell) return;
+
+              cell.s = {
+                alignment: {
+                  horizontal: "left",
+                  vertical: "center",
+                },
+              };
+            },
+          );
+        },
+      );
+
+      /*
+       * =====================================
+       * CUSTOM CELL STYLES
+       *
+       * Example:
+       * Status -> In Stock / Low Stock /
+       *           Out of Stock
+       *
+       * Merge the custom style with the
+       * default left alignment.
+       * =====================================
+       */
+
+      Object.entries(cellStyles).forEach(
+        ([columnLabel, stylesByValue]) => {
+          const columnIndex =
+            columns.findIndex(
+              (column) =>
+                (column.label ||
+                  column.key) ===
+                columnLabel,
+            );
+
+          if (columnIndex < 0) return;
+
+          data.forEach(
+            (row, rowIndex) => {
+              /*
+               * Row 1 = Header
+               * Row 2 = Blank
+               * Row 3 = First data row
+               *
+               * Therefore:
+               * rowIndex + 2
+               */
+
+              const cellRef =
+                XLSX.utils.encode_cell({
+                  r: rowIndex + 2,
+                  c: columnIndex,
+                });
+
+              const cell =
+                worksheet[cellRef];
+
+              if (!cell) return;
+
+              const value =
+                getExportValue(
+                  row,
+                  columns[columnIndex],
+                );
+
+              const customStyle =
+                stylesByValue[value];
+
+              if (!customStyle) return;
+
+              /*
+               * Keep left alignment even
+               * when custom status styling
+               * is applied.
+               */
+
+              cell.s = {
+                alignment: {
+                  horizontal: "left",
+                  vertical: "center",
+                },
+
+                ...customStyle,
+
+                /*
+                 * Make sure custom style
+                 * cannot remove alignment.
+                 */
+                alignment: {
+                  horizontal: "left",
+                  vertical: "center",
+                  ...(customStyle.alignment ||
+                    {}),
+                },
+              };
+            },
+          );
+        },
+      );
+
+      /*
+       * =====================================
+       * DYNAMIC COLUMN WIDTH
+       *
+       * Width is calculated from the
+       * longest value in each column.
+       * =====================================
+       */
+
+      worksheet["!cols"] = headers.map(
+        (header, columnIndex) => {
+          const headerLength =
+            String(
+              header || "",
+            ).length;
+
+          const dataLength =
+            dataRows.reduce(
+              (maxLength, row) => {
+                const value =
+                  row[columnIndex];
+
+                return Math.max(
+                  maxLength,
+                  String(
+                    value ?? "",
+                  ).length,
+                );
+              },
+              0,
+            );
+
+          /*
+           * Add 3 characters of padding.
+           *
+           * Minimum width = 12
+           * Maximum width = 35
+           */
+
+          const width =
+            Math.max(
+              headerLength,
+              dataLength,
+            ) + 3;
+
+          return {
+            wch: Math.min(
+              35,
+              Math.max(12, width),
+            ),
+          };
+        },
+      );
+
+      /*
+       * =====================================
+       * ROW HEIGHT
+       * =====================================
+       */
+
+      worksheet["!rows"] = [
+        {
+          hpt: 22,
+        },
+        {
+          hpt: 8,
+        },
+      ];
+
+      /*
+       * =====================================
+       * FREEZE HEADER + BLANK ROW
+       *
+       * Row 1 -> Header
+       * Row 2 -> Blank
+       * Data starts from Row 3
+       * =====================================
+       */
+
+      worksheet["!freeze"] = {
+        xSplit: 0,
+        ySplit: 2,
+      };
+
+      /*
+       * =====================================
+       * APPEND SHEET
+       * =====================================
+       */
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        name,
+      );
+    },
+  );
+
+  /*
+   * =====================================
+   * WRITE EXCEL FILE
+   * =====================================
+   */
+
+  XLSXStyle.writeFile(
+    workbook,
+    filename,
+  );
+
   return true;
 };
 
