@@ -128,6 +128,9 @@ const DiscountCoupons = React.lazy(
 const ReferralCommerce = React.lazy(
   () => import("../../pages/ReferralCommerce/ReferralCommerce"),
 );
+const ReferralPartnerDetails = React.lazy(
+  () => import("../../pages/ReferralCommerce/ReferralPartnerDetails"),
+);
 
 const ShipmentTracking = React.lazy(
   () => import("../../pages/ShippingPickup/ShipmentTracking/ShipmentTracking"),
@@ -614,6 +617,10 @@ function Layout() {
       { path: "/product-reviews", render: () => <ProductReviews /> },
       { path: "/discount-coupons", render: () => <DiscountCoupons /> },
       { path: "/referral-commerce", render: () => <ReferralCommerce /> },
+      {
+        path: "/referral-commerce/influencers/view/:id",
+        render: () => <ReferralPartnerDetails />,
+      },
       {
         path: "/referral-commerce/:section",
         render: () => <ReferralCommerce />,

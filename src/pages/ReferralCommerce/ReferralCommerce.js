@@ -46,13 +46,9 @@ import {
   getReferralRules,
   getReferralSummary,
   markReferralPayoutPaid,
-  promoteReferralInfluencer,
   rejectReferralPayout,
-  reviewReferralInfluencerVerification,
   updateReferralCode,
   updateReferralBonusRule,
-  updateReferralInfluencerStatus,
-  updateReferralInfluencerChildPermission,
   updateReferralRules,
 } from "../../Redux/referralCommerceSlice";
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
@@ -1476,82 +1472,6 @@ const ReferralCommerce = () => {
     }
   };
 
-  const setInfluencerStatus = async (influencer, nextStatus) => {
-    try {
-      await dispatch(
-        updateReferralInfluencerStatus({
-          influencerId: getId(influencer),
-          status: nextStatus,
-        }),
-      ).unwrap();
-      toast.success("Referral Partner status updated");
-      await refreshAll();
-    } catch (error) {
-      toast.error(error || "Unable to update Referral Partner status");
-    }
-  };
-
-  const promoteInfluencer = async (influencer) => {
-    try {
-      await dispatch(
-        promoteReferralInfluencer({
-          influencerId: getId(influencer),
-          canCreateChildren: true,
-        }),
-      ).unwrap();
-      toast.success("Brand Associate promoted to Growth Partner");
-      await refreshAll();
-    } catch (error) {
-      toast.error(error || "Unable to promote Brand Associate");
-    }
-  };
-
-  const toggleChildPermission = async (influencer) => {
-    const granting = !influencer.canCreateChildren;
-    try {
-      await dispatch(updateReferralInfluencerChildPermission({
-        influencerId: getId(influencer),
-        canCreateChildren: granting,
-        reason: granting ? "Granted by Admin" : "Revoked by Admin",
-      })).unwrap();
-      toast.success(granting
-        ? "Child account permission granted"
-        : "Child account permission revoked; registration QR is disabled");
-      await refreshAll();
-    } catch (error) {
-      toast.error(error || "Unable to update child account permission");
-    }
-  };
-
-  const reviewInfluencerVerification = async (influencer, section, decision) => {
-    const reason = decision === "rejected"
-      ? window.prompt(`Reason for rejecting ${section === "kyc" ? "KYC documents" : "bank details"}:`)
-      : "";
-    if (decision === "rejected" && !reason?.trim()) return;
-    try {
-      await dispatch(reviewReferralInfluencerVerification({
-        influencerId: getId(influencer),
-        section,
-        decision,
-        reason: reason?.trim() || null,
-      })).unwrap();
-      toast.success(`${section === "kyc" ? "KYC" : "Bank"} ${decision}`);
-      await refreshAll();
-    } catch (error) {
-      toast.error(error || `Unable to review ${section}`);
-    }
-  };
-
-  const copyRegistrationLink = async (influencer) => {
-    const link = influencer.childRegistration?.registrationUrl;
-    if (!link || !influencer.childRegistration?.shareable) {
-      toast.error("Grant child account permission before sharing this registration QR/link");
-      return;
-    }
-    await navigator.clipboard.writeText(link);
-    toast.success("Associate registration link copied");
-  };
-
   const toggleCodeStatus = async (code) => {
     try {
       await dispatch(
@@ -1773,73 +1693,6 @@ const ReferralCommerce = () => {
     kyc: <StatusPill value={item.kycStatus || "not_submitted"} />,
     bank: <StatusPill value={item.payoutProfileStatus || "not_submitted"} />,
     status: <StatusPill value={item.status} />,
-    actions: (
-      <RowActions
-        actions={[
-          {
-            label: "Approve KYC",
-            icon: <Check size={14} />,
-            hidden: item.kycStatus !== "submitted" && item.kycStatus !== "rejected",
-            onClick: () => reviewInfluencerVerification(item, "kyc", "verified"),
-          },
-          {
-            label: "Reject KYC",
-            icon: <X size={14} />,
-            danger: true,
-            hidden: item.kycStatus !== "submitted" && item.kycStatus !== "verified",
-            onClick: () => reviewInfluencerVerification(item, "kyc", "rejected"),
-          },
-          {
-            label: "Verify Bank",
-            icon: <Check size={14} />,
-            hidden: item.payoutProfileStatus !== "submitted" && item.payoutProfileStatus !== "rejected",
-            onClick: () => reviewInfluencerVerification(item, "bank", "verified"),
-          },
-          {
-            label: "Reject Bank",
-            icon: <X size={14} />,
-            danger: true,
-            hidden: item.payoutProfileStatus !== "submitted" && item.payoutProfileStatus !== "verified",
-            onClick: () => reviewInfluencerVerification(item, "bank", "rejected"),
-          },
-          {
-            label:
-              item.status === "pending"
-                ? "Approve account"
-                : item.status === "active"
-                ? "Suspend partner"
-                : "Reactivate partner",
-            icon:
-              item.status === "active" ? <X size={14} /> : <Check size={14} />,
-            danger: item.status === "active",
-            onClick: () =>
-              setInfluencerStatus(
-                item,
-                item.status === "active" ? "suspended" : "active",
-              ),
-          },
-          {
-            label: item.canCreateChildren
-              ? "Revoke child creation"
-              : "Grant child creation",
-            icon: item.canCreateChildren ? <X size={14} /> : <UserPlus size={14} />,
-            onClick: () => toggleChildPermission(item),
-          },
-          {
-            label: "Copy registration link",
-            icon: <Share2 size={14} />,
-            hidden: !item.childRegistration?.shareable,
-            onClick: () => copyRegistrationLink(item),
-          },
-          {
-            label: "Promote to Growth Partner",
-            icon: <GitBranch size={14} />,
-            hidden: item.influencerType === "parent" && item.canCreateChildren,
-            onClick: () => promoteInfluencer(item),
-          },
-        ]}
-      />
-    ),
   }));
 
   const codeRows = codes.map((code) => ({
@@ -3000,16 +2853,20 @@ const ReferralCommerce = () => {
             { key: "code", label: "Referral Code" },
             { key: "hierarchy", label: "Hierarchy" },
             { key: "wallet", label: "Available Coins" },
-            { key: "documents", label: "Documents" },
-            { key: "bankDetails", label: "Bank Details" },
-            { key: "kyc", label: "KYC" },
-            { key: "bank", label: "Bank" },
             { key: "status", label: "Status" },
-            { key: "actions", label: "Actions" },
           ]}
           data={influencerRows}
           loading={loading}
           rowKey="key"
+          onRowClick={(row) =>
+            navigate(`/app/referral-commerce/influencers/view/${row.key}`, {
+              state: {
+                influencer: influencers.find(
+                  (item) => String(getId(item)) === String(row.key),
+                ),
+              },
+            })
+          }
           onSearch={setSearch}
           searchPlaceholder="Search referral partners..."
           filterBar={
