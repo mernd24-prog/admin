@@ -201,6 +201,9 @@ const MyOrganizations = React.lazy(
 
 // ── Inventory Management ────────────────────────────────────────────────────
 const Inventory = React.lazy(() => import("../../pages/Inventory/Inventory"));
+const StockNotifications = React.lazy(
+  () => import("../../pages/Inventory/StockNotifications"),
+);
 
 // ── Reports & Analytics ─────────────────────────────────────────────────────
 const SalesReport = React.lazy(() =>
@@ -701,6 +704,7 @@ function Layout() {
       { path: "/inventory-transactions", redirectTo: "/app/inventory" },
       { path: "/warehouse", redirectTo: "/app/inventory" },
       { path: "/low-stock-alerts", redirectTo: "/app/inventory" },
+      { path: "/stock-notifications", render: () => <StockNotifications /> },
       {
         path: "/seller-staff",
         permissionPath: "/seller-users",

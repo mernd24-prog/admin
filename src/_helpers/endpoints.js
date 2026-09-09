@@ -418,6 +418,11 @@ export const ENDPOINTS = {
     send: "/notifications",
     preferences: "/notifications/preferences",
   },
+  stockNotifications: {
+    list: "/stock-notifications",
+    notify: "/stock-notifications/notify",
+    notifyBulk: "/stock-notifications/notify/bulk",
+  },
   support: {
     mine: "/support/queries",
     myDetail: (queryId) => `/support/queries/${queryId}`,
