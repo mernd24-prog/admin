@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  Activity,
   ArrowLeft,
   BadgeCheck,
   BadgeIndianRupee,
@@ -19,7 +20,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import SharedDataTable from "../../components/Shared/DataTable";
-import { PageHeader } from "../../components/Shared";
+import {
+  FormSection,
+  PageHeader,
+  StatusBadge,
+  SummaryCard,
+} from "../../components/Shared";
 import {
   getReferralBonusAchievements,
   getReferralBonusProgress,
@@ -177,26 +183,6 @@ const partnerTypeLabel = (value) =>
       ? "Brand Associate"
       : humanize(value);
 
-const statusClass = (status) => {
-  const normalized = String(status || "").toLowerCase();
-  if (["active", "completed", "available", "paid", "approved", "resolved"].includes(normalized)) {
-    return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  }
-  if (["pending", "locked", "payout_requested", "reviewing"].includes(normalized)) {
-    return "bg-amber-50 text-amber-700 border-amber-200";
-  }
-  if (["suspended", "rejected", "reversed", "failed", "cancelled", "refunded", "dismissed"].includes(normalized)) {
-    return "bg-rose-50 text-rose-700 border-rose-200";
-  }
-  return "bg-slate-50 text-slate-700 border-slate-200";
-};
-
-const StatusPill = ({ value }) => (
-  <span className={`inline-flex max-w-full items-center rounded border px-2 py-1 text-xs font-medium ${statusClass(value)}`}>
-    {formatLabel(value, "-")}
-  </span>
-);
-
 const findInfluencer = (items = [], influencerId) =>
   items.find((item) => String(getId(item)) === String(influencerId)) || null;
 
@@ -207,6 +193,7 @@ const ReferralPartnerDetails = () => {
   const { id } = useParams();
   const referralState = useSelector((state) => state.referralCommerce || {});
   const navigatedInfluencer = location.state?.influencer;
+  const [activeActivityTab, setActiveActivityTab] = useState("codes");
 
   const influencers = useMemo(
     () => getBranchList(referralState.influencersData),
@@ -283,7 +270,7 @@ const ReferralPartnerDetails = () => {
       { label: "Profile ID", value: shortId(getId(influencer)) },
       { label: "User ID", value: shortId(influencer.userId) },
       { label: "Role type", value: partnerTypeLabel(influencer.influencerType) },
-      { label: "Status", value: <StatusPill value={influencer.status} /> },
+      { label: "Status", value: <StatusBadge status={influencer.status} size="sm" /> },
       { label: "Primary code", value: influencer.primaryCode?.code || "-" },
       { label: "Hierarchy level", value: `Level ${influencer.level || 1}` },
       { label: "Available coins", value: formatCoins(influencer.wallet?.availableBalance) },
@@ -368,7 +355,7 @@ const ReferralPartnerDetails = () => {
       codes.map((code) => ({
         key: getId(code),
         code: code.code,
-        status: <StatusPill value={code.status} />,
+        status: <StatusBadge status={code.status} size="sm" />,
         usage: `${code.usageCount || 0}${code.usageLimit ? ` / ${code.usageLimit}` : ""}`,
         created: formatDate(code.createdAt),
       })),
@@ -382,7 +369,7 @@ const ReferralPartnerDetails = () => {
         order: order.orderNumber || order.orderId || "-",
         code: order.code || "-",
         amount: formatAmount(order.eligibleAmount),
-        status: <StatusPill value={order.status} />,
+        status: <StatusBadge status={order.status} size="sm" />,
         created: formatDate(order.createdAt),
       })),
     [orders],
@@ -396,7 +383,7 @@ const ReferralPartnerDetails = () => {
         type: entry.commissionType || "-",
         amount: formatCoins(entry.amount),
         basis: formatAmount(entry.basisAmount),
-        status: <StatusPill value={entry.status} />,
+        status: <StatusBadge status={entry.status} size="sm" />,
       })),
     [commissions],
   );
@@ -411,7 +398,7 @@ const ReferralPartnerDetails = () => {
             Number((payout.coinAmount ?? payout.amount) || 0) * Number(payout.coinValue || 1),
         ),
         method: payout.payoutMethod || "-",
-        status: <StatusPill value={payout.status} />,
+        status: <StatusBadge status={payout.status} size="sm" />,
         requested: formatDate(payout.requestedAt || payout.createdAt),
       })),
     [payouts],
@@ -483,25 +470,21 @@ const ReferralPartnerDetails = () => {
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {activeSummaryCards.map((card) => (
-          <div key={card.label} className="admin-card relative overflow-hidden p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{card.label}</p>
-                <p className="mt-2 text-xl font-bold text-gray-900">{card.value}</p>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-md" style={{ background: card.accent, color: card.color }}>
-                {card.icon}
-              </div>
-            </div>
-          </div>
+          <SummaryCard
+            key={card.label}
+            title={card.label}
+            value={card.value}
+            icon={card.icon}
+            iconStyle={{ background: card.accent, color: card.color }}
+          />
         ))}
       </div>
 
-      <section className="admin-card p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <UserRound size={18} className="text-indigo-600" />
-          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--admin-navy)]">Partner profile</h2>
-        </div>
+      <FormSection
+        title="Partner profile"
+        subtitle="Basic identity and referral account information"
+        icon={<UserRound size={18} />}
+      >
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {infoRows.map((row) => (
             <div key={row.label} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -510,64 +493,63 @@ const ReferralPartnerDetails = () => {
             </div>
           ))}
         </div>
-      </section>
+      </FormSection>
 
-      <section className="admin-card p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <ShieldCheck size={18} className="text-indigo-600" />
-          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--admin-navy)]">
-            Partner actions
-          </h2>
+      <FormSection
+        title="Partner actions"
+        subtitle="Review access, verification, and partner status"
+        icon={<ShieldCheck size={18} />}
+      >
+        <div className="mb-3 flex justify-end">
+          <StatusBadge status={influencer?.status} size="sm" />
         </div>
         <div className="flex flex-wrap gap-2">
           {(influencer?.kycStatus === "submitted" || influencer?.kycStatus === "rejected") && (
-            <button type="button" className="admin-btn-secondary inline-flex items-center gap-2" onClick={() => reviewVerification("kyc", "verified")}>
+            <button type="button" className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100" onClick={() => reviewVerification("kyc", "verified")}>
               <Check size={14} /> Approve KYC
             </button>
           )}
           {(influencer?.kycStatus === "submitted" || influencer?.kycStatus === "verified") && (
-            <button type="button" className="admin-btn-secondary inline-flex items-center gap-2" onClick={() => reviewVerification("kyc", "rejected")}>
+            <button type="button" className="inline-flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100" onClick={() => reviewVerification("kyc", "rejected")}>
               <X size={14} /> Reject KYC
             </button>
           )}
           {(influencer?.payoutProfileStatus === "submitted" || influencer?.payoutProfileStatus === "rejected") && (
-            <button type="button" className="admin-btn-secondary inline-flex items-center gap-2" onClick={() => reviewVerification("bank", "verified")}>
+            <button type="button" className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100" onClick={() => reviewVerification("bank", "verified")}>
               <Check size={14} /> Verify Bank
             </button>
           )}
           {(influencer?.payoutProfileStatus === "submitted" || influencer?.payoutProfileStatus === "verified") && (
-            <button type="button" className="admin-btn-secondary inline-flex items-center gap-2" onClick={() => reviewVerification("bank", "rejected")}>
+            <button type="button" className="inline-flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100" onClick={() => reviewVerification("bank", "rejected")}>
               <X size={14} /> Reject Bank
             </button>
           )}
-          <button type="button" className="admin-btn-secondary inline-flex items-center gap-2" onClick={updatePartnerStatus}>
+          <button type="button" className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition ${influencer?.status === "active" ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`} onClick={updatePartnerStatus}>
             {influencer?.status === "active" ? <X size={14} /> : <Check size={14} />}
             {influencer?.status === "pending" ? "Approve account" : influencer?.status === "active" ? "Suspend partner" : "Reactivate partner"}
           </button>
-          <button type="button" className="admin-btn-secondary inline-flex items-center gap-2" onClick={togglePermission}>
+          <button type="button" className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition ${influencer?.canCreateChildren ? "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100" : "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"}`} onClick={togglePermission}>
             {influencer?.canCreateChildren ? <X size={14} /> : <UserPlus size={14} />}
             {influencer?.canCreateChildren ? "Revoke child creation" : "Grant child creation"}
           </button>
           {influencer?.childRegistration?.shareable && (
-            <button type="button" className="admin-btn-secondary inline-flex items-center gap-2" onClick={copyRegistrationLink}>
+            <button type="button" className="inline-flex items-center gap-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100" onClick={copyRegistrationLink}>
               <Link size={14} /> Copy registration link
             </button>
           )}
           {!(influencer?.influencerType === "parent" && influencer?.canCreateChildren) && (
-            <button type="button" className="admin-btn-secondary inline-flex items-center gap-2" onClick={promotePartner}>
+            <button type="button" className="inline-flex items-center gap-2 rounded border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100" onClick={promotePartner}>
               <GitBranch size={14} /> Promote to Growth Partner
             </button>
           )}
         </div>
-      </section>
+      </FormSection>
 
-      <section className="admin-card p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <BadgeCheck size={18} className="text-indigo-600" />
-          <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--admin-navy)]">
-            Documents, KYC &amp; bank details
-          </h2>
-        </div>
+      <FormSection
+        title="Documents, KYC & bank details"
+        subtitle="Verification records and payout information"
+        icon={<BadgeCheck size={18} />}
+      >
         <div className="grid gap-5 lg:grid-cols-3">
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
@@ -609,7 +591,7 @@ const ReferralPartnerDetails = () => {
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-500">Verification status</span>
-                <StatusPill value={verificationData.kycStatus || "not_submitted"} />
+                <StatusBadge status={verificationData.kycStatus || "not_submitted"} size="sm" />
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-500">PAN</span>
@@ -628,7 +610,7 @@ const ReferralPartnerDetails = () => {
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-500">Verification status</span>
-                <StatusPill value={verificationData.bankStatus || "not_submitted"} />
+                <StatusBadge status={verificationData.bankStatus || "not_submitted"} size="sm" />
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-500">Bank</span>
@@ -662,111 +644,161 @@ const ReferralPartnerDetails = () => {
             </div>
           </div>
         </div>
+      </FormSection>
+
+      <section className="admin-card overflow-hidden">
+        <div className="border-b border-[var(--admin-line)] px-5 pt-4">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)]">
+              <Activity size={18} />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--admin-ink)]">Partner activity</h2>
+              <p className="mt-0.5 text-xs text-[var(--admin-muted)]">Review this partner's referrals, earnings, payouts, and bonuses.</p>
+            </div>
+            <span className="ml-auto hidden rounded-full bg-[var(--admin-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--admin-muted)] sm:inline-flex">
+              {codes.length + orders.length + commissions.length + payouts.length} records
+            </span>
+          </div>
+          <div className="flex gap-1 overflow-x-auto">
+            {[
+              ["codes", "Referral codes", codeRows.length],
+              ["orders", "Orders", orderRows.length],
+              ["commissions", "Commissions", commissionRows.length],
+              ["payouts", "Payouts", payoutRows.length],
+              ["progress", "Bonus progress", bonusProgress.length],
+              ["achievements", "Bonus history", bonusAchievements.length],
+            ].map(([value, label, count]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setActiveActivityTab(value)}
+                className={`whitespace-nowrap border-b-2 px-3 py-2.5 text-xs font-semibold transition ${activeActivityTab === value ? "border-indigo-600 text-indigo-700" : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-800"}`}
+              >
+                {label} <span className="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px]">{count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {activeActivityTab === "codes" && (
+          <SharedDataTable
+            columns={[
+              { key: "code", label: "Referral Code" },
+              { key: "status", label: "Status" },
+              { key: "usage", label: "Usage" },
+              { key: "created", label: "Created" },
+            ]}
+            data={codeRows}
+            loading={Boolean(referralState.loading)}
+            rowKey="key"
+            emptyText="No referral codes found for this partner."
+            cardClassName="overflow-hidden"
+          />
+        )}
+
+        {activeActivityTab === "orders" && (
+          <SharedDataTable
+            columns={[
+              { key: "order", label: "Order" },
+              { key: "code", label: "Code" },
+              { key: "amount", label: "Amount" },
+              { key: "status", label: "Status" },
+              { key: "created", label: "Created" },
+            ]}
+            data={orderRows}
+            loading={Boolean(referralState.loading)}
+            rowKey="key"
+            emptyText="No partner orders yet."
+            cardClassName="overflow-hidden"
+          />
+        )}
+
+        {activeActivityTab === "commissions" && (
+          <SharedDataTable
+            columns={[
+              { key: "type", label: "Type" },
+              { key: "basis", label: "Basis" },
+              { key: "amount", label: "Coins" },
+              { key: "status", label: "Status" },
+            ]}
+            data={commissionRows}
+            loading={Boolean(referralState.loading)}
+            rowKey="key"
+            emptyText="No commission entries found."
+            cardClassName="overflow-hidden"
+          />
+        )}
+
+        {activeActivityTab === "payouts" && (
+          <SharedDataTable
+            columns={[
+              { key: "coins", label: "Coins" },
+              { key: "payable", label: "Payable" },
+              { key: "method", label: "Method" },
+              { key: "status", label: "Status" },
+              { key: "requested", label: "Requested" },
+            ]}
+            data={payoutRows}
+            loading={Boolean(referralState.loading)}
+            rowKey="key"
+            emptyText="No payout requests for this partner."
+            cardClassName="overflow-hidden"
+          />
+        )}
+
+        {activeActivityTab === "progress" && (
+          <SharedDataTable
+            columns={[
+              { key: "rule", label: "Rule" },
+              { key: "cycle", label: "Cycle" },
+              { key: "target", label: "Target" },
+              { key: "progress", label: "Progress" },
+              { key: "status", label: "Status" },
+            ]}
+            data={bonusProgress.map((row) => ({
+              key: `${getId(row.rule)}-${row.influencer?.id}-${row.cycleKey}`,
+              rule: row.rule?.ruleName || "-",
+              cycle: row.cycleKey || "-",
+              target: Number(row.targetValue || 0).toLocaleString("en-IN"),
+              progress: `${Number(row.progressPercent || 0).toFixed(2)}%`,
+              status: row.existingAchievement ? (
+                <StatusBadge status={row.existingAchievement.status} size="sm" />
+              ) : (
+                <StatusBadge status={row.achieved ? "achieved" : "in_progress"} size="sm" />
+              ),
+            }))}
+            loading={Boolean(referralState.loading)}
+            rowKey="key"
+            emptyText="No bonus progress recorded."
+            cardClassName="overflow-hidden"
+          />
+        )}
+
+        {activeActivityTab === "achievements" && (
+          <SharedDataTable
+            columns={[
+              { key: "rule", label: "Rule" },
+              { key: "cycle", label: "Cycle" },
+              { key: "bonus", label: "Bonus Coins" },
+              { key: "status", label: "Status" },
+              { key: "achievedAt", label: "Achieved At" },
+            ]}
+            data={bonusAchievements.map((achievement) => ({
+              key: getId(achievement),
+              rule: achievement.ruleName || "-",
+              cycle: achievement.cycleKey || "-",
+              bonus: `${Number(achievement.bonusCoins || 0).toLocaleString("en-IN")} coins`,
+              status: <StatusBadge status={achievement.status} size="sm" />,
+              achievedAt: formatDate(achievement.achievedAt || achievement.createdAt),
+            }))}
+            loading={Boolean(referralState.loading)}
+            rowKey="key"
+            emptyText="No bonus achievements for this partner."
+            cardClassName="overflow-hidden"
+          />
+        )}
       </section>
-
-      <SharedDataTable
-        columns={[
-          { key: "code", label: "Referral Code" },
-          { key: "status", label: "Status" },
-          { key: "usage", label: "Usage" },
-          { key: "created", label: "Created" },
-        ]}
-        data={codeRows}
-        loading={Boolean(referralState.loading)}
-        rowKey="key"
-        emptyText="No referral codes found for this partner."
-      />
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <SharedDataTable
-          columns={[
-            { key: "order", label: "Order" },
-            { key: "code", label: "Code" },
-            { key: "amount", label: "Amount" },
-            { key: "status", label: "Status" },
-            { key: "created", label: "Created" },
-          ]}
-          data={orderRows}
-          loading={Boolean(referralState.loading)}
-          rowKey="key"
-          emptyText="No partner orders yet."
-        />
-
-        <SharedDataTable
-          columns={[
-            { key: "type", label: "Type" },
-            { key: "basis", label: "Basis" },
-            { key: "amount", label: "Coins" },
-            { key: "status", label: "Status" },
-          ]}
-          data={commissionRows}
-          loading={Boolean(referralState.loading)}
-          rowKey="key"
-          emptyText="No commission entries found."
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <SharedDataTable
-          columns={[
-            { key: "coins", label: "Coins" },
-            { key: "payable", label: "Payable" },
-            { key: "method", label: "Method" },
-            { key: "status", label: "Status" },
-            { key: "requested", label: "Requested" },
-          ]}
-          data={payoutRows}
-          loading={Boolean(referralState.loading)}
-          rowKey="key"
-          emptyText="No payout requests for this partner."
-        />
-
-        <SharedDataTable
-          columns={[
-            { key: "rule", label: "Rule" },
-            { key: "cycle", label: "Cycle" },
-            { key: "target", label: "Target" },
-            { key: "progress", label: "Progress" },
-            { key: "status", label: "Status" },
-          ]}
-          data={bonusProgress.map((row) => ({
-            key: `${getId(row.rule)}-${row.influencer?.id}-${row.cycleKey}`,
-            rule: row.rule?.ruleName || "-",
-            cycle: row.cycleKey || "-",
-            target: Number(row.targetValue || 0).toLocaleString("en-IN"),
-            progress: `${Number(row.progressPercent || 0).toFixed(2)}%`,
-            status: row.existingAchievement ? (
-              <StatusPill value={row.existingAchievement.status} />
-            ) : (
-              <StatusPill value={row.achieved ? "achieved" : "in_progress"} />
-            ),
-          }))}
-          loading={Boolean(referralState.loading)}
-          rowKey="key"
-          emptyText="No bonus progress recorded."
-        />
-      </div>
-
-      <SharedDataTable
-        columns={[
-          { key: "rule", label: "Rule" },
-          { key: "cycle", label: "Cycle" },
-          { key: "bonus", label: "Bonus Coins" },
-          { key: "status", label: "Status" },
-          { key: "achievedAt", label: "Achieved At" },
-        ]}
-        data={bonusAchievements.map((achievement) => ({
-          key: getId(achievement),
-          rule: achievement.ruleName || "-",
-          cycle: achievement.cycleKey || "-",
-          bonus: `${Number(achievement.bonusCoins || 0).toLocaleString("en-IN")} coins`,
-          status: <StatusPill value={achievement.status} />,
-          achievedAt: formatDate(achievement.achievedAt || achievement.createdAt),
-        }))}
-        loading={Boolean(referralState.loading)}
-        rowKey="key"
-        emptyText="No bonus achievements for this partner."
-      />
     </div>
   );
 };

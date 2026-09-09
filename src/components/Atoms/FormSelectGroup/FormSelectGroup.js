@@ -21,11 +21,11 @@ const FormSelectGroup = ({
   id,
 }) => {
   return (
-    <div className={`space-y-1.5 ${className}`}>
+    <div className={`admin-field ${className}`}>
       {label && (
         <label
           htmlFor={id}
-          className="block text-sm font-medium text-[#1E293B]"
+          className="admin-label"
         >
           {label}
           {required && <span className="ml-1 text-red-500">*</span>}
@@ -33,7 +33,7 @@ const FormSelectGroup = ({
       )}
 
       {description && (
-        <p className="text-xs text-gray-500">
+        <p className="mb-1.5 text-xs text-gray-500">
           {description}
         </p>
       )}

@@ -11,6 +11,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   BadgeIndianRupee,
   Check,
+  Eye,
   ExternalLink,
   GitBranch,
   Pencil,
@@ -64,6 +65,12 @@ import {
   SummaryCard,
 } from "../../components/Shared";
 import SharedDataTable from "../../components/Shared/DataTable";
+import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
+import FormSection from "../../components/Atoms/FormSection/FormSection";
+import FormInput from "../../components/Atoms/FormInput/FormInput";
+import FormToggleRow from "../../components/Atoms/FormToggleRow/FormToggleRow";
+import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
+import ToggleButton from "../../components/Atoms/ToggleButton/ToggleButton";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -612,9 +619,10 @@ const Modal = ({ title, open, onClose, children, footer }) => {
     </div>
   );
 };
-
 const ProductReferralAmounts = () => {
   const empty = {
+    storeId: "",
+    storeKey: "",
     productId: "",
     productTitle: "",
     amountType: "fixed_amount",
@@ -622,27 +630,84 @@ const ProductReferralAmounts = () => {
     maximumAmount: "",
     active: true,
   };
+
   const [form, setForm] = useState(empty);
   const [products, setProducts] = useState([]);
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const isEditMode = Boolean(form.productId);
+
   const unwrapList = (response) => {
     const value = response?.data?.data || response?.data || [];
+
     return Array.isArray(value)
       ? value
       : value.items || value.list || value.products || [];
   };
+
+  const getProductStoreId = (product) => {
+    return (
+      product?.storeId ||
+      product?.store?._id ||
+      product?.store?.id ||
+      product?.organizationSnapshot?.storeId ||
+      product?.organizationSnapshot?.storeID ||
+      ""
+    );
+  };
+
+  const getProductStoreName = (product) => {
+    return (
+      product?.organizationSnapshot?.storeDisplayName ||
+      product?.storeDisplayName ||
+      product?.store?.storeDisplayName ||
+      product?.store?.name ||
+      product?.organizationSnapshot?.legalBusinessName ||
+      "Unnamed Store"
+    );
+  };
+
+  const getProductStoreKey = (product) => {
+    const storeId = getProductStoreId(product);
+
+    if (storeId) {
+      return String(storeId);
+    }
+
+    return String(getProductStoreName(product));
+  };
+
+  const getProductTitle = (product) => {
+    return (
+      product?.name ||
+      product?.title ||
+      product?.productName ||
+      getId(product)
+    );
+  };
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
+
       const [configResponse, productResponse] = await Promise.all([
         axiosPrivate.get(ENDPOINTS.referral.productAmounts, {
-          params: { page: 1, limit: 100 },
+          params: {
+            page: 1,
+            limit: 100,
+          },
         }),
+
         axiosPrivate.get(ENDPOINTS.products.list, {
-          params: { page: 1, limit: 200, status: "active" },
+          params: {
+            page: 1,
+            limit: 200,
+            status: "active",
+          },
         }),
       ]);
+
       setConfigs(unwrapList(configResponse));
       setProducts(unwrapList(productResponse));
     } catch (error) {
@@ -654,30 +719,162 @@ const ProductReferralAmounts = () => {
       setLoading(false);
     }
   }, []);
+
   useEffect(() => {
     load();
   }, [load]);
-  const selectedProduct = products.find(
-    (product) => String(getId(product)) === String(form.productId),
-  );
+
+  const storeOptions = useMemo(() => {
+    const storeMap = new Map();
+
+    products.forEach((product) => {
+      const storeKey = getProductStoreKey(product);
+      const storeName = getProductStoreName(product);
+
+      if (!storeKey) return;
+
+      if (!storeMap.has(storeKey)) {
+        storeMap.set(storeKey, {
+          label: storeName,
+          value: storeKey,
+        });
+      }
+    });
+
+    return Array.from(storeMap.values());
+  }, [products]);
+
+  const storeProducts = useMemo(() => {
+    if (!form.storeKey) {
+      return [];
+    }
+
+    return products.filter(
+      (product) =>
+        getProductStoreKey(product) === String(form.storeKey),
+    );
+  }, [products, form.storeKey]);
+
+  const productOptions = useMemo(() => {
+    return storeProducts.map((product) => ({
+      label: getProductTitle(product),
+      value: getId(product),
+    }));
+  }, [storeProducts]);
+
+  const amountTypeOptions = [
+    {
+      label: "Fixed amount per unit",
+      value: "fixed_amount",
+    },
+    {
+      label: "Percentage of product line",
+      value: "percentage",
+    },
+  ];
+
+  const selectedProduct = useMemo(() => {
+    if (!form.productId) {
+      return null;
+    }
+
+    return (
+      products.find(
+        (product) =>
+          String(getId(product)) === String(form.productId),
+      ) || null
+    );
+  }, [products, form.productId]);
+
+  const selectedStore = useMemo(() => {
+    return (
+      storeOptions.find(
+        (option) =>
+          String(option.value) === String(form.storeKey),
+      ) || null
+    );
+  }, [storeOptions, form.storeKey]);
+
   const save = async (event) => {
     event.preventDefault();
-    if (!form.productId || form.amountValue === "")
-      return toast.error("Select a product and enter its referral amount");
+
+    if (!form.storeKey) {
+      toast.error("Please select a store");
+      return;
+    }
+
+    if (!form.productId) {
+      toast.error("Please select a product");
+      return;
+    }
+
+    if (form.amountValue === "") {
+      toast.error("Please enter the referral amount");
+      return;
+    }
+
+    const amountValue = Number(form.amountValue);
+
+    if (Number.isNaN(amountValue) || amountValue < 0) {
+      toast.error("Referral amount must be a valid positive number");
+      return;
+    }
+
+    if (
+      form.amountType === "percentage" &&
+      amountValue > 100
+    ) {
+      toast.error("Percentage must be between 0 and 100");
+      return;
+    }
+
+    const maximumAmount =
+      form.maximumAmount === ""
+        ? 0
+        : Number(form.maximumAmount);
+
+    if (
+      Number.isNaN(maximumAmount) ||
+      maximumAmount < 0
+    ) {
+      toast.error("Maximum pool amount must be a valid number");
+      return;
+    }
+
     try {
       setLoading(true);
-      await axiosPrivate.put(ENDPOINTS.referral.productAmounts, {
-        ...form,
+
+      const actualStoreId = getProductStoreId(selectedProduct);
+
+      const payload = {
+        productId: form.productId,
         productTitle:
-          selectedProduct?.name ||
-          selectedProduct?.title ||
+          getProductTitle(selectedProduct) ||
           form.productTitle ||
           "",
-        amountValue: Number(form.amountValue),
-        maximumAmount: Number(form.maximumAmount || 0),
-      });
-      toast.success("Product referral amount saved");
+        amountType: form.amountType,
+        amountValue,
+        maximumAmount,
+        active: form.active,
+      };
+
+      if (actualStoreId) {
+        payload.storeId = actualStoreId;
+      }
+
+      await axiosPrivate.put(
+        ENDPOINTS.referral.productAmounts,
+        payload,
+      );
+
+      toast.success(
+        isEditMode
+          ? "Product referral amount updated"
+          : "Product referral amount saved",
+      );
+
       setForm(empty);
+
       await load();
     } catch (error) {
       toast.error(
@@ -688,139 +885,536 @@ const ProductReferralAmounts = () => {
       setLoading(false);
     }
   };
+
   const remove = async (config) => {
     try {
+      setLoading(true);
+
       await axiosPrivate.delete(
         ENDPOINTS.referral.productAmount(getId(config)),
       );
-      toast.success("Product override removed; global amount will apply");
+
+      toast.success(
+        "Product override removed; global amount will apply",
+      );
+
       await load();
     } catch (error) {
       toast.error(
-        error?.response?.data?.message || "Unable to remove override",
+        error?.response?.data?.message ||
+          "Unable to remove product referral amount",
       );
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleEdit = (row) => {
+    const product = products.find(
+      (item) =>
+        String(getId(item)) === String(row.productId),
+    );
+
+    if (!product) {
+      toast.error("Product details could not be found");
+      return;
+    }
+
+    const storeKey =
+      row.storeId || getProductStoreKey(product);
+
+    const actualStoreId =
+      row.storeId || getProductStoreId(product);
+
+    setForm({
+      storeId: actualStoreId
+        ? String(actualStoreId)
+        : "",
+
+      storeKey: storeKey
+        ? String(storeKey)
+        : "",
+
+      productId: row.productId
+        ? String(row.productId)
+        : "",
+
+      productTitle:
+        row.productTitle ||
+        getProductTitle(product) ||
+        "",
+
+      amountType:
+        row.amountType || "fixed_amount",
+
+      amountValue:
+        row.amountValue ?? "",
+
+      maximumAmount:
+        row.maximumAmount ?? "",
+
+      active: row.active !== false,
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setForm(empty);
+  };
+
   return (
     <section className="admin-card overflow-hidden">
-      <div className="border-b border-[var(--admin-line)] p-5">
-        <h2 className="text-base font-bold text-[var(--admin-navy)]">
-          Product Referral Pool Overrides
-        </h2>
-        <p className="mt-1 text-xs text-[var(--admin-muted)]">
-          Set how much pool a product contributes. Distribution percentages
-          always come from Global Rules. Variants cannot override this value.
-        </p>
+      {/* Header */}
+      <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--admin-surface-soft)]">
+              <span className="text-sm font-bold text-[var(--admin-navy)]">
+                %
+              </span>
+            </div>
+
+            <h2 className="text-base font-bold text-[var(--admin-navy)]">
+              Product Referral Pool Overrides
+            </h2>
+          </div>
+
+          <p className="max-w-3xl text-xs leading-5 text-[var(--admin-muted)]">
+            Configure the referral pool contribution for
+            individual products. Select a store first to view
+            only the products belonging to that store.
+          </p>
+        </div>
       </div>
+
+      {/* Configuration Form */}
       <form
         onSubmit={save}
-        className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4"
+        className="bg-[var(--admin-surface-soft)] p-5"
       >
-        <label className="text-xs font-semibold text-gray-600">
-          Product
-          <select
-            className="admin-input mt-2"
-            value={form.productId}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                productId: event.target.value,
-              }))
-            }
-          >
-            <option value="">Select product</option>
-            {products.map((product) => (
-              <option key={getId(product)} value={getId(product)}>
-                {product.name || product.title || getId(product)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs font-semibold text-gray-600">
-          Amount type
-          <select
-            className="admin-input mt-2"
-            value={form.amountType}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                amountType: event.target.value,
-              }))
-            }
-          >
-            <option value="fixed_amount">Fixed amount per unit</option>
-            <option value="percentage">Percentage of product line</option>
-          </select>
-        </label>
-        <TextInput
-          label={
-            form.amountType === "percentage"
-              ? "Pool Percentage"
-              : "Pool Amount Per Unit (₹)"
-          }
-          name="amountValue"
-          type="number"
-          min="0"
-          step="0.01"
-          value={form.amountValue}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              amountValue: event.target.value,
-            }))
-          }
-        />
-        <TextInput
-          label="Maximum Pool Per Line (₹)"
-          name="maximumAmount"
-          type="number"
-          min="0"
-          step="0.01"
-          value={form.maximumAmount}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              maximumAmount: event.target.value,
-            }))
-          }
-          hint="0 means no extra cap."
-        />
-        <div className="flex items-center justify-between gap-3 md:col-span-2 xl:col-span-4">
-          <label className="admin-switch">
-            <input
-              type="checkbox"
-              className="sr-only"
-              checked={form.active}
-              onChange={(event) =>
+        <div className="rounded-xl border border-[var(--admin-line)] bg-white p-5">
+          {/* Configuration Header */}
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
+                  {isEditMode
+                    ? "Edit Product Override"
+                    : "Referral Override"}
+                </h3>
+
+                {isEditMode && (
+                  <span className="rounded-full bg-[var(--admin-surface-soft)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--admin-navy)]">
+                    Edit Mode
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                {isEditMode
+                  ? "Update the referral pool configuration for this product."
+                  : "Select a store first, then choose a product and define the pool contribution rules."}
+              </p>
+            </div>
+
+            {/* Active Toggle */}
+           {/* Active Toggle */}
+<div className="flex shrink-0 items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2">
+  <div className="text-right">
+    <p className="text-[11px] font-semibold text-[var(--admin-navy)]">
+      Override Status
+    </p>
+
+    <p
+      className={`text-[10px] font-medium ${
+        form.active
+          ? "text-green-600"
+          : "text-[var(--admin-muted)]"
+      }`}
+    >
+      {form.active
+        ? "Currently active"
+        : "Global rule applied"}
+    </p>
+  </div>
+
+  <ToggleButton
+    isToggle={form.active}
+    handleClick={() => {
+      setForm((current) => ({
+        ...current,
+        active: !current.active,
+      }));
+    }}
+    disabled={loading}
+  />
+
+ <span
+  className={`min-w-[48px] -translate-y-0.5 text-xs font-semibold ${
+    form.active
+      ? "text-[var(--admin-navy)]"
+      : "text-gray-500"
+  }`}
+>
+  {form.active ? "Active" : "Inactive"}
+</span>
+</div>
+          </div>
+
+          {/* Form Fields */}
+          <div className="grid items-end gap-5 md:grid-cols-2 xl:grid-cols-5">
+            {/* Store */}
+            <FormSelectGroup
+              label="Store"
+              options={storeOptions}
+              value={
+                storeOptions.find(
+                  (option) =>
+                    String(option.value) ===
+                    String(form.storeKey),
+                ) || null
+              }
+              onChange={(selectedOption) => {
+                const storeKey =
+                  selectedOption?.value || "";
+
                 setForm((current) => ({
                   ...current,
-                  active: event.target.checked,
-                }))
-              }
+                  storeKey,
+                  storeId: "",
+                  productId: "",
+                  productTitle: "",
+                }));
+              }}
+              placeholder="Select store"
+              isSearchable
+              isClearable
+              className="w-full"
             />
-            <span className="admin-switch-track" />
-            <span>Active override</span>
-          </label>
-          <OrangeButton type="submit" disabled={loading}>
-            <Check size={16} /> Save Product Amount
-          </OrangeButton>
+
+            {/* Product */}
+            <FormSelectGroup
+              label="Product"
+              options={productOptions}
+              value={
+                productOptions.find(
+                  (option) =>
+                    String(option.value) ===
+                    String(form.productId),
+                ) || null
+              }
+              onChange={(selectedOption) => {
+                const productId =
+                  selectedOption?.value || "";
+
+                const product = storeProducts.find(
+                  (item) =>
+                    String(getId(item)) ===
+                    String(productId),
+                );
+
+                setForm((current) => ({
+                  ...current,
+                  productId,
+                  productTitle:
+                    getProductTitle(product),
+                  storeId:
+                    getProductStoreId(product),
+                }));
+              }}
+              placeholder={
+                form.storeKey
+                  ? "Select product"
+                  : "Select store first"
+              }
+              isDisabled={!form.storeKey}
+              isSearchable
+              isClearable
+              className="w-full"
+            />
+
+            {/* Amount Type */}
+            <FormSelectGroup
+              label="Amount Type"
+              options={amountTypeOptions}
+              value={
+                amountTypeOptions.find(
+                  (option) =>
+                    option.value ===
+                    form.amountType,
+                ) || null
+              }
+              onChange={(selectedOption) => {
+                setForm((current) => ({
+                  ...current,
+                  amountType:
+                    selectedOption?.value ||
+                    "fixed_amount",
+                }));
+              }}
+              placeholder="Select amount type"
+              isSearchable={false}
+              className="w-full"
+            />
+
+            {/* Pool Amount */}
+            <FormInput
+              label={
+                form.amountType === "percentage"
+                  ? "Pool Percentage"
+                  : "Pool Amount Per Unit (₹)"
+              }
+              name="amountValue"
+              type="number"
+              min="0"
+              max={
+                form.amountType === "percentage"
+                  ? "100"
+                  : undefined
+              }
+              step="0.01"
+              value={form.amountValue}
+              onChange={(event) => {
+                setForm((current) => ({
+                  ...current,
+                  amountValue: event.target.value,
+                }));
+              }}
+              className="w-full"
+            />
+
+            {/* Maximum Amount */}
+            <FormInput
+              label="Maximum Pool Per Line (₹)"
+              name="maximumAmount"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.maximumAmount}
+              onChange={(event) => {
+                setForm((current) => ({
+                  ...current,
+                  maximumAmount: event.target.value,
+                }));
+              }}
+              hint="0 means no additional limit."
+              className="w-full"
+            />
+          </div>
+
+          {/* Selected Product Information */}
+          {selectedProduct && (
+            <div className="mt-5 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <div>
+                  <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                    Store
+                  </p>
+
+                  <p className="text-xs font-semibold text-[var(--admin-navy)]">
+                    {selectedStore?.label ||
+                      getProductStoreName(selectedProduct)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                    Product
+                  </p>
+
+                  <p className="max-w-xl text-xs font-semibold text-[var(--admin-navy)]">
+                    {getProductTitle(selectedProduct)}
+                  </p>
+                </div>
+
+                {selectedProduct?.sku && (
+                  <div>
+                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                      SKU
+                    </p>
+
+                    <p className="text-xs font-semibold text-[var(--admin-navy)]">
+                      {selectedProduct.sku}
+                    </p>
+                  </div>
+                )}
+
+                {selectedProduct?.price !== undefined && (
+                  <div>
+                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                      Price
+                    </p>
+
+                    <p className="text-xs font-semibold text-[var(--admin-navy)]">
+                      ₹
+                      {Number(
+                        selectedProduct.price,
+                      ).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Referral Pool Preview */}
+          {form.amountValue !== "" && (
+            <div className="mt-4 rounded-lg border border-[var(--admin-line)] bg-white px-4 py-3">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-[var(--admin-navy)]">
+                    Referral Pool Preview
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+                    Estimated contribution based on the selected
+                    configuration.
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-sm font-bold text-[var(--admin-navy)]">
+                    {form.amountType === "percentage"
+                      ? `${Number(form.amountValue || 0)}%`
+                      : `₹${Number(
+                          form.amountValue || 0,
+                        ).toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}`}
+                  </p>
+
+                  <p className="text-[11px] text-[var(--admin-muted)]">
+                    {form.amountType === "percentage"
+                      ? "of product line"
+                      : "per unit"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="mt-6 flex justify-end gap-3 border-t border-[var(--admin-line)] pt-5">
+            {isEditMode && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                disabled={loading}
+                className="rounded-md border border-[var(--admin-line)] bg-white px-4 py-2 text-sm font-medium text-[var(--admin-navy)] transition hover:bg-[var(--admin-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
+
+            <OrangeButton
+              type="submit"
+              disabled={loading}
+              className="min-w-[180px]"
+            >
+              <Check size={16} />
+
+              {isEditMode
+                ? "Update Product Amount"
+                : "Save Product Amount"}
+            </OrangeButton>
+          </div>
         </div>
       </form>
+
+      {/* Existing Overrides */}
       <div className="border-t border-[var(--admin-line)]">
+        <div className="flex flex-col gap-1 border-b border-[var(--admin-line)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
+              Existing Overrides
+            </h3>
+
+            <p className="mt-1 text-xs text-[var(--admin-muted)]">
+              Manage product-specific referral pool configurations.
+            </p>
+          </div>
+
+          <div className="rounded-full bg-[var(--admin-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--admin-navy)]">
+            {configs.length}{" "}
+            {configs.length === 1 ? "Override" : "Overrides"}
+          </div>
+        </div>
+
         <SharedDataTable
           columns={[
-            { key: "productTitle", label: "Product" },
+            {
+              key: "storeId",
+              label: "Store",
+              render: (value, row) => {
+                const product = products.find(
+                  (item) =>
+                    String(getId(item)) ===
+                    String(row.productId),
+                );
+
+                return (
+                  row.storeName ||
+                  product?.organizationSnapshot
+                    ?.storeDisplayName ||
+                  product?.storeDisplayName ||
+                  product?.organizationSnapshot
+                    ?.legalBusinessName ||
+                  "—"
+                );
+              },
+            },
+            {
+              key: "productTitle",
+              label: "Product",
+            },
             {
               key: "amountType",
               label: "Type",
               render: (value) => formatLabel(value),
             },
-            { key: "amountValue", label: "Pool Value" },
-            { key: "maximumAmount", label: "Maximum" },
+            {
+              key: "amountValue",
+              label: "Pool Value",
+              render: (value, row) => {
+                if (row.amountType === "percentage") {
+                  return `${value}%`;
+                }
+
+                return `₹${Number(
+                  value || 0,
+                ).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                })} / unit`;
+              },
+            },
+            {
+              key: "maximumAmount",
+              label: "Maximum",
+              render: (value) => {
+                if (Number(value || 0) === 0) {
+                  return "No Limit";
+                }
+
+                return `₹${Number(
+                  value || 0,
+                ).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                })}`;
+              },
+            },
             {
               key: "active",
               label: "Status",
-              render: (value) => (value ? "Active" : "Inactive"),
+              render: (value) => (
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    value
+                      ? "bg-green-50 text-green-700"
+                      : "bg-gray-100 text-gray-500"
+                  }`}
+                >
+                  {value ? "Active" : "Inactive"}
+                </span>
+              ),
             },
           ]}
           data={configs}
@@ -829,15 +1423,7 @@ const ProductReferralAmounts = () => {
             {
               label: "Edit",
               icon: <Pencil size={15} />,
-              onClick: () =>
-                setForm({
-                  productId: row.productId,
-                  productTitle: row.productTitle || "",
-                  amountType: row.amountType,
-                  amountValue: row.amountValue,
-                  maximumAmount: row.maximumAmount || "",
-                  active: row.active !== false,
-                }),
+              onClick: () => handleEdit(row),
             },
             {
               label: "Remove override",
@@ -846,7 +1432,18 @@ const ProductReferralAmounts = () => {
               onClick: () => remove(row),
             },
           ]}
-          emptyText="No product overrides. The global referral pool amount applies to every product."
+          emptyText={
+            <div className="py-6 text-center">
+              <p className="text-sm font-semibold text-[var(--admin-navy)]">
+                No Product Overrides
+              </p>
+
+              <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                All products are currently using the global
+                referral pool rule.
+              </p>
+            </div>
+          }
         />
       </div>
     </section>
@@ -1693,6 +2290,21 @@ const ReferralCommerce = () => {
     kyc: <StatusPill value={item.kycStatus || "not_submitted"} />,
     bank: <StatusPill value={item.payoutProfileStatus || "not_submitted"} />,
     status: <StatusPill value={item.status} />,
+    actions: (
+      <button
+        type="button"
+        className="inline-flex items-center gap-1.5 rounded bg-[var(--admin-blue-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--admin-blue)] transition hover:bg-[var(--admin-blue)] hover:text-white"
+        onClick={() =>
+          navigate(`/app/referral-commerce/influencers/view/${getId(item)}`, {
+            state: { influencer: item },
+          })
+        }
+        aria-label={`View details for ${fullName(item.user)}`}
+      >
+        <Eye size={14} />
+        View
+      </button>
+    ),
   }));
 
   const codeRows = codes.map((code) => ({
@@ -2854,6 +3466,7 @@ const ReferralCommerce = () => {
             { key: "hierarchy", label: "Hierarchy" },
             { key: "wallet", label: "Available Coins" },
             { key: "status", label: "Status" },
+            { key: "actions", label: "Actions" },
           ]}
           data={influencerRows}
           loading={loading}
@@ -3082,209 +3695,311 @@ const ReferralCommerce = () => {
         />
       )}
 
-      <Modal
-        title="Create Parent Influencer"
-        open={parentModalOpen}
-        onClose={() => setParentModalOpen(false)}
-        footer={
-          <OrangeButton type="submit" form="parentInfluencerForm">
-            <Check size={16} />
-            Create Parent Influencer
-          </OrangeButton>
-        }
-      >
-        <form
-          id="parentInfluencerForm"
-          onSubmit={submitParent}
-          className="grid grid-cols-1 gap-4 md:grid-cols-2"
-        >
-          <TextInput
-            label="First Name"
-            name="firstName"
-            value={influencerForm.firstName}
-            onChange={handleInfluencerField}
-          />
-          <TextInput
-            label="Last Name"
-            name="lastName"
-            value={influencerForm.lastName}
-            onChange={handleInfluencerField}
-          />
-          <TextInput
-            label="Email"
-            name="email"
-            type="email"
-            required
-            value={influencerForm.email}
-            onChange={handleInfluencerField}
-          />
-          <TextInput
-            label="Phone"
-            name="phone"
-            value={influencerForm.phone}
-            onChange={handleInfluencerField}
-          />
-          <TextInput
-            label="Temporary Password"
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            hint="At least 8 characters. The influencer uses this for the first login."
-            value={influencerForm.password}
-            onChange={handleInfluencerField}
-          />
-          <TextInput
-            label="Referral Code"
-            name="code"
-            value={influencerForm.code}
-            onChange={handleInfluencerField}
-          />
-          <label className="flex items-center gap-2 pt-6 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              name="canCreateChildren"
-              checked={Boolean(influencerForm.canCreateChildren)}
-              onChange={handleInfluencerField}
-              className="h-4 w-4"
-            />
-            Can create Brand Associates
-          </label>
-        </form>
-      </Modal>
+   <DefaultModal
+  isOpen={parentModalOpen}
+  onClose={() => setParentModalOpen(false)}
+  onSubmit={submitParent}
+  title="Create Parent Influencer"
+  submitButtonText="Create Parent Influencer"
+  closeButtonText="Reset"
+  isButtonView={true}
+  width="600px"
+  loading={loading}
+>
+  <div className="space-y-5">
+    {/* ==================== Basic Information ==================== */}
+    <FormSection
+      title="Basic Information"
+      description="Enter the basic details of the parent influencer."
+    >
+      <div className="space-y-4">
 
-      <Modal
-        title="Create Brand Associate"
-        open={childModalOpen}
-        onClose={() => setChildModalOpen(false)}
-        footer={
-          <OrangeButton type="submit" form="childInfluencerForm">
-            <Check size={16} />
-            Create Brand Associate
-          </OrangeButton>
-        }
-      >
-        <form
-          id="childInfluencerForm"
-          onSubmit={submitChild}
-          className="grid grid-cols-1 gap-4 md:grid-cols-2"
-        >
-          <SelectInput
-            label="Growth Partner"
-            name="parentId"
-            value={parentId}
-            onChange={(event) => setParentId(event.target.value)}
-          >
-            <option value="">Select Growth Partner</option>
-            {parentOptions.map((parent) => (
-              <option key={getId(parent)} value={getId(parent)}>
-                {fullName(parent.user)} -{" "}
-                {parent.primaryCode?.code || getId(parent)}
-              </option>
-            ))}
-          </SelectInput>
-          <TextInput
-            label="First Name"
-            name="firstName"
-            value={influencerForm.firstName}
-            onChange={handleInfluencerField}
-          />
-          <TextInput
-            label="Last Name"
-            name="lastName"
-            value={influencerForm.lastName}
-            onChange={handleInfluencerField}
-          />
-          <TextInput
-            label="Email"
-            name="email"
-            type="email"
-            value={influencerForm.email}
-            onChange={handleInfluencerField}
-          />
-          <TextInput
-            label="Phone"
-            name="phone"
-            value={influencerForm.phone}
-            onChange={handleInfluencerField}
-          />
-          <TextInput
-            label="Password"
-            name="password"
-            type="password"
-            value={influencerForm.password}
-            onChange={handleInfluencerField}
-          />
-          <TextInput
-            label="Referral Code"
-            name="code"
-            value={influencerForm.code}
-            onChange={handleInfluencerField}
-          />
-        </form>
-      </Modal>
+        {/* First Name */}
+        <FormInput
+          label="First Name"
+          name="firstName"
+          value={influencerForm.firstName}
+          onChange={handleInfluencerField}
+          placeholder="Enter first name"
+          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+        />
 
-      <Modal
-        title={editingCode ? "Edit Referral Code" : "Create Referral Code"}
-        open={codeModalOpen}
-        onClose={() => {
-          setCodeModalOpen(false);
-          setEditingCode(null);
-        }}
-        footer={
-          <OrangeButton type="submit" form="referralCodeForm">
-            <Check size={16} />
-            Save Referral Code
-          </OrangeButton>
+        {/* Last Name */}
+        <FormInput
+          label="Last Name"
+          name="lastName"
+          value={influencerForm.lastName}
+          onChange={handleInfluencerField}
+          placeholder="Enter last name"
+          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+        />
+
+        {/* Email */}
+        <FormInput
+          label="Email"
+          name="email"
+          type="email"
+          required
+          value={influencerForm.email}
+          onChange={handleInfluencerField}
+          placeholder="Enter email address"
+          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+        />
+
+        {/* Phone */}
+        <FormInput
+          label="Phone"
+          name="phone"
+          value={influencerForm.phone}
+          onChange={handleInfluencerField}
+          placeholder="Enter phone number"
+          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+        />
+
+        {/* Temporary Password */}
+        <FormInput
+          label="Temporary Password"
+          name="password"
+          type="password"
+          required
+          value={influencerForm.password}
+          onChange={handleInfluencerField}
+          placeholder="Enter temporary password"
+          hint="At least 8 characters. The influencer uses this for the first login."
+          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+        />
+
+        {/* Referral Code */}
+        <FormInput
+          label="Referral Code"
+          name="code"
+          value={influencerForm.code}
+          onChange={handleInfluencerField}
+          placeholder="Enter referral code"
+          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+        />
+      </div>
+    </FormSection>
+
+    {/* ==================== Permissions ==================== */}
+    <FormSection
+      title="Permissions"
+      description="Manage what this parent influencer can do."
+    >
+      <FormToggleRow
+        title="Can Create Brand Associates"
+        description="Allow this influencer to create and manage Brand Associates."
+        isToggle={Boolean(
+          influencerForm.canCreateChildren
+        )}
+        handleClick={() =>
+          handleInfluencerField({
+            target: {
+              name: "canCreateChildren",
+              type: "checkbox",
+              checked: !influencerForm.canCreateChildren,
+            },
+          })
         }
-      >
-        <form
-          id="referralCodeForm"
-          onSubmit={submitCode}
-          className="grid grid-cols-1 gap-4 md:grid-cols-2"
-        >
-          {!editingCode && (
-            <SelectInput
-              label="Referral Partner"
-              name="influencerId"
-              value={codeForm.influencerId}
-              onChange={handleCodeField}
-            >
-              <option value="">Select Referral Partner</option>
-              {influencers.map((item) => (
-                <option key={getId(item)} value={getId(item)}>
-                  {fullName(item.user)} - {getId(item)}
-                </option>
-              ))}
-            </SelectInput>
-          )}
-          <TextInput
-            label="Referral Code"
-            name="code"
-            value={codeForm.code}
-            onChange={handleCodeField}
+      />
+    </FormSection>
+  </div>
+</DefaultModal>
+
+    <DefaultModal
+  isOpen={childModalOpen}
+  onClose={() => setChildModalOpen(false)}
+  onSubmit={submitChild}
+  title="Create Brand Associate"
+  submitButtonText="Create Brand Associate"
+  closeButtonText="Reset"
+  isButtonView={true}
+  width="600px"
+  loading={loading}
+>
+  <div className="space-y-5">
+    {/* ==================== Basic Information ==================== */}
+    <FormSection
+      title="Basic Information"
+      description="Enter the basic details of the Brand Associate."
+    >
+      <div className="space-y-4">
+
+        {/* Growth Partner */}
+        <FormSelectGroup
+          label="Growth Partner"
+          options={parentOptions.map((parent) => ({
+            label: `${fullName(parent.user)} - ${
+              parent.primaryCode?.code || getId(parent)
+            }`,
+            value: getId(parent),
+          }))}
+          value={parentId}
+          onChange={(selectedOption) =>
+            setParentId(
+              selectedOption?.value || selectedOption || ""
+            )
+          }
+          placeholder="Select Growth Partner"
+        />
+
+        {/* First Name */}
+        <FormInput
+          label="First Name"
+          name="firstName"
+          value={influencerForm.firstName}
+          onChange={handleInfluencerField}
+          placeholder="Enter first name"
+        />
+
+        {/* Last Name */}
+        <FormInput
+          label="Last Name"
+          name="lastName"
+          value={influencerForm.lastName}
+          onChange={handleInfluencerField}
+          placeholder="Enter last name"
+        />
+
+        {/* Email */}
+        <FormInput
+          label="Email"
+          name="email"
+          type="email"
+          value={influencerForm.email}
+          onChange={handleInfluencerField}
+          placeholder="Enter email address"
+        />
+
+        {/* Phone */}
+        <FormInput
+          label="Phone"
+          name="phone"
+          value={influencerForm.phone}
+          onChange={handleInfluencerField}
+          placeholder="Enter phone number"
+        />
+
+        {/* Password */}
+        <FormInput
+          label="Password"
+          name="password"
+          type="password"
+          value={influencerForm.password}
+          onChange={handleInfluencerField}
+          placeholder="Enter password"
+        />
+
+        {/* Referral Code */}
+        <FormInput
+          label="Referral Code"
+          name="code"
+          value={influencerForm.code}
+          onChange={handleInfluencerField}
+          placeholder="Enter referral code"
+        />
+
+      </div>
+    </FormSection>
+  </div>
+</DefaultModal>
+
+      <DefaultModal
+  isOpen={codeModalOpen}
+  onClose={() => {
+    setCodeModalOpen(false);
+    setEditingCode(null);
+  }}
+  onSubmit={submitCode}
+  title={
+    editingCode
+      ? "Edit Referral Code"
+      : "Create Referral Code"
+  }
+  submitButtonText="Save Referral Code"
+  closeButtonText="Reset"
+  isButtonView={true}
+  width="600px"
+  loading={loading}
+>
+  <div className="space-y-5">
+    {/* ==================== Referral Code Information ==================== */}
+    <FormSection
+      title="Referral Code Information"
+      description={
+        editingCode
+          ? "Update the referral code details."
+          : "Create a referral code for a referral partner."
+      }
+    >
+      <div className="space-y-4">
+
+        {/* Referral Partner */}
+        {!editingCode && (
+          <FormSelectGroup
+            label="Referral Partner"
+            options={influencers.map((item) => ({
+              label: `${fullName(item.user)} - ${getId(item)}`,
+              value: getId(item),
+            }))}
+            value={codeForm.influencerId}
+            onChange={(selectedOption) =>
+              handleCodeField({
+                target: {
+                  name: "influencerId",
+                  value:
+                    selectedOption?.value ||
+                    selectedOption ||
+                    "",
+                },
+              })
+            }
+            placeholder="Select Referral Partner"
           />
-          <TextInput
-            label="Usage Limit"
-            name="usageLimit"
-            type="number"
-            value={codeForm.usageLimit}
-            onChange={handleCodeField}
-          />
-          <SelectInput
-            label="Status"
-            name="status"
-            value={codeForm.status}
-            onChange={handleCodeField}
-          >
-            {referralCodeStatuses.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectInput>
-        </form>
-      </Modal>
+        )}
+
+        {/* Referral Code */}
+        <FormInput
+          label="Referral Code"
+          name="code"
+          value={codeForm.code}
+          onChange={handleCodeField}
+          placeholder="Enter referral code"
+        />
+
+        {/* Usage Limit */}
+        <FormInput
+          label="Usage Limit"
+          name="usageLimit"
+          type="number"
+          value={codeForm.usageLimit}
+          onChange={handleCodeField}
+          placeholder="Enter usage limit"
+        />
+
+        {/* Status */}
+        <FormSelectGroup
+          label="Status"
+          options={referralCodeStatuses.options}
+          value={codeForm.status}
+          onChange={(selectedOption) =>
+            handleCodeField({
+              target: {
+                name: "status",
+                value:
+                  selectedOption?.value ||
+                  selectedOption ||
+                  "",
+              },
+            })
+          }
+          placeholder="Select status"
+        />
+
+      </div>
+    </FormSection>
+  </div>
+</DefaultModal>
 
       <Modal
         title={
