@@ -71,16 +71,13 @@ const CLASS_TEXT_XS_MUTED = "text-xs text-gray-500";
 const CLASS_TEXT_XS_GRAY = "text-xs text-gray-600";
 const CLASS_TEXT_SM_GRAY = "text-sm text-gray-700";
 const CLASS_DETAIL_LABEL = "text-gray-500";
-const CLASS_DETAIL_CARD = "rounded-lg border border-gray-100 bg-gray-50 p-3";
 const CLASS_DETAIL_VALUE = "font-medium text-gray-800";
 const CLASS_DETAIL_SECTION = "border-t border-gray-100 pt-3";
 const CLASS_MODAL_BODY = "mt-3";
-const CLASS_INPUT_MODAL = "mt-3";
 const CLASS_ACTION_ICON_BLUE = "text-blue-600";
 const CLASS_ACTION_ICON_RED = "text-red-600";
 const CLASS_ACTION_ICON_GREEN = "text-green-600";
 const CLASS_ACTION_ICON_ORANGE = "text-orange-600";
-const CLASS_CONFIRM_NOTE_INPUT = "mt-3";
 const CLASS_MANUAL_REFUND_BODY = "p-4 space-y-4";
 const CLASS_MANUAL_REFUND_BUTTON =
   "w-full py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-60";

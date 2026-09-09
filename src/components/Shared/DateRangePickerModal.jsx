@@ -9,17 +9,12 @@ const MODAL_CONTAINER =
 const MODAL_HEADER =
   "flex items-center justify-between border-b border-slate-100 px-5 py-4";
 
-const MODAL_TITLE =
-  "text-base font-medium text-[var(--admin-ink)]";
-
-const MODAL_SUBTITLE =
-  "mt-1 text-xs font-normal text-[var(--admin-muted)]";
+const MODAL_TITLE = "text-base font-medium text-[var(--admin-ink)]";
 
 const CLOSE_BUTTON =
   "flex h-8 w-8 items-center justify-center rounded-md text-lg font-normal text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50";
 
-const MODAL_CONTENT =
-  "px-5 py-5";
+const MODAL_CONTENT = "px-5 py-5";
 
 /**
  * Reusable Date Range Picker Modal Container Component

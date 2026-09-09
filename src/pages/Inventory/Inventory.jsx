@@ -817,198 +817,198 @@ const Inventory = () => {
     }
   };
 
-  const handleExport = () => {
-    if (!detailRows.length) {
-      toast.info("No inventory variants available to export");
-      return;
-    }
+  // const handleExport = () => {
+  //   if (!detailRows.length) {
+  //     toast.info("No inventory variants available to export");
+  //     return;
+  //   }
 
-    const exportRows = detailRows.map((row) => ({
-      productId: row.productId,
-      productName: row.productName,
-      productSku: row.productSku,
-      variantId: row.variantId,
-      variantSku: row.variantSku,
-      variantName: row.variantName,
-      currentStock: row.originalStock,
-      newStock: row.currentStock,
-    }));
+  //   const exportRows = detailRows.map((row) => ({
+  //     productId: row.productId,
+  //     productName: row.productName,
+  //     productSku: row.productSku,
+  //     variantId: row.variantId,
+  //     variantSku: row.variantSku,
+  //     variantName: row.variantName,
+  //     currentStock: row.originalStock,
+  //     newStock: row.currentStock,
+  //   }));
 
-    exportToExcel(exportRows, {
-      filename: `${normalizeText(detail?.product?.sku || "product")}-inventory-template.xlsx`,
-      sheetName: "Product Inventory",
-      columns: IMPORT_COLUMNS.map((key) => ({
-        label: key,
-        key,
-      })),
-    });
-  };
+  //   exportToExcel(exportRows, {
+  //     filename: `${normalizeText(detail?.product?.sku || "product")}-inventory-template.xlsx`,
+  //     sheetName: "Product Inventory",
+  //     columns: IMPORT_COLUMNS.map((key) => ({
+  //       label: key,
+  //       key,
+  //     })),
+  //   });
+  // };
 
-  const handleImport = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // const handleImport = async (event) => {
+  //   const file = event.target.files?.[0];
+  //   if (!file) return;
 
-    try {
-      setImporting(true);
-      setImportError("");
-      setImportInfo("");
-      setImportSuccess("");
+  //   try {
+  //     setImporting(true);
+  //     setImportError("");
+  //     setImportInfo("");
+  //     setImportSuccess("");
 
-      const imported = await parseImportFile(file);
+  //     const imported = await parseImportFile(file);
 
-      if (!imported.length) {
-        throw new Error("The selected file did not contain any rows");
-      }
+  //     if (!imported.length) {
+  //       throw new Error("The selected file did not contain any rows");
+  //     }
 
-      const importedColumns = Object.keys(imported[0] || {});
+  //     const importedColumns = Object.keys(imported[0] || {});
 
-      const missingColumns = IMPORT_COLUMNS.filter(
-        (column) => !importedColumns.includes(column),
-      );
+  //     const missingColumns = IMPORT_COLUMNS.filter(
+  //       (column) => !importedColumns.includes(column),
+  //     );
 
-      const unknownColumns = importedColumns.filter(
-        (column) => !IMPORT_COLUMNS.includes(column),
-      );
+  //     const unknownColumns = importedColumns.filter(
+  //       (column) => !IMPORT_COLUMNS.includes(column),
+  //     );
 
-      if (missingColumns.length) {
-        throw new Error(
-          buildImportValidationError(
-            `Missing required column(s): ${missingColumns.join(", ")}.`,
-          ),
-        );
-      }
+  //     if (missingColumns.length) {
+  //       throw new Error(
+  //         buildImportValidationError(
+  //           `Missing required column(s): ${missingColumns.join(", ")}.`,
+  //         ),
+  //       );
+  //     }
 
-      if (unknownColumns.length) {
-        throw new Error(
-          buildImportValidationError(
-            `Unknown column(s) found: ${unknownColumns.join(", ")}.`,
-          ),
-        );
-      }
+  //     if (unknownColumns.length) {
+  //       throw new Error(
+  //         buildImportValidationError(
+  //           `Unknown column(s) found: ${unknownColumns.join(", ")}.`,
+  //         ),
+  //       );
+  //     }
 
-      const catalogByIdentity = new Map(
-        detailRows.map((row) => [getVariantIdentity(row), row]),
-      );
+  //     const catalogByIdentity = new Map(
+  //       detailRows.map((row) => [getVariantIdentity(row), row]),
+  //     );
 
-      const catalogByProductAndSku = new Map(
-        detailRows.map((row) => [
-          `${normalizeText(row.productId)}::${normalizeText(row.variantSku)}`,
-          row,
-        ]),
-      );
+  //     const catalogByProductAndSku = new Map(
+  //       detailRows.map((row) => [
+  //         `${normalizeText(row.productId)}::${normalizeText(row.variantSku)}`,
+  //         row,
+  //       ]),
+  //     );
 
-      const importedUpdates = new Map();
+  //     const importedUpdates = new Map();
 
-      imported.forEach((item, index) => {
-        const rowNumber = index + 2;
+  //     imported.forEach((item, index) => {
+  //       const rowNumber = index + 2;
 
-        const productIdValue = normalizeText(item.productId);
-        const variantIdValue = normalizeText(item.variantId);
-        const variantSkuValue = normalizeText(item.variantSku);
+  //       const productIdValue = normalizeText(item.productId);
+  //       const variantIdValue = normalizeText(item.variantId);
+  //       const variantSkuValue = normalizeText(item.variantSku);
 
-        if (!productIdValue || (!variantIdValue && !variantSkuValue)) {
-          throw new Error(
-            buildImportValidationError(
-              `Row ${rowNumber}: productId and variantId/variantSku are required.`,
-            ),
-          );
-        }
+  //       if (!productIdValue || (!variantIdValue && !variantSkuValue)) {
+  //         throw new Error(
+  //           buildImportValidationError(
+  //             `Row ${rowNumber}: productId and variantId/variantSku are required.`,
+  //           ),
+  //         );
+  //       }
 
-        const identity = [productIdValue, variantIdValue, variantSkuValue].join(
-          "::",
-        );
+  //       const identity = [productIdValue, variantIdValue, variantSkuValue].join(
+  //         "::",
+  //       );
 
-        const fallbackIdentity = `${productIdValue}::${variantSkuValue}`;
+  //       const fallbackIdentity = `${productIdValue}::${variantSkuValue}`;
 
-        const catalogRow = variantIdValue
-          ? catalogByIdentity.get(identity)
-          : catalogByProductAndSku.get(fallbackIdentity);
+  //       const catalogRow = variantIdValue
+  //         ? catalogByIdentity.get(identity)
+  //         : catalogByProductAndSku.get(fallbackIdentity);
 
-        if (!catalogRow) {
-          throw new Error(
-            buildImportValidationError(
-              `Row ${rowNumber}: product or variant identity was changed or no longer exists.`,
-            ),
-          );
-        }
+  //       if (!catalogRow) {
+  //         throw new Error(
+  //           buildImportValidationError(
+  //             `Row ${rowNumber}: product or variant identity was changed or no longer exists.`,
+  //           ),
+  //         );
+  //       }
 
-        if (importedUpdates.has(catalogRow.id)) {
-          throw new Error(
-            buildImportValidationError(
-              `Row ${rowNumber}: duplicate product or variant row found.`,
-            ),
-          );
-        }
+  //       if (importedUpdates.has(catalogRow.id)) {
+  //         throw new Error(
+  //           buildImportValidationError(
+  //             `Row ${rowNumber}: duplicate product or variant row found.`,
+  //           ),
+  //         );
+  //       }
 
-        const editedColumns = READ_ONLY_IMPORT_COLUMNS.filter(
-          (column) =>
-            !importValuesMatch(
-              item[column],
-              getExpectedImportValue(catalogRow, column),
-              column,
-            ),
-        );
+  //       const editedColumns = READ_ONLY_IMPORT_COLUMNS.filter(
+  //         (column) =>
+  //           !importValuesMatch(
+  //             item[column],
+  //             getExpectedImportValue(catalogRow, column),
+  //             column,
+  //           ),
+  //       );
 
-        if (editedColumns.length) {
-          throw new Error(
-            buildImportValidationError(
-              `Row ${rowNumber}: ${editedColumns.join(", ")} cannot be changed.`,
-            ),
-          );
-        }
+  //       if (editedColumns.length) {
+  //         throw new Error(
+  //           buildImportValidationError(
+  //             `Row ${rowNumber}: ${editedColumns.join(", ")} cannot be changed.`,
+  //           ),
+  //         );
+  //       }
 
-        const newStock = Number(item.newStock);
+  //       const newStock = Number(item.newStock);
 
-        if (!Number.isInteger(newStock) || newStock < 0) {
-          throw new Error(
-            `Row ${rowNumber}: newStock must be a non-negative whole number.`,
-          );
-        }
+  //       if (!Number.isInteger(newStock) || newStock < 0) {
+  //         throw new Error(
+  //           `Row ${rowNumber}: newStock must be a non-negative whole number.`,
+  //         );
+  //       }
 
-        importedUpdates.set(catalogRow.id, newStock);
-      });
+  //       importedUpdates.set(catalogRow.id, newStock);
+  //     });
 
-      const nextRows = detailRows.map((row) =>
-        importedUpdates.has(row.id)
-          ? {
-              ...row,
-              currentStock: importedUpdates.get(row.id),
-            }
-          : row,
-      );
+  //     const nextRows = detailRows.map((row) =>
+  //       importedUpdates.has(row.id)
+  //         ? {
+  //             ...row,
+  //             currentStock: importedUpdates.get(row.id),
+  //           }
+  //         : row,
+  //     );
 
-      setDetailRows(nextRows);
+  //     setDetailRows(nextRows);
 
-      const changedCount = nextRows.filter(
-        (row) => importedUpdates.has(row.id) && isPendingStock(row),
-      ).length;
+  //     const changedCount = nextRows.filter(
+  //       (row) => importedUpdates.has(row.id) && isPendingStock(row),
+  //     ).length;
 
-      if (!changedCount) {
-        setImportInfo(
-          "The file was imported successfully, but there are no new stock changes to save.",
-        );
-        return;
-      }
+  //     if (!changedCount) {
+  //       setImportInfo(
+  //         "The file was imported successfully, but there are no new stock changes to save.",
+  //       );
+  //       return;
+  //     }
 
-      setImportSuccess(
-        `${changedCount} inventory ${
-          changedCount === 1 ? "change is" : "changes are"
-        } ready to save.`,
-      );
-    } catch (importErrorValue) {
-      setImportError(
-        getErrorMessage(importErrorValue, "Failed to import inventory Excel"),
-      );
-      setImportInfo("");
-      setImportSuccess("");
-    } finally {
-      setImporting(false);
+  //     setImportSuccess(
+  //       `${changedCount} inventory ${
+  //         changedCount === 1 ? "change is" : "changes are"
+  //       } ready to save.`,
+  //     );
+  //   } catch (importErrorValue) {
+  //     setImportError(
+  //       getErrorMessage(importErrorValue, "Failed to import inventory Excel"),
+  //     );
+  //     setImportInfo("");
+  //     setImportSuccess("");
+  //   } finally {
+  //     setImporting(false);
 
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
+  //     if (fileInputRef.current) {
+  //       fileInputRef.current.value = "";
+  //     }
+  //   }
+  // };
 
   const adjustRows = async (target, payload) => {
     setAdjusting(true);
@@ -1233,9 +1233,7 @@ const Inventory = () => {
 
     return (
       <div>
-        <Loader
-          loading={saving || importing}
-        />
+        <Loader loading={saving || importing} />
 
         <PageHeader
           title="Product Inventory"
