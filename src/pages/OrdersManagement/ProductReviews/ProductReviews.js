@@ -8,7 +8,6 @@ import {
   MdRateReview,
   MdEdit,
   MdDelete,
-  MdReply,
   MdCheckCircle,
   MdClose,
   MdVisibility,
@@ -26,7 +25,6 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import { ACTIONS } from "../../../_helpers/usePermission";
 import {
   deleteProductReview,
-  getProductReviews,
   getProductReviewSummaries,
   getProductReviewSummaryReviews,
   updateProductReview,
@@ -138,20 +136,21 @@ const getProductName = (row = {}) =>
   row.title ||
   "";
 
-const initials = (value = "") =>
-  String(value || "B")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("") || "B";
+// const initials = (value = "") =>
+//   String(value || "B")
+//     .trim()
+//     .split(/\s+/)
+//     .slice(0, 2)
+//     .map((part) => part.charAt(0).toUpperCase())
+//     .join("") || "B";
 
 const cssImageUrl = (value) =>
   `url("${String(value || "").replace(/"/g, "%22")}")`;
 
 const getProductReviewSummaryPayload = (state = {}) => {
   const payload = state?.productReviewSummariesData?.data || {};
-  const source = payload?.data && !payload?.list && !payload?.items ? payload.data : payload;
+  const source =
+    payload?.data && !payload?.list && !payload?.items ? payload.data : payload;
   const list = Array.isArray(source?.list)
     ? source.list
     : Array.isArray(source?.items)
@@ -165,20 +164,39 @@ const getProductReviewSummaryPayload = (state = {}) => {
   };
 };
 
-const ReviewDetailsDrawer = ({ review, onClose, sellerView = false, detailReviews = [], detailStats = {}, detailLoading = false, onReviewAction }) => {
+const ReviewDetailsDrawer = ({
+  review,
+  onClose,
+  sellerView = false,
+  detailReviews = [],
+  detailStats = {},
+  detailLoading = false,
+  onReviewAction,
+}) => {
   if (!review) return null;
 
   const productName = getProductName(review) || "Product not found";
   const reviewDate = formatDateTime12Hour(review.createdAt, "—");
-  const isSummary = !review.reviewText && !review.buyerName && !review.buyerId && !review.status;
-  const summaryAverage = Number(review.averageRating || detailStats.avgRating || 0);
-  const totalReviews = Number(review.reviewCount || detailStats.count || detailReviews.length || 0);
+  const isSummary =
+    !review.reviewText &&
+    !review.buyerName &&
+    !review.buyerId &&
+    !review.status;
+  const summaryAverage = Number(
+    review.averageRating || detailStats.avgRating || 0,
+  );
+  const totalReviews = Number(
+    review.reviewCount || detailStats.count || detailReviews.length || 0,
+  );
 
   const CLASS_DETAIL_LABEL = "text-xs font-medium uppercase text-gray-400";
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-xl flex-col bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div>
@@ -187,7 +205,11 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false, detailReview
             </h2>
             <p className="mt-0.5 text-xs text-gray-500">{productName}</p>
           </div>
-          <button onClick={onClose} className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800" aria-label="Close">
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+            aria-label="Close"
+          >
             <MdClose size={22} />
           </button>
         </div>
@@ -198,35 +220,55 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false, detailReview
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className={CLASS_DETAIL_LABEL}>Average Rating</p>
-                  <div className="mt-1"><StarRating rating={summaryAverage} /></div>
+                  <div className="mt-1">
+                    <StarRating rating={summaryAverage} />
+                  </div>
                 </div>
                 <div>
                   <p className={CLASS_DETAIL_LABEL}>Total Reviews</p>
-                  <p className="mt-1 font-medium text-gray-800">{totalReviews}</p>
+                  <p className="mt-1 font-medium text-gray-800">
+                    {totalReviews}
+                  </p>
                 </div>
                 <div>
                   <p className={CLASS_DETAIL_LABEL}>Published</p>
-                  <p className="mt-1 text-gray-800">{review.publishedCount || 0}</p>
+                  <p className="mt-1 text-gray-800">
+                    {review.publishedCount || 0}
+                  </p>
                 </div>
                 <div>
                   <p className={CLASS_DETAIL_LABEL}>Pending</p>
-                  <p className="mt-1 text-gray-800">{review.pendingCount || 0}</p>
+                  <p className="mt-1 text-gray-800">
+                    {review.pendingCount || 0}
+                  </p>
                 </div>
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-4 text-sm">
               <div>
-                <p className={CLASS_DETAIL_LABEL}>{sellerView ? "Created By" : "Buyer"}</p>
-                <p className="mt-1 font-medium text-gray-800">{getCreatedByName(review, sellerView)}</p>
+                <p className={CLASS_DETAIL_LABEL}>
+                  {sellerView ? "Created By" : "Buyer"}
+                </p>
+                <p className="mt-1 font-medium text-gray-800">
+                  {getCreatedByName(review, sellerView)}
+                </p>
               </div>
               <div>
                 <p className={CLASS_DETAIL_LABEL}>Status</p>
-                <div className="mt-1"><StatusBadge status={review.status || "pending"} dot variant={STATUS_COLOR[review.status] || "default"} /></div>
+                <div className="mt-1">
+                  <StatusBadge
+                    status={review.status || "pending"}
+                    dot
+                    variant={STATUS_COLOR[review.status] || "default"}
+                  />
+                </div>
               </div>
               <div>
                 <p className={CLASS_DETAIL_LABEL}>Rating</p>
-                <div className="mt-1"><StarRating rating={Number(review.rating) || 0} /></div>
+                <div className="mt-1">
+                  <StarRating rating={Number(review.rating) || 0} />
+                </div>
               </div>
               <div>
                 <p className={CLASS_DETAIL_LABEL}>Date</p>
@@ -243,39 +285,61 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false, detailReview
             <section>
               <div className="mb-2 flex items-center justify-between">
                 <p className={CLASS_DETAIL_LABEL}>Reviews</p>
-                {detailLoading && <span className="text-xs text-gray-500">Loading…</span>}
+                {detailLoading && (
+                  <span className="text-xs text-gray-500">Loading…</span>
+                )}
               </div>
               <div className="space-y-3">
-                {detailReviews.length ? detailReviews.map((row) => (
-                  <div key={row._id || row.id} className="rounded-lg border border-gray-200 bg-white p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="text-xs font-semibold text-gray-700">{getCreatedByName(row, sellerView)}</div>
-                        <div className="mt-1"><StarRating rating={Number(row.rating) || 0} /></div>
+                {detailReviews.length ? (
+                  detailReviews.map((row) => (
+                    <div
+                      key={row._id || row.id}
+                      className="rounded-lg border border-gray-200 bg-white p-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-xs font-semibold text-gray-700">
+                            {getCreatedByName(row, sellerView)}
+                          </div>
+                          <div className="mt-1">
+                            <StarRating rating={Number(row.rating) || 0} />
+                          </div>
+                        </div>
+                        <StatusBadge
+                          status={row.status || "pending"}
+                          dot
+                          variant={STATUS_COLOR[row.status] || "default"}
+                        />
                       </div>
-                      <StatusBadge status={row.status || "pending"} dot variant={STATUS_COLOR[row.status] || "default"} />
+                      {row.title && (
+                        <div className="mt-2 text-xs font-semibold text-gray-700">
+                          {row.title}
+                        </div>
+                      )}
+                      <div className="mt-2 text-xs leading-5 text-gray-600">
+                        {row.reviewText || "—"}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(row.status === "published"
+                          ? [{ label: "Hide", value: "hidden" }]
+                          : [
+                              { label: "Publish", value: "published" },
+                              { label: "Hide", value: "hidden" },
+                            ]
+                        ).map((action) => (
+                          <button
+                            key={action.value}
+                            type="button"
+                            onClick={() => onReviewAction?.(row, action.value)}
+                            className="rounded bg-gray-100 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-200"
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    {row.title && <div className="mt-2 text-xs font-semibold text-gray-700">{row.title}</div>}
-                    <div className="mt-2 text-xs leading-5 text-gray-600">{row.reviewText || "—"}</div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {(row.status === "published" ? [
-                        { label: "Hide", value: "hidden" },
-                      ] : [
-                        { label: "Publish", value: "published" },
-                        { label: "Hide", value: "hidden" },
-                      ]).map((action) => (
-                        <button
-                          key={action.value}
-                          type="button"
-                          onClick={() => onReviewAction?.(row, action.value)}
-                          className="rounded bg-gray-100 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-200"
-                        >
-                          {action.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )) : (
+                  ))
+                ) : (
                   <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
                     No reviews yet for this product.
                   </div>
@@ -286,12 +350,16 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false, detailReview
             <>
               <section>
                 <p className={CLASS_DETAIL_LABEL}>Title</p>
-                <p className="mt-1 text-sm font-semibold text-gray-800">{review.title || "—"}</p>
+                <p className="mt-1 text-sm font-semibold text-gray-800">
+                  {review.title || "—"}
+                </p>
               </section>
 
               <section>
                 <p className={CLASS_DETAIL_LABEL}>Review</p>
-                <p className="mt-2 whitespace-pre-wrap rounded-lg border border-gray-100 bg-white p-3 text-sm leading-6 text-gray-700">{review.reviewText || "—"}</p>
+                <p className="mt-2 whitespace-pre-wrap rounded-lg border border-gray-100 bg-white p-3 text-sm leading-6 text-gray-700">
+                  {review.reviewText || "—"}
+                </p>
               </section>
 
               {Array.isArray(review.media) && review.media.length ? (
@@ -299,8 +367,18 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false, detailReview
                   <p className={CLASS_DETAIL_LABEL}>Review Photos</p>
                   <div className="mt-2 grid grid-cols-3 gap-2">
                     {review.media.map((url) => (
-                      <a key={url} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded border">
-                        <img src={url} alt="Review media" className="h-24 w-full object-cover" />
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block overflow-hidden rounded border"
+                      >
+                        <img
+                          src={url}
+                          alt="Review media"
+                          className="h-24 w-full object-cover"
+                        />
                       </a>
                     ))}
                   </div>
@@ -309,8 +387,12 @@ const ReviewDetailsDrawer = ({ review, onClose, sellerView = false, detailReview
 
               {review.adminReply?.text ? (
                 <section className="rounded-lg border border-blue-100 bg-blue-50 p-3">
-                  <p className="text-xs font-medium uppercase text-blue-500">Admin Reply</p>
-                  <p className="mt-1 text-sm text-blue-900">{review.adminReply.text}</p>
+                  <p className="text-xs font-medium uppercase text-blue-500">
+                    Admin Reply
+                  </p>
+                  <p className="mt-1 text-sm text-blue-900">
+                    {review.adminReply.text}
+                  </p>
                 </section>
               ) : null}
             </>
@@ -343,7 +425,11 @@ const ProductReviews = () => {
   const [toggleLoadingId, setToggleLoadingId] = useState(null);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [detailReviews, setDetailReviews] = useState([]);
-  const [detailStats, setDetailStats] = useState({ avgRating: 0, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
+  const [detailStats, setDetailStats] = useState({
+    avgRating: 0,
+    count: 0,
+    distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  });
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [userData, setUserData] = useState(() => getSessionUserData());
@@ -408,7 +494,13 @@ const ProductReviews = () => {
                 : [];
 
       const meta = response?.meta || response?.data?.meta || {};
-      const summary = meta?.summary || response?.summary || response?.data?.summary || response?.stats || response?.data?.stats || {};
+      const summary =
+        meta?.summary ||
+        response?.summary ||
+        response?.data?.summary ||
+        response?.stats ||
+        response?.data?.stats ||
+        {};
       const list = Array.isArray(payload) ? payload : [];
 
       setDetailReviews(list);
@@ -458,12 +550,13 @@ const ProductReviews = () => {
     }
   };
 
-  const handleToggleStatus = async (review) => {
-    const current = review.status || "pending";
-    const newStatus = current === "published" ? "hidden" : "published";
-    const message = newStatus === "published" ? "Review approved" : "Review hidden";
-    await updateReviewStatus(review, newStatus, message);
-  };
+  // const handleToggleStatus = async (review) => {
+  //   const current = review.status || "pending";
+  //   const newStatus = current === "published" ? "hidden" : "published";
+  //   const message =
+  //     newStatus === "published" ? "Review approved" : "Review hidden";
+  //   await updateReviewStatus(review, newStatus, message);
+  // };
 
   const handleBulkStatus = async (status) => {
     if (!list.selectedKeys.length) return;
@@ -476,7 +569,11 @@ const ProductReviews = () => {
           sellerScope: isSellerPanelUser,
         }),
       ).unwrap();
-      toast.success(status === "published" ? "Selected reviews approved" : "Selected reviews updated");
+      toast.success(
+        status === "published"
+          ? "Selected reviews approved"
+          : "Selected reviews updated",
+      );
       list.clearSelection();
       fetchReviews();
     } catch (err) {
@@ -495,8 +592,16 @@ const ProductReviews = () => {
   };
 
   const handleReviewAction = async (review, newStatus) => {
-    await updateReviewStatus(review, newStatus, newStatus === "published" ? "Review approved" : "Review hidden");
-    const productId = review.productId || viewTarget?.productId || viewTarget?._id || viewTarget?.id;
+    await updateReviewStatus(
+      review,
+      newStatus,
+      newStatus === "published" ? "Review approved" : "Review hidden",
+    );
+    const productId =
+      review.productId ||
+      viewTarget?.productId ||
+      viewTarget?._id ||
+      viewTarget?.id;
     if (productId) await fetchReviewDetails(productId);
   };
 
@@ -538,15 +643,23 @@ const ProductReviews = () => {
       key: "productId",
       label: "Product",
       render: (v, row) => {
-        const productImage = row.productImage || row.product?.image || row.image;
+        const productImage =
+          row.productImage || row.product?.image || row.image;
         const productName = getProductName(row) || "Product";
         return (
           <div className="flex items-center gap-2 min-w-0">
             {productImage && (
-              <span role="img" aria-label={productName} className="w-9 h-9 rounded border flex-shrink-0 bg-cover bg-center" style={{ backgroundImage: cssImageUrl(productImage) }} />
+              <span
+                role="img"
+                aria-label={productName}
+                className="w-9 h-9 rounded border flex-shrink-0 bg-cover bg-center"
+                style={{ backgroundImage: cssImageUrl(productImage) }}
+              />
             )}
             <div className="min-w-0">
-              <span className="block max-w-[180px] truncate text-xs font-medium text-gray-700">{productName || "Product not found"}</span>
+              <span className="block max-w-[180px] truncate text-xs font-medium text-gray-700">
+                {productName || "Product not found"}
+              </span>
             </div>
           </div>
         );
@@ -561,15 +674,21 @@ const ProductReviews = () => {
     {
       key: "reviewCount",
       label: "Reviews",
-      render: (v) => <span className="text-xs font-medium text-gray-700">{v || 0}</span>,
+      render: (v) => (
+        <span className="text-xs font-medium text-gray-700">{v || 0}</span>
+      ),
     },
     {
       key: "publishedCount",
       label: "Status",
       render: (v, row) => (
         <div className="flex flex-wrap gap-1 text-[10px] text-gray-600">
-          <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">{row.publishedCount || 0} live</span>
-          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">{row.pendingCount || 0} pending</span>
+          <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">
+            {row.publishedCount || 0} live
+          </span>
+          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">
+            {row.pendingCount || 0} pending
+          </span>
         </div>
       ),
     },
@@ -577,7 +696,11 @@ const ProductReviews = () => {
       key: "latestReviewAt",
       label: "Last Review",
       sortable: true,
-      render: (v) => <span className="text-xs text-gray-400">{v ? formatDateTime12Hour(v, "—") : "—"}</span>,
+      render: (v) => (
+        <span className="text-xs text-gray-400">
+          {v ? formatDateTime12Hour(v, "—") : "—"}
+        </span>
+      ),
     },
   ];
 
@@ -741,8 +864,12 @@ const ProductReviews = () => {
         <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-col gap-2 border-b border-gray-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">Product</p>
-              <h3 className="mt-1 text-lg font-semibold text-gray-800">{getProductName(selectedProduct)}</h3>
+              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Product
+              </p>
+              <h3 className="mt-1 text-lg font-semibold text-gray-800">
+                {getProductName(selectedProduct)}
+              </h3>
             </div>
             <button
               type="button"
@@ -750,7 +877,11 @@ const ProductReviews = () => {
                 setSelectedProduct(null);
                 setViewTarget(null);
                 setDetailReviews([]);
-                setDetailStats({ avgRating: 0, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
+                setDetailStats({
+                  avgRating: 0,
+                  count: 0,
+                  distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+                });
               }}
               className="rounded border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
             >
@@ -760,45 +891,97 @@ const ProductReviews = () => {
 
           <div className="mb-5 grid gap-3 md:grid-cols-4">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">Average Rating</p>
-              <div className="mt-2"><StarRating rating={Number(selectedProduct.averageRating || detailStats.avgRating || 0)} /></div>
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Average Rating
+              </p>
+              <div className="mt-2">
+                <StarRating
+                  rating={Number(
+                    selectedProduct.averageRating || detailStats.avgRating || 0,
+                  )}
+                />
+              </div>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">Total Reviews</p>
-              <p className="mt-2 text-lg font-semibold text-gray-800">{Number(selectedProduct.reviewCount || detailStats.count || detailReviews.length || 0)}</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Total Reviews
+              </p>
+              <p className="mt-2 text-lg font-semibold text-gray-800">
+                {Number(
+                  selectedProduct.reviewCount ||
+                    detailStats.count ||
+                    detailReviews.length ||
+                    0,
+                )}
+              </p>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">Published</p>
-              <p className="mt-2 text-lg font-semibold text-gray-800">{selectedProduct.publishedCount || 0}</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Published
+              </p>
+              <p className="mt-2 text-lg font-semibold text-gray-800">
+                {selectedProduct.publishedCount || 0}
+              </p>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">Pending</p>
-              <p className="mt-2 text-lg font-semibold text-gray-800">{selectedProduct.pendingCount || 0}</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Pending
+              </p>
+              <p className="mt-2 text-lg font-semibold text-gray-800">
+                {selectedProduct.pendingCount || 0}
+              </p>
             </div>
           </div>
 
           <div className="space-y-3">
             {detailLoading ? (
-              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">Loading reviews…</div>
+              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">
+                Loading reviews…
+              </div>
             ) : detailReviews.length ? (
               detailReviews.map((row) => (
-                <div key={row._id || row.id} className="rounded-lg border border-gray-200 bg-white p-4">
+                <div
+                  key={row._id || row.id}
+                  className="rounded-lg border border-gray-200 bg-white p-4"
+                >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-800">{getCreatedByName(row, sellerView)}</span>
-                        <StatusBadge status={row.status || "pending"} dot variant={STATUS_COLOR[row.status] || "default"} />
+                        <span className="text-sm font-semibold text-gray-800">
+                          {getCreatedByName(row, sellerView)}
+                        </span>
+                        <StatusBadge
+                          status={row.status || "pending"}
+                          dot
+                          variant={STATUS_COLOR[row.status] || "default"}
+                        />
                       </div>
-                      <div className="mt-2"><StarRating rating={Number(row.rating) || 0} /></div>
+                      <div className="mt-2">
+                        <StarRating rating={Number(row.rating) || 0} />
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">{formatDateTime12Hour(row.createdAt, "—")}</div>
+                    <div className="text-xs text-gray-500">
+                      {formatDateTime12Hour(row.createdAt, "—")}
+                    </div>
                   </div>
 
-                  {row.title && <div className="mt-3 text-sm font-semibold text-gray-800">{row.title}</div>}
-                  <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-600">{row.reviewText || "—"}</div>
+                  {row.title && (
+                    <div className="mt-3 text-sm font-semibold text-gray-800">
+                      {row.title}
+                    </div>
+                  )}
+                  <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-600">
+                    {row.reviewText || "—"}
+                  </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {(row.status === "published" ? [{ label: "Hide", value: "hidden" }] : [{ label: "Publish", value: "published" }, { label: "Hide", value: "hidden" }]).map((action) => (
+                    {(row.status === "published"
+                      ? [{ label: "Hide", value: "hidden" }]
+                      : [
+                          { label: "Publish", value: "published" },
+                          { label: "Hide", value: "hidden" },
+                        ]
+                    ).map((action) => (
                       <button
                         key={action.value}
                         type="button"
@@ -812,7 +995,9 @@ const ProductReviews = () => {
                 </div>
               ))
             ) : (
-              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">No reviews yet for this product.</div>
+              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">
+                No reviews yet for this product.
+              </div>
             )}
           </div>
         </div>
@@ -824,7 +1009,11 @@ const ProductReviews = () => {
           setViewTarget(null);
           setSelectedProduct(null);
           setDetailReviews([]);
-          setDetailStats({ avgRating: 0, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
+          setDetailStats({
+            avgRating: 0,
+            count: 0,
+            distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+          });
         }}
         sellerView={sellerView}
         detailReviews={detailReviews}

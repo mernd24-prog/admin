@@ -3,14 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import {
-  MdAdd,
-  MdStorefront,
-  MdVisibility,
-  MdEdit,
-  MdCheckCircle,
-  MdBlock,
-} from "react-icons/md";
+import { MdAdd, MdStorefront, MdVisibility, MdEdit } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -22,7 +15,6 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import Loader from "../../../components/Loader/Loader";
 import {
   createSeller,
   enableDisableSeller,
@@ -148,7 +140,10 @@ const Sellers = () => {
         errs.confirmPassword = "Passwords do not match";
     }
     // When editing, password fields are optional — validate only if any is provided
-    if (isEdit && (formData.password?.trim() || formData.confirmPassword?.trim())) {
+    if (
+      isEdit &&
+      (formData.password?.trim() || formData.confirmPassword?.trim())
+    ) {
       if (formData.password?.trim()) {
         if (formData.password.length < 8)
           errs.password = "At least 8 characters";
@@ -163,7 +158,8 @@ const Sellers = () => {
         else if (!/[^A-Za-z0-9]/.test(formData.password))
           errs.password = "At least one special character";
       }
-      if (!formData.confirmPassword?.trim()) errs.confirmPassword = "Please confirm your password";
+      if (!formData.confirmPassword?.trim())
+        errs.confirmPassword = "Please confirm your password";
       else if (formData.password !== formData.confirmPassword)
         errs.confirmPassword = "Passwords do not match";
     }

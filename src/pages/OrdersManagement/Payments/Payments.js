@@ -405,6 +405,7 @@ const Payments = () => {
         isOpen={Boolean(detailPayment)}
         onClose={() => setDetailPayment(null)}
         title="Payment Detail"
+        isButtonView={false}
       >
         <div className="space-y-3 text-sm" aria-busy={detailLoading}>
           <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-2">

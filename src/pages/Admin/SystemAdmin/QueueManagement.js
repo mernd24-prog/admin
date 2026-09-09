@@ -2,15 +2,29 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdPause, MdPlayArrow, MdRefresh } from "react-icons/md";
+import { MdPause, MdPlayArrow } from "react-icons/md";
 import Loader from "../../../components/Loader/Loader";
-import { ConfirmModal, DataTable, PageHeader, StatusBadge } from "../../../components/Shared";
-import { getSystemQueues, pauseSystemQueue, resumeSystemQueue } from "../../../Redux/adminCoreSlice";
+import {
+  ConfirmModal,
+  DataTable,
+  PageHeader,
+  StatusBadge,
+} from "../../../components/Shared";
+import {
+  getSystemQueues,
+  pauseSystemQueue,
+  resumeSystemQueue,
+} from "../../../Redux/adminCoreSlice";
 
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
   if (Array.isArray(data)) return data;
-  return data?.list || data?.queues || data?.items || (Array.isArray(data) ? data : []);
+  return (
+    data?.list ||
+    data?.queues ||
+    data?.items ||
+    (Array.isArray(data) ? data : [])
+  );
 };
 
 const QueueManagement = () => {
@@ -19,7 +33,11 @@ const QueueManagement = () => {
   const queues = unwrapList(selector?.systemQueuesData);
 
   const [loading, setLoading] = useState(false);
-  const [confirm, setConfirm] = useState({ open: false, action: "", queue: null });
+  const [confirm, setConfirm] = useState({
+    open: false,
+    action: "",
+    queue: null,
+  });
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchQueues = useCallback(async () => {
@@ -33,7 +51,9 @@ const QueueManagement = () => {
     }
   }, [dispatch]);
 
-  useEffect(() => { fetchQueues(); }, [fetchQueues]);
+  useEffect(() => {
+    fetchQueues();
+  }, [fetchQueues]);
 
   const handleAction = useCallback(async () => {
     const { action, queue } = confirm;
@@ -61,12 +81,25 @@ const QueueManagement = () => {
     {
       key: "name",
       label: "Queue Name",
-      render: (v) => <span className="font-mono text-sm font-medium">{v || "—"}</span>,
+      render: (v) => (
+        <span className="font-mono text-sm font-medium">{v || "—"}</span>
+      ),
     },
     {
       key: "status",
       label: "Status",
-      render: (v) => <StatusBadge status={v || "unknown"} color={v === "active" || v === "running" ? "green" : v === "paused" ? "yellow" : "gray"} />,
+      render: (v) => (
+        <StatusBadge
+          status={v || "unknown"}
+          color={
+            v === "active" || v === "running"
+              ? "green"
+              : v === "paused"
+                ? "yellow"
+                : "gray"
+          }
+        />
+      ),
     },
     {
       key: "waiting",
@@ -86,7 +119,13 @@ const QueueManagement = () => {
     {
       key: "failed",
       label: "Failed",
-      render: (v) => <span className={`text-sm font-medium ${Number(v) > 0 ? "text-red-600" : "text-gray-600"}`}>{v ?? "—"}</span>,
+      render: (v) => (
+        <span
+          className={`text-sm font-medium ${Number(v) > 0 ? "text-red-600" : "text-gray-600"}`}
+        >
+          {v ?? "—"}
+        </span>
+      ),
     },
     {
       key: "_actions",
@@ -97,14 +136,18 @@ const QueueManagement = () => {
           <div className="flex gap-1">
             {isPaused ? (
               <button
-                onClick={() => setConfirm({ open: true, action: "resume", queue: row })}
+                onClick={() =>
+                  setConfirm({ open: true, action: "resume", queue: row })
+                }
                 className="flex items-center gap-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
               >
                 <MdPlayArrow size={14} /> Resume
               </button>
             ) : (
               <button
-                onClick={() => setConfirm({ open: true, action: "pause", queue: row })}
+                onClick={() =>
+                  setConfirm({ open: true, action: "pause", queue: row })
+                }
                 className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700"
               >
                 <MdPause size={14} /> Pause
@@ -134,7 +177,12 @@ const QueueManagement = () => {
       ) : queues.length === 0 ? (
         <div className="text-center py-16 text-gray-400">No queues found</div>
       ) : (
-        <DataTable columns={COLUMNS} data={queues} total={queues.length} emptyMessage="No queues found" />
+        <DataTable
+          columns={COLUMNS}
+          data={queues}
+          total={queues.length}
+          emptyMessage="No queues found"
+        />
       )}
 
       <ConfirmModal

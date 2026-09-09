@@ -482,28 +482,28 @@ export default function CommerceSettings() {
         "Manage seller platform commission, commission GST, payout holds, and payment policy.",
     }[activeView] || "Commerce controls for platform commission.";
 
-  const renderNav = () => (
-    <div className="mb-5 flex flex-wrap gap-2">
-      {ROUTES.map((item) => {
-        const Icon = item.icon;
-        const active = item.key === activeView;
-        return (
-          <button
-            key={item.key}
-            type="button"
-            onClick={() => navigate(item.path)}
-            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
-              active
-                ? "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-navy)]"
-                : "border-gray-200 bg-white text-gray-600 hover:border-[var(--admin-gold)]"
-            }`}
-          >
-            <Icon size={16} /> {item.label}
-          </button>
-        );
-      })}
-    </div>
-  );
+  // const renderNav = () => (
+  //   <div className="mb-5 flex flex-wrap gap-2">
+  //     {ROUTES.map((item) => {
+  //       const Icon = item.icon;
+  //       const active = item.key === activeView;
+  //       return (
+  //         <button
+  //           key={item.key}
+  //           type="button"
+  //           onClick={() => navigate(item.path)}
+  //           className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+  //             active
+  //               ? "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-navy)]"
+  //               : "border-gray-200 bg-white text-gray-600 hover:border-[var(--admin-gold)]"
+  //           }`}
+  //         >
+  //           <Icon size={16} /> {item.label}
+  //         </button>
+  //       );
+  //     })}
+  //   </div>
+  // );
 
   const platformMetrics = useMemo(
     () => [

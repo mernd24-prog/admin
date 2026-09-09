@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { BsCamera, BsSave } from "react-icons/bs";
-import { FiDownload, FiEdit3, FiEye, FiFileText } from "react-icons/fi";
+import { FiEdit3, FiEye, FiFileText } from "react-icons/fi";
 import { PiX } from "react-icons/pi";
 import { useDispatch } from "react-redux";
 import { getProfile, updateProfile } from "../../Redux/userSlice";
@@ -49,14 +49,14 @@ const parseDocumentMap = (value = {}) => {
   }
 };
 
-const isPdfDocument = (url = "") =>
-  /\.pdf(\?.*)?$/i.test(String(url || "")) ||
-  String(url || "")
-    .toLowerCase()
-    .includes("application/pdf");
+// const isPdfDocument = (url = "") =>
+//   /\.pdf(\?.*)?$/i.test(String(url || "")) ||
+//   String(url || "")
+//     .toLowerCase()
+//     .includes("application/pdf");
 
-const isImageDocument = (url = "") =>
-  /\.(png|jpe?g|webp|gif|bmp|avif)(\?.*)?$/i.test(String(url || ""));
+// const isImageDocument = (url = "") =>
+//   /\.(png|jpe?g|webp|gif|bmp|avif)(\?.*)?$/i.test(String(url || ""));
 
 const unwrapSellerProfileResponse = (response = {}) => {
   const root = response?.data?.data || response?.data || response || {};

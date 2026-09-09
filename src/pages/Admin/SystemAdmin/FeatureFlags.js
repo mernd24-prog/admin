@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdAdd, MdEdit, MdRefresh } from "react-icons/md";
+import { MdAdd, MdEdit } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
@@ -216,14 +216,14 @@ const FeatureFlags = () => {
       />
 
       <DataTable
-          columns={COLUMNS}
-          data={payload.list}
-          total={payload.total}
-          listPage={list}
-          loading={loading}
-          searchPlaceholder="Search feature flags…"
-          filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
-          emptyMessage="No feature flags found"
+        columns={COLUMNS}
+        data={payload.list}
+        total={payload.total}
+        listPage={list}
+        loading={loading}
+        searchPlaceholder="Search feature flags…"
+        filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
+        emptyMessage="No feature flags found"
       />
 
       <DefaultModal

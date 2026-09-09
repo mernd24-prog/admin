@@ -23,7 +23,6 @@ import { getProfile } from "../../../../Redux/userSlice";
 import Loader from "../../../../components/Loader/Loader";
 import DefaultModal from "../../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../../components/Atoms/Input/Input";
-import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
 import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
 import PageHeader from "../../../../components/Shared/PageHeader";
 import StatusBadge from "../../../../components/Shared/StatusBadge";
@@ -2890,44 +2889,44 @@ const OrderSummary = () => {
       ? savedSettlements.map(normalizeSellerSettlement)
       : buildSellerSettlements(items).map(normalizeSellerSettlement);
   }, [items, relations.sellerSettlements]);
-  const shipmentSummary = useMemo(() => {
-    const statuses = shipments
-      .filter(
-        (shipment) => String(shipment.direction || "forward") !== "reverse",
-      )
-      .map((shipment) =>
-        firstDefined(
-          shipment.status,
-          shipment.shipment_status,
-          shipment.delivery_status,
-        ),
-      )
-      .filter(Boolean);
-    if (statuses.length) {
-      const counts = statuses.reduce((acc, status) => {
-        const key = String(status);
-        acc[key] = (acc[key] || 0) + 1;
-        return acc;
-      }, {});
-      return Object.entries(counts)
-        .map(([status, count]) => `${displayStatus(status)} (${count})`)
-        .join(", ");
-    }
+  // const shipmentSummary = useMemo(() => {
+  //   const statuses = shipments
+  //     .filter(
+  //       (shipment) => String(shipment.direction || "forward") !== "reverse",
+  //     )
+  //     .map((shipment) =>
+  //       firstDefined(
+  //         shipment.status,
+  //         shipment.shipment_status,
+  //         shipment.delivery_status,
+  //       ),
+  //     )
+  //     .filter(Boolean);
+  //   if (statuses.length) {
+  //     const counts = statuses.reduce((acc, status) => {
+  //       const key = String(status);
+  //       acc[key] = (acc[key] || 0) + 1;
+  //       return acc;
+  //     }, {});
+  //     return Object.entries(counts)
+  //       .map(([status, count]) => `${displayStatus(status)} (${count})`)
+  //       .join(", ");
+  //   }
 
-    const groupStatuses = (relations.sellerFulfillmentGroups || [])
-      .map((group) =>
-        firstDefined(
-          group.shipmentStatus,
-          group.shipment_status,
-          group.fulfillmentStatus,
-          group.fulfillment_status,
-        ),
-      )
-      .filter(Boolean);
-    return groupStatuses.length
-      ? [...new Set(groupStatuses.map(displayStatus))].join(", ")
-      : "Not created";
-  }, [relations.sellerFulfillmentGroups, shipments]);
+  //   const groupStatuses = (relations.sellerFulfillmentGroups || [])
+  //     .map((group) =>
+  //       firstDefined(
+  //         group.shipmentStatus,
+  //         group.shipment_status,
+  //         group.fulfillmentStatus,
+  //         group.fulfillment_status,
+  //       ),
+  //     )
+  //     .filter(Boolean);
+  //   return groupStatuses.length
+  //     ? [...new Set(groupStatuses.map(displayStatus))].join(", ")
+  //     : "Not created";
+  // }, [relations.sellerFulfillmentGroups, shipments]);
   const orderTaxRates = useMemo(
     () => getOrderTaxRates(taxBreakup, items),
     [taxBreakup, items],
@@ -4718,342 +4717,339 @@ const OrderSummary = () => {
       </div>
 
       <DefaultModal
-  isOpen={state.statusModal}
-  onClose={() =>
-    setState((prev) => ({
-      ...prev,
-      statusModal: false,
-    }))
-  }
-  title={isSeller ? "Cancel My Items" : "Administrative Status Override"}
-  onSubmit={handleStatusSubmit}
-  loading={state.isLoading}
->
-  <div className="space-y-5 py-2">
-    {/* Admin Warning */}
-    {!isSeller && (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <p className="text-xs leading-5 text-amber-900">
-          Use this only for exceptional order corrections. Delivery changes
-          must be made through Shipment Management.
-        </p>
-      </div>
-    )}
-
-    {/* Status */}
-    {!isSeller && (
-      <FormSection
-        title="Order Status"
-        description="Select the status you want to apply to this order."
+        isOpen={state.statusModal}
+        onClose={() =>
+          setState((prev) => ({
+            ...prev,
+            statusModal: false,
+          }))
+        }
+        title={isSeller ? "Cancel My Items" : "Administrative Status Override"}
+        onSubmit={handleStatusSubmit}
+        loading={state.isLoading}
       >
-        <FormSelectGroup
-          label="Status"
-          options={statusOptions}
-          value={
-            statusOptions.find(
-              (opt) => opt.value === formData.status,
-            ) || null
-          }
-          onChange={(option) => {
-            const status = option?.value || "";
+        <div className="space-y-5 py-2">
+          {/* Admin Warning */}
+          {!isSeller && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-xs leading-5 text-amber-900">
+                Use this only for exceptional order corrections. Delivery
+                changes must be made through Shipment Management.
+              </p>
+            </div>
+          )}
 
-            const cancelItems =
-              status === "cancelled"
-                ? Object.fromEntries(
-                    items
-                      .map((item) => [
-                        String(item.id),
+          {/* Status */}
+          {!isSeller && (
+            <FormSection
+              title="Order Status"
+              description="Select the status you want to apply to this order."
+            >
+              <FormSelectGroup
+                label="Status"
+                options={statusOptions}
+                value={
+                  statusOptions.find((opt) => opt.value === formData.status) ||
+                  null
+                }
+                onChange={(option) => {
+                  const status = option?.value || "";
+
+                  const cancelItems =
+                    status === "cancelled"
+                      ? Object.fromEntries(
+                          items
+                            .map((item) => [
+                              String(item.id),
+                              Number(item.quantity || 0) -
+                                Number(item.cancelled_quantity || 0),
+                            ])
+                            .filter(([, quantity]) => quantity > 0),
+                        )
+                      : {};
+
+                  setFormData((prev) => ({
+                    ...prev,
+                    status,
+                    cancelItems,
+                  }));
+                }}
+                placeholder="Select Status"
+                isSearchable={false}
+              />
+            </FormSection>
+          )}
+
+          {/* Shipment Details */}
+          {["ready_to_ship", "shipped", "out_for_delivery"].includes(
+            formData.status,
+          ) && (
+            <FormSection
+              title="Shipment Details"
+              description="Enter the tracking information for this shipment."
+            >
+              <div className="space-y-4">
+                <Input
+                  labelName="Tracking Number"
+                  value={formData.trackingNumber}
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      trackingNumber: event.target.value,
+                    }))
+                  }
+                  name="trackingNumber"
+                  placeholder="AWB / tracking number"
+                  maxLength={200}
+                />
+
+                <Input
+                  labelName="Carrier / Courier"
+                  value={formData.carrierName}
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      carrierName: event.target.value,
+                    }))
+                  }
+                  name="carrierName"
+                  placeholder="e.g. Delhivery, BlueDart, FedEx"
+                  maxLength={100}
+                />
+
+                <Input
+                  labelName="Tracking URL (optional)"
+                  value={formData.carrierUrl}
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      carrierUrl: event.target.value,
+                    }))
+                  }
+                  name="carrierUrl"
+                  placeholder="https://..."
+                  maxLength={500}
+                />
+              </div>
+            </FormSection>
+          )}
+
+          {/* Cancellation Details */}
+          {formData.status === "cancelled" && (
+            <FormSection
+              title="Cancellation Details"
+              description="Select the cancellation reason, refund handling, and items to cancel."
+            >
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormSelectGroup
+                    label="Reason Type"
+                    options={[
+                      { value: "other", label: "Other" },
+                      {
+                        value: "seller_unavailable",
+                        label: "Seller unavailable",
+                      },
+                      {
+                        value: "inventory_unavailable",
+                        label: "Inventory unavailable",
+                      },
+                      {
+                        value: "delivery_delay",
+                        label: "Delivery delay",
+                      },
+                      {
+                        value: "pricing_issue",
+                        label: "Pricing issue",
+                      },
+                      {
+                        value: "address_issue",
+                        label: "Address issue",
+                      },
+                      {
+                        value: "payment_issue",
+                        label: "Payment issue",
+                      },
+                    ]}
+                    value={{
+                      value: formData.reasonCode,
+                      label:
+                        {
+                          other: "Other",
+                          seller_unavailable: "Seller unavailable",
+                          inventory_unavailable: "Inventory unavailable",
+                          delivery_delay: "Delivery delay",
+                          pricing_issue: "Pricing issue",
+                          address_issue: "Address issue",
+                          payment_issue: "Payment issue",
+                        }[formData.reasonCode] || "Other",
+                    }}
+                    onChange={(option) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        reasonCode: option?.value || "other",
+                      }))
+                    }
+                    placeholder="Select reason"
+                    isSearchable={false}
+                  />
+
+                  <FormSelectGroup
+                    label="Refund Handling"
+                    options={[
+                      { value: "auto", label: "Automatic" },
+                      {
+                        value: "original_source",
+                        label: "Original source",
+                      },
+                      { value: "wallet", label: "Wallet" },
+                      { value: "manual", label: "Manual review" },
+                    ]}
+                    value={{
+                      value: formData.refundMethod,
+                      label:
+                        {
+                          auto: "Automatic",
+                          original_source: "Original source",
+                          wallet: "Wallet",
+                          manual: "Manual review",
+                        }[formData.refundMethod] || "Automatic",
+                    }}
+                    onChange={(option) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        refundMethod: option?.value || "auto",
+                      }))
+                    }
+                    placeholder="Select refund method"
+                    isSearchable={false}
+                  />
+                </div>
+
+                {/* Products */}
+                <div>
+                  <div className="mb-3">
+                    <p className="text-sm font-semibold text-gray-800">
+                      Products to Cancel
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Select the products that should be cancelled from this
+                      order.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    {items.map((item) => {
+                      const itemId = String(item.id);
+
+                      const remaining =
                         Number(item.quantity || 0) -
-                          Number(item.cancelled_quantity || 0),
-                      ])
-                      .filter(([, quantity]) => quantity > 0),
-                  )
-                : {};
+                        Number(item.cancelled_quantity || 0);
 
-            setFormData((prev) => ({
-              ...prev,
-              status,
-              cancelItems,
-            }));
-          }}
-          placeholder="Select Status"
-          isSearchable={false}
-        />
-      </FormSection>
-    )}
+                      const selected = Object.prototype.hasOwnProperty.call(
+                        formData.cancelItems,
+                        itemId,
+                      );
 
-    {/* Shipment Details */}
-    {["ready_to_ship", "shipped", "out_for_delivery"].includes(
-      formData.status,
-    ) && (
-      <FormSection
-        title="Shipment Details"
-        description="Enter the tracking information for this shipment."
-      >
-        <div className="space-y-4">
-          <Input
-            labelName="Tracking Number"
-            value={formData.trackingNumber}
-            onChange={(event) =>
-              setFormData((prev) => ({
-                ...prev,
-                trackingNumber: event.target.value,
-              }))
-            }
-            name="trackingNumber"
-            placeholder="AWB / tracking number"
-            maxLength={200}
-          />
+                      return (
+                        <label
+                          key={itemId}
+                          className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                            selected
+                              ? "border-red-200 bg-red-50/50"
+                              : "border-gray-200 bg-white hover:bg-gray-50"
+                          } ${
+                            remaining <= 0
+                              ? "cursor-not-allowed opacity-60"
+                              : "cursor-pointer"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            disabled={remaining <= 0}
+                            onChange={(event) =>
+                              setFormData((prev) => {
+                                const next = { ...prev.cancelItems };
 
-          <Input
-            labelName="Carrier / Courier"
-            value={formData.carrierName}
-            onChange={(event) =>
-              setFormData((prev) => ({
-                ...prev,
-                carrierName: event.target.value,
-              }))
-            }
-            name="carrierName"
-            placeholder="e.g. Delhivery, BlueDart, FedEx"
-            maxLength={100}
-          />
+                                if (event.target.checked) {
+                                  next[itemId] = remaining;
+                                } else {
+                                  delete next[itemId];
+                                }
 
-          <Input
-            labelName="Tracking URL (optional)"
-            value={formData.carrierUrl}
-            onChange={(event) =>
-              setFormData((prev) => ({
-                ...prev,
-                carrierUrl: event.target.value,
-              }))
-            }
-            name="carrierUrl"
-            placeholder="https://..."
-            maxLength={500}
-          />
-        </div>
-      </FormSection>
-    )}
+                                return {
+                                  ...prev,
+                                  cancelItems: next,
+                                };
+                              })
+                            }
+                            className="h-4 w-4 accent-red-600"
+                          />
 
-    {/* Cancellation Details */}
-    {formData.status === "cancelled" && (
-      <FormSection
-        title="Cancellation Details"
-        description="Select the cancellation reason, refund handling, and items to cancel."
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormSelectGroup
-              label="Reason Type"
-              options={[
-                { value: "other", label: "Other" },
-                {
-                  value: "seller_unavailable",
-                  label: "Seller unavailable",
-                },
-                {
-                  value: "inventory_unavailable",
-                  label: "Inventory unavailable",
-                },
-                {
-                  value: "delivery_delay",
-                  label: "Delivery delay",
-                },
-                {
-                  value: "pricing_issue",
-                  label: "Pricing issue",
-                },
-                {
-                  value: "address_issue",
-                  label: "Address issue",
-                },
-                {
-                  value: "payment_issue",
-                  label: "Payment issue",
-                },
-              ]}
-              value={{
-                value: formData.reasonCode,
-                label:
-                  {
-                    other: "Other",
-                    seller_unavailable: "Seller unavailable",
-                    inventory_unavailable: "Inventory unavailable",
-                    delivery_delay: "Delivery delay",
-                    pricing_issue: "Pricing issue",
-                    address_issue: "Address issue",
-                    payment_issue: "Payment issue",
-                  }[formData.reasonCode] || "Other",
-              }}
-              onChange={(option) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  reasonCode: option?.value || "other",
-                }))
-              }
-              placeholder="Select reason"
-              isSearchable={false}
-            />
+                          <span className="min-w-0 flex-1 truncate text-gray-800">
+                            {firstDefined(item.product_title, item.product_id)}
+                          </span>
 
-            <FormSelectGroup
-              label="Refund Handling"
-              options={[
-                { value: "auto", label: "Automatic" },
-                {
-                  value: "original_source",
-                  label: "Original source",
-                },
-                { value: "wallet", label: "Wallet" },
-                { value: "manual", label: "Manual review" },
-              ]}
-              value={{
-                value: formData.refundMethod,
-                label:
-                  {
-                    auto: "Automatic",
-                    original_source: "Original source",
-                    wallet: "Wallet",
-                    manual: "Manual review",
-                  }[formData.refundMethod] || "Automatic",
-              }}
-              onChange={(option) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  refundMethod: option?.value || "auto",
-                }))
-              }
-              placeholder="Select refund method"
-              isSearchable={false}
-            />
-          </div>
+                          <span
+                            className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${
+                              selected
+                                ? "bg-red-100 text-red-700"
+                                : "bg-gray-100 text-gray-500"
+                            }`}
+                          >
+                            {selected
+                              ? `Cancel all ${remaining}`
+                              : `${remaining} available`}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </FormSection>
+          )}
 
-          {/* Products */}
-          <div>
-            <div className="mb-3">
-              <p className="text-sm font-semibold text-gray-800">
-                Products to Cancel
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                Select the products that should be cancelled from this order.
-              </p>
+          {/* Notes */}
+          <FormSection
+            title="Notes"
+            description="Add a reason or internal note for this status update."
+          >
+            <div className="space-y-4">
+              <Input
+                type="textarea"
+                labelName="Reason"
+                value={formData.reason}
+                onChange={(event) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    reason: event.target.value,
+                  }))
+                }
+                name="reason"
+                placeholder="Reason or operational note"
+                maxLength={1000}
+              />
+
+              <Input
+                type="textarea"
+                labelName="Internal Note"
+                value={formData.note}
+                onChange={(event) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    note: event.target.value,
+                  }))
+                }
+                name="note"
+                placeholder="Optional internal note"
+                maxLength={1000}
+              />
             </div>
-
-            <div className="space-y-2">
-              {items.map((item) => {
-                const itemId = String(item.id);
-
-                const remaining =
-                  Number(item.quantity || 0) -
-                  Number(item.cancelled_quantity || 0);
-
-                const selected = Object.prototype.hasOwnProperty.call(
-                  formData.cancelItems,
-                  itemId,
-                );
-
-                return (
-                  <label
-                    key={itemId}
-                    className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
-                      selected
-                        ? "border-red-200 bg-red-50/50"
-                        : "border-gray-200 bg-white hover:bg-gray-50"
-                    } ${
-                      remaining <= 0
-                        ? "cursor-not-allowed opacity-60"
-                        : "cursor-pointer"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      disabled={remaining <= 0}
-                      onChange={(event) =>
-                        setFormData((prev) => {
-                          const next = { ...prev.cancelItems };
-
-                          if (event.target.checked) {
-                            next[itemId] = remaining;
-                          } else {
-                            delete next[itemId];
-                          }
-
-                          return {
-                            ...prev,
-                            cancelItems: next,
-                          };
-                        })
-                      }
-                      className="h-4 w-4 accent-red-600"
-                    />
-
-                    <span className="min-w-0 flex-1 truncate text-gray-800">
-                      {firstDefined(
-                        item.product_title,
-                        item.product_id,
-                      )}
-                    </span>
-
-                    <span
-                      className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${
-                        selected
-                          ? "bg-red-100 text-red-700"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {selected
-                        ? `Cancel all ${remaining}`
-                        : `${remaining} available`}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
+          </FormSection>
         </div>
-      </FormSection>
-    )}
-
-    {/* Notes */}
-    <FormSection
-      title="Notes"
-      description="Add a reason or internal note for this status update."
-    >
-      <div className="space-y-4">
-        <Input
-          type="textarea"
-          labelName="Reason"
-          value={formData.reason}
-          onChange={(event) =>
-            setFormData((prev) => ({
-              ...prev,
-              reason: event.target.value,
-            }))
-          }
-          name="reason"
-          placeholder="Reason or operational note"
-          maxLength={1000}
-        />
-
-        <Input
-          type="textarea"
-          labelName="Internal Note"
-          value={formData.note}
-          onChange={(event) =>
-            setFormData((prev) => ({
-              ...prev,
-              note: event.target.value,
-            }))
-          }
-          name="note"
-          placeholder="Optional internal note"
-          maxLength={1000}
-        />
-      </div>
-    </FormSection>
-  </div>
-</DefaultModal>
+      </DefaultModal>
 
       <DefaultModal
         isOpen={state.noteModal}

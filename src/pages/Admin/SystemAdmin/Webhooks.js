@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import moment from "moment";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdAdd, MdRefresh } from "react-icons/md";
+import { MdAdd } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
@@ -263,14 +263,14 @@ const Webhooks = () => {
       />
 
       <DataTable
-          columns={COLUMNS}
-          data={payload.list}
-          total={payload.total}
-          listPage={list}
-          loading={loading}
-          searchPlaceholder="Search webhooks…"
-          filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
-          emptyMessage="No webhooks configured"
+        columns={COLUMNS}
+        data={payload.list}
+        total={payload.total}
+        listPage={list}
+        loading={loading}
+        searchPlaceholder="Search webhooks…"
+        filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
+        emptyMessage="No webhooks configured"
       />
 
       <DefaultModal
