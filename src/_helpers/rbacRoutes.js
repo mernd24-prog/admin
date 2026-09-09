@@ -94,6 +94,7 @@ export const SELLER_ALLOWED_MODULE_CODES = new Set([
   "products",
   "reviews",
   "inventory",
+  "stock-notifications",
   "orders",
   "returns",
   "cancellations",
@@ -194,6 +195,7 @@ const MODULE_LABELS = {
   "cms-pages": "CMS/Page Management",
   warranty: "Warranty",
   inventory: "Inventory Management",
+  "stock-notifications": "Stock Notifications",
   carts: "Cart Management",
   orders: "Order Management",
   returns: "Return Management",
@@ -300,6 +302,7 @@ const MODULE_TABS = {
   warranty: "Catalog Management",
   reviews: "Catalog Management",
   inventory: "Inventory Management",
+  "stock-notifications": "Inventory Management",
   carts: "Orders Management",
   orders: "Orders Management",
   returns: "Returns & Cancellations",
@@ -396,6 +399,7 @@ export const MODULE_DEFAULT_ROUTES = {
 
   // Inventory
   inventory: "inventory",
+  "stock-notifications": "stock-notifications",
   // Orders
   carts: "carts",
   orders: "orders",
@@ -612,6 +616,7 @@ const ROUTE_MODULES = [
       "/inventory-transactions",
       "/warehouse",
       "/low-stock-alerts",
+      "/stock-notifications",
       "/threshold-products",
       "/inventory-audit",
     ],
