@@ -53,6 +53,7 @@ import {
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 import { GoldDateRangeCalendar } from "../../components/Shared/FilterBar";
+import { formatDateTime } from "../../utils/formatters";
 
 const CHART_GRID_COLOR = "#e9dfc9";
 const REPORT_GOLD = "#d6a323";
@@ -1306,6 +1307,7 @@ const SummaryColumnChart = ({ title, items = [] }) => {
 export const SalesReport = () => {
   const sellerView = isSellerPanel();
   const filters = useReportFilters();
+
   const loadData = useCallback(
     async ({ fromDate, toDate }) => {
       const analyticsDashboard = await fetchJson(
@@ -1314,17 +1316,23 @@ export const SalesReport = () => {
           : ENDPOINTS.analytics.adminDashboard,
         { fromDate, toDate },
       );
+
       if (!sellerView) return analyticsDashboard;
 
-      const [dashboardOverview, topProducts] = await Promise.all([
-        fetchJson(ENDPOINTS.dashboard.overview, { fromDate, toDate }),
-        fetchJson(ENDPOINTS.products.analyticsTop, {
-          limit: 10,
-          metric: "purchases",
-          fromDate,
-          toDate,
-        }),
-      ]);
+      const [dashboardOverview, topProducts] =
+        await Promise.all([
+          fetchJson(ENDPOINTS.dashboard.overview, {
+            fromDate,
+            toDate,
+          }),
+
+          fetchJson(ENDPOINTS.products.analyticsTop, {
+            limit: 10,
+            metric: "purchases",
+            fromDate,
+            toDate,
+          }),
+        ]);
 
       return {
         ...analyticsDashboard,
@@ -1334,14 +1342,46 @@ export const SalesReport = () => {
     },
     [sellerView],
   );
-  const { data, loading, error, refresh } = useApiReport(loadData, filters);
-  const dashboardOverview = data.dashboardOverview || {};
-  const dashboardMetrics = dashboardOverview.metrics || {};
-  const dashboardCommerce = dashboardOverview.commerce || {};
+
+  const {
+    data,
+    loading,
+    error,
+    refresh,
+  } = useApiReport(loadData, filters);
+
+  const dashboardOverview =
+    data.dashboardOverview || {};
+
+  const dashboardMetrics =
+    dashboardOverview.metrics || {};
+
+  const dashboardCommerce =
+    dashboardOverview.commerce || {};
+
   const orders = data.orders || {};
-  const returns = data.returns || dashboardOverview.returns || {};
-  const fallbackProductRows = productRowsFromAnalytics(data.topProducts);
-  const fallbackProductTotals = productTotalsFromRows(fallbackProductRows);
+
+  const returns =
+    data.returns ||
+    dashboardOverview.returns ||
+    {};
+
+  const fallbackProductRows =
+    productRowsFromAnalytics(
+      data.topProducts,
+    );
+
+  const fallbackProductTotals =
+    productTotalsFromRows(
+      fallbackProductRows,
+    );
+
+  /*
+   * ==========================
+   * SALES TOTALS
+   * ==========================
+   */
+
   const totalRevenue = asNumber(
     dashboardMetrics.gmv ??
       dashboardCommerce.gmv ??
@@ -1349,53 +1389,81 @@ export const SalesReport = () => {
       orders.totalSalesAmount ??
       fallbackProductTotals.revenue,
   );
+
   const totalOrders = asNumber(
     dashboardMetrics.totalOrders ??
       dashboardCommerce.totalOrders ??
       orders.orderCount,
   );
+
   const totalProductViews = asNumber(
-    fallbackProductTotals.views || fallbackProductTotals.impressions,
+    fallbackProductTotals.views ||
+      fallbackProductTotals.impressions,
   );
-  const refundAmount = asNumber(returns.refundAmount);
+
+  const refundAmount = asNumber(
+    returns.refundAmount,
+  );
+
   const deliveredOrders = asNumber(
     dashboardMetrics.deliveredOrders ??
       dashboardCommerce.deliveredOrders ??
       orders.deliveredOrders,
   );
+
+  /*
+   * ==========================
+   * SALES SUMMARY CARDS
+   * ==========================
+   */
+
   const salesSummaryItems = [
     {
       label: "Revenue",
       value: totalRevenue,
-      displayValue: formatCurrency(totalRevenue),
+      displayValue:
+        formatCurrency(totalRevenue),
       sub: "Selected range",
     },
+
     {
       label: "Orders",
       value: totalOrders,
-      displayValue: formatNumber(totalOrders),
+      displayValue:
+        formatNumber(totalOrders),
       sub: "All statuses",
     },
+
     sellerView
       ? {
           label: "Views",
           value: totalProductViews,
-          displayValue: formatNumber(totalProductViews),
+          displayValue:
+            formatNumber(totalProductViews),
           sub: "Product activity",
         }
       : {
           label: "Delivered",
           value: deliveredOrders,
-          displayValue: formatNumber(deliveredOrders),
+          displayValue:
+            formatNumber(deliveredOrders),
           sub: "Completed orders",
         },
+
     {
       label: "Refunds",
       value: refundAmount,
-      displayValue: formatCurrency(refundAmount),
+      displayValue:
+        formatCurrency(refundAmount),
       sub: "Return refunds",
     },
   ];
+
+  /*
+   * ==========================
+   * DASHBOARD STATS
+   * ==========================
+   */
 
   const stats = [
     {
@@ -1403,16 +1471,29 @@ export const SalesReport = () => {
       value: formatCurrency(totalRevenue),
       sub: "GMV in selected range",
     },
+
     {
       label: "Total Orders",
       value: formatNumber(totalOrders),
       sub: "All order statuses",
     },
+
     {
-      label: sellerView ? "Product Views" : "Delivered Orders",
-      value: formatNumber(sellerView ? totalProductViews : deliveredOrders),
-      sub: sellerView ? "Tracked product views" : "Completed fulfilment",
+      label: sellerView
+        ? "Product Views"
+        : "Delivered Orders",
+
+      value: formatNumber(
+        sellerView
+          ? totalProductViews
+          : deliveredOrders,
+      ),
+
+      sub: sellerView
+        ? "Tracked product views"
+        : "Completed fulfilment",
     },
+
     {
       label: "Refund Amount",
       value: formatCurrency(refundAmount),
@@ -1420,58 +1501,513 @@ export const SalesReport = () => {
     },
   ];
 
-  const salesExportRows = listFrom(data.performance).map((item) => ({
-    date: item.date || item.day || item.label || "Selected range",
-    products: asNumber(
-      item.products ?? item.productCount ?? item.totalProducts,
-    ),
-    orders: asNumber(
-      item.orders ?? item.orderCount ?? item.totalOrders ?? item.count,
-    ),
-    revenue: asNumber(
-      item.revenue ?? item.gmv ?? item.gmvAmount ?? item.totalRevenue,
-    ),
-    views: asNumber(item.views ?? item.productViews ?? item.totalViews),
-  }));
+  /*
+   * ==========================
+   * SALES SUMMARY API DATA
+   * ==========================
+   */
 
-  if (!salesExportRows.length) {
-    salesExportRows.push({
-      date: `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(filters.toDate)}`,
-      products: fallbackProductRows.length,
-      refundAmount: refundAmount,
-      orders: totalOrders,
-      revenue: totalRevenue,
-      views: totalProductViews,
-    });
-  }
+  const salesSummary =
+    data.salesSummary || {};
+
+  /*
+   * ==========================
+   * SALES DETAILS API DATA
+   * ==========================
+   */
+
+  const salesDetails = listFrom(
+    data.salesDetails,
+  );
+
+  /*
+   * ==========================
+   * SALES SUMMARY EXCEL ROWS
+   * ==========================
+   */
+
+  const salesSummaryRows = [
+    {
+      field: "Report Name",
+      value: sellerView
+        ? "Sales Report"
+        : "Sales Reports",
+    },
+
+    {
+      field: "Date Range",
+      value: `${formatDateLabel(
+        filters.fromDate,
+      )} - ${formatDateLabel(
+        filters.toDate,
+      )}`,
+    },
+
+    {
+      field: "Generated On",
+      value: formatDateLabel(
+        toIsoDate(new Date()),
+      ),
+    },
+
+    {
+      field: "Total Revenue",
+      value: asNumber(
+        salesSummary.totalRevenue,
+      ),
+    },
+
+    {
+      field: "Total Orders",
+      value: asNumber(
+        salesSummary.totalOrders,
+      ),
+    },
+
+    {
+      field: "Total Products Sold",
+      value: asNumber(
+        salesSummary.totalProductsSold,
+      ),
+    },
+
+    {
+      field: "Completed Orders",
+      value: asNumber(
+        salesSummary.completedOrders,
+      ),
+    },
+
+    {
+      field: "Cancelled Orders",
+      value: asNumber(
+        salesSummary.cancelledOrders,
+      ),
+    },
+
+    {
+      field: "Returned Orders",
+      value: asNumber(
+        salesSummary.returnedOrders,
+      ),
+    },
+
+    {
+      field: "Refunded Orders",
+      value: asNumber(
+        salesSummary.refundedOrders,
+      ),
+    },
+
+    {
+      field: "Product Views",
+      value: asNumber(
+        salesSummary.productViews,
+      ),
+    },
+
+    {
+      field: "Gross Sales",
+      value: asNumber(
+        salesSummary.grossSales,
+      ),
+    },
+
+    {
+      field: "Discount",
+      value: asNumber(
+        salesSummary.discount,
+      ),
+    },
+
+    {
+      field: "Shipping",
+      value: asNumber(
+        salesSummary.shipping,
+      ),
+    },
+
+    {
+      field: "Refund Amount",
+      value: asNumber(
+        salesSummary.refundAmount,
+      ),
+    },
+
+    {
+      field: "Commission",
+      value: asNumber(
+        salesSummary.commission,
+      ),
+    },
+
+    {
+      field: "Net Seller Earnings",
+      value: asNumber(
+        salesSummary.netSellerEarnings,
+      ),
+    },
+  ];
+
+  /*
+   * ==========================
+   * SALES DETAILS EXCEL ROWS
+   * ==========================
+   */
+
+  const salesDetailRows =
+    salesDetails.map(
+      (item, index) => ({
+        serialNumber: index + 1,
+
+        orderId:
+          item.orderId || "-",
+
+        orderDate:
+          item.orderDate
+            ? formatDateTime(
+                item.orderDate,
+                "-",
+              )
+            : "-",
+
+        orderStatus:
+          item.orderStatus || "-",
+
+        paymentStatus:
+          item.paymentStatus || "-",
+
+        productName:
+          item.productName || "-",
+
+        sku:
+          item.sku || "-",
+
+        variant:
+          item.variant || "-",
+
+        category:
+          item.category || "-",
+
+        quantity:
+          asNumber(item.quantity),
+
+        unitPrice:
+          asNumber(item.unitPrice),
+
+        subtotal:
+          asNumber(item.subtotal),
+
+        discount:
+          asNumber(item.discount),
+
+        tax:
+          asNumber(item.tax),
+
+        shipping:
+          asNumber(item.shipping),
+
+        grossAmount:
+          asNumber(item.grossAmount),
+
+        refundAmount:
+          asNumber(item.refundAmount),
+
+        commission:
+          asNumber(item.commission),
+
+        shippingDeduction:
+          asNumber(
+            item.shippingDeduction,
+          ),
+
+        netSellerEarnings:
+          asNumber(
+            item.netSellerEarnings,
+          ),
+
+        payoutStatus:
+          item.payoutStatus || "-",
+
+        payoutDate:
+          item.payoutDate
+            ? formatDateTime(
+                item.payoutDate,
+                "-",
+              )
+            : "-",
+      }),
+    );
+
+  /*
+   * ==========================
+   * EXCEL FILE NAME
+   * ==========================
+   */
+
+  const salesDatePart = (value) =>
+    formatDateLabel(value).replace(
+      /\s+/g,
+      "-",
+    );
+
+  const salesExportFilename =
+    `Sales_Report_${salesDatePart(
+      filters.fromDate,
+    )}_to_${salesDatePart(
+      filters.toDate,
+    )}.xlsx`;
 
   return (
     <ReportShell
-      title={sellerView ? "Sales Report" : "Sales Reports"}
+      title={
+        sellerView
+          ? "Sales Report"
+          : "Sales Reports"
+      }
+
       subtitle={
         sellerView
           ? "Revenue and order status for your seller account."
           : "Revenue, order status, payments, and refunds from live marketplace analytics"
       }
+
       breadcrumbs={[
-        { label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" },
-        { label: sellerView ? "Sales Report" : "Sales Reports" },
+        {
+          label: sellerView
+            ? SELLER_REPORT_CRUMB
+            : "Reports & Analytics",
+        },
+
+        {
+          label: sellerView
+            ? "Sales Report"
+            : "Sales Reports",
+        },
       ]}
+
       stats={stats}
+
       loading={loading}
+
       error={error}
+
       filters={filters}
+
       onRefresh={refresh}
+
       exportEndpoint={null}
-      exportFilename="sales-report.csv"
-      exportRows={salesExportRows}
-      exportColumns={[
-        { key: "date", label: "Date" },
-        { key: "products", label: "Products" },
-        { key: "refundAmount", label: "Refund Amount" },
-        { key: "orders", label: "Orders" },
-        { key: "revenue", label: "Revenue" },
-        { key: "views", label: "Views" },
+
+      exportFilename={
+        salesExportFilename
+      }
+
+      /*
+       * ==========================
+       * EXCEL EXPORT
+       * ==========================
+       */
+
+      exportExcelSheets={[
+        /*
+         * ==========================
+         * SALES SUMMARY
+         * ==========================
+         */
+
+        {
+          name: "Sales Summary",
+
+          title: "Sales Summary",
+
+          data: salesSummaryRows,
+
+          columns: [
+            {
+              key: "field",
+              label: "Field",
+            },
+
+            {
+              key: "value",
+              label: "Value",
+            },
+          ],
+        },
+
+        /*
+         * ==========================
+         * SALES DETAILS
+         * ==========================
+         */
+
+       {
+  name: "Sales Details",
+
+  title: "Sales Details",
+
+  data: salesDetailRows,
+
+  columns: [
+    {
+      key: "serialNumber",
+      label: "S.No",
+    },
+
+    {
+      key: "orderId",
+      label: "Order ID",
+    },
+
+    {
+      key: "orderDate",
+      label: "Order Date",
+    },
+
+    {
+      key: "orderStatus",
+      label: "Order Status",
+    },
+
+    {
+      key: "paymentStatus",
+      label: "Payment Status",
+    },
+
+    {
+      key: "productName",
+      label: "Product Name",
+    },
+
+    {
+      key: "sku",
+      label: "SKU",
+    },
+
+    {
+      key: "variant",
+      label: "Variant",
+    },
+
+    {
+      key: "category",
+      label: "Category",
+    },
+
+    {
+      key: "quantity",
+      label: "Quantity",
+    },
+
+    {
+      key: "unitPrice",
+      label: "Unit Price",
+    },
+
+    {
+      key: "subtotal",
+      label: "Subtotal",
+    },
+
+    {
+      key: "discount",
+      label: "Discount",
+    },
+
+    {
+      key: "tax",
+      label: "Tax",
+    },
+
+    {
+      key: "shipping",
+      label: "Shipping",
+    },
+
+    {
+      key: "grossAmount",
+      label: "Gross Amount",
+    },
+
+    {
+      key: "refundAmount",
+      label: "Refund Amount",
+    },
+
+    {
+      key: "commission",
+      label: "Commission",
+    },
+
+    {
+      key: "shippingDeduction",
+      label: "Shipping Deduction",
+    },
+
+    {
+      key: "netSellerEarnings",
+      label: "Net Seller Earnings",
+    },
+
+    {
+      key: "payoutStatus",
+      label: "Payout Status",
+    },
+
+    // {
+    //   key: "payoutDate",
+    //   label: "Payout Date",
+    // },
+  ],
+
+  cellStyles: {
+    "Payout Status": {
+      pending: {
+        fill: {
+          patternType: "solid",
+          fgColor: { rgb: "FEF3C7" },
+        },
+        font: {
+          color: { rgb: "92400E" },
+          bold: true,
+        },
+      },
+
+      processing: {
+        fill: {
+          patternType: "solid",
+          fgColor: { rgb: "DBEAFE" },
+        },
+        font: {
+          color: { rgb: "1D4ED8" },
+          bold: true,
+        },
+      },
+
+      completed: {
+        fill: {
+          patternType: "solid",
+          fgColor: { rgb: "DCFCE7" },
+        },
+        font: {
+          color: { rgb: "166534" },
+          bold: true,
+        },
+      },
+
+      failed: {
+        fill: {
+          patternType: "solid",
+          fgColor: { rgb: "FEE2E2" },
+        },
+        font: {
+          color: { rgb: "991B1B" },
+          bold: true,
+        },
+      },
+    },
+  },
+},
       ]}
     >
       <SummaryColumnChart
@@ -1901,9 +2437,7 @@ export const ProductAnalytics = () => {
 
       lastViewed:
         row.lastViewedAt
-          ? formatDateLabel(
-              row.lastViewedAt,
-            )
+          ? formatDateTime(row.lastViewedAt, "-")
           : "-",
 
       status: row.status,
@@ -2000,85 +2534,144 @@ export const ProductAnalytics = () => {
          * PRODUCT DETAILS
          * ==========================
          */
-        {
-          name: "Product Details",
+       {
+  name: "Product Details",
 
-          title: "Product Details",
+  title: "Product Details",
 
-          data: productDetailRows,
+  data: productDetailRows,
 
-          columns: [
-            {
-              key: "serialNumber",
-              label: "S.No",
-            },
+  columns: [
+    {
+      key: "serialNumber",
+      label: "S.No",
+    },
 
-            {
-              key: "productName",
-              label: "Product Name",
-            },
+    {
+      key: "productName",
+      label: "Product Name",
+    },
 
-            {
-              key: "sku",
-              label: "SKU",
-            },
+    {
+      key: "sku",
+      label: "SKU",
+    },
 
-            {
-              key: "price",
-              label: "Price",
-            },
+    {
+      key: "price",
+      label: "Price",
+    },
 
-            {
-              key: "productViews",
-              label: "Product Views",
-            },
+    {
+      key: "productViews",
+      label: "Product Views",
+    },
 
-            {
-              key: "uniqueViews",
-              label: "Unique Views",
-            },
+    {
+      key: "uniqueViews",
+      label: "Unique Views",
+    },
 
-            {
-              key: "impressions",
-              label: "Impressions",
-            },
+    {
+      key: "impressions",
+      label: "Impressions",
+    },
 
-            {
-              key: "cartAdds",
-              label: "Cart Adds",
-            },
+    {
+      key: "cartAdds",
+      label: "Cart Adds",
+    },
 
-            {
-              key: "wishlistAdds",
-              label: "Wishlist Adds",
-            },
+    {
+      key: "wishlistAdds",
+      label: "Wishlist Adds",
+    },
 
-            {
-              key: "purchases",
-              label: "Purchases",
-            },
+    {
+      key: "purchases",
+      label: "Purchases",
+    },
 
-            {
-              key: "orderCount",
-              label: "Order Count",
-            },
+    {
+      key: "orderCount",
+      label: "Order Count",
+    },
 
-            {
-              key: "revenue",
-              label: "Revenue",
-            },
+    {
+      key: "revenue",
+      label: "Revenue",
+    },
 
-            {
-              key: "lastViewed",
-              label: "Last Viewed",
-            },
+    {
+      key: "lastViewed",
+      label: "Last Viewed",
+    },
 
-            {
-              key: "status",
-              label: "Status",
-            },
-          ],
+    {
+      key: "status",
+      label: "Status",
+    },
+  ],
+
+  cellStyles: {
+    Status: {
+      active: {
+        fill: {
+          patternType: "solid",
+          fgColor: { rgb: "DCFCE7" },
         },
+        font: {
+          color: { rgb: "166534" },
+          bold: true,
+        },
+      },
+
+      approved: {
+        fill: {
+          patternType: "solid",
+          fgColor: { rgb: "DCFCE7" },
+        },
+        font: {
+          color: { rgb: "166534" },
+          bold: true,
+        },
+      },
+
+      pending: {
+        fill: {
+          patternType: "solid",
+          fgColor: { rgb: "FEF3C7" },
+        },
+        font: {
+          color: { rgb: "92400E" },
+          bold: true,
+        },
+      },
+
+      rejected: {
+        fill: {
+          patternType: "solid",
+          fgColor: { rgb: "FEE2E2" },
+        },
+        font: {
+          color: { rgb: "991B1B" },
+          bold: true,
+        },
+      },
+
+      inactive: {
+        fill: {
+          patternType: "solid",
+          fgColor: { rgb: "F3F4F6" },
+        },
+        font: {
+          color: { rgb: "4B5563" },
+          bold: true,
+        },
+      },
+    },
+  },
+},
       ]}
     >
       <div className="space-y-4">
