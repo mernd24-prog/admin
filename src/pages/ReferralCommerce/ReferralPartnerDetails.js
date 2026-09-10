@@ -74,6 +74,37 @@ const formatCoins = (value) =>
 
 const formatDate = (value) => formatDateTime12Hour(value, "-");
 
+const SectionTabs = ({ tabs = [], activeTab, onChange }) => (
+  <div className="flex flex-wrap gap-2 rounded-xl border border-[var(--admin-navy)]/10 bg-[var(--admin-blue-soft)] p-1.5">
+    {tabs.map((tab) => {
+      const isActive = tab.value === activeTab;
+      return (
+        <button
+          key={tab.value}
+          type="button"
+          onClick={() => onChange?.(tab.value)}
+          className={`rounded-md px-3 py-2 text-xs font-semibold transition-all ${
+            isActive
+              ? "bg-[var(--admin-navy)] text-white shadow-sm ring-1 ring-[var(--admin-navy-dark)]"
+              : "bg-transparent text-[var(--admin-navy)] hover:bg-white hover:text-[var(--admin-navy-dark)]"
+          }`}
+        >
+          {tab.label}
+          {tab.count !== undefined && (
+            <span
+              className={`ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                isActive ? "bg-white/20 text-white" : "bg-white text-[var(--admin-navy)]"
+              }`}
+            >
+              {tab.count}
+            </span>
+          )}
+        </button>
+      );
+    })}
+  </div>
+);
+
 const humanize = (value) => formatLabel(value, "-");
 
 const firstValue = (...values) =>
@@ -195,7 +226,10 @@ const ReferralPartnerDetails = () => {
   const { id } = useParams();
   const referralState = useSelector((state) => state.referralCommerce || {});
   const navigatedInfluencer = location.state?.influencer;
+  const returnTo = location.state?.returnTo;
+  const [activeMainTab, setActiveMainTab] = useState("overview");
   const [activeActivityTab, setActiveActivityTab] = useState("codes");
+  const [loadedDetailId, setLoadedDetailId] = useState(null);
 
   const influencers = useMemo(
     () => getBranchList(referralState.influencersData),
@@ -252,17 +286,33 @@ const ReferralPartnerDetails = () => {
     () => navigatedInfluencer || findInfluencer(influencers, id),
     [id, influencers, navigatedInfluencer],
   );
+  const isAssociate = influencer?.influencerType === "child";
+  const detailLoading = loadedDetailId !== id;
+
+  const handleBack = () => {
+    navigate(returnTo?.pathname || "/app/referral-commerce/influencers", {
+      state: returnTo?.state,
+    });
+  };
+
+  useEffect(() => {
+    setActiveMainTab("overview");
+    setActiveActivityTab("codes");
+  }, [id, influencer?.influencerType]);
 
   useEffect(() => {
     if (!id) return;
 
-    dispatch(getReferralInfluencers({ page: 1, limit: 200, influencerId: id }));
-    dispatch(getReferralCodes({ page: 1, limit: 200, influencerId: id }));
-    dispatch(getReferralOrders({ page: 1, limit: 200, influencerId: id }));
-    dispatch(getReferralCommissions({ page: 1, limit: 200, influencerId: id }));
-    dispatch(getReferralPayouts({ page: 1, limit: 200, influencerId: id }));
-    dispatch(getReferralBonusProgress({ page: 1, limit: 200, influencerId: id }));
-    dispatch(getReferralBonusAchievements({ page: 1, limit: 200, influencerId: id }));
+    setLoadedDetailId(null);
+    Promise.all([
+      dispatch(getReferralInfluencers({ page: 1, limit: 200, influencerId: id })),
+      dispatch(getReferralCodes({ page: 1, limit: 200, influencerId: id })),
+      dispatch(getReferralOrders({ page: 1, limit: 200, influencerId: id })),
+      dispatch(getReferralCommissions({ page: 1, limit: 200, influencerId: id })),
+      dispatch(getReferralPayouts({ page: 1, limit: 200, influencerId: id })),
+      dispatch(getReferralBonusProgress({ page: 1, limit: 200, influencerId: id })),
+      dispatch(getReferralBonusAchievements({ page: 1, limit: 200, influencerId: id })),
+    ]).finally(() => setLoadedDetailId(id));
   }, [dispatch, id]);
 
   useEffect(() => {
@@ -438,12 +488,20 @@ const ReferralPartnerDetails = () => {
           <button
             type="button"
             className="inline-flex items-center gap-1.5 rounded bg-[var(--admin-blue-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--admin-blue)] transition hover:bg-[var(--admin-blue)] hover:text-white"
-            onClick={() =>
-              navigate(
-                `/app/referral-commerce/influencers/view/${getId(associate)}`,
-                { state: { influencer: associate } },
-              )
-            }
+            onClick={(event) => {
+              event.stopPropagation();
+              const associateId = getId(associate);
+              if (!associateId) return;
+              navigate(`/app/referral-commerce/influencers/view/${associateId}`, {
+                state: {
+                  influencer: associate,
+                  returnTo: {
+                    pathname: `/app/referral-commerce/influencers/view/${id}`,
+                    state: { influencer },
+                  },
+                },
+              });
+            }}
           >
             <Eye size={14} /> View
           </button>
@@ -503,7 +561,11 @@ const ReferralPartnerDetails = () => {
           subtitle="Partner profile could not be found."
           breadcrumbs={[{ label: "Marketing" }, { label: "Referral Partners" }, { label: "Details" }]}
           actions={
-            <button type="button" className="admin-btn-secondary" onClick={() => navigate("/app/referral-commerce/influencers")}>
+            <button
+              type="button"
+              className="admin-btn-secondary !border-[var(--admin-navy)] !bg-[var(--admin-navy)] !text-white hover:!bg-[var(--admin-navy-dark)]"
+              onClick={handleBack}
+            >
               <ArrowLeft size={16} />
               Back
             </button>
@@ -519,11 +581,16 @@ const ReferralPartnerDetails = () => {
       <PageHeader
         title="Referral Partner Details"
         subtitle={fullName(influencer?.user || {})}
+        status={partnerTypeLabel(influencer?.influencerType)}
         breadcrumbs={[{ label: "Marketing" }, { label: "Referral Partners" }, { label: "Details" }]}
         actions={
-          <button type="button" className="admin-btn-secondary" onClick={() => navigate("/app/referral-commerce/influencers")}>
+          <button
+            type="button"
+            className="admin-btn-primary"
+            onClick={handleBack}
+          >
             <ArrowLeft size={16} />
-            Back to partners
+            {isAssociate && returnTo ? "Back to Growth Partner" : "Back to partners"}
           </button>
         }
       />
@@ -540,359 +607,414 @@ const ReferralPartnerDetails = () => {
         ))}
       </div>
 
-      <FormSection
-        title="Partner profile"
-        subtitle="Basic identity and referral account information"
-        icon={<UserRound size={18} />}
-      >
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {infoRows.map((row) => (
-            <div key={row.label} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{row.label}</div>
-              <div className="mt-2 text-sm font-medium text-gray-800">{row.value}</div>
+      <div className="admin-card overflow-hidden border-0 shadow-none">
+        <div className="bg-[#f9f4eb] px-4 py-4">
+          <div className="flex flex-wrap gap-2 rounded-md border-0 bg-[var(--admin-blue-soft)] p-1.5">
+            {[
+              { value: "overview", label: "Overview" },
+              ...(influencer?.influencerType === "parent"
+                ? [{ value: "associated-brands", label: "Brand Associate" }]
+                : []),
+              { value: "activity", label: "Activity" },
+              { value: "verification", label: "Verification" },
+              { value: "actions", label: "Actions" },
+            ].map((tab) => {
+              const isActive = activeMainTab === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setActiveMainTab(tab.value)}
+                  className={`rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    isActive
+                      ? "bg-[var(--admin-navy)] text-white shadow-sm ring-1 ring-[var(--admin-navy-dark)]"
+                      : "bg-transparent text-[var(--admin-navy)] hover:bg-white hover:text-[var(--admin-navy-dark)]"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="p-4">
+          {activeMainTab === "overview" && (
+            <div className="space-y-5">
+              <FormSection
+                title="Partner profile"
+                subtitle="Basic identity and referral account information"
+                icon={<UserRound size={18} />}
+                className="border-0 shadow-none"
+              >
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {infoRows.map((row) => (
+                    <div key={row.label} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{row.label}</div>
+                      <div className="mt-2 text-sm font-medium text-gray-800">{row.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </FormSection>
             </div>
-          ))}
-        </div>
-      </FormSection>
+          )}
 
-      {influencer?.influencerType === "parent" && (
-        <FormSection
-          title="Associated Brands"
-          subtitle="Brand Associates registered under this Growth Partner"
-          icon={<GitBranch size={18} />}
-        >
-          <SharedDataTable
-            columns={[
-              { key: "associate", label: "Brand Associate" },
-              { key: "code", label: "Referral Code" },
-              { key: "level", label: "Hierarchy" },
-              { key: "wallet", label: "Available Coins" },
-              { key: "status", label: "Status" },
-              { key: "created", label: "Associated On" },
-              { key: "actions", label: "Actions" },
-            ]}
-            data={brandAssociateRows}
-            loading={Boolean(referralState.loading)}
-            rowKey="key"
-            onRowClick={(row) =>
-              navigate(`/app/referral-commerce/influencers/view/${row.key}`, {
-                state: {
-                  influencer: brandAssociates.find(
-                    (item) => String(getId(item)) === String(row.key),
-                  ),
-                },
-              })
-            }
-            emptyText="No Brand Associates are linked to this Growth Partner."
-            cardClassName="overflow-hidden"
-          />
-        </FormSection>
-      )}
+          {influencer?.influencerType === "parent" && activeMainTab === "associated-brands" && (
+            <FormSection
+              title="Associated Brands"
+              subtitle="Brand Associates registered under this Growth Partner"
+              icon={<GitBranch size={18} />}
+              className="border-0 shadow-none"
+            >
+              <SharedDataTable
+                columns={[
+                  { key: "associate", label: "Brand Associate" },
+                  { key: "code", label: "Referral Code" },
+                  { key: "level", label: "Hierarchy" },
+                  { key: "wallet", label: "Available Coins" },
+                  { key: "status", label: "Status" },
+                  { key: "created", label: "Associated On" },
+                  { key: "actions", label: "Actions" },
+                ]}
+                data={brandAssociateRows}
+                loading={detailLoading || Boolean(referralState.brandAssociatesData?.loading)}
+                rowKey="key"
+                onRowClick={(row) =>
+                  navigate(`/app/referral-commerce/influencers/view/${row.key}`, {
+                    state: {
+                      influencer: brandAssociates.find(
+                        (item) => String(getId(item)) === String(row.key),
+                      ),
+                      returnTo: {
+                        pathname: `/app/referral-commerce/influencers/view/${id}`,
+                        state: { influencer },
+                      },
+                    },
+                  })
+                }
+                emptyText="No Brand Associates are linked to this Growth Partner."
+                cardClassName="overflow-hidden"
+              />
+            </FormSection>
+          )}
 
-      <FormSection
-        title="Partner actions"
-        subtitle="Review access, verification, and partner status"
-        icon={<ShieldCheck size={18} />}
-      >
-        <div className="mb-3 flex justify-end">
-          <StatusBadge status={influencer?.status} size="sm" />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {(influencer?.kycStatus === "submitted" || influencer?.kycStatus === "rejected") && (
-            <button type="button" className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100" onClick={() => reviewVerification("kyc", "verified")}>
-              <Check size={14} /> Approve KYC
-            </button>
-          )}
-          {(influencer?.kycStatus === "submitted" || influencer?.kycStatus === "verified") && (
-            <button type="button" className="inline-flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100" onClick={() => reviewVerification("kyc", "rejected")}>
-              <X size={14} /> Reject KYC
-            </button>
-          )}
-          {(influencer?.payoutProfileStatus === "submitted" || influencer?.payoutProfileStatus === "rejected") && (
-            <button type="button" className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100" onClick={() => reviewVerification("bank", "verified")}>
-              <Check size={14} /> Verify Bank
-            </button>
-          )}
-          {(influencer?.payoutProfileStatus === "submitted" || influencer?.payoutProfileStatus === "verified") && (
-            <button type="button" className="inline-flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100" onClick={() => reviewVerification("bank", "rejected")}>
-              <X size={14} /> Reject Bank
-            </button>
-          )}
-          <button type="button" className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition ${influencer?.status === "active" ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`} onClick={updatePartnerStatus}>
-            {influencer?.status === "active" ? <X size={14} /> : <Check size={14} />}
-            {influencer?.status === "pending" ? "Approve account" : influencer?.status === "active" ? "Suspend partner" : "Reactivate partner"}
-          </button>
-          <button type="button" className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition ${influencer?.canCreateChildren ? "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100" : "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"}`} onClick={togglePermission}>
-            {influencer?.canCreateChildren ? <X size={14} /> : <UserPlus size={14} />}
-            {influencer?.canCreateChildren ? "Revoke child creation" : "Grant child creation"}
-          </button>
-          {influencer?.childRegistration?.shareable && (
-            <button type="button" className="inline-flex items-center gap-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100" onClick={copyRegistrationLink}>
-              <Link size={14} /> Copy registration link
-            </button>
-          )}
-          {!(influencer?.influencerType === "parent" && influencer?.canCreateChildren) && (
-            <button type="button" className="inline-flex items-center gap-2 rounded border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100" onClick={promotePartner}>
-              <GitBranch size={14} /> Promote to Growth Partner
-            </button>
-          )}
-        </div>
-      </FormSection>
+          {activeMainTab === "activity" && (
+            <FormSection
+              title="Partner activity"
+              subtitle="Review this partner's referrals, earnings, payouts, and bonuses."
+              icon={<Activity size={18} />}
+              className="border-0 shadow-none"
+            >
+              <div className="mb-4 flex gap-1 overflow-x-auto">
+                {[
+                  ["codes", "Referral codes", codeRows.length],
+                  ["orders", "Orders", orderRows.length],
+                  ["commissions", "Commissions", commissionRows.length],
+                  ["payouts", "Payouts", payoutRows.length],
+                  ["progress", "Bonus progress", bonusProgress.length],
+                  ["achievements", "Bonus history", bonusAchievements.length],
+                ].map(([value, label, count]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setActiveActivityTab(value)}
+                    className={`whitespace-nowrap rounded-md px-3.5 py-2.5 text-xs font-semibold transition ${activeActivityTab === value ? "bg-[var(--admin-navy)] text-white shadow-sm ring-1 ring-[var(--admin-navy-dark)]" : "bg-white/70 text-[var(--admin-navy)] hover:bg-white hover:text-[var(--admin-navy-dark)]"}`}
+                  >
+                    {label} <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] ${activeActivityTab === value ? "bg-white/20 text-white" : "bg-[var(--admin-blue-soft)] text-[var(--admin-navy)]"}`}>{count}</span>
+                  </button>
+                ))}
+              </div>
 
-      <FormSection
-        title="Documents, KYC & bank details"
-        subtitle="Verification records and payout information"
-        icon={<BadgeCheck size={18} />}
-      >
-        <div className="grid gap-5 lg:grid-cols-3">
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <FileText size={16} className="text-indigo-600" />
-              Documents
-            </div>
-            <div className="space-y-2 text-sm">
-              {documentEntries(verificationData.documents).length ? (
-                documentEntries(verificationData.documents).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between gap-3">
-                    <span className="text-gray-500">{documentLabel(key)}</span>
-                    {String(value).startsWith("http") ? (
-                      <a
-                        href={value}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-medium text-indigo-700 underline"
-                      >
-                        View
-                      </a>
+              {activeActivityTab === "codes" && (
+                <div className="pt-2">
+                  <SharedDataTable
+                    columns={[
+                      { key: "code", label: "Referral Code" },
+                      { key: "status", label: "Status" },
+                      { key: "usage", label: "Usage" },
+                      { key: "created", label: "Created" },
+                    ]}
+                    data={codeRows}
+                    loading={detailLoading || Boolean(referralState.codesData?.loading)}
+                    rowKey="key"
+                    emptyText="No referral codes found for this partner."
+                    cardClassName="overflow-hidden"
+                  />
+                </div>
+              )}
+
+              {activeActivityTab === "orders" && (
+                <div className="pt-2">
+                  <SharedDataTable
+                    columns={[
+                      { key: "order", label: "Order" },
+                      { key: "code", label: "Code" },
+                      { key: "amount", label: "Amount" },
+                      { key: "status", label: "Status" },
+                      { key: "created", label: "Created" },
+                    ]}
+                    data={orderRows}
+                    loading={detailLoading || Boolean(referralState.ordersData?.loading)}
+                    rowKey="key"
+                    emptyText="No partner orders yet."
+                    cardClassName="overflow-hidden"
+                  />
+                </div>
+              )}
+
+              {activeActivityTab === "commissions" && (
+                <div className="pt-2">
+                  <SharedDataTable
+                    columns={[
+                      { key: "type", label: "Type" },
+                      { key: "basis", label: "Basis" },
+                      { key: "amount", label: "Coins" },
+                      { key: "status", label: "Status" },
+                    ]}
+                    data={commissionRows}
+                    loading={detailLoading || Boolean(referralState.commissionsData?.loading)}
+                    rowKey="key"
+                    emptyText="No commission entries found."
+                    cardClassName="overflow-hidden"
+                  />
+                </div>
+              )}
+
+              {activeActivityTab === "payouts" && (
+                <div className="pt-2">
+                  <SharedDataTable
+                    columns={[
+                      { key: "coins", label: "Coins" },
+                      { key: "payable", label: "Payable" },
+                      { key: "method", label: "Method" },
+                      { key: "status", label: "Status" },
+                      { key: "requested", label: "Requested" },
+                    ]}
+                    data={payoutRows}
+                    loading={detailLoading || Boolean(referralState.payoutsData?.loading)}
+                    rowKey="key"
+                    emptyText="No payout requests for this partner."
+                    cardClassName="overflow-hidden"
+                  />
+                </div>
+              )}
+
+              {activeActivityTab === "progress" && (
+                <div className="pt-2">
+                  <SharedDataTable
+                    columns={[
+                      { key: "rule", label: "Rule" },
+                      { key: "cycle", label: "Cycle" },
+                      { key: "target", label: "Target" },
+                      { key: "progress", label: "Progress" },
+                      { key: "status", label: "Status" },
+                    ]}
+                    data={bonusProgress.map((row) => ({
+                      key: `${getId(row.rule)}-${row.influencer?.id}-${row.cycleKey}`,
+                      rule: row.rule?.ruleName || "-",
+                      cycle: row.cycleKey || "-",
+                      target: Number(row.targetValue || 0).toLocaleString("en-IN"),
+                      progress: `${Number(row.progressPercent || 0).toFixed(2)}%`,
+                      status: row.existingAchievement ? (
+                        <StatusBadge status={row.existingAchievement.status} size="sm" />
+                      ) : (
+                        <StatusBadge status={row.achieved ? "achieved" : "in_progress"} size="sm" />
+                      ),
+                    }))}
+                    loading={detailLoading || Boolean(referralState.bonusProgressData?.loading)}
+                    rowKey="key"
+                    emptyText="No bonus progress recorded."
+                    cardClassName="overflow-hidden"
+                  />
+                </div>
+              )}
+
+              {activeActivityTab === "achievements" && (
+                <div className="pt-2">
+                  <SharedDataTable
+                    columns={[
+                      { key: "rule", label: "Rule" },
+                      { key: "cycle", label: "Cycle" },
+                      { key: "bonus", label: "Bonus Coins" },
+                      { key: "status", label: "Status" },
+                      { key: "achievedAt", label: "Achieved At" },
+                    ]}
+                    data={bonusAchievements.map((achievement) => ({
+                      key: getId(achievement),
+                      rule: achievement.ruleName || "-",
+                      cycle: achievement.cycleKey || "-",
+                      bonus: `${Number(achievement.bonusCoins || 0).toLocaleString("en-IN")} coins`,
+                      status: <StatusBadge status={achievement.status} size="sm" />,
+                      achievedAt: formatDate(achievement.achievedAt || achievement.createdAt),
+                    }))}
+                    loading={detailLoading || Boolean(referralState.bonusAchievementsData?.loading)}
+                    rowKey="key"
+                    emptyText="No bonus achievements for this partner."
+                    cardClassName="overflow-hidden"
+                  />
+                </div>
+              )}
+            </FormSection>
+          )}
+
+          {activeMainTab === "verification" && (
+            <FormSection
+              title="Documents, KYC & bank details"
+              subtitle="Verification records and payout information"
+              icon={<BadgeCheck size={18} />}
+              className="border-0 shadow-none"
+            >
+              <div className="grid gap-5 lg:grid-cols-3">
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
+                    <FileText size={16} className="text-indigo-600" />
+                    Documents
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {documentEntries(verificationData.documents).length ? (
+                      documentEntries(verificationData.documents).map(([key, value]) => (
+                        <div key={key} className="flex items-center justify-between gap-3">
+                          <span className="text-gray-500">{documentLabel(key)}</span>
+                          {String(value).startsWith("http") ? (
+                            <a
+                              href={value}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-medium text-indigo-700 underline"
+                            >
+                              View
+                            </a>
+                          ) : (
+                            <span className="max-w-[65%] truncate text-right font-medium text-gray-800">
+                              {String(value)}
+                            </span>
+                          )}
+                        </div>
+                      ))
                     ) : (
-                      <span className="max-w-[65%] truncate text-right font-medium text-gray-800">
-                        {String(value)}
-                      </span>
+                      <span className="text-gray-500">No documents submitted.</span>
                     )}
                   </div>
-                ))
-              ) : (
-                <span className="text-gray-500">No documents submitted.</span>
-              )}
-            </div>
-          </div>
+                </div>
 
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <BadgeCheck size={16} className="text-indigo-600" />
-              KYC
-            </div>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-500">Verification status</span>
-                <StatusBadge status={verificationData.kycStatus || "not_submitted"} size="sm" />
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-500">PAN</span>
-                <span className="font-medium text-gray-800">
-                  {verificationData.panNumber || "-"}
-                </span>
-              </div>
-            </div>
-          </div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
+                    <BadgeCheck size={16} className="text-indigo-600" />
+                    KYC
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-500">Verification status</span>
+                      <StatusBadge status={verificationData.kycStatus || "not_submitted"} size="sm" />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-500">PAN</span>
+                      <span className="font-medium text-gray-800">
+                        {verificationData.panNumber || "-"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <Landmark size={16} className="text-indigo-600" />
-              Bank details
-            </div>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-500">Verification status</span>
-                <StatusBadge status={verificationData.bankStatus || "not_submitted"} size="sm" />
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
+                    <Landmark size={16} className="text-indigo-600" />
+                    Bank details
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-500">Verification status</span>
+                      <StatusBadge status={verificationData.bankStatus || "not_submitted"} size="sm" />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-500">Bank</span>
+                      <span className="text-right font-medium text-gray-800">
+                        {verificationData.bankDetails.method === "upi"
+                          ? `UPI: ${verificationData.bankDetails.upiId || "-"}`
+                          : firstValue(
+                              verificationData.bankDetails.bankName,
+                              verificationData.bankDetails.bank,
+                            ) || "-"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-500">Account</span>
+                      <span className="font-medium text-gray-800">
+                        {maskAccountNumber(
+                          firstValue(
+                            verificationData.bankDetails.accountNumber,
+                            verificationData.bankDetails.bankAccountNumber,
+                            verificationData.bankDetails.accountNo,
+                          ),
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-500">IFSC</span>
+                      <span className="font-medium text-gray-800">
+                        {firstValue(verificationData.bankDetails.ifscCode, verificationData.bankDetails.ifsc) || "-"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-500">Bank</span>
-                <span className="text-right font-medium text-gray-800">
-                  {verificationData.bankDetails.method === "upi"
-                    ? `UPI: ${verificationData.bankDetails.upiId || "-"}`
-                    : firstValue(
-                        verificationData.bankDetails.bankName,
-                        verificationData.bankDetails.bank,
-                      ) || "-"}
-                </span>
+            </FormSection>
+          )}
+
+          {activeMainTab === "actions" && (
+            <FormSection
+              title="Partner actions"
+              subtitle="Review access, verification, and partner status"
+              icon={<ShieldCheck size={18} />}
+              className="border-0 shadow-none"
+            >
+              <div className="mb-3 flex justify-end">
+                <StatusBadge status={influencer?.status} size="sm" />
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-500">Account</span>
-                <span className="font-medium text-gray-800">
-                  {maskAccountNumber(
-                    firstValue(
-                      verificationData.bankDetails.accountNumber,
-                      verificationData.bankDetails.bankAccountNumber,
-                      verificationData.bankDetails.accountNo,
-                    ),
-                  )}
-                </span>
+              <div className="flex flex-wrap gap-2">
+                {(influencer?.kycStatus === "submitted" || influencer?.kycStatus === "rejected") && (
+                  <button type="button" className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100" onClick={() => reviewVerification("kyc", "verified")}>
+                    <Check size={14} /> Approve KYC
+                  </button>
+                )}
+                {(influencer?.kycStatus === "submitted" || influencer?.kycStatus === "verified") && (
+                  <button type="button" className="inline-flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100" onClick={() => reviewVerification("kyc", "rejected")}>
+                    <X size={14} /> Reject KYC
+                  </button>
+                )}
+                {(influencer?.payoutProfileStatus === "submitted" || influencer?.payoutProfileStatus === "rejected") && (
+                  <button type="button" className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100" onClick={() => reviewVerification("bank", "verified")}>
+                    <Check size={14} /> Verify Bank
+                  </button>
+                )}
+                {(influencer?.payoutProfileStatus === "submitted" || influencer?.payoutProfileStatus === "verified") && (
+                  <button type="button" className="inline-flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100" onClick={() => reviewVerification("bank", "rejected")}>
+                    <X size={14} /> Reject Bank
+                  </button>
+                )}
+                <button type="button" className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition ${influencer?.status === "active" ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`} onClick={updatePartnerStatus}>
+                  {influencer?.status === "active" ? <X size={14} /> : <Check size={14} />}
+                  {influencer?.status === "pending" ? "Approve account" : influencer?.status === "active" ? "Suspend partner" : "Reactivate partner"}
+                </button>
+                <button type="button" className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition ${influencer?.canCreateChildren ? "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100" : "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"}`} onClick={togglePermission}>
+                  {influencer?.canCreateChildren ? <X size={14} /> : <UserPlus size={14} />}
+                  {influencer?.canCreateChildren ? "Revoke child creation" : "Grant child creation"}
+                </button>
+                {influencer?.childRegistration?.shareable && (
+                  <button type="button" className="inline-flex items-center gap-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100" onClick={copyRegistrationLink}>
+                    <Link size={14} /> Copy registration link
+                  </button>
+                )}
+                {!(influencer?.influencerType === "parent" && influencer?.canCreateChildren) && (
+                  <button type="button" className="inline-flex items-center gap-2 rounded border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100" onClick={promotePartner}>
+                    <GitBranch size={14} /> Promote to Growth Partner
+                  </button>
+                )}
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-500">IFSC</span>
-                <span className="font-medium text-gray-800">
-                  {firstValue(verificationData.bankDetails.ifscCode, verificationData.bankDetails.ifsc) || "-"}
-                </span>
-              </div>
-            </div>
-          </div>
+            </FormSection>
+          )}
         </div>
-      </FormSection>
-
-      <section className="admin-card overflow-hidden">
-        <div className="border-b border-[var(--admin-line)] px-5 pt-4">
-          <div className="mb-4 flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)]">
-              <Activity size={18} />
-            </span>
-            <div>
-              <h2 className="text-sm font-semibold text-[var(--admin-ink)]">Partner activity</h2>
-              <p className="mt-0.5 text-xs text-[var(--admin-muted)]">Review this partner's referrals, earnings, payouts, and bonuses.</p>
-            </div>
-            <span className="ml-auto hidden rounded-full bg-[var(--admin-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--admin-muted)] sm:inline-flex">
-              {codes.length + orders.length + commissions.length + payouts.length} records
-            </span>
-          </div>
-          <div className="flex gap-1 overflow-x-auto">
-            {[
-              ["codes", "Referral codes", codeRows.length],
-              ["orders", "Orders", orderRows.length],
-              ["commissions", "Commissions", commissionRows.length],
-              ["payouts", "Payouts", payoutRows.length],
-              ["progress", "Bonus progress", bonusProgress.length],
-              ["achievements", "Bonus history", bonusAchievements.length],
-            ].map(([value, label, count]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setActiveActivityTab(value)}
-                className={`whitespace-nowrap border-b-2 px-3 py-2.5 text-xs font-semibold transition ${activeActivityTab === value ? "border-indigo-600 text-indigo-700" : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-800"}`}
-              >
-                {label} <span className="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px]">{count}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {activeActivityTab === "codes" && (
-          <SharedDataTable
-            columns={[
-              { key: "code", label: "Referral Code" },
-              { key: "status", label: "Status" },
-              { key: "usage", label: "Usage" },
-              { key: "created", label: "Created" },
-            ]}
-            data={codeRows}
-            loading={Boolean(referralState.loading)}
-            rowKey="key"
-            emptyText="No referral codes found for this partner."
-            cardClassName="overflow-hidden"
-          />
-        )}
-
-        {activeActivityTab === "orders" && (
-          <SharedDataTable
-            columns={[
-              { key: "order", label: "Order" },
-              { key: "code", label: "Code" },
-              { key: "amount", label: "Amount" },
-              { key: "status", label: "Status" },
-              { key: "created", label: "Created" },
-            ]}
-            data={orderRows}
-            loading={Boolean(referralState.loading)}
-            rowKey="key"
-            emptyText="No partner orders yet."
-            cardClassName="overflow-hidden"
-          />
-        )}
-
-        {activeActivityTab === "commissions" && (
-          <SharedDataTable
-            columns={[
-              { key: "type", label: "Type" },
-              { key: "basis", label: "Basis" },
-              { key: "amount", label: "Coins" },
-              { key: "status", label: "Status" },
-            ]}
-            data={commissionRows}
-            loading={Boolean(referralState.loading)}
-            rowKey="key"
-            emptyText="No commission entries found."
-            cardClassName="overflow-hidden"
-          />
-        )}
-
-        {activeActivityTab === "payouts" && (
-          <SharedDataTable
-            columns={[
-              { key: "coins", label: "Coins" },
-              { key: "payable", label: "Payable" },
-              { key: "method", label: "Method" },
-              { key: "status", label: "Status" },
-              { key: "requested", label: "Requested" },
-            ]}
-            data={payoutRows}
-            loading={Boolean(referralState.loading)}
-            rowKey="key"
-            emptyText="No payout requests for this partner."
-            cardClassName="overflow-hidden"
-          />
-        )}
-
-        {activeActivityTab === "progress" && (
-          <SharedDataTable
-            columns={[
-              { key: "rule", label: "Rule" },
-              { key: "cycle", label: "Cycle" },
-              { key: "target", label: "Target" },
-              { key: "progress", label: "Progress" },
-              { key: "status", label: "Status" },
-            ]}
-            data={bonusProgress.map((row) => ({
-              key: `${getId(row.rule)}-${row.influencer?.id}-${row.cycleKey}`,
-              rule: row.rule?.ruleName || "-",
-              cycle: row.cycleKey || "-",
-              target: Number(row.targetValue || 0).toLocaleString("en-IN"),
-              progress: `${Number(row.progressPercent || 0).toFixed(2)}%`,
-              status: row.existingAchievement ? (
-                <StatusBadge status={row.existingAchievement.status} size="sm" />
-              ) : (
-                <StatusBadge status={row.achieved ? "achieved" : "in_progress"} size="sm" />
-              ),
-            }))}
-            loading={Boolean(referralState.loading)}
-            rowKey="key"
-            emptyText="No bonus progress recorded."
-            cardClassName="overflow-hidden"
-          />
-        )}
-
-        {activeActivityTab === "achievements" && (
-          <SharedDataTable
-            columns={[
-              { key: "rule", label: "Rule" },
-              { key: "cycle", label: "Cycle" },
-              { key: "bonus", label: "Bonus Coins" },
-              { key: "status", label: "Status" },
-              { key: "achievedAt", label: "Achieved At" },
-            ]}
-            data={bonusAchievements.map((achievement) => ({
-              key: getId(achievement),
-              rule: achievement.ruleName || "-",
-              cycle: achievement.cycleKey || "-",
-              bonus: `${Number(achievement.bonusCoins || 0).toLocaleString("en-IN")} coins`,
-              status: <StatusBadge status={achievement.status} size="sm" />,
-              achievedAt: formatDate(achievement.achievedAt || achievement.createdAt),
-            }))}
-            loading={Boolean(referralState.loading)}
-            rowKey="key"
-            emptyText="No bonus achievements for this partner."
-            cardClassName="overflow-hidden"
-          />
-        )}
-      </section>
+      </div>
     </div>
   );
 };
