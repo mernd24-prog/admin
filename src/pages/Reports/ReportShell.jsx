@@ -2389,11 +2389,6 @@ export const ProductAnalytics = () => {
     },
 
     {
-      field: "Order Count",
-      value: orderCountTotal,
-    },
-
-    {
       field: "Total Revenue",
       value: revenueTotal,
     },
@@ -2590,11 +2585,6 @@ export const ProductAnalytics = () => {
     {
       key: "purchases",
       label: "Purchases",
-    },
-
-    {
-      key: "orderCount",
-      label: "Order Count",
     },
 
     {
