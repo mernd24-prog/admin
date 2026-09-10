@@ -312,6 +312,8 @@ export const ENDPOINTS = {
     productAmount: (configId) => `/admin/referral/product-amounts/${configId}`,
     influencers: "/admin/referral/influencers",
     parentInfluencers: "/admin/referral/influencers/parents",
+    brandAssociatesByParent: (parentId) =>
+      `/admin/referral/influencers/${parentId}/brand-associates`,
     childInfluencers: (parentId) =>
       `/admin/referral/influencers/${parentId}/children`,
     influencerStatus: (influencerId) =>

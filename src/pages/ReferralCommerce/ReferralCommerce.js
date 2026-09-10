@@ -1705,7 +1705,9 @@ const ReferralCommerce = () => {
         ]),
       influencers: () =>
         Promise.all([
-          dispatch(getReferralInfluencers(query)),
+          dispatch(
+            getReferralInfluencers({ ...query, influencerType: "parent" }),
+          ),
           dispatch(getReferralHierarchy()),
         ]),
       codes: () => dispatch(getReferralCodes(query)),
@@ -2227,7 +2229,10 @@ const ReferralCommerce = () => {
     },
   ];
 
-  const influencerRows = influencers.map((item) => ({
+  const growthPartners = influencers.filter(
+    (item) => item.influencerType === "parent",
+  );
+  const influencerRows = growthPartners.map((item) => ({
     key: getId(item),
     influencer: (
       <div className="min-w-0">

@@ -25,7 +25,7 @@ import Loader from "../../../../components/Loader/Loader";
 import { getAllStateList } from "../../../../Redux/stateSlice";
 import { getAllCityList } from "../../../../Redux/citySlice";
 import { GrDocument } from "react-icons/gr";
-import { FiTrash2, FiAlertCircle, FiPlus, FiImage, FiVideo } from "react-icons/fi";
+import { FiTrash2, FiAlertCircle, FiPlus, FiImage, FiVideo, FiSearch, FiCheck, FiX } from "react-icons/fi";
 import { toast } from "sonner";
 import { useNavigate, useParams } from "react-router-dom";
 import TabNavigation from "./TabNavigation";
@@ -340,6 +340,7 @@ export default function ProductManagementUI() {
   const sellerPanelMode = isSellerPanel();
   const [shippingProfileOptions, setShippingProfileOptions] = useState([]);
   const [allowedPincodeInput, setAllowedPincodeInput] = useState("");
+  const [collectionSearch, setCollectionSearch] = useState("");
 
   const calculatePriceWithTax = (product, basePrice) => {
     const igst = product?.IGST ?? 0;
@@ -383,6 +384,47 @@ export default function ProductManagementUI() {
     () => prefillList("collections").filter((item) => (item.active ?? item.isActive) !== false),
     [prefillList],
   );
+  const selectedCollectionIds = useMemo(
+    () => new Set((Array.isArray(formData?.collectionIds) ? formData.collectionIds : []).map(String)),
+    [formData?.collectionIds],
+  );
+  const collectionReferences = useCallback(
+    (collection = {}) => [collection._id, collection.id, collection.slug, collection.name]
+      .filter(Boolean)
+      .map(String),
+    [],
+  );
+  const isCollectionSelected = useCallback(
+    (collection) => collectionReferences(collection).some((value) => selectedCollectionIds.has(value)),
+    [collectionReferences, selectedCollectionIds],
+  );
+  const filteredCollectionOptions = useMemo(() => {
+    const query = collectionSearch.trim().toLowerCase();
+    if (!query) return collectionOptions;
+    return collectionOptions.filter((collection) =>
+      [collection.name, collection.slug, collection.type, collection.description, ...(collection.tags || [])]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [collectionOptions, collectionSearch]);
+  const selectedCollections = useMemo(
+    () => collectionOptions.filter(isCollectionSelected),
+    [collectionOptions, isCollectionSelected],
+  );
+  const toggleCollection = useCallback((collection) => {
+    const references = collectionReferences(collection);
+    const primaryValue = String(collection._id || collection.id || collection.slug || collection.name || "");
+    if (!primaryValue) return;
+    setFormData((current) => {
+      const currentIds = (Array.isArray(current.collectionIds) ? current.collectionIds : []).map(String);
+      const wasSelected = references.some((value) => currentIds.includes(value));
+      const withoutCollection = currentIds.filter((value) => !references.includes(value));
+      return {
+        ...current,
+        collectionIds: wasSelected ? withoutCollection : [...withoutCollection, primaryValue],
+      };
+    });
+  }, [collectionReferences]);
 
   const toSelectId = (record = {}) =>
     String(
@@ -3387,21 +3429,117 @@ export default function ProductManagementUI() {
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="admin-label">Collections</label>
-              <p className="text-xs text-gray-500">Place this product in one or more curated customer collections.</p>
-              {collectionOptions.length ? (
-                <div className="grid gap-2 rounded-xl border border-[var(--admin-line)] p-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {collectionOptions.map((collection) => {
-                    const value = String(collection._id || collection.slug || collection.name);
-                    const selected = Array.isArray(formData?.collectionIds) && formData.collectionIds.includes(value);
-                    return <label key={value} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-gray-50">
-                      <input type="checkbox" checked={selected} onChange={() => setFormData((prev) => ({ ...prev, collectionIds: selected ? (prev.collectionIds || []).filter((id) => id !== value) : [...(prev.collectionIds || []), value] }))} />
-                      <span className="text-sm">{collection.name}</span>
-                    </label>;
-                  })}
+            <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white">
+              <div className="flex flex-col gap-3 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="admin-label !mb-0">Collections</label>
+                    <span className="rounded-full bg-[var(--admin-gold-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--admin-gold-dark)]">
+                      {selectedCollections.length} selected
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Optional merchandising groups shown in customer discovery and collection pages.
+                  </p>
                 </div>
-              ) : <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-700">No active collections. Create one from Catalog Management → Collections.</p>}
+                {!sellerPanelMode && (
+                  <button type="button" className="admin-btn-secondary shrink-0" onClick={() => navigate("/app/collections")}>
+                    <FiPlus size={14} /> Manage collections
+                  </button>
+                )}
+              </div>
+
+              {collectionOptions.length ? (
+                <div className="space-y-4 p-4">
+                  {selectedCollections.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Selected collections</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCollections.map((collection) => (
+                          <button
+                            key={`selected-${collection._id || collection.slug || collection.name}`}
+                            type="button"
+                            onClick={() => toggleCollection(collection)}
+                            className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:border-amber-300 hover:bg-amber-100"
+                            aria-label={`Remove ${collection.name} collection`}
+                          >
+                            <FiCheck size={13} /> {collection.name}
+                            <FiX size={13} className="text-amber-700" />
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setFormData((current) => ({ ...current, collectionIds: [] }))}
+                          className="px-2 py-1 text-xs font-semibold text-gray-500 hover:text-red-600"
+                        >
+                          Clear all
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="relative">
+                    <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <input
+                      type="search"
+                      value={collectionSearch}
+                      onChange={(event) => setCollectionSearch(event.target.value)}
+                      placeholder="Search collections by name, type, or tag…"
+                      className="admin-input !pl-9"
+                      aria-label="Search collections"
+                    />
+                  </div>
+
+                  {filteredCollectionOptions.length ? (
+                    <div className="grid max-h-80 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
+                      {filteredCollectionOptions.map((collection) => {
+                        const value = String(collection._id || collection.slug || collection.name);
+                        const selected = isCollectionSelected(collection);
+                        const image = collection.thumbnailImage || collection.bannerImage;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => toggleCollection(collection)}
+                            aria-pressed={selected}
+                            className={`group overflow-hidden rounded-xl border text-left transition ${selected ? "border-[var(--admin-gold)] bg-amber-50 shadow-sm" : "border-[var(--admin-line)] bg-white hover:border-amber-300 hover:shadow-sm"}`}
+                          >
+                            <div className="flex min-h-[76px] items-stretch">
+                              <div className="flex w-20 shrink-0 items-center justify-center bg-gray-100">
+                                {image ? (
+                                  <img src={image} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                  <BsMenuApp className="text-gray-300" size={24} />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1 p-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <span className="truncate text-sm font-semibold text-[var(--admin-navy)]">{collection.name}</span>
+                                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[var(--admin-gold)] bg-[var(--admin-gold)] text-white" : "border-gray-300 bg-white text-transparent"}`}>
+                                    <FiCheck size={12} />
+                                  </span>
+                                </div>
+                                <p className="mt-1 truncate text-[11px] capitalize text-gray-500">{collection.type || "custom"}</p>
+                                {collection.description && <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-500">{collection.description}</p>}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-[var(--admin-line)] bg-gray-50 p-5 text-center text-xs text-gray-500">
+                      No collections match “{collectionSearch}”.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4">
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                    No active collections are available. {sellerPanelMode ? "An admin must create and activate a collection first." : "Create one from Catalog Management → Collections."}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* <div className="rounded-xl border border-[var(--admin-line)] bg-white p-4">
@@ -3459,6 +3597,13 @@ export default function ProductManagementUI() {
     [
       formData,
       collectionOptions,
+      filteredCollectionOptions,
+      selectedCollections,
+      collectionSearch,
+      isCollectionSelected,
+      toggleCollection,
+      sellerPanelMode,
+      navigate,
       formattedData,
       createSelectOptions,
       handleChange,

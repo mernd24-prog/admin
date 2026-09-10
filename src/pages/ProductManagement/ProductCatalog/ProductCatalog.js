@@ -35,7 +35,7 @@ import { getAllSellerList } from "../../../Redux/StoreSlice";
 import { transformArray } from "../../../_helpers/globalFunctions";
 import ProductReviewModal from "../../../components/Product/ProductReviewModal";
 import ProductStatusBadge from "../../../components/Product/ProductStatusBadge";
-// import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
+import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import {
   DataTable,
   ExportButton,
@@ -82,11 +82,20 @@ const SELLER_PANEL_ROLES = new Set([
   "seller-admin",
   "seller-sub-admin",
 ]);
-const STATUS_TOGGLEABLE = new Set(["active", "inactive"]);
+const STATUS_TOGGLEABLE = new Set(["active", "inactive", "draft"]);
 const REVIEWABLE_STATUSES = new Set(["pending_approval"]);
 
 const getProductStatus = (product = {}) =>
-  product.status || (product.isDisable ? "inactive" : "active");
+  String(product.status || (product.isDisable ? "inactive" : "active"))
+    .trim()
+    .toLowerCase();
+
+const getProductApprovalStatus = (product = {}) =>
+  String(
+    product.approvalStatus || (product.approvedAt ? "approved" : "pending"),
+  )
+    .trim()
+    .toLowerCase();
 
 const isProductActive = (product = {}) =>
   getProductStatus(product) === "active";
@@ -487,7 +496,9 @@ const ProductCatalog = () => {
     ).unwrap();
     toast.success(
       response?.message ||
-        `Product ${nextStatus === "active" ? "enabled" : "disabled"} successfully.`,
+        (nextStatus === "pending_approval"
+          ? "Product submitted for admin approval."
+          : `Product ${nextStatus === "active" ? "enabled" : "disabled"} successfully.`),
     );
   };
 
@@ -525,6 +536,20 @@ const ProductCatalog = () => {
     });
   };
 
+  const handleSubmitForApproval = (product) => {
+    setStatusConfirmation({
+      open: true,
+      type: "submit_approval",
+      product,
+      productIds: [],
+      nextStatus: "pending_approval",
+      title: "Submit product for approval?",
+      message: `This will send "${product?.title || product?.name || "this product"}" to the admin for review. It will remain hidden from customers until approved.`,
+      confirmLabel: "Submit for approval",
+      variant: "info",
+    });
+  };
+
   const hasPendingRevision = (product) =>
     product?.revisionStatus === "change_pending" ||
     Boolean(product?.pendingRevisionId) ||
@@ -535,8 +560,22 @@ const ProductCatalog = () => {
   const canToggleProduct = (product) => {
     const status = getProductStatus(product);
     if (!STATUS_TOGGLEABLE.has(status)) return false;
-    if (status === "inactive" && product?.approvalStatus !== "approved") return false;
+    if (
+      status !== "active" &&
+      getProductApprovalStatus(product) !== "approved"
+    ) {
+      return false;
+    }
     return true;
+  };
+  const canSubmitForApproval = (product) => {
+    if (!isSellerPanelUser) return false;
+    const status = getProductStatus(product);
+    const approvalStatus = getProductApprovalStatus(product);
+    return (
+      ["draft", "rejected"].includes(status) &&
+      ["pending", "rejected"].includes(approvalStatus)
+    );
   };
 
   const extractRevisionList = (response) => {
@@ -686,7 +725,10 @@ const ProductCatalog = () => {
   const handleStatusConfirm = async () => {
     try {
       setLoading(true);
-      if (statusConfirmation.type === "toggle") {
+      if (
+        statusConfirmation.type === "toggle" ||
+        statusConfirmation.type === "submit_approval"
+      ) {
         await executeToggleStatus(
           statusConfirmation.product,
           statusConfirmation.nextStatus,
@@ -961,26 +1003,51 @@ const ProductCatalog = () => {
       },
       {
         key: "active",
-        label: "Active",
-        render: (_, product) =>
-          canToggleProduct(product) ? (
+        label: "Action",
+        render: (_, product) => {
+          if (canSubmitForApproval(product)) {
+            return (
+              <PermissionGuard
+                module="products"
+                action="status_change"
+                hide
+              >
+                <button
+                  type="button"
+                  onClick={() => handleSubmitForApproval(product)}
+                  className="whitespace-nowrap rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] px-2.5 py-1.5 text-xs font-semibold text-[var(--admin-navy)] transition hover:bg-[var(--admin-gold)]"
+                >
+                  Submit for approval
+                </button>
+              </PermissionGuard>
+            );
+          }
+
+          return canToggleProduct(product) ? (
             <ToggleButton
               isToggle={isProductActive(product)}
               handleClick={() => handleToggle(product)}
               requiredModule="products"
             />
           ) : (
-            <span className="text-xs text-gray-400">-</span>
-          ),
+            <span className="whitespace-nowrap text-xs text-gray-400">
+              {getProductStatus(product) === "pending_approval"
+                ? "Awaiting admin approval"
+                : "-"}
+            </span>
+          );
+        },
       },
     ],
     [
       canReviewProduct,
+      canSubmitForApproval,
       canToggleProduct,
       handleApproveToggle,
       handleDuplicateProduct,
       handleEditProduct,
       handleImageClick,
+      handleSubmitForApproval,
       handleToggle,
       hasPendingRevision,
       navigate,

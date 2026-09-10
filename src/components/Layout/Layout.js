@@ -76,6 +76,9 @@ const Brands = React.lazy(
 const ProductOptions = React.lazy(
   () => import("../../pages/ProductManagement/ProductOptions/ProductOptions"),
 );
+const Collections = React.lazy(
+  () => import("../../pages/Admin/Collection/Collections"),
+);
 const Orders = React.lazy(
   () => import("../../pages/OrdersManagement/Orders/Orders"),
 );
@@ -560,6 +563,7 @@ function Layout() {
       { path: "/store", render: () => <Store /> },
       { path: "/brands", render: () => <Brands /> },
       { path: "/product-options", render: () => <ProductOptions /> },
+      { path: "/collections", render: () => <Collections /> },
       { path: "/threshold-products", redirectTo: "/app/inventory" },
       { path: "/inventory-audit", redirectTo: "/app/inventory" },
       { path: "/orders", render: () => <Orders /> },

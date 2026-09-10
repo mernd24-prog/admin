@@ -6,6 +6,7 @@ import {
   BadgeIndianRupee,
   Check,
   Coins,
+  Eye,
   FileText,
   GitBranch,
   Gift,
@@ -29,6 +30,7 @@ import {
 import {
   getReferralBonusAchievements,
   getReferralBonusProgress,
+  getReferralBrandAssociates,
   getReferralCodes,
   getReferralCommissions,
   getReferralInfluencers,
@@ -199,6 +201,10 @@ const ReferralPartnerDetails = () => {
     () => getBranchList(referralState.influencersData),
     [referralState.influencersData],
   );
+  const brandAssociates = useMemo(
+    () => getBranchList(referralState.brandAssociatesData),
+    [referralState.brandAssociatesData],
+  );
   const codes = useMemo(
     () =>
       getBranchList(referralState.codesData).filter(
@@ -258,6 +264,11 @@ const ReferralPartnerDetails = () => {
     dispatch(getReferralBonusProgress({ page: 1, limit: 200, influencerId: id }));
     dispatch(getReferralBonusAchievements({ page: 1, limit: 200, influencerId: id }));
   }, [dispatch, id]);
+
+  useEffect(() => {
+    if (!id || influencer?.influencerType !== "parent") return;
+    dispatch(getReferralBrandAssociates({ parentId: id, page: 1, limit: 200 }));
+  }, [dispatch, id, influencer?.influencerType]);
 
   const infoRows = useMemo(() => {
     if (!influencer) return [];
@@ -404,6 +415,43 @@ const ReferralPartnerDetails = () => {
     [payouts],
   );
 
+  const brandAssociateRows = useMemo(
+    () =>
+      brandAssociates.map((associate) => ({
+        key: getId(associate),
+        associate: (
+          <div className="min-w-0">
+            <div className="truncate font-medium text-gray-900">
+              {fullName(associate.user)}
+            </div>
+            <div className="truncate text-xs text-gray-500">
+              {associate.user?.email || "Linked account"}
+            </div>
+          </div>
+        ),
+        code: associate.primaryCode?.code || "-",
+        level: `Level ${associate.level || 2}`,
+        wallet: formatCoins(associate.wallet?.availableBalance),
+        status: <StatusBadge status={associate.status} size="sm" />,
+        created: formatDate(associate.createdAt),
+        actions: (
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded bg-[var(--admin-blue-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--admin-blue)] transition hover:bg-[var(--admin-blue)] hover:text-white"
+            onClick={() =>
+              navigate(
+                `/app/referral-commerce/influencers/view/${getId(associate)}`,
+                { state: { influencer: associate } },
+              )
+            }
+          >
+            <Eye size={14} /> View
+          </button>
+        ),
+      })),
+    [brandAssociates, navigate],
+  );
+
   const activeSummaryCards = [
     {
       label: "Status",
@@ -420,9 +468,21 @@ const ReferralPartnerDetails = () => {
       color: "#15803d",
     },
     {
-      label: "Referral codes",
-      value: String(codes.length),
-      icon: <Gift size={18} />,
+      label:
+        influencer?.influencerType === "parent"
+          ? "Brand Associates"
+          : "Referral codes",
+      value: String(
+        influencer?.influencerType === "parent"
+          ? brandAssociates.length
+          : codes.length,
+      ),
+      icon:
+        influencer?.influencerType === "parent" ? (
+          <GitBranch size={18} />
+        ) : (
+          <Gift size={18} />
+        ),
       accent: "#ede9fe",
       color: "#7c3aed",
     },
@@ -494,6 +554,40 @@ const ReferralPartnerDetails = () => {
           ))}
         </div>
       </FormSection>
+
+      {influencer?.influencerType === "parent" && (
+        <FormSection
+          title="Associated Brands"
+          subtitle="Brand Associates registered under this Growth Partner"
+          icon={<GitBranch size={18} />}
+        >
+          <SharedDataTable
+            columns={[
+              { key: "associate", label: "Brand Associate" },
+              { key: "code", label: "Referral Code" },
+              { key: "level", label: "Hierarchy" },
+              { key: "wallet", label: "Available Coins" },
+              { key: "status", label: "Status" },
+              { key: "created", label: "Associated On" },
+              { key: "actions", label: "Actions" },
+            ]}
+            data={brandAssociateRows}
+            loading={Boolean(referralState.loading)}
+            rowKey="key"
+            onRowClick={(row) =>
+              navigate(`/app/referral-commerce/influencers/view/${row.key}`, {
+                state: {
+                  influencer: brandAssociates.find(
+                    (item) => String(getId(item)) === String(row.key),
+                  ),
+                },
+              })
+            }
+            emptyText="No Brand Associates are linked to this Growth Partner."
+            cardClassName="overflow-hidden"
+          />
+        </FormSection>
+      )}
 
       <FormSection
         title="Partner actions"

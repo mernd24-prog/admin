@@ -6,6 +6,7 @@ const initialState = {
   summaryData: {},
   hierarchyData: {},
   influencersData: {},
+  brandAssociatesData: {},
   createParentData: {},
   createChildData: {},
   updateInfluencerStatusData: {},
@@ -79,6 +80,17 @@ export const getReferralInfluencers = createApiThunkPrivate(
       "canCreateChildren",
     ]),
   }
+);
+
+export const getReferralBrandAssociates = createApiThunkPrivate(
+  "referralCommerce/getBrandAssociates",
+  (payload) =>
+    ENDPOINTS.referral.brandAssociatesByParent(
+      idOf(payload, "parentId", "parentInfluencerId"),
+    ),
+  "GET",
+  true,
+  { transformParams: pickQuery(listQueryKeys) },
 );
 
 export const createReferralParent = createApiThunkPrivate(
@@ -290,6 +302,7 @@ const referralCommerceSlice = createSlice({
       [getReferralSummary, "summaryData"],
       [getReferralHierarchy, "hierarchyData"],
       [getReferralInfluencers, "influencersData"],
+      [getReferralBrandAssociates, "brandAssociatesData"],
       [createReferralParent, "createParentData"],
       [createReferralChild, "createChildData"],
       [updateReferralInfluencerStatus, "updateInfluencerStatusData"],
