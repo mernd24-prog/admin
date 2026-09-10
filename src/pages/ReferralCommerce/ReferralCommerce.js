@@ -3349,7 +3349,7 @@ const ReferralCommerce = () => {
                 }}
               >
                 <UserPlus size={16} />
-                Parent Influencer
+                Growth Partner
               </button>
 
               <button
@@ -3704,8 +3704,8 @@ const ReferralCommerce = () => {
   isOpen={parentModalOpen}
   onClose={() => setParentModalOpen(false)}
   onSubmit={submitParent}
-  title="Create Parent Influencer"
-  submitButtonText="Create Parent Influencer"
+  title="Create Growth Partner"
+  submitButtonText="Create Growth Partner"
   closeButtonText="Reset"
   isButtonView={true}
   width="600px"
@@ -3715,7 +3715,7 @@ const ReferralCommerce = () => {
     {/* ==================== Basic Information ==================== */}
     <FormSection
       title="Basic Information"
-      description="Enter the basic details of the parent influencer."
+      description="Enter the basic details of the growth partner."
     >
       <div className="space-y-4">
 
