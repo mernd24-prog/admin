@@ -1966,6 +1966,10 @@ export default function ProductManagementUI() {
     }
   };
   const handleToggleProductSetting = (key) => {
+    if (key === "APPROVE" && isSellerPanelUser) {
+      return;
+    }
+
     if (key === "COD") {
       setFormData((prev) => ({
         ...prev,
@@ -2248,12 +2252,12 @@ export default function ProductManagementUI() {
       ...(Object.keys(dimensions).length ? { dimensions } : {}),
       ...(Object.keys(warranty).length ? { warranty } : {}),
       ...(Object.keys(shipping).length ? { shipping } : {}),
-      status: updatedFormData.isApproved
-        ? "active"
-        : updatedFormData.isDisable
-          ? "inactive"
+      status: updatedFormData.isDisable
+        ? "inactive"
+        : updatedFormData.isApproved
+          ? "active"
           : "draft",
-      ...(updatedFormData.isApproved
+      ...(!isSellerPanelUser && updatedFormData.isApproved
         ? { approvalStatus: "approved" }
         : {}),
       metadata: {
@@ -3800,6 +3804,7 @@ export default function ProductManagementUI() {
             formData={formData}
             handleToggleProductSetting={handleToggleProductSetting}
             saving={saving}
+            canManageApproval={!isSellerPanelUser}
           />
         </div>
       </div>

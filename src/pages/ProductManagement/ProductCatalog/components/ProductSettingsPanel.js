@@ -7,7 +7,7 @@ export default function ProductSettingsPanel({
   formData,
   handleToggleProductSetting,
   saving = false,
-  canManageApproval = true,
+  canManageApproval = false,
 }) {
   const codEnabled =
     formData?.shipping?.codAvailable !== undefined
