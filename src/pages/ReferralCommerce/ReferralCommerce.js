@@ -3700,7 +3700,7 @@ const ReferralCommerce = () => {
         />
       )}
 
-   <DefaultModal
+  <DefaultModal
   isOpen={parentModalOpen}
   onClose={() => setParentModalOpen(false)}
   onSubmit={submitParent}
@@ -3717,8 +3717,7 @@ const ReferralCommerce = () => {
       title="Basic Information"
       description="Enter the basic details of the growth partner."
     >
-      <div className="space-y-4">
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
         {/* First Name */}
         <FormInput
           label="First Name"
@@ -3794,9 +3793,7 @@ const ReferralCommerce = () => {
       <FormToggleRow
         title="Can Create Brand Associates"
         description="Allow this influencer to create and manage Brand Associates."
-        isToggle={Boolean(
-          influencerForm.canCreateChildren
-        )}
+        isToggle={Boolean(influencerForm.canCreateChildren)}
         handleClick={() =>
           handleInfluencerField({
             target: {
@@ -3811,7 +3808,7 @@ const ReferralCommerce = () => {
   </div>
 </DefaultModal>
 
-    <DefaultModal
+   <DefaultModal
   isOpen={childModalOpen}
   onClose={() => setChildModalOpen(false)}
   onSubmit={submitChild}
@@ -3823,30 +3820,28 @@ const ReferralCommerce = () => {
   loading={loading}
 >
   <div className="space-y-5">
-    {/* ==================== Basic Information ==================== */}
     <FormSection
       title="Basic Information"
       description="Enter the basic details of the Brand Associate."
     >
-      <div className="space-y-4">
-
-        {/* Growth Partner */}
-        <FormSelectGroup
-          label="Growth Partner"
-          options={parentOptions.map((parent) => ({
-            label: `${fullName(parent.user)} - ${
-              parent.primaryCode?.code || getId(parent)
-            }`,
-            value: getId(parent),
-          }))}
-          value={parentId}
-          onChange={(selectedOption) =>
-            setParentId(
-              selectedOption?.value || selectedOption || ""
-            )
-          }
-          placeholder="Select Growth Partner"
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+        {/* Growth Partner - Full Width */}
+        <div className="md:col-span-2">
+          <FormSelectGroup
+            label="Growth Partner"
+            options={parentOptions.map((parent) => ({
+              label: `${fullName(parent.user)} - ${
+                parent.primaryCode?.code || getId(parent)
+              }`,
+              value: getId(parent),
+            }))}
+            value={parentId}
+            onChange={(selectedOption) =>
+              setParentId(selectedOption?.value || selectedOption || "")
+            }
+            placeholder="Select Growth Partner"
+          />
+        </div>
 
         {/* First Name */}
         <FormInput
@@ -3903,7 +3898,6 @@ const ReferralCommerce = () => {
           onChange={handleInfluencerField}
           placeholder="Enter referral code"
         />
-
       </div>
     </FormSection>
   </div>
@@ -3937,30 +3931,31 @@ const ReferralCommerce = () => {
           : "Create a referral code for a referral partner."
       }
     >
-      <div className="space-y-4">
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
         {/* Referral Partner */}
         {!editingCode && (
-          <FormSelectGroup
-            label="Referral Partner"
-            options={influencers.map((item) => ({
-              label: `${fullName(item.user)} - ${getId(item)}`,
-              value: getId(item),
-            }))}
-            value={codeForm.influencerId}
-            onChange={(selectedOption) =>
-              handleCodeField({
-                target: {
-                  name: "influencerId",
-                  value:
-                    selectedOption?.value ||
-                    selectedOption ||
-                    "",
-                },
-              })
-            }
-            placeholder="Select Referral Partner"
-          />
+          <div className="md:col-span-2">
+            <FormSelectGroup
+              label="Referral Partner"
+              options={influencers.map((item) => ({
+                label: `${fullName(item.user)} - ${getId(item)}`,
+                value: getId(item),
+              }))}
+              value={codeForm.influencerId}
+              onChange={(selectedOption) =>
+                handleCodeField({
+                  target: {
+                    name: "influencerId",
+                    value:
+                      selectedOption?.value ||
+                      selectedOption ||
+                      "",
+                  },
+                })
+              }
+              placeholder="Select Referral Partner"
+            />
+          </div>
         )}
 
         {/* Referral Code */}
@@ -3983,24 +3978,25 @@ const ReferralCommerce = () => {
         />
 
         {/* Status */}
-        <FormSelectGroup
-          label="Status"
-          options={referralCodeStatuses.options}
-          value={codeForm.status}
-          onChange={(selectedOption) =>
-            handleCodeField({
-              target: {
-                name: "status",
-                value:
-                  selectedOption?.value ||
-                  selectedOption ||
-                  "",
-              },
-            })
-          }
-          placeholder="Select status"
-        />
-
+        <div className="md:col-span-2">
+          <FormSelectGroup
+            label="Status"
+            options={referralCodeStatuses.options}
+            value={codeForm.status}
+            onChange={(selectedOption) =>
+              handleCodeField({
+                target: {
+                  name: "status",
+                  value:
+                    selectedOption?.value ||
+                    selectedOption ||
+                    "",
+                },
+              })
+            }
+            placeholder="Select status"
+          />
+        </div>
       </div>
     </FormSection>
   </div>

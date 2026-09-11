@@ -1126,6 +1126,8 @@ export default function ProductManagementUI() {
           item?.title ||
           item?.code ||
           String(item?._id || item?.id || ""),
+        brandId: item?._id || item?.id,
+        brandName: item?.name || item?.title || "",
       })),
       warrantyTemplateList: prefillList(
         "warrantyTemplates",

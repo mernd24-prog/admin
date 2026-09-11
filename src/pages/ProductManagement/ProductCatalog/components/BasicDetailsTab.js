@@ -11,7 +11,7 @@ import useDropdownOptions from "../../../../hooks/useDropdownOptions";
 import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
 
 // Modals
-import AddCategoryModal from "./Modals/AddCategoryModal";
+import CategorySetup from "../../ProductCategories/components/CategorySetup";
 
 // Redux Actions
 import {
@@ -36,6 +36,10 @@ import {
 } from "../../../../_helpers/authStorage";
 import { isSellerPanel } from "../../../../_helpers/panelConfig";
 import { TextEditor } from "../../../../components/Atoms/FormInput/TextEditor";
+import DefaultModal from "../../../../components/Atoms/Modal/DefaultRightSideModal";
+import FormSection from "../../../../components/Atoms/FormSection/FormSection";
+import FormInput from "../../../../components/Atoms/FormInput/FormInput";
+import ImageUpload from "../../../../components/Atoms/ImageGallery/ImageUpload";
 
 const INITIAL_FORM_CATEGORY = {
   categoryName: "",
@@ -384,6 +388,7 @@ export default function BasicDetailsTab({
         String(brand.value || "").toLowerCase(),
       ),
     );
+
     const ownPendingBrands = isSellerPanelUser
       ? myBrandSubmissions
           .filter(
@@ -399,16 +404,37 @@ export default function BasicDetailsTab({
           }))
       : [];
 
-    return [
-      {
-        value: "__add_new_brand__",
-        label: "+ Add New Brand",
-        isAddBrand: true,
-      },
-      ...ownPendingBrands,
-      ...(formattedBrandList || []),
-    ];
+    return [...ownPendingBrands, ...(formattedBrandList || [])];
   }, [formattedBrandList, isSellerPanelUser, myBrandSubmissions]);
+
+  const selectedBrandOption = useMemo(() => {
+    const rawBrand =
+      formData.brand || formData.brandId || formData.brand_id || "";
+    const currentBrand =
+      typeof rawBrand === "object"
+        ? rawBrand.value || rawBrand._id || rawBrand.id || rawBrand.name
+        : rawBrand;
+
+    if (!currentBrand) return null;
+
+    return (
+      brandOptions.find(
+        (option) =>
+          String(option.value) === String(currentBrand) ||
+          String(option.label) === String(currentBrand) ||
+          String(option.brandName || "") === String(currentBrand) ||
+          String(option.brandId || option._id || option.id || "") ===
+            String(currentBrand),
+      ) ||
+      (typeof rawBrand === "object"
+        ? {
+            ...rawBrand,
+            value: currentBrand,
+            label: rawBrand.label || rawBrand.name || currentBrand,
+          }
+        : { value: currentBrand, label: currentBrand })
+    );
+  }, [brandOptions, formData.brand, formData.brandId, formData.brand_id]);
 
   const handleBrandSelect = (option) => {
     // Clear selected brand
@@ -648,43 +674,43 @@ export default function BasicDetailsTab({
     }
   };
 
- const handleHsnSubmit = async (e) => {
-  e?.preventDefault();
+  const handleHsnSubmit = async (e) => {
+    e?.preventDefault();
 
-  const basePayload = {
-    code: hsnFormValues.code.trim(),
-    IGST: Number(hsnFormValues.IGST),
-    CGST: Number(hsnFormValues.CGST),
-    SGST: Number(hsnFormValues.SGST),
-    additionalTax: Number(hsnFormValues.additionalTax),
-    description: hsnFormValues.description?.trim() || "",
-    active: true,
+    const basePayload = {
+      code: hsnFormValues.code.trim(),
+      IGST: Number(hsnFormValues.IGST),
+      CGST: Number(hsnFormValues.CGST),
+      SGST: Number(hsnFormValues.SGST),
+      additionalTax: Number(hsnFormValues.additionalTax),
+      description: hsnFormValues.description?.trim() || "",
+      active: true,
+    };
+
+    try {
+      await dispatch(createHsn(basePayload)).unwrap();
+
+      toast.success("HSN Code created successfully");
+
+      setIsHsnAddModal(false);
+      setIsHsnFormValue(INITIAL_FORM_HSN);
+      setFormErrors({});
+
+      fetchAllData([API_CALL_OBJECT["Hsn code list"]]);
+    } catch (error) {
+      console.error("HSN Create Error:", error);
+
+      const errorMessage =
+        typeof error === "string"
+          ? error
+          : error?.message ||
+            error?.error?.message ||
+            error?.response?.data?.message ||
+            "Failed to save HSN Code";
+
+      toast.error(errorMessage);
+    }
   };
-
-  try {
-    await dispatch(createHsn(basePayload)).unwrap();
-
-    toast.success("HSN Code created successfully");
-
-    setIsHsnAddModal(false);
-    setIsHsnFormValue(INITIAL_FORM_HSN);
-    setFormErrors({});
-
-    fetchAllData([API_CALL_OBJECT["Hsn code list"]]);
-  } catch (error) {
-    console.error("HSN Create Error:", error);
-
-    const errorMessage =
-      typeof error === "string"
-        ? error
-        : error?.message ||
-          error?.error?.message ||
-          error?.response?.data?.message ||
-          "Failed to save HSN Code";
-
-    toast.error(errorMessage);
-  }
-};
   const validateCategoryForm = () => {
     const newErrors = {};
     if (!categoryForm.categoryName)
@@ -751,9 +777,7 @@ export default function BasicDetailsTab({
     if (titled !== value) handleChange({ target: { name, value: titled } });
   };
 
- const isReturnable = Boolean(
-  formData.warranty?.returnPolicy?.returnable
-);
+  const isReturnable = Boolean(formData.warranty?.returnPolicy?.returnable);
 
   return (
     <>
@@ -820,24 +844,31 @@ export default function BasicDetailsTab({
                 error={errors?.name}
               />
             </div>
-            <div>
-              <FilterSelect
-                label="Brand"
-                name="brand"
-                value={
-                  brandOptions.find(
-                    (opt) => String(opt.value) === String(formData.brand || ""),
-                  ) || null
-                }
-                onChange={handleBrandSelect}
-                options={brandOptions}
-                placeholder="Select Brand"
-                error={errors?.brand}
-                isClearable
-                required
-              />
-            </div>
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <FilterSelect
+                  label="Brand"
+                  name="brand"
+                  value={selectedBrandOption}
+                  onChange={handleBrandSelect}
+                  options={brandOptions.filter((opt) => !opt.isAddBrand)}
+                  placeholder="Select Brand"
+                  error={errors?.brand}
+                  isClearable
+                  required
+                />
+              </div>
 
+              <PermissionGuard module="brands" action="create" hide>
+                <button
+                  type="button"
+                  className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
+                  onClick={() => setIsBrandModal(true)}
+                >
+                  + Add
+                </button>
+              </PermissionGuard>
+            </div>
             <div>
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
@@ -1094,9 +1125,7 @@ export default function BasicDetailsTab({
             )} */}
             <section className="product-form-subsection md:col-span-2">
               <div className="product-form-section-header">
-                <h3>
-                  Warranty information
-                </h3>
+                <h3>Warranty information</h3>
                 <p>
                   Describe warranty coverage, exclusions, claim rules, required
                   documents, and support instructions.
@@ -1167,88 +1196,82 @@ export default function BasicDetailsTab({
             <section className="product-form-subsection md:col-span-2">
               <div className="product-form-section-header flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h3>
-                    Product Return Policy
-                  </h3>
+                  <h3>Product Return Policy</h3>
                   <p className="max-w-2xl">
-                    Set the return window, available resolution, shipping responsibility,
-                    and verification requirements for this product.
+                    Set the return window, available resolution, shipping
+                    responsibility, and verification requirements for this
+                    product.
                   </p>
                   <p className="mt-1 text-[11px] text-gray-400">
-                    The policy is saved with each order and will not change for existing orders.
+                    The policy is saved with each order and will not change for
+                    existing orders.
                   </p>
                 </div>
                 <div className="shrink-0 rounded-full bg-[var(--admin-surface-soft)] px-3 py-2">
-         <Input
-  className="!mb-0"
-  labelName="Returnable"
-  name="warranty.returnPolicy.returnable"
-  type="switch"
-  value={isReturnable}
-  onChange={(eventOrValue) => {
-    const checked =
-      typeof eventOrValue === "boolean"
-        ? eventOrValue
-        : Boolean(eventOrValue?.target?.checked);
+                  <Input
+                    className="!mb-0"
+                    labelName="Returnable"
+                    name="warranty.returnPolicy.returnable"
+                    type="switch"
+                    value={isReturnable}
+                    onChange={(eventOrValue) => {
+                      const checked =
+                        typeof eventOrValue === "boolean"
+                          ? eventOrValue
+                          : Boolean(eventOrValue?.target?.checked);
 
-    handleNestedChange(
-      "warranty.returnPolicy.returnable",
-      checked
-    );
+                      handleNestedChange(
+                        "warranty.returnPolicy.returnable",
+                        checked,
+                      );
 
-    handleNestedChange(
-      "warranty.returnPolicy.eligible",
-      checked
-    );
+                      handleNestedChange(
+                        "warranty.returnPolicy.eligible",
+                        checked,
+                      );
 
-    handleNestedChange(
-      "warranty.returnPolicy.type",
-      checked ? "standard" : "non_returnable"
-    );
+                      handleNestedChange(
+                        "warranty.returnPolicy.type",
+                        checked ? "standard" : "non_returnable",
+                      );
 
-    if (!checked) {
-      handleNestedChange(
-        "warranty.returnPolicy.days",
-        0
-      );
+                      if (!checked) {
+                        handleNestedChange("warranty.returnPolicy.days", 0);
 
-      handleNestedChange(
-        "warranty.returnPolicy.returnWindowDays",
-        0
-      );
-    }
-  }}
-/>
+                        handleNestedChange(
+                          "warranty.returnPolicy.returnWindowDays",
+                          0,
+                        );
+                      }
+                    }}
+                  />
                 </div>
               </div>
               <div className="grid gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
-              <Input
-  labelName="Return Window Days"
-  name="warranty.returnPolicy.returnWindowDays"
-  type="number"
-  min={0}
-  max={365}
-  disabled={!isReturnable}
-  value={
-    formData.warranty?.returnPolicy?.returnWindowDays ?? ""
-  }
-  onChange={(event) => {
-    const value =
-      event.target.value === ""
-        ? ""
-        : Number(event.target.value);
+                <Input
+                  labelName="Return Window Days"
+                  name="warranty.returnPolicy.returnWindowDays"
+                  type="number"
+                  min={0}
+                  max={365}
+                  disabled={!isReturnable}
+                  value={
+                    formData.warranty?.returnPolicy?.returnWindowDays ?? ""
+                  }
+                  onChange={(event) => {
+                    const value =
+                      event.target.value === ""
+                        ? ""
+                        : Number(event.target.value);
 
-    handleNestedChange(
-      "warranty.returnPolicy.returnWindowDays",
-      value
-    );
+                    handleNestedChange(
+                      "warranty.returnPolicy.returnWindowDays",
+                      value,
+                    );
 
-    handleNestedChange(
-      "warranty.returnPolicy.days",
-      value
-    );
-  }}
-/>
+                    handleNestedChange("warranty.returnPolicy.days", value);
+                  }}
+                />
                 <Input
                   labelName="Allowed Resolution"
                   name="warranty.returnPolicy.resolution"
@@ -1309,35 +1332,35 @@ export default function BasicDetailsTab({
                     Return requirements
                   </p>
                   <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:gap-x-12">
-                <Input
-                  labelName="Require Return Images"
-                  name="warranty.returnPolicy.requiresImages"
-                  type="switch"
-                  value={Boolean(
-                    formData.warranty?.returnPolicy?.requiresImages,
-                  )}
-                  onChange={(event) =>
-                    handleNestedChange(
-                      "warranty.returnPolicy.requiresImages",
-                      event.target.checked,
-                    )
-                  }
-                />
-                <Input
-                  labelName="Require Inspection / QC"
-                  name="warranty.returnPolicy.inspectionRequired"
-                  type="switch"
-                  value={
-                    formData.warranty?.returnPolicy?.inspectionRequired !==
-                    false
-                  }
-                  onChange={(event) =>
-                    handleNestedChange(
-                      "warranty.returnPolicy.inspectionRequired",
-                      event.target.checked,
-                    )
-                  }
-                />
+                    <Input
+                      labelName="Require Return Images"
+                      name="warranty.returnPolicy.requiresImages"
+                      type="switch"
+                      value={Boolean(
+                        formData.warranty?.returnPolicy?.requiresImages,
+                      )}
+                      onChange={(event) =>
+                        handleNestedChange(
+                          "warranty.returnPolicy.requiresImages",
+                          event.target.checked,
+                        )
+                      }
+                    />
+                    <Input
+                      labelName="Require Inspection / QC"
+                      name="warranty.returnPolicy.inspectionRequired"
+                      type="switch"
+                      value={
+                        formData.warranty?.returnPolicy?.inspectionRequired !==
+                        false
+                      }
+                      onChange={(event) =>
+                        handleNestedChange(
+                          "warranty.returnPolicy.inspectionRequired",
+                          event.target.checked,
+                        )
+                      }
+                    />
                   </div>
                 </div>
               </div>
@@ -1346,19 +1369,29 @@ export default function BasicDetailsTab({
         </div>
       </div>
 
-      <AddCategoryModal
+      <CategorySetup
         isOpen={isCategoryModal}
         formData={categoryForm}
+        setFormData={setCategoryForm}
         handleFileUpload={handleFileUploadCategory}
         handleChange={handleInputCategoryChange}
         parentCategories={createSelectOptions}
-        handleCloseModal={() => {
+        handleClose={() => {
           setIsCategoryModal(false);
           setCategoryForm(INITIAL_FORM_CATEGORY);
         }}
         handleSubmit={() => validateCategoryForm() && handleCategorySubmit()}
         handleSelectChange={handleSelectCategoryChange}
         handleDashboardVisible={handleDashboardVisible}
+        handleIsPublish={() => {}}
+        isPublish={false}
+        isEditing={false}
+        errors={formErrors}
+        title="Add Category"
+        submitButtonText="Create"
+        closeButtonText="Cancel"
+        showPublish={false}
+        handleNameBlur={handleNameBlur}
       />
 
       <AddHsnModal
@@ -1374,116 +1407,107 @@ export default function BasicDetailsTab({
         errors={formErrors}
       />
 
-      {isBrandModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <form
-            onSubmit={submitBrandRequest}
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
-          >
-            <h2 className="mb-2 text-lg font-bold text-[var(--admin-navy)]">
-              {brandSubmission._id ? "Resubmit Brand" : "Add New Brand"}
-            </h2>
-            <p className="mb-4 text-sm text-gray-600">
-              {isSellerPanelUser
+      <DefaultModal
+        title={brandSubmission._id ? "Resubmit Brand" : "Add New Brand"}
+        isOpen={isBrandModal}
+        onClose={() => setIsBrandModal(false)}
+        onSubmit={submitBrandRequest}
+        submitButtonText={
+          brandSubmitting
+            ? "Saving..."
+            : brandLogoUploading
+              ? "Uploading..."
+              : brandSubmission._id
+                ? "Resubmit"
+                : isSellerPanelUser
+                  ? "Submit for Approval"
+                  : "Create Brand"
+        }
+        closeButtonText="Cancel"
+        loading={brandSubmitting || brandLogoUploading}
+        isButtonView={true}
+      >
+        <div className="space-y-5">
+          {/* Brand Information */}
+          <FormSection
+            title="Brand Information"
+            description={
+              isSellerPanelUser
                 ? "New brands require admin approval before they can be used on products."
-                : "This brand will be created as active and selected for this product."}
+                : "Create a new brand that will be available for this product."
+            }
+          >
+            <div className="space-y-4">
+              <FormInput
+                label="Brand Name"
+                name="name"
+                type="text"
+                value={brandSubmission.name}
+                onChange={(event) =>
+                  setBrandSubmission((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
+                }
+                placeholder="Enter brand name"
+                maxLength={200}
+                required
+              />
+
+              <FormInput
+                label="Description"
+                name="description"
+                type="textarea"
+                value={brandSubmission.description}
+                onChange={(event) =>
+                  setBrandSubmission((current) => ({
+                    ...current,
+                    description: event.target.value,
+                  }))
+                }
+                placeholder="Enter brand details (optional)"
+                rows={4}
+                maxLength={1000}
+              />
+            </div>
+          </FormSection>
+
+          {/* Brand Logo */}
+          <FormSection
+            title="Brand Logo"
+            description="Upload a logo for the brand. This is optional."
+          >
+            <ImageUpload
+              label="Brand Logo"
+              value={brandSubmission.logo}
+              onChange={handleBrandLogoUpload}
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              disabled={brandLogoUploading || brandSubmitting}
+            />
+
+            <p className="mt-1 text-[11px] text-gray-400">
+              {brandLogoUploading
+                ? "Uploading logo..."
+                : "JPG, PNG, or WEBP up to 5MB"}
             </p>
-            <input
-              value={brandSubmission.name}
-              onChange={(event) =>
-                setBrandSubmission((current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
-              }
-              placeholder="Brand name"
-              className="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              maxLength={200}
-              required
-            />
-            <div className="mb-3">
-              <label className="mb-1.5 block text-xs font-semibold text-gray-600">
-                Brand logo (optional)
-              </label>
-              <div className="flex items-center gap-3 rounded-lg border border-gray-300 px-3 py-2">
-                {brandSubmission.logo ? (
-                  <img
-                    src={brandSubmission.logo}
-                    alt="Brand logo preview"
-                    className="h-10 w-10 rounded-md border border-gray-200 object-contain"
-                  />
-                ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-md border border-dashed border-gray-300 text-[10px] text-gray-400">
-                    Logo
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    onChange={handleBrandLogoUpload}
-                    disabled={brandLogoUploading || brandSubmitting}
-                    className="block w-full text-xs text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-[var(--admin-navy)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white disabled:opacity-60"
-                  />
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    {brandLogoUploading
-                      ? "Uploading logo..."
-                      : "JPG, PNG, or WEBP up to 5MB"}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <textarea
-              value={brandSubmission.description}
-              onChange={(event) =>
-                setBrandSubmission((current) => ({
-                  ...current,
-                  description: event.target.value,
-                }))
-              }
-              placeholder="Brand details (optional)"
-              className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              rows={3}
-              maxLength={1000}
-            />
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                className="rounded-lg border px-4 py-2 text-sm"
-                onClick={() => setIsBrandModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={brandSubmitting || brandLogoUploading}
-                className="rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm text-white disabled:opacity-60"
-              >
-                {brandSubmitting
-                  ? "Saving…"
-                  : brandLogoUploading
-                    ? "Uploading…"
-                    : brandSubmission._id
-                      ? "Resubmit"
-                      : isSellerPanelUser
-                        ? "Submit for Approval"
-                        : "Create Brand"}
-              </button>
-            </div>
-            {myBrandSubmissions.filter(
-              (brand) => brand.approvalStatus === "rejected",
-            ).length > 0 && (
-              <div className="mt-5 border-t pt-4">
-                <p className="mb-2 text-xs font-semibold text-gray-600">
-                  Rejected submissions
-                </p>
+          </FormSection>
+
+          {/* Rejected Submissions */}
+          {myBrandSubmissions.filter(
+            (brand) => brand.approvalStatus === "rejected",
+          ).length > 0 && (
+            <FormSection
+              title="Rejected Submissions"
+              description="Select a rejected brand to make changes and resubmit it."
+            >
+              <div className="space-y-2">
                 {myBrandSubmissions
                   .filter((brand) => brand.approvalStatus === "rejected")
                   .map((brand) => (
                     <button
                       key={brand._id}
                       type="button"
-                      className="mb-2 w-full rounded-md bg-red-50 p-2 text-left text-xs text-red-700"
+                      className="w-full rounded-md border border-red-200 bg-red-50 p-3 text-left text-xs text-red-700 transition-colors hover:bg-red-100"
                       onClick={() =>
                         setBrandSubmission({
                           _id: brand._id,
@@ -1494,15 +1518,18 @@ export default function BasicDetailsTab({
                         })
                       }
                     >
-                      <span className="font-semibold">{brand.name}</span>:{" "}
-                      {brand.rejectionReason || "Needs changes"}
+                      <span className="font-semibold">{brand.name}</span>
+
+                      <span className="mt-1 block text-red-600">
+                        {brand.rejectionReason || "Needs changes"}
+                      </span>
                     </button>
                   ))}
               </div>
-            )}
-          </form>
+            </FormSection>
+          )}
         </div>
-      )}
+      </DefaultModal>
     </>
   );
 }

@@ -26,6 +26,10 @@ import {
 } from "../../../Redux/notificationsSlice";
 import { formatDateTime12Hour } from "../../../utils/formatters";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import FormInput from "../../../components/Atoms/FormInput/FormInput";
+import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
 
 const CHANNEL_OPTIONS = [
   { value: "in_app", label: "In-App" },
@@ -344,7 +348,7 @@ const UserMessages = () => {
   };
 
   const CLASS_FORM_INPUT =
-  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]";
+    "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]";
 
   return (
     <div>
@@ -444,119 +448,122 @@ const UserMessages = () => {
       />
 
       {/* Send Notification Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5 flex items-center gap-2">
-              <MdSend size={20} /> Send Notification
-            </h2>
-
+      <DefaultModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleSend}
+        title="Send Notification"
+        submitButtonText={sending ? "Sending…" : "Send Notification"}
+        closeButtonText="Cancel"
+        loading={sending}
+        isButtonView={true}
+      >
+        <div className="space-y-5">
+          {/* ==================== Recipient Information ==================== */}
+          <FormSection
+            title="Recipient Information"
+            description="Select the user who should receive this notification."
+          >
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Recipient User ID *
-                </label>
-                <input
-                  type="text"
-                  value={form.userId}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, userId: e.target.value }))
-                  }
-                  className={CLASS_FORM_INPUT}
-                  placeholder="User ID or email"
-                />
-              </div>
+              <FormInput
+                label="Recipient User ID"
+                name="userId"
+                value={form.userId}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    userId: e.target.value,
+                  }))
+                }
+                placeholder="Enter user ID or email"
+                required
+              />
+            </div>
+          </FormSection>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FilterSelect
-                    label="Channel"
-                    options={CHANNEL_OPTIONS}
-                    value={
-                      CHANNEL_OPTIONS.find(
-                        (item) => item.value === form.channel,
-                      ) || null
-                    }
-                    onChange={(selected) =>
-                      setForm((f) => ({
-                        ...f,
-                        channel: selected?.value ?? "",
-                      }))
-                    }
-                    isSearchable={false}
-                  />
-                </div>
+          {/* ==================== Notification Settings ==================== */}
+          <FormSection
+            title="Notification Settings"
+            description="Choose the channel and template for this notification."
+          >
+            <div className="space-y-4">
+              <FormSelectGroup
+                label="Channel"
+                options={CHANNEL_OPTIONS}
+                value={
+                  CHANNEL_OPTIONS.find((item) => item.value === form.channel) ||
+                  null
+                }
+                onChange={(selectedOption) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    channel: selectedOption?.value ?? "",
+                  }))
+                }
+                placeholder="Select channel"
+              />
 
-                <div>
-                  <FilterSelect
-                    label="Template"
-                    options={TEMPLATE_OPTIONS}
-                    value={
-                      TEMPLATE_OPTIONS.find(
-                        (item) => item.value === form.template,
-                      ) || null
-                    }
-                    onChange={(selected) =>
-                      setForm((f) => ({
-                        ...f,
-                        template: selected?.value ?? "",
-                      }))
-                    }
-                    isSearchable={false}
-                  />
-                </div>
-              </div>
+              <FormSelectGroup
+                label="Template"
+                options={TEMPLATE_OPTIONS}
+                value={
+                  TEMPLATE_OPTIONS.find(
+                    (item) => item.value === form.template,
+                  ) || null
+                }
+                onChange={(selectedOption) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    template: selectedOption?.value ?? "",
+                  }))
+                }
+                placeholder="Select template"
+              />
+            </div>
+          </FormSection>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  value={form.subject}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, subject: e.target.value }))
-                  }
-                  className={CLASS_FORM_INPUT}
-                  placeholder="Notification subject"
-                />
-              </div>
+          {/* ==================== Notification Content ==================== */}
+          <FormSection
+            title="Notification Content"
+            description="Add the subject and message for the notification."
+          >
+            <div className="space-y-4">
+              <FormInput
+                label="Subject"
+                name="subject"
+                value={form.subject}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    subject: e.target.value,
+                  }))
+                }
+                placeholder="Notification subject"
+              />
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Message
                 </label>
+
                 <textarea
+                  name="message"
                   value={form.message}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, message: e.target.value }))
+                    setForm((prev) => ({
+                      ...prev,
+                      message: e.target.value,
+                    }))
                   }
-                  rows={3}
+                  rows={5}
                   className={`${CLASS_FORM_INPUT} resize-none`}
                   placeholder="Notification message (optional for templated notifications)"
                 />
               </div>
             </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setModalOpen(false)}
-                className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSend}
-                disabled={sending}
-                className="flex items-center gap-2 px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors"
-              >
-                <MdSend size={16} />
-                {sending ? "Sending…" : "Send"}
-              </button>
-            </div>
-          </div>
+          </FormSection>
         </div>
-      )}
+      </DefaultModal>
     </div>
   );
 };

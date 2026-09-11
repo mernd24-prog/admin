@@ -2,11 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import {
-  MdCheckCircle,
-  MdVisibility,
-  MdCancel,
-} from "react-icons/md";
+import { MdCheckCircle, MdVisibility, MdCancel } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
@@ -30,6 +26,7 @@ import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
 
 const PROVIDERS = [
   "razorpay",
@@ -86,11 +83,10 @@ const FILTER_FIELDS = [
     key: "status",
     type: "select",
     label: "Status",
-     options: STATUSES.map((s) => ({
+    options: STATUSES.map((s) => ({
       value: s,
       label: formatLabel(s),
     })),
-    
   },
   { key: "fromDate", type: "date", label: "From" },
   { key: "toDate", type: "date", label: "To" },
@@ -256,7 +252,14 @@ const Payments = () => {
             row.buyer_email;
           return (
             <div>
-              {name && <UserLink userId={value || row.buyerId || row.buyer?.id || row.buyer?._id} userName={name} />}
+              {name && (
+                <UserLink
+                  userId={
+                    value || row.buyerId || row.buyer?.id || row.buyer?._id
+                  }
+                  userName={name}
+                />
+              )}
               {email && !name && (
                 <div className="text-sm text-gray-700">{email}</div>
               )}
@@ -407,62 +410,147 @@ const Payments = () => {
         title="Payment Detail"
         isButtonView={false}
       >
-        <div className="space-y-3 text-sm" aria-busy={detailLoading}>
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-2">
-            <div>
-              <strong>Order:</strong>{" "}
-              <OrderLink
-                orderId={detailPayment?.orderId || detailPayment?.order_id}
-                orderNumber={detailPayment?.orderNumber || detailPayment?.order_number}
-              />
+        <div className="space-y-5" aria-busy={detailLoading}>
+          <FormSection
+            title="Payment Overview"
+            description="Basic information about this payment."
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <p className="admin-label">Order</p>
+                <OrderLink
+                  orderId={detailPayment?.orderId || detailPayment?.order_id}
+                  orderNumber={
+                    detailPayment?.orderNumber || detailPayment?.order_number
+                  }
+                />
+              </div>
+
+              <div>
+                <p className="admin-label">Customer</p>
+                <p className="mt-1 text-sm text-gray-700">
+                  {detailPayment?.buyerName ||
+                    detailPayment?.buyer?.displayName ||
+                    "Customer"}
+                </p>
+              </div>
+
+              <div>
+                <p className="admin-label">Email</p>
+                <p className="mt-1 break-all text-sm text-gray-700">
+                  {detailPayment?.buyer?.email || "Not available"}
+                </p>
+              </div>
+
+              <div>
+                <p className="admin-label">Provider</p>
+                <p className="mt-1 text-sm font-medium capitalize text-gray-800">
+                  {display(detailPayment?.provider)}
+                </p>
+              </div>
+
+              <div>
+                <p className="admin-label">Status</p>
+                <div className="mt-1">
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      detailPayment?.status === "success" ||
+                      detailPayment?.status === "completed" ||
+                      detailPayment?.status === "paid"
+                        ? "bg-green-50 text-green-700"
+                        : detailPayment?.status === "failed"
+                          ? "bg-red-50 text-red-700"
+                          : detailPayment?.status === "pending"
+                            ? "bg-yellow-50 text-yellow-700"
+                            : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {display(detailPayment?.status)}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <p className="admin-label">Verification</p>
+                <p className="mt-1 text-sm font-medium capitalize text-gray-800">
+                  {display(
+                    detailPayment?.verification_method || "not verified",
+                  )}
+                </p>
+              </div>
             </div>
-            <div>
-              <strong>Customer:</strong>{" "}
-              {detailPayment?.buyerName ||
-                detailPayment?.buyer?.displayName ||
-                "Customer"}
+
+            {/* Amount */}
+            <div className="mt-5 rounded-lg border border-[var(--admin-gold)]/20 bg-[var(--admin-gold-soft)]/20 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Payment Amount
+              </p>
+
+              <p className="mt-1 text-2xl font-bold text-[var(--admin-gold-dark)]">
+                {detailPayment?.currency || "INR"}{" "}
+                {money(detailPayment?.amount)}
+              </p>
             </div>
-            <div>
-              <strong>Email:</strong>{" "}
-              {detailPayment?.buyer?.email || "Not available"}
+
+            <div className="mt-4">
+              <p className="admin-label">Created</p>
+              <p className="mt-1 text-sm text-gray-700">
+                {formatDateTime12Hour(detailPayment?.created_at, "N/A")}
+              </p>
             </div>
-            <div>
-              <strong>Provider:</strong> {display(detailPayment?.provider)}
-            </div>
-            <div>
-              <strong>Status:</strong> {display(detailPayment?.status)}
-            </div>
-            <div>
-              <strong>Amount:</strong> {detailPayment?.currency || "INR"}{" "}
-              {money(detailPayment?.amount)}
-            </div>
-            <div>
-              <strong>Verification:</strong>{" "}
-              {display(detailPayment?.verification_method || "not verified")}
-            </div>
-            <div>
-              <strong>Created:</strong>{" "}
-              {formatDateTime12Hour(detailPayment?.created_at, "N/A")}
-            </div>
-          </div>
+          </FormSection>
+
           {(detailPayment?.provider_payment_id ||
             detailPayment?.transaction_reference) && (
-            <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-blue-800">
-              <strong>Payment reference:</strong>{" "}
-              {detailPayment.provider_payment_id ||
-                detailPayment.transaction_reference}
-            </div>
+            <FormSection
+              title="Payment Reference"
+              description="Reference details received from the payment provider."
+            >
+              <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+                <p className="text-xs font-medium text-blue-600">
+                  Provider / Transaction Reference
+                </p>
+
+                <p className="mt-1 break-all font-mono text-sm text-blue-800">
+                  {detailPayment.provider_payment_id ||
+                    detailPayment.transaction_reference}
+                </p>
+              </div>
+            </FormSection>
           )}
+
           {detailPayment?.failed_reason && (
-            <div className="rounded-lg border border-red-100 bg-red-50 p-3 text-red-700">
-              <strong>Failure reason:</strong> {detailPayment.failed_reason}
-            </div>
+            <FormSection
+              title="Failure Information"
+              description="Details about why the payment failed."
+            >
+              <div className="rounded-lg border border-red-100 bg-red-50 p-3">
+                <p className="text-xs font-medium text-red-600">
+                  Failure Reason
+                </p>
+
+                <p className="mt-1 text-sm leading-5 text-red-700">
+                  {detailPayment.failed_reason}
+                </p>
+              </div>
+            </FormSection>
           )}
+
           {detailPayment?.metadata?.approvalReason && (
-            <div>
-              <strong>Approval note:</strong>{" "}
-              {detailPayment.metadata.approvalReason}
-            </div>
+            <FormSection
+              title="Approval Information"
+              description="Additional approval information associated with this payment."
+            >
+              <div className="rounded-lg border border-amber-100 bg-amber-50 p-3">
+                <p className="text-xs font-medium text-amber-600">
+                  Approval Note
+                </p>
+
+                <p className="mt-1 text-sm leading-5 text-amber-700">
+                  {detailPayment.metadata.approvalReason}
+                </p>
+              </div>
+            </FormSection>
           )}
         </div>
       </DefaultModal>

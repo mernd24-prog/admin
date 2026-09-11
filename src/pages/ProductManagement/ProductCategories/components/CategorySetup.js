@@ -34,6 +34,12 @@ const CategorySetup = ({
   setErrors, // Added setErrors prop
   isEditing, // Added isEditing prop
   handleDashboardVisible,
+  title,
+  submitButtonText,
+  closeButtonText = "Reset",
+  showPublish = true,
+  handleFileUpload,
+  handleNameBlur,
 }) => {
   const [localErrors, setLocalErrors] = useState({
     categoryName: "",
@@ -147,6 +153,15 @@ const CategorySetup = ({
     }
   };
 
+  const handleImageChange = (file, fieldName) => {
+    if (handleFileUpload) {
+      handleFileUpload(file, fieldName);
+      return;
+    }
+
+    handleImageUpload(file, fieldName);
+  };
+
   return (
     <>
       <Loader loading={isLoading} />
@@ -159,119 +174,126 @@ const CategorySetup = ({
       )}
 
       {/* Category Setup Side Drawer */}
-     <DefaultModal
-  isOpen={isOpen}
-  onClose={handleClose}
-  onSubmit={handleLocalSubmit}
-  title={isEditing ? "Edit Category" : "Add New Category"}
-  submitButtonText={isEditing ? "Update" : "Submit"}
-  closeButtonText="Reset"
-  isButtonView={true}
->
-  <div className="space-y-5">
-    {/* ==================== Basic Information ==================== */}
-    <FormSection
-      title="Basic Information"
-      description="Enter the basic details for this category."
-    >
-      <div className="space-y-4">
-        {/* Category Name */}
-        <FormInput
-          label="Category Name"
-          name="categoryName"
-          value={formData?.categoryName}
-          onChange={handleChange}
-          error={localErrors.categoryName}
-          className={localErrors.categoryName ? "border-red-500" : ""}
-          required
-        />
-
-        {/* Parent Category */}
-        <FormSelectGroup
-          label="Parent Category"
-          options={parentCategories}
-          value={formData?.parentCategory}
-          onChange={(selectedOption) =>
-            handleSelectChange(selectedOption, "parentCategory")
-          }
-          placeholder="Select parent category"
-        />
-
-        {/* Category Icon */}
-        <ImageUpload
-          id="category-icon"
-          label="Icon"
-          file={formData?.iconUrl}
-          onChange={(file) => handleImageUpload(file, "iconUrl")}
-          accept={CATEGORY_IMAGE_ACCEPT}
-          helperText={CATEGORY_IMAGE_HELPER_TEXT}
-          onRemove={() =>
-            setFormData((prev) => ({
-              ...prev,
-              iconUrl: "",
-            }))
-          }
-        />
-
-        {/* Banner Image */}
-        <ImageUpload
-          id="category-banner"
-          label="Banner Image"
-          subtext="Recommended: JPG, PNG or WEBP"
-          file={formData?.bannerUrl}
-          onChange={(file) => handleImageUpload(file, "bannerUrl")}
-          onRemove={() =>
-            setFormData((prev) => ({
-              ...prev,
-              bannerUrl: "",
-            }))
-          }
-          accept="image/jpeg,image/jpg,image/png,image/webp"
-        />
-      </div>
-    </FormSection>
-
-    {/* ==================== Visibility Settings ==================== */}
-    <FormSection
-      title="Visibility Settings"
-      description="Control where this category will be visible."
-    >
-      <div className="space-y-3">
-        {/* Publish */}
-        <FormToggleRow
-          title="Publish"
-          description="Make this category available to customers."
-          isToggle={isPublish}
-          handleClick={handleIsPublish}
-        />
-
-        {/* Dashboard Visible */}
-        <FormToggleRow
-          title="Dashboard Visible"
-          description="Show this category on the dashboard."
-          isToggle={formData?.isDashboardVisible}
-          handleClick={handleDashboardVisible}
-        />
-      </div>
-    </FormSection>
-
-    {/* ==================== Priority ==================== */}
-    {formData?.isDashboardVisible && (
-      <FormSection
-        title="Display Priority"
-        description="Set the order in which this category appears on the dashboard."
+      <DefaultModal
+        isOpen={isOpen}
+        onClose={handleClose}
+        onSubmit={handleLocalSubmit}
+        title={title || (isEditing ? "Edit Category" : "Add New Category")}
+        submitButtonText={submitButtonText || (isEditing ? "Update" : "Submit")}
+        closeButtonText={closeButtonText}
+        isButtonView={true}
       >
-        <Input
-          value={formData?.priority}
-          name="priority"
-          onChange={handleChange}
-          labelName="Priority"
-          type="number"
-        />
-      </FormSection>
-    )}
-  </div>
-</DefaultModal>
+        <div className="space-y-5">
+          {/* ==================== Basic Information ==================== */}
+          <FormSection
+            title="Basic Information"
+            description="Enter the basic details for this category."
+          >
+            <div className="space-y-4">
+              {/* Category Name */}
+              <FormInput
+                label="Category Name"
+                name="categoryName"
+                value={formData?.categoryName}
+                onChange={handleChange}
+                onBlur={handleNameBlur}
+                error={localErrors.categoryName}
+                className={localErrors.categoryName ? "border-red-500" : ""}
+                required
+              />
+
+              {/* Parent Category */}
+              <FormSelectGroup
+                label="Parent Category"
+                options={parentCategories}
+                value={formData?.parentCategory}
+                onChange={(selectedOption) =>
+                  handleSelectChange(selectedOption, "parentCategory")
+                }
+                placeholder="Select parent category"
+              />
+
+              {/* Category Icon */}
+              <ImageUpload
+                id="category-icon"
+                label="Icon"
+                subtext="Recommended: PNG or WEBP"
+                file={formData?.iconUrl}
+                onChange={(file) => handleImageChange(file, "iconUrl")}
+                accept={CATEGORY_IMAGE_ACCEPT}
+                helperText={CATEGORY_IMAGE_HELPER_TEXT}
+                onRemove={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    iconUrl: "",
+                  }))
+                }
+              />
+
+              {/* Banner Image */}
+              <ImageUpload
+                id="category-banner"
+                label="Banner Image"
+                subtext="Recommended: JPG, PNG or WEBP"
+                file={formData?.bannerUrl}
+                onChange={(file) => handleImageChange(file, "bannerUrl")}
+                accept={CATEGORY_IMAGE_ACCEPT}
+                helperText={CATEGORY_IMAGE_HELPER_TEXT}
+                onRemove={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    bannerUrl: "",
+                  }))
+                }
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Visibility Settings ==================== */}
+          <FormSection
+            title={showPublish ? "Visibility Settings" : "Display Settings"}
+            description={
+              showPublish
+                ? "Control where this category will be visible."
+                : "Control whether this category appears on the dashboard."
+            }
+          >
+            <div className="space-y-3">
+              {showPublish && (
+                <FormToggleRow
+                  title="Publish"
+                  description="Make this category available to customers."
+                  isToggle={isPublish}
+                  handleClick={handleIsPublish}
+                />
+              )}
+
+              <FormToggleRow
+                title="Dashboard Visible"
+                description="Show this category on the dashboard."
+                isToggle={formData?.isDashboardVisible}
+                handleClick={handleDashboardVisible}
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Priority ==================== */}
+          {formData?.isDashboardVisible && (
+            <FormSection
+              title="Display Priority"
+              description="Set the order in which this category appears on the dashboard."
+            >
+              <Input
+                value={formData?.priority}
+                name="priority"
+                onChange={handleChange}
+                labelName="Priority"
+                type="number"
+              />
+            </FormSection>
+          )}
+        </div>
+      </DefaultModal>
     </>
   );
 };
