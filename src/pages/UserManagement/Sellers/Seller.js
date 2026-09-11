@@ -21,6 +21,8 @@ import {
   getSellerList,
   updateSeller,
 } from "../../../Redux/userManagementSlice";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
 
 const EMPTY_FORM = {
   full_name: "",
@@ -552,81 +554,129 @@ const Sellers = () => {
         title="Add New Seller"
         titleClassName="mt-5 font-medium"
       >
-        <div className="p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormInput
-              label="Full Name"
-              name="full_name"
-              type="text"
-              value={formData.full_name}
-              onChange={handleInputChange}
-              error={errors.full_name}
-              maxLength={50}
-              required
-            />
-            <FormInput
-              label="Username"
-              name="userName"
-              type="text"
-              value={formData.userName}
-              onChange={handleInputChange}
-              error={errors.userName}
-              maxLength={30}
-              required
-            />
-          </div>
-          <FormInput
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleInputChange}
-            error={errors.email}
-            maxLength={50}
-            required
-          />
-          <FormInput
-            label="Phone"
-            name="phone"
-            type="text"
-            value={formData.phone}
-            onChange={handleInputChange}
-            error={errors.phone}
-            maxLength={15}
-            required
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <FormInput
-              label="Password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              error={errors.password}
-              maxLength={15}
-              required
-              helperText="8–15 chars with uppercase, lowercase, number and special character"
-            />
-            <FormInput
-              label="Confirm Password"
-              name="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
-              error={errors.confirmPassword}
-              maxLength={15}
-              required
-            />
-          </div>
-          <div className="flex items-center justify-between rounded border border-gray-200 p-3">
-            <p className="text-sm font-medium text-gray-700">Active</p>
-            <ToggleButton
-              isToggle={!formData.isDisable}
-              handleClick={() =>
-                setForm((p) => ({ ...p, isDisable: !p.isDisable }))
+        <div className="space-y-5">
+          {/* =========================
+        PERSONAL INFORMATION
+    ========================== */}
+          <FormSection
+            title="Personal Information"
+            description="Enter the seller's basic personal details."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput
+                label="Full Name"
+                name="full_name"
+                type="text"
+                value={formData.full_name}
+                onChange={handleInputChange}
+                error={errors.full_name}
+                // maxLength={50}
+                required
+                placeholder="Enter full name"
+              />
+
+              <FormInput
+                label="Username"
+                name="userName"
+                type="text"
+                value={formData.userName}
+                onChange={handleInputChange}
+                error={errors.userName}
+                // maxLength={30}
+                required
+                placeholder="Enter username"
+              />
+            </div>
+          </FormSection>
+
+          {/* =========================
+        CONTACT INFORMATION
+    ========================== */}
+          <FormSection
+            title="Contact Information"
+            description="Provide the seller's email address and phone number."
+          >
+            <div className="space-y-4">
+              <FormInput
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                error={errors.email}
+                // maxLength={50}
+                required
+                placeholder="Enter email address"
+              />
+
+              <FormInput
+                label="Phone"
+                name="phone"
+                type="text"
+                value={formData.phone}
+                onChange={handleInputChange}
+                error={errors.phone}
+                // maxLength={15}
+                required
+                placeholder="Enter phone number"
+              />
+            </div>
+          </FormSection>
+
+          {/* =========================
+        ACCOUNT SECURITY
+    ========================== */}
+          <FormSection
+            title="Account Security"
+            description="Set a secure password for the seller account."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput
+                label="Password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                error={errors.password}
+                // maxLength={15}
+                required
+                helperText="8–15 chars with uppercase, lowercase, number and special character"
+                placeholder="Enter password"
+              />
+
+              <FormInput
+                label="Confirm Password"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                error={errors.confirmPassword}
+                // maxLength={15}
+                required
+                placeholder="Confirm password"
+              />
+            </div>
+          </FormSection>
+
+          {/* =========================
+        ACCOUNT STATUS
+    ========================== */}
+          <FormSection
+            title="Account Status"
+            description="Control whether the seller account is active."
+          >
+            <FormToggleRow
+              title="Active"
+              description="Allow this seller to access and use their account."
+              checked={!formData.isDisable}
+              onChange={() =>
+                setForm((p) => ({
+                  ...p,
+                  isDisable: !p.isDisable,
+                }))
               }
             />
-          </div>
+          </FormSection>
         </div>
       </DefaultModal>
 

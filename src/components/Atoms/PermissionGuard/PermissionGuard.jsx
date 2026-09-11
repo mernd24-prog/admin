@@ -13,6 +13,7 @@ import { usePermission } from "../../../_helpers/usePermission";
  *   allOf    {string[]}        — require ALL of these actions
  *   fallback {React.ReactNode} — what to render when access is denied (default: null)
  *   hide     {boolean}         — if true, renders nothing on deny instead of fallback
+ *   allowSeller {boolean}      — allow seller roles for a scoped self-service action
  *
  * Examples:
  *   <PermissionGuard module="products" action="create">
@@ -30,19 +31,20 @@ const PermissionGuard = ({
   allOf,
   fallback = null,
   hide = false,
+  allowSeller = false,
   children,
 }) => {
-  const { can, canAny, canAll } = usePermission();
+  const { can, canAny, canAll, isSeller } = usePermission();
 
-  let allowed = false;
+  let allowed = allowSeller && isSeller;
 
-  if (allOf && allOf.length > 0) {
+  if (!allowed && allOf && allOf.length > 0) {
     allowed = canAll(moduleSlug, allOf);
-  } else if (actions && actions.length > 0) {
+  } else if (!allowed && actions && actions.length > 0) {
     allowed = canAny(moduleSlug, actions);
-  } else if (action) {
+  } else if (!allowed && action) {
     allowed = can(moduleSlug, action);
-  } else {
+  } else if (!allowed) {
     // No specific action — just check module access
     allowed = can(moduleSlug);
   }

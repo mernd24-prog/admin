@@ -964,27 +964,9 @@ const ProductCategories = () => {
       </div>
 
       <CategorySetup
-        isOpen={categoryOpen}
+        isOpen={categoryOpen || categoryEditOpen}
         handleClose={() => {
           setCategoryOpen(false);
-          handleResetForm();
-        }}
-        formData={formData}
-        setFormData={setFormData}
-        parentCategories={createSelectOptions}
-        handleResetForm={handleResetForm}
-        handleSubmit={handleSubmit}
-        isEditing={false}
-        isPublish={isPublish}
-        handleIsPublish={handleIsPublish}
-        errors={errors}
-        handleInputChange={handleInputChange}
-        handleDashboardVisible={handleDashboardVisible}
-      />
-
-      <CategorySetup
-        isOpen={categoryEditOpen}
-        handleClose={() => {
           setCategoryEditOpen(false);
           handleResetForm();
         }}
@@ -992,8 +974,8 @@ const ProductCategories = () => {
         setFormData={setFormData}
         parentCategories={createSelectOptions}
         handleResetForm={handleResetForm}
-        handleSubmit={handleEditSubmit}
-        isEditing={true}
+        handleSubmit={categoryEditOpen ? handleEditSubmit : handleSubmit}
+        isEditing={categoryEditOpen}
         isPublish={isPublish}
         handleIsPublish={handleIsPublish}
         errors={errors}

@@ -18,6 +18,9 @@ import {
   updateContentPage,
 } from "../../../Redux/adminCoreSlice";
 import { uploadFile } from "../../../_helpers/globalFunctions";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import FormInput from "../../../components/Atoms/FormInput/FormInput";
+import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
 
 const PAGE_SIZE = 10;
 const PAGE_TYPE = "auth_testimonial";
@@ -393,128 +396,222 @@ const AuthTestimonials = () => {
           formData.recordSlug ? "Edit Auth Testimonial" : "Add Auth Testimonial"
         }
         submitButtonText={formData.recordSlug ? "Update" : "Create"}
+        closeButtonText="Cancel"
+        isButtonView={true}
       >
-        <div className="space-y-4">
-          <Field label="Reviewer Name" error={errors.name}>
-            <input
-              className={inputClass}
-              value={formData.name}
-              onChange={(event) => patchForm("name", event.target.value)}
-              maxLength={80}
-            />
-          </Field>
-          <Field label="Avatar Image">
-            <ImageUpload
-              id="auth-testimonial-avatar"
-              label="Upload Avatar"
-              file={formData.avatarUrl}
-              onChange={uploadAvatar}
-              isDisabled={uploadingAvatar || submitting}
-              previewClassName="!h-32 !min-h-32 rounded-full object-cover"
-            />
-            <input
-              className={`${inputClass} mt-2`}
-              value={formData.avatarUrl}
-              onChange={(event) => patchForm("avatarUrl", event.target.value)}
-              placeholder="Uploaded Cloudinary URL"
-              disabled={uploadingAvatar}
-            />
-            <p className="mt-1 text-xs text-[#65718b]">
-              Upload folder: ecommerce/uploads/auth-testimonials
-            </p>
-          </Field>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Rating" error={errors.rating}>
-              <input
+        <div className="space-y-5">
+          {/* ==================== Basic Information ==================== */}
+          <FormSection
+            title="Basic Information"
+            description="Add the basic information for this testimonial."
+          >
+            <div className="space-y-4">
+              {/* Reviewer Name */}
+              <FormInput
+                label="Reviewer Name"
+                name="name"
+                value={formData.name}
+                onChange={(event) => patchForm("name", event.target.value)}
+                error={errors.name}
+                placeholder="Enter reviewer name"
+                maxLength={80}
+                required
+              />
+
+              {/* Avatar */}
+              <div>
+                <ImageUpload
+                  id="auth-testimonial-avatar"
+                  label="Upload Avatar"
+                  file={formData.avatarUrl}
+                  onChange={uploadAvatar}
+                  isDisabled={uploadingAvatar || submitting}
+                  previewClassName="!h-32 !min-h-32 rounded-full object-cover"
+                />
+
+                <input
+                  className={`${inputClass} mt-2`}
+                  value={formData.avatarUrl}
+                  onChange={(event) =>
+                    patchForm("avatarUrl", event.target.value)
+                  }
+                  placeholder="Uploaded Cloudinary URL"
+                  disabled={uploadingAvatar}
+                />
+
+                <p className="mt-1 text-xs text-[#65718b]">
+                  Upload folder: ecommerce/uploads/auth-testimonials
+                </p>
+              </div>
+            </div>
+          </FormSection>
+
+          {/* ==================== Review Details ==================== */}
+          <FormSection
+            title="Review Details"
+            description="Add the rating and review content provided by the customer."
+          >
+            <div className="space-y-4">
+              {/* Rating */}
+              <FormInput
+                label="Rating"
+                name="rating"
                 type="number"
                 min="1"
                 max="5"
                 step="0.1"
-                className={inputClass}
                 value={formData.rating}
                 onChange={(event) => patchForm("rating", event.target.value)}
+                error={errors.rating}
+                placeholder="Enter rating"
+                required
               />
-            </Field>
-            <Field label="Show On">
-              <select
-                className={inputClass}
-                value={formData.pageTarget}
-                onChange={(event) =>
-                  patchForm("pageTarget", event.target.value)
+
+              {/* Show On */}
+              <FormSelectGroup
+                label="Show On"
+                options={[
+                  {
+                    label: "Login + Register",
+                    value: "all",
+                  },
+                  {
+                    label: "Login only",
+                    value: "login",
+                  },
+                  {
+                    label: "Register only",
+                    value: "register",
+                  },
+                ]}
+                value={
+                  [
+                    {
+                      label: "Login + Register",
+                      value: "all",
+                    },
+                    {
+                      label: "Login only",
+                      value: "login",
+                    },
+                    {
+                      label: "Register only",
+                      value: "register",
+                    },
+                  ].find((option) => option.value === formData.pageTarget) ||
+                  null
                 }
-              >
-                <option value="all">Login + Register</option>
-                <option value="login">Login only</option>
-                <option value="register">Register only</option>
-              </select>
-            </Field>
-          </div>
-          <Field label="Review Text" error={errors.reviewText}>
-            <textarea
-              className={`${inputClass} min-h-[120px]`}
-              value={formData.reviewText}
-              onChange={(event) => patchForm("reviewText", event.target.value)}
-              maxLength={600}
-            />
-          </Field>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Google Average Rating">
-              <input
+                onChange={(selectedOption) =>
+                  patchForm("pageTarget", selectedOption?.value || "all")
+                }
+                placeholder="Select page"
+              />
+
+              {/* Review Text */}
+              <FormInput
+                label="Review Text"
+                type="textarea"
+                name="reviewText"
+                value={formData.reviewText}
+                onChange={(event) =>
+                  patchForm("reviewText", event.target.value)
+                }
+                error={errors.reviewText}
+                placeholder="Enter customer review"
+                maxLength={600}
+                multiline
+                rows={5}
+                required
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Google Review Details ==================== */}
+          <FormSection
+            title="Google Review Details"
+            description="Add Google rating and review information displayed with the testimonial."
+          >
+            <div className="space-y-4">
+              {/* Google Average Rating */}
+              <FormInput
+                label="Google Average Rating"
+                name="googleRating"
                 type="number"
                 min="0"
                 max="5"
                 step="0.1"
-                className={inputClass}
                 value={formData.googleRating}
                 onChange={(event) =>
                   patchForm("googleRating", event.target.value)
                 }
+                placeholder="Enter Google rating"
               />
-            </Field>
-            <Field label="Google Review Count">
-              <input
-                className={inputClass}
+
+              {/* Google Review Count */}
+              <FormInput
+                label="Google Review Count"
+                name="googleReviewCount"
                 value={formData.googleReviewCount}
                 onChange={(event) =>
                   patchForm("googleReviewCount", event.target.value)
                 }
                 placeholder="e.g. 128 reviews"
               />
-            </Field>
-          </div>
-          <Field label="Google Place / Review URL">
-            <input
-              className={inputClass}
-              value={formData.googlePlaceUrl}
-              onChange={(event) =>
-                patchForm("googlePlaceUrl", event.target.value)
-              }
-              placeholder="https://g.page/..."
-            />
-          </Field>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Sort Order">
-              <input
+
+              {/* Google URL */}
+              <FormInput
+                label="Google Place / Review URL"
+                name="googlePlaceUrl"
+                value={formData.googlePlaceUrl}
+                onChange={(event) =>
+                  patchForm("googlePlaceUrl", event.target.value)
+                }
+                placeholder="https://g.page/..."
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Display Settings ==================== */}
+          <FormSection
+            title="Display Settings"
+            description="Control the testimonial order and publication status."
+          >
+            <div className="space-y-4">
+              {/* Sort Order */}
+              <FormInput
+                label="Sort Order"
+                name="sortOrder"
                 type="number"
                 min="0"
-                className={inputClass}
                 value={formData.sortOrder}
                 onChange={(event) => patchForm("sortOrder", event.target.value)}
+                placeholder="Enter display order"
               />
-            </Field>
-            <Field label="Published">
-              <select
-                className={inputClass}
-                value={formData.published ? "yes" : "no"}
-                onChange={(event) =>
-                  patchForm("published", event.target.value === "yes")
+
+              {/* Published */}
+              <FormSelectGroup
+                label="Published"
+                options={[
+                  {
+                    label: "Yes",
+                    value: "yes",
+                  },
+                  {
+                    label: "Draft",
+                    value: "no",
+                  },
+                ]}
+                value={{
+                  label: formData.published ? "Yes" : "Draft",
+                  value: formData.published ? "yes" : "no",
+                }}
+                onChange={(selectedOption) =>
+                  patchForm("published", selectedOption?.value === "yes")
                 }
-              >
-                <option value="yes">Yes</option>
-                <option value="no">Draft</option>
-              </select>
-            </Field>
-          </div>
+                placeholder="Select status"
+              />
+            </div>
+          </FormSection>
         </div>
       </DefaultModal>
     </div>
