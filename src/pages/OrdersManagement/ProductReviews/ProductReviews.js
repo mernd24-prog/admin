@@ -3,39 +3,37 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import {
   MdAdd,
-  MdStar,
-  MdStarBorder,
   MdRateReview,
   MdEdit,
   MdDelete,
   MdCheckCircle,
   MdClose,
-  MdVisibility,
   MdVisibilityOff,
+  MdVisibility,
+  MdStar,
+  MdStarBorder,
 } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
-  StatusBadge,
-  FilterBar,
   ConfirmModal,
   BulkActionBar,
-  ShowMoreText,
-  ImageViewer,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import {
-  deleteProductReview,
-  getProductReviewSummaries,
-  getProductReviewSummaryReviews,
-  updateProductReview,
   bulkUpdateProductReviews,
+  deleteProductReview,
+  getProductReviewSummaryReviews,
+  getProductReviewSummaries,
+  updateProductReview,
 } from "../../../Redux/adminCoreSlice";
 import EditProductReview from "./components/EditProductReview";
 import AddProductReview from "./components/AddProductReview";
 import { useListPage } from "../../../hooks/useListPage";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
+import { getProducts } from "../../../Redux/productSlice";
 import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const SELLER_PANEL_ROLES = new Set([
@@ -82,53 +80,6 @@ const FILTER_FIELDS = [
   },
 ];
 
-const StarRating = ({ rating = 0, size = 20 }) => (
-  <div className="flex items-center gap-0.5 text-orange-500">
-    {[1, 2, 3, 4, 5].map((star) =>
-      star <= Math.round(rating) ? (
-        <MdStar key={star} size={size} />
-      ) : (
-        <MdStarBorder key={star} size={size} className="text-gray-300" />
-      ),
-    )}
-  </div>
-);
-
-const STATUS_COLOR = {
-  published: "success",
-  pending: "warning",
-  hidden: "default",
-  rejected: "danger",
-};
-
-const isLikelyId = (value = "") => /^[a-f\d]{24}$/i.test(String(value || ""));
-const isLikelyEmail = (value = "") =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
-
-const getBuyerName = (row = {}) => {
-  const names = [
-    row.buyerName,
-    row.buyer?.displayName,
-    row.buyer?.fullName,
-    row.buyer?.name,
-    row.buyer?.email || "",
-  ];
-  const name = names.find(
-    (value) => value && !isLikelyId(value) && !isLikelyEmail(value),
-  );
-  if (name) return name;
-  return "Verified Buyer";
-};
-
-const isPlatformCreatedReview = (row = {}) =>
-  String(row.orderId || "").startsWith("admin:") ||
-  String(row.orderItemId || "").startsWith("admin:");
-
-const getCreatedByName = (row = {}, sellerView = false) => {
-  if (sellerView && isPlatformCreatedReview(row)) return "Platform";
-  return getBuyerName(row);
-};
-
 const getProductName = (row = {}) =>
   row.productName ||
   row.product?.title ||
@@ -148,6 +99,31 @@ const getProductName = (row = {}) =>
 const cssImageUrl = (value) =>
   `url("${String(value || "").replace(/"/g, "%22")}")`;
 
+const getReviewId = (row = {}) => row._id || row.id || row.reviewId || "";
+
+const displayBuyerName = (review = {}) => {
+  const name =
+    review.buyerName ||
+    review.buyer?.displayName ||
+    review.buyer?.fullName ||
+    review.buyer?.name ||
+    review.buyer?.email ||
+    "";
+  return name || "Verified Buyer";
+};
+
+const getProductId = (row = {}) => row.productId || row.product?.id || row._id || row.id || "";
+
+const getMetaTotal = (payload = {}, source = {}, list = []) =>
+  Number(
+    source?.total ||
+      payload?.total ||
+      payload?.meta?.total ||
+      payload?.meta?.pagination?.total ||
+      list.length ||
+      0,
+  );
+
 const getProductReviewSummaryPayload = (state = {}) => {
   const payload = state?.productReviewSummariesData?.data || {};
   const source =
@@ -165,436 +141,63 @@ const getProductReviewSummaryPayload = (state = {}) => {
   };
 };
 
-const ReviewSkeleton = () => (
-  <div className="space-y-4 animate-pulse">
-    {[1, 2].map((item) => (
-      <div
-        key={item}
-        className="rounded-xl border border-gray-200 bg-white p-4 space-y-3 shadow-xs"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gray-200 shrink-0" />
-            <div className="space-y-1.5">
-              <div className="h-3.5 w-32 rounded bg-gray-200" />
-              <div className="h-3 w-20 rounded bg-gray-200" />
-            </div>
-          </div>
-          <div className="h-5 w-20 rounded-full bg-gray-200 shrink-0" />
-        </div>
-        <div className="h-3.5 w-3/4 rounded bg-gray-200" />
-        <div className="space-y-1.5">
-          <div className="h-3 w-full rounded bg-gray-200" />
-          <div className="h-3 w-5/6 rounded bg-gray-200" />
-        </div>
-        <div className="flex gap-2 pt-1">
-          <div className="h-16 w-16 rounded-lg bg-gray-200" />
-          <div className="h-16 w-16 rounded-lg bg-gray-200" />
-        </div>
-        <div className="flex gap-2 pt-2 border-t border-gray-100">
-          <div className="h-7 w-20 rounded-md bg-gray-200" />
-          <div className="h-7 w-16 rounded-md bg-gray-200" />
-        </div>
-      </div>
-    ))}
-  </div>
-);
+const getProductReviewDetailPayload = (state = {}) => {
+  const payload = state?.productReviewSummaryReviewsData?.data || {};
+  const source =
+    payload?.data && !payload?.list && !payload?.items ? payload.data : payload;
+  const list = Array.isArray(source?.list)
+    ? source.list
+    : Array.isArray(source?.items)
+      ? source.items
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : [];
 
-const ReviewCard = ({ row, sellerView, onReviewAction, onOpenPhoto }) => {
-  const buyerName = getCreatedByName(row, sellerView);
-  const buyerAvatar =
-    row.buyerImage || row.buyerAvatarUrl || row.buyer?.avatarUrl || "";
-  const initials = (buyerName || "CU")
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-  const reviewDate = row.createdAt ? formatDateTime12Hour(row.createdAt) : "—";
-  const mediaList = Array.isArray(row.media) ? row.media.filter(Boolean) : [];
+  return {
+    list: Array.isArray(list) ? list : [],
+    total: getMetaTotal(payload, source, list),
+    summary: payload?.meta?.summary || source?.summary || payload?.summary || {},
+    product: payload?.meta?.product || source?.product || payload?.product || null,
+  };
+};
 
+const RatingStars = ({ value = 0, showValue = true }) => {
+  const rating = Number(value || 0);
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3.5 shadow-xs transition-colors hover:border-gray-300">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          {buyerAvatar ? (
-            <img
-              src={buyerAvatar}
-              alt={buyerName}
-              className="h-10 w-10 rounded-full object-cover border border-gray-200 shrink-0"
-            />
+    <div className="flex items-center gap-1">
+      <div className="flex items-center">
+        {[1, 2, 3, 4, 5].map((star) =>
+          star <= Math.round(rating) ? (
+            <MdStar key={star} className="text-orange-500" size={17} />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-amber-200 text-xs font-bold text-amber-900 border border-amber-300/60 shrink-0">
-              {initials}
-            </div>
-          )}
-          <div>
-            <h4 className="text-sm font-semibold text-gray-900 leading-tight">
-              {buyerName}
-            </h4>
-            <div className="mt-1 flex items-center gap-2">
-              <StarRating rating={Number(row.rating) || 0} />
-              <span className="text-[11px] text-gray-300">•</span>
-              <span className="text-[11px] font-medium text-gray-500">
-                {reviewDate}
-              </span>
-            </div>
-          </div>
-        </div>
-        <StatusBadge status={row.status || "pending"} dot size="xs" />
-      </div>
-
-      {/* Review Title */}
-      {row.title && (
-        <h5 className="text-sm font-semibold text-gray-900 leading-snug">
-          <ShowMoreText
-            text={row.title}
-            limit={80}
-            moreLabel="See more"
-            lessLabel="See less"
-            textClassName="text-sm font-semibold text-gray-900"
-          />
-        </h5>
-      )}
-
-      {/* Review Text */}
-      {row.reviewText && (
-        <div className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-          <ShowMoreText
-            text={row.reviewText}
-            limit={150}
-            moreLabel="See more"
-            lessLabel="See less"
-            textClassName="text-xs sm:text-sm text-gray-600 leading-relaxed"
-          />
-        </div>
-      )}
-
-      {/* Media Photos Gallery */}
-      {mediaList.length > 0 && (
-        <div className="space-y-1.5 pt-1">
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-            Photos ({mediaList.length})
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {mediaList.map((imgUrl, mIdx) => (
-              <button
-                type="button"
-                key={mIdx}
-                onClick={() => onOpenPhoto?.(mediaList, mIdx)}
-                className="group relative h-16 w-16 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 transition-all hover:scale-105 hover:shadow-sm cursor-pointer focus:outline-none"
-              >
-                <img
-                  src={imgUrl}
-                  alt={`Review photo ${mIdx + 1}`}
-                  className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                  loading="lazy"
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      <div className="flex items-center gap-2 pt-2 border-t border-gray-100 flex-wrap">
-        {row.status !== "published" && (
-          <button
-            type="button"
-            onClick={() => onReviewAction?.(row, "published")}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-emerald-700"
-          >
-            <MdCheckCircle size={14} />
-            Publish
-          </button>
-        )}
-        {row.status !== "hidden" && (
-          <button
-            type="button"
-            onClick={() => onReviewAction?.(row, "hidden")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
-          >
-            <MdVisibilityOff size={14} />
-            Hide
-          </button>
-        )}
-        {row.status !== "rejected" && (
-          <button
-            type="button"
-            onClick={() => onReviewAction?.(row, "rejected")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100"
-          >
-            <MdClose size={14} />
-            Reject
-          </button>
+            <MdStarBorder key={star} className="text-gray-300" size={17} />
+          ),
         )}
       </div>
+      {showValue && (
+        <span className="text-xs font-semibold text-gray-700">
+          {rating ? rating.toFixed(1) : "0.0"}
+        </span>
+      )}
     </div>
   );
 };
 
-const ReviewDetailsDrawer = ({
-  review,
-  onClose,
-  sellerView = false,
-  detailReviews = [],
-  detailStats = {},
-  detailLoading = false,
-  onReviewAction,
-}) => {
-  const [lightboxData, setLightboxData] = useState({
-    open: false,
-    images: [],
-    index: 0,
-  });
-
-  if (!review) return null;
-
-  const productName = getProductName(review) || "Product not found";
-  const reviewDate = formatDateTime12Hour(review.createdAt, "—");
-  const isSummary =
-    !review.reviewText &&
-    !review.buyerName &&
-    !review.buyerId &&
-    !review.status;
-  const summaryAverage = Number(
-    review.averageRating || detailStats.avgRating || 0,
-  );
-  const totalReviews = Number(
-    review.reviewCount || detailStats.count || detailReviews.length || 0,
-  );
+const StatusPill = ({ status = "pending" }) => {
+  const normalized = String(status || "pending").toLowerCase();
+  const styles = {
+    published: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    pending: "border-amber-200 bg-amber-50 text-amber-700",
+    hidden: "border-slate-200 bg-slate-50 text-slate-600",
+    rejected: "border-red-200 bg-red-50 text-red-600",
+  };
 
   return (
-    <>
-      <div
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-xl flex-col bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-5 py-4">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">
-              {isSummary ? "Product Review Details" : "Review Details"}
-            </h2>
-            <p className="mt-0.5 text-xs text-gray-500 font-medium line-clamp-1">
-              {productName}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
-            aria-label="Close"
-          >
-            <MdClose size={20} />
-          </button>
-        </div>
-
-        <div className="flex-1 space-y-5 overflow-y-auto p-5">
-          {isSummary ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <div className="rounded-xl border border-amber-200/70 bg-amber-50/40 p-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
-                  Avg Rating
-                </p>
-                <div className="mt-1 flex items-baseline gap-1">
-                  <span className="text-xl font-bold text-gray-900">
-                    {Number(summaryAverage).toFixed(1)}
-                  </span>
-                  <span className="text-xs text-gray-500 font-medium">
-                    / 5.0
-                  </span>
-                </div>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
-                  Total Reviews
-                </p>
-                <p className="mt-1 text-xl font-bold text-gray-900">
-                  {totalReviews}
-                </p>
-              </div>
-              <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/40 p-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">
-                  Published
-                </p>
-                <p className="mt-1 text-xl font-bold text-emerald-700">
-                  {review.publishedCount || 0}
-                </p>
-              </div>
-              <div className="rounded-xl border border-amber-200/70 bg-amber-50/40 p-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
-                  Pending
-                </p>
-                <p className="mt-1 text-xl font-bold text-amber-700">
-                  {review.pendingCount || 0}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 rounded-xl border border-gray-200 bg-gray-50/80 p-4 text-sm">
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">
-                  {sellerView ? "Created By" : "Buyer"}
-                </p>
-                <p className="mt-1 font-semibold text-gray-900">
-                  {getCreatedByName(review, sellerView)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">
-                  Status
-                </p>
-                <div className="mt-1">
-                  <StatusBadge
-                    status={review.status || "pending"}
-                    dot
-                    size="xs"
-                  />
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">
-                  Rating
-                </p>
-                <div className="mt-1">
-                  <StarRating rating={Number(review.rating) || 0} />
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">
-                  Date
-                </p>
-                <p className="mt-1 font-medium text-gray-700">{reviewDate}</p>
-              </div>
-            </div>
-          )}
-
-          {isSummary ? (
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                  Reviews{" "}
-                  {detailReviews.length > 0 ? `(${detailReviews.length})` : ""}
-                </h3>
-                {detailLoading && (
-                  <span className="text-xs font-semibold text-amber-600 animate-pulse">
-                    Updating…
-                  </span>
-                )}
-              </div>
-
-              {detailLoading ? (
-                <ReviewSkeleton />
-              ) : detailReviews.length > 0 ? (
-                <div className="space-y-3">
-                  {detailReviews.map((row) => (
-                    <ReviewCard
-                      key={row._id || row.id}
-                      row={row}
-                      sellerView={sellerView}
-                      onReviewAction={onReviewAction}
-                      onOpenPhoto={(images, index) =>
-                        setLightboxData({ open: true, images, index })
-                      }
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/50 p-6 text-center text-sm text-gray-500">
-                  No reviews yet for this product.
-                </div>
-              )}
-            </section>
-          ) : (
-            <>
-              {review.title && (
-                <section>
-                  <p className="text-xs font-semibold uppercase text-gray-500">
-                    Title
-                  </p>
-                  <h4 className="mt-1 text-sm font-semibold text-gray-900 leading-snug">
-                    <ShowMoreText
-                      text={review.title}
-                      limit={100}
-                      moreLabel="See more"
-                      lessLabel="See less"
-                      textClassName="text-sm font-semibold text-gray-900"
-                    />
-                  </h4>
-                </section>
-              )}
-
-              {review.reviewText && (
-                <section>
-                  <p className="text-xs font-semibold uppercase text-gray-500">
-                    Review
-                  </p>
-                  <div className="mt-2 whitespace-pre-wrap rounded-xl border border-gray-200 bg-white p-4 text-sm leading-relaxed text-gray-700">
-                    <ShowMoreText
-                      text={review.reviewText}
-                      limit={250}
-                      moreLabel="See more"
-                      lessLabel="See less"
-                    />
-                  </div>
-                </section>
-              )}
-
-              {Array.isArray(review.media) && review.media.length ? (
-                <section className="space-y-2">
-                  <p className="text-xs font-semibold uppercase text-gray-500">
-                    Review Photos ({review.media.length})
-                  </p>
-                  <div className="grid grid-cols-3 gap-2.5">
-                    {review.media.map((url, idx) => (
-                      <button
-                        type="button"
-                        key={idx}
-                        onClick={() =>
-                          setLightboxData({
-                            open: true,
-                            images: review.media,
-                            index: idx,
-                          })
-                        }
-                        className="group relative h-24 overflow-hidden rounded-xl border border-gray-200 bg-gray-50 transition-all hover:scale-105 hover:shadow-md cursor-pointer focus:outline-none"
-                      >
-                        <img
-                          src={url}
-                          alt="Review media"
-                          className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-
-              {review.adminReply?.text ? (
-                <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
-                    Admin Reply
-                  </p>
-                  <p className="mt-1.5 text-sm text-blue-950 leading-relaxed">
-                    {review.adminReply.text}
-                  </p>
-                </section>
-              ) : null}
-            </>
-          )}
-        </div>
-      </aside>
-
-      {/* Global Image Viewer Lightbox Modal */}
-      {lightboxData.open && (
-        <ImageViewer
-          images={lightboxData.images}
-          initialIndex={lightboxData.index}
-          onClose={() => setLightboxData({ open: false, images: [], index: 0 })}
-        />
-      )}
-    </>
+    <span
+      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize ${styles[normalized] || styles.pending}`}
+    >
+      {normalized}
+    </span>
   );
 };
 
@@ -606,9 +209,9 @@ const ProductReviews = () => {
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
   });
+  const { clearSelection } = list;
 
   const [editTarget, setEditTarget] = useState(null);
-  const [viewTarget, setViewTarget] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({
     open: false,
@@ -617,21 +220,50 @@ const ProductReviews = () => {
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [toggleLoadingId, setToggleLoadingId] = useState(null);
   const [bulkLoading, setBulkLoading] = useState(false);
-  const [detailReviews, setDetailReviews] = useState([]);
-  const [detailStats, setDetailStats] = useState({
-    avgRating: 0,
-    count: 0,
-    distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-  });
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const [userData, setUserData] = useState(() => getSessionUserData());
+  const [sellerOptions, setSellerOptions] = useState([]);
+  const [productOptions, setProductOptions] = useState([]);
+  const [selectedSellerId, setSelectedSellerId] = useState("");
+  const [selectedProductId, setSelectedProductId] = useState("");
 
-  const { list: items, total } = getProductReviewSummaryPayload(reviewsData);
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
   const sellerView = isSellerPanel();
+  const showSellerFilter = !isSellerPanelUser && !sellerView;
+  const sellerScoped = isSellerPanelUser || sellerView;
+  const summaryPayload = getProductReviewSummaryPayload(reviewsData);
+  const detailPayload = getProductReviewDetailPayload(reviewsData);
+  const isDetailMode = Boolean(selectedProductId);
+  const items = isDetailMode ? detailPayload.list : summaryPayload.list;
+  const total = isDetailMode ? detailPayload.total : summaryPayload.total;
+  const selectedSummaryRow =
+    selectedProductId && summaryPayload.list.length
+      ? summaryPayload.list.find(
+          (row) =>
+            String(row.productId || row._id || row.id) === String(selectedProductId),
+        ) || null
+      : null;
+  const selectedProductOption = productOptions.find(
+    (product) => String(product.value) === String(selectedProductId),
+  );
+  const selectedProduct =
+    detailPayload.product ||
+    selectedSummaryRow?.product ||
+    (selectedProductId
+      ? { id: selectedProductId, title: selectedProductOption?.label || "Selected product" }
+      : null);
+  const selectedProductTitle =
+    selectedProduct?.title ||
+    selectedProduct?.name ||
+    selectedProductOption?.label ||
+    "Selected product";
+  const selectedStatusCounts = detailPayload.list.reduce(
+    (counts, review) => ({
+      ...counts,
+      [review.status || "pending"]: (counts[review.status || "pending"] || 0) + 1,
+    }),
+    {},
+  );
 
   useEffect(() => {
     setUserData(getSessionUserData());
@@ -641,19 +273,25 @@ const ProductReviews = () => {
     const params = list.toQueryParams();
     setLoading(true);
     setError("");
-    dispatch(
-      getProductReviewSummaries({
+    const requestParams = {
         page: params.page,
         limit: params.limit,
         search: params.search || undefined,
         status: params.status || undefined,
         rating: params.rating ? Number(params.rating) : undefined,
-        productId: params.productId || undefined,
+        sellerId: !isSellerPanelUser && !sellerView ? selectedSellerId || undefined : undefined,
         sortBy: params.sortBy,
         sortDir: params.sortDir,
-        sellerScope: isSellerPanelUser || undefined,
-      }),
-    )
+        sellerScope: sellerScoped || undefined,
+    };
+    const action = selectedProductId
+      ? getProductReviewSummaryReviews({
+          ...requestParams,
+          productId: selectedProductId,
+        })
+      : getProductReviewSummaries(requestParams);
+
+    dispatch(action)
       .unwrap()
       .catch((err) => {
         const msg = err?.message || "Failed to load product reviews";
@@ -663,54 +301,88 @@ const ProductReviews = () => {
       .finally(() => setLoading(false));
   };
 
-  const fetchReviewDetails = async (productId) => {
-    if (!productId) return;
-    setDetailLoading(true);
-    try {
-      const response = await dispatch(
-        getProductReviewSummaryReviews({
-          productId,
-          page: 1,
-          limit: 100,
-          sellerScope: isSellerPanelUser || undefined,
-        }),
-      ).unwrap();
+  useEffect(() => {
+    let mounted = true;
 
-      const payload = Array.isArray(response?.data)
-        ? response.data
-        : Array.isArray(response?.items)
-          ? response.items
-          : Array.isArray(response?.list)
-            ? response.list
-            : Array.isArray(response?.data?.items)
-              ? response.data.items
-              : Array.isArray(response?.data?.list)
-                ? response.data.list
-                : [];
+    const loadSellerOptions = async () => {
+      if (isSellerPanelUser || sellerView) {
+        if (mounted) setSellerOptions([]);
+        return;
+      }
 
-      const meta = response?.meta || response?.data?.meta || {};
-      const summary =
-        meta?.summary ||
-        response?.summary ||
-        response?.data?.summary ||
-        response?.stats ||
-        response?.data?.stats ||
-        {};
-      const list = Array.isArray(payload) ? payload : [];
+      try {
+        const result = await dropdownApi.getSellers({ limit: 100 });
+        if (mounted) setSellerOptions(Array.isArray(result) ? result : []);
+      } catch {
+        if (mounted) setSellerOptions([]);
+      }
+    };
 
-      setDetailReviews(list);
-      setDetailStats({
-        avgRating: Number(summary.avgRating || 0),
-        count: Number(summary.count || list.length || 0),
-        distribution: summary.distribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-      });
-    } catch (err) {
-      toast.error(err?.message || "Failed to load review details");
-      setDetailReviews([]);
-    } finally {
-      setDetailLoading(false);
+    loadSellerOptions();
+    return () => {
+      mounted = false;
+    };
+  }, [isSellerPanelUser, sellerView]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadProductOptions = async () => {
+      try {
+        const response = await dispatch(
+          getProducts({
+            page: 1,
+            limit: 200,
+            sellerId: selectedSellerId || undefined,
+          }),
+        ).unwrap();
+
+        const list = Array.isArray(response?.data?.products)
+          ? response.data.products
+          : Array.isArray(response?.data?.docs)
+            ? response.data.docs
+            : Array.isArray(response?.items)
+              ? response.items
+              : Array.isArray(response?.list)
+                ? response.list
+                : Array.isArray(response?.data?.items)
+                  ? response.data.items
+                  : Array.isArray(response?.data?.list)
+                    ? response.data.list
+                    : [];
+
+        const mapped = list.map((product) => ({
+          value: product._id || product.id,
+          label:
+            product.title ||
+            product.name ||
+            product.productName ||
+            product.sku ||
+            "Unnamed product",
+        }));
+
+        if (mounted) setProductOptions(mapped);
+      } catch {
+        if (mounted) setProductOptions([]);
+      }
+    };
+
+    if (isSellerPanelUser || sellerView) {
+      loadProductOptions();
+      return () => {
+        mounted = false;
+      };
     }
-  };
+
+    loadProductOptions();
+    return () => {
+      mounted = false;
+    };
+  }, [dispatch, isSellerPanelUser, sellerView, selectedSellerId]);
+
+  useEffect(() => {
+    clearSelection();
+  }, [clearSelection, selectedProductId, selectedSellerId]);
 
   useEffect(() => {
     fetchReviews();
@@ -722,36 +394,9 @@ const ProductReviews = () => {
     list.sortKey,
     list.sortDir,
     list.filters,
+    selectedSellerId,
+    selectedProductId,
   ]);
-
-  const updateReviewStatus = async (review, status, successMessage) => {
-    const reviewId = review._id || review.id;
-    if (!reviewId) return;
-    setToggleLoadingId(reviewId);
-    try {
-      await dispatch(
-        updateProductReview({
-          reviewId,
-          status,
-          sellerScope: isSellerPanelUser,
-        }),
-      ).unwrap();
-      toast.success(successMessage || "Review status updated");
-      fetchReviews();
-    } catch (err) {
-      toast.error(err?.message || "Failed to update review status");
-    } finally {
-      setToggleLoadingId(null);
-    }
-  };
-
-  // const handleToggleStatus = async (review) => {
-  //   const current = review.status || "pending";
-  //   const newStatus = current === "published" ? "hidden" : "published";
-  //   const message =
-  //     newStatus === "published" ? "Review approved" : "Review hidden";
-  //   await updateReviewStatus(review, newStatus, message);
-  // };
 
   const handleBulkStatus = async (status) => {
     if (!list.selectedKeys.length) return;
@@ -761,7 +406,7 @@ const ProductReviews = () => {
         bulkUpdateProductReviews({
           reviewIds: list.selectedKeys,
           status,
-          sellerScope: isSellerPanelUser,
+          sellerScope: sellerScoped,
         }),
       ).unwrap();
       toast.success(
@@ -778,28 +423,6 @@ const ProductReviews = () => {
     }
   };
 
-  const handleViewProductReviews = async (row) => {
-    const productId = row?.productId || row?._id || row?.id;
-    if (!productId) return;
-    setSelectedProduct(row);
-    setViewTarget(row);
-    await fetchReviewDetails(productId);
-  };
-
-  const handleReviewAction = async (review, newStatus) => {
-    await updateReviewStatus(
-      review,
-      newStatus,
-      newStatus === "published" ? "Review approved" : "Review hidden",
-    );
-    const productId =
-      review.productId ||
-      viewTarget?.productId ||
-      viewTarget?._id ||
-      viewTarget?.id;
-    if (productId) await fetchReviewDetails(productId);
-  };
-
   const handleDelete = async () => {
     const reviewId = deleteConfirm.review?._id || deleteConfirm.review?.id;
     if (!reviewId) return;
@@ -814,7 +437,7 @@ const ProductReviews = () => {
   };
 
   const handleBulkDelete = async () => {
-    if (isSellerPanelUser || !list.selectedKeys.length) return;
+    if (sellerScoped || !list.selectedKeys.length) return;
     setBulkLoading(true);
     try {
       await Promise.all(
@@ -833,7 +456,35 @@ const ProductReviews = () => {
     }
   };
 
-  const columns = [
+  const handleReviewStatus = async (row, status) => {
+    const reviewId = getReviewId(row);
+    if (!reviewId) return;
+    setBulkLoading(true);
+    try {
+      await dispatch(
+        updateProductReview({
+          reviewId,
+          status,
+          sellerScope: sellerScoped,
+        }),
+      ).unwrap();
+      toast.success(status === "published" ? "Review approved" : "Review updated");
+      fetchReviews();
+    } catch (err) {
+      toast.error(err?.message || "Failed to update review");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const openProductReviews = (row) => {
+    const productId = getProductId(row);
+    if (!productId) return;
+    list.setPage(1);
+    setSelectedProductId(String(productId));
+  };
+
+  const summaryColumns = [
     {
       key: "productId",
       label: "Product",
@@ -867,7 +518,7 @@ const ProductReviews = () => {
       key: "averageRating",
       label: "Average Rating",
       sortable: true,
-      render: (v) => <StarRating rating={Number(v) || 0} />,
+      render: (v) => <RatingStars value={v} />,
     },
     {
       key: "reviewCount",
@@ -910,6 +561,62 @@ const ProductReviews = () => {
     },
   ];
 
+  const detailColumns = [
+    {
+      key: "buyerName",
+      label: "Buyer",
+      render: (v, row) => (
+        <div className="min-w-0">
+          <span className="block max-w-[180px] truncate text-xs font-semibold text-gray-800">
+            {displayBuyerName(row)}
+          </span>
+          {row.buyer?.email && (
+            <span className="block max-w-[180px] truncate text-[11px] text-gray-400">
+              {row.buyer.email}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "rating",
+      label: "Rating",
+      sortable: true,
+      render: (v) => <RatingStars value={v} showValue={false} />,
+    },
+    {
+      key: "reviewText",
+      label: "Review",
+      render: (v, row) => (
+        <div className="min-w-[260px] max-w-[460px]">
+          {row.title && (
+            <p className="truncate text-xs font-semibold text-gray-800">{row.title}</p>
+          )}
+          <p className="line-clamp-2 whitespace-normal text-xs leading-5 text-gray-600">
+            {v || row.comment || "No review text"}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (v) => <StatusPill status={v} />,
+    },
+    {
+      key: "createdAt",
+      label: "Reviewed At",
+      sortable: true,
+      render: (v) => (
+        <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
+          {v ? formatDateTime12Hour(v, "—") : "—"}
+        </span>
+      ),
+    },
+  ];
+
+  const columns = isDetailMode ? detailColumns : summaryColumns;
+
   return (
     <div>
       <PageHeader
@@ -920,7 +627,7 @@ const ProductReviews = () => {
           { label: "Product Reviews" },
         ]}
         actions={
-          !isSellerPanelUser ? (
+          !sellerScoped ? (
             <PermissionGuard module="reviews" action={ACTIONS.CREATE} hide>
               <button onClick={() => setAddOpen(true)}>
                 <MdAdd size={18} />
@@ -930,6 +637,175 @@ const ProductReviews = () => {
           ) : null
         }
       />
+
+      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              Review Moderation Filters
+            </p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              {isDetailMode
+                ? "Moderating individual customer reviews for the selected product."
+                : "Select a product to open its customer review list for approval."}
+            </p>
+          </div>
+          {isDetailMode && (
+            <button
+              type="button"
+              onClick={() => {
+                list.clearSelection();
+                list.setPage(1);
+                setSelectedProductId("");
+              }}
+              className="rounded border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+            >
+              Back to Summary
+            </button>
+          )}
+        </div>
+        <div
+          className={`grid gap-3 sm:grid-cols-2 ${showSellerFilter ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
+        >
+          {showSellerFilter && (
+            <label className="block text-xs font-medium text-gray-600">
+              Seller
+              <select
+                value={selectedSellerId}
+                onChange={(event) => {
+                  list.setPage(1);
+                  setSelectedSellerId(event.target.value);
+                  setSelectedProductId("");
+                }}
+                className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">All Sellers</option>
+                {sellerOptions.map((seller) => (
+                  <option key={seller.value} value={seller.value}>
+                    {seller.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <label className="block text-xs font-medium text-gray-600">
+            Product
+            <select
+              value={selectedProductId}
+              onChange={(event) => {
+                list.clearSelection();
+                list.setPage(1);
+                setSelectedProductId(event.target.value);
+              }}
+              className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">All Products</option>
+              {productOptions.map((product) => (
+                <option key={product.value} value={product.value}>
+                  {product.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs font-medium text-gray-600">
+            Status
+            <select
+              value={list.filters.status || ""}
+              onChange={(event) => list.setFilter("status", event.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">All Status</option>
+              {FILTER_FIELDS[0].options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs font-medium text-gray-600">
+            Rating
+            <select
+              value={list.filters.rating || ""}
+              onChange={(event) => list.setFilter("rating", event.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">All Rating</option>
+              {FILTER_FIELDS[1].options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {isDetailMode && (
+        <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Selected Product
+              </p>
+              <h3 className="mt-1 text-lg font-semibold text-gray-800">
+                {selectedProductTitle}
+              </h3>
+            </div>
+            <RatingStars
+              value={
+                detailPayload.summary?.avgRating ||
+                selectedSummaryRow?.averageRating ||
+                selectedProduct?.rating ||
+                0
+              }
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Total Reviews
+              </p>
+              <p className="mt-2 text-lg font-semibold text-gray-800">
+                {Number(detailPayload.summary?.count || selectedSummaryRow?.reviewCount || total || 0)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Published
+              </p>
+              <p className="mt-2 text-lg font-semibold text-gray-800">
+                {selectedSummaryRow?.publishedCount || selectedStatusCounts.published || 0}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Pending
+              </p>
+              <p className="mt-2 text-lg font-semibold text-gray-800">
+                {selectedSummaryRow?.pendingCount || selectedStatusCounts.pending || 0}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Hidden
+              </p>
+              <p className="mt-2 text-lg font-semibold text-gray-800">
+                {selectedSummaryRow?.hiddenCount || selectedStatusCounts.hidden || 0}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Rejected
+              </p>
+              <p className="mt-2 text-lg font-semibold text-gray-800">
+                {selectedSummaryRow?.rejectedCount || selectedStatusCounts.rejected || 0}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DataTable
         columns={columns}
@@ -945,96 +821,127 @@ const ProductReviews = () => {
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
-        searchPlaceholder="Search reviews, products, buyers…"
-        emptyText="No product reviews found."
+        searchPlaceholder={
+          isDetailMode
+            ? "Search buyers, review text, orders..."
+            : "Search products..."
+        }
+        emptyText={
+          isDetailMode
+            ? "No reviews found for this product."
+            : "No product review summaries found."
+        }
         emptyIcon={<MdRateReview size={40} className="text-gray-200" />}
         requiredModule="reviews"
-        exportConfig={{ filename: "product-reviews", columns }}
-        selectable
+        exportConfig={{ filename: isDetailMode ? "product-review-details" : "product-review-summaries", columns }}
+        selectable={isDetailMode}
         selectedKeys={list.selectedKeys}
         onSelectionChange={list.setSelectedKeys}
-        rowKey="_id"
-        filterBar={
-          <FilterBar
-            filters={FILTER_FIELDS}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
-            loading={loading}
-            activeCount={list.activeFilterCount}
-          />
-        }
+        rowKey={isDetailMode ? "_id" : "productId"}
+        onRowClick={isDetailMode ? undefined : openProductReviews}
         bulkActionBar={
-          <BulkActionBar
-            selectedCount={list.selectedCount}
-            totalCount={items.length}
-            onClear={list.clearSelection}
-            onSelectAll={() =>
-              list.setSelectedKeys(
-                items.map((row) => row._id || row.id).filter(Boolean),
-              )
-            }
-            module="reviews"
-            loading={loading || bulkLoading}
-            actions={
-              isSellerPanelUser
-                ? [
+          isDetailMode ? (
+            <BulkActionBar
+              selectedCount={list.selectedCount}
+              totalCount={items.length}
+              onClear={list.clearSelection}
+              module="reviews"
+              loading={loading || bulkLoading}
+              actions={
+                sellerScoped
+                  ? [
                     {
-                      label: "Approve Selected",
+                      label: "Approve",
                       icon: <MdCheckCircle />,
                       variant: "primary",
                       onClick: () => handleBulkStatus("published"),
                     },
                     {
-                      label: "Hide Selected",
+                      label: "Hide",
                       icon: <MdVisibilityOff />,
                       variant: "warning",
                       onClick: () => handleBulkStatus("hidden"),
                     },
-                  ]
-                : [
                     {
-                      label: "Approve Selected",
+                      label: "Reject",
+                      icon: <MdClose />,
+                      variant: "danger",
+                      onClick: () => handleBulkStatus("rejected"),
+                    },
+                  ]
+                  : [
+                    {
+                      label: "Approve",
                       icon: <MdCheckCircle />,
                       action: ACTIONS.EDIT,
                       variant: "primary",
                       onClick: () => handleBulkStatus("published"),
                     },
                     {
-                      label: "Reject Selected",
+                      label: "Reject",
                       icon: <MdClose />,
                       action: ACTIONS.EDIT,
                       variant: "danger",
                       onClick: () => handleBulkStatus("rejected"),
                     },
                     {
-                      label: "Hide Selected",
+                      label: "Hide",
                       icon: <MdVisibilityOff />,
                       action: ACTIONS.EDIT,
                       variant: "warning",
                       onClick: () => handleBulkStatus("hidden"),
                     },
                     {
-                      label: "Delete Selected",
+                      label: "Delete",
                       icon: <MdDelete />,
                       action: ACTIONS.DELETE,
                       variant: "danger",
                       onClick: () => setBulkDeleteConfirm(true),
                     },
                   ]
-            }
-          />
+              }
+            />
+          ) : null
         }
         rowActions={(row) => {
+          if (!isDetailMode) {
+            return [
+              {
+                label: "View Reviews",
+                icon: <MdVisibility size={16} className="text-blue-600" />,
+                onClick: () => openProductReviews(row),
+              },
+            ];
+          }
+
           const actions = [
             {
-              label: "View Details",
-              icon: <MdVisibility size={16} className="text-blue-600" />,
-              onClick: () => handleViewProductReviews(row),
+              label: "Approve Review",
+              icon: <MdCheckCircle size={16} className="text-emerald-600" />,
+              requiredModule: "reviews",
+              requiredAction: ACTIONS.EDIT,
+              hidden: row.status === "published",
+              onClick: () => handleReviewStatus(row, "published"),
+            },
+            {
+              label: "Hide Review",
+              icon: <MdVisibilityOff size={16} className="text-amber-600" />,
+              requiredModule: "reviews",
+              requiredAction: ACTIONS.EDIT,
+              hidden: row.status === "hidden",
+              onClick: () => handleReviewStatus(row, "hidden"),
+            },
+            {
+              label: "Reject Review",
+              icon: <MdClose size={16} className="text-red-600" />,
+              requiredModule: "reviews",
+              requiredAction: ACTIONS.EDIT,
+              hidden: row.status === "rejected",
+              onClick: () => handleReviewStatus(row, "rejected"),
             },
           ];
 
-          if (!isSellerPanelUser) {
+          if (!sellerScoped) {
             actions.push(
               {
                 label: "Edit Review",
@@ -1066,167 +973,6 @@ const ProductReviews = () => {
         reviewData={editTarget}
       />
 
-      {selectedProduct && (
-        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-col gap-2 border-b border-gray-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Product
-              </p>
-              <h3 className="mt-1 text-lg font-semibold text-gray-800">
-                {getProductName(selectedProduct)}
-              </h3>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedProduct(null);
-                setViewTarget(null);
-                setDetailReviews([]);
-                setDetailStats({
-                  avgRating: 0,
-                  count: 0,
-                  distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-                });
-              }}
-              className="rounded border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-            >
-              Close details
-            </button>
-          </div>
-
-          <div className="mb-5 grid gap-3 md:grid-cols-4">
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Average Rating
-              </p>
-              <div className="mt-2">
-                <StarRating
-                  rating={Number(
-                    selectedProduct.averageRating || detailStats.avgRating || 0,
-                  )}
-                />
-              </div>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Total Reviews
-              </p>
-              <p className="mt-2 text-lg font-semibold text-gray-800">
-                {Number(
-                  selectedProduct.reviewCount ||
-                    detailStats.count ||
-                    detailReviews.length ||
-                    0,
-                )}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Published
-              </p>
-              <p className="mt-2 text-lg font-semibold text-gray-800">
-                {selectedProduct.publishedCount || 0}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Pending
-              </p>
-              <p className="mt-2 text-lg font-semibold text-gray-800">
-                {selectedProduct.pendingCount || 0}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {detailLoading ? (
-              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">
-                Loading reviews…
-              </div>
-            ) : detailReviews.length ? (
-              detailReviews.map((row) => (
-                <div
-                  key={row._id || row.id}
-                  className="rounded-lg border border-gray-200 bg-white p-4"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-800">
-                          {getCreatedByName(row, sellerView)}
-                        </span>
-                        <StatusBadge
-                          status={row.status || "pending"}
-                          dot
-                          variant={STATUS_COLOR[row.status] || "default"}
-                        />
-                      </div>
-                      <div className="mt-2">
-                        <StarRating rating={Number(row.rating) || 0} />
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {formatDateTime12Hour(row.createdAt, "—")}
-                    </div>
-                  </div>
-
-                  {row.title && (
-                    <div className="mt-3 text-sm font-semibold text-gray-800">
-                      {row.title}
-                    </div>
-                  )}
-                  <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-600">
-                    {row.reviewText || "—"}
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {(row.status === "published"
-                      ? [{ label: "Hide", value: "hidden" }]
-                      : [
-                          { label: "Publish", value: "published" },
-                          { label: "Hide", value: "hidden" },
-                        ]
-                    ).map((action) => (
-                      <button
-                        key={action.value}
-                        type="button"
-                        onClick={() => handleReviewAction(row, action.value)}
-                        className="rounded bg-gray-100 px-2.5 py-1.5 text-[11px] font-medium text-gray-700 hover:bg-gray-200"
-                      >
-                        {action.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">
-                No reviews yet for this product.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <ReviewDetailsDrawer
-        review={viewTarget}
-        onClose={() => {
-          setViewTarget(null);
-          setSelectedProduct(null);
-          setDetailReviews([]);
-          setDetailStats({
-            avgRating: 0,
-            count: 0,
-            distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-          });
-        }}
-        sellerView={sellerView}
-        detailReviews={detailReviews}
-        detailStats={detailStats}
-        detailLoading={detailLoading}
-        onReviewAction={handleReviewAction}
-      />
 
       <AddProductReview
         isOpen={addOpen}
@@ -1253,6 +999,7 @@ const ProductReviews = () => {
         onConfirm={handleBulkDelete}
         onCancel={() => setBulkDeleteConfirm(false)}
       />
+
     </div>
   );
 };
