@@ -21,6 +21,9 @@ import {
   getMyBrandSubmissions,
   resubmitBrandForApproval,
   submitBrandForApproval,
+  reviewBrandSubmission,
+  reviewCategorySubmission,
+  reviewHsnSubmission,
 } from "../../../../Redux/productSlice";
 
 import {
@@ -117,6 +120,43 @@ export default function BasicDetailsTab({
     ),
   );
   const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
+
+  const approvePendingOption = async (event, option) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const reviewAction = option.resourceType === "brand"
+      ? reviewBrandSubmission
+      : option.resourceType === "category"
+        ? reviewCategorySubmission
+        : reviewHsnSubmission;
+    try {
+      await dispatch(reviewAction({
+        _id: option.resourceId,
+        categoryKey: option.resourceId,
+        code: option.resourceId,
+        action: "approve",
+      })).unwrap();
+      toast.success(`${option.resourceType === "hsn" ? "HSN code" : option.resourceType} approved`);
+      fetchAllData?.();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Approval failed"));
+    }
+  };
+
+  const formatCatalogOption = (option) => (
+    <div className="flex items-center justify-between gap-2">
+      <span>{option.label}</span>
+      {!isSellerPanelUser && option.approvalStatus === "pending" && (
+        <button
+          type="button"
+          className="rounded bg-green-600 px-2 py-1 text-xs font-semibold text-white hover:bg-green-700"
+          onMouseDown={(event) => approvePendingOption(event, option)}
+        >
+          Approve
+        </button>
+      )}
+    </div>
+  );
 
   const modifiedSellerList = sellerList.length
     ? sellerList
@@ -833,6 +873,7 @@ export default function BasicDetailsTab({
                 options={brandOptions}
                 placeholder="Select Brand"
                 error={errors?.brand}
+                formatOptionLabel={formatCatalogOption}
                 isClearable
                 required
               />
@@ -850,6 +891,7 @@ export default function BasicDetailsTab({
                     error={errors?.category_id}
                     placeholder="Select Category"
                     helperText="Attributes are controlled by the selected category schema."
+                    formatOptionLabel={formatCatalogOption}
                     required
                     isClearable={true}
                   />
@@ -880,6 +922,7 @@ export default function BasicDetailsTab({
                     options={hsnCodeList || []}
                     error={errors?.hsn_code}
                     placeholder="Search by code or description…"
+                    formatOptionLabel={formatCatalogOption}
                     isClearable
                     required
                   />

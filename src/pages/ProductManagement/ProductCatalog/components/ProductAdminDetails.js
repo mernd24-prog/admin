@@ -286,8 +286,12 @@ const ProductAdminDetails = () => {
       toast.success(
         `${pendingRevision ? "Product revision" : "Product"} ${labels[decision] || "updated"} successfully.`,
       );
-      dispatch(getProductById({ _id: id }));
-      dispatch(getProductRevisions({ productId: id, page: 1, size: 20 }));
+      await Promise.all([
+        dispatch(getProductById({ _id: id })).unwrap(),
+        dispatch(
+          getProductRevisions({ productId: id, page: 1, size: 20 }),
+        ).unwrap(),
+      ]);
     } catch (err) {
       throw new Error(err?.message || "Failed to update product");
     } finally {

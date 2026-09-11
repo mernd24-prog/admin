@@ -329,6 +329,9 @@ export const createCategory = createApiThunkPrivate('product/createCategory', EN
         };
     },
 })
+export const reviewCategorySubmission = createApiThunkPrivate('category/reviewSubmission', (payload) => ENDPOINTS.catalogApprovals.category(firstId(payload) || payload.categoryKey), 'PATCH', false, {
+    transformBody: (payload = {}) => ({ action: payload.action, rejectionReason: payload.rejectionReason || '' }),
+})
 
 
 
@@ -667,6 +670,9 @@ export const softDeleteHsn = deleteMany(
 )
 export const createHsn = createApiThunkPrivate('createHsn', ENDPOINTS.platform.hsnCodes, 'POST', false, {
     transformBody: toHsnBody,
+})
+export const reviewHsnSubmission = createApiThunkPrivate('hsn/reviewSubmission', (payload) => ENDPOINTS.catalogApprovals.hsn(firstId(payload) || payload.code), 'PATCH', false, {
+    transformBody: (payload = {}) => ({ action: payload.action, rejectionReason: payload.rejectionReason || '' }),
 })
 export const updateHsn = createApiThunkPrivate('updateHsn', (payload) => ENDPOINTS.platform.hsnCode(firstId(payload) || payload.code), 'PATCH', false, {
     transformBody: (payload = {}) => {

@@ -397,6 +397,18 @@ const ProductCatalog = () => {
     list.pageSize,
   ]);
 
+  const updateVisibleProducts = useCallback((productIds, changes) => {
+    const ids = new Set((Array.isArray(productIds) ? productIds : [productIds]).filter(Boolean).map(String));
+    setApiRes((current) => ({
+      ...current,
+      list: (current?.list || []).map((product) =>
+        ids.has(String(product?._id || product?.id))
+          ? { ...product, ...changes }
+          : product,
+      ),
+    }));
+  }, []);
+
   useEffect(() => {
     fetchProductsList();
   }, [fetchProductsList]);
@@ -494,6 +506,10 @@ const ProductCatalog = () => {
     const response = await dispatch(
       enableDisableProductCatalogs(apiPayload),
     ).unwrap();
+    updateVisibleProducts(product?._id, {
+      status: nextStatus,
+      isDisable: nextStatus !== "active",
+    });
     toast.success(
       response?.message ||
         (nextStatus === "pending_approval"
@@ -512,6 +528,10 @@ const ProductCatalog = () => {
     const response = await dispatch(
       enableDisableProductCatalogs(apiPayload),
     ).unwrap();
+    updateVisibleProducts(productIds, {
+      status: nextStatus,
+      isDisable: nextStatus !== "active",
+    });
     toast.success(response?.message || "Products updated successfully.");
     setSelectedRow([]);
   };
@@ -674,7 +694,18 @@ const ProductCatalog = () => {
         response?.message ||
           `${subject} ${labels[decision] || "updated"} successfully.`,
       );
-      fetchProductsList();
+      updateVisibleProducts(product?._id, {
+        ...(reviewModal.revision
+          ? { revisionStatus: decision === "active" ? "approved" : decision }
+          : {
+              status: decision,
+              approvalStatus: decision === "active" ? "approved" : decision,
+              isApproved: decision === "active",
+            }),
+        pendingRevision: null,
+        pendingRevisionId: null,
+      });
+      await fetchProductsList();
     } catch (error) {
       throw new Error(error?.message || error || "Failed to update product");
     } finally {
@@ -691,7 +722,7 @@ const ProductCatalog = () => {
       ).unwrap();
       toast.success(res?.message || "Product permanently deleted.");
       setPermanentDeleteTarget(null);
-      fetchProductsList();
+      await fetchProductsList();
     } catch (error) {
       toast.error(error?.message || error || "Permanent deletion failed.");
     } finally {
@@ -713,7 +744,7 @@ const ProductCatalog = () => {
       const newId = res?.data?.data?._id || res?.data?._id;
       toast.success(res?.message || "Product duplicated successfully.");
       setDuplicateConfirmation({ open: false, product: null });
-      fetchProductsList();
+      await fetchProductsList();
       if (newId) navigate(`/app/product-catalog/form/${newId}`);
     } catch (err) {
       toast.error(err?.message || "Failed to duplicate product.");
@@ -739,7 +770,7 @@ const ProductCatalog = () => {
           statusConfirmation.nextStatus,
         );
       }
-      fetchProductsList();
+      await fetchProductsList();
     } catch (error) {
       toast.error(error?.message || error || "Action failed.");
     } finally {
@@ -826,7 +857,7 @@ const ProductCatalog = () => {
       toast.success(res?.message || "Selected products permanently deleted.");
       setSelectedRow([]);
       setBulkDeleteConfirmation(null);
-      fetchProductsList();
+      await fetchProductsList();
     } catch (error) {
       toast.error(error?.message || error || "Bulk product action failed.");
     } finally {

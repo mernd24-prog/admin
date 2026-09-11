@@ -442,7 +442,10 @@ export default function ProductManagementUI() {
     return {
       value: toSelectId(category),
       categoryKey: category.categoryKey || toSelectId(category),
-      label: prefix ? `${prefix} > ${categoryName}` : categoryName,
+      label: `${prefix ? `${prefix} > ${categoryName}` : categoryName}${category.approvalStatus === "pending" ? " (Pending approval)" : ""}`,
+      resourceType: "category",
+      resourceId: category._id || category.id || category.categoryKey,
+      approvalStatus: category.approvalStatus,
     };
   };
 
@@ -1121,11 +1124,15 @@ export default function ProductManagementUI() {
         getListPayload(selector?.getAllBrandListData),
       ).map((item) => ({
         value: item?.name || item?._id || item?.id,
-        label:
+        label: `${
           item?.name ||
           item?.title ||
           item?.code ||
-          String(item?._id || item?.id || ""),
+          String(item?._id || item?.id || "")
+        }${item?.approvalStatus === "pending" ? " (Pending approval)" : ""}`,
+        resourceType: "brand",
+        resourceId: item?._id || item?.id,
+        approvalStatus: item?.approvalStatus,
       })),
       warrantyTemplateList: prefillList(
         "warrantyTemplates",
@@ -1194,7 +1201,10 @@ export default function ProductManagementUI() {
           description: desc,
           hsnCategory: item.category || "",
           gstRate: gst,
-          label: [code, desc ? ` - ${desc}` : "", ` (${gst}% GST)`].join(""),
+          label: `${[code, desc ? ` - ${desc}` : "", ` (${gst}% GST)`].join("")}${item.approvalStatus === "pending" ? " (Pending approval)" : ""}`,
+          resourceType: "hsn",
+          resourceId: item._id || item.id || code,
+          approvalStatus: item.approvalStatus,
         };
       }),
       countryList: transformArray(prefillList("countries")),

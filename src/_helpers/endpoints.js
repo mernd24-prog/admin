@@ -21,6 +21,10 @@ export const ENDPOINTS = {
     approval: (brandId) => `/admin/platform/brands/${brandId}/approval`,
     approvalBulk: "/admin/platform/brands/approval",
   },
+  catalogApprovals: {
+    category: (categoryKey) => `/admin/platform/categories/${categoryKey}/approval`,
+    hsn: (hsnCode) => `/admin/platform/hsn-codes/${hsnCode}/approval`,
+  },
   productOptions: {
     submissions: "/platform/product-options/submissions",
     mySubmissions: "/platform/product-options/submissions/mine",

@@ -796,8 +796,8 @@ export const useAuthFlow = ({
             setInlineError(
               AUTH_FORM_TYPES.LOGIN,
               sellerPanel
-                ? "Please use a seller account for this panel."
-                : "Please use an admin account for this panel.",
+                ? "Invalid Credentials."
+                : "Invalid Credentials.",
             );
 
             return;

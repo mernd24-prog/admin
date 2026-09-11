@@ -90,13 +90,18 @@ export default function ProductOptions() {
   const displayTypes = useDropdownOptions("product-option-display-types");
   const { toQueryParams, setSearch, setFilter, clearFilters, setPage } = list;
 
-  const items = getListPayload(selector?.platformOptionsData);
+  const storeItems = getListPayload(selector?.platformOptionsData);
+  const [items, setItems] = useState(storeItems);
   const total = getTotal(selector?.platformOptionsData, items.length);
   const loading = selector?.loading;
 
+  useEffect(() => {
+    setItems(storeItems);
+  }, [selector?.platformOptionsData]);
+
   const load = useCallback(() => {
     const params = toQueryParams();
-    dispatch(
+    return dispatch(
       getPlatformOptions({
         page: params.page,
         limit: params.limit || 15,
@@ -105,7 +110,7 @@ export default function ProductOptions() {
         sortBy: params.sortBy,
         sortDir: params.sortDir,
       }),
-    );
+    ).unwrap();
   }, [dispatch, toQueryParams]);
 
   useEffect(() => {
@@ -174,8 +179,12 @@ export default function ProductOptions() {
         toast.success(
           `Selected option masters ${isNextActive ? "activated" : "deactivated"} successfully`,
         );
+        const changedIds = new Set(targetKeys.map(String));
+        setItems((current) => current.map((item) =>
+          changedIds.has(String(idOf(item))) ? { ...item, active: isNextActive } : item
+        ));
         setSelectedKeys([]);
-        load();
+        await load();
       } catch (err) {
         toast.error(err?.message || "Failed to update option masters status");
       } finally {
@@ -225,12 +234,15 @@ export default function ProductOptions() {
           updatePlatformOption({ id: idOf(editing), ...form }),
         ).unwrap();
         toast.success("Option master updated");
+        setItems((current) => current.map((item) =>
+          idOf(item) === idOf(editing) ? { ...item, ...form } : item
+        ));
       } else {
         await dispatch(createPlatformOption(form)).unwrap();
         toast.success("Option master created");
       }
       closeModal();
-      load();
+      await load();
     } catch (err) {
       toast.error(err?.message || "Save failed");
     } finally {
@@ -244,8 +256,9 @@ export default function ProductOptions() {
     try {
       await dispatch(deletePlatformOption({ id: idOf(deleteTarget) })).unwrap();
       toast.success("Option master deleted");
+      setItems((current) => current.filter((item) => idOf(item) !== idOf(deleteTarget)));
       setDeleteTarget(null);
-      load();
+      await load();
     } catch (err) {
       toast.error(err?.message || "Delete failed");
     } finally {
@@ -261,8 +274,11 @@ export default function ProductOptions() {
         updatePlatformOption({ id: idOf(row), active: !row.active }),
       ).unwrap();
       toast.success(row.active ? "Disabled" : "Enabled");
+      setItems((current) => current.map((item) =>
+        idOf(item) === idOf(row) ? { ...item, active: !row.active } : item
+      ));
       setStatusTarget(null);
-      load();
+      await load();
     } catch (err) {
       toast.error(err?.message || "Failed");
     } finally {
@@ -286,7 +302,12 @@ export default function ProductOptions() {
         }),
       ).unwrap();
       toast.success(`Option Master ${action === "approve" ? "approved" : "rejected"}`);
-      load();
+      setItems((current) => current.map((item) =>
+        idOf(item) === idOf(row)
+          ? { ...item, approvalStatus: action === "approve" ? "approved" : "rejected", needsApprovalReview: false }
+          : item
+      ));
+      await load();
     } catch (err) {
       toast.error(err?.message || "Review failed");
     } finally {

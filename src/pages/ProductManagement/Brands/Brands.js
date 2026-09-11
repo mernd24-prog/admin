@@ -219,7 +219,6 @@ const Brands = () => {
   const [brands, setBrands] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [isRefresh, setIsRefresh] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS);
@@ -341,7 +340,6 @@ const Brands = () => {
     list.sortKey,
     list.sortDir,
     appliedFilters,
-    isRefresh,
   ]);
 
   // useEffect(() => {
@@ -451,7 +449,7 @@ const Brands = () => {
         res?.message || `Brand ${modalMode === "edit" ? "updated" : "created"}`,
       );
       closeModal();
-      setIsRefresh((r) => !r);
+      await fetchList();
     } catch (err) {
       toast.error(err?.message || "Save failed");
     } finally {
@@ -468,7 +466,14 @@ const Brands = () => {
         toast.success("Brand status updated");
         setToggleOpen(false);
         setToggleTarget(null);
-        setIsRefresh((r) => !r);
+        setBrands((current) =>
+          current.map((brand) =>
+            brand._id === row._id
+              ? { ...brand, isDisable: !row.isDisable, active: row.isDisable }
+              : brand,
+          ),
+        );
+        await fetchList();
       } catch (err) {
         toast.error(err?.message || "Failed to update status");
       }
@@ -483,7 +488,11 @@ const Brands = () => {
       toast.success("Brand deleted");
       setDeleteOpen(false);
       setDeleteTarget(null);
-      setIsRefresh((r) => !r);
+      setBrands((current) =>
+        current.filter((brand) => brand._id !== deleteTarget._id),
+      );
+      setTotal((current) => Math.max(0, current - 1));
+      await fetchList();
     } catch (err) {
       toast.error(err?.message || "Delete failed");
     }
@@ -516,7 +525,19 @@ const Brands = () => {
       setReviewTarget(null);
       setRejectionReason("");
       list.clearSelection();
-      setIsRefresh((r) => !r);
+      const reviewedIds = new Set(reviewIds.map(String));
+      setBrands((current) =>
+        current.map((brand) =>
+          reviewedIds.has(String(brand._id))
+            ? {
+                ...brand,
+                approvalStatus: action === "approve" ? "approved" : "rejected",
+                needsApprovalReview: false,
+              }
+            : brand,
+        ),
+      );
+      await fetchList();
     } catch (err) {
       toast.error(err?.message || "Could not review brand");
     }
