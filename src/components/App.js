@@ -107,6 +107,14 @@ const App = () => {
           element={<Navigate to="/app/product-options" replace />}
         />
         <Route
+          path="/seller-special-price-manager"
+          element={<Navigate to="/app/seller-special-price-manager" replace />}
+        />
+        <Route
+          path="/seller-special-price-manager/*"
+          element={<Navigate to={`/app${window.location.pathname}`} replace />}
+        />
+        <Route
           path="/app/*"
           element={
             <>

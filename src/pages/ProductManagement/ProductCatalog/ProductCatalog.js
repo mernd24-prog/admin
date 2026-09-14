@@ -36,11 +36,7 @@ import { transformArray } from "../../../_helpers/globalFunctions";
 import ProductReviewModal from "../../../components/Product/ProductReviewModal";
 import ProductStatusBadge from "../../../components/Product/ProductStatusBadge";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import {
-  DataTable,
-  ExportButton,
-  PageHeader,
-} from "../../../components/Shared";
+import { DataTable, PageHeader } from "../../../components/Shared";
 import ConfirmModal from "../../../components/Shared/ConfirmModal";
 import {
   getPrimaryProductImage,
@@ -169,92 +165,6 @@ const formatExportDate = (value) => {
   return date.toLocaleString();
 };
 
-const PRODUCT_EXPORT_COLUMNS = [
-  { key: "_id", label: "Product ID" },
-  {
-    key: "title",
-    label: "Title",
-    value: (product) =>
-      product.title || product.name || product.full_name || "",
-  },
-  { key: "sku", label: "SKU" },
-  { key: "slug", label: "Slug" },
-  { key: "productType", label: "Product Type" },
-  { key: "visibility", label: "Visibility" },
-  {
-    key: "category",
-    label: "Category",
-    value: (product) => refToLabel(product.category || product.categoryId),
-  },
-  {
-    key: "brand",
-    label: "Brand",
-    value: (product) => refToLabel(product.brand),
-  },
-  { key: "productFamilyCode", label: "Product Family" },
-  {
-    key: "tags",
-    label: "Tags",
-    value: (product) =>
-      Array.isArray(product.tags) ? product.tags.join(", ") : "",
-  },
-  { key: "price", label: "Price" },
-  { key: "mrp", label: "MRP" },
-  { key: "salePrice", label: "Sale Price" },
-  { key: "currency", label: "Currency" },
-  { key: "gstRate", label: "GST Rate" },
-  { key: "hsnCode", label: "HSN Code" },
-  {
-    key: "variants",
-    label: "Variants Count",
-    value: (product) =>
-      Array.isArray(product.variants) ? product.variants.length : 0,
-  },
-  {
-    key: "image",
-    label: "Primary Image",
-    value: (product) => getPrimaryProductImage(product) || "",
-  },
-  {
-    key: "stock",
-    label: "Stock",
-    value: (product) => getEffectiveStock(product) ?? "",
-  },
-  { key: "reservedStock", label: "Reserved Stock" },
-  { key: "rating", label: "Rating" },
-  { key: "reviewCount", label: "Review Count" },
-  { key: "status", label: "Status", value: getProductStatus },
-  { key: "revisionStatus", label: "Revision Status" },
-  {
-    key: "isApproved",
-    label: "Approved",
-    value: (product) => (product.isApproved === true ? "Yes" : "No"),
-  },
-  {
-    key: "isDisable",
-    label: "Disabled",
-    value: (product) => (product.isDisable === true ? "Yes" : "No"),
-  },
-  { key: "sellerId", label: "Seller ID" },
-  {
-    key: "seller",
-    label: "Seller",
-    value: (product) =>
-      refToLabel(product.seller || product.sellerName || product.full_name),
-  },
-  { key: "organizationId", label: "Organization ID" },
-  {
-    key: "createdAt",
-    label: "Created At",
-    value: (product) => formatExportDate(product.createdAt),
-  },
-  {
-    key: "updatedAt",
-    label: "Updated At",
-    value: (product) => formatExportDate(product.updatedAt),
-  },
-];
-
 const getInitialFiltersForPath = () => INITIAL_FILTERS;
 
 const ProductCatalog = () => {
@@ -353,20 +263,20 @@ const ProductCatalog = () => {
       ...(appliedFilters?.activationStatus?.value === "Inactive"
         ? { status: "inactive" }
         : {}),
-      ...(["Draft", "Scheduled"].includes(appliedFilters?.activationStatus?.value)
-        ? { status: String(appliedFilters.activationStatus.value).toLowerCase() }
+      ...(["Draft", "Scheduled"].includes(
+        appliedFilters?.activationStatus?.value,
+      )
+        ? {
+            status: String(appliedFilters.activationStatus.value).toLowerCase(),
+          }
         : {}),
       ...(approvalStatusToApiStatus[appliedFilters?.approvalStatus?.value]
         ? {
             approvalStatus:
-              approvalStatusToApiStatus[
-                appliedFilters.approvalStatus.value
-              ],
+              approvalStatusToApiStatus[appliedFilters.approvalStatus.value],
           }
         : {}),
-      ...(isChangePendingFilter
-        ? { revisionStatus: "change_pending" }
-        : {}),
+      ...(isChangePendingFilter ? { revisionStatus: "change_pending" } : {}),
     }),
     [
       appliedFilters,
@@ -381,7 +291,9 @@ const ProductCatalog = () => {
   const fetchProductsList = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await dispatch(getProducts(buildProductQuery(list.page)));
+      const response = await dispatch(
+        getProducts(buildProductQuery(list.page)),
+      );
       setApiRes(response?.payload?.data || { list: [], total: 0 });
     } catch (err) {
       toast.error("Failed to fetch products");
@@ -398,7 +310,11 @@ const ProductCatalog = () => {
   ]);
 
   const updateVisibleProducts = useCallback((productIds, changes) => {
-    const ids = new Set((Array.isArray(productIds) ? productIds : [productIds]).filter(Boolean).map(String));
+    const ids = new Set(
+      (Array.isArray(productIds) ? productIds : [productIds])
+        .filter(Boolean)
+        .map(String),
+    );
     setApiRes((current) => ({
       ...current,
       list: (current?.list || []).map((product) =>
@@ -850,10 +766,12 @@ const ProductCatalog = () => {
     try {
       setLoading(true);
       const action = "permanent_delete";
-      const res = await dispatch(bulkUpdateProducts({
-        productIds: bulkDeleteConfirmation.productIds,
-        action,
-      })).unwrap();
+      const res = await dispatch(
+        bulkUpdateProducts({
+          productIds: bulkDeleteConfirmation.productIds,
+          action,
+        }),
+      ).unwrap();
       toast.success(res?.message || "Selected products permanently deleted.");
       setSelectedRow([]);
       setBulkDeleteConfirmation(null);
@@ -879,7 +797,7 @@ const ProductCatalog = () => {
           const primaryImage = getPrimaryProductImage(product);
 
           return (
-            <div className="relative flex min-w-[96px] items-center gap-2">
+            <div className="flex flex-col items-center gap-1">
               {primaryImage ? (
                 <button
                   type="button"
@@ -903,7 +821,7 @@ const ProductCatalog = () => {
               )}
               <button
                 type="button"
-                className={`text-sm ${productImages.length ? "text-blue-500 hover:underline" : "cursor-not-allowed text-gray-400"}`}
+                className={`text-xs ${productImages.length ? "text-blue-500 hover:underline" : "cursor-not-allowed text-gray-400"}`}
                 onClick={() => handleImageClick(productImages)}
                 disabled={!productImages.length}
               >
@@ -933,15 +851,6 @@ const ProductCatalog = () => {
       //     </span>
       //   ),
       // },
-      {
-        key: "brand",
-        label: "Brand",
-        render: (value) => (
-          <span className="block max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap">
-            {refToLabel(value)}
-          </span>
-        ),
-      },
       {
         key: "Varients",
         label: "Varients",
@@ -1009,7 +918,7 @@ const ProductCatalog = () => {
       // },
       {
         key: "status",
-        label: "Activation Status",
+        label: "Status",
         render: (_, product) => (
           <ProductStatusBadge
             status={product?.status}
@@ -1022,7 +931,10 @@ const ProductCatalog = () => {
         label: "Approval Status",
         render: (_, product) => (
           <ProductStatusBadge
-            status={product?.approvalStatus || (product?.approvedAt ? "approved" : "pending")}
+            status={
+              product?.approvalStatus ||
+              (product?.approvedAt ? "approved" : "pending")
+            }
           />
         ),
       },
@@ -1038,11 +950,7 @@ const ProductCatalog = () => {
         render: (_, product) => {
           if (canSubmitForApproval(product)) {
             return (
-              <PermissionGuard
-                module="products"
-                action="status_change"
-                hide
-              >
+              <PermissionGuard module="products" action="status_change" hide>
                 <button
                   type="button"
                   onClick={() => handleSubmitForApproval(product)}
@@ -1091,8 +999,6 @@ const ProductCatalog = () => {
     return selectedRow.includes(productId);
   });
 
-  const exportData = selectedRow.length > 0 ? selectedProducts : products;
-
   return (
     <div className="overflow-x-auto overflow-y-auto">
       <PageHeader
@@ -1108,12 +1014,6 @@ const ProductCatalog = () => {
         ]}
         actions={
           <>
-            <ExportButton
-              data={exportData}
-              filename="products"
-              columns={PRODUCT_EXPORT_COLUMNS}
-              requiredModule="products"
-            />
             <AddButton onClick={handleAddNavigate} requiredModule="products" />
           </>
         }
@@ -1146,11 +1046,11 @@ const ProductCatalog = () => {
             isSearchDown={false}
             defaultSearchOpen={true}
             exclusiveStatusFilters={true}
-            filterGridClassName={
-              sellerView
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-7"
-            }
+            // filterGridClassName={
+            //   sellerView
+            //     ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            //     : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            // }
             compactFilterBar={true}
             hideFilterActions={true}
             largeSearchInput={true}

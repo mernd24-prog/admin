@@ -60,7 +60,7 @@ export default function SearchComponent({
   searchActions,
   defaultSearchOpen = false,
   exclusiveStatusFilters = false,
-  filterGridClassName = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+  filterGridClassName = "grid-cols-1 md:grid-cols-2 lg:grid-cols-6",
   compactFilterBar = false,
   hideFilterActions = false,
   largeSearchInput = false,

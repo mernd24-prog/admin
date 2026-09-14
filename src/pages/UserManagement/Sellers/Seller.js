@@ -281,9 +281,12 @@ const Sellers = () => {
             />
             <div className="min-w-0">
               <p className="truncate font-medium capitalize text-gray-800 transition group-hover:text-[var(--admin-blue)] group-hover:underline">
-                {v || row?.sellerProfile?.displayName || "N/A"}
+                {`${row?.profile?.firstName || ""} ${
+                  row?.profile?.lastName || ""
+                }`.trim() || "N/A"}
               </p>
-              <p className="text-xs text-gray-400 truncate">
+
+              <p className="truncate text-xs text-gray-400">
                 {row?.userName || ""}
               </p>
             </div>

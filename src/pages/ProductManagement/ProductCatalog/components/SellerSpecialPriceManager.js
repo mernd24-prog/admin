@@ -5,12 +5,16 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import {
   bulkUpdateSpecialPrices,
   getProducts,
+  getProductById,
 } from "../../../../Redux/productSlice";
+import { getAllSellerList } from "../../../../Redux/StoreSlice";
+import { transformArray } from "../../../../_helpers/globalFunctions";
 import {
   exportToExcel,
   parseImportFile,
@@ -18,8 +22,9 @@ import {
 import {
   DataTable,
   PageHeader,
-  // FilterBar,
+  FilterBar,
 } from "../../../../components/Shared";
+import ProductStatusBadge from "../../../../components/Product/ProductStatusBadge";
 import Loader from "../../../../components/Loader/Loader";
 import { useListPage } from "../../../../hooks/useListPage";
 import { isSellerPanel } from "../../../../_helpers/panelConfig";
@@ -27,11 +32,12 @@ import { toast } from "../../../../utils/toast";
 
 const getErrorMessage = (error, fallback) => {
   if (typeof error === "string" && error.trim()) return error;
-  return error?.message || fallback;
+  return error?.message || error?.data?.message || fallback;
 };
 
 const formatMoney = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 const MIN_SPECIAL_PRICE_RATIO = 0.5;
+
 const IMPORT_COLUMNS = [
   "productId",
   "productName",
@@ -46,34 +52,6 @@ const IMPORT_COLUMNS = [
 ];
 const EDITABLE_IMPORT_COLUMN = "newSpecialPrice";
 
-const CLASS_PRODUCT_LINK =
-  "block truncate text-left font-semibold text-[var(--admin-ink)] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]";
-const CLASS_PRODUCT_SKU = "text-xs text-[var(--admin-muted)]";
-const CLASS_MONO_XS = "font-mono text-xs";
-const CLASS_MONO_SM = "font-mono text-sm";
-const CLASS_STATUS_BASE =
-  "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium";
-const CLASS_STATUS_ACTIVE =
-  "inline-flex rounded-lg px-2 py-1 text-xs font-medium bg-green-50 text-green-700";
-const CLASS_STATUS_INACTIVE =
-  "inline-flex rounded-lg px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700";
-const CLASS_STATUS_OTHER =
-  "inline-flex rounded-lg px-2 py-1 text-xs font-medium bg-yellow-50 text-yellow-700";
-const CLASS_STATUS_ERROR =
-  "inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700";
-const CLASS_STATUS_PENDING =
-  "inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700";
-const CLASS_SPECIAL_PRICE_INPUT =
-  "w-32 rounded-lg border px-2 py-1.5 text-sm";
-const CLASS_ALERT_CLOSE =
-  "shrink-0 rounded-md px-2 py-1 text-lg leading-none";
-const CLASS_ALERT =
-  "mb-4 flex items-start justify-between gap-3 rounded-lg px-4 py-3 text-sm";
-
-const READ_ONLY_IMPORT_COLUMNS = IMPORT_COLUMNS.filter(
-  (column) => column !== EDITABLE_IMPORT_COLUMN,
-);
-
 const getMinimumSpecialPrice = (sellingPrice) =>
   Math.ceil(Number(sellingPrice || 0) * MIN_SPECIAL_PRICE_RATIO * 100) / 100;
 
@@ -82,39 +60,6 @@ const normalizeSpecialPriceValue = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 };
-
-const normalizeImportText = (value) => String(value ?? "").trim();
-
-const normalizeImportNumber = (value) => {
-  if (value === "" || value === null || value === undefined) return "";
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? String(parsed) : normalizeImportText(value);
-};
-
-const getExpectedImportValue = (row, column) => {
-  const values = {
-    productId: row.productId,
-    productName: row.productName,
-    sku: row.productSku,
-    variantId: row.variantId,
-    variantSku: row.variantSku,
-    variantTitle: row.variantTitle,
-    mrp: row.mrp,
-    sellingPrice: row.sellingPrice,
-    currentSpecialPrice: row.originalSpecialPrice,
-  };
-  return values[column];
-};
-
-const importValuesMatch = (actual, expected, column) => {
-  if (["mrp", "sellingPrice", "currentSpecialPrice"].includes(column)) {
-    return normalizeImportNumber(actual) === normalizeImportNumber(expected);
-  }
-  return normalizeImportText(actual) === normalizeImportText(expected);
-};
-
-const buildImportValidationError = (message) =>
-  `${message} Suggestion: export a fresh template and edit only the "${EDITABLE_IMPORT_COLUMN}" column.`;
 
 const getRowFlags = (row) => {
   const current = normalizeSpecialPriceValue(row.specialPrice ?? "");
@@ -138,19 +83,6 @@ const getRowFlags = (row) => {
     isPending,
   };
 };
-
-// const PRICE_STATUS_FILTER_FIELDS = [
-//   {
-//     key: "priceStatus",
-//     type: "select",
-//     label: "Price Status",
-//     options: [
-//       { value: "pending", label: "Pending Changes" },
-//       { value: "conflict", label: "Price Conflicts" },
-//       { value: "zero", label: "Zero Selling Price" },
-//     ],
-//   },
-// ];
 
 const getSellerContext = () => {
   try {
@@ -238,49 +170,100 @@ const buildRowsFromProducts = (products = []) => {
   return rows;
 };
 
+const getProductImage = (product) => {
+  if (product?.images && product.images.length > 0) {
+    const img = product.images[0];
+    return typeof img === "string" ? img : img?.url || img?.src || "";
+  }
+  if (product?.image) {
+    return typeof product.image === "string" ? product.image : product.image?.url || "";
+  }
+  if (product?.variants && product.variants.length > 0) {
+    const vImg = product.variants[0]?.images?.[0] || product.variants[0]?.image;
+    return typeof vImg === "string" ? vImg : vImg?.url || "";
+  }
+  return "";
+};
+
 const SellerSpecialPriceManager = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { productId } = useParams();
+
+  const storeSelector = useSelector((state) => state?.store);
+  const sellerContext = useMemo(() => getSellerContext(), []);
+  const sellerView = isSellerPanel();
+
+  const list = useListPage({ defaultPageSize: 20 });
+  const detailList = useListPage({ defaultPageSize: 20 });
+
+  // Main list state (Products view)
+  const [products, setProducts] = useState([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [productsLoading, setProductsLoading] = useState(false);
+
+  // Detail view state (Variants for single product)
+  const [detailProduct, setDetailProduct] = useState(null);
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // Mutation states
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
   const [importInfo, setImportInfo] = useState("");
   const [importSuccess, setImportSuccess] = useState("");
+
   const fileInputRef = useRef(null);
 
-  const sellerContext = useMemo(() => getSellerContext(), []);
-  const sellerView = isSellerPanel();
-  const list = useListPage({ defaultPageSize: 20 });
+  // Fetch Sellers List for Admin
+  useEffect(() => {
+    if (!sellerView) {
+      dispatch(getAllSellerList());
+    }
+  }, [dispatch, sellerView]);
 
-  // The special-price grid is variant-level, but the products API only paginates
-  // at the product level, so a "product" page can yield a different number of
-  // variant rows. To keep the on-screen count accurate, we fetch every matching
-  // product for the current search once, then page/filter the flattened variant
-  // rows entirely on the client.
+  const sellerListData = useMemo(() => {
+    if (sellerView) return [];
+    return transformArray(
+      storeSelector?.getAllSellerListData?.data?.data?.list || [],
+    );
+  }, [sellerView, storeSelector]);
+
+  // Load products list for main page
   const loadProducts = useCallback(async () => {
-    setLoading(true);
+    setProductsLoading(true);
     try {
       const query = {
-        page: 1,
-        limit: 200,
+        page: list.page,
+        limit: list.pageSize,
         includeAllStatuses: true,
         includeVariants: true,
       };
       if (list.search) query.search = list.search;
-      if (sellerContext.sellerId) {
-        query.sellerId = sellerContext.sellerId;
+
+      // Filter by seller
+      const activeSellerId = sellerView
+        ? sellerContext.sellerId
+        : list.filters?.sellerId?.value || list.filters?.sellerId;
+      if (activeSellerId) {
+        query.sellerId = activeSellerId;
       }
+
       const res = await dispatch(getProducts(query)).unwrap();
       let productList =
         res?.data?.data?.list || res?.data?.list || res?.data?.data || [];
       if (!Array.isArray(productList)) {
         productList = [];
       }
-      const productsWithVariants = productList.filter(
-        (p) => Array.isArray(p?.variants) && p.variants.length > 0,
-      );
-      setRows(buildRowsFromProducts(productsWithVariants));
+      const count =
+        res?.data?.data?.total ||
+        res?.data?.total ||
+        res?.data?.meta?.totalItems ||
+        productList.length;
+
+      setProducts(productList);
+      setTotalProducts(count);
     } catch (error) {
       toast.error(
         getErrorMessage(
@@ -289,14 +272,82 @@ const SellerSpecialPriceManager = () => {
         ),
       );
     } finally {
-      setLoading(false);
+      setProductsLoading(false);
     }
-  }, [dispatch, sellerContext.sellerId, list.search]);
+  }, [
+    dispatch,
+    sellerView,
+    sellerContext.sellerId,
+    list.search,
+    list.page,
+    list.pageSize,
+    list.filters?.sellerId,
+  ]);
 
   useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+    if (!productId) {
+      loadProducts();
+    }
+  }, [loadProducts, productId]);
 
+  // Load single product details & variant rows for detail page
+  const loadProductDetail = useCallback(async () => {
+    if (!productId) return;
+    setDetailLoading(true);
+    try {
+      let foundProduct = products.find(
+        (p) => (p._id || p.id) === productId,
+      );
+
+      if (!foundProduct) {
+        const res = await dispatch(getProductById({ _id: productId })).unwrap();
+        foundProduct =
+          res?.data?.data?.product ||
+          res?.data?.data ||
+          res?.data?.product ||
+          res?.data;
+      }
+
+      if (!foundProduct) {
+        // Fallback: search products endpoint for this productId
+        const listRes = await dispatch(
+          getProducts({
+            page: 1,
+            limit: 10,
+            search: productId,
+            includeAllStatuses: true,
+            includeVariants: true,
+          }),
+        ).unwrap();
+        const listData =
+          listRes?.data?.data?.list || listRes?.data?.list || listRes?.data?.data || [];
+        foundProduct = listData.find((p) => (p._id || p.id) === productId) || listData[0];
+      }
+
+      if (foundProduct) {
+        setDetailProduct(foundProduct);
+        setRows(buildRowsFromProducts([foundProduct]));
+      } else {
+        toast.error("Product not found");
+        navigate("/app/seller-special-price-manager");
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Failed to load product variants"));
+    } finally {
+      setDetailLoading(false);
+    }
+  }, [dispatch, productId, products, navigate]);
+
+  useEffect(() => {
+    if (productId) {
+      loadProductDetail();
+    } else {
+      setDetailProduct(null);
+      setRows([]);
+    }
+  }, [productId, loadProductDetail]);
+
+  // Auto clear alerts
   useEffect(() => {
     if (!importSuccess) return undefined;
     const timer = window.setTimeout(() => setImportSuccess(""), 4000);
@@ -309,29 +360,46 @@ const SellerSpecialPriceManager = () => {
     return () => window.clearTimeout(timer);
   }, [importInfo]);
 
+  // Product Dropdown options
+  const productDropdownOptions = useMemo(() => {
+    return products.map((p) => ({
+      label: `${p.title || p.name || "Untitled"} (${p.sku || "No SKU"})`,
+      value: p._id || p.id,
+    }));
+  }, [products]);
+
+  // Filter bar fields for main view
+const filterFields = useMemo(() => {
+  const fields = [];
+
+  if (!sellerView) {
+    fields.push({
+      key: "sellerId",
+      type: "select",
+      label: "Seller",
+      placeholder: "All Sellers",
+      options: sellerListData,
+    });
+  }
+
+  return fields;
+}, [sellerView, sellerListData]);
+
+  // Handle selecting a product from dropdown
+  useEffect(() => {
+    const selectedProd = list.filters?.selectedProduct;
+    const prodId = typeof selectedProd === "object" ? selectedProd?.value : selectedProd;
+    if (prodId && !productId) {
+      navigate(`/app/seller-special-price-manager/${prodId}`);
+    }
+  }, [list.filters?.selectedProduct, productId, navigate]);
+
+  // Pending changes count for detail view
   const pendingCount = useMemo(
     () => rows.filter((row) => getRowFlags(row).isPending).length,
     [rows],
   );
-  const canSave = pendingCount > 0 && !saving && !importing && !loading;
-
-  const filteredRows = useMemo(() => {
-    const priceStatus = list.filters.priceStatus;
-    if (!priceStatus || priceStatus === "all") return rows;
-    return rows.filter((row) => {
-      const { hasError, isZeroPrice, isPending } = getRowFlags(row);
-      if (priceStatus === "conflict") return hasError;
-      if (priceStatus === "zero") return isZeroPrice;
-      if (priceStatus === "pending") return isPending;
-      return true;
-    });
-  }, [rows, list.filters.priceStatus]);
-  const total = filteredRows.length;
-
-  const visibleRows = useMemo(() => {
-    const start = (list.page - 1) * list.pageSize;
-    return filteredRows.slice(start, start + list.pageSize);
-  }, [filteredRows, list.page, list.pageSize]);
+  const canSave = pendingCount > 0 && !saving && !importing && !detailLoading;
 
   const handleRowChange = useCallback((rowId, value) => {
     setImportError("");
@@ -375,7 +443,7 @@ const SellerSpecialPriceManager = () => {
       groupedByProduct.set(row.productId, existing);
     });
 
-    groupedByProduct.forEach((groupRows, productId) => {
+    groupedByProduct.forEach((groupRows, targetProductId) => {
       const variantUpdates = groupRows
         .filter((row) => row.variantId || row.variantSku)
         .map((row) => ({
@@ -386,7 +454,7 @@ const SellerSpecialPriceManager = () => {
 
       if (variantUpdates.length) {
         updates.push({
-          productId,
+          productId: targetProductId,
           variants: variantUpdates,
         });
         return;
@@ -394,7 +462,7 @@ const SellerSpecialPriceManager = () => {
 
       const [firstRow] = groupRows;
       updates.push({
-        productId,
+        productId: targetProductId,
         salePrice: normalizeSpecialPriceValue(firstRow.specialPrice),
       });
     });
@@ -454,7 +522,7 @@ const SellerSpecialPriceManager = () => {
     }));
 
     exportToExcel(exportRows, {
-      filename: "seller-special-price-template.xlsx",
+      filename: `special-prices-${detailProduct?.sku || "template"}.xlsx`,
       sheetName: "Special Prices",
       columns: [
         { label: "productId", key: "productId" },
@@ -489,252 +557,264 @@ const SellerSpecialPriceManager = () => {
       const missingColumns = IMPORT_COLUMNS.filter(
         (column) => !importedColumns.includes(column),
       );
-      const unknownColumns = importedColumns.filter(
-        (column) => !IMPORT_COLUMNS.includes(column),
-      );
       if (missingColumns.length) {
         throw new Error(
-          buildImportValidationError(
-            `Missing required column(s): ${missingColumns.join(", ")}.`,
-          ),
-        );
-      }
-      if (unknownColumns.length) {
-        throw new Error(
-          buildImportValidationError(
-            `Unknown column(s) found: ${unknownColumns.join(", ")}.`,
-          ),
+          `Missing required column(s): ${missingColumns.join(", ")}. Export a fresh template and edit only the "${EDITABLE_IMPORT_COLUMN}" column.`,
         );
       }
 
-      const catalogByIdentity = new Map(
-        rows.map((row) => [
-          `${String(row.productId).trim()}::${String(row.variantId || "").trim()}::${String(row.variantSku || "").trim()}`,
-          row,
-        ]),
-      );
-      const catalogByProductAndSku = new Map(
-        rows.map((row) => [
-          `${String(row.productId).trim()}::${String(row.variantSku || "").trim()}`,
-          row,
-        ]),
-      );
-      const importedUpdates = new Map();
+      const nextRows = rows.map((row) => ({ ...row }));
+      let matchesFound = 0;
 
-      imported.forEach((item, index) => {
-        const rowNumber = index + 2;
-        const productId = String(item.productId || "").trim();
-        const variantId = String(item.variantId || "").trim();
-        const variantSku = String(item.variantSku || "").trim();
-        if (!productId || (!variantId && !variantSku)) {
-          throw new Error(
-            buildImportValidationError(
-              `Row ${rowNumber}: productId and variantId/variantSku are required.`,
-            ),
-          );
-        }
-
-        const identity = `${productId}::${variantId}::${variantSku}`;
-        const fallbackIdentity = `${productId}::${variantSku}`;
-        const catalogRow = variantId
-          ? catalogByIdentity.get(identity)
-          : catalogByProductAndSku.get(fallbackIdentity);
-        if (!catalogRow) {
-          throw new Error(
-            buildImportValidationError(
-              `Row ${rowNumber}: product or variant identity was edited, duplicated, or no longer exists.`,
-            ),
-          );
-        }
-        if (importedUpdates.has(catalogRow.id)) {
-          throw new Error(
-            buildImportValidationError(
-              `Row ${rowNumber}: duplicate product/variant row in the import file.`,
-            ),
-          );
-        }
-        const editedColumns = READ_ONLY_IMPORT_COLUMNS.filter((column) => {
-          const expected = getExpectedImportValue(catalogRow, column);
-          return !importValuesMatch(item[column], expected, column);
+      imported.forEach((importedRow) => {
+        const targetRow = nextRows.find((row) => {
+          if (importedRow.variantId && row.variantId) {
+            return String(importedRow.variantId) === String(row.variantId);
+          }
+          if (importedRow.variantSku && row.variantSku) {
+            return String(importedRow.variantSku).toLowerCase() === String(row.variantSku).toLowerCase();
+          }
+          return String(importedRow.productId) === String(row.productId);
         });
-        if (editedColumns.length) {
-          const preview = editedColumns.slice(0, 3).join(", ");
-          const extraCount = editedColumns.length - 3;
-          throw new Error(
-            buildImportValidationError(
-              `Row ${rowNumber}: ${preview}${extraCount > 0 ? ` and ${extraCount} more column(s)` : ""} cannot be changed in this import.`,
-            ),
-          );
-        }
-        if (!Object.prototype.hasOwnProperty.call(item, "newSpecialPrice")) {
-          throw new Error(
-            buildImportValidationError(
-              `Row ${rowNumber}: newSpecialPrice column is required.`,
-            ),
-          );
-        }
 
-        const rawPrice = item.newSpecialPrice;
-        const isBlank =
-          rawPrice === "" || rawPrice === null || rawPrice === undefined;
-        const price = isBlank ? null : Number(rawPrice);
-        if (!isBlank && (!Number.isFinite(price) || price < 0)) {
-          throw new Error(
-            `Row ${rowNumber}: newSpecialPrice must be a non-negative number or blank to clear it. Valid example: 84990.`,
-          );
+        if (targetRow) {
+          matchesFound += 1;
+          const parsedVal = normalizeSpecialPriceValue(importedRow.newSpecialPrice);
+          targetRow.specialPrice = parsedVal;
         }
-        const minimumSpecialPrice = getMinimumSpecialPrice(
-          catalogRow.sellingPrice,
-        );
-        if (price !== null && price < minimumSpecialPrice) {
-          throw new Error(
-            `Row ${rowNumber}: newSpecialPrice must be at least ${formatMoney(minimumSpecialPrice)} (50% of selling price). Valid range: ${formatMoney(minimumSpecialPrice)} to below ${formatMoney(catalogRow.sellingPrice)}.`,
-          );
-        }
-        if (price !== null && price >= Number(catalogRow.sellingPrice || 0)) {
-          throw new Error(
-            `Row ${rowNumber}: newSpecialPrice must be less than the current selling price. Valid range: ${formatMoney(minimumSpecialPrice)} to below ${formatMoney(catalogRow.sellingPrice)}.`,
-          );
-        }
-        importedUpdates.set(catalogRow.id, price);
       });
 
-      const nextRows = rows.map((row) =>
-        importedUpdates.has(row.id)
-          ? { ...row, specialPrice: importedUpdates.get(row.id) }
-          : row,
-      );
+      if (!matchesFound) {
+        throw new Error("No matching variant rows were found in the template");
+      }
 
       setRows(nextRows);
-      if (importedUpdates.size === 0) {
-        const message =
-          "No rows matched the imported file. Check the product ID / SKU columns.";
-        setImportError(message);
-        return;
-      }
-
-      const importChangeCount = nextRows.filter(
-        (row) => importedUpdates.has(row.id) && getRowFlags(row).isPending,
-      ).length;
-      if (importChangeCount === 0) {
-        setImportInfo(
-          "Import file uploaded successfully, but there are no new special price changes to save.",
-        );
-        setImportError("");
-        return;
-      }
-
-      const savedCount = await persistRows(nextRows, importedUpdates.keys(), {
-        showToast: false,
-      });
-      if (savedCount > 0) {
-        setImportSuccess(
-          `Imported and updated ${savedCount} special price ${savedCount > 1 ? "entries" : "entry"} successfully.`,
-        );
-      }
+      setImportSuccess(`Loaded prices for ${matchesFound} variants from file`);
     } catch (error) {
-      const message = getErrorMessage(
-        error,
-        "Failed to import special price Excel",
-      );
-      setImportError(message);
-      setImportInfo("");
-      setImportSuccess("");
+      setImportError(getErrorMessage(error, "Failed to parse import file"));
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const columns = useMemo(
+  // Products List Table Columns (Main View) - Matching ProductCatalog.js UI
+  const productColumns = useMemo(
     () => [
       {
-        key: "productName",
+        key: "image",
+        label: "Image",
+        render: (_, row) => {
+          const img = getProductImage(row);
+          return (
+            <div className="flex flex-col items-center gap-1">
+              {img ? (
+                <div className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50 p-0.5">
+                  <img
+                    src={img}
+                    alt={row.title || row.name || "Product"}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+              ) : (
+                <span className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400">
+                  No
+                </span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        key: "title",
         label: "Product",
+        sortable: true,
         render: (_, row) => (
-          <div className="w-[220px] max-w-[220px] min-w-0">
-            <Link
-              to={`/app/product-catalog/view/${row.productId}`}
-              className={CLASS_PRODUCT_LINK}
-              title={row.productName || "Untitled product"}
+          <div>
+            <button
+              type="button"
+              onClick={() => navigate(`/app/seller-special-price-manager/${row._id || row.id}`)}
+              className="block max-w-[280px] overflow-hidden text-ellipsis whitespace-nowrap text-left font-semibold text-[var(--admin-ink)] hover:text-[var(--admin-blue)] hover:underline focus:outline-none"
             >
-              {row.productName || "Untitled product"}
-            </Link>
-            <p className={CLASS_PRODUCT_SKU}>
-              {row.productSku || "N/A"}
-            </p>
+              {row.title || row.name || "Untitled Product"}
+            </button>
+            <span className="block text-xs text-gray-500">{row.sku || "No SKU"}</span>
           </div>
         ),
       },
+      ...(!sellerView
+        ? [
+            {
+              key: "seller",
+              label: "Seller",
+              render: (_, row) => (
+                <span className="block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-xs font-medium text-gray-700">
+                  {row.sellerName || row.seller?.name || row.organizationName || "-"}
+                </span>
+              ),
+            },
+          ]
+        : []),
       {
-        key: "variantTitle",
-        label: "Variant",
-        render: (value) => value || "Default",
+        key: "category",
+        label: "Category",
+        render: (_, row) => (
+          <span className="block max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap text-xs text-gray-600">
+            {row.category?.name || row.categoryName || row.category || "-"}
+          </span>
+        ),
       },
       {
-        key: "variantSku",
-        label: "SKU",
-        render: (_, row) => (
-          <span className={CLASS_MONO_XS}>
-            {row.variantSku || row.productSku || "N/A"}
-          </span>
+        key: "variants",
+        label: "Variants",
+        render: (_, row) => {
+          const count = Array.isArray(row.variants) ? row.variants.length : 1;
+          return (
+            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+              {`${count} ${count === 1 ? "Variant" : "Variants"}`}
+            </span>
+          );
+        },
+      },
+      {
+        key: "price",
+        label: "Price",
+        sortable: true,
+        render: (_, row) => {
+          const variants = row.variants || [];
+          if (variants.length > 0) {
+            const prices = variants.map((v) => Number(v.price || 0)).filter((p) => p > 0);
+            if (prices.length > 0) {
+              const min = Math.min(...prices);
+              const max = Math.max(...prices);
+              return (
+                <span className="font-mono text-xs font-medium text-gray-800">
+                  {min === max ? formatMoney(min) : `${formatMoney(min)} - ${formatMoney(max)}`}
+                </span>
+              );
+            }
+          }
+          return (
+            <span className="font-mono text-xs font-medium text-gray-800">
+              {formatMoney(row.price || 0)}
+            </span>
+          );
+        },
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (_, row) => <ProductStatusBadge status={row.status || "active"} />,
+      },
+  
+{
+  key: "action",
+  label: "Action",
+  render: (_, row) => (
+    <button
+      type="button"
+      onClick={() =>
+        navigate(
+          `/app/seller-special-price-manager/${row._id || row.id}`
+        )
+      }
+      className="inline-flex items-center gap-1.5 rounded-md border border-[var(--admin-gold)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--admin-gold)] transition-colors hover:bg-[var(--admin-gold)] hover:text-white focus:border-[var(--admin-gold)] focus:outline-none focus:ring-0"
+    >
+      Manage Special Prices
+      <ArrowRight size={14} />
+    </button>
+  ),
+}
+    ],
+    [sellerView, navigate],
+  );
+
+  // Filtered variant rows for search in detail view
+  const filteredVariantRows = useMemo(() => {
+    if (!detailList.search) return rows;
+    const term = detailList.search.toLowerCase().trim();
+    return rows.filter(
+      (row) =>
+        row.variantTitle?.toLowerCase().includes(term) ||
+        row.variantSku?.toLowerCase().includes(term) ||
+        row.productName?.toLowerCase().includes(term),
+    );
+  }, [rows, detailList.search]);
+
+  // Variant Rows Table Columns (Detail View)
+  const variantColumns = useMemo(
+    () => [
+      {
+        key: "variantTitle",
+        label: "Variant Name",
+        render: (value, row) => (
+          <div>
+            <p className="font-semibold text-gray-900">{value || "Default Variant"}</p>
+            <p className="font-mono text-xs text-gray-500">{row.variantSku || row.productSku}</p>
+          </div>
         ),
       },
       {
         key: "mrp",
         label: "MRP",
         render: (value) => (
-          <span className={CLASS_MONO_SM}>{formatMoney(value)}</span>
+          <span className="font-mono text-xs text-gray-500 line-through">
+            {formatMoney(value)}
+          </span>
         ),
       },
       {
         key: "sellingPrice",
         label: "Selling Price",
-        render: (value, row) => {
-          const { isZeroPrice } = getRowFlags(row);
-          return (
-            <span
-              className={`font-mono text-sm font-semibold ${isZeroPrice ? "text-red-600" : "text-[var(--admin-ink)]"}`}
-            >
-              {formatMoney(value)}
-            </span>
-          );
-        },
+        render: (value) => (
+          <span className="font-mono text-sm font-semibold text-gray-800">
+            {formatMoney(value)}
+          </span>
+        ),
       },
       {
         key: "originalSpecialPrice",
-        label: "Current Special",
+        label: "Current Special Price",
         render: (value) =>
-          value ? (
-            <span className={CLASS_MONO_SM}>{formatMoney(value)}</span>
+          value !== "" && value !== null && value !== undefined ? (
+            <span className="font-mono text-xs font-semibold text-green-700">
+              {formatMoney(value)}
+            </span>
           ) : (
-            "N/A"
+            <span className="text-xs text-gray-400">Not Set</span>
           ),
       },
       {
         key: "specialPrice",
         label: "New Special Price",
-        render: (_, row) => {
+        render: (value, row) => {
           const { hasError, minimumSpecialPrice } = getRowFlags(row);
           return (
-            <input
-              type="number"
-              min={minimumSpecialPrice}
-              max={
-                Number(row.sellingPrice) > 0
-                  ? Math.max(0, Number(row.sellingPrice) - 0.01)
-                  : undefined
-              }
-              step="0.01"
-              className={`${CLASS_SPECIAL_PRICE_INPUT} ${
-                hasError
-                  ? "border-red-300 bg-red-50 text-red-800"
-                  : "border-[var(--admin-line)]"
-              }`}
-              value={row.specialPrice ?? ""}
-              onChange={(event) => handleRowChange(row.id, event.target.value)}
-              placeholder={String(minimumSpecialPrice)}
-            />
+            <div>
+              <div className="relative flex items-center">
+                <span className="absolute left-2.5 text-xs font-medium text-gray-400">₹</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={value ?? ""}
+                  onChange={(e) => handleRowChange(row.id, e.target.value)}
+                  placeholder="Enter price"
+                  className={`w-36 rounded-lg border pl-6 pr-2 py-1.5 text-sm font-mono transition-colors ${
+                    hasError
+                      ? "border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      : "border-gray-300 bg-white focus:border-[var(--admin-blue)] focus:ring-1 focus:ring-[var(--admin-blue)]"
+                  }`}
+                />
+              </div>
+              {hasError && (
+                <p className="mt-1 text-[10px] font-medium text-red-600">
+                {`Must be between ${formatMoney(minimumSpecialPrice)} & ${formatMoney(
+  row.sellingPrice
+)}`}
+                </p>
+              )}
+            </div>
           );
         },
       },
@@ -742,51 +822,24 @@ const SellerSpecialPriceManager = () => {
         key: "status",
         label: "Status",
         render: (_, row) => {
-          const {
-            hasError,
-            isZeroPrice,
-            isPending,
-            current,
-            minimumSpecialPrice,
-          } = getRowFlags(row);
-          if (isZeroPrice) {
-            return (
-              <span className={CLASS_STATUS_ERROR}>
-                ⚠ Selling price is 0
-              </span>
-            );
-          }
+          const { isPending, hasError } = getRowFlags(row);
           if (hasError) {
             return (
-              <span className={CLASS_STATUS_ERROR}>
-                {current < minimumSpecialPrice
-                  ? `⚠ Minimum ${formatMoney(minimumSpecialPrice)}`
-                  : "⚠ Special must be < Selling"}
+              <span className="inline-flex rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                Invalid Price
               </span>
             );
           }
           if (isPending) {
             return (
-              <span className={CLASS_STATUS_PENDING}>
-                ⟳ Pending
+              <span className="inline-flex rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                Modified
               </span>
             );
           }
-          const status = row.variantStatus || row.productStatus;
-
           return (
-            <span
-              className={`${CLASS_STATUS_BASE} ${
-                status === "active"
-                  ? "bg-green-50 text-green-700"
-                  : status === "inactive"
-                    ? "bg-gray-100 text-gray-700"
-                    : "bg-yellow-50 text-yellow-700"
-              }`}
-            >
-              {status
-                ? status.charAt(0).toUpperCase() + status.slice(1)
-                : "N/A"}
+            <span className="inline-flex rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+              Unchanged
             </span>
           );
         },
@@ -795,123 +848,171 @@ const SellerSpecialPriceManager = () => {
     [handleRowChange],
   );
 
-  return (
-    <div>
-      <Loader
-        loading={saving || importing}
-        label={
-          importing ? "Importing special prices..." : "Saving special prices..."
-        }
-      />
-      <PageHeader
-        title={
-          sellerView ? "Special Price Management" : "Special Price Management"
-        }
-        subtitle="Update variant-wise special prices, export a template, edit it in Excel, and import the updated values back here."
-        count={total}
-        breadcrumbs={[
-          { label: sellerView ? "Catalog" : "Product Management" },
-          {
-            label: sellerView
-              ? "Special Price Management"
-              : "Special Price Management",
-          },
-        ]}
-        actions={
-          <>
-            <button type="button" onClick={handleExport}>
-              Export Excel
-            </button>
-            <button type="button" onClick={() => fileInputRef.current?.click()}>
-              {importing ? "Importing…" : "Import Excel"}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              className="hidden"
-              onChange={handleImport}
-            />
+  // ----------------------------------------------------
+  // RENDER: DETAIL VIEW (Single Product Variants Editing)
+  // ----------------------------------------------------
+  if (productId) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Special Price Management"
+          subtitle="Set and update special promotional prices for product variants"
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+  type="button"
+  onClick={() => navigate("/app/seller-special-price-manager")}
+
+>
+  <ArrowLeft size={16} />
+  Back to Products
+</button>
+
+              <button
+                type="button"
+                onClick={handleExport}
+                // className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+              >
+                Export Template
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+                // className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
+              >
+                {importing ? "Importing..." : "Import Excel"}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleImport}
+                className="hidden"
+              />
+
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={!canSave}
+                // className="inline-flex items-center gap-1 rounded-lg bg-[var(--admin-blue)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving ? "Saving..." : `Save Changes ${pendingCount ? `(${pendingCount})` : ""}`}
+              </button>
+            </div>
+          }
+        />
+
+        {/* Notifications */}
+        {importError && (
+          <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <span>{importError}</span>
             <button
               type="button"
-              onClick={handleSave}
-              disabled={!canSave}
-              title={
-                pendingCount
-                  ? "Save special price changes"
-                  : "No changes to save"
-              }
-              className="disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:bg-gray-300"
+              onClick={() => setImportError("")}
+              className="text-red-500 hover:text-red-700"
             >
-              {saving
-                ? "Saving…"
-                : `Save ${pendingCount ? `(${pendingCount})` : ""}`}
+              ✕
             </button>
-          </>
-        }
+          </div>
+        )}
+        {importSuccess && (
+          <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            <span>{importSuccess}</span>
+            <button
+              type="button"
+              onClick={() => setImportSuccess("")}
+              className="text-green-500 hover:text-green-700"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Product Summary Header Card */}
+        {detailProduct && (
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                {getProductImage(detailProduct) ? (
+                  <img
+                    src={getProductImage(detailProduct)}
+                    alt={detailProduct.title || "Product"}
+                    className="h-full w-full object-contain p-1"
+                  />
+                ) : (
+                  <span className="text-xs text-gray-400">No Image</span>
+                )}
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-gray-900">
+                  {detailProduct.title || detailProduct.name || "Product"}
+                </h2>
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                  <span>SKU: <strong className="text-gray-700">{detailProduct.sku || "-"}</strong></span>
+                  {!sellerView && (detailProduct.sellerName || detailProduct.seller?.name) && (
+                    <span>Seller: <strong className="text-gray-700">{detailProduct.sellerName || detailProduct.seller?.name}</strong></span>
+                  )}
+                  <span>Category: <strong className="text-gray-700">{detailProduct.category?.name || detailProduct.categoryName || "-"}</strong></span>
+                  <span>Total Variants: <strong className="text-gray-700">{rows.length}</strong></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Variants Data Table */}
+        {detailLoading ? (
+          <Loader />
+        ) : (
+          <DataTable
+            columns={variantColumns}
+            data={filteredVariantRows}
+            loading={detailLoading}
+            listPage={detailList}
+            searchPlaceholder="Search variant title or SKU..."
+            emptyText="No variants found for this product."
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // RENDER: MAIN VIEW (Products List Table with Search & FilterBar)
+  // ----------------------------------------------------
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Special Price Management"
+        subtitle="Manage promotional special prices for seller products and variants"
       />
 
-      {importError ? (
-        <div className={`${CLASS_ALERT} border border-red-200 bg-red-50 text-red-700`}>
-          <div>
-            <p className="font-semibold">Import issue</p>
-            <p className="mt-1 whitespace-pre-wrap">{importError}</p>
-          </div>
-          <button
-            type="button"
-            aria-label="Close import issue"
-            className={`${CLASS_ALERT_CLOSE} text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300`}
-            onClick={() => setImportError("")}
-          >
-            ×
-          </button>
-        </div>
-      ) : null}
-
-      {importInfo ? (
-        <div className={`${CLASS_ALERT} border border-sky-200 bg-sky-50 text-sky-700`}>
-          <div>
-            <p className="font-semibold">Import info</p>
-            <p className="mt-1 whitespace-pre-wrap">{importInfo}</p>
-          </div>
-          <button
-            type="button"
-            aria-label="Close import info"
-            className={`${CLASS_ALERT_CLOSE} text-sky-700 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300`}
-            onClick={() => setImportInfo("")}
-          >
-            ×
-          </button>
-        </div>
-      ) : null}
-
-      {importSuccess ? (
-        <div className={`${CLASS_ALERT} border border-emerald-200 bg-emerald-50 text-emerald-700`}>
-          <div>
-            <p className="font-semibold">Import successful</p>
-            <p className="mt-1 whitespace-pre-wrap">{importSuccess}</p>
-          </div>
-          <button
-            type="button"
-            aria-label="Close import success"
-            className={`${CLASS_ALERT_CLOSE} text-emerald-700 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300`}
-            onClick={() => setImportSuccess("")}
-          >
-            ×
-          </button>
-        </div>
-      ) : null}
-
+      {/* Products DataTable with embedded Search and FilterBar */}
       <DataTable
-        columns={columns}
-        data={visibleRows}
-        loading={loading}
-        totalCount={total}
+        columns={productColumns}
+        data={products}
+        loading={productsLoading}
+        totalCount={totalProducts}
         listPage={list}
-        rowKey="id"
+        rowKey="_id"
         searchPlaceholder="Search product name or SKU"
-        // filterBar={<FilterBar filters={PRICE_STATUS_FILTER_FIELDS} listPage={list} loading={loading} />}
-        emptyText="No products were found for this seller."
+        filterBar={
+          <FilterBar
+            filters={filterFields}
+            listPage={list}
+            loading={productsLoading}
+            compactFilterBar={true}
+            filterGridClassName={
+              sellerView
+                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2"
+                : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            }
+          />
+        }
+        emptyText="No products found matching your search or filter criteria."
+        onRowClick={(row) => navigate(`/app/seller-special-price-manager/${row._id || row.id}`)}
       />
     </div>
   );
