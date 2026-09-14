@@ -560,6 +560,11 @@ function Layout() {
         path: "/seller-special-price-manager",
         render: () => <SellerSpecialPriceManager />,
       },
+      {
+        path: "/seller-special-price-manager/:productId",
+        permissionPath: "/seller-special-price-manager",
+        render: () => <SellerSpecialPriceManager />,
+      },
       { path: "/store", render: () => <Store /> },
       { path: "/brands", render: () => <Brands /> },
       { path: "/product-options", render: () => <ProductOptions /> },

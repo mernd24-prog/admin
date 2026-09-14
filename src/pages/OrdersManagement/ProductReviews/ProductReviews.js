@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import {
@@ -18,6 +18,7 @@ import {
   DataTable,
   ConfirmModal,
   BulkActionBar,
+  FilterBar,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -52,33 +53,44 @@ const getSessionUserData = () => {
   }
 };
 
-const FILTER_FIELDS = [
-  {
-    key: "status",
-    type: "select",
-    label: "Status",
-    width: "w-36",
-    options: [
-      { value: "published", label: "Published" },
-      { value: "pending", label: "Pending" },
-      { value: "hidden", label: "Hidden" },
-      { value: "rejected", label: "Rejected" },
-    ],
-  },
-  {
-    key: "rating",
-    type: "select",
-    label: "Rating",
-    width: "w-32",
-    options: [
-      { value: "5", label: "5 Stars" },
-      { value: "4", label: "4 Stars" },
-      { value: "3", label: "3 Stars" },
-      { value: "2", label: "2 Stars" },
-      { value: "1", label: "1 Star" },
-    ],
-  },
-];
+const getProductOptions = async (dispatch, search = "", sellerId = "") => {
+  try {
+    const response = await dispatch(
+      getProducts({
+        page: 1,
+        limit: 20,
+        q: search || undefined,
+        sellerId: sellerId || undefined,
+      }),
+    ).unwrap();
+
+    const list = Array.isArray(response?.data?.products)
+      ? response.data.products
+      : Array.isArray(response?.data?.docs)
+        ? response.data.docs
+        : Array.isArray(response?.items)
+          ? response.items
+          : Array.isArray(response?.list)
+            ? response.list
+            : Array.isArray(response?.data?.items)
+              ? response.data.items
+              : Array.isArray(response?.data?.list)
+                ? response.data.list
+                : [];
+
+    return list.map((product) => ({
+      value: product._id || product.id,
+      label:
+        product.title ||
+        product.name ||
+        product.productName ||
+        product.sku ||
+        "Unnamed product",
+    }));
+  } catch {
+    return [];
+  }
+};
 
 const getProductName = (row = {}) =>
   row.productName ||
@@ -112,7 +124,8 @@ const displayBuyerName = (review = {}) => {
   return name || "Verified Buyer";
 };
 
-const getProductId = (row = {}) => row.productId || row.product?.id || row._id || row.id || "";
+const getProductId = (row = {}) =>
+  row.productId || row.product?.id || row._id || row.id || "";
 
 const getMetaTotal = (payload = {}, source = {}, list = []) =>
   Number(
@@ -156,8 +169,10 @@ const getProductReviewDetailPayload = (state = {}) => {
   return {
     list: Array.isArray(list) ? list : [],
     total: getMetaTotal(payload, source, list),
-    summary: payload?.meta?.summary || source?.summary || payload?.summary || {},
-    product: payload?.meta?.product || source?.product || payload?.product || null,
+    summary:
+      payload?.meta?.summary || source?.summary || payload?.summary || {},
+    product:
+      payload?.meta?.product || source?.product || payload?.product || null,
   };
 };
 
@@ -231,6 +246,63 @@ const ProductReviews = () => {
   const sellerView = isSellerPanel();
   const showSellerFilter = !isSellerPanelUser && !sellerView;
   const sellerScoped = isSellerPanelUser || sellerView;
+  const filterFields = useMemo(
+    () => [
+      ...(showSellerFilter
+        ? [
+            {
+              key: "sellerId",
+              type: "asyncDropdown",
+              label: "Seller",
+              width: "w-52",
+              placeholder: "All Sellers",
+              load: async (search) => {
+                const result = await dropdownApi.getSellers({
+                  keyWord: search,
+                  searchFields: "full_name,email,businessName",
+                  limit: 20,
+                });
+                return Array.isArray(result) ? result : [];
+              },
+            },
+          ]
+        : []),
+      {
+        key: "product",
+        type: "select",
+        label: "Product",
+        width: "w-52",
+        options: productOptions,
+        placeholder: "All Products",
+      },
+      {
+        key: "status",
+        type: "select",
+        label: "Status",
+        width: "w-36",
+        options: [
+          { value: "published", label: "Published" },
+          { value: "pending", label: "Pending" },
+          { value: "hidden", label: "Hidden" },
+          { value: "rejected", label: "Rejected" },
+        ],
+      },
+      {
+        key: "rating",
+        type: "select",
+        label: "Rating",
+        width: "w-32",
+        options: [
+          { value: "5", label: "5 Stars" },
+          { value: "4", label: "4 Stars" },
+          { value: "3", label: "3 Stars" },
+          { value: "2", label: "2 Stars" },
+          { value: "1", label: "1 Star" },
+        ],
+      },
+    ],
+    [productOptions, showSellerFilter],
+  );
   const summaryPayload = getProductReviewSummaryPayload(reviewsData);
   const detailPayload = getProductReviewDetailPayload(reviewsData);
   const isDetailMode = Boolean(selectedProductId);
@@ -240,7 +312,8 @@ const ProductReviews = () => {
     selectedProductId && summaryPayload.list.length
       ? summaryPayload.list.find(
           (row) =>
-            String(row.productId || row._id || row.id) === String(selectedProductId),
+            String(row.productId || row._id || row.id) ===
+            String(selectedProductId),
         ) || null
       : null;
   const selectedProductOption = productOptions.find(
@@ -250,7 +323,10 @@ const ProductReviews = () => {
     detailPayload.product ||
     selectedSummaryRow?.product ||
     (selectedProductId
-      ? { id: selectedProductId, title: selectedProductOption?.label || "Selected product" }
+      ? {
+          id: selectedProductId,
+          title: selectedProductOption?.label || "Selected product",
+        }
       : null);
   const selectedProductTitle =
     selectedProduct?.title ||
@@ -260,7 +336,8 @@ const ProductReviews = () => {
   const selectedStatusCounts = detailPayload.list.reduce(
     (counts, review) => ({
       ...counts,
-      [review.status || "pending"]: (counts[review.status || "pending"] || 0) + 1,
+      [review.status || "pending"]:
+        (counts[review.status || "pending"] || 0) + 1,
     }),
     {},
   );
@@ -273,21 +350,27 @@ const ProductReviews = () => {
     const params = list.toQueryParams();
     setLoading(true);
     setError("");
+    const productIdFromFilter =
+      list.filters.product || selectedProductId || undefined;
+    const sellerIdFromFilter =
+      list.filters.sellerId || selectedSellerId || undefined;
+
     const requestParams = {
-        page: params.page,
-        limit: params.limit,
-        search: params.search || undefined,
-        status: params.status || undefined,
-        rating: params.rating ? Number(params.rating) : undefined,
-        sellerId: !isSellerPanelUser && !sellerView ? selectedSellerId || undefined : undefined,
-        sortBy: params.sortBy,
-        sortDir: params.sortDir,
-        sellerScope: sellerScoped || undefined,
+      page: params.page,
+      limit: params.limit,
+      search: params.search || undefined,
+      status: params.status || undefined,
+      rating: params.rating ? Number(params.rating) : undefined,
+      sellerId:
+        !isSellerPanelUser && !sellerView ? sellerIdFromFilter : undefined,
+      sortBy: params.sortBy,
+      sortDir: params.sortDir,
+      sellerScope: sellerScoped || undefined,
     };
-    const action = selectedProductId
+    const action = productIdFromFilter
       ? getProductReviewSummaryReviews({
           ...requestParams,
-          productId: selectedProductId,
+          productId: productIdFromFilter,
         })
       : getProductReviewSummaries(requestParams);
 
@@ -381,8 +464,24 @@ const ProductReviews = () => {
   }, [dispatch, isSellerPanelUser, sellerView, selectedSellerId]);
 
   useEffect(() => {
+    const nextSellerId = list.filters.sellerId || "";
+    const nextProductId = list.filters.product || "";
+
+    if (selectedSellerId !== nextSellerId) {
+      setSelectedSellerId(nextSellerId);
+    }
+    if (selectedProductId !== nextProductId) {
+      setSelectedProductId(nextProductId);
+    }
+
     clearSelection();
-  }, [clearSelection, selectedProductId, selectedSellerId]);
+  }, [
+    clearSelection,
+    list.filters.product,
+    list.filters.sellerId,
+    selectedProductId,
+    selectedSellerId,
+  ]);
 
   useEffect(() => {
     fetchReviews();
@@ -468,7 +567,9 @@ const ProductReviews = () => {
           sellerScope: sellerScoped,
         }),
       ).unwrap();
-      toast.success(status === "published" ? "Review approved" : "Review updated");
+      toast.success(
+        status === "published" ? "Review approved" : "Review updated",
+      );
       fetchReviews();
     } catch (err) {
       toast.error(err?.message || "Failed to update review");
@@ -481,6 +582,7 @@ const ProductReviews = () => {
     const productId = getProductId(row);
     if (!productId) return;
     list.setPage(1);
+    list.setFilter("product", String(productId));
     setSelectedProductId(String(productId));
   };
 
@@ -590,7 +692,9 @@ const ProductReviews = () => {
       render: (v, row) => (
         <div className="min-w-[260px] max-w-[460px]">
           {row.title && (
-            <p className="truncate text-xs font-semibold text-gray-800">{row.title}</p>
+            <p className="truncate text-xs font-semibold text-gray-800">
+              {row.title}
+            </p>
           )}
           <p className="line-clamp-2 whitespace-normal text-xs leading-5 text-gray-600">
             {v || row.comment || "No review text"}
@@ -638,109 +742,6 @@ const ProductReviews = () => {
         }
       />
 
-      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-              Review Moderation Filters
-            </p>
-            <p className="mt-0.5 text-xs text-gray-500">
-              {isDetailMode
-                ? "Moderating individual customer reviews for the selected product."
-                : "Select a product to open its customer review list for approval."}
-            </p>
-          </div>
-          {isDetailMode && (
-            <button
-              type="button"
-              onClick={() => {
-                list.clearSelection();
-                list.setPage(1);
-                setSelectedProductId("");
-              }}
-              className="rounded border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-            >
-              Back to Summary
-            </button>
-          )}
-        </div>
-        <div
-          className={`grid gap-3 sm:grid-cols-2 ${showSellerFilter ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
-        >
-          {showSellerFilter && (
-            <label className="block text-xs font-medium text-gray-600">
-              Seller
-              <select
-                value={selectedSellerId}
-                onChange={(event) => {
-                  list.setPage(1);
-                  setSelectedSellerId(event.target.value);
-                  setSelectedProductId("");
-                }}
-                className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none"
-              >
-                <option value="">All Sellers</option>
-                {sellerOptions.map((seller) => (
-                  <option key={seller.value} value={seller.value}>
-                    {seller.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          <label className="block text-xs font-medium text-gray-600">
-            Product
-            <select
-              value={selectedProductId}
-              onChange={(event) => {
-                list.clearSelection();
-                list.setPage(1);
-                setSelectedProductId(event.target.value);
-              }}
-              className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="">All Products</option>
-              {productOptions.map((product) => (
-                <option key={product.value} value={product.value}>
-                  {product.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-xs font-medium text-gray-600">
-            Status
-            <select
-              value={list.filters.status || ""}
-              onChange={(event) => list.setFilter("status", event.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="">All Status</option>
-              {FILTER_FIELDS[0].options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-xs font-medium text-gray-600">
-            Rating
-            <select
-              value={list.filters.rating || ""}
-              onChange={(event) => list.setFilter("rating", event.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="">All Rating</option>
-              {FILTER_FIELDS[1].options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </div>
-
       {isDetailMode && (
         <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between gap-3">
@@ -768,7 +769,12 @@ const ProductReviews = () => {
                 Total Reviews
               </p>
               <p className="mt-2 text-lg font-semibold text-gray-800">
-                {Number(detailPayload.summary?.count || selectedSummaryRow?.reviewCount || total || 0)}
+                {Number(
+                  detailPayload.summary?.count ||
+                    selectedSummaryRow?.reviewCount ||
+                    total ||
+                    0,
+                )}
               </p>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -776,7 +782,9 @@ const ProductReviews = () => {
                 Published
               </p>
               <p className="mt-2 text-lg font-semibold text-gray-800">
-                {selectedSummaryRow?.publishedCount || selectedStatusCounts.published || 0}
+                {selectedSummaryRow?.publishedCount ||
+                  selectedStatusCounts.published ||
+                  0}
               </p>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -784,7 +792,9 @@ const ProductReviews = () => {
                 Pending
               </p>
               <p className="mt-2 text-lg font-semibold text-gray-800">
-                {selectedSummaryRow?.pendingCount || selectedStatusCounts.pending || 0}
+                {selectedSummaryRow?.pendingCount ||
+                  selectedStatusCounts.pending ||
+                  0}
               </p>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -792,7 +802,9 @@ const ProductReviews = () => {
                 Hidden
               </p>
               <p className="mt-2 text-lg font-semibold text-gray-800">
-                {selectedSummaryRow?.hiddenCount || selectedStatusCounts.hidden || 0}
+                {selectedSummaryRow?.hiddenCount ||
+                  selectedStatusCounts.hidden ||
+                  0}
               </p>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -800,7 +812,9 @@ const ProductReviews = () => {
                 Rejected
               </p>
               <p className="mt-2 text-lg font-semibold text-gray-800">
-                {selectedSummaryRow?.rejectedCount || selectedStatusCounts.rejected || 0}
+                {selectedSummaryRow?.rejectedCount ||
+                  selectedStatusCounts.rejected ||
+                  0}
               </p>
             </div>
           </div>
@@ -812,33 +826,32 @@ const ProductReviews = () => {
         data={items}
         loading={loading}
         error={error}
-        totalCount={total}
-        page={list.page}
-        pageSize={list.pageSize}
-        onPageChange={list.setPage}
-        onPageSizeChange={list.setPageSize}
-        onSearch={list.setSearch}
-        onSort={list.setSort}
-        sortKey={list.sortKey}
-        sortDir={list.sortDir}
+        total={total}
+        listPage={list}
         searchPlaceholder={
           isDetailMode
             ? "Search buyers, review text, orders..."
             : "Search products..."
         }
-        emptyText={
+        emptyMessage={
           isDetailMode
             ? "No reviews found for this product."
             : "No product review summaries found."
         }
         emptyIcon={<MdRateReview size={40} className="text-gray-200" />}
         requiredModule="reviews"
-        exportConfig={{ filename: isDetailMode ? "product-review-details" : "product-review-summaries", columns }}
+        exportConfig={{
+          filename: isDetailMode
+            ? "product-review-details"
+            : "product-review-summaries",
+          columns,
+        }}
         selectable={isDetailMode}
         selectedKeys={list.selectedKeys}
         onSelectionChange={list.setSelectedKeys}
         rowKey={isDetailMode ? "_id" : "productId"}
         onRowClick={isDetailMode ? undefined : openProductReviews}
+        filterBar={<FilterBar fields={filterFields} listPage={list} />}
         bulkActionBar={
           isDetailMode ? (
             <BulkActionBar
@@ -850,55 +863,55 @@ const ProductReviews = () => {
               actions={
                 sellerScoped
                   ? [
-                    {
-                      label: "Approve",
-                      icon: <MdCheckCircle />,
-                      variant: "primary",
-                      onClick: () => handleBulkStatus("published"),
-                    },
-                    {
-                      label: "Hide",
-                      icon: <MdVisibilityOff />,
-                      variant: "warning",
-                      onClick: () => handleBulkStatus("hidden"),
-                    },
-                    {
-                      label: "Reject",
-                      icon: <MdClose />,
-                      variant: "danger",
-                      onClick: () => handleBulkStatus("rejected"),
-                    },
-                  ]
+                      {
+                        label: "Approve",
+                        icon: <MdCheckCircle />,
+                        variant: "primary",
+                        onClick: () => handleBulkStatus("published"),
+                      },
+                      {
+                        label: "Hide",
+                        icon: <MdVisibilityOff />,
+                        variant: "warning",
+                        onClick: () => handleBulkStatus("hidden"),
+                      },
+                      {
+                        label: "Reject",
+                        icon: <MdClose />,
+                        variant: "danger",
+                        onClick: () => handleBulkStatus("rejected"),
+                      },
+                    ]
                   : [
-                    {
-                      label: "Approve",
-                      icon: <MdCheckCircle />,
-                      action: ACTIONS.EDIT,
-                      variant: "primary",
-                      onClick: () => handleBulkStatus("published"),
-                    },
-                    {
-                      label: "Reject",
-                      icon: <MdClose />,
-                      action: ACTIONS.EDIT,
-                      variant: "danger",
-                      onClick: () => handleBulkStatus("rejected"),
-                    },
-                    {
-                      label: "Hide",
-                      icon: <MdVisibilityOff />,
-                      action: ACTIONS.EDIT,
-                      variant: "warning",
-                      onClick: () => handleBulkStatus("hidden"),
-                    },
-                    {
-                      label: "Delete",
-                      icon: <MdDelete />,
-                      action: ACTIONS.DELETE,
-                      variant: "danger",
-                      onClick: () => setBulkDeleteConfirm(true),
-                    },
-                  ]
+                      {
+                        label: "Approve",
+                        icon: <MdCheckCircle />,
+                        action: ACTIONS.EDIT,
+                        variant: "primary",
+                        onClick: () => handleBulkStatus("published"),
+                      },
+                      {
+                        label: "Reject",
+                        icon: <MdClose />,
+                        action: ACTIONS.EDIT,
+                        variant: "danger",
+                        onClick: () => handleBulkStatus("rejected"),
+                      },
+                      {
+                        label: "Hide",
+                        icon: <MdVisibilityOff />,
+                        action: ACTIONS.EDIT,
+                        variant: "warning",
+                        onClick: () => handleBulkStatus("hidden"),
+                      },
+                      {
+                        label: "Delete",
+                        icon: <MdDelete />,
+                        action: ACTIONS.DELETE,
+                        variant: "danger",
+                        onClick: () => setBulkDeleteConfirm(true),
+                      },
+                    ]
               }
             />
           ) : null
@@ -973,7 +986,6 @@ const ProductReviews = () => {
         reviewData={editTarget}
       />
 
-
       <AddProductReview
         isOpen={addOpen}
         onClose={() => setAddOpen(false)}
@@ -999,7 +1011,6 @@ const ProductReviews = () => {
         onConfirm={handleBulkDelete}
         onCancel={() => setBulkDeleteConfirm(false)}
       />
-
     </div>
   );
 };
