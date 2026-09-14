@@ -112,6 +112,7 @@ export default function BasicDetailsTab({
   const selector = useSelector((state) => state);
   const warrantyUnits = useDropdownOptions("warranty-units");
   const warrantyTemplatesFromMaster = useDropdownOptions("warranty-templates");
+  const [brandStatusOverrides, setBrandStatusOverrides] = useState({});
   const userRole = normalizeRole(
     extractRole(
       userData,
@@ -134,14 +135,31 @@ export default function BasicDetailsTab({
         ? reviewCategorySubmission
         : reviewHsnSubmission;
     try {
-      await dispatch(reviewAction({
+      const response = await dispatch(reviewAction({
         _id: option.resourceId,
         categoryKey: option.resourceId,
         code: option.resourceId,
         action: "approve",
       })).unwrap();
+      const approvedRecord = response?.data || {};
+      if (option.resourceType === "brand") {
+        const keys = [
+          option.resourceId,
+          option.value,
+          option.brandName,
+          approvedRecord._id,
+          approvedRecord.id,
+          approvedRecord.name,
+        ]
+          .filter(Boolean)
+          .map(String);
+        setBrandStatusOverrides((current) => ({
+          ...current,
+          ...Object.fromEntries(keys.map((key) => [key, "approved"])),
+        }));
+      }
       toast.success(`${option.resourceType === "hsn" ? "HSN code" : option.resourceType} approved`);
-      fetchAllData?.();
+      await fetchAllData?.();
     } catch (error) {
       toast.error(getErrorMessage(error, "Approval failed"));
     }
@@ -371,7 +389,7 @@ export default function BasicDetailsTab({
     setBrandSubmitting(true);
     try {
       if (isSellerPanelUser) {
-        await dispatch(
+        const response = await dispatch(
           brandSubmission._id
             ? resubmitBrandForApproval({
                 ...brandSubmission,
@@ -379,28 +397,49 @@ export default function BasicDetailsTab({
               })
             : submitBrandForApproval(brandSubmission),
         ).unwrap();
-        const brandName = brandSubmission.name.trim();
+        const createdBrand = response?.data || {};
+        const brandName = createdBrand.name || brandSubmission.name.trim();
         setMyBrandSubmissions((current) => [
-          { ...brandSubmission, name: brandName, approvalStatus: "pending" },
+          {
+            ...brandSubmission,
+            ...createdBrand,
+            name: brandName,
+            approvalStatus: createdBrand.approvalStatus || "pending",
+          },
           ...current.filter(
             (brand) =>
-              String(brand._id || "") !== String(brandSubmission._id || ""),
+              String(brand._id || "") !==
+              String(createdBrand._id || brandSubmission._id || ""),
           ),
         ]);
-        handleSelectChange({ value: brandName, label: brandName }, "BRAND_ID");
+        handleSelectChange(
+          {
+            value: brandName,
+            label: brandName,
+            brandName,
+            resourceId: createdBrand._id || createdBrand.id,
+            approvalStatus: createdBrand.approvalStatus || "pending",
+          },
+          "BRAND_ID",
+        );
         toast.success(
           brandSubmission._id
             ? "Brand resubmitted for approval"
             : "Brand submitted for approval",
         );
       } else {
-        await dispatch(
+        const response = await dispatch(
           createBrand({ ...brandSubmission, active: true }),
         ).unwrap();
+        const createdBrand = response?.data || {};
+        const brandName = createdBrand.name || brandSubmission.name.trim();
         handleSelectChange(
           {
-            value: brandSubmission.name.trim(),
-            label: brandSubmission.name.trim(),
+            value: brandName,
+            label: brandName,
+            brandName,
+            resourceId: createdBrand._id || createdBrand.id,
+            approvalStatus: createdBrand.approvalStatus || "approved",
           },
           "BRAND_ID",
         );
@@ -444,8 +483,32 @@ export default function BasicDetailsTab({
           }))
       : [];
 
-    return [...ownPendingBrands, ...(formattedBrandList || [])];
-  }, [formattedBrandList, isSellerPanelUser, myBrandSubmissions]);
+    return [...ownPendingBrands, ...(formattedBrandList || [])].map((brand) => {
+      const approvalStatus =
+        brandStatusOverrides[String(brand.resourceId || "")] ||
+        brandStatusOverrides[String(brand.value || "")] ||
+        brandStatusOverrides[String(brand.brandName || "")] ||
+        brand.approvalStatus;
+      if (approvalStatus === brand.approvalStatus) return brand;
+
+      const baseName =
+        brand.brandName ||
+        String(brand.label || "").replace(/ \(Pending approval\)$/, "");
+      return {
+        ...brand,
+        approvalStatus,
+        label:
+          approvalStatus === "pending"
+            ? `${baseName} (Pending approval)`
+            : baseName,
+      };
+    });
+  }, [
+    brandStatusOverrides,
+    formattedBrandList,
+    isSellerPanelUser,
+    myBrandSubmissions,
+  ]);
 
   const selectedBrandOption = useMemo(() => {
     const rawBrand =
@@ -703,6 +766,25 @@ export default function BasicDetailsTab({
       }
       setIsLoading(true);
       const res = await dispatch(createCategory(reqData)).unwrap();
+      const createdCategory = res?.data || {};
+      const categoryValue =
+        createdCategory.categoryKey || createdCategory._id || createdCategory.id;
+      if (categoryValue) {
+        handleSelectChange(
+          {
+            value: categoryValue,
+            categoryKey: createdCategory.categoryKey || categoryValue,
+            label:
+              createdCategory.title ||
+              createdCategory.name ||
+              categoryForm.categoryName,
+            resourceId:
+              createdCategory._id || createdCategory.id || categoryValue,
+            approvalStatus: createdCategory.approvalStatus,
+          },
+          "CATEGORY_ID",
+        );
+      }
       toast.success(res.message || "Category created successfully");
       setIsCategoryModal(false);
       setCategoryForm(INITIAL_FORM_CATEGORY);
@@ -728,7 +810,19 @@ export default function BasicDetailsTab({
     };
 
     try {
-      await dispatch(createHsn(basePayload)).unwrap();
+      const res = await dispatch(createHsn(basePayload)).unwrap();
+      const createdHsn = res?.data || {};
+      const hsnValue = createdHsn.code || basePayload.code;
+      handleSelectChange(
+        {
+          value: hsnValue,
+          code: hsnValue,
+          label: hsnValue,
+          resourceId: createdHsn._id || createdHsn.id || hsnValue,
+          approvalStatus: createdHsn.approvalStatus,
+        },
+        "hsn_code",
+      );
 
       toast.success("HSN Code created successfully");
 
@@ -889,11 +983,7 @@ export default function BasicDetailsTab({
                <FilterSelect
                 label="Brand"
                 name="brand"
-                value={
-                  brandOptions.find(
-                    (opt) => String(opt.value) === String(formData.brand || ""),
-                  ) || null
-                }
+                value={selectedBrandOption}
                 onChange={handleBrandSelect}
                 options={brandOptions}
                 placeholder="Select Brand"
