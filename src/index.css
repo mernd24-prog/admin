@@ -16,7 +16,7 @@ body {
 
 /* Custom Global Scrollbars (Firefox & Webkit) */
 * {
-  scrollbar-color: #CE9F2D33 transparent;
+  scrollbar-color: #ce9f2d33 transparent;
   scrollbar-width: thin;
 }
 
@@ -30,12 +30,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CE9F2D33;
+  background: #ce9f2d33;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #CE9F2D66;
+  background: #ce9f2d66;
 }
 
 .d {
@@ -351,7 +351,8 @@ select:active {
 
 /* Product create/edit uses the gold brand accent for every form focus state. */
 .product-catalog-form .admin-input:focus,
-.product-catalog-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.product-catalog-form
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
 .product-catalog-form select:focus,
 .product-catalog-form textarea:focus {
   border-color: var(--admin-gold) !important;
@@ -379,7 +380,10 @@ select:active {
 }
 
 /* Flat gold focus for fields that should not render an additional blurred ring. */
-body .admin-shell .product-catalog-form .admin-input.product-flat-gold-focus:focus {
+body
+  .admin-shell
+  .product-catalog-form
+  .admin-input.product-flat-gold-focus:focus {
   border-color: var(--admin-gold) !important;
   box-shadow: none !important;
   outline: none !important;
@@ -485,10 +489,30 @@ body .admin-shell .product-catalog-form .admin-input.product-flat-gold-focus:foc
   box-shadow: 0 0 0 3px rgba(214, 163, 35, 0.15) !important;
 }
 
-body .admin-shell .product-catalog-form input.product-variant-search-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-body .admin-shell .product-catalog-form input.product-variant-search-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
-body .admin-shell .product-catalog-form input.product-tag-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-body .admin-shell .product-catalog-form input.product-tag-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus {
+body
+  .admin-shell
+  .product-catalog-form
+  input.product-variant-search-input:not([type="checkbox"]):not(
+    [type="radio"]
+  ):not([type="file"]),
+body
+  .admin-shell
+  .product-catalog-form
+  input.product-variant-search-input:not([type="checkbox"]):not(
+    [type="radio"]
+  ):not([type="file"]):focus,
+body
+  .admin-shell
+  .product-catalog-form
+  input.product-tag-input:not([type="checkbox"]):not([type="radio"]):not(
+    [type="file"]
+  ),
+body
+  .admin-shell
+  .product-catalog-form
+  input.product-tag-input:not([type="checkbox"]):not([type="radio"]):not(
+    [type="file"]
+  ):focus {
   min-height: 0 !important;
   border: none !important;
   border-radius: 0 !important;
@@ -503,10 +527,30 @@ body .admin-shell .product-catalog-form input.product-tag-input:not([type="check
    input border; the surrounding select control is its only visible border. */
 .admin-shell .product-catalog-form .admin-filter-select__input-container,
 .admin-shell .product-catalog-form .admin-react-select__input-container,
-.admin-shell .product-catalog-form .admin-filter-select__input-container input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.admin-input),
-.admin-shell .product-catalog-form .admin-react-select__input-container input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.admin-input),
-.admin-shell .product-catalog-form .admin-filter-select__input-container input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.admin-input):focus,
-.admin-shell .product-catalog-form .admin-react-select__input-container input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.admin-input):focus {
+.admin-shell
+  .product-catalog-form
+  .admin-filter-select__input-container
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
+    .admin-input
+  ),
+.admin-shell
+  .product-catalog-form
+  .admin-react-select__input-container
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
+    .admin-input
+  ),
+.admin-shell
+  .product-catalog-form
+  .admin-filter-select__input-container
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
+    .admin-input
+  ):focus,
+.admin-shell
+  .product-catalog-form
+  .admin-react-select__input-container
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
+    .admin-input
+  ):focus {
   min-height: 0 !important;
   border: none !important;
   border-radius: 0 !important;

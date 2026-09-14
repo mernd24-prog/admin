@@ -316,24 +316,19 @@ export const GoldDateRangeCalendar = ({
       <div className="mb-5 flex w-full flex-nowrap justify-between gap-2">
         <button
           type="button"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-base font-normal text-[var(--admin-gold-dark)] transition hover:border-[var(--admin-gold)] hover:bg-[#fffaf0] disabled:opacity-50"
-          onClick={() =>
-            onViewDateChange(
-              addMonths(viewDate, -1),
-            )
-          }
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-medium text-slate-700 shadow-xs transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40"
+          onClick={() => onViewDateChange(addMonths(viewDate, -1))}
           disabled={loading}
           aria-label="Previous month"
         >
           ‹
         </button>
 
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-1.5">
           <div className="flex min-w-0 flex-nowrap items-center justify-center gap-1.5">
             {/* Month dropdown */}
-            <FilterSelect
-              className="shrink-0"
-              options={[
+            {(() => {
+              const monthLabels = [
                 "January",
                 "February",
                 "March",
@@ -346,84 +341,69 @@ export const GoldDateRangeCalendar = ({
                 "October",
                 "November",
                 "December",
-              ].map((month, index) => ({
-                value: index,
-                label: month,
-              }))}
-              value={{
-                value: viewDate.getMonth(),
-                label: [
-                  "January",
-                  "February",
-                  "March",
-                  "April",
-                  "May",
-                  "June",
-                  "July",
-                  "August",
-                  "September",
-                  "October",
-                  "November",
-                  "December",
-                ][viewDate.getMonth()],
-              }}
-              onChange={(selected) => {
-                if (!selected) return;
+              ];
 
-                const nextDate = new Date(viewDate);
-                nextDate.setDate(1);
-                nextDate.setMonth(
-                  Number(selected.value),
-                );
+              const monthOptions = monthLabels.map((m, i) => ({
+                value: i,
+                label: m,
+              }));
 
-                onViewDateChange(nextDate);
-              }}
-              isDisabled={loading}
-              isSearchable={false}
-              placeholder="Month"
-            />
+              return (
+                <FilterSelect
+                  className="shrink-0"
+                  options={monthOptions}
+                  value={
+                    monthOptions.find(
+                      (o) => Number(o.value) === Number(viewDate.getMonth()),
+                    ) || null
+                  }
+                  onChange={(selected) => {
+                    if (!selected) return;
+                    const nextDate = new Date(viewDate);
+                    nextDate.setDate(1);
+                    nextDate.setMonth(Number(selected.value));
+                    onViewDateChange(nextDate);
+                  }}
+                  isDisabled={loading}
+                  isSearchable={false}
+                  placeholder="Month"
+                />
+              );
+            })()}
 
             {/* Year dropdown */}
-            <FilterSelect
-              className="shrink-0"
-              options={Array.from(
-                { length: 21 },
-                (_, index) => {
-                  const year =
-                    new Date().getFullYear() -
-                    10 +
-                    index;
+            {(() => {
+              const startYear = new Date().getFullYear() - 10;
+              const yearOptions = Array.from({ length: 21 }, (_, index) => {
+                const year = startYear + index;
+                return { value: year, label: String(year) };
+              });
 
-                  return {
-                    value: year,
-                    label: String(year),
-                  };
-                },
-              )}
-              value={{
-                value: viewDate.getFullYear(),
-                label: String(
-                  viewDate.getFullYear(),
-                ),
-              }}
-              onChange={(selected) => {
-                if (!selected) return;
-
-                const nextDate = new Date(viewDate);
-                nextDate.setDate(1);
-                nextDate.setFullYear(
-                  Number(selected.value),
-                );
-
-                onViewDateChange(nextDate);
-              }}
-              isDisabled={loading}
-              isSearchable={false}
-              placeholder="Year"
-            />
+              return (
+                <FilterSelect
+                  className="shrink-0"
+                  options={yearOptions}
+                  value={
+                    yearOptions.find(
+                      (o) => Number(o.value) === Number(viewDate.getFullYear()),
+                    ) || null
+                  }
+                  onChange={(selected) => {
+                    if (!selected) return;
+                    const nextDate = new Date(viewDate);
+                    nextDate.setDate(1);
+                    nextDate.setFullYear(Number(selected.value));
+                    onViewDateChange(nextDate);
+                  }}
+                  isDisabled={loading}
+                  isSearchable={false}
+                  placeholder="Year"
+                />
+              );
+            })()}
           </div>
 
-          <p className="text-[11px] font-normal text-[var(--admin-muted)]">
+          <p className="text-xs font-medium text-slate-500">
             {!dates.fromDate
               ? "Select start date"
               : !dates.toDate
@@ -434,12 +414,8 @@ export const GoldDateRangeCalendar = ({
 
         <button
           type="button"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-base font-normal text-[var(--admin-gold-dark)] transition hover:border-[var(--admin-gold)] hover:bg-[#fffaf0] disabled:opacity-50"
-          onClick={() =>
-            onViewDateChange(
-              addMonths(viewDate, 1),
-            )
-          }
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-medium text-slate-700 shadow-xs transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40"
+          onClick={() => onViewDateChange(addMonths(viewDate, 1))}
           disabled={loading}
           aria-label="Next month"
         >
@@ -447,63 +423,53 @@ export const GoldDateRangeCalendar = ({
         </button>
       </div>
 
-      <div className="mb-3 grid grid-cols-7 gap-1 text-center text-[10px] font-normal uppercase tracking-wide text-slate-400">
+      <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
         {WEEKDAY_LABELS.map((label) => (
-          <span key={label}>{label}</span>
+          <span key={label} className="py-1">
+            {label}
+          </span>
         ))}
       </div>
 
       <div className="grid grid-cols-7 gap-1">
         {days.map((day) => {
-          const isFutureDate =
-            day.value > todayValue;
+          const isFutureDate = day.value > todayValue;
+          const isStart = day.value === dates.fromDate;
+          const isEnd = day.value === dates.toDate;
+          const isSelected = isStart || isEnd;
+          const isToday = day.value === todayValue;
 
-          const isStart =
-            day.value === dates.fromDate;
+          const isInRange = isBetweenDates(
+            day.value,
+            dates.fromDate,
+            dates.toDate,
+          );
 
-          const isEnd =
-            day.value === dates.toDate;
-
-          const isSelected =
-            isStart || isEnd;
-
-          const isInRange =
-            isBetweenDates(
-              day.value,
-              dates.fromDate,
-              dates.toDate,
-            );
-
-          // Disable future dates.
-          // If maxDate is provided, also respect it.
           const isDisabled =
-            isFutureDate ||
-            Boolean(
-              maxDate &&
-                day.value > maxDate,
-            );
+            isFutureDate || Boolean(maxDate && day.value > maxDate);
 
           return (
             <button
               key={day.value}
               type="button"
-              className={`mx-auto flex h-8 w-8 items-center justify-center rounded-md text-[10px] font-normal transition ${
+              className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-xs font-medium transition-all ${
                 isSelected
-                  ? "bg-[#211b62] text-white shadow-sm"
+                  ? "bg-[var(--admin-navy)] text-white font-semibold shadow-xs"
                   : isInRange
-                    ? "bg-[#fff3cc] text-[var(--admin-gold-dark)]"
-                    : day.isCurrentMonth
-                      ? "text-[var(--admin-ink)] hover:bg-[#fff8e6] hover:text-[var(--admin-gold-dark)]"
-                      : "text-slate-300 hover:bg-slate-50"
-              } disabled:cursor-not-allowed disabled:bg-transparent disabled:text-slate-200 disabled:shadow-none`}
+                    ? "bg-[var(--admin-gold-soft)] text-[var(--admin-navy)] font-semibold"
+                    : isDisabled
+                      ? "text-slate-300 cursor-not-allowed bg-transparent"
+                      : isToday
+                        ? "border border-[var(--admin-gold)] font-bold text-[var(--admin-gold-dark)] bg-[var(--admin-gold-soft)]/90 hover:bg-[var(--admin-gold-soft)]/100"
+                        : day.isCurrentMonth
+                          ? "text-[var(--admin-ink)] hover:bg-white hover:text-[var(--admin-navy-dark)]"
+                          : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+              } disabled:cursor-not-allowed disabled:bg-transparent disabled:shadow-none`}
               onClick={() => {
                 if (isDisabled) return;
-
                 onSelectDate(day.value);
               }}
-              disabled={
-                loading || isDisabled
-              }
+              disabled={loading || isDisabled}
             >
               {day.day}
             </button>
@@ -511,25 +477,39 @@ export const GoldDateRangeCalendar = ({
         })}
       </div>
 
-      <div className="mx-auto mt-5 w-[375px] max-w-full rounded-md border border-[#f1dfad] bg-[#fffaf0] px-3 py-2.5 text-xs font-normal text-[var(--admin-gold-dark)]">
-        {!dates.fromDate
-          ? "Select start date"
-          : !dates.toDate
-            ? `Start date: ${formatDateLabel(
-                dates.fromDate,
-              )} — Select end date`
-            : `${formatDateLabel(
-                dates.fromDate,
-              )} - ${formatDateLabel(
-                dates.toDate,
-              )}`}
+      {/* Selected Range Display Box - simplified & styled */}
+      <div className="mt-4 w-full">
+        {!dates.fromDate ? (
+          <span className="text-slate-400 text-sm"></span>
+        ) : !dates.toDate ? (
+          <div className="flex justify-end items-center gap-3">
+            <div className="rounded-md bg-[var(--admin-gold-soft)]/40 px-3 py-1 text-[11px] font-semibold text-[var(--admin-gold)]">
+              {formatDateLabel(dates.fromDate)}
+            </div>
+            <span className="text-[11px] text-[var(--admin-muted)]">
+              Select end date
+            </span>
+          </div>
+        ) : (
+          <div className="flex justify-end">
+            <div className="inline-flex items-center gap-3 rounded-lg  bg-white/90 px-3 py-1 text-xs font-medium">
+              <span className="text-[var(--admin-ink)]">
+                {formatDateLabel(dates.fromDate)}
+              </span>
+              <span className="text-slate-400">→</span>
+              <span className="text-[var(--admin-ink)]">
+                {formatDateLabel(dates.toDate)}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="inline-flex min-h-8 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-medium text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={onToday}
             disabled={loading}
           >
@@ -538,13 +518,9 @@ export const GoldDateRangeCalendar = ({
 
           <button
             type="button"
-            className="inline-flex min-h-8 items-center justify-center rounded border border-red-100 bg-white px-3 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
             onClick={onClear}
-            disabled={
-              loading ||
-              (!dates.fromDate &&
-                !dates.toDate)
-            }
+            disabled={loading || (!dates.fromDate && !dates.toDate)}
           >
             Clear
           </button>
@@ -553,7 +529,7 @@ export const GoldDateRangeCalendar = ({
         <div className="flex items-center justify-end gap-2">
           <button
             type="button"
-            className="inline-flex min-h-8 items-center justify-center rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={onCancel}
             disabled={loading}
           >
@@ -562,11 +538,8 @@ export const GoldDateRangeCalendar = ({
 
           <button
             type="button"
-            className="inline-flex min-h-8 min-w-[86px] items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-xs font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)] disabled:cursor-not-allowed disabled:opacity-70"
-            disabled={
-              !hasCompleteRange ||
-              loading
-            }
+            className="inline-flex h-9 min-w-[90px] items-center justify-center rounded-lg bg-[var(--admin-gold)] text-white px-4 text-xs font-semibold shadow-sm transition hover:bg-[var(--admin-gold-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-slate-200 disabled:text-slate-400"
+            disabled={!hasCompleteRange || loading}
             onClick={onApply}
           >
             Apply
@@ -615,12 +588,12 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
     setOpen(false);
   };
 
- const clearRange = () => {
-  setDraftDates({
-    fromDate: "",
-    toDate: "",
-  });
-};
+  const clearRange = () => {
+    setDraftDates({
+      fromDate: "",
+      toDate: "",
+    });
+  };
 
   const selectToday = () => {
     const todayValue = toInputDate(new Date());
@@ -705,13 +678,7 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
 
 /* ─────────────── Debounced Text Filter ─────────────── */
 
-const DebouncedTextFilter = ({
-  field,
-  value,
-  onChange,
-  id,
-  wrapperClass,
-}) => {
+const DebouncedTextFilter = ({ field, value, onChange, id, wrapperClass }) => {
   const [inputValue, setInputValue] = useState(value ?? "");
 
   const debounceRef = useRef(null);
@@ -797,14 +764,9 @@ const DebouncedTextFilter = ({
           type="text"
           value={inputValue}
           onChange={handleChange}
-          placeholder={
-            field.placeholder ||
-            `Search ${field.label || ""}…`
-          }
+          placeholder={field.placeholder || `Search ${field.label || ""}…`}
           className={`admin-input min-h-9 w-full text-sm ${
-            field.type === "search"
-              ? "!pl-9"
-              : ""
+            field.type === "search" ? "!pl-9" : ""
           }`}
         />
 
@@ -831,11 +793,7 @@ const FilterField = ({ field, value, onChange, values }) => {
   /* ─────────────── Async Dropdown ─────────────── */
   if (field.type === "asyncDropdown") {
     return (
-      <AsyncDropdownFilter
-        field={field}
-        value={value}
-        onChange={onChange}
-      />
+      <AsyncDropdownFilter field={field} value={value} onChange={onChange} />
     );
   }
 
@@ -860,12 +818,8 @@ const FilterField = ({ field, value, onChange, values }) => {
         <FilterSelect
           options={field.options || []}
           value={selectedOption}
-          onChange={(opt) =>
-            onChange(field.key, opt ? opt.value : "")
-          }
-          placeholder={
-            field.placeholder || `All ${field.label || ""}`
-          }
+          onChange={(opt) => onChange(field.key, opt ? opt.value : "")}
+          placeholder={field.placeholder || `All ${field.label || ""}`}
           isSearchable={field.isSearchable ?? true}
           isClearable
           inputId={id}
@@ -894,14 +848,10 @@ const FilterField = ({ field, value, onChange, values }) => {
 
     const maxDate = field.maxDate ?? today;
 
-    const isEndDate =
-      field.key === "endDate" ||
-      field.key === "toDate";
+    const isEndDate = field.key === "endDate" || field.key === "toDate";
 
     const minDate =
-      isEndDate && values?.fromDate
-        ? values.fromDate
-        : field.minDate;
+      isEndDate && values?.fromDate ? values.fromDate : field.minDate;
 
     return (
       <div className={wrapperClass}>
@@ -918,9 +868,7 @@ const FilterField = ({ field, value, onChange, values }) => {
           id={id}
           type="date"
           value={value ?? ""}
-          onChange={(e) =>
-            onChange(field.key, e.target.value)
-          }
+          onChange={(e) => onChange(field.key, e.target.value)}
           min={minDate}
           max={maxDate}
           className="admin-input min-h-9 w-full text-sm"
@@ -998,10 +946,7 @@ const FilterBar = ({
           endKey: nextField.key || endKey,
           minDate: field.minDate,
           maxDate: nextField.maxDate ?? field.maxDate,
-          disableFuture:
-            field.disableFuture ??
-            nextField.disableFuture ??
-            true,
+          disableFuture: field.disableFuture ?? nextField.disableFuture ?? true,
           width:
             field.rangeWidth ||
             nextField.rangeWidth ||
@@ -1044,17 +989,17 @@ const FilterBar = ({
   }, [resolvedFilters]);
 
   // NOW normalizedFilters exists, so this is safe
-const resolvedOnChange = useCallback(
-  (key, value) => {
-    if (listPage?.setFilter) {
-      listPage.setFilter(key, value);
-      return;
-    }
+  const resolvedOnChange = useCallback(
+    (key, value) => {
+      if (listPage?.setFilter) {
+        listPage.setFilter(key, value);
+        return;
+      }
 
-    onChange?.(key, value);
-  },
-  [listPage, onChange],
-);
+      onChange?.(key, value);
+    },
+    [listPage, onChange],
+  );
 
   const resolvedActiveCount = useMemo(() => {
     return normalizedFilters.reduce((count, field) => {
@@ -1093,14 +1038,10 @@ const resolvedOnChange = useCallback(
       <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
           <MdFilterList size={16} />
-
           Filters
-
           <span
             className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--admin-gold)] px-1.5 text-[10px] font-bold text-[var(--admin-navy)] transition-opacity ${
-              resolvedActiveCount > 0
-                ? "opacity-100"
-                : "opacity-0"
+              resolvedActiveCount > 0 ? "opacity-100" : "opacity-0"
             }`}
             aria-hidden={resolvedActiveCount === 0}
           >
@@ -1112,17 +1053,10 @@ const resolvedOnChange = useCallback(
           <button
             type="button"
             onClick={resolvedOnClear}
-            disabled={
-              loading ||
-              resolvedActiveCount === 0
-            }
-            tabIndex={
-              resolvedActiveCount > 0 ? 0 : -1
-            }
+            disabled={loading || resolvedActiveCount === 0}
+            tabIndex={resolvedActiveCount > 0 ? 0 : -1}
             className={`inline-flex h-8 items-center gap-1 rounded-md border border-red-100 bg-white px-2.5 text-xs font-semibold text-red-500 transition-opacity hover:bg-red-50 hover:text-red-700 disabled:pointer-events-none ${
-              resolvedActiveCount > 0
-                ? "opacity-100"
-                : "opacity-0"
+              resolvedActiveCount > 0 ? "opacity-100" : "opacity-0"
             }`}
             aria-hidden={resolvedActiveCount === 0}
           >

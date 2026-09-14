@@ -82,7 +82,7 @@ const customStyles = (error, controlHeight) => ({
   menu: (provided) => ({
     ...provided,
     borderRadius: 8,
-    zIndex: 10050,
+    zIndex: 100200,
     position: "absolute",
   }),
 
@@ -126,7 +126,7 @@ const customStyles = (error, controlHeight) => ({
 
   menuPortal: (provided) => ({
     ...provided,
-    zIndex: 10050,
+    zIndex: 100200,
   }),
 });
 
@@ -157,9 +157,7 @@ const FilterSelect = ({
   value,
   onChange,
   isDisabled = false,
-  placeholder = label
-    ? label
-    : "Search by User's Name or Username",
+  placeholder = label ? label : "Search by User's Name or Username",
   isMulti = false,
   isCreatable = false,
   error = "",
@@ -242,11 +240,7 @@ const FilterSelect = ({
             {error}
           </p>
         ) : (
-          helperText && (
-            <p className="admin-field-help">
-              {helperText}
-            </p>
-          )
+          helperText && <p className="admin-field-help">{helperText}</p>
         )}
       </div>
     </div>

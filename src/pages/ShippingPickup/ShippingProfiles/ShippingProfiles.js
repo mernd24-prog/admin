@@ -1617,23 +1617,14 @@ export default function ShippingProfiles() {
       />
 
       <div className="mb-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-[var(--admin-ink)]">
-              Admin Shipping Templates
-            </h3>
-            <p className="text-xs text-[var(--admin-muted)]">
-              Sellers copy these templates into their own profile, then edit
-              only their private copy. The admin template never changes.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="admin-btn-secondary text-xs"
-            onClick={fetchTemplates}
-          >
-            Refresh Templates
-          </button>
+        <div className="mb-3">
+          <h3 className="text-sm font-semibold text-[var(--admin-ink)]">
+            Admin Shipping Templates
+          </h3>
+          <p className="text-xs text-[var(--admin-muted)]">
+            Sellers copy these templates into their own profile, then edit
+            only their private copy. The admin template never changes.
+          </p>
         </div>
         {templatesPayload.list.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-[var(--admin-muted)]">
@@ -1647,7 +1638,6 @@ export default function ShippingProfiles() {
                 title={template.name}
                 description={template.description || "Reusable admin template"}
                 // icon={<MdLocalShipping size={18} />}
-                badge={`v${template.version || 1}`}
                 titleClassName="text-[16px] leading-5"
                 descriptionClassName="text-[12px] leading-[18px]"
                 footer={

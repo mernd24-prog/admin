@@ -202,7 +202,8 @@ const StatusBadge = ({
   const key = String(status)
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
-  const colorClass = VARIANTS[key] || "bg-gray-50 text-gray-600 border-gray-200";
+  const colorClass =
+    VARIANTS[key] || "bg-gray-50 text-gray-600 border-gray-200";
   const dotColor = DOT_COLORS[key] || "bg-gray-400";
   const displayText = formatLabel(
     label ?? DISPLAY_LABELS[key] ?? status,

@@ -287,6 +287,46 @@ const compactObject = (value) => {
     return acc;
   }, {});
 };
+const getCollectionInitials = (name = "") => {
+  const words = String(name || "")
+    .trim()
+    .split(/[\s-_]+/)
+    .filter(Boolean);
+  if (!words.length) return "C";
+  const letterWords = words.filter((w) => /^[a-zA-Z]/.test(w));
+  if (letterWords.length >= 2) {
+    return `${letterWords[0][0]}${letterWords[1][0]}`.toUpperCase();
+  }
+  if (letterWords.length === 1) {
+    const w = letterWords[0].replace(/[^a-zA-Z]/g, "");
+    return w.length >= 2 ? w.slice(0, 2).toUpperCase() : w.toUpperCase();
+  }
+  return words[0].slice(0, 2).toUpperCase();
+};
+
+const CollectionCardThumbnail = ({ image, name }) => {
+  const [imageFailed, setImageFailed] = useState(false);
+  const initials = useMemo(() => getCollectionInitials(name), [name]);
+
+  if (image && !imageFailed) {
+    return (
+      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[var(--admin-line)] shadow-xs">
+        <img
+          src={image}
+          alt={name}
+          className="h-full w-full object-cover"
+          onError={() => setImageFailed(true)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--admin-line)] bg-gradient-to-br from-[#edf3ff] to-[#dbe7ff] text-sm font-bold text-[var(--admin-navy)] shadow-xs select-none">
+      {initials}
+    </div>
+  );
+};
 
 export default function ProductManagementUI() {
   const dispatch = useDispatch();
@@ -3505,7 +3545,7 @@ export default function ProductManagementUI() {
                   </div>
 
                   {filteredCollectionOptions.length ? (
-                    <div className="grid max-h-80 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid max-h-96 gap-3.5 overflow-y-auto pr-1 sm:grid-cols-2">
                       {filteredCollectionOptions.map((collection) => {
                         const value = String(collection._id || collection.slug || collection.name);
                         const selected = isCollectionSelected(collection);
@@ -3516,25 +3556,39 @@ export default function ProductManagementUI() {
                             type="button"
                             onClick={() => toggleCollection(collection)}
                             aria-pressed={selected}
-                            className={`group overflow-hidden rounded-xl border text-left transition ${selected ? "border-[var(--admin-gold)] bg-amber-50 shadow-sm" : "border-[var(--admin-line)] bg-white hover:border-amber-300 hover:shadow-sm"}`}
+                            className={`group relative overflow-hidden rounded-xl border text-left transition-colors duration-150 ${
+                              selected
+                                ? "border-[var(--admin-gold)] bg-amber-50/50 shadow-sm ring-1 ring-[var(--admin-gold)]/30"
+                                : "border-gray-200/80 bg-white hover:border-amber-300"
+                            }`}
                           >
-                            <div className="flex min-h-[76px] items-stretch">
-                              <div className="flex w-20 shrink-0 items-center justify-center bg-gray-100">
-                                {image ? (
-                                  <img src={image} alt="" className="h-full w-full object-cover" />
-                                ) : (
-                                  <BsMenuApp className="text-gray-300" size={24} />
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1 p-3">
+                            <div className="flex items-start gap-3.5 p-3.5">
+                              <CollectionCardThumbnail image={image} name={collection.name} />
+                              <div className="min-w-0 flex-1">
                                 <div className="flex items-start justify-between gap-2">
-                                  <span className="truncate text-sm font-semibold text-[var(--admin-navy)]">{collection.name}</span>
-                                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[var(--admin-gold)] bg-[var(--admin-gold)] text-white" : "border-gray-300 bg-white text-transparent"}`}>
-                                    <FiCheck size={12} />
+                                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                    <span className="text-sm font-semibold text-[var(--admin-navy)] leading-snug group-hover:text-[var(--admin-gold-dark)] transition-colors">
+                                      {collection.name}
+                                    </span>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--admin-surface-soft)] text-gray-600 border border-gray-200/60 capitalize shrink-0">
+                                      {(collection.type || "custom").replace(/_/g, " ")}
+                                    </span>
+                                  </div>
+                                  <span
+                                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all ${
+                                      selected
+                                        ? "border-[var(--admin-gold)] bg-[var(--admin-gold)] text-white shadow-xs"
+                                        : "border-gray-300 bg-white text-transparent group-hover:border-[var(--admin-gold)]/60"
+                                    }`}
+                                  >
+                                    <FiCheck size={11} strokeWidth={3} />
                                   </span>
                                 </div>
-                                <p className="mt-1 truncate text-[11px] capitalize text-gray-500">{collection.type || "custom"}</p>
-                                {collection.description && <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-500">{collection.description}</p>}
+                                {collection.description && (
+                                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-500">
+                                    {collection.description}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </button>

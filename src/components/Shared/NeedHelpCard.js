@@ -13,7 +13,7 @@ const NeedHelpCard = ({
 }) => (
   <div
     className={twMerge(
-      "mt-8 rounded-[8px] border border-[var(--admin-line)] bg-[var(--admin-gold-soft)] p-4",
+      "mt-8 rounded-[8px] border border-[var(--admin-line)] bg-[var(--admin-gold)] p-4",
       className,
     )}
   >

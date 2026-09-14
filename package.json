@@ -47,6 +47,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "start:admin": "PORT=3001 REACT_APP_PANEL_MODE=ADMIN react-scripts start",
+    "start:seller": "PORT=3000 REACT_APP_PANEL_MODE=SELLER react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
