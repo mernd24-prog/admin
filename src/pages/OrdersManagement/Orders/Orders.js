@@ -308,19 +308,6 @@ const createColumns = (
       <OrderLink orderId={orderIdOf(row)} orderNumber={v || row.orderNumber} />
     ),
   },
-  {
-    key: "createdAt",
-    label: "Date",
-    sortable: true,
-    render: (v, row) => {
-      const date = firstDefined(v, row.created_at);
-      return (
-        <span className="text-gray-500 text-sm">
-          {formatDateTime12Hour(date)}
-        </span>
-      );
-    },
-  },
   ...(showBuyerColumn
     ? [
         {
@@ -381,7 +368,11 @@ const createColumns = (
             );
 
             return canOpenBuyerDetails && buyerId ? (
-              <UserLink userId={buyerId} userName={name || email} className="block text-left">
+              <UserLink
+                userId={buyerId}
+                userName={name || email}
+                className="block text-left"
+              >
                 {buyerContent}
               </UserLink>
             ) : (
@@ -469,7 +460,11 @@ const createColumns = (
               </>
             );
             return canLinkSeller ? (
-              <SellerLink sellerId={sellerId} sellerName={sellerName} className="block text-left">
+              <SellerLink
+                sellerId={sellerId}
+                sellerName={sellerName}
+                className="block text-left"
+              >
                 {content}
               </SellerLink>
             ) : (
@@ -495,26 +490,15 @@ const createColumns = (
     ),
   },
   {
-    key: "status",
-    label: "Order Status",
-    render: (v) => <StatusBadge status={v} />,
-  },
-  // {
-  //   key: "fulfillment_status",
-  //   label: "Fulfilment",
-  //   render: (v, row) => (
-  //     <StatusBadge
-  //       status={firstDefined(v, row.fulfilmentStatus, row.fulfillmentStatus, row.status)}
-  //       dot
-  //     />
-  //   ),
-  // },
-  {
     key: "payment_provider",
     label: "Payment Type",
     render: (v, row) => {
-      const provider = String(firstDefined(v, row.paymentProvider, "")).toLowerCase();
-      const label = PAYMENT_TYPE_OPTIONS.find((option) => option.value === provider)?.label;
+      const provider = String(
+        firstDefined(v, row.paymentProvider, ""),
+      ).toLowerCase();
+      const label = PAYMENT_TYPE_OPTIONS.find(
+        (option) => option.value === provider,
+      )?.label;
       return (
         <span className="text-sm font-medium text-gray-700">
           {label || (provider ? provider.replace(/_/g, " ") : "N/A")}
@@ -528,6 +512,11 @@ const createColumns = (
     render: (v, row) => (
       <StatusBadge status={firstDefined(v, row.paymentStatus)} dot />
     ),
+  },
+  {
+    key: "status",
+    label: "Order Status",
+    render: (v) => <StatusBadge status={v} />,
   },
   {
     key: "delivery_status",
@@ -738,6 +727,19 @@ const Orders = () => {
               </div>
             )}
           </div>
+        );
+      },
+    },
+    {
+      key: "createdAt",
+      label: "Date",
+      sortable: true,
+      render: (v, row) => {
+        const date = firstDefined(v, row.created_at);
+        return (
+          <span className="text-gray-500 text-sm whitespace-nowrap">
+            {formatDateTime12Hour(date)}
+          </span>
         );
       },
     },

@@ -1492,7 +1492,6 @@ const Returns = () => {
 
   return (
     <div>
-      <Loader loading={loading} />
       <PageHeader
         title="Returns & Refunds"
         subtitle="Review RMA requests, QC, refunds, and replacement lifecycle."

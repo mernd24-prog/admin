@@ -720,7 +720,6 @@ const ShipmentTracking = () => {
 
   return (
     <div>
-      <Loader loading={loading} />
       <PageHeader
         title="Shipments"
         subtitle="Manage seller-packed, shipped, and manually delivered orders with courier tracking details."

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  MdDoneAll,
   MdMarkEmailRead,
   MdNotifications,
   MdSend,
@@ -25,7 +26,6 @@ import {
   setNotificationsSeenAt,
 } from "../../../Redux/notificationsSlice";
 import { formatDateTime12Hour } from "../../../utils/formatters";
-import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
@@ -46,32 +46,132 @@ const TEMPLATE_OPTIONS = [
   { value: "custom", label: "Custom" },
 ];
 
+const CLASS_FORM_INPUT =
+  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]";
+
 const firstValue = (...values) =>
   values.find(
     (value) =>
       value !== undefined && value !== null && String(value).trim() !== "",
   );
 
-const getNotificationDetailRoute = (notification = {}) => {
+const extractEntityFromText = (text = "") => {
+  if (!text) return {};
+  const str = String(text);
+
+  // 1. Order ID or Order Number (e.g. ORD-260909-5AV72IJI)
+  const orderNumMatch = str.match(/\b(ORD-[A-Za-z0-9-]+)\b/i);
+  if (orderNumMatch) return { orderId: orderNumMatch[1] };
+
+  // 2. UUID matching (36-character standard UUID)
+  const uuidMatch = str.match(
+    /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i,
+  );
+  if (uuidMatch) {
+    const uuid = uuidMatch[1];
+    const lower = str.toLowerCase();
+    if (
+      lower.includes("payout") ||
+      lower.includes("finance") ||
+      lower.includes("wallet")
+    ) {
+      return { payoutId: uuid };
+    }
+    if (
+      lower.includes("shipment") ||
+      lower.includes("tracking") ||
+      lower.includes("transit") ||
+      lower.includes("courier")
+    ) {
+      return { shipmentId: uuid };
+    }
+    if (lower.includes("invoice") || lower.includes("tax")) {
+      return { invoiceId: uuid, orderId: uuid };
+    }
+    if (lower.includes("product") || lower.includes("item")) {
+      return { productId: uuid };
+    }
+    if (
+      lower.includes("return") ||
+      lower.includes("refund") ||
+      lower.includes("rma")
+    ) {
+      return { returnId: uuid };
+    }
+    if (lower.includes("order") || lower.includes("payment")) {
+      return { orderId: uuid };
+    }
+    return { genericId: uuid };
+  }
+
+  // 3. Fallback to topic based on keywords
+  const lower = str.toLowerCase();
+  if (
+    lower.includes("payout") ||
+    lower.includes("finance") ||
+    lower.includes("wallet")
+  ) {
+    return { topic: "payout" };
+  }
+  if (lower.includes("invoice") || lower.includes("tax")) {
+    return { topic: "invoice" };
+  }
+  if (
+    lower.includes("shipment") ||
+    lower.includes("delivery") ||
+    lower.includes("delivered") ||
+    lower.includes("transit")
+  ) {
+    return { topic: "shipment" };
+  }
+  if (
+    lower.includes("product") ||
+    lower.includes("catalog") ||
+    lower.includes("inventory")
+  ) {
+    return { topic: "product" };
+  }
+  if (lower.includes("order") || lower.includes("payment")) {
+    return { topic: "order" };
+  }
+  if (lower.includes("return") || lower.includes("refund")) {
+    return { topic: "return" };
+  }
+
+  return {};
+};
+
+const getNotificationDetailRoute = (notification = {}, isSeller = false) => {
   const meta =
-    notification.payload || notification.meta || notification.metadata || {};
+    notification.payload ||
+    notification.meta ||
+    notification.metadata ||
+    notification.data ||
+    {};
+
+  const textCorpus = [
+    notification.subject,
+    notification.template,
+    notification.message,
+    notification.title,
+    meta.title,
+    meta.message,
+    meta.subject,
+    meta.description,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const extracted = extractEntityFromText(textCorpus);
+
   const orderId = firstValue(
     meta.orderId,
     meta.order_id,
+    meta.orderNumber,
+    meta.order_number,
     notification.orderId,
     notification.order_id,
-  );
-  const returnId = firstValue(
-    meta.returnId,
-    meta.return_id,
-    notification.returnId,
-    notification.return_id,
-  );
-  const shipmentId = firstValue(
-    meta.shipmentId,
-    meta.shipment_id,
-    notification.shipmentId,
-    notification.shipment_id,
+    extracted.orderId,
   );
   const invoiceId = firstValue(
     meta.invoiceId,
@@ -79,6 +179,35 @@ const getNotificationDetailRoute = (notification = {}) => {
     meta.taxInvoiceId,
     notification.invoiceId,
     notification.invoice_id,
+    extracted.invoiceId,
+  );
+  const shipmentId = firstValue(
+    meta.shipmentId,
+    meta.shipment_id,
+    notification.shipmentId,
+    notification.shipment_id,
+    extracted.shipmentId,
+  );
+  const payoutId = firstValue(
+    meta.payoutId,
+    meta.payout_id,
+    notification.payoutId,
+    notification.payout_id,
+    extracted.payoutId,
+  );
+  const productId = firstValue(
+    meta.productId,
+    meta.product_id,
+    notification.productId,
+    notification.product_id,
+    extracted.productId,
+  );
+  const returnId = firstValue(
+    meta.returnId,
+    meta.return_id,
+    notification.returnId,
+    notification.return_id,
+    extracted.returnId,
   );
   const creditNoteId = firstValue(
     meta.creditNoteId,
@@ -92,19 +221,16 @@ const getNotificationDetailRoute = (notification = {}) => {
     notification.dealId,
     notification.deal_id,
   );
-  const payoutId = firstValue(
-    meta.payoutId,
-    meta.payout_id,
-    notification.payoutId,
-    notification.payout_id,
-  );
 
   if (invoiceId) return `/app/tax-invoices/${encodeURIComponent(invoiceId)}`;
   if (creditNoteId)
     return `/app/credit-notes?creditNoteId=${encodeURIComponent(creditNoteId)}`;
   if (payoutId)
-    return `/app/seller-payouts?payoutId=${encodeURIComponent(payoutId)}`;
+    return isSeller
+      ? `/app/seller-payouts?payoutId=${encodeURIComponent(payoutId)}`
+      : `/app/payout-ops-queue?payoutId=${encodeURIComponent(payoutId)}`;
   if (returnId) return `/app/returns?returnId=${encodeURIComponent(returnId)}`;
+  if (productId) return `/app/products/edit/${encodeURIComponent(productId)}`;
   if (shipmentId) {
     const params = new URLSearchParams({ shipmentId: String(shipmentId) });
     if (orderId) params.set("orderId", String(orderId));
@@ -113,6 +239,16 @@ const getNotificationDetailRoute = (notification = {}) => {
   if (dealId)
     return `/app/deal-management?dealId=${encodeURIComponent(dealId)}`;
   if (orderId) return `/app/orders/view/${encodeURIComponent(orderId)}`;
+
+  // Module listing fallback
+  if (extracted.topic === "payout")
+    return isSeller ? "/app/seller-payouts" : "/app/payout-ops-queue";
+  if (extracted.topic === "invoice") return "/app/tax-invoices";
+  if (extracted.topic === "shipment") return "/app/shipment-tracking";
+  if (extracted.topic === "product") return "/app/products";
+  if (extracted.topic === "order") return "/app/orders";
+  if (extracted.topic === "return") return "/app/returns";
+
   return null;
 };
 
@@ -123,57 +259,6 @@ const FILTER_FIELDS = [
     label: "Channel",
     width: "w-36",
     options: CHANNEL_OPTIONS,
-  },
-];
-
-const BASE_COLUMNS = [
-  {
-    key: "userId",
-    label: "Recipient",
-    render: (v, row) => {
-      const name =
-        row.recipientName ||
-        row.user?.name ||
-        row.user?.full_name ||
-        row.userName;
-      return name ? (
-        <span className="text-sm font-medium text-gray-700">{name}</span>
-      ) : (
-        <span className="text-xs font-mono text-gray-400">
-          {v ? `${String(v).slice(0, 12)}…` : "—"}
-        </span>
-      );
-    },
-  },
-
-  {
-    key: "template",
-    label: "Template",
-    render: (v) => <span className="text-xs text-gray-600">{v || "—"}</span>,
-  },
-  {
-    key: "subject",
-    label: "Subject",
-    render: (v, row) => (
-      <span className="text-sm text-gray-700">
-        {v || row.payload?.title || "—"}
-      </span>
-    ),
-  },
-  {
-    key: "status",
-    label: "Status",
-    render: (v) => <StatusBadge status={v || "sent"} dot />,
-  },
-  {
-    key: "createdAt",
-    label: "Sent At",
-    sortable: true,
-    render: (v) => (
-      <span className="text-xs text-gray-400">
-        {v ? formatDateTime12Hour(new Date(v)) : "—"}
-      </span>
-    ),
   },
 ];
 
@@ -195,52 +280,95 @@ const UserMessages = () => {
   const notificationReadBaselineAt = useSelector(
     (state) => state.notifications.notificationReadBaselineAt || 0,
   );
+
   const markAsSeen = useCallback(
     (notification) => dispatch(markNotificationRead(notification)),
     [dispatch],
   );
+
   const columns = useMemo(() => {
-    const baseColumns = (
-      isSeller
-        ? BASE_COLUMNS.filter((column) => column.key !== "userId")
-        : BASE_COLUMNS
-    ).map((column) => {
-      if (column.key !== "channel") return column;
-      return {
-        ...column,
-        render: (value, row) => {
+    const cols = [];
+
+    if (!isSeller) {
+      cols.push({
+        key: "userId",
+        label: "Recipient",
+        render: (v, row) => {
+          const name =
+            row.recipientName ||
+            row.user?.name ||
+            row.user?.full_name ||
+            row.userName;
+          return name ? (
+            <span className="text-sm font-medium text-gray-700">{name}</span>
+          ) : (
+            <span className="text-xs font-mono text-gray-400">
+              {v ? `${String(v).slice(0, 12)}…` : "—"}
+            </span>
+          );
+        },
+      });
+    }
+
+    cols.push(
+      {
+        key: "template",
+        label: "Template",
+        render: (v, row) => (
+          <span className="text-xs text-gray-700 line-clamp-2">
+            {v || row.message || row.payload?.message || "—"}
+          </span>
+        ),
+      },
+      {
+        key: "subject",
+        label: "Subject",
+        render: (v, row) => (
+          <span className="text-sm font-semibold text-[var(--admin-ink)]">
+            {v || row.payload?.title || "—"}
+          </span>
+        ),
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (v, row) => {
           const unread = isNotificationUnread(
             row,
             readNotificationIds,
             notificationReadBaselineAt,
           );
+          if (v === "failed" || v === "error") {
+            return <StatusBadge status="failed" dot />;
+          }
+          if (unread) {
+            return <StatusBadge status="unread" label="New" dot animate />;
+          }
           return (
-            <span className="inline-flex items-center gap-1.5">
-              <span className="rounded-full bg-[#F4F1ED] px-2 py-0.5 text-xs font-medium capitalize text-[var(--admin-navy)]">
-                {String(value || "in_app").replace(/_/g, " ")}
-              </span>
-              <span
-                className={`h-2 w-2 flex-none rounded-full ${
-                  unread
-                    ? "bg-[var(--admin-navy)] shadow-[0_0_0_3px_rgba(31,27,95,0.12)]"
-                    : "bg-transparent"
-                }`}
-                aria-label={unread ? "Unseen notification" : undefined}
-              />
-            </span>
+            <StatusBadge
+              status="seen"
+              label="Seen"
+              dot
+              className="opacity-75"
+            />
           );
         },
-      };
-    });
+      },
+      {
+        key: "createdAt",
+        label: "Sent At",
+        sortable: true,
+        render: (v) => (
+          <span className="text-xs text-gray-500 whitespace-nowrap">
+            {v ? formatDateTime12Hour(new Date(v)) : "—"}
+          </span>
+        ),
+      },
+    );
 
-    return [...baseColumns];
-  }, [
-    isSeller,
-    markAsSeen,
-    navigate,
-    notificationReadBaselineAt,
-    readNotificationIds,
-  ]);
+    return cols;
+  }, [isSeller, notificationReadBaselineAt, readNotificationIds]);
+
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
@@ -254,10 +382,6 @@ const UserMessages = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [sending, setSending] = useState(false);
-
-  useEffect(() => {
-    dispatch(setNotificationsSeenAt(Date.now()));
-  }, [dispatch]);
 
   const fetchNotifications = useCallback(
     async ({ silent = false } = {}) => {
@@ -289,7 +413,6 @@ const UserMessages = () => {
         );
         setNotifications(items);
         setTotal(totalCount);
-        dispatch(setNotificationsSeenAt(Date.now()));
       } catch (err) {
         const msg =
           err?.response?.data?.message || "Failed to load notifications";
@@ -301,7 +424,7 @@ const UserMessages = () => {
         if (!silent) setLoading(false);
       }
     },
-    [dispatch, isSeller, toQueryParams],
+    [isSeller, toQueryParams],
   );
 
   useEffect(() => {
@@ -315,6 +438,12 @@ const UserMessages = () => {
     );
     return () => window.clearInterval(intervalId);
   }, [fetchNotifications]);
+
+  const handleMarkAllAsSeen = useCallback(() => {
+    notifications.forEach((n) => markAsSeen(n));
+    dispatch(setNotificationsSeenAt(Date.now()));
+    toast.success("All notifications marked as seen");
+  }, [dispatch, markAsSeen, notifications]);
 
   const handleSend = async () => {
     if (isSeller) {
@@ -347,8 +476,13 @@ const UserMessages = () => {
     }
   };
 
-  const CLASS_FORM_INPUT =
-    "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]";
+  const hasUnread = notifications.some((n) =>
+    isNotificationUnread(
+      n,
+      readNotificationIds,
+      notificationReadBaselineAt,
+    ),
+  );
 
   return (
     <div>
@@ -365,6 +499,15 @@ const UserMessages = () => {
         ]}
         actions={
           <div className="flex items-center gap-2">
+            {hasUnread && (
+              <button
+                type="button"
+                className="admin-btn-secondary text-xs flex items-center gap-1.5"
+                onClick={handleMarkAllAsSeen}
+              >
+                <MdDoneAll size={16} /> Mark All as Seen
+              </button>
+            )}
             {!isSeller && (
               <PermissionGuard
                 module="notifications"
@@ -398,15 +541,23 @@ const UserMessages = () => {
         emptyText="No notifications sent yet."
         emptyIcon={<MdNotifications size={40} className="text-gray-200" />}
         requiredModule="notifications"
-        rowClassName={(row) =>
-          isNotificationUnread(
+        onRowClick={(row) => {
+          markAsSeen(row);
+          const detailRoute = getNotificationDetailRoute(row, isSeller);
+          if (detailRoute) {
+            navigate(detailRoute);
+          }
+        }}
+        rowClassName={(row) => {
+          const unread = isNotificationUnread(
             row,
             readNotificationIds,
             notificationReadBaselineAt,
-          )
-            ? "bg-blue-50/40 font-semibold"
-            : ""
-        }
+          );
+          return unread
+            ? "bg-white font-semibold hover:bg-blue-50/40 cursor-pointer transition-colors"
+            : "opacity-60 bg-gray-50/50 text-gray-500 font-normal hover:bg-gray-100/60 hover:opacity-85 cursor-pointer transition-all";
+        }}
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}
@@ -415,7 +566,7 @@ const UserMessages = () => {
           />
         }
         rowActions={(row) => {
-          const detailRoute = getNotificationDetailRoute(row);
+          const detailRoute = getNotificationDetailRoute(row, isSeller);
           const unread = isNotificationUnread(
             row,
             readNotificationIds,

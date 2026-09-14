@@ -662,7 +662,6 @@ const PayoutOpsQueue = () => {
 
   return (
     <div>
-      <Loader loading={loading} />
       <PageHeader
         title="Payout Operations Queue"
         subtitle="Approve, hold, release, retry, complete, or fail seller payout operations"
