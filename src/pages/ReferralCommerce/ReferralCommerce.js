@@ -185,6 +185,53 @@ const emptyInfluencerForm = {
   canCreateChildren: true,
 };
 
+const validateGrowthPartnerForm = (form = {}) => {
+  const errors = {};
+  const firstName = String(form.firstName || "").trim();
+  const lastName = String(form.lastName || "").trim();
+  const email = String(form.email || "").trim();
+  const password = String(form.password || "");
+  const phone = String(form.phone || "").trim();
+  const code = String(form.code || "").trim();
+
+  if (!firstName) {
+    errors.firstName = "First name is required";
+  } else if (!/^[A-Za-z\s.'-]{2,50}$/.test(firstName)) {
+    errors.firstName = "Enter a valid first name";
+  }
+
+  if (!lastName) {
+    errors.lastName = "Last name is required";
+  } else if (!/^[A-Za-z\s.'-]{1,50}$/.test(lastName)) {
+    errors.lastName = "Enter a valid last name";
+  }
+
+  if (!email) {
+    errors.email = "Email is required";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.email = "Enter a valid email address";
+  }
+
+  if (!password) {
+    errors.password = "Temporary password is required";
+  } else if (password.length < 8) {
+    errors.password = "Password must be at least 8 characters";
+  }
+
+  if (phone && !/^[6-9]\d{9}$/.test(phone)) {
+    errors.phone = "Enter 10 digit mobile number";
+  }
+
+  if (code && !/^[A-Za-z0-9_-]{4,32}$/.test(code)) {
+    errors.code = "Use 4-32 letters, numbers, hyphen, or underscore";
+  }
+
+  return errors;
+};
+
+const validateGrowthPartnerField = (name, value, form = {}) =>
+  validateGrowthPartnerForm({ ...form, [name]: value })[name] || "";
+
 const emptyCodeForm = {
   influencerId: "",
   code: "",
@@ -1495,6 +1542,7 @@ const ReferralCommerce = () => {
   const [bonusView, setBonusView] = useState("rules");
   const [payoutAction, setPayoutAction] = useState(null);
   const [uploadingPaymentProof, setUploadingPaymentProof] = useState(false);
+  const [parentSubmitting, setParentSubmitting] = useState(false);
   const [payoutActionForm, setPayoutActionForm] = useState({
     adminNote: "",
     transactionReference: "",
@@ -1502,6 +1550,7 @@ const ReferralCommerce = () => {
   });
   const [parentId, setParentId] = useState("");
   const [influencerForm, setInfluencerForm] = useState(emptyInfluencerForm);
+  const [influencerErrors, setInfluencerErrors] = useState({});
   const [codeForm, setCodeForm] = useState(emptyCodeForm);
   const [rulesForm, setRulesForm] = useState(emptyRulesForm);
   const [bonusRuleForm, setBonusRuleForm] = useState(emptyBonusRuleForm);
@@ -1815,15 +1864,28 @@ const ReferralCommerce = () => {
 
   const resetInfluencerForm = () => {
     setInfluencerForm(emptyInfluencerForm);
+    setInfluencerErrors({});
     setParentId("");
+  };
+
+  const closeParentModal = () => {
+    setInfluencerErrors({});
+    setParentModalOpen(false);
   };
 
   const handleInfluencerField = (event) => {
     const { name, value, type, checked } = event.target;
+    const nextValue = type === "checkbox" ? checked : value;
     setInfluencerForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: nextValue,
     }));
+    setInfluencerErrors((prev) => {
+      const message = validateGrowthPartnerField(name, nextValue, influencerForm);
+      const next = { ...prev, [name]: message };
+      if (!message) delete next[name];
+      return next;
+    });
   };
 
   const handleCodeField = (event) => {
@@ -1876,6 +1938,14 @@ const ReferralCommerce = () => {
 
   const submitParent = async (event) => {
     event.preventDefault();
+    const errors = validateGrowthPartnerForm(influencerForm);
+    setInfluencerErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error("Please fix the highlighted fields");
+      return;
+    }
+
+    setParentSubmitting(true);
     try {
       await dispatch(
         createReferralParent(compactPayload(influencerForm)),
@@ -1886,6 +1956,8 @@ const ReferralCommerce = () => {
       await refreshAll();
     } catch (error) {
       toast.error(error || "Unable to create Parent Influencer");
+    } finally {
+      setParentSubmitting(false);
     }
   };
 
@@ -3702,14 +3774,14 @@ const ReferralCommerce = () => {
 
   <DefaultModal
   isOpen={parentModalOpen}
-  onClose={() => setParentModalOpen(false)}
+  onClose={closeParentModal}
   onSubmit={submitParent}
   title="Create Growth Partner"
   submitButtonText="Create Growth Partner"
   closeButtonText="Reset"
   isButtonView={true}
   width="600px"
-  loading={loading}
+  loading={parentSubmitting}
 >
   <div className="space-y-5">
     {/* ==================== Basic Information ==================== */}
@@ -3722,9 +3794,12 @@ const ReferralCommerce = () => {
         <FormInput
           label="First Name"
           name="firstName"
+          required
           value={influencerForm.firstName}
           onChange={handleInfluencerField}
           placeholder="Enter first name"
+          error={influencerErrors.firstName}
+          maxLength={50}
           className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
         />
 
@@ -3732,9 +3807,12 @@ const ReferralCommerce = () => {
         <FormInput
           label="Last Name"
           name="lastName"
+          required
           value={influencerForm.lastName}
           onChange={handleInfluencerField}
           placeholder="Enter last name"
+          error={influencerErrors.lastName}
+          maxLength={50}
           className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
         />
 
@@ -3747,6 +3825,7 @@ const ReferralCommerce = () => {
           value={influencerForm.email}
           onChange={handleInfluencerField}
           placeholder="Enter email address"
+          error={influencerErrors.email}
           className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
         />
 
@@ -3754,9 +3833,12 @@ const ReferralCommerce = () => {
         <FormInput
           label="Phone"
           name="phone"
+          type="phone"
           value={influencerForm.phone}
           onChange={handleInfluencerField}
           placeholder="Enter phone number"
+          error={influencerErrors.phone}
+          maxLength={10}
           className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
         />
 
@@ -3770,6 +3852,7 @@ const ReferralCommerce = () => {
           onChange={handleInfluencerField}
           placeholder="Enter temporary password"
           hint="At least 8 characters. The influencer uses this for the first login."
+          error={influencerErrors.password}
           className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
         />
 
@@ -3780,6 +3863,8 @@ const ReferralCommerce = () => {
           value={influencerForm.code}
           onChange={handleInfluencerField}
           placeholder="Enter referral code"
+          error={influencerErrors.code}
+          maxLength={32}
           className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
         />
       </div>

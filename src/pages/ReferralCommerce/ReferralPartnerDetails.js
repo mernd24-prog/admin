@@ -12,6 +12,7 @@ import {
   Gift,
   Landmark,
   Link,
+  Loader2,
   ShieldCheck,
   UserPlus,
   UserRound,
@@ -216,6 +217,15 @@ const partnerTypeLabel = (value) =>
       ? "Brand Associate"
       : humanize(value);
 
+const baseActionButtonClass =
+  "inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition";
+const pendingApprovalButtonClass =
+  "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100";
+const approvedActionButtonClass =
+  "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100";
+const rejectedActionButtonClass =
+  "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100";
+
 const findInfluencer = (items = [], influencerId) =>
   items.find((item) => String(getId(item)) === String(influencerId)) || null;
 
@@ -230,6 +240,7 @@ const ReferralPartnerDetails = () => {
   const [activeMainTab, setActiveMainTab] = useState("overview");
   const [activeActivityTab, setActiveActivityTab] = useState("codes");
   const [loadedDetailId, setLoadedDetailId] = useState(null);
+  const [loadingAction, setLoadingAction] = useState(null);
 
   const influencers = useMemo(
     () => getBranchList(referralState.influencersData),
@@ -343,14 +354,20 @@ const ReferralPartnerDetails = () => {
     () => getVerificationData(influencer || {}),
     [influencer],
   );
+  const isKycApproved = verificationData.kycStatus === "verified";
+  const isBankApproved = verificationData.bankStatus === "verified";
+  const verificationApproved = isKycApproved && isBankApproved;
 
-  const runPartnerAction = async (action) => {
-    if (!influencer) return;
+  const runPartnerAction = async (action, actionKey) => {
+    if (!influencer || loadingAction) return;
+    setLoadingAction(actionKey || "action");
     try {
       await action();
       refreshPartner(dispatch, id);
     } catch (error) {
       toast.error(error || "Unable to update referral partner");
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -369,7 +386,7 @@ const ReferralPartnerDetails = () => {
         }),
       ).unwrap();
       toast.success(`${section === "kyc" ? "KYC" : "Bank"} ${decision}`);
-    });
+    }, `${section}_${decision}`);
 
   const updatePartnerStatus = () =>
     runPartnerAction(async () => {
@@ -378,7 +395,7 @@ const ReferralPartnerDetails = () => {
         updateReferralInfluencerStatus({ influencerId: getId(influencer), status: nextStatus }),
       ).unwrap();
       toast.success("Referral Partner status updated");
-    });
+    }, "status");
 
   const togglePermission = () =>
     runPartnerAction(async () => {
@@ -391,7 +408,7 @@ const ReferralPartnerDetails = () => {
         }),
       ).unwrap();
       toast.success(canCreateChildren ? "Child account permission granted" : "Child account permission revoked");
-    });
+    }, "permission");
 
   const promotePartner = () =>
     runPartnerAction(async () => {
@@ -399,7 +416,7 @@ const ReferralPartnerDetails = () => {
         promoteReferralInfluencer({ influencerId: getId(influencer), canCreateChildren: true }),
       ).unwrap();
       toast.success("Brand Associate promoted to Growth Partner");
-    });
+    }, "promote");
 
   const copyRegistrationLink = async () => {
     const link = influencer?.childRegistration?.registrationUrl;
@@ -973,31 +990,31 @@ const ReferralPartnerDetails = () => {
               </div>
               <div className="flex flex-wrap gap-2">
                 {(influencer?.kycStatus === "submitted" || influencer?.kycStatus === "rejected") && (
-                  <button type="button" className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100" onClick={() => reviewVerification("kyc", "verified")}>
-                    <Check size={14} /> Approve KYC
+                  <button type="button" className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`} disabled={!!loadingAction} onClick={() => reviewVerification("kyc", "verified")}>
+                    {loadingAction === "kyc_verified" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Approve KYC
                   </button>
                 )}
                 {(influencer?.kycStatus === "submitted" || influencer?.kycStatus === "verified") && (
-                  <button type="button" className="inline-flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100" onClick={() => reviewVerification("kyc", "rejected")}>
-                    <X size={14} /> Reject KYC
+                  <button type="button" className={`${baseActionButtonClass} ${rejectedActionButtonClass}`} disabled={!!loadingAction} onClick={() => reviewVerification("kyc", "rejected")}>
+                    {loadingAction === "kyc_rejected" ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />} Reject KYC
                   </button>
                 )}
                 {(influencer?.payoutProfileStatus === "submitted" || influencer?.payoutProfileStatus === "rejected") && (
-                  <button type="button" className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100" onClick={() => reviewVerification("bank", "verified")}>
-                    <Check size={14} /> Verify Bank
+                  <button type="button" className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`} disabled={!!loadingAction} onClick={() => reviewVerification("bank", "verified")}>
+                    {loadingAction === "bank_verified" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Verify Bank
                   </button>
                 )}
                 {(influencer?.payoutProfileStatus === "submitted" || influencer?.payoutProfileStatus === "verified") && (
-                  <button type="button" className="inline-flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100" onClick={() => reviewVerification("bank", "rejected")}>
-                    <X size={14} /> Reject Bank
+                  <button type="button" className={`${baseActionButtonClass} ${rejectedActionButtonClass}`} disabled={!!loadingAction} onClick={() => reviewVerification("bank", "rejected")}>
+                    {loadingAction === "bank_rejected" ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />} Reject Bank
                   </button>
                 )}
-                <button type="button" className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition ${influencer?.status === "active" ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`} onClick={updatePartnerStatus}>
-                  {influencer?.status === "active" ? <X size={14} /> : <Check size={14} />}
+                <button type="button" className={`${baseActionButtonClass} ${influencer?.status === "active" ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" : verificationApproved ? approvedActionButtonClass : pendingApprovalButtonClass}`} disabled={!!loadingAction} onClick={updatePartnerStatus}>
+                  {loadingAction === "status" ? <Loader2 size={14} className="animate-spin" /> : influencer?.status === "active" ? <X size={14} /> : <Check size={14} />}
                   {influencer?.status === "pending" ? "Approve account" : influencer?.status === "active" ? "Suspend partner" : "Reactivate partner"}
                 </button>
-                <button type="button" className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition ${influencer?.canCreateChildren ? "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100" : "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"}`} onClick={togglePermission}>
-                  {influencer?.canCreateChildren ? <X size={14} /> : <UserPlus size={14} />}
+                <button type="button" className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition ${influencer?.canCreateChildren ? "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100" : "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"}`} disabled={!!loadingAction} onClick={togglePermission}>
+                  {loadingAction === "permission" ? <Loader2 size={14} className="animate-spin" /> : influencer?.canCreateChildren ? <X size={14} /> : <UserPlus size={14} />}
                   {influencer?.canCreateChildren ? "Revoke child creation" : "Grant child creation"}
                 </button>
                 {influencer?.childRegistration?.shareable && (
@@ -1006,8 +1023,8 @@ const ReferralPartnerDetails = () => {
                   </button>
                 )}
                 {!(influencer?.influencerType === "parent" && influencer?.canCreateChildren) && (
-                  <button type="button" className="inline-flex items-center gap-2 rounded border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100" onClick={promotePartner}>
-                    <GitBranch size={14} /> Promote to Growth Partner
+                  <button type="button" className="inline-flex items-center gap-2 rounded border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100" disabled={!!loadingAction} onClick={promotePartner}>
+                    {loadingAction === "promote" ? <Loader2 size={14} className="animate-spin" /> : <GitBranch size={14} />} Promote to Growth Partner
                   </button>
                 )}
               </div>
