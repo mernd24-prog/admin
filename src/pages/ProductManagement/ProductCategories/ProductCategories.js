@@ -2,8 +2,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { FaPlus, FaMinus, FaChevronRight } from "react-icons/fa";
-import { MdSearch, MdClose, MdAdd, MdTune } from "react-icons/md";
+import { FaChevronRight } from "react-icons/fa";
+import { MdAdd, MdTune, MdFolder } from "react-icons/md";
 
 // Components
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
@@ -25,6 +25,8 @@ import {
   update,
 } from "../../../Redux/productSlice";
 
+const CATEGORY_TABLE_PAGE_SIZE = 10;
+
 const ProductCategories = () => {
   // State management
   const [categoryOpen, setCategoryOpen] = useState(false);
@@ -36,7 +38,9 @@ const ProductCategories = () => {
   const [isRefresh, setIsRefresh] = useState(false);
   const [isPublish, setIsPublish] = useState(false);
   const [categories, setCategories] = useState([]);
-  const [expandedCategoryIds, setExpandedCategoryIds] = useState(() => new Set());
+  const [selectedMainCategoryKey, setSelectedMainCategoryKey] = useState("");
+  const [categoryPage, setCategoryPage] = useState(1);
+  const [currentPath, setCurrentPath] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedCategories, setHasLoadedCategories] = useState(false);
   const [allCategories, setAllCategories] = useState([]);
@@ -144,6 +148,17 @@ const ProductCategories = () => {
       isDashboardVisible: Boolean(category?.isDashboardVisible),
       priority: category?.sortOrder ?? category?.priority ?? 0,
       level: Number(category?.level || 0),
+      userName:
+        category?.createdByName ||
+        category?.updatedByName ||
+        category?.submittedByName ||
+        category?.reviewedByName ||
+        category?.submittedByUserName ||
+        category?.submittedBySellerName ||
+        category?.submittedByUserId ||
+        category?.submittedBySellerId ||
+        category?.reviewedBy ||
+        "-",
     }));
 
     const map = new Map(
@@ -202,7 +217,7 @@ const ProductCategories = () => {
   }, [dispatch, isRefresh]);
 
   const categoriesLoading =
-    !hasLoadedCategories || selector?.getListData?.loading || isLoading;
+    !hasLoadedCategories || selector?.getListData?.loading;
 
   // Build select options for category dropdown
   const createSelectOptions = useMemo(() => {
@@ -333,16 +348,6 @@ const ProductCategories = () => {
 
     setIsPublish(!category.isDisable);
     setCategoryEditOpen(true);
-  }, []);
-
-  const toggleExpand = useCallback((id) => {
-    setExpandedCategoryIds((current) => {
-      const next = new Set(current);
-      const key = String(id);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
   }, []);
 
   const handleDelete = useCallback((data) => {
@@ -584,17 +589,6 @@ const ProductCategories = () => {
     handleResetForm,
   ]);
 
-  const calculateCategoryCount = useCallback((category) => {
-    let count = 1; // Count the category itself
-    if (category.subCategories && category.subCategories.length > 0) {
-      count += category.subCategories.reduce(
-        (acc, subCat) => acc + calculateCategoryCount(subCat),
-        0,
-      );
-    }
-    return count;
-  }, []);
-
   const filterCategoryTree = useCallback((searchTerm, sourceCategories) => {
     if (!searchTerm || !searchTerm.trim()) {
       return sourceCategories;
@@ -602,119 +596,49 @@ const ProductCategories = () => {
 
     const term = searchTerm.toLowerCase().trim();
 
-    return sourceCategories
-      .map((category) => {
-        const mainCategoryMatches = category.name
-          ?.toLowerCase()
-          .includes(term);
+    const filterNodes = (nodes = []) =>
+      nodes
+        .map((category) => {
+          const categoryMatches = category.name?.toLowerCase().includes(term);
+          const filteredChildren = filterNodes(category.subCategories || []);
 
-        const filteredSubCategories =
-          category.subCategories
-            ?.map((subCategory) => {
-              const subCategoryMatches = subCategory.name
-                ?.toLowerCase()
-                .includes(term);
+          if (categoryMatches || filteredChildren.length > 0) {
+            return {
+              ...category,
+              subCategories: categoryMatches
+                ? category.subCategories || []
+                : filteredChildren,
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
 
-              const filteredChildren =
-                subCategory.subCategories?.filter((child) =>
-                  child.name.toLowerCase().includes(term),
-                ) || [];
-
-              if (subCategoryMatches || filteredChildren.length > 0) {
-                return {
-                  ...subCategory,
-                  subCategories: filteredChildren,
-                };
-              }
-              return null;
-            })
-            .filter(Boolean) || [];
-
-        if (mainCategoryMatches || filteredSubCategories.length > 0) {
-          return {
-            ...category,
-            subCategories: filteredSubCategories,
-          };
-        }
-        return null;
-      })
-      .filter(Boolean);
+    return filterNodes(sourceCategories);
   }, []);
 
   useEffect(() => {
     const filtered = filterCategoryTree(filters.search, allCategories);
     setCategories(filtered);
-
-    // Auto-expand all nodes when searching (like the hierarchy does)
-    if (filters.search?.trim()) {
-      const ids = new Set();
-      const collectIds = (nodes = []) => {
-        nodes.forEach((node) => {
-          if (node.subCategories?.length) {
-            ids.add(String(node._id));
-            collectIds(node.subCategories);
-          }
-        });
-      };
-      collectIds(filtered);
-      setExpandedCategoryIds(ids);
-    }
   }, [filters.search, allCategories, filterCategoryTree]);
+
+  useEffect(() => {
+    if (!categories.length) {
+      setSelectedMainCategoryKey("");
+      return;
+    }
+
+    const selectedMainExists = categories.some(
+      (category) => String(category.categoryKey || category._id) === selectedMainCategoryKey,
+    );
+    if (!selectedMainExists) {
+      setSelectedMainCategoryKey("");
+    }
+  }, [categories, selectedMainCategoryKey]);
 
   const handleSearchRemove = useCallback(() => {
     setFilters((prev) => ({ ...prev, search: "" }));
   }, []);
-
-  // const renderCategory = (category, level = 0, parentId = null) => {
-  //   const hasChildren = category.subCategories?.length > 0;
-  //   const marginLeft = level > 0 ? `${level * 20}px` : '0';
-
-  //   return (
-  //     <div key={category._id} className="mb-2">
-  //       {/* Category Row */}
-  //       <div
-  //         className="flex items-center justify-between p-4 rounded-lg border border-gray-200 bg-white"
-  //         style={{ marginLeft }}
-  //       >
-
-  //         <div className="flex items-center gap-2">
-  //           {hasChildren && (
-  //             <button
-  //               onClick={() => toggleExpand(category._id, level, parentId)}
-  //               className="text-gray-500 hover:text-gray-700"
-  //             >
-  //               {category.isExpanded ? <FaMinus size={14} /> : <FaPlus size={14} />}
-  //             </button>
-  //           )}
-  //           <span className="font-medium text-gray-900 capitalize">{category.name}</span>
-  //         </div>
-  //         <div className="flex items-center gap-2">
-  //           <ToggleButton
-  //             isToggle={!category.isDisable}
-  //             handleClick={handleToggle(category)}
-  //             size="sm"
-  //           />
-  //           <ActionButtons
-  //             showLinkButton={false}
-  //             onEdit={() => handleEdit(category)}
-  //             onDelete={() => handleDelete(category)}
-  //             size="sm"
-  //           />
-  //         </div>
-  //       </div>
-
-  //       {category.isExpanded && hasChildren && (
-  //         <div className="mt-2 space-y-2">
-  //           {category.subCategories.map(subCategory =>
-  //             renderCategory(subCategory, level + 1, category._id)
-  //           )}
-  //         </div>
-  //       )}
-  //     </div>
-  //   );
-  // };
-
-  // Helper function to find category by ID in nested structure
 
   // Helper function to find category by ID in nested structure
   const findCategoryById = (categories, targetId) => {
@@ -730,147 +654,95 @@ const ProductCategories = () => {
     return null;
   };
 
-  // Helper function to count total subcategories recursively
-  const countSubCategories = (category) => {
-    if (!category.subCategories || category.subCategories.length === 0) {
-      return 0;
-    }
-
-    let count = category.subCategories.length;
-    category.subCategories.forEach((subCategory) => {
-      count += countSubCategories(subCategory);
-    });
-
-    return count;
-  };
-
   // Helper function to format count display
   const formatCount = (count) => {
     return String(count);
   };
 
-  const renderCategory = (
-    category,
-    level = 0,
-    isLastChild = false,
-  ) => {
-    const hasChildren = category.subCategories?.length > 0;
-    const marginLeft = level > 0 ? `${level * 40}px` : "0";
+  const categoryTableRows = useMemo(() => {
+    let activeCategories = categories;
 
-    return (
-      <div key={category._id} className="relative">
-        {/* Vertical connecting line for nested items */}
-        {level > 0 && (
-          <div
-            className="absolute left-0 top-0 bottom-0 w-px bg-gray-300"
-            style={{
-              left: `${(level - 1) * 40 + 20}px`,
-              height: isLastChild ? "24px" : "100%",
-            }}
-          />
-        )}
+    // Navigate to current path level
+    for (const step of currentPath) {
+      const found = activeCategories.find((c) => String(c._id || c.categoryKey || c.name) === String(step._id || step.categoryKey || step.name));
+      if (found) {
+        activeCategories = found.subCategories || [];
+      } else {
+        // If path node not found (e.g. filtered out), fallback to empty
+        activeCategories = [];
+        break;
+      }
+    }
 
-        {/* Horizontal connecting line for nested items */}
-        {level > 0 && (
-          <div
-            className="absolute top-6 w-5 h-px bg-gray-300"
-            style={{ left: `${(level - 1) * 40 + 20}px` }}
-          />
-        )}
+    const countCache = new Map();
+    const descendantCount = (category) => {
+      const key = String(category._id || category.categoryKey || category.name);
+      if (countCache.has(key)) return countCache.get(key);
+      const count = (category.subCategories || []).reduce(
+        (total, child) => total + 1 + descendantCount(child),
+        0,
+      );
+      countCache.set(key, count);
+      return count;
+    };
 
-        {/* Category Row */}
-        <div
-          className={`flex items-center justify-between p-3 mb-1 ${
-            level === 0
-              ? "bg-gray-100 border-l-4 border-l-gray-400"
-              : "bg-white border-l-2 border-l-transparent hover:bg-gray-50"
-          }`}
-          style={{ marginLeft }}
-        >
-          <div className="flex min-w-0 items-center gap-3">
-            {hasChildren ? (
-              <button
-                type="button"
-                onClick={() => toggleExpand(category._id)}
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border text-sm leading-none ${
-                  expandedCategoryIds.has(String(category._id))
-                    ? "border-gray-600 bg-gray-600 text-white"
-                    : "border-gray-400 bg-white text-gray-600 hover:border-gray-600"
-                }`}
-                aria-label={`${expandedCategoryIds.has(String(category._id)) ? "Collapse" : "Expand"} ${category.name}`}
-              >
-                {expandedCategoryIds.has(String(category._id)) ? "−" : "+"}
-              </button>
-            ) : level > 0 ? (
-              <span className="h-5 w-5 shrink-0" />
-            ) : null}
+    return activeCategories.map((category) => {
+      return {
+        category,
+        name: category.name || "-",
+        userName: category.userName || "-",
+        count: descendantCount(category),
+        hasSubCategories:
+          category.subCategories && category.subCategories.length > 0,
+      };
+    });
+  }, [categories, currentPath]);
 
-            <span
-              className={`capitalize ${
-                level === 0
-                  ? "font-semibold text-gray-800 text-base"
-                  : "font-medium text-gray-700 text-sm"
-              }`}
-            >
-              {category.name}
-            </span>
-            {hasChildren && (
-              <span
-                className="px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-700"
-              >
-                {formatCount(countSubCategories(category))}
-              </span>
-            )}
-          </div>
+  const totalCategoryPages = Math.max(
+    1,
+    Math.ceil(categoryTableRows.length / CATEGORY_TABLE_PAGE_SIZE),
+  );
 
-          <div className="flex items-center gap-3">
-            {/* Subcategory count badge - only show if category has subcategories */}
-            <PermissionGuard
-              module="categories"
-              action={ACTIONS.STATUS_CHANGE}
-              hide
-            >
-              <ToggleButton
-                isToggle={!category.isDisable}
-                handleClick={() => setStatusTarget(category)}
-                size="sm"
-              />
-            </PermissionGuard>
-            <ActionButtons
-              showLinkButton={false}
-              onEdit={() => handleEdit(category)}
-              onDelete={() => handleDelete(category)}
-              requiredModule="categories"
-              size="sm"
-            />
-            <PermissionGuard module="categories" action={ACTIONS.UPDATE} hide>
-              <button
-                type="button"
-                onClick={() => setAttributeCategory(category)}
-                className="rounded p-1 text-[var(--admin-blue)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)]"
-                title="Manage category attributes"
-              >
-                <MdTune size={18} />
-              </button>
-            </PermissionGuard>
-          </div>
-        </div>
-
-        {/* Subcategories */}
-        {(filters.search?.trim() || expandedCategoryIds.has(String(category._id))) && hasChildren && (
-          <div className="relative">
-            {category.subCategories.map((subCategory, index) =>
-              renderCategory(
-                subCategory,
-                level + 1,
-                index === category.subCategories.length - 1,
-              ),
-            )}
-          </div>
-        )}
-      </div>
+  const pagedCategoryRows = useMemo(() => {
+    const startIndex = (categoryPage - 1) * CATEGORY_TABLE_PAGE_SIZE;
+    return categoryTableRows.slice(
+      startIndex,
+      startIndex + CATEGORY_TABLE_PAGE_SIZE,
     );
-  };
+  }, [categoryPage, categoryTableRows]);
+
+  const renderCategoryActions = (category) => (
+    <div className="flex items-center justify-end gap-3">
+      <PermissionGuard
+        module="categories"
+        action={ACTIONS.STATUS_CHANGE}
+        hide
+      >
+        <ToggleButton
+          isToggle={!category.isDisable}
+          handleClick={() => setStatusTarget(category)}
+          size="sm"
+        />
+      </PermissionGuard>
+      <ActionButtons
+        showLinkButton={false}
+        onEdit={() => handleEdit(category)}
+        onDelete={() => handleDelete(category)}
+        requiredModule="categories"
+        size="sm"
+      />
+      <PermissionGuard module="categories" action={ACTIONS.UPDATE} hide>
+        <button
+          type="button"
+          onClick={() => setAttributeCategory(category)}
+          className="rounded p-1 text-[var(--admin-blue)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)]"
+          title="Manage category attributes"
+        >
+          <MdTune size={18} />
+        </button>
+      </PermissionGuard>
+    </div>
+  );
 
   const handleDashboardVisible = () => {
     setFormData((prev) => ({
@@ -915,8 +787,42 @@ const ProductCategories = () => {
           </div>
         </div>
 
-        {/* Category tree */}
-        <div className="space-y-1">
+        {/* Category Breadcrumbs */}
+        <div className="flex items-center gap-2 mb-4 text-sm text-[var(--admin-muted)]">
+          <button 
+            type="button"
+            onClick={() => setCurrentPath([])} 
+            className={`hover:text-[var(--admin-primary)] ${currentPath.length === 0 ? 'font-semibold text-[var(--admin-ink)]' : ''}`}
+          >
+            Catalog
+          </button>
+          
+          <FaChevronRight size={10} className="text-gray-400" />
+          
+          <button 
+            type="button"
+            onClick={() => setCurrentPath([])} 
+            className={`hover:text-[var(--admin-primary)] ${currentPath.length === 0 ? 'font-semibold text-[var(--admin-ink)]' : ''}`}
+          >
+            Categories
+          </button>
+
+          {currentPath.map((cat, index) => (
+            <React.Fragment key={cat._id || cat.name || index}>
+              <FaChevronRight size={10} className="text-gray-400" />
+              <button 
+                type="button"
+                onClick={() => setCurrentPath(currentPath.slice(0, index + 1))}
+                className={`hover:text-[var(--admin-primary)] ${index === currentPath.length - 1 ? 'font-semibold text-[var(--admin-ink)]' : ''}`}
+              >
+                {cat.name}
+              </button>
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* Category table */}
+        <div className="overflow-hidden rounded-lg border border-[var(--admin-line)]">
           {categoriesLoading && (
             <div
               className="space-y-2 py-2"
@@ -949,10 +855,101 @@ const ProductCategories = () => {
               <span className="sr-only">Loading categories…</span>
             </div>
           )}
-          {!categoriesLoading && categories.length > 0 ? (
-            categories.map((category, index) =>
-              renderCategory(category, 0, index === categories.length - 1),
-            )
+          {!categoriesLoading && categoryTableRows.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-[var(--admin-line)] text-sm">
+                <thead className="bg-[var(--admin-surface-soft)]">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--admin-muted)]">
+                      Category Name
+                    </th>
+                  
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--admin-muted)]">
+                      Subcategories
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--admin-muted)]">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--admin-line)] bg-white">
+                  {pagedCategoryRows.map((row) => (
+                    <tr
+                      key={row.category._id}
+                      className="transition-colors hover:bg-[var(--admin-surface-soft)]"
+                    >
+                      <td className="min-w-[260px] px-4 py-3">
+                        {row.hasSubCategories ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCurrentPath([...currentPath, row.category]);
+                              setCategoryPage(1);
+                            }}
+                            className="flex items-center gap-2 text-left font-semibold text-[var(--admin-primary)] hover:underline capitalize"
+                          >
+                            <MdFolder size={18} className="text-gray-400" />
+                            {row.name}
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-2 text-left font-semibold text-[var(--admin-ink)] capitalize pl-[26px]">
+                            {row.name}
+                          </div>
+                        )}
+                      </td>
+                    
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <span className="rounded bg-cyan-100 px-2 py-1 text-xs font-medium text-cyan-700">
+                          {formatCount(row.count)}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {renderCategoryActions(row.category)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {categoryTableRows.length > CATEGORY_TABLE_PAGE_SIZE && (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--admin-line)] bg-white px-4 py-3 text-sm">
+                  <span className="text-[var(--admin-muted)]">
+                    Showing {(categoryPage - 1) * CATEGORY_TABLE_PAGE_SIZE + 1}-
+                    {Math.min(
+                      categoryPage * CATEGORY_TABLE_PAGE_SIZE,
+                      categoryTableRows.length,
+                    )}{" "}
+                    of {categoryTableRows.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCategoryPage((page) => Math.max(1, page - 1))
+                      }
+                      disabled={categoryPage === 1}
+                      className="rounded border border-[var(--admin-line)] px-3 py-1.5 font-medium text-[var(--admin-ink)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-[var(--admin-muted)]">
+                      Page {categoryPage} of {totalCategoryPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCategoryPage((page) =>
+                          Math.min(totalCategoryPages, page + 1),
+                        )
+                      }
+                      disabled={categoryPage === totalCategoryPages}
+                      className="rounded border border-[var(--admin-line)] px-3 py-1.5 font-medium text-[var(--admin-ink)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : !categoriesLoading ? (
             <div className="text-center py-8 text-gray-400 text-sm">
               {filters.search
