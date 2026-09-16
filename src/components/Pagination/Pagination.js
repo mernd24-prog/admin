@@ -22,6 +22,7 @@ const Pagination = ({
   compact = false,
 }) => {
   const safeTotalPages = Math.max(1, Number(totalPages) || 1);
+
   const safeCurrentPage = Math.min(
     Math.max(1, Number(currentPage) || 1),
     safeTotalPages,
@@ -29,6 +30,7 @@ const Pagination = ({
 
   const handlePageChange = (page) => {
     if (typeof page !== "number" || page === safeCurrentPage) return;
+
     if (page >= 1 && page <= safeTotalPages) {
       onPageChange?.(page);
     }
@@ -68,7 +70,11 @@ const Pagination = ({
       pageNumbers.push("...");
     }
 
-    for (let i = Math.max(safeTotalPages - 1, 3); i <= safeTotalPages; i++) {
+    for (
+      let i = Math.max(safeTotalPages - 1, 3);
+      i <= safeTotalPages;
+      i++
+    ) {
       if (i > 2) {
         pageNumbers.push(i);
       }
@@ -78,95 +84,131 @@ const Pagination = ({
   };
 
   const pageNumbers = renderPageNumbers();
+
   const rangeStart =
-    totalRecords && pageSize ? (safeCurrentPage - 1) * pageSize + 1 : 0;
+    totalRecords && pageSize
+      ? (safeCurrentPage - 1) * pageSize + 1
+      : 0;
+
   const rangeEnd =
     totalRecords && pageSize
       ? Math.min(safeCurrentPage * pageSize, totalRecords)
       : 0;
 
   const wrapperClass = compact
-    ? "admin-pagination  flex flex-wrap items-center justify-end gap-3"
-    : "admin-pagination flex w-full flex-wrap items-center justify-end gap-3 rounded-lg   px-3 py-2";
+    ? "admin-pagination flex flex-wrap items-center justify-start gap-3"
+    : "admin-pagination flex w-full flex-wrap items-center justify-between gap-3 rounded-lg px-3 py-2";
 
   return (
     <div className={wrapperClass}>
+      {/* Showing Count - Always at Start */}
       {!compact && totalRecords !== undefined && pageSize && (
-        <div className="flex flex-col leading-tight">
+        <div className="flex shrink-0 flex-col leading-tight">
           <span className="text-xs font-medium text-[var(--admin-muted)]">
-            Showing
-          </span>
-          <span className="text-sm font-semibold text-[var(--admin-ink)]">
-            {rangeStart}-{rangeEnd} of {totalRecords}
+            Showing  {rangeStart}-{rangeEnd} of {totalRecords}
           </span>
         </div>
       )}
-      {onPageSizeChange && (
-        <div className="inline-flex items-center gap-2 rounded-md bg-[var(--admin-surface-soft)] px-2 py-1 text-xs font-medium text-[var(--admin-muted)]">
-          Rows Per Page
-          <FilterSelect
-            options={options}
-            value={options.find((option) => option.value === pageSize) || null}
-            onChange={(option) => onPageSizeChange(Number(option?.value))}
-            isSearchable={false}
-            placeholder={String(pageSize)}
-            className="!mb-0 !min-w-0 [&>div]:!min-w-0 w-[80px]"
-          />
-        </div>
-      )}
-      <nav
-        className="flex flex-row items-center justify-end gap-1 overflow-x-auto"
-        aria-label="Pagination"
-      >
-        <button
-          className={`${pageButtonBase} ${pageButtonIdle} hidden sm:inline-flex`}
-          onClick={() => handlePageChange(1)}
-          disabled={safeCurrentPage === 1}
-          aria-label="First page"
-        >
-          First
-        </button>
-        <button
-          className={`${pageButtonBase} ${pageButtonIdle} !px-0`}
-          onClick={() => handlePageChange(safeCurrentPage - 1)}
-          disabled={safeCurrentPage === 1}
-          aria-label="Previous page"
-        >
-          <LuChevronLeft />
-        </button>
 
-        {pageNumbers.map((page, index) => (
+      {/* Right Side Controls */}
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+        {/* Rows Per Page */}
+        {onPageSizeChange && (
+          <div className="inline-flex items-center gap-2 rounded-md bg-[var(--admin-surface-soft)] px-2 py-1 text-xs font-medium text-[var(--admin-muted)]">
+            <span className="whitespace-nowrap">Rows Per Page</span>
+
+            <FilterSelect
+              options={options}
+              value={
+                options.find((option) => option.value === pageSize) || null
+              }
+              onChange={(option) =>
+                onPageSizeChange(Number(option?.value))
+              }
+              isSearchable={false}
+              placeholder={String(pageSize)}
+              className="!mb-0 !min-w-0 w-[80px] [&>div]:!min-w-0"
+            />
+          </div>
+        )}
+
+        {/* Pagination Buttons */}
+        <nav
+          className="flex flex-row items-center justify-end gap-1 overflow-x-auto"
+          aria-label="Pagination"
+        >
+          {/* First */}
           <button
-            key={`${page}-${index}`}
-            className={`${pageButtonBase} ${
-              safeCurrentPage === page ? pageButtonActive : pageButtonIdle
-            } ${page === "..." ? "!min-w-7 !border-transparent !bg-transparent !px-1 !text-slate-400 !opacity-100" : ""}`}
-            onClick={() => handlePageChange(page)}
-            disabled={page === "..."}
-            aria-current={safeCurrentPage === page ? "page" : undefined}
-            aria-label={page === "..." ? "More pages" : `Page ${page}`}
+            type="button"
+            className={`${pageButtonBase} ${pageButtonIdle} hidden sm:inline-flex`}
+            onClick={() => handlePageChange(1)}
+            disabled={safeCurrentPage === 1}
+            aria-label="First page"
           >
-            {page}
+            First
           </button>
-        ))}
 
-        <button
-          className={`${pageButtonBase} ${pageButtonIdle} !px-0`}
-          onClick={() => handlePageChange(safeCurrentPage + 1)}
-          disabled={safeCurrentPage === safeTotalPages}
-          aria-label="Next page"
-        >
-          <LuChevronRight />
-        </button>
-        <button
-          className={`${pageButtonBase} ${pageButtonIdle} hidden sm:inline-flex`}
-          onClick={() => handlePageChange(safeTotalPages)}
-          disabled={safeCurrentPage === safeTotalPages}
-          aria-label="Last page"
-        >
-          Last
-        </button>
-      </nav>
+          {/* Previous */}
+          <button
+            type="button"
+            className={`${pageButtonBase} ${pageButtonIdle} !px-0`}
+            onClick={() => handlePageChange(safeCurrentPage - 1)}
+            disabled={safeCurrentPage === 1}
+            aria-label="Previous page"
+          >
+            <LuChevronLeft />
+          </button>
+
+          {/* Page Numbers */}
+          {pageNumbers.map((page, index) => (
+            <button
+              type="button"
+              key={`${page}-${index}`}
+              className={`${pageButtonBase} ${
+                safeCurrentPage === page
+                  ? pageButtonActive
+                  : pageButtonIdle
+              } ${
+                page === "..."
+                  ? "!min-w-7 !border-transparent !bg-transparent !px-1 !text-slate-400 !opacity-100"
+                  : ""
+              }`}
+              onClick={() => handlePageChange(page)}
+              disabled={page === "..."}
+              aria-current={
+                safeCurrentPage === page ? "page" : undefined
+              }
+              aria-label={
+                page === "..." ? "More pages" : `Page ${page}`
+              }
+            >
+              {page}
+            </button>
+          ))}
+
+          {/* Next */}
+          <button
+            type="button"
+            className={`${pageButtonBase} ${pageButtonIdle} !px-0`}
+            onClick={() => handlePageChange(safeCurrentPage + 1)}
+            disabled={safeCurrentPage === safeTotalPages}
+            aria-label="Next page"
+          >
+            <LuChevronRight />
+          </button>
+
+          {/* Last */}
+          <button
+            type="button"
+            className={`${pageButtonBase} ${pageButtonIdle} hidden sm:inline-flex`}
+            onClick={() => handlePageChange(safeTotalPages)}
+            disabled={safeCurrentPage === safeTotalPages}
+            aria-label="Last page"
+          >
+            Last
+          </button>
+        </nav>
+      </div>
     </div>
   );
 };

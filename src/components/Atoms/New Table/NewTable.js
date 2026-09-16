@@ -464,6 +464,24 @@ export default function SearchComponent({
                   />
                 </div>
               )}
+  {isSellerStoreName && (
+                <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
+                  <FilterSelect
+                    label="Seller Store Name"
+                    value={
+                      filters?.sellerName || { value: "", label: "All Sellers" }
+                    }
+                    options={[
+                      { value: "", label: "All Sellers" },
+                      ...(userOptions || []),
+                    ]}
+                    isSearchable={true}
+                    onChange={(option) =>
+                      handleFilterChange("sellerName", option)
+                    }
+                  />
+                </div>
+              )}
 
               {isCategory && (
                 <div className={compactFilterBar ? "min-w-0" : undefined}>
@@ -523,25 +541,7 @@ export default function SearchComponent({
                 </div>
               )}
 
-              {isSellerStoreName && (
-                <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
-                  <FilterSelect
-                    label="Seller Store Name"
-                    value={
-                      filters?.sellerName || { value: "", label: "All Sellers" }
-                    }
-                    options={[
-                      { value: "", label: "All Sellers" },
-                      ...(userOptions || []),
-                    ]}
-                    isSearchable={true}
-                    onChange={(option) =>
-                      handleFilterChange("sellerName", option)
-                    }
-                  />
-                </div>
-              )}
-
+            
               {dateFrom && dateTo && (
                 <div className={compactFilterBar ? "min-w-0" : "min-w-40"}>
                   <DateRangeFilter
