@@ -1,5 +1,6 @@
 import "react-quill/dist/quill.snow.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FiRefreshCw } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 
@@ -125,6 +126,30 @@ export default function BasicDetailsTab({
     ),
   );
   const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
+  const [localCategoryOptions, setLocalCategoryOptions] = useState([]);
+  const [localHsnOptions, setLocalHsnOptions] = useState([]);
+  const [refreshingCatalog, setRefreshingCatalog] = useState("");
+
+  const mergeCatalogOptions = useCallback((localOptions, serverOptions) => {
+    const options = [...localOptions, ...(serverOptions || [])];
+    const seen = new Set();
+    return options.filter((option) => {
+      const key = String(option?.value ?? option?.code ?? "");
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, []);
+
+  const categoryOptions = useMemo(
+    () => mergeCatalogOptions(localCategoryOptions, formattedCategoryList),
+    [formattedCategoryList, localCategoryOptions, mergeCatalogOptions],
+  );
+
+  const hsnOptions = useMemo(
+    () => mergeCatalogOptions(localHsnOptions, hsnCodeList),
+    [hsnCodeList, localHsnOptions, mergeCatalogOptions],
+  );
 
   const approvePendingOption = async (event, option) => {
     event.preventDefault();
@@ -195,14 +220,14 @@ export default function BasicDetailsTab({
     );
     if (!currentCategory) return null;
     return (
-      formattedCategoryList.find(
+      categoryOptions.find(
         (opt) =>
           String(opt.value) === currentCategory ||
           String(opt.categoryKey || "") === currentCategory,
       ) || null
     );
   }, [
-    formattedCategoryList,
+    categoryOptions,
     formData.category_id,
     formData.categoryId,
     formData.category,
@@ -213,13 +238,13 @@ export default function BasicDetailsTab({
     const currentHsn = String(formData.hsn_code || formData.hsnCode || "");
     if (!currentHsn) return null;
     return (
-      hsnCodeList.find(
+      hsnOptions.find(
         (opt) =>
           String(opt.value) === currentHsn ||
           String(opt.code || "") === currentHsn,
       ) || null
     );
-  }, [hsnCodeList, formData.hsn_code, formData.hsnCode]);
+  }, [hsnOptions, formData.hsn_code, formData.hsnCode]);
 
   // ── HSN suggestion ──────────────────────────────────────────────────────
 
@@ -348,6 +373,26 @@ export default function BasicDetailsTab({
   useEffect(() => {
     loadMyBrandSubmissions();
   }, [loadMyBrandSubmissions]);
+
+  const refreshCatalogList = async (type) => {
+    setRefreshingCatalog(type);
+    try {
+      if (type === "brand") {
+        await Promise.all([fetchAllData?.(), loadMyBrandSubmissions()]);
+      } else {
+        const call =
+          type === "category"
+            ? API_CALL_OBJECT["Category List"]
+            : API_CALL_OBJECT["Hsn code list"];
+        await fetchAllData?.([call]);
+      }
+      toast.success(`${type === "hsn" ? "HSN code" : type} list refreshed`);
+    } catch (error) {
+      toast.error(getErrorMessage(error, `Could not refresh ${type} list`));
+    } finally {
+      setRefreshingCatalog("");
+    }
+  };
 
   const handleBrandLogoUpload = async (event) => {
     const file = event.target.files?.[0];
@@ -770,20 +815,19 @@ export default function BasicDetailsTab({
       const categoryValue =
         createdCategory.categoryKey || createdCategory._id || createdCategory.id;
       if (categoryValue) {
-        handleSelectChange(
-          {
-            value: categoryValue,
-            categoryKey: createdCategory.categoryKey || categoryValue,
-            label:
-              createdCategory.title ||
-              createdCategory.name ||
-              categoryForm.categoryName,
-            resourceId:
-              createdCategory._id || createdCategory.id || categoryValue,
-            approvalStatus: createdCategory.approvalStatus,
-          },
-          "CATEGORY_ID",
-        );
+        const newOption = {
+          value: categoryValue,
+          categoryKey: createdCategory.categoryKey || categoryValue,
+          label:
+            createdCategory.title ||
+            createdCategory.name ||
+            categoryForm.categoryName,
+          resourceType: "category",
+          resourceId: createdCategory._id || createdCategory.id || categoryValue,
+          approvalStatus: createdCategory.approvalStatus,
+        };
+        setLocalCategoryOptions((current) => [newOption, ...current]);
+        handleSelectChange(newOption, "CATEGORY_ID");
       }
       toast.success(res.message || "Category created successfully");
       setIsCategoryModal(false);
@@ -813,16 +857,19 @@ export default function BasicDetailsTab({
       const res = await dispatch(createHsn(basePayload)).unwrap();
       const createdHsn = res?.data || {};
       const hsnValue = createdHsn.code || basePayload.code;
-      handleSelectChange(
-        {
-          value: hsnValue,
-          code: hsnValue,
-          label: hsnValue,
-          resourceId: createdHsn._id || createdHsn.id || hsnValue,
-          approvalStatus: createdHsn.approvalStatus,
-        },
-        "hsn_code",
-      );
+      const newOption = {
+        value: hsnValue,
+        code: hsnValue,
+        label: createdHsn.description
+          ? `${hsnValue} - ${createdHsn.description}`
+          : hsnValue,
+        description: createdHsn.description || basePayload.description,
+        resourceType: "hsn",
+        resourceId: createdHsn._id || createdHsn.id || hsnValue,
+        approvalStatus: createdHsn.approvalStatus,
+      };
+      setLocalHsnOptions((current) => [newOption, ...current]);
+      handleSelectChange(newOption, "hsn_code");
 
       toast.success("HSN Code created successfully");
 
@@ -1003,6 +1050,16 @@ export default function BasicDetailsTab({
                   + Add
                 </button>
               </PermissionGuard>
+              <button
+                type="button"
+                aria-label="Refresh brand list"
+                title="Refresh brand list"
+                disabled={refreshingCatalog === "brand"}
+                className="mt-6 flex-shrink-0 rounded-md border border-gray-300 p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                onClick={() => refreshCatalogList("brand")}
+              >
+                <FiRefreshCw className={refreshingCatalog === "brand" ? "animate-spin" : ""} />
+              </button>
             </div>
             <div>
               <div className="flex items-start gap-2">
@@ -1012,7 +1069,7 @@ export default function BasicDetailsTab({
                     name="category_id"
                     value={selectedCategoryOption}
                     onChange={handleCategoryChange}
-                    options={formattedCategoryList || []}
+                    options={categoryOptions}
                     error={errors?.category_id}
                     placeholder="Select Category"
                     helperText="Attributes are controlled by the selected category schema."
@@ -1030,6 +1087,16 @@ export default function BasicDetailsTab({
                     + Add
                   </button>
                 </PermissionGuard>
+                <button
+                  type="button"
+                  aria-label="Refresh category list"
+                  title="Refresh category list"
+                  disabled={refreshingCatalog === "category"}
+                  className="mt-6 flex-shrink-0 rounded-md border border-gray-300 p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  onClick={() => refreshCatalogList("category")}
+                >
+                  <FiRefreshCw className={refreshingCatalog === "category" ? "animate-spin" : ""} />
+                </button>
               </div>
             </div>
 
@@ -1044,7 +1111,7 @@ export default function BasicDetailsTab({
                       setHsnSuggestion(null);
                       handleSelectChange(option, "hsn_code");
                     }}
-                    options={hsnCodeList || []}
+                    options={hsnOptions}
                     error={errors?.hsn_code}
                     placeholder="Search by code or description…"
                     formatOptionLabel={formatCatalogOption}
@@ -1061,6 +1128,16 @@ export default function BasicDetailsTab({
                     + Add
                   </button>
                 </PermissionGuard>
+                <button
+                  type="button"
+                  aria-label="Refresh HSN code list"
+                  title="Refresh HSN code list"
+                  disabled={refreshingCatalog === "hsn"}
+                  className="mt-6 flex-shrink-0 rounded-md border border-gray-300 p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  onClick={() => refreshCatalogList("hsn")}
+                >
+                  <FiRefreshCw className={refreshingCatalog === "hsn" ? "animate-spin" : ""} />
+                </button>
               </div>
 
               {/* Suggestion: category changed, HSN kept until explicitly applied */}

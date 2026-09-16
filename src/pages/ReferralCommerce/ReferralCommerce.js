@@ -166,10 +166,7 @@ const MARKETING_PAGE_META = {
     title: "Payout Requests",
     subtitle: "Review and manage referral partner payout requests",
   },
-  hierarchy: {
-    title: "Hierarchy",
-    subtitle: "View Growth Partner and Brand Associate relationships",
-  },
+  
   fraud: {
     title: "Fraud Review",
     subtitle: "Review and manage flagged referral activity",
@@ -3681,72 +3678,7 @@ const ReferralCommerce = () => {
           emptyText="No payout requests found."
         />
       )}
-      {activeTab === "hierarchy" && (
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full max-w-2xl">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-[var(--admin-muted)]"
-              />
-              <input
-                type="text"
-                value={hierarchySearch}
-                onChange={(event) => setHierarchySearch(event.target.value)}
-                placeholder="Search hierarchy..."
-                className="admin-input h-10 w-full bg-white !pl-11 !pr-10 text-sm"
-              />
-              {hierarchySearch && (
-                <button
-                  type="button"
-                  onClick={() => setHierarchySearch("")}
-                  className="absolute right-3 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-[var(--admin-muted)] hover:bg-[var(--admin-surface-soft)] hover:text-[var(--admin-ink)]"
-                  aria-label="Clear hierarchy search"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-            <div className="flex shrink-0 items-center gap-2 text-xs text-gray-500">
-              <span className="rounded bg-cyan-50 px-2.5 py-1.5 font-medium text-cyan-700">
-                {hierarchy?.total || 0} partners
-              </span>
-              <span className="rounded bg-gray-100 px-2.5 py-1.5 font-medium">
-                Max level {hierarchy?.maxLevel || 1}
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            {loading ? (
-              <div className="space-y-2 py-2" aria-label="Loading hierarchy">
-                {[0, 1, 2].map((row) => (
-                  <div
-                    key={row}
-                    className="h-14 animate-pulse bg-gray-100"
-                    style={{ marginLeft: row ? "40px" : 0 }}
-                  />
-                ))}
-              </div>
-            ) : filteredHierarchyRoots.length ? (
-              filteredHierarchyRoots.map((node, index) =>
-                renderHierarchyNode(
-                  node,
-                  0,
-                  index,
-                  filteredHierarchyRoots.length,
-                ),
-              )
-            ) : (
-              <div className="py-10 text-center text-sm text-gray-400">
-                {hierarchySearch
-                  ? "No partners match your search"
-                  : "No hierarchy found"}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+ 
       {activeTab === "fraud" && (
         <SharedDataTable
           columns={[
