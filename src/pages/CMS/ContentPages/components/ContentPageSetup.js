@@ -891,7 +891,9 @@ const ContentPageSetup = ({
                         </div>
                       </div>
 
-                      {/* ==================== Content Points ==================== */}
+                      {/* =========================================================
+    CONTENT POINTS
+========================================================= */}
                       <div className="mt-5 border-t border-gray-200 pt-5">
                         {/* Points Header */}
                         <div className="flex items-start justify-between gap-4">
@@ -932,7 +934,7 @@ const ContentPageSetup = ({
                                   key={`point-${sectionIndex}-${pointIndex}`}
                                   className="overflow-hidden rounded-xl bg-white shadow-[0_3px_12px_rgba(0,0,0,0.06)]"
                                 >
-                                  {/* Point Header */}
+                                  {/* ==================== Point Header ==================== */}
                                   <div className="flex items-center justify-between gap-3 bg-gray-50/80 px-4 py-3">
                                     <div className="flex min-w-0 items-center gap-3">
                                       {/* Point Number */}
@@ -967,10 +969,11 @@ const ContentPageSetup = ({
                                     </button>
                                   </div>
 
-                                  {/* Point Content */}
+                                  {/* ==================== Point Content ==================== */}
                                   <div className="space-y-4 p-4">
-                                    {/* Point Fields */}
+                                    {/* ==================== Point Fields ==================== */}
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                      {/* Point Title */}
                                       <FormInput
                                         label="Point Title"
                                         value={point.title || ""}
@@ -987,10 +990,11 @@ const ContentPageSetup = ({
                                         placeholder="Fast Delivery"
                                       />
 
+                                      {/* Point Sort Order */}
                                       <FormInput
                                         label="Point Sort Order"
                                         type="number"
-                                        value={point.sortOrder || 0}
+                                        value={point.sortOrder ?? 0}
                                         onChange={(e) =>
                                           updatePoint(
                                             sectionIndex,
@@ -1006,6 +1010,7 @@ const ContentPageSetup = ({
                                         placeholder="0"
                                       />
 
+                                      {/* Point Image URL */}
                                       <FormInput
                                         label="Point Image URL"
                                         value={point.image?.url || ""}
@@ -1025,6 +1030,7 @@ const ContentPageSetup = ({
                                         placeholder="https://example.com/icon.png"
                                       />
 
+                                      {/* Point Image Alt */}
                                       <FormInput
                                         label="Point Image Alt"
                                         value={point.image?.alt || ""}
@@ -1045,7 +1051,7 @@ const ContentPageSetup = ({
                                       />
                                     </div>
 
-                                    {/* Point Image */}
+                                    {/* ==================== Point Image ==================== */}
                                     <div className="pt-2">
                                       <div className="mb-3">
                                         <p className="text-xs font-semibold text-gray-700">
@@ -1077,10 +1083,23 @@ const ContentPageSetup = ({
                                             ),
                                           )
                                         }
+                                        onRemove={() =>
+                                          updatePoint(
+                                            sectionIndex,
+                                            pointIndex,
+                                            (item) => ({
+                                              ...item,
+                                              image: {
+                                                ...(item.image || emptyImage),
+                                                url: "",
+                                              },
+                                            }),
+                                          )
+                                        }
                                       />
                                     </div>
 
-                                    {/* Point Description */}
+                                    {/* ==================== Point Description ==================== */}
                                     <div className="pt-2">
                                       <FormInput
                                         label="Point Description"
@@ -1099,12 +1118,100 @@ const ContentPageSetup = ({
                                         type="textarea"
                                       />
                                     </div>
+
+                                    {/* ==================== Point CTA ==================== */}
+                                    <div className="mt-5 border-t border-gray-200 pt-5">
+                                      <div className="mb-4">
+                                        <p className="text-sm font-semibold text-gray-800">
+                                          Point CTA
+                                        </p>
+
+                                        <p className="mt-1 text-xs leading-5 text-gray-500">
+                                          Configure the optional call-to-action
+                                          for this content point.
+                                        </p>
+                                      </div>
+
+                                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                        {/* CTA Label */}
+                                        <FormInput
+                                          label="CTA Label"
+                                          value={point.cta?.label || ""}
+                                          onChange={(e) =>
+                                            updatePoint(
+                                              sectionIndex,
+                                              pointIndex,
+                                              (item) => ({
+                                                ...item,
+                                                cta: {
+                                                  ...(item.cta || {
+                                                    label: "",
+                                                    url: "",
+                                                    target: "_self",
+                                                  }),
+                                                  label: e.target.value,
+                                                },
+                                              }),
+                                            )
+                                          }
+                                          placeholder="Shop Now"
+                                        />
+
+                                        {/* CTA URL */}
+                                        <FormInput
+                                          label="CTA URL"
+                                          value={point.cta?.url || ""}
+                                          onChange={(e) =>
+                                            updatePoint(
+                                              sectionIndex,
+                                              pointIndex,
+                                              (item) => ({
+                                                ...item,
+                                                cta: {
+                                                  ...(item.cta || {
+                                                    label: "",
+                                                    url: "",
+                                                    target: "_self",
+                                                  }),
+                                                  url: e.target.value,
+                                                },
+                                              }),
+                                            )
+                                          }
+                                          placeholder="/products"
+                                        />
+
+                                        {/* CTA Target */}
+                                        <FormInput
+                                          label="CTA Target"
+                                          value={point.cta?.target || "_self"}
+                                          onChange={(e) =>
+                                            updatePoint(
+                                              sectionIndex,
+                                              pointIndex,
+                                              (item) => ({
+                                                ...item,
+                                                cta: {
+                                                  ...(item.cta || {
+                                                    label: "",
+                                                    url: "",
+                                                    target: "_self",
+                                                  }),
+                                                  target: e.target.value,
+                                                },
+                                              }),
+                                            )
+                                          }
+                                          placeholder="_self"
+                                        />
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            /* Empty Points State */
+                            /* ==================== Empty Points State ==================== */
                             <div className="rounded-xl bg-gray-50/70 px-5 py-6 text-center">
                               <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100">
                                 <span className="text-sm font-semibold text-gray-400">

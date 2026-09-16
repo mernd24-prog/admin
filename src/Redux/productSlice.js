@@ -1,807 +1,1551 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { createExtraReducersForThunk, createApiThunkPrivate } from '../_helpers/ApiThunk';
-import { ENDPOINTS } from '../_helpers/endpoints';
-import { deleteMany, firstId, patchMany, toListParams } from '../_helpers/adminApi';
-import { normalizeImageList } from '../_helpers/productMedia';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import {
+  createExtraReducersForThunk,
+  createApiThunkPrivate,
+} from "../_helpers/ApiThunk";
+import { ENDPOINTS } from "../_helpers/endpoints";
+import {
+  deleteMany,
+  firstId,
+  patchMany,
+  toListParams,
+} from "../_helpers/adminApi";
+import { normalizeImageList } from "../_helpers/productMedia";
 
 const firstProductId = (payload = {}) => {
-    const value = payload.productId || payload.product_id || payload._id || payload.id;
-    return Array.isArray(value) ? value[0] : value;
+  const value =
+    payload.productId || payload.product_id || payload._id || payload.id;
+  return Array.isArray(value) ? value[0] : value;
 };
 
 // small deep merge to preserve nested objects when combining prefill parts
 const deepMerge = (target = {}, ...sources) => {
-    const isObject = (obj) => obj && typeof obj === 'object' && !Array.isArray(obj);
-    for (const source of sources) {
-        if (!isObject(source)) continue;
-        for (const key of Object.keys(source)) {
-            const val = source[key];
-            if (isObject(val)) {
-                if (!isObject(target[key])) target[key] = {};
-                target[key] = deepMerge(target[key], val);
-            } else {
-                target[key] = val;
-            }
-        }
+  const isObject = (obj) =>
+    obj && typeof obj === "object" && !Array.isArray(obj);
+  for (const source of sources) {
+    if (!isObject(source)) continue;
+    for (const key of Object.keys(source)) {
+      const val = source[key];
+      if (isObject(val)) {
+        if (!isObject(target[key])) target[key] = {};
+        target[key] = deepMerge(target[key], val);
+      } else {
+        target[key] = val;
+      }
     }
-    return target;
+  }
+  return target;
 };
 
 const toProductListParams = (params = {}) => ({
-    ...(params.page ? { page: Number(params.page) } : {}),
-    ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
-    ...(params.keyWord || params.search || params.q ? { q: params.keyWord || params.search || params.q } : {}),
-    ...(params.category ? { category: params.category } : {}),
-    ...(params.status ? { status: params.status } : {}),
-    ...(params.revisionStatus ? { revisionStatus: params.revisionStatus } : {}),
-    ...(params.sellerId ? { sellerId: params.sellerId } : {}),
-    ...(params.organizationId ? { organizationId: params.organizationId } : {}),
-    ...(params.storeId ? { storeId: params.storeId } : {}),
-    ...(params.warehouseId ? { warehouseId: params.warehouseId } : {}),
-    ...(params.hsnCode || params.hsn_code ? { hsnCode: params.hsnCode || params.hsn_code } : {}),
-    ...(params.color ? { color: params.color } : {}),
-    ...(params.country ? { country: params.country } : {}),
-    ...(params.state ? { state: params.state } : {}),
-    ...(params.city ? { city: params.city } : {}),
-    ...(params.productFamilyCode ? { productFamilyCode: params.productFamilyCode } : {}),
-    ...(params.sku ? { sku: params.sku } : {}),
-    ...(params.includeAllStatuses !== undefined ? { includeAllStatuses: params.includeAllStatuses } : {}),
-    ...(params.productType ? { productType: params.productType } : {}),
-    ...(params.hasVariants !== undefined ? { hasVariants: params.hasVariants } : {}),
-    ...(params.includeVariants !== undefined ? { includeVariants: params.includeVariants } : {}),
-    ...(params.visibility ? { visibility: params.visibility } : {}),
-    ...(params.brand ? { brand: params.brand } : {}),
-    ...(params.tags ? { tags: params.tags } : {}),
-    ...(params.minPrice !== undefined ? { minPrice: Number(params.minPrice) } : {}),
-    ...(params.maxPrice !== undefined ? { maxPrice: Number(params.maxPrice) } : {}),
-    ...(params.dateFrom ? { dateFrom: params.dateFrom } : {}),
-    ...(params.dateTo ? { dateTo: params.dateTo } : {}),
-    ...(params.inStock !== undefined ? { inStock: params.inStock } : {}),
-    ...(params.stockStatus || params.inventoryStatus ? { stockStatus: params.stockStatus || params.inventoryStatus } : {}),
-    ...(params.sortBy ? { sortBy: params.sortBy } : {}),
-    ...(params.sortDir ? { sortDir: params.sortDir } : {}),
+  ...(params.page ? { page: Number(params.page) } : {}),
+  ...(params.limit || params.size
+    ? { limit: Number(params.limit || params.size) }
+    : {}),
+  ...(params.keyWord || params.search || params.q
+    ? { q: params.keyWord || params.search || params.q }
+    : {}),
+  ...(params.category ? { category: params.category } : {}),
+  ...(params.status ? { status: params.status } : {}),
+  ...(params.revisionStatus ? { revisionStatus: params.revisionStatus } : {}),
+  ...(params.approvalStatus || params.approval_status
+    ? { approvalStatus: params.approvalStatus || params.approval_status }
+    : {}),
+  ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+  ...(params.organizationId ? { organizationId: params.organizationId } : {}),
+  ...(params.storeId ? { storeId: params.storeId } : {}),
+  ...(params.warehouseId ? { warehouseId: params.warehouseId } : {}),
+  ...(params.hsnCode || params.hsn_code
+    ? { hsnCode: params.hsnCode || params.hsn_code }
+    : {}),
+  ...(params.color ? { color: params.color } : {}),
+  ...(params.country ? { country: params.country } : {}),
+  ...(params.state ? { state: params.state } : {}),
+  ...(params.city ? { city: params.city } : {}),
+  ...(params.productFamilyCode
+    ? { productFamilyCode: params.productFamilyCode }
+    : {}),
+  ...(params.sku ? { sku: params.sku } : {}),
+  ...(params.includeAllStatuses !== undefined
+    ? { includeAllStatuses: params.includeAllStatuses }
+    : {}),
+  ...(params.productType ? { productType: params.productType } : {}),
+  ...(params.hasVariants !== undefined
+    ? { hasVariants: params.hasVariants }
+    : {}),
+  ...(params.includeVariants !== undefined
+    ? { includeVariants: params.includeVariants }
+    : {}),
+  ...(params.visibility ? { visibility: params.visibility } : {}),
+  ...(params.brand ? { brand: params.brand } : {}),
+  ...(params.tags ? { tags: params.tags } : {}),
+  ...(params.minPrice !== undefined
+    ? { minPrice: Number(params.minPrice) }
+    : {}),
+  ...(params.maxPrice !== undefined
+    ? { maxPrice: Number(params.maxPrice) }
+    : {}),
+  ...(params.dateFrom ? { dateFrom: params.dateFrom } : {}),
+  ...(params.dateTo ? { dateTo: params.dateTo } : {}),
+  ...(params.inStock !== undefined ? { inStock: params.inStock } : {}),
+  ...(params.stockStatus || params.inventoryStatus
+    ? { stockStatus: params.stockStatus || params.inventoryStatus }
+    : {}),
+  ...(params.sortBy ? { sortBy: params.sortBy } : {}),
+  ...(params.sortDir ? { sortDir: params.sortDir } : {}),
 });
 
 const toProductStatusBody = (payload = {}) => ({
-    status: payload.status || (payload.isDisable ? "inactive" : "active"),
-    ...(payload.reason ? { reason: payload.reason } : {}),
-    ...(payload.rejectionReason !== undefined ? { rejectionReason: payload.rejectionReason } : {}),
-    ...(payload.scheduledAt ? { scheduledAt: payload.scheduledAt } : {}),
-    checklist: {
-        titleVerified: true,
-        categoryVerified: true,
-        complianceVerified: true,
-        mediaVerified: true,
-    },
+  status: payload.status || (payload.isDisable ? "inactive" : "active"),
+  ...(payload.reason ? { reason: payload.reason } : {}),
+  ...(payload.rejectionReason !== undefined
+    ? { rejectionReason: payload.rejectionReason }
+    : {}),
+  ...(payload.scheduledAt ? { scheduledAt: payload.scheduledAt } : {}),
+  checklist: {
+    titleVerified: true,
+    categoryVerified: true,
+    complianceVerified: true,
+    mediaVerified: true,
+  },
 });
 
 const toProductBody = (payload = {}) => {
-    const categoryId = payload.categoryId || payload.category_id || payload.category;
-    const category = payload.category || payload.categoryKey || payload.category_key || categoryId;
-    const hsnCode = payload.hsnCode || payload.hsn_code || "";
-    const variants = Array.isArray(payload.variants) ? payload.variants : [];
-    const primaryVariant = variants[0] || {};
-    const salePrice = payload.salePrice ?? payload.specialPrice ?? primaryVariant.salePrice;
-    const title = payload.title || payload.name || "";
+  const categoryId =
+    payload.categoryId || payload.category_id || payload.category;
+  const category =
+    payload.category ||
+    payload.categoryKey ||
+    payload.category_key ||
+    categoryId;
+  const hsnCode = payload.hsnCode || payload.hsn_code || "";
+  const variants = Array.isArray(payload.variants) ? payload.variants : [];
+  const primaryVariant = variants[0] || {};
+  const salePrice =
+    payload.salePrice ?? payload.specialPrice ?? primaryVariant.salePrice;
+  const title = payload.title || payload.name || "";
 
-    return {
-        ...(payload.sellerId ? { sellerId: payload.sellerId } : {}),
-        ...(payload.organizationId ? { organizationId: payload.organizationId } : {}),
-        ...(payload.storeId ? { storeId: payload.storeId } : {}),
-        ...(payload.warehouseId ? { warehouseId: payload.warehouseId } : {}),
-        title,
-        ...(payload.shortDescription ? { shortDescription: payload.shortDescription } : {}),
-        // The description editor is intentionally hidden in the current
-        // product flow, while Mongo still requires a description.
-        description: payload.description || payload.shortDescription || `Product: ${title}`,
-        ...(payload.productType ? { productType: payload.productType } : {}),
-        ...(payload.visibility ? { visibility: payload.visibility } : {}),
-        price: Number(payload.price || primaryVariant.price || primaryVariant.salePrice || 0),
-        mrp: Number(payload.mrp || primaryVariant.mrp || 0),
-        ...(salePrice !== undefined && salePrice !== "" ? { salePrice: Number(salePrice || 0) } : {}),
-        ...(payload.costPrice !== undefined ? { costPrice: Number(payload.costPrice || 0) } : {}),
-        gstInclusive: true,
-        category,
-        ...(categoryId ? { categoryId } : {}),
-        ...(payload.brand || payload.brand_id ? { brand: payload.brand || payload.brand_id } : {}),
-        ...(payload.productFamilyCode ? { productFamilyCode: payload.productFamilyCode } : {}),
-        ...(payload.sku ? { sku: payload.sku } : {}),
-        ...(payload.color ? { color: payload.color } : {}),
-        attributes: payload.attributes || {},
-        variants,
-        ...(Array.isArray(payload.options) ? { options: payload.options } : {}),
-        ...(payload.dimensions ? { dimensions: payload.dimensions } : {}),
-        ...(hsnCode ? { hsnCode } : {}),
-        origin: payload.origin || {},
-        ...(payload.warranty ? { warranty: payload.warranty } : {}),
-        ...(payload.shipping ? { shipping: payload.shipping } : {}),
-        ...(payload.inventorySettings ? { inventorySettings: payload.inventorySettings } : {}),
-        ...(payload.metadata ? { metadata: payload.metadata } : {}),
-        ...(payload.seo ? { seo: payload.seo } : {}),
-        ...(payload.digital ? { digital: payload.digital } : {}),
-        ...(payload.subscription ? { subscription: payload.subscription } : {}),
-        ...(Array.isArray(payload.bundleItems) ? { bundleItems: payload.bundleItems } : {}),
-        ...(payload.bundleDiscount !== undefined ? { bundleDiscount: Number(payload.bundleDiscount || 0) } : {}),
-        ...(Array.isArray(payload.relatedProducts) ? { relatedProducts: payload.relatedProducts } : {}),
-        ...(Array.isArray(payload.crossSellProducts) ? { crossSellProducts: payload.crossSellProducts } : {}),
-        ...(Array.isArray(payload.upSellProducts) ? { upSellProducts: payload.upSellProducts } : {}),
-        ...(Array.isArray(payload.frequentlyBoughtTogether) ? { frequentlyBoughtTogether: payload.frequentlyBoughtTogether } : {}),
-        ...(Array.isArray(payload.featuredProducts) ? { featuredProducts: payload.featuredProducts } : {}),
-        ...(Array.isArray(payload.trendingProducts) ? { trendingProducts: payload.trendingProducts } : {}),
-        ...(Array.isArray(payload.bestSellerProducts) ? { bestSellerProducts: payload.bestSellerProducts } : {}),
-        ...(Array.isArray(payload.collectionIds) ? { collectionIds: payload.collectionIds } : {}),
-        stock: Number(payload.stock || payload.quantity || 0),
-        images: normalizeImageList(payload.images),
-        commonImages: normalizeImageList(payload.commonImages),
-        videos: Array.isArray(payload.videos) ? payload.videos : [],
-        documents: Array.isArray(payload.documents) ? payload.documents : [],
-        tags: Array.isArray(payload.tags) ? payload.tags : [],
-        ...(payload.status ? { status: payload.status } : {}),
-    };
+  return {
+    ...(payload.sellerId ? { sellerId: payload.sellerId } : {}),
+    ...(payload.organizationId
+      ? { organizationId: payload.organizationId }
+      : {}),
+    ...(payload.storeId ? { storeId: payload.storeId } : {}),
+    ...(payload.warehouseId ? { warehouseId: payload.warehouseId } : {}),
+    title,
+    ...(payload.shortDescription
+      ? { shortDescription: payload.shortDescription }
+      : {}),
+    // The description editor is intentionally hidden in the current
+    // product flow, while Mongo still requires a description.
+    description:
+      payload.description || payload.shortDescription || `Product: ${title}`,
+    ...(payload.productType ? { productType: payload.productType } : {}),
+    ...(payload.visibility ? { visibility: payload.visibility } : {}),
+    price: Number(
+      payload.price || primaryVariant.price || primaryVariant.salePrice || 0,
+    ),
+    mrp: Number(payload.mrp || primaryVariant.mrp || 0),
+    ...(salePrice !== undefined && salePrice !== ""
+      ? { salePrice: Number(salePrice || 0) }
+      : {}),
+    ...(payload.costPrice !== undefined
+      ? { costPrice: Number(payload.costPrice || 0) }
+      : {}),
+    gstInclusive: true,
+    category,
+    ...(categoryId ? { categoryId } : {}),
+    ...(payload.brand || payload.brand_id
+      ? { brand: payload.brand || payload.brand_id }
+      : {}),
+    ...(payload.productFamilyCode
+      ? { productFamilyCode: payload.productFamilyCode }
+      : {}),
+    ...(payload.sku ? { sku: payload.sku } : {}),
+    ...(payload.color ? { color: payload.color } : {}),
+    attributes: payload.attributes || {},
+    variants,
+    ...(Array.isArray(payload.options) ? { options: payload.options } : {}),
+    ...(payload.dimensions ? { dimensions: payload.dimensions } : {}),
+    ...(hsnCode ? { hsnCode } : {}),
+    origin: payload.origin || {},
+    ...(payload.warranty ? { warranty: payload.warranty } : {}),
+    ...(payload.shipping ? { shipping: payload.shipping } : {}),
+    ...(payload.inventorySettings
+      ? { inventorySettings: payload.inventorySettings }
+      : {}),
+    ...(payload.metadata ? { metadata: payload.metadata } : {}),
+    ...(payload.seo ? { seo: payload.seo } : {}),
+    ...(payload.digital ? { digital: payload.digital } : {}),
+    ...(payload.subscription ? { subscription: payload.subscription } : {}),
+    ...(Array.isArray(payload.bundleItems)
+      ? { bundleItems: payload.bundleItems }
+      : {}),
+    ...(payload.bundleDiscount !== undefined
+      ? { bundleDiscount: Number(payload.bundleDiscount || 0) }
+      : {}),
+    ...(Array.isArray(payload.relatedProducts)
+      ? { relatedProducts: payload.relatedProducts }
+      : {}),
+    ...(Array.isArray(payload.crossSellProducts)
+      ? { crossSellProducts: payload.crossSellProducts }
+      : {}),
+    ...(Array.isArray(payload.upSellProducts)
+      ? { upSellProducts: payload.upSellProducts }
+      : {}),
+    ...(Array.isArray(payload.frequentlyBoughtTogether)
+      ? { frequentlyBoughtTogether: payload.frequentlyBoughtTogether }
+      : {}),
+    ...(Array.isArray(payload.featuredProducts)
+      ? { featuredProducts: payload.featuredProducts }
+      : {}),
+    ...(Array.isArray(payload.trendingProducts)
+      ? { trendingProducts: payload.trendingProducts }
+      : {}),
+    ...(Array.isArray(payload.bestSellerProducts)
+      ? { bestSellerProducts: payload.bestSellerProducts }
+      : {}),
+    ...(Array.isArray(payload.collectionIds)
+      ? { collectionIds: payload.collectionIds }
+      : {}),
+    stock: Number(payload.stock || payload.quantity || 0),
+    images: normalizeImageList(payload.images),
+    commonImages: normalizeImageList(payload.commonImages),
+    videos: Array.isArray(payload.videos) ? payload.videos : [],
+    documents: Array.isArray(payload.documents) ? payload.documents : [],
+    tags: Array.isArray(payload.tags) ? payload.tags : [],
+    ...(payload.status ? { status: payload.status } : {}),
+  };
 };
 
 const toProductPatchBody = (payload = {}) => {
-    const source = payload.body || payload.data || payload;
-    const body = {};
-    const categoryId = source.categoryId || source.category_id || source.category;
-    const category = source.category || source.categoryKey || source.category_key || categoryId;
+  const source = payload.body || payload.data || payload;
+  const body = {};
+  const categoryId = source.categoryId || source.category_id || source.category;
+  const category =
+    source.category || source.categoryKey || source.category_key || categoryId;
 
-    if (source.sellerId !== undefined) body.sellerId = source.sellerId;
-    if (source.organizationId !== undefined) body.organizationId = source.organizationId;
-    if (source.storeId !== undefined) body.storeId = source.storeId;
-    if (source.warehouseId !== undefined) body.warehouseId = source.warehouseId;
-    if (source.title !== undefined || source.name !== undefined) body.title = source.title || source.name || "";
-    if (source.shortDescription !== undefined) body.shortDescription = source.shortDescription || "";
-    if (source.description !== undefined) body.description = source.description || "";
-    if (source.productType !== undefined) body.productType = source.productType;
-    if (source.visibility !== undefined) body.visibility = source.visibility;
-    if (source.price !== undefined) body.price = Number(source.price || 0);
-    if (source.mrp !== undefined) body.mrp = Number(source.mrp || 0);
-    if (source.salePrice !== undefined || source.specialPrice !== undefined) {
-        const salePrice = source.salePrice ?? source.specialPrice;
-        body.salePrice = salePrice === "" || salePrice === null ? null : Number(salePrice || 0);
-    }
-    if (source.costPrice !== undefined) body.costPrice = Number(source.costPrice || 0);
-    if (source.gstRate !== undefined) body.gstRate = Number(source.gstRate || 0);
-    if (source.gstInclusive !== undefined) body.gstInclusive = Boolean(source.gstInclusive);
-    if (source.category !== undefined || source.categoryKey !== undefined || source.category_id !== undefined || source.categoryId !== undefined) {
-        body.category = category;
-    }
-    if (source.categoryId !== undefined || source.category_id !== undefined) body.categoryId = categoryId;
-    if (source.brand !== undefined || source.brand_id !== undefined) body.brand = source.brand || source.brand_id || "";
-    if (source.productFamilyCode !== undefined) body.productFamilyCode = source.productFamilyCode;
-    if (source.sku !== undefined) body.sku = source.sku;
-    if (source.color !== undefined) body.color = source.color;
-    if (source.attributes !== undefined) body.attributes = source.attributes || {};
-    if (source.variants !== undefined) body.variants = Array.isArray(source.variants) ? source.variants : [];
-    if (source.options !== undefined && Array.isArray(source.options)) body.options = source.options;
-    if (source.dimensions !== undefined) body.dimensions = source.dimensions;
-    if (source.hsnCode !== undefined || source.hsn_code !== undefined) body.hsnCode = source.hsnCode || source.hsn_code || "";
-    if (source.origin !== undefined) body.origin = source.origin || {};
-    if (source.warranty !== undefined) body.warranty = source.warranty;
-    if (source.shipping !== undefined) body.shipping = source.shipping || {};
-    if (source.inventorySettings !== undefined) body.inventorySettings = source.inventorySettings || {};
-    if (source.metadata !== undefined) body.metadata = source.metadata || {};
-    if (source.seo !== undefined) body.seo = source.seo || {};
-    if (source.digital !== undefined) body.digital = source.digital || {};
-    if (source.subscription !== undefined) body.subscription = source.subscription || {};
-    if (source.bundleItems !== undefined && Array.isArray(source.bundleItems)) body.bundleItems = source.bundleItems;
-    if (source.bundleDiscount !== undefined) body.bundleDiscount = Number(source.bundleDiscount || 0);
-    if (source.relatedProducts !== undefined && Array.isArray(source.relatedProducts)) body.relatedProducts = source.relatedProducts;
-    if (source.crossSellProducts !== undefined && Array.isArray(source.crossSellProducts)) body.crossSellProducts = source.crossSellProducts;
-    if (source.upSellProducts !== undefined && Array.isArray(source.upSellProducts)) body.upSellProducts = source.upSellProducts;
-    if (source.frequentlyBoughtTogether !== undefined && Array.isArray(source.frequentlyBoughtTogether)) body.frequentlyBoughtTogether = source.frequentlyBoughtTogether;
-    if (source.featuredProducts !== undefined && Array.isArray(source.featuredProducts)) body.featuredProducts = source.featuredProducts;
-    if (source.trendingProducts !== undefined && Array.isArray(source.trendingProducts)) body.trendingProducts = source.trendingProducts;
-    if (source.bestSellerProducts !== undefined && Array.isArray(source.bestSellerProducts)) body.bestSellerProducts = source.bestSellerProducts;
-    if (source.collectionIds !== undefined && Array.isArray(source.collectionIds)) body.collectionIds = source.collectionIds;
-    if (source.stock !== undefined || source.quantity !== undefined) body.stock = Number(source.stock || source.quantity || 0);
-    if (source.images !== undefined && Array.isArray(source.images)) body.images = normalizeImageList(source.images);
-    if (source.commonImages !== undefined && Array.isArray(source.commonImages)) {
-        body.commonImages = normalizeImageList(source.commonImages);
-    }
-    if (source.videos !== undefined && Array.isArray(source.videos)) body.videos = source.videos;
-    if (source.documents !== undefined && Array.isArray(source.documents)) body.documents = source.documents;
-    if (source.tags !== undefined && Array.isArray(source.tags)) body.tags = source.tags;
-    if (source.status !== undefined) body.status = source.status;
-    if (source.approvalStatus !== undefined) body.approvalStatus = source.approvalStatus;
-    if (source.isApproved === true) body.approvalStatus = "approved";
-    if (source.minPurchaseQuantity !== undefined) body.minPurchaseQuantity = Number(source.minPurchaseQuantity || 0);
-    if (source.volumeDiscount !== undefined) body.volumeDiscount = Number(source.volumeDiscount || 0);
-    if (source.specialPriceStartDate !== undefined) body.specialPriceStartDate = source.specialPriceStartDate;
-    if (source.specialPriceEndDate !== undefined) body.specialPriceEndDate = source.specialPriceEndDate;
-    return body;
+  if (source.sellerId !== undefined) body.sellerId = source.sellerId;
+  if (source.organizationId !== undefined)
+    body.organizationId = source.organizationId;
+  if (source.storeId !== undefined) body.storeId = source.storeId;
+  if (source.warehouseId !== undefined) body.warehouseId = source.warehouseId;
+  if (source.title !== undefined || source.name !== undefined)
+    body.title = source.title || source.name || "";
+  if (source.shortDescription !== undefined)
+    body.shortDescription = source.shortDescription || "";
+  if (source.description !== undefined)
+    body.description = source.description || "";
+  if (source.productType !== undefined) body.productType = source.productType;
+  if (source.visibility !== undefined) body.visibility = source.visibility;
+  if (source.price !== undefined) body.price = Number(source.price || 0);
+  if (source.mrp !== undefined) body.mrp = Number(source.mrp || 0);
+  if (source.salePrice !== undefined || source.specialPrice !== undefined) {
+    const salePrice = source.salePrice ?? source.specialPrice;
+    body.salePrice =
+      salePrice === "" || salePrice === null ? null : Number(salePrice || 0);
+  }
+  if (source.costPrice !== undefined)
+    body.costPrice = Number(source.costPrice || 0);
+  if (source.gstRate !== undefined) body.gstRate = Number(source.gstRate || 0);
+  if (source.gstInclusive !== undefined)
+    body.gstInclusive = Boolean(source.gstInclusive);
+  if (
+    source.category !== undefined ||
+    source.categoryKey !== undefined ||
+    source.category_id !== undefined ||
+    source.categoryId !== undefined
+  ) {
+    body.category = category;
+  }
+  if (source.categoryId !== undefined || source.category_id !== undefined)
+    body.categoryId = categoryId;
+  if (source.brand !== undefined || source.brand_id !== undefined)
+    body.brand = source.brand || source.brand_id || "";
+  if (source.productFamilyCode !== undefined)
+    body.productFamilyCode = source.productFamilyCode;
+  if (source.sku !== undefined) body.sku = source.sku;
+  if (source.color !== undefined) body.color = source.color;
+  if (source.attributes !== undefined)
+    body.attributes = source.attributes || {};
+  if (source.variants !== undefined)
+    body.variants = Array.isArray(source.variants) ? source.variants : [];
+  if (source.options !== undefined && Array.isArray(source.options))
+    body.options = source.options;
+  if (source.dimensions !== undefined) body.dimensions = source.dimensions;
+  if (source.hsnCode !== undefined || source.hsn_code !== undefined)
+    body.hsnCode = source.hsnCode || source.hsn_code || "";
+  if (source.origin !== undefined) body.origin = source.origin || {};
+  if (source.warranty !== undefined) body.warranty = source.warranty;
+  if (source.shipping !== undefined) body.shipping = source.shipping || {};
+  if (source.inventorySettings !== undefined)
+    body.inventorySettings = source.inventorySettings || {};
+  if (source.metadata !== undefined) body.metadata = source.metadata || {};
+  if (source.seo !== undefined) body.seo = source.seo || {};
+  if (source.digital !== undefined) body.digital = source.digital || {};
+  if (source.subscription !== undefined)
+    body.subscription = source.subscription || {};
+  if (source.bundleItems !== undefined && Array.isArray(source.bundleItems))
+    body.bundleItems = source.bundleItems;
+  if (source.bundleDiscount !== undefined)
+    body.bundleDiscount = Number(source.bundleDiscount || 0);
+  if (
+    source.relatedProducts !== undefined &&
+    Array.isArray(source.relatedProducts)
+  )
+    body.relatedProducts = source.relatedProducts;
+  if (
+    source.crossSellProducts !== undefined &&
+    Array.isArray(source.crossSellProducts)
+  )
+    body.crossSellProducts = source.crossSellProducts;
+  if (
+    source.upSellProducts !== undefined &&
+    Array.isArray(source.upSellProducts)
+  )
+    body.upSellProducts = source.upSellProducts;
+  if (
+    source.frequentlyBoughtTogether !== undefined &&
+    Array.isArray(source.frequentlyBoughtTogether)
+  )
+    body.frequentlyBoughtTogether = source.frequentlyBoughtTogether;
+  if (
+    source.featuredProducts !== undefined &&
+    Array.isArray(source.featuredProducts)
+  )
+    body.featuredProducts = source.featuredProducts;
+  if (
+    source.trendingProducts !== undefined &&
+    Array.isArray(source.trendingProducts)
+  )
+    body.trendingProducts = source.trendingProducts;
+  if (
+    source.bestSellerProducts !== undefined &&
+    Array.isArray(source.bestSellerProducts)
+  )
+    body.bestSellerProducts = source.bestSellerProducts;
+  if (source.collectionIds !== undefined && Array.isArray(source.collectionIds))
+    body.collectionIds = source.collectionIds;
+  if (source.stock !== undefined || source.quantity !== undefined)
+    body.stock = Number(source.stock || source.quantity || 0);
+  if (source.images !== undefined && Array.isArray(source.images))
+    body.images = normalizeImageList(source.images);
+  if (source.commonImages !== undefined && Array.isArray(source.commonImages)) {
+    body.commonImages = normalizeImageList(source.commonImages);
+  }
+  if (source.videos !== undefined && Array.isArray(source.videos))
+    body.videos = source.videos;
+  if (source.documents !== undefined && Array.isArray(source.documents))
+    body.documents = source.documents;
+  if (source.tags !== undefined && Array.isArray(source.tags))
+    body.tags = source.tags;
+  if (source.status !== undefined) body.status = source.status;
+  if (source.approvalStatus !== undefined)
+    body.approvalStatus = source.approvalStatus;
+  if (source.isApproved === true) body.approvalStatus = "approved";
+  if (source.minPurchaseQuantity !== undefined)
+    body.minPurchaseQuantity = Number(source.minPurchaseQuantity || 0);
+  if (source.volumeDiscount !== undefined)
+    body.volumeDiscount = Number(source.volumeDiscount || 0);
+  if (source.specialPriceStartDate !== undefined)
+    body.specialPriceStartDate = source.specialPriceStartDate;
+  if (source.specialPriceEndDate !== undefined)
+    body.specialPriceEndDate = source.specialPriceEndDate;
+  return body;
 };
 
 const toHsnListParams = (params = {}) => ({
-    ...(params.page ? { page: Number(params.page) } : {}),
-    ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
-    ...(params.keyWord || params.search || params.q ? { q: params.keyWord || params.search || params.q } : {}),
-    ...(params.category ? { category: params.category } : {}),
-    ...(params.active !== undefined ? { active: params.active } : {}),
+  ...(params.page ? { page: Number(params.page) } : {}),
+  ...(params.limit || params.size
+    ? { limit: Number(params.limit || params.size) }
+    : {}),
+  ...(params.keyWord || params.search || params.q
+    ? { q: params.keyWord || params.search || params.q }
+    : {}),
+  ...(params.category ? { category: params.category } : {}),
+  ...(params.active !== undefined ? { active: params.active } : {}),
 });
 
 const toHsnBody = (payload = {}) => ({
-    ...(payload.code ? { code: String(payload.code) } : {}),
-    description: payload.description || '',
-    gstRate: Number(payload.IGST ?? payload.gstRate ?? 0),
-    cessRate: Number(payload.additionalTax ?? payload.cessRate ?? 0),
-    taxType: payload.taxType || 'gst',
-    exempt: Boolean(payload.exempt),
-    category: payload.category || '',
-    active: payload.active ?? payload.isDisable !== true,
+  ...(payload.code ? { code: String(payload.code) } : {}),
+  description: payload.description || "",
+  gstRate: Number(payload.IGST ?? payload.gstRate ?? 0),
+  cessRate: Number(payload.additionalTax ?? payload.cessRate ?? 0),
+  taxType: payload.taxType || "gst",
+  exempt: Boolean(payload.exempt),
+  category: payload.category || "",
+  active: payload.active ?? payload.isDisable !== true,
 });
 
 const initialState = {
-    getListData: {}, softDeleteData: {}, enableDisableData: {}, createData: {}, updateData: {},
-    FinishGetListData: {},
-    CreateFinishData: {}, softDeleteFinishData: {}, enableDisableFinishData: {}, getListDimensionData: {}, createDimensionData: {},
-    enableDisableDimensionData: {}, softDeleteDimensionData: {}, updateDimensionData: {}, getBrandListData: {}, createBrandData: {},
-    updateBrandData: {}, deleteBrandData: {}, enableDisableBrandData: {}, getWarrantyListData: {}, enableDisableWarrantyData: {},
-    softDeleteWarrantyData: {}, createWarrantyData: {}, getListProductData: {}, enableDisableProductData: {}, updateProductData: {},
-    createProductData: {}, deleteProductData: {}, getListProductOptionData: {}, enableDisableProductOptionData: {}, deleteProductOptionData: {},
-    createProductOptionData: {}, updateProductOptionData: {},
-    getAllBrandListData: {}, getAllColorListData: {},
-    getAllWarrantyListData: {}, getAllTaxListData: {}, getAllBatchListData: {},
-    createProductsData: {}, getProductsData: {}, updateProductsData: {}, enableDisableProductCatalogsData: {}, updateProductsByIdData: {},
-    deleteProductsData: {}, approveDisapproveData: {}, getAllProductsData: {}, createCategoryData: {},
-    getHsnListData: {}, createHsnData: {}, updateHsnData: {}, enableDisableHsnData: {}, softDeleteHsnData: {}, getAllHsnData: {},
-    getProductRevisionsData: {}, reviewProductRevisionData: {},
-    getCategoryAttributesData: {}, updateCategoryAttributesData: {},
-    productPrefillData: {},
-    bulkUpdateProductsData: {}, adjustProductInventoryData: {}, getInventoryStatsData: {}, getTopProductsData: {},
-    getInventoryTransactionsData: {},
-    duplicateProductData: {}, permanentlyDeleteProductData: {},
-}
+  getListData: {},
+  softDeleteData: {},
+  enableDisableData: {},
+  createData: {},
+  updateData: {},
+  FinishGetListData: {},
+  CreateFinishData: {},
+  softDeleteFinishData: {},
+  enableDisableFinishData: {},
+  getListDimensionData: {},
+  createDimensionData: {},
+  enableDisableDimensionData: {},
+  softDeleteDimensionData: {},
+  updateDimensionData: {},
+  getBrandListData: {},
+  createBrandData: {},
+  updateBrandData: {},
+  deleteBrandData: {},
+  enableDisableBrandData: {},
+  getWarrantyListData: {},
+  enableDisableWarrantyData: {},
+  softDeleteWarrantyData: {},
+  createWarrantyData: {},
+  getListProductData: {},
+  enableDisableProductData: {},
+  updateProductData: {},
+  createProductData: {},
+  deleteProductData: {},
+  getListProductOptionData: {},
+  enableDisableProductOptionData: {},
+  deleteProductOptionData: {},
+  createProductOptionData: {},
+  updateProductOptionData: {},
+  getAllBrandListData: {},
+  getAllColorListData: {},
+  getAllWarrantyListData: {},
+  getAllTaxListData: {},
+  getAllBatchListData: {},
+  createProductsData: {},
+  getProductsData: {},
+  updateProductsData: {},
+  enableDisableProductCatalogsData: {},
+  updateProductsByIdData: {},
+  deleteProductsData: {},
+  approveDisapproveData: {},
+  getAllProductsData: {},
+  createCategoryData: {},
+  getHsnListData: {},
+  createHsnData: {},
+  updateHsnData: {},
+  enableDisableHsnData: {},
+  softDeleteHsnData: {},
+  getAllHsnData: {},
+  getProductRevisionsData: {},
+  reviewProductRevisionData: {},
+  getCategoryAttributesData: {},
+  updateCategoryAttributesData: {},
+  productPrefillData: {},
+  bulkUpdateProductsData: {},
+  adjustProductInventoryData: {},
+  getInventoryStatsData: {},
+  getTopProductsData: {},
+  getInventoryTransactionsData: {},
+  duplicateProductData: {},
+  permanentlyDeleteProductData: {},
+};
 
-export const getList = createApiThunkPrivate('product/getList', ENDPOINTS.platform.categories, 'GET', true, {
+export const getList = createApiThunkPrivate(
+  "product/getList",
+  ENDPOINTS.platform.categories,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => ({
-        ...(params.page ? { page: Number(params.page) } : {}),
-        limit: Number(params.limit || params.size || 1000),
-        ...(params.tree !== undefined ? { tree: params.tree } : {}),
-        ...(params.parentKey ? { parentKey: params.parentKey } : {}),
-        ...(params.active !== undefined ? { active: params.active } : {}),
-        ...(params.categoryKey ? { categoryKey: params.categoryKey } : {}),
+      ...(params.page ? { page: Number(params.page) } : {}),
+      limit: Number(params.limit || params.size || 1000),
+      ...(params.tree !== undefined ? { tree: params.tree } : {}),
+      ...(params.parentKey ? { parentKey: params.parentKey } : {}),
+      ...(params.active !== undefined ? { active: params.active } : {}),
+      ...(params.categoryKey ? { categoryKey: params.categoryKey } : {}),
     }),
-})
+  },
+);
 export const softDelete = deleteMany(
-    'product/softDelete',
-    ENDPOINTS.platform.category,
-    'Category deleted successfully',
-)
+  "product/softDelete",
+  ENDPOINTS.platform.category,
+  "Category deleted successfully",
+);
 export const enableDisable = patchMany(
-    'product/enableDisable',
-    ENDPOINTS.platform.category,
-    (payload = {}) => ({ active: payload.isDisable !== true }),
-    'Category status updated successfully',
-)
-export const create = createApiThunkPrivate('product/createCategoryLegacy', ENDPOINTS.platform.categories, 'POST', false, {
+  "product/enableDisable",
+  ENDPOINTS.platform.category,
+  (payload = {}) => ({ active: payload.isDisable !== true }),
+  "Category status updated successfully",
+);
+export const create = createApiThunkPrivate(
+  "product/createCategoryLegacy",
+  ENDPOINTS.platform.categories,
+  "POST",
+  false,
+  {
     transformBody: (payload = {}) => {
-        const title = payload.title || payload.name || payload.categoryName || '';
-        const keyBase = payload.categoryKey || title;
-        return {
-            categoryKey: String(keyBase).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-            title,
-            parentKey: payload.parentKey || payload.categoryId || null,
-            level: payload.level || (payload.categoryId ? 1 : 0),
-            attributeSchema: payload.attributeSchema || [],
-            attributesSchema: payload.attributesSchema || {},
-            active: payload.active ?? payload.isDisable !== true,
-            sortOrder: Number(payload.sortOrder || payload.priority || 0),
-            bannerUrl: payload.bannerUrl || '',
-            iconUrl: payload.iconUrl || '',
-            isDashboardVisible: Boolean(payload.isDashboardVisible),
-        };
+      const title = payload.title || payload.name || payload.categoryName || "";
+      const keyBase = payload.categoryKey || title;
+      return {
+        categoryKey: String(keyBase)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, ""),
+        title,
+        parentKey: payload.parentKey || payload.categoryId || null,
+        level: payload.level || (payload.categoryId ? 1 : 0),
+        attributeSchema: payload.attributeSchema || [],
+        attributesSchema: payload.attributesSchema || {},
+        active: payload.active ?? payload.isDisable !== true,
+        sortOrder: Number(payload.sortOrder || payload.priority || 0),
+        bannerUrl: payload.bannerUrl || "",
+        iconUrl: payload.iconUrl || "",
+        isDashboardVisible: Boolean(payload.isDashboardVisible),
+      };
     },
-})
-export const update = createApiThunkPrivate('product/updateCategoryLegacy', (payload) => ENDPOINTS.platform.category(firstId(payload)), 'PATCH', false, {
+  },
+);
+export const update = createApiThunkPrivate(
+  "product/updateCategoryLegacy",
+  (payload) => ENDPOINTS.platform.category(firstId(payload)),
+  "PATCH",
+  false,
+  {
     transformBody: (payload = {}) => {
-        const body = {};
-        if (payload.name || payload.title || payload.categoryName) body.title = payload.name || payload.title || payload.categoryName;
-        if (payload.active !== undefined || payload.isDisable !== undefined) body.active = payload.active ?? payload.isDisable !== true;
-        if (payload.sortOrder !== undefined || payload.priority !== undefined) body.sortOrder = Number(payload.sortOrder ?? payload.priority ?? 0);
-        if (payload.parentKey !== undefined) body.parentKey = payload.parentKey || null;
-        if (payload.level !== undefined) body.level = Number(payload.level || 0);
-        if (payload.bannerUrl !== undefined) body.bannerUrl = payload.bannerUrl || '';
-        if (payload.iconUrl !== undefined) body.iconUrl = payload.iconUrl || '';
-        if (payload.isDashboardVisible !== undefined) body.isDashboardVisible = Boolean(payload.isDashboardVisible);
-        if (payload.attributeSchema) body.attributeSchema = payload.attributeSchema;
-        if (payload.attributesSchema) body.attributesSchema = payload.attributesSchema;
-        return body;
+      const body = {};
+      if (payload.name || payload.title || payload.categoryName)
+        body.title = payload.name || payload.title || payload.categoryName;
+      if (payload.active !== undefined || payload.isDisable !== undefined)
+        body.active = payload.active ?? payload.isDisable !== true;
+      if (payload.sortOrder !== undefined || payload.priority !== undefined)
+        body.sortOrder = Number(payload.sortOrder ?? payload.priority ?? 0);
+      if (payload.parentKey !== undefined)
+        body.parentKey = payload.parentKey || null;
+      if (payload.level !== undefined) body.level = Number(payload.level || 0);
+      if (payload.bannerUrl !== undefined)
+        body.bannerUrl = payload.bannerUrl || "";
+      if (payload.iconUrl !== undefined) body.iconUrl = payload.iconUrl || "";
+      if (payload.isDashboardVisible !== undefined)
+        body.isDashboardVisible = Boolean(payload.isDashboardVisible);
+      if (payload.attributeSchema)
+        body.attributeSchema = payload.attributeSchema;
+      if (payload.attributesSchema)
+        body.attributesSchema = payload.attributesSchema;
+      return body;
     },
-})
-export const createCategory = createApiThunkPrivate('product/createCategory', ENDPOINTS.platform.categories, 'POST', false, {
+  },
+);
+export const createCategory = createApiThunkPrivate(
+  "product/createCategory",
+  ENDPOINTS.platform.categories,
+  "POST",
+  false,
+  {
     transformBody: (payload = {}) => {
-        const title = payload.title || payload.name || payload.categoryName || '';
-        const keyBase = payload.categoryKey || title;
-        return {
-            categoryKey: String(keyBase).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-            title,
-            parentKey: payload.parentKey || payload.categoryId || null,
-            level: payload.level || (payload.categoryId ? 1 : 0),
-            attributeSchema: payload.attributeSchema || [],
-            attributesSchema: payload.attributesSchema || {},
-            active: payload.active ?? payload.isDisable !== true,
-            sortOrder: Number(payload.sortOrder || payload.priority || 0),
-            bannerUrl: payload.bannerUrl || '',
-            iconUrl: payload.iconUrl || '',
-            isDashboardVisible: Boolean(payload.isDashboardVisible),
-        };
+      const title = payload.title || payload.name || payload.categoryName || "";
+      const keyBase = payload.categoryKey || title;
+      return {
+        categoryKey: String(keyBase)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, ""),
+        title,
+        parentKey: payload.parentKey || payload.categoryId || null,
+        level: payload.level || (payload.categoryId ? 1 : 0),
+        attributeSchema: payload.attributeSchema || [],
+        attributesSchema: payload.attributesSchema || {},
+        active: payload.active ?? payload.isDisable !== true,
+        sortOrder: Number(payload.sortOrder || payload.priority || 0),
+        bannerUrl: payload.bannerUrl || "",
+        iconUrl: payload.iconUrl || "",
+        isDashboardVisible: Boolean(payload.isDashboardVisible),
+      };
     },
-})
-export const reviewCategorySubmission = createApiThunkPrivate('category/reviewSubmission', (payload) => ENDPOINTS.catalogApprovals.category(firstId(payload) || payload.categoryKey), 'PATCH', false, {
-    transformBody: (payload = {}) => ({ action: payload.action, rejectionReason: payload.rejectionReason || '' }),
-})
-
-
-
+  },
+);
+export const reviewCategorySubmission = createApiThunkPrivate(
+  "category/reviewSubmission",
+  (payload) =>
+    ENDPOINTS.catalogApprovals.category(
+      firstId(payload) || payload.categoryKey,
+    ),
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      action: payload.action,
+      rejectionReason: payload.rejectionReason || "",
+    }),
+  },
+);
 
 /// brand functions===>>>>>>>>>>>>>>>>>
 
-export const getBrandList = createApiThunkPrivate('brands/getList', ENDPOINTS.platform.brands, 'GET', true, {
+export const getBrandList = createApiThunkPrivate(
+  "brands/getList",
+  ENDPOINTS.platform.brands,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => toListParams(params),
-})
-export const createBrand = createApiThunkPrivate('brands/create', ENDPOINTS.platform.brands, 'POST', false, {
+  },
+);
+export const createBrand = createApiThunkPrivate(
+  "brands/create",
+  ENDPOINTS.platform.brands,
+  "POST",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        name: String(payload.name || '').trim(),
-        logo: payload.logo || '',
-        thumbnails: payload.thumbnails || '',
-        active: payload.active ?? payload.isDisable !== true,
-        sortOrder: Number(payload.sortOrder || 0),
+      name: String(payload.name || "").trim(),
+      logo: payload.logo || "",
+      thumbnails: payload.thumbnails || "",
+      active: payload.active ?? payload.isDisable !== true,
+      sortOrder: Number(payload.sortOrder || 0),
     }),
-})
-export const updateBrand = createApiThunkPrivate('brands/update', (payload) => ENDPOINTS.platform.brand(firstId(payload)), 'PATCH', false, {
+  },
+);
+export const updateBrand = createApiThunkPrivate(
+  "brands/update",
+  (payload) => ENDPOINTS.platform.brand(firstId(payload)),
+  "PATCH",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        ...(payload.name !== undefined ? { name: String(payload.name || '').trim() } : {}),
-        ...(payload.logo !== undefined ? { logo: payload.logo || '' } : {}),
-        ...(payload.thumbnails !== undefined ? { thumbnails: payload.thumbnails || '' } : {}),
-        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
-        ...(payload.sortOrder !== undefined ? { sortOrder: Number(payload.sortOrder || 0) } : {}),
+      ...(payload.name !== undefined
+        ? { name: String(payload.name || "").trim() }
+        : {}),
+      ...(payload.logo !== undefined ? { logo: payload.logo || "" } : {}),
+      ...(payload.thumbnails !== undefined
+        ? { thumbnails: payload.thumbnails || "" }
+        : {}),
+      ...(payload.active !== undefined || payload.isDisable !== undefined
+        ? { active: payload.active ?? payload.isDisable !== true }
+        : {}),
+      ...(payload.sortOrder !== undefined
+        ? { sortOrder: Number(payload.sortOrder || 0) }
+        : {}),
     }),
-})
-export const deleteBrand = deleteMany('brands/softDelete', ENDPOINTS.platform.brand, 'Brand deleted successfully')
+  },
+);
+export const deleteBrand = deleteMany(
+  "brands/softDelete",
+  ENDPOINTS.platform.brand,
+  "Brand deleted successfully",
+);
 export const enableDisableBrand = patchMany(
-    'brands/enableDisable',
-    ENDPOINTS.platform.brand,
-    (payload = {}) => ({ active: payload.isDisable !== true }),
-    'Brand status updated successfully',
-)
-export const submitBrandForApproval = createApiThunkPrivate('brands/submitForApproval', ENDPOINTS.brands.submissions, 'POST', false, {
+  "brands/enableDisable",
+  ENDPOINTS.platform.brand,
+  (payload = {}) => ({ active: payload.isDisable !== true }),
+  "Brand status updated successfully",
+);
+export const submitBrandForApproval = createApiThunkPrivate(
+  "brands/submitForApproval",
+  ENDPOINTS.brands.submissions,
+  "POST",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        name: String(payload.name || '').trim(),
-        ...(payload.logo ? { logo: payload.logo } : {}),
-        ...(payload.thumbnails ? { thumbnails: payload.thumbnails } : {}),
-        ...(payload.description ? { description: payload.description } : {}),
+      name: String(payload.name || "").trim(),
+      ...(payload.logo ? { logo: payload.logo } : {}),
+      ...(payload.thumbnails ? { thumbnails: payload.thumbnails } : {}),
+      ...(payload.description ? { description: payload.description } : {}),
     }),
-})
-export const getMyBrandSubmissions = createApiThunkPrivate('brands/getMySubmissions', ENDPOINTS.brands.mySubmissions, 'GET', true)
-export const resubmitBrandForApproval = createApiThunkPrivate('brands/resubmitForApproval', (payload) => ENDPOINTS.brands.submission(firstId(payload)), 'PATCH', false, {
+  },
+);
+export const getMyBrandSubmissions = createApiThunkPrivate(
+  "brands/getMySubmissions",
+  ENDPOINTS.brands.mySubmissions,
+  "GET",
+  true,
+);
+export const resubmitBrandForApproval = createApiThunkPrivate(
+  "brands/resubmitForApproval",
+  (payload) => ENDPOINTS.brands.submission(firstId(payload)),
+  "PATCH",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        name: String(payload.name || '').trim(),
-        ...(payload.logo ? { logo: payload.logo } : {}),
-        ...(payload.thumbnails ? { thumbnails: payload.thumbnails } : {}),
-        ...(payload.description ? { description: payload.description } : {}),
+      name: String(payload.name || "").trim(),
+      ...(payload.logo ? { logo: payload.logo } : {}),
+      ...(payload.thumbnails ? { thumbnails: payload.thumbnails } : {}),
+      ...(payload.description ? { description: payload.description } : {}),
     }),
-})
+  },
+);
 const brandReviewIds = (payload = {}) => {
-    const selectedIds = Array.isArray(payload.selectedData)
-        ? payload.selectedData.map((item) => item?._id || item?.id || item?.brandId)
-        : [];
-    const rawIds = [
-        payload.brandIds,
-        payload.ids,
-        payload._id,
-        payload.id,
-        payload.brandId,
-        selectedIds,
-    ];
-    return [...new Set(rawIds.flatMap((value) => Array.isArray(value) ? value : [value]).filter(Boolean))];
+  const selectedIds = Array.isArray(payload.selectedData)
+    ? payload.selectedData.map((item) => item?._id || item?.id || item?.brandId)
+    : [];
+  const rawIds = [
+    payload.brandIds,
+    payload.ids,
+    payload._id,
+    payload.id,
+    payload.brandId,
+    selectedIds,
+  ];
+  return [
+    ...new Set(
+      rawIds
+        .flatMap((value) => (Array.isArray(value) ? value : [value]))
+        .filter(Boolean),
+    ),
+  ];
 };
 const isBulkBrandReview = (payload = {}) =>
-    brandReviewIds(payload).length > 1 ||
-    Array.isArray(payload.brandIds) ||
-    Array.isArray(payload.ids) ||
-    Array.isArray(payload._id) ||
-    Array.isArray(payload.selectedData);
+  brandReviewIds(payload).length > 1 ||
+  Array.isArray(payload.brandIds) ||
+  Array.isArray(payload.ids) ||
+  Array.isArray(payload._id) ||
+  Array.isArray(payload.selectedData);
 
-export const reviewBrandSubmission = createApiThunkPrivate('brands/reviewSubmission', (payload) => {
+export const reviewBrandSubmission = createApiThunkPrivate(
+  "brands/reviewSubmission",
+  (payload) => {
     const ids = brandReviewIds(payload);
-    return isBulkBrandReview(payload) ? ENDPOINTS.brands.approvalBulk : ENDPOINTS.brands.approval(ids[0]);
-}, 'PATCH', false, {
+    return isBulkBrandReview(payload)
+      ? ENDPOINTS.brands.approvalBulk
+      : ENDPOINTS.brands.approval(ids[0]);
+  },
+  "PATCH",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        action: payload.action,
-        rejectionReason: payload.rejectionReason || '',
-        ...(isBulkBrandReview(payload) ? { brandIds: brandReviewIds(payload) } : {}),
+      action: payload.action,
+      rejectionReason: payload.rejectionReason || "",
+      ...(isBulkBrandReview(payload)
+        ? { brandIds: brandReviewIds(payload) }
+        : {}),
     }),
-})
+  },
+);
 
 /// batch functions ===>>>>>>>>>>>>>>>>>
 
-export const getBatchList = createApiThunkPrivate('batch/getList', ENDPOINTS.platform.batches, 'GET', true, {
+export const getBatchList = createApiThunkPrivate(
+  "batch/getList",
+  ENDPOINTS.platform.batches,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => toListParams(params),
-});
-export const createBatch = createApiThunkPrivate('batch/create', ENDPOINTS.platform.batches, 'POST', false, {
-    transformBody: (payload = {}) => ({
-        batchCode: String(payload.batchCode || '').trim(),
-        manufactureDate: Number(payload.manufactureDate || 0),
-        expiryDate: Number(payload.expiryDate || 0),
-        active: payload.active ?? payload.isDisable !== true,
-    }),
-});
-export const updateBatch = createApiThunkPrivate('batch/update', (payload) => ENDPOINTS.platform.batch(firstId(payload)), 'PATCH', false, {
-    transformBody: (payload = {}) => ({
-        ...(payload.batchCode !== undefined ? { batchCode: String(payload.batchCode || '').trim() } : {}),
-        ...(payload.manufactureDate !== undefined ? { manufactureDate: Number(payload.manufactureDate || 0) } : {}),
-        ...(payload.expiryDate !== undefined ? { expiryDate: Number(payload.expiryDate || 0) } : {}),
-        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
-    }),
-});
-export const deleteBatch = deleteMany('batch/softDelete', ENDPOINTS.platform.batch, 'Batch deleted successfully');
-export const enableDisableBatch = patchMany(
-    'batch/enableDisable',
-    ENDPOINTS.platform.batch,
-    (payload = {}) => ({ active: payload.isDisable !== true }),
-    'Batch status updated successfully',
+  },
 );
-export const getAllBatchList = createApiThunkPrivate('batch/getAllDocuments', ENDPOINTS.platform.batches, 'GET', true, {
+export const createBatch = createApiThunkPrivate(
+  "batch/create",
+  ENDPOINTS.platform.batches,
+  "POST",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      batchCode: String(payload.batchCode || "").trim(),
+      manufactureDate: Number(payload.manufactureDate || 0),
+      expiryDate: Number(payload.expiryDate || 0),
+      active: payload.active ?? payload.isDisable !== true,
+    }),
+  },
+);
+export const updateBatch = createApiThunkPrivate(
+  "batch/update",
+  (payload) => ENDPOINTS.platform.batch(firstId(payload)),
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      ...(payload.batchCode !== undefined
+        ? { batchCode: String(payload.batchCode || "").trim() }
+        : {}),
+      ...(payload.manufactureDate !== undefined
+        ? { manufactureDate: Number(payload.manufactureDate || 0) }
+        : {}),
+      ...(payload.expiryDate !== undefined
+        ? { expiryDate: Number(payload.expiryDate || 0) }
+        : {}),
+      ...(payload.active !== undefined || payload.isDisable !== undefined
+        ? { active: payload.active ?? payload.isDisable !== true }
+        : {}),
+    }),
+  },
+);
+export const deleteBatch = deleteMany(
+  "batch/softDelete",
+  ENDPOINTS.platform.batch,
+  "Batch deleted successfully",
+);
+export const enableDisableBatch = patchMany(
+  "batch/enableDisable",
+  ENDPOINTS.platform.batch,
+  (payload = {}) => ({ active: payload.isDisable !== true }),
+  "Batch status updated successfully",
+);
+export const getAllBatchList = createApiThunkPrivate(
+  "batch/getAllDocuments",
+  ENDPOINTS.platform.batches,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => toListParams(params, { limit: 100 }),
-})
+  },
+);
 
 //product-options
-export const submitProductOptionForApproval = createApiThunkPrivate('product-option/submitForApproval', ENDPOINTS.productOptions.submissions, 'POST', false, {
+export const submitProductOptionForApproval = createApiThunkPrivate(
+  "product-option/submitForApproval",
+  ENDPOINTS.productOptions.submissions,
+  "POST",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        name: String(payload.name || '').trim(),
-        displayType: payload.displayType || 'button',
-        description: String(payload.description || '').trim(),
-        values: (payload.values || []).map((value) =>
-            typeof value === 'string' ? { name: value.trim() } : value
-        ).filter((value) => value.name),
+      name: String(payload.name || "").trim(),
+      displayType: payload.displayType || "button",
+      description: String(payload.description || "").trim(),
+      values: (payload.values || [])
+        .map((value) =>
+          typeof value === "string" ? { name: value.trim() } : value,
+        )
+        .filter((value) => value.name),
     }),
-})
-export const getAvailableProductOptionsForSeller = createApiThunkPrivate('product-option/getAvailableForSeller', ENDPOINTS.productOptions.availableMine, 'GET', true)
-export const reviewProductOptionSubmission = createApiThunkPrivate('product-option/reviewSubmission', (payload) => ENDPOINTS.productOptions.approval(firstId(payload)), 'PATCH', false, {
+  },
+);
+export const getAvailableProductOptionsForSeller = createApiThunkPrivate(
+  "product-option/getAvailableForSeller",
+  ENDPOINTS.productOptions.availableMine,
+  "GET",
+  true,
+);
+export const reviewProductOptionSubmission = createApiThunkPrivate(
+  "product-option/reviewSubmission",
+  (payload) => ENDPOINTS.productOptions.approval(firstId(payload)),
+  "PATCH",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        action: payload.action,
-        rejectionReason: payload.rejectionReason || '',
+      action: payload.action,
+      rejectionReason: payload.rejectionReason || "",
     }),
-})
-export const getListProduct = createApiThunkPrivate('product-option/getList', ENDPOINTS.platform.productOptions, 'GET', true, {
+  },
+);
+export const getListProduct = createApiThunkPrivate(
+  "product-option/getList",
+  ENDPOINTS.platform.productOptions,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => toListParams(params),
-})
+  },
+);
 export const enableDisableProduct = patchMany(
-    'product-option/enableDisable',
-    ENDPOINTS.platform.productOption,
-    (payload = {}) => ({ active: payload.isDisable !== true }),
-    'Product option status updated successfully',
-)
-export const updateProduct = createApiThunkPrivate('product-option/update', (payload) => ENDPOINTS.platform.productOption(firstId(payload)), 'PATCH', false, {
+  "product-option/enableDisable",
+  ENDPOINTS.platform.productOption,
+  (payload = {}) => ({ active: payload.isDisable !== true }),
+  "Product option status updated successfully",
+);
+export const updateProduct = createApiThunkPrivate(
+  "product-option/update",
+  (payload) => ENDPOINTS.platform.productOption(firstId(payload)),
+  "PATCH",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        ...(payload.name !== undefined ? { name: String(payload.name || '').trim() } : {}),
-        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
+      ...(payload.name !== undefined
+        ? { name: String(payload.name || "").trim() }
+        : {}),
+      ...(payload.active !== undefined || payload.isDisable !== undefined
+        ? { active: payload.active ?? payload.isDisable !== true }
+        : {}),
     }),
-})
-export const createProduct = createApiThunkPrivate('product-option/create', ENDPOINTS.platform.productOptions, 'POST', false, {
+  },
+);
+export const createProduct = createApiThunkPrivate(
+  "product-option/create",
+  ENDPOINTS.platform.productOptions,
+  "POST",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        name: String(payload.name || '').trim(),
-        active: payload.active ?? payload.isDisable !== true,
+      name: String(payload.name || "").trim(),
+      active: payload.active ?? payload.isDisable !== true,
     }),
-})
-export const deleteProduct = deleteMany('product-option/softDelete', ENDPOINTS.platform.productOption, 'Product option deleted successfully')
-export const getListProductOption = createApiThunkPrivate('product-option-value/getList', ENDPOINTS.platform.productOptionValues, 'GET', true, {
+  },
+);
+export const deleteProduct = deleteMany(
+  "product-option/softDelete",
+  ENDPOINTS.platform.productOption,
+  "Product option deleted successfully",
+);
+export const getListProductOption = createApiThunkPrivate(
+  "product-option-value/getList",
+  ENDPOINTS.platform.productOptionValues,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => toListParams(params),
-})
+  },
+);
 export const enableDisableProductOption = patchMany(
-    'product-option-value/enableDisable',
-    ENDPOINTS.platform.productOptionValue,
-    (payload = {}) => ({ active: payload.isDisable !== true }),
-    'Product option value status updated successfully',
-)
-export const deleteProductOption = deleteMany('product-option-value/softDelete', ENDPOINTS.platform.productOptionValue, 'Product option value deleted successfully')
-export const createProductOption = createApiThunkPrivate('product-option-value/create', ENDPOINTS.platform.productOptionValues, 'POST', false, {
+  "product-option-value/enableDisable",
+  ENDPOINTS.platform.productOptionValue,
+  (payload = {}) => ({ active: payload.isDisable !== true }),
+  "Product option value status updated successfully",
+);
+export const deleteProductOption = deleteMany(
+  "product-option-value/softDelete",
+  ENDPOINTS.platform.productOptionValue,
+  "Product option value deleted successfully",
+);
+export const createProductOption = createApiThunkPrivate(
+  "product-option-value/create",
+  ENDPOINTS.platform.productOptionValues,
+  "POST",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        option_id: payload.option_id,
-        name: String(payload.name || '').trim(),
-        active: payload.active ?? payload.isDisable !== true,
+      option_id: payload.option_id,
+      name: String(payload.name || "").trim(),
+      active: payload.active ?? payload.isDisable !== true,
     }),
-})
-export const updateProductOption = createApiThunkPrivate('product-option-value/update', (payload) => ENDPOINTS.platform.productOptionValue(firstId(payload)), 'PATCH', false, {
+  },
+);
+export const updateProductOption = createApiThunkPrivate(
+  "product-option-value/update",
+  (payload) => ENDPOINTS.platform.productOptionValue(firstId(payload)),
+  "PATCH",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        ...(payload.option_id !== undefined ? { option_id: payload.option_id } : {}),
-        ...(payload.name !== undefined ? { name: String(payload.name || '').trim() } : {}),
-        ...(payload.active !== undefined || payload.isDisable !== undefined ? { active: payload.active ?? payload.isDisable !== true } : {}),
+      ...(payload.option_id !== undefined
+        ? { option_id: payload.option_id }
+        : {}),
+      ...(payload.name !== undefined
+        ? { name: String(payload.name || "").trim() }
+        : {}),
+      ...(payload.active !== undefined || payload.isDisable !== undefined
+        ? { active: payload.active ?? payload.isDisable !== true }
+        : {}),
     }),
-})
+  },
+);
 
-
-export const createProducts = createApiThunkPrivate('createProducts', ENDPOINTS.products.list, 'POST', false, {
+export const createProducts = createApiThunkPrivate(
+  "createProducts",
+  ENDPOINTS.products.list,
+  "POST",
+  false,
+  {
     transformBody: toProductBody,
-})
-export const getProductPrefillBasic = createApiThunkPrivate('getProductPrefillBasic', ENDPOINTS.products.prefillBasic, 'GET', true, {
+  },
+);
+export const getProductPrefillBasic = createApiThunkPrivate(
+  "getProductPrefillBasic",
+  ENDPOINTS.products.prefillBasic,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => ({
-        ...(params.includeInactive !== undefined ? { includeInactive: params.includeInactive } : {}),
-        ...(params.includeOptionValues !== undefined ? { includeOptionValues: params.includeOptionValues } : {}),
-        ...(params.includeCategoryAttributes !== undefined ? { includeCategoryAttributes: params.includeCategoryAttributes } : {}),
+      ...(params.includeInactive !== undefined
+        ? { includeInactive: params.includeInactive }
+        : {}),
+      ...(params.includeOptionValues !== undefined
+        ? { includeOptionValues: params.includeOptionValues }
+        : {}),
+      ...(params.includeCategoryAttributes !== undefined
+        ? { includeCategoryAttributes: params.includeCategoryAttributes }
+        : {}),
     }),
-})
+  },
+);
 
-export const getProductPrefillLookups = createApiThunkPrivate('getProductPrefillLookups', ENDPOINTS.products.prefillLookups, 'GET', true, {
+export const getProductPrefillLookups = createApiThunkPrivate(
+  "getProductPrefillLookups",
+  ENDPOINTS.products.prefillLookups,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => ({
-        ...(params.includeInactive !== undefined ? { includeInactive: params.includeInactive } : {}),
-        ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+      ...(params.includeInactive !== undefined
+        ? { includeInactive: params.includeInactive }
+        : {}),
+      ...(params.sellerId ? { sellerId: params.sellerId } : {}),
     }),
-})
+  },
+);
 
-export const getProductPrefillLocations = createApiThunkPrivate('getProductPrefillLocations', ENDPOINTS.products.prefillLocations, 'GET', true, {
+export const getProductPrefillLocations = createApiThunkPrivate(
+  "getProductPrefillLocations",
+  ENDPOINTS.products.prefillLocations,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => ({
-        ...(params.includeInactive !== undefined ? { includeInactive: params.includeInactive } : {}),
-        ...(params.includeStates !== undefined ? { includeStates: params.includeStates } : {}),
-        ...(params.includeCities !== undefined ? { includeCities: params.includeCities } : {}),
+      ...(params.includeInactive !== undefined
+        ? { includeInactive: params.includeInactive }
+        : {}),
+      ...(params.includeStates !== undefined
+        ? { includeStates: params.includeStates }
+        : {}),
+      ...(params.includeCities !== undefined
+        ? { includeCities: params.includeCities }
+        : {}),
     }),
-})
+  },
+);
 
-export const getProductPrefillProducts = createApiThunkPrivate('getProductPrefillProducts', ENDPOINTS.products.prefillProducts, 'GET', true, {
+export const getProductPrefillProducts = createApiThunkPrivate(
+  "getProductPrefillProducts",
+  ENDPOINTS.products.prefillProducts,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => ({
-        includeProducts: params.includeProducts !== false,
-        ...(params.includeInactive !== undefined ? { includeInactive: params.includeInactive } : {}),
-        ...(params.sellerId ? { sellerId: params.sellerId } : {}),
-        productLimit: Number(params.productLimit || params.limit || 100),
+      includeProducts: params.includeProducts !== false,
+      ...(params.includeInactive !== undefined
+        ? { includeInactive: params.includeInactive }
+        : {}),
+      ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+      productLimit: Number(params.productLimit || params.limit || 100),
     }),
-})
+  },
+);
 
-export const getProductPrefill = createAsyncThunk('getProductPrefill', async (params = {}, { dispatch, getState, rejectWithValue }) => {
+export const getProductPrefill = createAsyncThunk(
+  "getProductPrefill",
+  async (params = {}, { dispatch, getState, rejectWithValue }) => {
     try {
-        const shouldLoad = {
-            basic: params.includeBasic !== false,
-            lookups: params.includeLookups !== false,
-            locations: params.includeLocations !== false,
-            products: params.includeProducts !== false,
-        };
-        const requests = [];
-        if (shouldLoad.basic) requests.push(['basic', dispatch(getProductPrefillBasic(params)).unwrap()]);
-        if (shouldLoad.lookups) requests.push(['lookups', dispatch(getProductPrefillLookups(params)).unwrap()]);
-        if (shouldLoad.locations) requests.push(['locations', dispatch(getProductPrefillLocations(params)).unwrap()]);
-        if (shouldLoad.products) requests.push(['products', dispatch(getProductPrefillProducts(params)).unwrap()]);
+      const shouldLoad = {
+        basic: params.includeBasic !== false,
+        lookups: params.includeLookups !== false,
+        locations: params.includeLocations !== false,
+        products: params.includeProducts !== false,
+      };
+      const requests = [];
+      if (shouldLoad.basic)
+        requests.push([
+          "basic",
+          dispatch(getProductPrefillBasic(params)).unwrap(),
+        ]);
+      if (shouldLoad.lookups)
+        requests.push([
+          "lookups",
+          dispatch(getProductPrefillLookups(params)).unwrap(),
+        ]);
+      if (shouldLoad.locations)
+        requests.push([
+          "locations",
+          dispatch(getProductPrefillLocations(params)).unwrap(),
+        ]);
+      if (shouldLoad.products)
+        requests.push([
+          "products",
+          dispatch(getProductPrefillProducts(params)).unwrap(),
+        ]);
 
-        const results = await Promise.all(requests.map(([, request]) => request));
-        const fresh = results.reduce((acc, response, index) => {
-            acc[requests[index][0]] = response?.data || response || {};
-            return acc;
-        }, {});
-        const existingState = getState()?.product?.productPrefillData;
-        const existing = existingState?.data?.data || existingState?.normalized?.data || existingState?.data || {};
+      const results = await Promise.all(requests.map(([, request]) => request));
+      const fresh = results.reduce((acc, response, index) => {
+        acc[requests[index][0]] = response?.data || response || {};
+        return acc;
+      }, {});
+      const existingState = getState()?.product?.productPrefillData;
+      const existing =
+        existingState?.data?.data ||
+        existingState?.normalized?.data ||
+        existingState?.data ||
+        {};
 
-        return deepMerge({}, existing, fresh.basic, fresh.lookups, fresh.locations, fresh.products);
+      return deepMerge(
+        {},
+        existing,
+        fresh.basic,
+        fresh.lookups,
+        fresh.locations,
+        fresh.products,
+      );
     } catch (err) {
-        return rejectWithValue(err?.toString ? err.toString() : err);
+      return rejectWithValue(err?.toString ? err.toString() : err);
     }
-})
-export const getProducts = createApiThunkPrivate('getProducts', ENDPOINTS.products.listForPanel, 'GET', true, {
+  },
+);
+export const getProducts = createApiThunkPrivate(
+  "getProducts",
+  ENDPOINTS.products.listForPanel,
+  "GET",
+  true,
+  {
     transformParams: toProductListParams,
-})
-export const getProductById = createApiThunkPrivate('getProductById', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'GET')
-export const updateProducts = getProductById
+  },
+);
+export const getProductById = createApiThunkPrivate(
+  "getProductById",
+  (payload) => ENDPOINTS.products.detail(firstProductId(payload)),
+  "GET",
+);
+export const updateProducts = getProductById;
 export const enableDisableProductCatalogs = patchMany(
-    'enableDisableProductCatalogs',
-    ENDPOINTS.products.status,
-    toProductStatusBody,
-    'Product status updated successfully'
-)
-export const updateProductsById = createApiThunkPrivate('updateProductsById', (payload) => ENDPOINTS.products.detail(firstProductId(payload)), 'PATCH', false, {
+  "enableDisableProductCatalogs",
+  ENDPOINTS.products.status,
+  toProductStatusBody,
+  "Product status updated successfully",
+);
+export const updateProductsById = createApiThunkPrivate(
+  "updateProductsById",
+  (payload) => ENDPOINTS.products.detail(firstProductId(payload)),
+  "PATCH",
+  false,
+  {
     transformBody: toProductPatchBody,
-})
-export const permanentlyDeleteProduct = createApiThunkPrivate('permanentlyDeleteProduct', (payload) => ENDPOINTS.products.permanentDelete(firstProductId(payload)), 'DELETE')
-export const duplicateProduct = createApiThunkPrivate('duplicateProduct', (payload) => ENDPOINTS.products.duplicate(firstProductId(payload)), 'POST', false, {
+  },
+);
+export const permanentlyDeleteProduct = createApiThunkPrivate(
+  "permanentlyDeleteProduct",
+  (payload) => ENDPOINTS.products.permanentDelete(firstProductId(payload)),
+  "DELETE",
+);
+export const duplicateProduct = createApiThunkPrivate(
+  "duplicateProduct",
+  (payload) => ENDPOINTS.products.duplicate(firstProductId(payload)),
+  "POST",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        ...(payload.title ? { title: payload.title } : {}),
-        ...(payload.sku ? { sku: payload.sku } : {}),
+      ...(payload.title ? { title: payload.title } : {}),
+      ...(payload.sku ? { sku: payload.sku } : {}),
     }),
-})
-export const approveDisapprove = createApiThunkPrivate('approveDisapprove', (payload) => ENDPOINTS.products.moderate(payload?.productId || payload?._id || payload?.id), 'PATCH', false, {
-    transformBody: (payload = {}) => ({
-        ...(payload.status ? { status: payload.status } : {}),
-        ...(payload.rejectionReason !== undefined ? { rejectionReason: payload.rejectionReason } : {}),
-        ...(payload.checklist ? { checklist: payload.checklist } : {}),
-    }),
-})
-export const getAllProducts = createApiThunkPrivate('getAllProducts', ENDPOINTS.products.listForPanel, 'GET', true, {
-    transformParams: toProductListParams,
-})
-export const getProductRevisions = createApiThunkPrivate('getProductRevisions', (payload) => ENDPOINTS.products.revisions(firstProductId(payload)), 'GET', true, {
-    transformParams: (params = {}) => ({
-        ...(params.status ? { status: params.status } : {}),
-        ...(params.page ? { page: Number(params.page) } : {}),
-        ...(params.limit || params.size ? { limit: Number(params.limit || params.size) } : {}),
-    }),
-})
-export const reviewProductRevision = createApiThunkPrivate(
-    'reviewProductRevision',
-    (payload) => ENDPOINTS.products.reviewRevision(
-        firstProductId(payload),
-        payload.revisionId || payload.pendingRevisionId || payload?.revision?._id || payload?.revision?.id,
+  },
+);
+export const approveDisapprove = createApiThunkPrivate(
+  "approveDisapprove",
+  (payload) =>
+    ENDPOINTS.products.moderate(
+      payload?.productId || payload?._id || payload?.id,
     ),
-    'PATCH',
-    false,
-    {
-        transformBody: (payload = {}) => ({
-            status: payload.status,
-            ...(payload.rejectionReason !== undefined ? { rejectionReason: payload.rejectionReason } : {}),
-            ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
-            ...(payload.checklist ? { checklist: payload.checklist } : {}),
-        }),
-    },
-)
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      ...(payload.status ? { status: payload.status } : {}),
+      ...(payload.rejectionReason !== undefined
+        ? { rejectionReason: payload.rejectionReason }
+        : {}),
+      ...(payload.checklist ? { checklist: payload.checklist } : {}),
+    }),
+  },
+);
+export const getAllProducts = createApiThunkPrivate(
+  "getAllProducts",
+  ENDPOINTS.products.listForPanel,
+  "GET",
+  true,
+  {
+    transformParams: toProductListParams,
+  },
+);
+export const getProductRevisions = createApiThunkPrivate(
+  "getProductRevisions",
+  (payload) => ENDPOINTS.products.revisions(firstProductId(payload)),
+  "GET",
+  true,
+  {
+    transformParams: (params = {}) => ({
+      ...(params.status ? { status: params.status } : {}),
+      ...(params.page ? { page: Number(params.page) } : {}),
+      ...(params.limit || params.size
+        ? { limit: Number(params.limit || params.size) }
+        : {}),
+    }),
+  },
+);
+export const reviewProductRevision = createApiThunkPrivate(
+  "reviewProductRevision",
+  (payload) =>
+    ENDPOINTS.products.reviewRevision(
+      firstProductId(payload),
+      payload.revisionId ||
+        payload.pendingRevisionId ||
+        payload?.revision?._id ||
+        payload?.revision?.id,
+    ),
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      status: payload.status,
+      ...(payload.rejectionReason !== undefined
+        ? { rejectionReason: payload.rejectionReason }
+        : {}),
+      ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
+      ...(payload.checklist ? { checklist: payload.checklist } : {}),
+    }),
+  },
+);
 export const getCategoryAttributes = createApiThunkPrivate(
-    'getCategoryAttributes',
-    (payload) => ENDPOINTS.platform.categoryAttributes(payload?.categoryKey || payload?.categoryId || payload?._id || payload?.id),
-    'GET',
-    true
-)
+  "getCategoryAttributes",
+  (payload) =>
+    ENDPOINTS.platform.categoryAttributes(
+      payload?.categoryKey ||
+        payload?.categoryId ||
+        payload?._id ||
+        payload?.id,
+    ),
+  "GET",
+  true,
+);
 export const updateCategoryAttributes = createApiThunkPrivate(
-    'updateCategoryAttributes',
-    (payload) => ENDPOINTS.platform.category(payload?.categoryKey || payload?.categoryId || payload?._id || payload?.id),
-    'PATCH',
-    false,
-    {
-        transformBody: (payload = {}) => ({
-            attributeSchema: payload.attributeSchema || [],
-        }),
-    }
-)
-export const getAllBrandList = createApiThunkPrivate('brands/getAllDocuments', ENDPOINTS.platform.brands, 'GET', true, {
+  "updateCategoryAttributes",
+  (payload) =>
+    ENDPOINTS.platform.category(
+      payload?.categoryKey ||
+        payload?.categoryId ||
+        payload?._id ||
+        payload?.id,
+    ),
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      attributeSchema: payload.attributeSchema || [],
+    }),
+  },
+);
+export const getAllBrandList = createApiThunkPrivate(
+  "brands/getAllDocuments",
+  ENDPOINTS.platform.brands,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => toListParams(params, { limit: 5000 }),
-})
-
+  },
+);
 
 /// hsn code==============>>>>>>>>>>>>>>>
 
-export const getHsnList = createApiThunkPrivate('getHsnList', ENDPOINTS.platform.hsnCodes, 'GET', true, {
+export const getHsnList = createApiThunkPrivate(
+  "getHsnList",
+  ENDPOINTS.platform.hsnCodes,
+  "GET",
+  true,
+  {
     transformParams: toHsnListParams,
-})
+  },
+);
 export const enableDisableHsn = patchMany(
-    'enableDisableHsn',
-    ENDPOINTS.platform.hsnCode,
-    (payload = {}) => ({ active: payload.isDisable !== true }),
-    'HSN status updated successfully'
-)
+  "enableDisableHsn",
+  ENDPOINTS.platform.hsnCode,
+  (payload = {}) => ({ active: payload.isDisable !== true }),
+  "HSN status updated successfully",
+);
 export const softDeleteHsn = deleteMany(
-    'softDeleteHsn',
-    ENDPOINTS.platform.hsnCode,
-    'HSN code deleted successfully'
-)
-export const createHsn = createApiThunkPrivate('createHsn', ENDPOINTS.platform.hsnCodes, 'POST', false, {
+  "softDeleteHsn",
+  ENDPOINTS.platform.hsnCode,
+  "HSN code deleted successfully",
+);
+export const createHsn = createApiThunkPrivate(
+  "createHsn",
+  ENDPOINTS.platform.hsnCodes,
+  "POST",
+  false,
+  {
     transformBody: toHsnBody,
-})
-export const reviewHsnSubmission = createApiThunkPrivate('hsn/reviewSubmission', (payload) => ENDPOINTS.catalogApprovals.hsn(firstId(payload) || payload.code), 'PATCH', false, {
-    transformBody: (payload = {}) => ({ action: payload.action, rejectionReason: payload.rejectionReason || '' }),
-})
-export const updateHsn = createApiThunkPrivate('updateHsn', (payload) => ENDPOINTS.platform.hsnCode(firstId(payload) || payload.code), 'PATCH', false, {
+  },
+);
+export const reviewHsnSubmission = createApiThunkPrivate(
+  "hsn/reviewSubmission",
+  (payload) => ENDPOINTS.catalogApprovals.hsn(firstId(payload) || payload.code),
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      action: payload.action,
+      rejectionReason: payload.rejectionReason || "",
+    }),
+  },
+);
+export const updateHsn = createApiThunkPrivate(
+  "updateHsn",
+  (payload) => ENDPOINTS.platform.hsnCode(firstId(payload) || payload.code),
+  "PATCH",
+  false,
+  {
     transformBody: (payload = {}) => {
-        const body = toHsnBody(payload);
-        delete body.code;
-        return body;
+      const body = toHsnBody(payload);
+      delete body.code;
+      return body;
     },
-})
-export const getAllHsn = createApiThunkPrivate('getAllHsn', ENDPOINTS.platform.hsnCodes, 'GET', true, {
-    transformParams: (params = {}) => toHsnListParams({ ...params, limit: params.limit || params.size || 100 }),
-})
+  },
+);
+export const getAllHsn = createApiThunkPrivate(
+  "getAllHsn",
+  ENDPOINTS.platform.hsnCodes,
+  "GET",
+  true,
+  {
+    transformParams: (params = {}) =>
+      toHsnListParams({ ...params, limit: params.limit || params.size || 100 }),
+  },
+);
 
-export const bulkUpdateProducts = createApiThunkPrivate('bulkUpdateProducts', ENDPOINTS.products.bulkUpdate, 'POST', false, {
+export const bulkUpdateProducts = createApiThunkPrivate(
+  "bulkUpdateProducts",
+  ENDPOINTS.products.bulkUpdate,
+  "POST",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        productIds: Array.isArray(payload.productIds) ? payload.productIds : [],
-        ...(payload.status !== undefined ? { status: payload.status } : {}),
-        ...(payload.visibility !== undefined ? { visibility: payload.visibility } : {}),
-        ...(payload.action !== undefined ? { action: payload.action } : {}),
+      productIds: Array.isArray(payload.productIds) ? payload.productIds : [],
+      ...(payload.status !== undefined ? { status: payload.status } : {}),
+      ...(payload.visibility !== undefined
+        ? { visibility: payload.visibility }
+        : {}),
+      ...(payload.action !== undefined ? { action: payload.action } : {}),
     }),
-})
-export const bulkUpdateSpecialPrices = createApiThunkPrivate('bulkUpdateSpecialPrices', ENDPOINTS.products.specialPrices, 'POST', false, {
+  },
+);
+export const bulkUpdateSpecialPrices = createApiThunkPrivate(
+  "bulkUpdateSpecialPrices",
+  ENDPOINTS.products.specialPrices,
+  "POST",
+  false,
+  {
     transformBody: (payload = {}) => ({
-        updates: Array.isArray(payload.updates) ? payload.updates : [],
+      updates: Array.isArray(payload.updates) ? payload.updates : [],
     }),
-})
+  },
+);
 export const adjustProductInventory = createApiThunkPrivate(
-    'adjustProductInventory',
-    (payload) => ENDPOINTS.products.inventory(firstProductId(payload)),
-    'PATCH',
-    false,
-    {
-        transformBody: (payload = {}) => ({
-            ...(payload.adjustment !== undefined ? { adjustment: Number(payload.adjustment || 0) } : {}),
-            ...(payload.adjustmentType ? { adjustmentType: payload.adjustmentType } : {}),
-            ...(payload.quantity !== undefined ? { quantity: Number(payload.quantity || 0) } : {}),
-            ...(payload.variantSku ? { variantSku: payload.variantSku } : {}),
-            ...(payload.reason ? { reason: payload.reason } : {}),
-            ...(payload.note ? { note: payload.note } : {}),
-            ...(payload.reference ? { reference: payload.reference } : {}),
-        }),
-    }
-)
-export const getInventoryTransactions = createApiThunkPrivate('getInventoryTransactions', ENDPOINTS.inventory.transactions, 'GET', true, {
-    transformParams: (params = {}) => ({
-        ...(params.productId ? { productId: params.productId } : {}),
-        ...(params.sellerId ? { sellerId: params.sellerId } : {}),
-        ...(params.type ? { type: params.type } : {}),
-        ...(params.orderId ? { orderId: params.orderId } : {}),
-        limit: Number(params.limit || 50),
-        offset: Number(params.offset || 0),
+  "adjustProductInventory",
+  (payload) => ENDPOINTS.products.inventory(firstProductId(payload)),
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) => ({
+      ...(payload.adjustment !== undefined
+        ? { adjustment: Number(payload.adjustment || 0) }
+        : {}),
+      ...(payload.adjustmentType
+        ? { adjustmentType: payload.adjustmentType }
+        : {}),
+      ...(payload.quantity !== undefined
+        ? { quantity: Number(payload.quantity || 0) }
+        : {}),
+      ...(payload.variantSku ? { variantSku: payload.variantSku } : {}),
+      ...(payload.reason ? { reason: payload.reason } : {}),
+      ...(payload.note ? { note: payload.note } : {}),
+      ...(payload.reference ? { reference: payload.reference } : {}),
     }),
-})
-export const getInventoryStats = createApiThunkPrivate('getInventoryStats', ENDPOINTS.products.inventoryStats, 'GET', true, {
+  },
+);
+export const getInventoryTransactions = createApiThunkPrivate(
+  "getInventoryTransactions",
+  ENDPOINTS.inventory.transactions,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => ({
-        ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+      ...(params.productId ? { productId: params.productId } : {}),
+      ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+      ...(params.type ? { type: params.type } : {}),
+      ...(params.orderId ? { orderId: params.orderId } : {}),
+      limit: Number(params.limit || 50),
+      offset: Number(params.offset || 0),
     }),
-})
-export const getTopProducts = createApiThunkPrivate('getTopProducts', ENDPOINTS.products.analyticsTop, 'GET', true, {
+  },
+);
+export const getInventoryStats = createApiThunkPrivate(
+  "getInventoryStats",
+  ENDPOINTS.products.inventoryStats,
+  "GET",
+  true,
+  {
     transformParams: (params = {}) => ({
-        limit: Number(params.limit || 10),
-        ...(params.metric ? { metric: params.metric } : {}),
+      ...(params.sellerId ? { sellerId: params.sellerId } : {}),
     }),
-})
-
+  },
+);
+export const getTopProducts = createApiThunkPrivate(
+  "getTopProducts",
+  ENDPOINTS.products.analyticsTop,
+  "GET",
+  true,
+  {
+    transformParams: (params = {}) => ({
+      limit: Number(params.limit || 10),
+      ...(params.metric ? { metric: params.metric } : {}),
+    }),
+  },
+);
 
 const countrySlice = createSlice({
-    name: 'product',
-    initialState,
-    extraReducers: builder => {
-        createExtraReducersForThunk(builder, getList, 'getListData')
-        createExtraReducersForThunk(builder, softDelete, 'softDeleteData')
-        createExtraReducersForThunk(builder, enableDisable, 'enableDisableData')
-        createExtraReducersForThunk(builder, create, 'createData')
-        createExtraReducersForThunk(builder, update, 'updateData')
+  name: "product",
+  initialState,
+  extraReducers: (builder) => {
+    createExtraReducersForThunk(builder, getList, "getListData");
+    createExtraReducersForThunk(builder, softDelete, "softDeleteData");
+    createExtraReducersForThunk(builder, enableDisable, "enableDisableData");
+    createExtraReducersForThunk(builder, create, "createData");
+    createExtraReducersForThunk(builder, update, "updateData");
 
-        /// Brands Functions===========>>>>>>>>>>
+    /// Brands Functions===========>>>>>>>>>>
 
-        createExtraReducersForThunk(builder, getBrandList, 'getBrandListData')
-        createExtraReducersForThunk(builder, createBrand, 'createBrandData')
-        createExtraReducersForThunk(builder, updateBrand, 'updateBrandData')
-        createExtraReducersForThunk(builder, deleteBrand, 'deleteBrandData')
-        createExtraReducersForThunk(builder, enableDisableBrand, 'enableDisableBrandData')
-        createExtraReducersForThunk(builder, submitBrandForApproval, 'submitBrandForApprovalData')
-        createExtraReducersForThunk(builder, getMyBrandSubmissions, 'getMyBrandSubmissionsData')
-        createExtraReducersForThunk(builder, resubmitBrandForApproval, 'resubmitBrandForApprovalData')
-        createExtraReducersForThunk(builder, reviewBrandSubmission, 'reviewBrandSubmissionData')
-        //Product Options
-        createExtraReducersForThunk(builder, getListProduct, 'getListProductData')
-        createExtraReducersForThunk(builder, enableDisableProduct, 'enableDisableProductData')
-        createExtraReducersForThunk(builder, updateProduct, 'updateProductData')
-        createExtraReducersForThunk(builder, createProduct, 'createProductData')
-        createExtraReducersForThunk(builder, deleteProduct, 'deleteProductData')
-        ///Product-Options-Value
-        createExtraReducersForThunk(builder, getListProductOption, 'getListProductOptionData')
-        createExtraReducersForThunk(builder, enableDisableProductOption, 'enableDisableProductOptionData')
-        createExtraReducersForThunk(builder, deleteProductOption, 'deleteProductOptionData')
-        createExtraReducersForThunk(builder, createProductOption, 'createProductOptionData')
-        createExtraReducersForThunk(builder, updateProductOption, 'updateProductOptionData')
+    createExtraReducersForThunk(builder, getBrandList, "getBrandListData");
+    createExtraReducersForThunk(builder, createBrand, "createBrandData");
+    createExtraReducersForThunk(builder, updateBrand, "updateBrandData");
+    createExtraReducersForThunk(builder, deleteBrand, "deleteBrandData");
+    createExtraReducersForThunk(
+      builder,
+      enableDisableBrand,
+      "enableDisableBrandData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      submitBrandForApproval,
+      "submitBrandForApprovalData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      getMyBrandSubmissions,
+      "getMyBrandSubmissionsData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      resubmitBrandForApproval,
+      "resubmitBrandForApprovalData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      reviewBrandSubmission,
+      "reviewBrandSubmissionData",
+    );
+    //Product Options
+    createExtraReducersForThunk(builder, getListProduct, "getListProductData");
+    createExtraReducersForThunk(
+      builder,
+      enableDisableProduct,
+      "enableDisableProductData",
+    );
+    createExtraReducersForThunk(builder, updateProduct, "updateProductData");
+    createExtraReducersForThunk(builder, createProduct, "createProductData");
+    createExtraReducersForThunk(builder, deleteProduct, "deleteProductData");
+    ///Product-Options-Value
+    createExtraReducersForThunk(
+      builder,
+      getListProductOption,
+      "getListProductOptionData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      enableDisableProductOption,
+      "enableDisableProductOptionData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      deleteProductOption,
+      "deleteProductOptionData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      createProductOption,
+      "createProductOptionData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      updateProductOption,
+      "updateProductOptionData",
+    );
 
-        createExtraReducersForThunk(builder, getAllBrandList, 'getAllBrandListData')
-        createExtraReducersForThunk(builder, createProducts, 'createProductsData')
-        createExtraReducersForThunk(builder, getProductPrefill, 'productPrefillData')
-        createExtraReducersForThunk(builder, getProducts, 'getProductsData')
-        createExtraReducersForThunk(builder, getProductById, 'updateProductsData')
-        createExtraReducersForThunk(builder, enableDisableProductCatalogs, 'enableDisableProductCatalogsData')
-        createExtraReducersForThunk(builder, updateProductsById, 'updateProductsByIdData')
-        createExtraReducersForThunk(builder, permanentlyDeleteProduct, 'permanentlyDeleteProductData')
-        createExtraReducersForThunk(builder, duplicateProduct, 'duplicateProductData')
-        createExtraReducersForThunk(builder, approveDisapprove, 'approveDisapproveData')
-        createExtraReducersForThunk(builder, getAllBatchList, 'getAllBatchListData')
-        createExtraReducersForThunk(builder, getAllProducts, 'getAllProductsData')
-        createExtraReducersForThunk(builder, getProductRevisions, 'getProductRevisionsData')
-        createExtraReducersForThunk(builder, reviewProductRevision, 'reviewProductRevisionData')
-        createExtraReducersForThunk(builder, createCategory, 'createCategoryData')
-        createExtraReducersForThunk(builder, getCategoryAttributes, 'getCategoryAttributesData')
-        createExtraReducersForThunk(builder, updateCategoryAttributes, 'updateCategoryAttributesData')
+    createExtraReducersForThunk(
+      builder,
+      getAllBrandList,
+      "getAllBrandListData",
+    );
+    createExtraReducersForThunk(builder, createProducts, "createProductsData");
+    createExtraReducersForThunk(
+      builder,
+      getProductPrefill,
+      "productPrefillData",
+    );
+    createExtraReducersForThunk(builder, getProducts, "getProductsData");
+    createExtraReducersForThunk(builder, getProductById, "updateProductsData");
+    createExtraReducersForThunk(
+      builder,
+      enableDisableProductCatalogs,
+      "enableDisableProductCatalogsData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      updateProductsById,
+      "updateProductsByIdData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      permanentlyDeleteProduct,
+      "permanentlyDeleteProductData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      duplicateProduct,
+      "duplicateProductData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      approveDisapprove,
+      "approveDisapproveData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      getAllBatchList,
+      "getAllBatchListData",
+    );
+    createExtraReducersForThunk(builder, getAllProducts, "getAllProductsData");
+    createExtraReducersForThunk(
+      builder,
+      getProductRevisions,
+      "getProductRevisionsData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      reviewProductRevision,
+      "reviewProductRevisionData",
+    );
+    createExtraReducersForThunk(builder, createCategory, "createCategoryData");
+    createExtraReducersForThunk(
+      builder,
+      getCategoryAttributes,
+      "getCategoryAttributesData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      updateCategoryAttributes,
+      "updateCategoryAttributesData",
+    );
 
-        createExtraReducersForThunk(builder, getHsnList, 'getHsnListData')
-        createExtraReducersForThunk(builder, createHsn, 'createHsnData')
-        createExtraReducersForThunk(builder, updateHsn, 'updateHsnData')
-        createExtraReducersForThunk(builder, enableDisableHsn, 'enableDisableHsnData')
-        createExtraReducersForThunk(builder, softDeleteHsn, 'softDeleteHsnData')
-        createExtraReducersForThunk(builder, getAllHsn, 'getAllHsnData')
-        createExtraReducersForThunk(builder, bulkUpdateProducts, 'bulkUpdateProductsData')
-        createExtraReducersForThunk(builder, adjustProductInventory, 'adjustProductInventoryData')
-        createExtraReducersForThunk(builder, getInventoryStats, 'getInventoryStatsData')
-        createExtraReducersForThunk(builder, getTopProducts, 'getTopProductsData')
-        createExtraReducersForThunk(builder, getInventoryTransactions, 'getInventoryTransactionsData')
-    }
-})
+    createExtraReducersForThunk(builder, getHsnList, "getHsnListData");
+    createExtraReducersForThunk(builder, createHsn, "createHsnData");
+    createExtraReducersForThunk(builder, updateHsn, "updateHsnData");
+    createExtraReducersForThunk(
+      builder,
+      enableDisableHsn,
+      "enableDisableHsnData",
+    );
+    createExtraReducersForThunk(builder, softDeleteHsn, "softDeleteHsnData");
+    createExtraReducersForThunk(builder, getAllHsn, "getAllHsnData");
+    createExtraReducersForThunk(
+      builder,
+      bulkUpdateProducts,
+      "bulkUpdateProductsData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      adjustProductInventory,
+      "adjustProductInventoryData",
+    );
+    createExtraReducersForThunk(
+      builder,
+      getInventoryStats,
+      "getInventoryStatsData",
+    );
+    createExtraReducersForThunk(builder, getTopProducts, "getTopProductsData");
+    createExtraReducersForThunk(
+      builder,
+      getInventoryTransactions,
+      "getInventoryTransactionsData",
+    );
+  },
+});
 
-export default countrySlice.reducer
+export default countrySlice.reducer;
