@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { MdCalendarToday } from "react-icons/md";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
-import { DateRangePickerModal, OrderLink } from "../../components/Shared";
+import { DataTable, DateRangePickerModal, OrderLink } from "../../components/Shared";
 import {
   Area,
   AreaChart,
@@ -22,6 +22,7 @@ import { getDashboardOverview } from "../../Redux/adminCoreSlice";
 import Cards from "../../components/Cards/Cards";
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 import { GoldDateRangeCalendar } from "../../components/Shared/FilterBar";
+import Loader from "../../components/Loader/Loader";
 
 const EMPTY_PERFORMANCE = [
   { label: "Mon", value: 0, revenue: 0, averageOrderValue: 0 },
@@ -374,6 +375,15 @@ export default function Dashboard() {
     (state) => state.adminCore?.dashboardOverviewData,
   );
   const isLoading = useSelector((state) => state.adminCore?.loading);
+  const hasDashboardResponse = Boolean(
+  dashboardState?.normalized?.data ||
+    dashboardState?.data?.data,
+);
+
+const isDashboardLoading =
+  isLoading || !hasDashboardResponse;
+
+
   const overview = useMemo(
     () => dashboardState?.normalized?.data || dashboardState?.data?.data || {},
     [dashboardState],
@@ -918,6 +928,130 @@ export default function Dashboard() {
       label: formatRangeLabel(dateFilters),
     };
   }, [dateFilters, range]);
+  
+
+  const topProductsColumns = [
+  {
+    key: "index",
+    label: "S. No.",
+    render: (_, __, index) => `${index + 1}.`,
+  },
+  {
+    key: "product",
+    label: "Product",
+    render: (_, product) => {
+      const productId =
+        product?.product_id ||
+        product?.productId ||
+        product?._id ||
+        product?.id;
+
+      const productName =
+        product?.name || product?.title || "Untitled product";
+
+      return productId ? (
+        <Link
+          to={`/app/product-catalog/view/${productId}`}
+          className={CLASS_PRODUCT_LINK}
+          title={productName}
+        >
+          {productName}
+        </Link>
+      ) : (
+        <span
+          className="line-clamp-1 max-w-[220px] break-normal"
+          title={productName}
+        >
+          {productName}
+        </span>
+      );
+    },
+  },
+  {
+    key: "unitsSold",
+    label: "Units Sold",
+    render: (_, product) =>
+      formatNumber(product?.units_sold ?? product?.unitsSold),
+  },
+  {
+    key: "revenue",
+    label: "Revenue",
+    render: (_, product) => formatCurrency(product?.revenue),
+  },
+];
+
+const recentOrdersColumns = [
+  {
+    key: "index",
+    label: "S. No.",
+    render: (_, __, index) => `${index + 1}.`,
+  },
+  {
+    key: "orderId",
+    label: "Order ID",
+    render: (_, order) => {
+      const orderId =
+        order?._id ||
+        order?.id ||
+        order?.orderId ||
+        order?.order_id ||
+        order?.order_no;
+
+      const orderNumber =
+        order?.orderNumber ||
+        order?.order_number ||
+        order?.order_no ||
+        String(orderId || "-").slice(0, 10);
+
+      return (
+        <OrderLink
+          orderId={orderId}
+          orderNumber={orderNumber}
+          className="font-semibold"
+        />
+      );
+    },
+  },
+  {
+    key: "customer",
+    label: "Customer",
+    render: (_, order) =>
+      formatLabel(
+        order?.customerName ||
+          order?.customer ||
+          order?.buyer_id ||
+          order?.buyerId ||
+          "-",
+      ),
+  },
+  {
+    key: "amount",
+    label: "Amount",
+    render: (_, order) =>
+      formatCurrency(
+        order?.seller_order_total ??
+          order?.payable_amount ??
+          order?.totalAmount ??
+          order?.total,
+      ),
+  },
+  {
+    key: "status",
+    label: "Status",
+    render: (_, order) => {
+      const status =
+        order?.status || order?.paymentStatus || "Pending";
+
+      return (
+        <span
+          className={`${CLASS_STATUS_BADGE} ${statusStyle(status)}`}
+        >
+          {formatLabel(status)}
+        </span>
+      );
+    },
+  },
+];
 
   return (
     <div className="admin-page min-h-screen">
@@ -972,10 +1106,6 @@ export default function Dashboard() {
         />
       </DateRangePickerModal>
 
-      {isLoading && !dashboardState?.normalized?.data && (
-        <p className="mb-4 text-xs text-slate-400">Loading dashboard data...</p>
-      )}
-
       {/* Cards UI */}
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         {metrics.map((metric) => (
@@ -987,455 +1117,454 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(280px,0.95fr)]">
-        <section className={`${CLASS_ADMIN_CARD} p-5`}>
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--admin-line)] pb-3">
-            <div>
-              <h2 className={CLASS_SECTION_TITLE}>Performance Overview</h2>
+  <div className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(280px,0.95fr)]">
+  {/* Performance Overview */}
+  <section className={`${CLASS_ADMIN_CARD} p-5`}>
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--admin-line)] pb-3">
+      <div>
+        <h2 className={CLASS_SECTION_TITLE}>Performance Overview</h2>
+      </div>
+    </div>
+
+    <div
+      className={`mb-4 flex flex-wrap items-center gap-5 ${CLASS_LEGEND_TEXT}`}
+    >
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
+        {chartView === "performance" ? "Order" : "Units / Orders"}
+      </span>
+
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
+        Revenue
+      </span>
+
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-[var(--admin-navy)]" />
+        Average Order Value
+      </span>
+    </div>
+
+    <div className="relative h-[270px] w-full text-xs">
+      {isDashboardLoading ? (
+        <div className="flex h-full items-center justify-center">
+          <Loader
+            fullScreen={false}
+              size="h-8 w-8"
+          />
+        </div>
+      ) : hasActiveChartData ? (
+        <ResponsiveContainer
+          key={chartRenderKey}
+          width="100%"
+          height="100%"
+        >
+          {chartView === "performance" ? (
+            <AreaChart
+              data={activeChartData}
+              margin={{
+                top: 10,
+                right: 12,
+                left: -16,
+                bottom: 0,
+              }}
+            >
+              <defs>
+                <linearGradient
+                  id="ordersPerformanceFill"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="5%"
+                    stopColor="#37B446"
+                    stopOpacity={0.34}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="#37B446"
+                    stopOpacity={0.07}
+                  />
+                </linearGradient>
+
+                <linearGradient
+                  id="revenuePerformanceFill"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="5%"
+                    stopColor="#D6A323"
+                    stopOpacity={0.38}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="#D6A323"
+                    stopOpacity={0.08}
+                  />
+                </linearGradient>
+
+                <linearGradient
+                  id="aovPerformanceFill"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="5%"
+                    stopColor="#1F1B5F"
+                    stopOpacity={0.3}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="#1F1B5F"
+                    stopOpacity={0.06}
+                  />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid
+                vertical={false}
+                stroke="#EADFCE"
+              />
+
+              <XAxis
+                dataKey="label"
+                interval={range === "year" ? 0 : "preserveEnd"}
+                axisLine={false}
+                tickLine={false}
+                tick={{
+                  fill: "#777487",
+                  fontSize: 10,
+                }}
+              />
+
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{
+                  fill: "#777487",
+                  fontSize: 10,
+                }}
+              />
+
+              <Tooltip
+                formatter={(value, name) => [
+                  name === "Revenue" ||
+                  name === "Average Order Value"
+                    ? formatCurrency(value)
+                    : formatNumber(value),
+                  name,
+                ]}
+              />
+
+              <Area
+                type="monotone"
+                dataKey="value"
+                name="Orders"
+                stroke="#37B446"
+                strokeWidth={2}
+                fill="url(#ordersPerformanceFill)"
+              />
+
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                name="Revenue"
+                stroke="#D6A323"
+                strokeWidth={2}
+                fill="url(#revenuePerformanceFill)"
+              />
+
+              <Area
+                type="monotone"
+                dataKey="averageOrderValue"
+                name="Average Order Value"
+                stroke="#1F1B5F"
+                strokeWidth={2}
+                fill="url(#aovPerformanceFill)"
+              />
+            </AreaChart>
+          ) : (
+            <BarChart
+              data={activeChartData}
+              margin={{
+                top: 10,
+                right: 12,
+                left: -16,
+                bottom: 0,
+              }}
+            >
+              <defs>
+                <filter
+                  id="dashboardOrdersBarShadow"
+                  x="-20%"
+                  y="-20%"
+                  width="140%"
+                  height="140%"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy="4"
+                    stdDeviation="4"
+                    floodColor="#37B446"
+                    floodOpacity="0.16"
+                  />
+                </filter>
+
+                <filter
+                  id="dashboardRevenueBarShadow"
+                  x="-20%"
+                  y="-20%"
+                  width="140%"
+                  height="140%"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy="4"
+                    stdDeviation="4"
+                    floodColor="#B98514"
+                    floodOpacity="0.18"
+                  />
+                </filter>
+              </defs>
+
+              <CartesianGrid
+                vertical={false}
+                stroke="#EADFCE"
+              />
+
+              <XAxis
+                dataKey="label"
+                axisLine={false}
+                tickLine={false}
+                tick={{
+                  fill: "#777487",
+                  fontSize: 10,
+                }}
+              />
+
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{
+                  fill: "#777487",
+                  fontSize: 10,
+                }}
+              />
+
+              <Tooltip
+                formatter={(value, name) => [
+                  name === "Revenue"
+                    ? formatCurrency(value)
+                    : formatNumber(value),
+                  name,
+                ]}
+              />
+
+              <Bar
+                dataKey="orders"
+                name={
+                  chartView === "top_products"
+                    ? "Units Sold"
+                    : "Orders"
+                }
+                fill="#37B446"
+                barSize={38}
+                shape={
+                  <RoundedDashboardBar shadowId="dashboardOrdersBarShadow" />
+                }
+              />
+
+              <Bar
+                dataKey="revenue"
+                name="Revenue"
+                fill="#D6A323"
+                barSize={38}
+                shape={
+                  <RoundedDashboardBar shadowId="dashboardRevenueBarShadow" />
+                }
+              />
+            </BarChart>
+          )}
+        </ResponsiveContainer>
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-slate-400">
+          <img
+            src="/Img/noData.png"
+            alt=""
+            className="h-28 w-28 object-contain"
+          />
+
+          <span className="text-sm font-medium">
+            No performance data found
+          </span>
+        </div>
+      )}
+    </div>
+  </section>
+
+  {/* Order Status */}
+  <section className={`${CLASS_ADMIN_CARD} p-5`}>
+    <div className="mb-4 border-b border-[var(--admin-line)] pb-3">
+      <h2 className={CLASS_SECTION_TITLE}>Order Status</h2>
+    </div>
+
+    <div className="grid items-center gap-4 sm:grid-cols-[160px_1fr] xl:grid-cols-1 2xl:grid-cols-[170px_1fr]">
+      {isDashboardLoading ? (
+        <div className="col-span-full flex h-[250px] items-center justify-center">
+          <Loader
+            fullScreen={false}
+            size="h-8 w-8"
+          />
+        </div>
+      ) : statusTotal === 0 ? (
+        <div className="col-span-full flex h-[170px] flex-col items-center justify-center gap-1 text-center text-slate-400">
+          <span className="text-sm font-medium">
+            No order status data found
+          </span>
+        </div>
+      ) : (
+        <>
+          <div className="relative h-[170px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={statusRows}
+                  dataKey="value"
+                  nameKey="label"
+                  innerRadius={48}
+                  outerRadius={74}
+                  paddingAngle={1}
+                >
+                  {statusRows.map((entry) => (
+                    <Cell
+                      key={entry.name}
+                      fill={entry.color}
+                    />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span className="text-[21px] font-bold text-[var(--admin-ink)]">
+                {formatNumber(statusTotal)}
+              </span>
+
+              <span className="text-[10px] text-[var(--admin-muted)]">
+                Total Orders
+              </span>
             </div>
           </div>
-          <div
-            className={`mb-4 flex flex-wrap items-center gap-5 ${CLASS_LEGEND_TEXT}`}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[var(--admin-success)]" />
-              {chartView === "performance" ? "Order" : "Units / Orders"}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
-              Revenue
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[var(--admin-navy)]" />
-              Average Order Value
-            </span>
-          </div>
-          <div className="relative h-[270px] w-full text-xs">
-            {hasActiveChartData ? (
-              <ResponsiveContainer
-                key={chartRenderKey}
-                width="100%"
-                height="100%"
-              >
-                {chartView === "performance" ? (
-                  <AreaChart
-                    data={activeChartData}
-                    margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient
-                        id="ordersPerformanceFill"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="#37B446"
-                          stopOpacity={0.34}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#37B446"
-                          stopOpacity={0.07}
-                        />
-                      </linearGradient>
-                      <linearGradient
-                        id="revenuePerformanceFill"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="#D6A323"
-                          stopOpacity={0.38}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#D6A323"
-                          stopOpacity={0.08}
-                        />
-                      </linearGradient>
-                      <linearGradient
-                        id="aovPerformanceFill"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="#1F1B5F"
-                          stopOpacity={0.3}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#1F1B5F"
-                          stopOpacity={0.06}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} stroke="#EADFCE" />
-                    <XAxis
-                      dataKey="label"
-                      interval={range === "year" ? 0 : "preserveEnd"}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#777487", fontSize: 10 }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#777487", fontSize: 10 }}
-                    />
-                    <Tooltip
-                      formatter={(value, name) => [
-                        name === "Revenue" || name === "Average Order Value"
-                          ? formatCurrency(value)
-                          : formatNumber(value),
-                        name,
-                      ]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      name="Orders"
-                      stroke="#37B446"
-                      strokeWidth={2}
-                      fill="url(#ordersPerformanceFill)"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      name="Revenue"
-                      stroke="#D6A323"
-                      strokeWidth={2}
-                      fill="url(#revenuePerformanceFill)"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="averageOrderValue"
-                      name="Average Order Value"
-                      stroke="#1F1B5F"
-                      strokeWidth={2}
-                      fill="url(#aovPerformanceFill)"
-                    />
-                  </AreaChart>
-                ) : (
-                  <BarChart
-                    data={activeChartData}
-                    margin={{ top: 10, right: 12, left: -16, bottom: 0 }}
-                  >
-                    <defs>
-                      <filter
-                        id="dashboardOrdersBarShadow"
-                        x="-20%"
-                        y="-20%"
-                        width="140%"
-                        height="140%"
-                      >
-                        <feDropShadow
-                          dx="0"
-                          dy="4"
-                          stdDeviation="4"
-                          floodColor="#37B446"
-                          floodOpacity="0.16"
-                        />
-                      </filter>
-                      <filter
-                        id="dashboardRevenueBarShadow"
-                        x="-20%"
-                        y="-20%"
-                        width="140%"
-                        height="140%"
-                      >
-                        <feDropShadow
-                          dx="0"
-                          dy="4"
-                          stdDeviation="4"
-                          floodColor="#B98514"
-                          floodOpacity="0.18"
-                        />
-                      </filter>
-                    </defs>
-                    <CartesianGrid vertical={false} stroke="#EADFCE" />
-                    <XAxis
-                      dataKey="label"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#777487", fontSize: 10 }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#777487", fontSize: 10 }}
-                    />
-                    <Tooltip
-                      formatter={(value, name) => [
-                        name === "Revenue"
-                          ? formatCurrency(value)
-                          : formatNumber(value),
-                        name,
-                      ]}
-                    />
-                    <Bar
-                      dataKey="orders"
-                      name={
-                        chartView === "top_products" ? "Units Sold" : "Orders"
-                      }
-                      fill="#37B446"
-                      barSize={38}
-                      shape={
-                        <RoundedDashboardBar shadowId="dashboardOrdersBarShadow" />
-                      }
-                    />
-                    <Bar
-                      dataKey="revenue"
-                      name="Revenue"
-                      fill="#D6A323"
-                      barSize={38}
-                      shape={
-                        <RoundedDashboardBar shadowId="dashboardRevenueBarShadow" />
-                      }
-                    />
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-slate-400">
-                <img
-                  src="/Img/noData.png"
-                  alt=""
-                  className="h-28 w-28 object-contain"
-                />
-                <span className="text-sm font-medium">
-                  No performance data found
-                </span>
-              </div>
-            )}
-          </div>
-        </section>
 
-        <section className={`${CLASS_ADMIN_CARD} p-5`}>
-          <div className="mb-4 border-b border-[var(--admin-line)] pb-3">
-            <h2 className={CLASS_SECTION_TITLE}>Order Status</h2>
-          </div>
-          <div className="grid items-center gap-4 sm:grid-cols-[160px_1fr] xl:grid-cols-1 2xl:grid-cols-[170px_1fr]">
-            {statusTotal === 0 ? (
-              <div className="col-span-full flex h-[170px] flex-col items-center justify-center gap-1 text-center text-slate-400">
-                <span className="text-sm font-medium">
-                  No order status data found
+          <div className="space-y-3">
+            {statusRows.slice(0, 5).map((row) => (
+              <div
+                key={row.name}
+                className="flex items-center justify-between gap-3 text-[11px]"
+              >
+                <span className="inline-flex items-center gap-2 capitalize text-[var(--admin-ink)]">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor: row.color,
+                    }}
+                  />
+                  {row.label}
+                </span>
+
+                <span className="font-semibold text-[var(--admin-ink)]">
+                  {formatNumber(row.value)}
+                  {` (${Math.round(
+                    (row.value / statusTotal) * 100,
+                  )}%)`}
                 </span>
               </div>
-            ) : (
-              <>
-                <div className="relative h-[170px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={statusRows}
-                        dataKey="value"
-                        nameKey="label"
-                        innerRadius={48}
-                        outerRadius={74}
-                        paddingAngle={1}
-                      >
-                        {statusRows.map((entry) => (
-                          <Cell key={entry.name} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                    <span className="text-[21px] font-bold text-[var(--admin-ink)]">
-                      {formatNumber(statusTotal)}
-                    </span>
-                    <span className="text-[10px] text-[var(--admin-muted)]">
-                      Total Orders
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {statusRows.slice(0, 5).map((row) => (
-                    <div
-                      key={row.name}
-                      className="flex items-center justify-between gap-3 text-[11px]"
-                    >
-                      <span className="inline-flex items-center gap-2 capitalize text-[var(--admin-ink)]">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: row.color }}
-                        />
-                        {row.label}
-                      </span>
-                      <span className="font-semibold text-[var(--admin-ink)]">
-                        {formatNumber(row.value)}
-                        {` (${Math.round((row.value / statusTotal) * 100)}%)`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+            ))}
           </div>
-        </section>
-      </div>
+        </>
+      )}
+    </div>
+  </section>
+</div>
 
       {/* Tables */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <section className={`${CLASS_ADMIN_CARD} overflow-hidden bg-white`}>
-          <div className={CLASS_CARD_HEADER}>
-            <h2 className={CLASS_SECTION_TITLE}>Top Products</h2>
-            <button
-              type="button"
-              className={CLASS_TABLE_ACTION}
-              onClick={() => navigate("/app/product-catalog")}
-            >
-              See All
-            </button>
-          </div>
-          <table className="w-full text-left">
-            <thead className={CLASS_TABLE_HEADER}>
-              <tr>
-                <th className={CLASS_TABLE_HEADER_CELL}>S. No.</th>
-                <th className={CLASS_TABLE_HEADER_PRODUCT_CELL}>Product</th>
-                <th className={CLASS_TABLE_HEADER_CELL}>Units Sold</th>
-                <th className={CLASS_TABLE_HEADER_CELL}>Revenue</th>
-              </tr>
-            </thead>
-            <tbody className={CLASS_TABLE_BODY}>
-              {topProducts.length === 0 && (
-                <EmptyTableRow colSpan={4}>
-                  No top products available.
-                </EmptyTableRow>
-              )}
-              {topProducts.map((product, index) => {
-                const productId =
-                  product.product_id ||
-                  product.productId ||
-                  product._id ||
-                  product.id;
-                const productName =
-                  product.name || product.title || "Untitled product";
+     {/* Tables */}
+<div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+  {/* Top Products */}
+  <section className={`${CLASS_ADMIN_CARD} overflow-hidden bg-white`}>
+    <div className={CLASS_CARD_HEADER}>
+      <h2 className={CLASS_SECTION_TITLE}>Top Products</h2>
 
-                return (
-                  <tr key={productId || index} className={CLASS_TABLE_ROW}>
-                    <td className={CLASS_TABLE_INDEX_CELL}>{index + 1}.</td>
-                    <td className={CLASS_TABLE_PRODUCT_TEXT}>
-                      {productId ? (
-                        <Link
-                          to={`/app/product-catalog/view/${productId}`}
-                          className={CLASS_PRODUCT_LINK}
-                          title={productName}
-                        >
-                          {productName}
-                        </Link>
-                      ) : (
-                        <span
-                          className="line-clamp-1 max-w-[220px] break-normal"
-                          title={productName}
-                        >
-                          {productName}
-                        </span>
-                      )}
-                    </td>
-                    <td className={CLASS_TABLE_CELL}>
-                      {formatNumber(product.units_sold ?? product.unitsSold)}
-                    </td>
-                    <td className={CLASS_TABLE_CELL}>
-                      {formatCurrency(product.revenue)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </section>
+      <button
+        type="button"
+        className={CLASS_TABLE_ACTION}
+        onClick={() => navigate("/app/product-catalog")}
+      >
+        See All
+      </button>
+    </div>
 
-        <section className={`${CLASS_ADMIN_CARD} overflow-hidden bg-white`}>
-          <div className={CLASS_CARD_HEADER}>
-            <h2 className={CLASS_SECTION_TITLE}>Recent Orders</h2>
-            <button
-              type="button"
-              className={CLASS_TABLE_ACTION}
-              onClick={() => navigate("/app/orders")}
-            >
-              See All
-            </button>
-          </div>
-          <table className="w-full text-left">
-            <thead className={CLASS_TABLE_HEADER}>
-              <tr>
-                <th className={CLASS_TABLE_HEADER_CELL}>S. No.</th>
-                <th className={CLASS_TABLE_HEADER_CELL}>Order ID</th>
-                <th className={CLASS_TABLE_HEADER_CELL}>Customer</th>
-                <th className={CLASS_TABLE_HEADER_CELL}>Amount</th>
-                <th className={CLASS_TABLE_HEADER_CELL}>Status</th>
-              </tr>
-            </thead>
-            <tbody className={CLASS_TABLE_BODY}>
-              {recentOrders.length === 0 && (
-                <EmptyTableRow colSpan={6}>
-                  No recent orders available.
-                </EmptyTableRow>
-              )}
-              {recentOrders.map((order, index) => {
-                const status = order.status || order.paymentStatus || "Pending";
-                const orderId =
-                  order._id ||
-                  order.id ||
-                  order.orderId ||
-                  order.order_id ||
-                  order.order_no;
-                const orderNumber =
-                  order.orderNumber ||
-                  order.order_number ||
-                  order.order_no ||
-                  String(orderId || index + 1).slice(0, 10);
-                return (
-                  <tr key={orderId || index} className={CLASS_TABLE_ROW}>
-                    <td className={CLASS_TABLE_INDEX_CELL}>{index + 1}.</td>
-                    <td className="px-4 py-3 font-medium">
-                      <OrderLink
-                        orderId={orderId}
-                        orderNumber={orderNumber}
-                        className="font-semibold"
-                      />
-                    </td>
-                    <td className={CLASS_TABLE_CELL}>
-                      {formatLabel(
-                        order.customerName ||
-                          order.customer ||
-                          order.buyer_id ||
-                          order.buyerId ||
-                          "-",
-                      )}
-                    </td>
-                    <td className={CLASS_TABLE_CELL}>
-                      {formatCurrency(
-                        order.seller_order_total ??
-                          order.payable_amount ??
-                          order.totalAmount ??
-                          order.total,
-                      )}
-                    </td>
-                    <td className={CLASS_TABLE_CELL}>
-                      <span
-                        className={`${CLASS_STATUS_BADGE} ${statusStyle(status)}`}
-                      >
-                        {formatLabel(status)}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </section>
-      </div>
+    <DataTable
+      columns={topProductsColumns}
+      data={topProducts}
+      loading={isDashboardLoading}
+      totalCount={topProducts.length}
+      exportConfig={null}
+      rowKey={(product, index) =>
+        product?.product_id ||
+        product?.productId ||
+        product?._id ||
+        product?.id ||
+        index
+      }
+      emptyText="No top products available."
+      cardClassName="overflow-hidden rounded-none border-0 shadow-none"
+      tableContainerClassName="hide-scrollbar overflow-x-auto"
+    />
+  </section>
+
+  {/* Recent Orders */}
+  <section className={`${CLASS_ADMIN_CARD} overflow-hidden bg-white`}>
+    <div className={CLASS_CARD_HEADER}>
+      <h2 className={CLASS_SECTION_TITLE}>Recent Orders</h2>
+
+      <button
+        type="button"
+        className={CLASS_TABLE_ACTION}
+        onClick={() => navigate("/app/orders")}
+      >
+        See All
+      </button>
+    </div>
+
+    <DataTable
+      columns={recentOrdersColumns}
+      data={recentOrders}
+      loading={isDashboardLoading}
+      totalCount={recentOrders.length}
+      exportConfig={null}
+      rowKey={(order, index) =>
+        order?._id ||
+        order?.id ||
+        order?.orderId ||
+        order?.order_id ||
+        order?.order_no ||
+        index
+      }
+      emptyText="No recent orders available."
+      cardClassName="overflow-hidden rounded-none border-0 shadow-none"
+      tableContainerClassName="hide-scrollbar overflow-x-auto"
+      tableClassName="min-w-[700px]"
+    />
+  </section>
+</div>
     </div>
   );
 }

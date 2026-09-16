@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { FaChevronRight } from "react-icons/fa";
-import { MdAdd, MdTune, MdFolder } from "react-icons/md";
+import { MdAdd, MdTune, MdFolder, MdSearch } from "react-icons/md";
 
 // Components
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
@@ -15,6 +15,7 @@ import { SkeletonLoader } from "../../../components/Loader/SkeletonLoader";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import CategorySetup from "./components/CategorySetup";
 import { CategoryAttributesPanel } from "./CategoryAttributes";
+import Pagination from "../../../components/Pagination/Pagination";
 
 // Redux actions
 import {
@@ -28,22 +29,38 @@ import {
 const CATEGORY_TABLE_PAGE_SIZE = 10;
 
 const ProductCategories = () => {
-  // State management
+  // ---------------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------------
+
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [categoryEditOpen, setCategoryEditOpen] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
   const [statusTarget, setStatusTarget] = useState(null);
   const [attributeCategory, setAttributeCategory] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+
   const [isRefresh, setIsRefresh] = useState(false);
   const [isPublish, setIsPublish] = useState(false);
+
   const [categories, setCategories] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
+
   const [selectedMainCategoryKey, setSelectedMainCategoryKey] = useState("");
+
   const [categoryPage, setCategoryPage] = useState(1);
+
+  const [categoryPageSize, setCategoryPageSize] = useState(
+    CATEGORY_TABLE_PAGE_SIZE,
+  );
+
   const [currentPath, setCurrentPath] = useState([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedCategories, setHasLoadedCategories] = useState(false);
-  const [allCategories, setAllCategories] = useState([]);
+  const [isDrillDownLoading, setIsDrillDownLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     categoryName: "",
     bannerUrl: "",
@@ -53,18 +70,25 @@ const ProductCategories = () => {
     isDashboardVisible: false,
     priority: "0",
   });
+
   const [errors, setErrors] = useState({
     categoryName: "",
   });
+
   const [filters, setFilters] = useState({
     search: "",
   });
 
   const dispatch = useDispatch();
+
   const selector = useSelector((state) => state.product);
+
   const getListData = selector?.getListData?.data?.data;
 
-  // Validation functions
+  // ---------------------------------------------------------------------------
+  // Validation
+  // ---------------------------------------------------------------------------
+
   const validateField = (name, value) => {
     let error = "";
 
@@ -85,6 +109,7 @@ const ProductCategories = () => {
 
     return error;
   };
+
   const validateForm = () => {
     const newErrors = {
       categoryName: validateField("categoryName", formData.categoryName),
@@ -109,7 +134,10 @@ const ProductCategories = () => {
     }
   };
 
-  // Transform API data structure
+  // ---------------------------------------------------------------------------
+  // Transform API Data
+  // ---------------------------------------------------------------------------
+
   const transformData = useCallback((apiData) => {
     const raw = Array.isArray(apiData)
       ? apiData
@@ -119,35 +147,54 @@ const ProductCategories = () => {
         apiData?.roots ||
         apiData?.tree ||
         [];
-    if (!Array.isArray(raw) || raw.length === 0) return [];
 
-    // Flatten server-side tree (children array) into a flat list so parentKey-based rebuilding works
+    if (!Array.isArray(raw) || raw.length === 0) {
+      return [];
+    }
+
     const flattenTree = (nodes = [], out = []) => {
       nodes.forEach((node) => {
         out.push(node);
+
         const nested = node.children || node.subCategories || [];
-        if (Array.isArray(nested) && nested.length) flattenTree(nested, out);
+
+        if (Array.isArray(nested) && nested.length) {
+          flattenTree(nested, out);
+        }
       });
+
       return out;
     };
+
     const source = flattenTree(raw);
 
     const indexed = source.map((category) => ({
       _id: category?.categoryKey || category?._id,
       rawId: category?._id,
+
       categoryKey: category?.categoryKey || category?._id,
+
       name: category?.title || category?.name || category?.categoryKey,
+
       isDisable: category?.active === false,
       active: category?.active !== false,
+
       bannerUrl: category?.bannerUrl || "",
       iconUrl: category?.iconUrl || "",
+
       isExpanded: false,
+
       parentId: category?.parentKey || null,
       parentName: null,
+
       subCategories: [],
+
       isDashboardVisible: Boolean(category?.isDashboardVisible),
+
       priority: category?.sortOrder ?? category?.priority ?? 0,
+
       level: Number(category?.level || 0),
+
       userName:
         category?.createdByName ||
         category?.updatedByName ||
@@ -164,12 +211,17 @@ const ProductCategories = () => {
     const map = new Map(
       indexed.map((item) => [String(item.categoryKey), item]),
     );
+
     const roots = [];
+
     indexed.forEach((item) => {
       const parentKey = item.parentId ? String(item.parentId) : null;
+
       if (parentKey && map.has(parentKey)) {
         const parent = map.get(parentKey);
+
         item.parentName = parent?.name || null;
+
         parent.subCategories.push(item);
       } else {
         roots.push(item);
@@ -191,24 +243,36 @@ const ProductCategories = () => {
     return sortRecursive(roots);
   }, []);
 
-  // Update categories when API data changes
+  // ---------------------------------------------------------------------------
+  // Fetch Categories
+  // ---------------------------------------------------------------------------
+
   useEffect(() => {
     if (getListData) {
       const transformedData = transformData(getListData);
+
       setAllCategories(transformedData);
       setCategories(transformedData);
     }
   }, [getListData, transformData]);
 
-  // Fetch categories on initial load and refresh
   useEffect(() => {
     let active = true;
+
     setHasLoadedCategories(false);
-    dispatch(getList({ tree: true, limit: 100 }))
+
+    dispatch(
+      getList({
+        tree: true,
+        limit: 100,
+      }),
+    )
       .unwrap()
       .catch(() => null)
       .finally(() => {
-        if (active) setHasLoadedCategories(true);
+        if (active) {
+          setHasLoadedCategories(true);
+        }
       });
 
     return () => {
@@ -218,18 +282,28 @@ const ProductCategories = () => {
 
   const categoriesLoading =
     !hasLoadedCategories || selector?.getListData?.loading;
-  
-  const [isDrillDownLoading, setIsDrillDownLoading] = useState(false);
+
   const isTableLoading = categoriesLoading || isDrillDownLoading;
 
-  // Build select options for category dropdown
+  // ---------------------------------------------------------------------------
+  // Category Select Options
+  // ---------------------------------------------------------------------------
+
   const createSelectOptions = useMemo(() => {
-    const options = [{ label: "ROOT", value: "ROOT" }];
+    const options = [
+      {
+        label: "ROOT",
+        value: "ROOT",
+      },
+    ];
+
     const blockedKeys = new Set();
 
     const collectBlockedKeys = (category) => {
       if (!category) return;
+
       blockedKeys.add(String(category.categoryKey || category._id));
+
       (category.subCategories || []).forEach(collectBlockedKeys);
     };
 
@@ -237,30 +311,37 @@ const ProductCategories = () => {
       collectBlockedKeys(selectedCategory);
     }
 
-    const addOptions = (categories, prefix = "", depth = 1) => {
-      Array.isArray(categories) &&
-        categories?.length > 0 &&
-        categories.forEach((category) => {
-          if (blockedKeys.has(String(category.categoryKey || category._id)))
-            return;
+    const addOptions = (categoryList, prefix = "", depth = 1) => {
+      if (!Array.isArray(categoryList) || categoryList.length === 0) {
+        return;
+      }
 
-          options.push({
-            value: category.categoryKey || category._id,
-            label: <span className="capitalize">{prefix + category.name}</span>,
-          });
+      categoryList.forEach((category) => {
+        if (blockedKeys.has(String(category.categoryKey || category._id))) {
+          return;
+        }
 
-          // Only go deeper if depth is less than 3
-          if (depth < 2 && category.subCategories?.length > 0) {
-            addOptions(category.subCategories, prefix + "- ", depth + 1);
-          }
+        options.push({
+          value: category.categoryKey || category._id,
+
+          label: <span className="capitalize">{prefix + category.name}</span>,
         });
+
+        if (depth < 2 && category.subCategories?.length > 0) {
+          addOptions(category.subCategories, prefix + "- ", depth + 1);
+        }
+      });
     };
 
     addOptions(allCategories);
+
     return options;
   }, [allCategories, selectedCategory]);
 
-  // Event handlers
+  // ---------------------------------------------------------------------------
+  // Form Handlers
+  // ---------------------------------------------------------------------------
+
   const handleIsPublish = useCallback(() => {
     setIsPublish((prev) => !prev);
   }, []);
@@ -271,38 +352,77 @@ const ProductCategories = () => {
       bannerUrl: "",
       iconUrl: "",
       parentCategory: null,
+      isPublish: false,
       isDashboardVisible: false,
       priority: "0",
     });
+
     setSelectedCategory(null);
     setIsPublish(false);
+
     setErrors({
       categoryName: "",
     });
   }, []);
 
+  // ---------------------------------------------------------------------------
+  // Find Category
+  // ---------------------------------------------------------------------------
+
+  const findCategoryById = (categoryList, targetId) => {
+    for (const category of categoryList) {
+      if (String(category._id) === String(targetId)) {
+        return category;
+      }
+
+      if (category.subCategories?.length > 0) {
+        const found = findCategoryById(category.subCategories, targetId);
+
+        if (found) {
+          return found;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  // ---------------------------------------------------------------------------
+  // Create Category
+  // ---------------------------------------------------------------------------
+
   const handleSubmit = useCallback(() => {
     if (!validateForm()) return;
+
     let parentKey = null;
     let level = 0;
 
     if (formData.parentCategory && formData.parentCategory.value !== "ROOT") {
       parentKey = formData.parentCategory.value;
+
       const parentCategory = findCategoryById(allCategories, parentKey);
+
       level = Number(parentCategory?.level || 0) + 1;
     }
 
     const reqData = {
       name: formData.categoryName,
+
       bannerUrl: formData.bannerUrl,
+
       iconUrl: formData.iconUrl,
+
       parentKey,
+
       level,
+
       isDisable: !isPublish,
+
       isDashboardVisible: formData?.isDashboardVisible
-        ? formData?.isDashboardVisible
+        ? formData.isDashboardVisible
         : false,
-      priority: formData?.isDashboardVisible ? Number(formData?.priority) : 0,
+
+      priority: formData?.isDashboardVisible ? Number(formData.priority) : 0,
     };
 
     dispatch(create(reqData))
@@ -312,13 +432,18 @@ const ProductCategories = () => {
           toast.error(res.message);
           return;
         }
+
         toast.success(res.message || "Category Created Successfully");
+
         setIsRefresh(!isRefresh);
+
         setCategoryOpen(false);
+
         handleResetForm();
       })
       .catch((error) => {
         console.error("Error creating category:", error);
+
         toast.error(error || "Error in Creating Category");
       });
   }, [
@@ -330,9 +455,17 @@ const ProductCategories = () => {
     allCategories,
   ]);
 
+  // ---------------------------------------------------------------------------
+  // Edit Category
+  // ---------------------------------------------------------------------------
+
   const handleEdit = useCallback((category) => {
     setSelectedCategory(category);
-    let parentCategoryValue = { label: "ROOT", value: "ROOT" };
+
+    let parentCategoryValue = {
+      label: "ROOT",
+      value: "ROOT",
+    };
 
     if (category.parentId) {
       parentCategoryValue = {
@@ -340,156 +473,104 @@ const ProductCategories = () => {
         value: category.parentId,
       };
     }
+
     setFormData({
       categoryName: category.name,
+
       bannerUrl: category.bannerUrl || "",
+
       iconUrl: category.iconUrl || "",
+
       parentCategory: parentCategoryValue,
+
+      isPublish: !category.isDisable,
+
       isDashboardVisible: category?.isDashboardVisible,
-      priority: category?.priority,
+
+      priority: category?.priority ?? 0,
     });
 
     setIsPublish(!category.isDisable);
+
     setCategoryEditOpen(true);
   }, []);
 
+  // ---------------------------------------------------------------------------
+  // Delete Category
+  // ---------------------------------------------------------------------------
+
   const handleDelete = useCallback((data) => {
-    setSelectedCategory({ id: data._id, name: data.name });
+    setSelectedCategory({
+      id: data._id,
+      name: data.name,
+    });
+
     setShowDeleteConfirmation(true);
   }, []);
 
   const handleDeleteConfirmDelete = useCallback(() => {
-    dispatch(softDelete({ _id: selectedCategory.id }))
+    if (!selectedCategory?.id) {
+      return;
+    }
+
+    dispatch(
+      softDelete({
+        _id: selectedCategory.id,
+      }),
+    )
       .unwrap()
       .then((res) => {
         if (res.error) {
           toast.error(res.message);
           return;
         }
+
         setIsRefresh(!isRefresh);
+
         toast.success(res.message || "Item Deleted Successfully");
+
         setShowDeleteConfirmation(false);
       })
       .catch((error) => {
-        toast.error(error.message || "Error in Deleting Item");
+        toast.error(error?.message || "Error in Deleting Item");
       });
   }, [dispatch, selectedCategory, isRefresh]);
 
-  // const handleToggle = useCallback((data) => () => {
-  //   const updateChildrenStatus = (categoryId, status) => {
-  //     const findCategory = (categories, id) => {
-  //       for (const category of categories) {
-  //         if (category._id === id) return category;
-  //         if (category.subCategories?.length > 0) {
-  //           const found = findCategory(category.subCategories, id);
-  //           if (found) return found;
-  //         }
-  //       }
-  //       return null;
-  //     };
-
-  //     const category = findCategory(allCategories, categoryId);
-  //     if (!category) return;
-  //     const updateCategoryAndChildren = (cat) => {
-  //       dispatch(enableDisable({
-  //         _id: cat._id,
-  //         isDisable: status
-  //       }));
-  //       setCategories(prev => {
-  //         const updateCategoryInState = (categories) => {
-  //           return categories.map(item => {
-  //             if (item._id === cat._id) {
-  //               return {
-  //                 ...item,
-  //                 isDisable: status,
-  //                 isExpanded: item.isExpanded,
-  //                 subCategories: item.subCategories?.length > 0
-  //                   ? updateCategoryInState(item.subCategories)
-  //                   : []
-  //               };
-  //             }
-  //             if (item.subCategories?.length > 0) {
-  //               return {
-  //                 ...item,
-  //                 subCategories: updateCategoryInState(item.subCategories)
-  //               };
-  //             }
-  //             return item;
-  //           });
-  //         };
-  //         return updateCategoryInState(prev);
-  //       });
-  //       if (cat.subCategories?.length > 0) {
-  //         cat.subCategories.forEach(updateCategoryAndChildren);
-  //       }
-  //     };
-
-  //     updateCategoryAndChildren(category);
-  //   };
-
-  //   setIsLoading(true);
-  //   dispatch(enableDisable({
-  //     _id: data._id,
-  //     isDisable: !data.isDisable
-  //   }))
-  //     .unwrap()
-  //     .then((res) => {
-  //       if (res.error) {
-  //         toast.error(res.message);
-  //         return;
-  //       }
-  //       setCategories(prev => {
-  //         return prev.map(item => {
-  //           if (item._id === data._id) {
-  //             return {
-  //               ...item,
-  //               isDisable: !data.isDisable,
-  //               isExpanded: item.isExpanded
-  //             };
-  //           }
-  //           return item;
-  //         });
-  //       });
-  //       // updateChildrenStatus(data._id, !data.isDisable);
-
-  //       toast.success(res.message || "Status Updated Successfully");
-  //       // setIsRefresh(!isRefresh);
-  //     })
-  //     .catch((error) => {
-  //       toast.error(error.message || "Error in Updating Status");
-  //     })
-  //     .finally(() => {
-  //       setIsLoading(false);
-  //     });
-  // }, [dispatch, isRefresh, allCategories]);
+  // ---------------------------------------------------------------------------
+  // Toggle Status
+  // ---------------------------------------------------------------------------
 
   const handleToggle = useCallback(
     (data) => () => {
-      const updateChildrenStatus = (categories, categoryId, status) => {
-        return categories.map((category) => {
+      const updateChildrenStatus = (categoryList, categoryId, status) => {
+        return categoryList.map((category) => {
           if (category._id === categoryId) {
             if (status === true) {
               const disableRecursively = (cat) => ({
                 ...cat,
+
                 isDisable: true,
+
                 subCategories:
                   cat.subCategories?.length > 0
                     ? cat.subCategories.map(disableRecursively)
                     : [],
               });
+
               return disableRecursively(category);
-            } else {
-              // enable only the selected category
-              return {
-                ...category,
-                isDisable: false,
-                subCategories: category.subCategories || [],
-              };
             }
+
+            return {
+              ...category,
+              isDisable: false,
+              subCategories: category.subCategories || [],
+            };
           }
+
           if (category.subCategories?.length > 0) {
             return {
               ...category,
+
               subCategories: updateChildrenStatus(
                 category.subCategories,
                 categoryId,
@@ -497,11 +578,13 @@ const ProductCategories = () => {
               ),
             };
           }
+
           return category;
         });
       };
 
       setIsLoading(true);
+
       const newStatus = !data.isDisable;
 
       dispatch(
@@ -524,7 +607,7 @@ const ProductCategories = () => {
           toast.success(res.message || "Status Updated Successfully");
         })
         .catch((error) => {
-          toast.error(error.message || "Error in Updating Status");
+          toast.error(error?.message || "Error in Updating Status");
         })
         .finally(() => {
           setIsLoading(false);
@@ -535,35 +618,56 @@ const ProductCategories = () => {
 
   const handleStatusConfirm = useCallback(() => {
     if (!statusTarget) return;
+
     handleToggle(statusTarget)();
+
     setStatusTarget(null);
   }, [handleToggle, statusTarget]);
 
+  // ---------------------------------------------------------------------------
+  // Update Category
+  // ---------------------------------------------------------------------------
+
   const handleEditSubmit = useCallback(() => {
-    if (!selectedCategory) return;
-    if (!validateForm()) return;
+    if (!selectedCategory) {
+      return;
+    }
+
+    if (!validateForm()) {
+      return;
+    }
 
     let parentKey = null;
     let level = 0;
 
     if (formData.parentCategory && formData.parentCategory.value !== "ROOT") {
       parentKey = formData.parentCategory.value;
+
       const parentCategory = findCategoryById(allCategories, parentKey);
+
       level = Number(parentCategory?.level || 0) + 1;
     }
 
     const reqData = {
       _id: selectedCategory.categoryKey || selectedCategory._id,
+
       name: formData.categoryName,
+
       bannerUrl: formData.bannerUrl,
+
       iconUrl: formData.iconUrl,
+
       isDisable: !isPublish,
+
       parentKey,
+
       level,
+
       isDashboardVisible: formData?.isDashboardVisible
-        ? formData?.isDashboardVisible
+        ? formData.isDashboardVisible
         : false,
-      priority: formData?.isDashboardVisible ? Number(formData?.priority) : 0,
+
+      priority: formData?.isDashboardVisible ? Number(formData.priority) : 0,
     };
 
     dispatch(update(reqData))
@@ -573,13 +677,18 @@ const ProductCategories = () => {
           toast.error(res.message);
           return;
         }
+
         toast.success(res.message || "Category Updated Successfully");
+
         setIsRefresh(!isRefresh);
+
         setCategoryEditOpen(false);
+
         handleResetForm();
       })
       .catch((error) => {
         console.error("Error updating category:", error);
+
         toast.error(error || "Error in Updating Category");
       });
   }, [
@@ -592,15 +701,25 @@ const ProductCategories = () => {
     handleResetForm,
   ]);
 
+  // ---------------------------------------------------------------------------
+  // Navigation
+  // ---------------------------------------------------------------------------
+
   const handleNavigate = useCallback((newPath) => {
     setIsDrillDownLoading(true);
-    // Short artificial delay to show loader
+
     setTimeout(() => {
       setCurrentPath(newPath);
+
       setCategoryPage(1);
+
       setIsDrillDownLoading(false);
     }, 300);
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // Search
+  // ---------------------------------------------------------------------------
 
   const filterCategoryTree = useCallback((searchTerm, sourceCategories) => {
     if (!searchTerm || !searchTerm.trim()) {
@@ -613,16 +732,19 @@ const ProductCategories = () => {
       nodes
         .map((category) => {
           const categoryMatches = category.name?.toLowerCase().includes(term);
+
           const filteredChildren = filterNodes(category.subCategories || []);
 
           if (categoryMatches || filteredChildren.length > 0) {
             return {
               ...category,
+
               subCategories: categoryMatches
                 ? category.subCategories || []
                 : filteredChildren,
             };
           }
+
           return null;
         })
         .filter(Boolean);
@@ -632,7 +754,10 @@ const ProductCategories = () => {
 
   useEffect(() => {
     const filtered = filterCategoryTree(filters.search, allCategories);
+
     setCategories(filtered);
+
+    setCategoryPage(1);
   }, [filters.search, allCategories, filterCategoryTree]);
 
   useEffect(() => {
@@ -642,101 +767,116 @@ const ProductCategories = () => {
     }
 
     const selectedMainExists = categories.some(
-      (category) => String(category.categoryKey || category._id) === selectedMainCategoryKey,
+      (category) =>
+        String(category.categoryKey || category._id) ===
+        selectedMainCategoryKey,
     );
+
     if (!selectedMainExists) {
       setSelectedMainCategoryKey("");
     }
   }, [categories, selectedMainCategoryKey]);
 
   const handleSearchRemove = useCallback(() => {
-    setFilters((prev) => ({ ...prev, search: "" }));
+    setFilters((prev) => ({
+      ...prev,
+      search: "",
+    }));
   }, []);
 
-  // Helper function to find category by ID in nested structure
-  const findCategoryById = (categories, targetId) => {
-    for (const category of categories) {
-      if (category._id === targetId) {
-        return category;
-      }
-      if (category.subCategories?.length > 0) {
-        const found = findCategoryById(category.subCategories, targetId);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
+  // ---------------------------------------------------------------------------
+  // Table Data
+  // ---------------------------------------------------------------------------
 
-  // Helper function to format count display
-  const formatCount = (count) => {
-    return String(count);
-  };
+  const formatCount = (count) => String(count);
 
   const categoryTableRows = useMemo(() => {
     let activeCategories = categories;
 
-    // Navigate to current path level
     for (const step of currentPath) {
-      const found = activeCategories.find((c) => String(c._id || c.categoryKey || c.name) === String(step._id || step.categoryKey || step.name));
+      const found = activeCategories.find(
+        (category) =>
+          String(category._id || category.categoryKey || category.name) ===
+          String(step._id || step.categoryKey || step.name),
+      );
+
       if (found) {
         activeCategories = found.subCategories || [];
       } else {
-        // If path node not found (e.g. filtered out), fallback to empty
         activeCategories = [];
         break;
       }
     }
 
     const countCache = new Map();
+
     const descendantCount = (category) => {
       const key = String(category._id || category.categoryKey || category.name);
-      if (countCache.has(key)) return countCache.get(key);
+
+      if (countCache.has(key)) {
+        return countCache.get(key);
+      }
+
       const count = (category.subCategories || []).reduce(
         (total, child) => total + 1 + descendantCount(child),
         0,
       );
+
       countCache.set(key, count);
+
       return count;
     };
 
-    return activeCategories.map((category) => {
-      return {
-        category,
-        name: category.name || "-",
-        userName: category.userName || "-",
-        count: descendantCount(category),
-        hasSubCategories:
-          category.subCategories && category.subCategories.length > 0,
-      };
-    });
+    return activeCategories.map((category) => ({
+      category,
+
+      name: category.name || "-",
+
+      userName: category.userName || "-",
+
+      count: descendantCount(category),
+
+      hasSubCategories: Boolean(category.subCategories?.length),
+    }));
   }, [categories, currentPath]);
+
+  // ---------------------------------------------------------------------------
+  // Pagination
+  // ---------------------------------------------------------------------------
 
   const totalCategoryPages = Math.max(
     1,
-    Math.ceil(categoryTableRows.length / CATEGORY_TABLE_PAGE_SIZE),
+    Math.ceil(categoryTableRows.length / categoryPageSize),
   );
 
+  // Keep current page valid if page size
+  // or data changes.
+  useEffect(() => {
+    if (categoryPage > totalCategoryPages) {
+      setCategoryPage(totalCategoryPages);
+    }
+  }, [categoryPage, totalCategoryPages]);
+
   const pagedCategoryRows = useMemo(() => {
-    const startIndex = (categoryPage - 1) * CATEGORY_TABLE_PAGE_SIZE;
-    return categoryTableRows.slice(
-      startIndex,
-      startIndex + CATEGORY_TABLE_PAGE_SIZE,
-    );
-  }, [categoryPage, categoryTableRows]);
+    const startIndex = (categoryPage - 1) * categoryPageSize;
+
+    return categoryTableRows.slice(startIndex, startIndex + categoryPageSize);
+  }, [categoryPage, categoryPageSize, categoryTableRows]);
+
+  // ---------------------------------------------------------------------------
+  // Category Actions
+  // ---------------------------------------------------------------------------
 
   const renderCategoryActions = (category) => (
-    <div className="flex items-center justify-end gap-3">
-      <PermissionGuard
-        module="categories"
-        action={ACTIONS.STATUS_CHANGE}
-        hide
-      >
+    <div className="flex items-center justify-start gap-2">
+      <PermissionGuard module="categories" action={ACTIONS.STATUS_CHANGE} hide>
         <ToggleButton
           isToggle={!category.isDisable}
           handleClick={() => setStatusTarget(category)}
           size="sm"
         />
       </PermissionGuard>
+
       <ActionButtons
         showLinkButton={false}
         onEdit={() => handleEdit(category)}
@@ -744,14 +884,15 @@ const ProductCategories = () => {
         requiredModule="categories"
         size="sm"
       />
+
       <PermissionGuard module="categories" action={ACTIONS.UPDATE} hide>
         <button
           type="button"
           onClick={() => setAttributeCategory(category)}
-          className="rounded p-1 text-[var(--admin-blue)] transition-colors duration-200 hover:bg-[var(--admin-blue-soft)]"
+          className="rounded-lg p-2 text-[var(--admin-blue)] transition-colors hover:bg-[var(--admin-blue-soft)]"
           title="Manage category attributes"
         >
-          <MdTune size={18} />
+          <MdTune size={17} />
         </button>
       </PermissionGuard>
     </div>
@@ -760,13 +901,20 @@ const ProductCategories = () => {
   const handleDashboardVisible = () => {
     setFormData((prev) => ({
       ...prev,
+
       isDashboardVisible: !prev?.isDashboardVisible,
+
       priority: !prev?.isDashboardVisible ? prev.priority : 0,
     }));
   };
 
+  // ---------------------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------------------
+
   return (
-    <div>
+    <div className="min-h-screen">
+      {/* Page Header */}
       <PageHeader
         title="Product Categories"
         subtitle="Manage hierarchical product category tree"
@@ -774,197 +922,339 @@ const ProductCategories = () => {
         actions={
           <PermissionGuard module="categories" action={ACTIONS.CREATE} hide>
             <button
+              type="button"
               onClick={() => {
                 handleResetForm();
                 setCategoryOpen(true);
               }}
+              className="inline-flex items-center gap-2 rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--admin-gold-dark)] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]/30"
             >
-              <MdAdd size={16} /> Add Category
+              <MdAdd size={18} />
+              Add Category
             </button>
           </PermissionGuard>
         }
       />
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-        {/* Search bar */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 max-w-2xl">
-            <SearchInput
-              placeholder="Search categories…"
-              searchTerm={filters.search}
-              handleChange={(e) =>
-                setFilters((f) => ({ ...f, search: e.target.value }))
-              }
-              handleRemove={handleSearchRemove}
-            />
+      {/* Main Content */}
+      <div className="overflow-hidden rounded-2xl border border-[var(--admin-line)] bg-white shadow-sm">
+        {/* Search Header */}
+        <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-blue-soft)] text-[var(--admin-primary)]">
+                <MdFolder size={21} />
+              </div>
+
+              <div>
+                <h2 className="text-sm font-semibold text-[var(--admin-ink)]">
+                  Category Management
+                </h2>
+
+                <p className="mt-0.5 text-xs text-[var(--admin-muted)]">
+                  Search and manage your category hierarchy.
+                </p>
+              </div>
+            </div>
+
+            <div className="w-full lg:max-w-md">
+              <div className="relative">
+                <MdSearch
+                  size={18}
+                  className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[var(--admin-muted)]"
+                />
+
+                <div className="[&_input]:pl-10">
+                  <SearchInput
+                    placeholder="Search categories..."
+                    searchTerm={filters.search}
+                    handleChange={(e) =>
+                      setFilters((f) => ({
+                        ...f,
+                        search: e.target.value,
+                      }))
+                    }
+                    handleRemove={handleSearchRemove}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Category Breadcrumbs */}
-        <div className="flex items-center gap-2 mb-4 text-sm text-[var(--admin-muted)]">
-         
-     
-          
-          <button 
-            type="button"
-            onClick={() => handleNavigate([])} 
-            className={`hover:text-[var(--admin-primary)] ${currentPath.length === 0 ? 'font-semibold text-[var(--admin-ink)]' : ''}`}
-          >
-            Categories
-          </button>
-
-          {currentPath.map((cat, index) => (
-            <React.Fragment key={cat._id || cat.name || index}>
-              <FaChevronRight size={10} className="text-gray-400" />
-              <button 
+        {/* Breadcrumb Navigation */}
+        <div className="border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-5 py-3">
+          <div className="flex min-h-[34px] items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto">
+              {/* Root */}
+              <button
                 type="button"
-                onClick={() => handleNavigate(currentPath.slice(0, index + 1))}
-                className={`hover:text-[var(--admin-primary)] ${index === currentPath.length - 1 ? 'font-semibold text-[var(--admin-ink)]' : ''}`}
+                onClick={() => handleNavigate([])}
+                className={`inline-flex shrink-0 items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  currentPath.length === 0
+                    ? "bg-white text-[var(--admin-primary)] shadow-sm ring-1 ring-[#e3e7f5]"
+                    : "text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-primary)]"
+                }`}
               >
-                {cat.name}
+                Categories
               </button>
-            </React.Fragment>
-          ))}
+
+              {/* Nested Breadcrumbs */}
+              {currentPath.map((item, index) => {
+                const isLast = index === currentPath.length - 1;
+
+                return (
+                  <React.Fragment key={item?.categoryKey || item?._id || index}>
+                    <FaChevronRight
+                      className="shrink-0 text-[9px] text-gray-400"
+                      aria-hidden="true"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleNavigate(currentPath.slice(0, index + 1))
+                      }
+                      className={`inline-flex max-w-[180px] shrink-0 items-center rounded-lg px-3 py-1.5 text-xs transition-all ${
+                        isLast
+                          ? "bg-white font-semibold text-[var(--admin-primary)] shadow-sm ring-1 ring-[#e3e7f5]"
+                          : "font-medium text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-primary)]"
+                      }`}
+                    >
+                      <span className="truncate">
+                        {item?.name || item?.title || "Category"}
+                      </span>
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            {/* Current Level Count */}
+            <div className="hidden shrink-0 items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[var(--admin-muted)] shadow-sm ring-1 ring-[var(--admin-line)] sm:flex">
+              <MdFolder className="text-[var(--admin-gold)]" size={15} />
+
+              <span>
+                {categoryTableRows.length}{" "}
+                {categoryTableRows.length === 1 ? "category" : "categories"}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Category table */}
-        <div className="overflow-hidden rounded-lg border border-[var(--admin-line)]">
-          {isTableLoading && (
+        {/* Table */}
+        <div className="overflow-hidden">
+          {isTableLoading ? (
             <div
-              className="space-y-2 py-2"
+              className="p-4"
               role="status"
               aria-label="Loading categories"
               aria-busy="true"
             >
-              {[0, 1, 2, 3, 4].map((row) => (
+              {/* Skeleton Header */}
+              <div className="mb-2 grid grid-cols-[50%_25%_25%] items-center rounded-lg bg-[var(--admin-surface-soft)] px-5 py-3">
+                <SkeletonLoader height={11} width="30%" />
+
+                <SkeletonLoader height={11} width="35%" />
+
+                <SkeletonLoader height={11} width="25%" />
+              </div>
+
+              {/* Skeleton Rows */}
+              {[0, 1, 2, 3, 4, 5].map((row) => (
                 <div
                   key={row}
-                  className="flex min-h-12 items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-white px-3 py-2"
-                  style={{ marginLeft: row === 2 || row === 3 ? 0 : 0 }}
+                  className="mb-2 grid min-h-[62px] grid-cols-[50%_25%_25%] items-center rounded-lg border border-[var(--admin-line)] bg-white px-5 py-3"
                 >
-                  <SkeletonLoader circle height={24} width={24} />
-                  <div className="min-w-0 flex-1">
-                    <SkeletonLoader
-                      height={12}
-                      width={row % 2 === 0 ? "38%" : "28%"}
-                    />
-                    <div className="mt-1">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <SkeletonLoader circle height={36} width={36} />
+
+                    <div className="min-w-0 flex-1">
                       <SkeletonLoader
-                        height={9}
-                        width={row % 2 === 0 ? "24%" : "18%"}
+                        height={12}
+                        width={row % 2 === 0 ? "38%" : "30%"}
                       />
+
+                      <div className="mt-2">
+                        <SkeletonLoader
+                          height={8}
+                          width={row % 2 === 0 ? "25%" : "18%"}
+                        />
+                      </div>
                     </div>
                   </div>
-                  <SkeletonLoader height={26} width={72} />
-                </div>
-              ))}
-              <span className="sr-only">Loading categories…</span>
-            </div>
-          )}
-          {!isTableLoading && categoryTableRows.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-[var(--admin-line)] text-sm">
-                <thead className="bg-[var(--admin-surface-soft)]">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--admin-muted)]">
-                      Category Name
-                    </th>
-                  
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--admin-muted)]">
-                      Subcategories
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--admin-muted)]">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--admin-line)] bg-white">
-                  {pagedCategoryRows.map((row) => (
-                    <tr
-                      key={row.category._id}
-                      className="transition-colors hover:bg-[var(--admin-surface-soft)]"
-                    >
-                      <td className="min-w-[260px] px-4 py-3">
-                        {row.hasSubCategories ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleNavigate([...currentPath, row.category]);
-                            }}
-                            className="flex items-center gap-2 text-left font-semibold text-[var(--admin-primary)] hover:underline capitalize"
-                          >
-                            <MdFolder size={18} className="text-gray-400" />
-                            {row.name}
-                          </button>
-                        ) : (
-                          <div className="flex items-center gap-2 text-left font-semibold text-[var(--admin-ink)] capitalize pl-[26px]">
-                            {row.name}
-                          </div>
-                        )}
-                      </td>
-                    
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <span className="rounded bg-cyan-100 px-2 py-1 text-xs font-medium text-cyan-700">
-                          {formatCount(row.count)}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        {renderCategoryActions(row.category)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {categoryTableRows.length > CATEGORY_TABLE_PAGE_SIZE && (
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--admin-line)] bg-white px-4 py-3 text-sm">
-                  <span className="text-[var(--admin-muted)]">
-                    Showing {(categoryPage - 1) * CATEGORY_TABLE_PAGE_SIZE + 1}-
-                    {Math.min(
-                      categoryPage * CATEGORY_TABLE_PAGE_SIZE,
-                      categoryTableRows.length,
-                    )}{" "}
-                    of {categoryTableRows.length}
-                  </span>
+
+                  <SkeletonLoader height={24} width={45} />
+
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCategoryPage((page) => Math.max(1, page - 1))
-                      }
-                      disabled={categoryPage === 1}
-                      className="rounded border border-[var(--admin-line)] px-3 py-1.5 font-medium text-[var(--admin-ink)] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Previous
-                    </button>
-                    <span className="text-[var(--admin-muted)]">
-                      Page {categoryPage} of {totalCategoryPages}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCategoryPage((page) =>
-                          Math.min(totalCategoryPages, page + 1),
-                        )
-                      }
-                      disabled={categoryPage === totalCategoryPages}
-                      className="rounded border border-[var(--admin-line)] px-3 py-1.5 font-medium text-[var(--admin-ink)] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Next
-                    </button>
+                    <SkeletonLoader height={28} width={35} />
+
+                    <SkeletonLoader height={28} width={28} />
+
+                    <SkeletonLoader height={28} width={28} />
                   </div>
                 </div>
+              ))}
+
+              <span className="sr-only">Loading categories...</span>
+            </div>
+          ) : categoryTableRows.length > 0 ? (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] table-fixed text-sm">
+                  <colgroup>
+                    <col className="w-[50%]" />
+                    <col className="w-[25%]" />
+                    <col className="w-[25%]" />
+                  </colgroup>
+
+                  <thead>
+                    <tr className="border-y border-[#dfe3eb] bg-[#f1f3f7]">
+                      <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
+                        Category Name
+                      </th>
+
+                      <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
+                        Subcategories
+                      </th>
+
+                      <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-[var(--admin-line)]">
+                    {pagedCategoryRows.map((row) => (
+                      <tr
+                        key={
+                          row.category?._id ||
+                          row.category?.categoryKey ||
+                          row.name
+                        }
+                        className="group/category-row h-[62px] transition-colors hover:bg-[var(--admin-surface-soft)]"
+                      >
+                        {/* Category Name */}
+             <td className="px-5 py-3.5 text-left align-middle">
+  {row.hasSubCategories ? (
+    <button
+      type="button"
+      onClick={() =>
+        handleNavigate([...currentPath, row.category])
+      }
+      className="grid w-full max-w-full grid-cols-[36px_360px_18px] items-center gap-1 text-left"
+    >
+      {/* Folder Icon */}
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#fffaf0] text-[var(--admin-primary)] transition-all group-hover/category-row:bg-white group-hover/category-row:shadow-sm">
+        <MdFolder size={18} />
+      </span>
+
+      {/* Category Name */}
+      <span className="min-w-0">
+        <span className="block truncate font-semibold capitalize text-[var(--admin-primary)]">
+          {row.name}
+        </span>
+
+        <span className="mt-0.5 block truncate text-[11px] text-[var(--admin-muted)]">
+          Click to view subcategories
+        </span>
+      </span>
+
+      {/* Arrow */}
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center text-gray-400 transition-transform group-hover/category-row:translate-x-0.5">
+        <FaChevronRight size={8} />
+      </span>
+    </button>
+  ) : (
+    <div className="flex items-center gap-3">
+      {/* Dot Icon */}
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--admin-surface-soft)]">
+        <span className="h-2.5 w-2.5 rounded-full bg-[var(--admin-muted)]" />
+      </span>
+
+      {/* Category Name */}
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold text-[var(--admin-ink)]">
+          {row.name}
+        </span>
+
+        <span className="text-xs text-[var(--admin-muted)]">
+          No subcategories
+        </span>
+      </span>
+    </div>
+  )}
+</td>
+                        {/* Subcategories */}
+                        <td className="px-5 py-3.5 text-left align-middle">
+                          <span className="inline-flex min-w-[34px] items-center justify-center rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-100">
+                            {formatCount(row.count)}
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-5 py-3.5 text-left align-middle">
+                          {renderCategoryActions(row.category)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="border-t border-[var(--admin-line)] bg-white px-5 py-3">
+                <Pagination
+                  totalPages={totalCategoryPages}
+                  currentPage={categoryPage}
+                  onPageChange={setCategoryPage}
+                  totalRecords={categoryTableRows.length}
+                  pageSize={categoryPageSize}
+                  pageSizeOptions={[10, 20, 50, 100]}
+                  onPageSizeChange={(size) => {
+                    const newSize = Number(size) || CATEGORY_TABLE_PAGE_SIZE;
+
+                    setCategoryPageSize(newSize);
+
+                    setCategoryPage(1);
+                  }}
+                />
+              </div>
+            </>
+          ) : (
+            /* Empty State */
+            <div className="flex min-h-[280px] flex-col items-center justify-center px-5 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-surface-soft)] text-[var(--admin-muted)]">
+                <MdFolder size={27} />
+              </div>
+
+              <h3 className="text-sm font-semibold text-[var(--admin-ink)]">
+                {filters.search
+                  ? "No categories found"
+                  : "No categories available"}
+              </h3>
+
+              <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--admin-muted)]">
+                {filters.search
+                  ? "Try adjusting your search term to find a matching category."
+                  : "Create your first category to start building your product catalog hierarchy."}
+              </p>
+
+              {filters.search && (
+                <button
+                  type="button"
+                  onClick={handleSearchRemove}
+                  className="mt-4 rounded-lg border border-[var(--admin-line)] bg-white px-3.5 py-2 text-xs font-semibold text-[var(--admin-primary)] transition hover:bg-[var(--admin-surface-soft)]"
+                >
+                  Clear Search
+                </button>
               )}
             </div>
-          ) : !isTableLoading ? (
-            <div className="text-center py-8 text-gray-400 text-sm">
-              {filters.search
-                ? "No categories match your search"
-                : "No categories found"}
-            </div>
-          ) : null}
+          )}
         </div>
       </div>
 
+      {/* Category Setup */}
       <CategorySetup
         isOpen={categoryOpen || categoryEditOpen}
         handleClose={() => {
@@ -985,6 +1275,7 @@ const ProductCategories = () => {
         handleDashboardVisible={handleDashboardVisible}
       />
 
+      {/* Delete Confirmation */}
       <ConfirmModal
         open={showDeleteConfirmation}
         onClose={() => setShowDeleteConfirmation(false)}
@@ -995,17 +1286,21 @@ const ProductCategories = () => {
         confirmLabel="Delete"
       />
 
+      {/* Status Confirmation */}
       <ConfirmModal
         open={Boolean(statusTarget)}
         onClose={() => setStatusTarget(null)}
         onConfirm={handleStatusConfirm}
         title={`${statusTarget?.isDisable ? "Enable" : "Disable"} Category`}
-        message={`${statusTarget?.isDisable ? "Enable" : "Disable"} "${statusTarget?.name || "this category"}"? Disabling a parent also disables its child categories.`}
+        message={`${statusTarget?.isDisable ? "Enable" : "Disable"} "${
+          statusTarget?.name || "this category"
+        }"? Disabling a parent also disables its child categories.`}
         variant={statusTarget?.isDisable ? "success" : "warning"}
         confirmLabel={statusTarget?.isDisable ? "Enable" : "Disable"}
         loading={isLoading}
       />
 
+      {/* Category Attributes */}
       {attributeCategory && (
         <div className="fixed inset-0 z-50">
           <button
@@ -1014,6 +1309,7 @@ const ProductCategories = () => {
             aria-label="Close category attributes"
             onClick={() => setAttributeCategory(null)}
           />
+
           <aside className="absolute right-0 top-0 h-full w-full max-w-4xl bg-white shadow-xl">
             <CategoryAttributesPanel
               embedded

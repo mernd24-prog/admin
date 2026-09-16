@@ -14,19 +14,34 @@ export const ButtonLoader = () => (
   <span className="admin-button-spinner" aria-hidden="true" />
 );
 
-const Loader = ({ loading = true, fullScreen = true, label }) => {
+const Loader = ({
+  loading = true,
+  fullScreen = true,
+  label,
+  size = "h-10 w-10",
+  border = "border-4",
+}) => {
   if (!loading) return null;
 
   const loader = (
     <div
-      className={`${fullScreen ? "fixed inset-0 z-[11000] bg-black/40 backdrop-blur-[2px]" : "min-h-32"} flex items-center justify-center`}
+      className={`${
+        fullScreen
+          ? "fixed inset-0 z-[11000] bg-black/40 backdrop-blur-[2px]"
+          : "min-h-32"
+      } flex items-center justify-center`}
       role="status"
       aria-label={label || "Loading"}
     >
       <div className="flex flex-col items-center gap-3 px-6 py-5">
-        <span className="h-10 w-10 animate-spin rounded-full border-4 border-[#e8eefc] border-t-[#082f91]" />
+        <span
+          className={`${size} animate-spin rounded-full ${border} border-[#e8eefc] border-t-[#082f91]`}
+        />
+
         {label && (
-          <span className="text-sm font-medium text-[#202337]">{label}</span>
+          <span className="text-sm font-medium text-[#202337]">
+            {label}
+          </span>
         )}
       </div>
     </div>
