@@ -350,3 +350,47 @@ export const OrganizationSkeletonLoader = ({ actionLabel }) => (
     </div>
   </div>
 );
+export const SidebarSkeletonLoader = ({ isExpanded = true }) => {
+  const items = Array.from({ length: isExpanded ? 9 : 7 });
+
+  return (
+    <div
+      className={`flex-1 overflow-hidden ${
+        isExpanded ? "px-3 py-4" : "px-2 py-4"
+      }`}
+      aria-label="Loading sidebar"
+    >
+      <div className="space-y-2">
+        {items.map((_, index) => (
+          <div key={index}>
+            <div
+              className={`flex items-center gap-3 rounded-[6px] px-2.5 py-3 ${
+                isExpanded ? "" : "justify-center"
+              }`}
+            >
+              <SkeletonLoader
+                height={isExpanded ? 24 : 28}
+                width={isExpanded ? 24 : 28}
+                circle
+              />
+
+              {isExpanded && (
+                <SkeletonLoader
+                  height={14}
+                  width={`${90 + (index % 3) * 25}px`}
+                />
+              )}
+            </div>
+
+            {isExpanded && index % 2 === 0 && (
+              <div className="ml-9 mt-1 space-y-2">
+                <SkeletonLoader height={12} width="75%" />
+                <SkeletonLoader height={12} width="60%" />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};

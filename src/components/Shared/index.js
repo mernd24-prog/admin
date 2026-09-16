@@ -14,3 +14,5 @@ export { default as DateRangePickerModal } from "./DateRangePickerModal";
 export { default as DocumentPreviewModal } from "./DocumentPreviewModal";
 export { default as ShowMoreText } from "./ShowMoreText";
 export { default as ImageViewer } from "../ImageViewer/ImageViewer";
+export { default as ImageThumbnail } from "../ImageViewer/ImageThumbnail";
+
