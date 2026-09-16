@@ -1,3 +1,4 @@
+import { formatLabel } from "../utils/formatters";
 import { apiRequest } from "./apiConfig";
 import { ENDPOINTS } from "./endpoints";
 
@@ -74,38 +75,44 @@ export const dropdownApi = {
   getHsnCodes: (params) => load("hsn-codes", params),
   getTaxes: (params) => load("taxes", params),
   getSystemOptions: (resource, params) => load(resource, params),
+
   getSellers: (params = {}) =>
-    loadProtected("sellers", ENDPOINTS.sellers.list, {
-      ...params,
-      // Seller directories are server-searched and paginated. Never request
-      // an unbounded directory just to populate a dropdown.
-      limit: Math.min(Math.max(Number(params.limit) || 20, 1), 100),
-    }, (item) => {
-      const name =
-        item.displayName ||
-        item.businessName ||
-        item.full_name ||
-        item.userName ||
-        item.sellerProfile?.displayName ||
-        item.sellerProfile?.businessName ||
-        item.sellerProfile?.legalBusinessName ||
-        [item.profile?.firstName, item.profile?.lastName]
-          .filter(Boolean)
-          .join(" ") ||
-        item.email ||
-        item._id ||
-        item.id;
-      return {
-        label: name,
-        value: item._id || item.id,
-        id: item._id || item.id,
-        meta: {
-          status: item.status || item.accountStatus || "",
-          email: item.email || "",
-          avatarUrl: item.profile?.avatarUrl || item.avatarUrl || "",
-        },
-      };
-    }),
+    loadProtected(
+      "sellers",
+      ENDPOINTS.sellers.list,
+      {
+        ...params,
+        // Seller directories are server-searched and paginated. Never request
+        // an unbounded directory just to populate a dropdown.
+        limit: Math.min(Math.max(Number(params.limit) || 20, 1), 100),
+      },
+      (item) => {
+        const name =
+          item.displayName ||
+          item.businessName ||
+          item.full_name ||
+          item.userName ||
+          item.sellerProfile?.displayName ||
+          item.sellerProfile?.businessName ||
+          item.sellerProfile?.legalBusinessName ||
+          [item.profile?.firstName, item.profile?.lastName]
+            .filter(Boolean)
+            .join(" ") ||
+          item.email ||
+          item._id ||
+          item.id;
+        return {
+          label: formatLabel(name),
+          value: item._id || item.id,
+          id: item._id || item.id,
+          meta: {
+            status: item.status || item.accountStatus || "",
+            email: item.email || "",
+            avatarUrl: item.profile?.avatarUrl || item.avatarUrl || "",
+          },
+        };
+      },
+    ),
   getSellerOrganizations: (sellerId, params) =>
     loadProtected(
       `seller-organizations:${sellerId || "all"}`,
@@ -177,25 +184,25 @@ export const dropdownApi = {
         meta: { email: item.email || "", phone: item.phone || "" },
       }),
     ),
-  getBuyers: (params) =>
-    loadProtected(
-      "buyers",
-      ENDPOINTS.users.adminUsers,
-      { limit: 20, role: "user", ...params },
-      (item) => ({
-        label:
-          item.full_name ||
-          [item.profile?.firstName, item.profile?.lastName]
-            .filter(Boolean)
-            .join(" ") ||
-          item.email ||
-          item._id ||
-          item.id,
-        value: item._id || item.id,
-        id: item._id || item.id,
-        meta: { email: item.email || "" },
-      }),
-    ),
+  // getBuyers: (params) =>
+  //   loadProtected(
+  //     "buyers",
+  //     ENDPOINTS.users.adminUsers,
+  //     { limit: 20, role: "user", ...params },
+  //     (item) => ({
+  //       label:
+  //         item.full_name ||
+  //         [item.profile?.firstName, item.profile?.lastName]
+  //           .filter(Boolean)
+  //           .join(" ") ||
+  //         item.email ||
+  //         item._id ||
+  //         item.id,
+  //       value: item._id || item.id,
+  //       id: item._id || item.id,
+  //       meta: { email: item.email || "" },
+  //     }),
+  //   ),
   getOrders: (params) =>
     loadProtected(
       "orders",

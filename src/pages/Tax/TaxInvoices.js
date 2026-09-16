@@ -42,7 +42,7 @@ const FILTER_FIELDS = isSellerPanel()
       { key: "toDate", type: "date", label: "To" },
     ]
   : [
-      { key: "search", type: "text", label: "Search", width: "w-56" },
+      // { key: "search", type: "text", label: "Search", width: "w-56" },
       {
         key: "invoiceType",
         type: "select",
@@ -52,7 +52,7 @@ const FILTER_FIELDS = isSellerPanel()
       {
         key: "sellerId",
         type: "asyncDropdown",
-        label: "Seller",
+        label: "STORE NAME",
         width: "w-52",
         load: (search) =>
           dropdownApi.getSellers({
@@ -60,23 +60,23 @@ const FILTER_FIELDS = isSellerPanel()
             searchFields: "full_name,email,businessName",
           }),
       },
-      {
-        key: "buyerId",
-        type: "asyncDropdown",
-        label: "Buyer",
-        width: "w-52",
-        load: (search) =>
-          dropdownApi.getBuyers({
-            keyWord: search,
-            searchFields: "full_name,email",
-          }),
-      },
-      {
-        key: "organizationId",
-        type: "text",
-        label: "Organization ID",
-        width: "w-52",
-      },
+      // {
+      //   key: "buyerId",
+      //   type: "asyncDropdown",
+      //   label: "Buyer",
+      //   width: "w-52",
+      //   load: (search) =>
+      //     dropdownApi.getBuyers({
+      //       keyWord: search,
+      //       searchFields: "full_name,email",
+      //     }),
+      // },
+      // {
+      //   key: "organizationId",
+      //   type: "text",
+      //   label: "Organization ID",
+      //   width: "w-52",
+      // },
       {
         key: "status",
         type: "select",
@@ -86,7 +86,7 @@ const FILTER_FIELDS = isSellerPanel()
           label: formatLabel(s),
         })),
       },
-      { key: "hsnCode", type: "text", label: "HSN Code", width: "w-36" },
+      // { key: "hsnCode", type: "text", label: "HSN Code", width: "w-36" },
       { key: "fromDate", type: "date", label: "From" },
       { key: "toDate", type: "date", label: "To" },
     ];
@@ -256,7 +256,12 @@ const TaxInvoices = () => {
           render: (v, row) => {
             const orderId = v || orderIdOf(row);
 
-            return <OrderLink orderId={orderId} orderNumber={row.orderNumber || row.order_number} />;
+            return (
+              <OrderLink
+                orderId={orderId}
+                orderNumber={row.orderNumber || row.order_number}
+              />
+            );
           },
         },
 
