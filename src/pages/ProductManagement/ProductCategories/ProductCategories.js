@@ -218,6 +218,9 @@ const ProductCategories = () => {
 
   const categoriesLoading =
     !hasLoadedCategories || selector?.getListData?.loading;
+  
+  const [isDrillDownLoading, setIsDrillDownLoading] = useState(false);
+  const isTableLoading = categoriesLoading || isDrillDownLoading;
 
   // Build select options for category dropdown
   const createSelectOptions = useMemo(() => {
@@ -589,6 +592,16 @@ const ProductCategories = () => {
     handleResetForm,
   ]);
 
+  const handleNavigate = useCallback((newPath) => {
+    setIsDrillDownLoading(true);
+    // Short artificial delay to show loader
+    setTimeout(() => {
+      setCurrentPath(newPath);
+      setCategoryPage(1);
+      setIsDrillDownLoading(false);
+    }, 300);
+  }, []);
+
   const filterCategoryTree = useCallback((searchTerm, sourceCategories) => {
     if (!searchTerm || !searchTerm.trim()) {
       return sourceCategories;
@@ -789,19 +802,12 @@ const ProductCategories = () => {
 
         {/* Category Breadcrumbs */}
         <div className="flex items-center gap-2 mb-4 text-sm text-[var(--admin-muted)]">
-          <button 
-            type="button"
-            onClick={() => setCurrentPath([])} 
-            className={`hover:text-[var(--admin-primary)] ${currentPath.length === 0 ? 'font-semibold text-[var(--admin-ink)]' : ''}`}
-          >
-            Catalog
-          </button>
-          
-          <FaChevronRight size={10} className="text-gray-400" />
+         
+     
           
           <button 
             type="button"
-            onClick={() => setCurrentPath([])} 
+            onClick={() => handleNavigate([])} 
             className={`hover:text-[var(--admin-primary)] ${currentPath.length === 0 ? 'font-semibold text-[var(--admin-ink)]' : ''}`}
           >
             Categories
@@ -812,7 +818,7 @@ const ProductCategories = () => {
               <FaChevronRight size={10} className="text-gray-400" />
               <button 
                 type="button"
-                onClick={() => setCurrentPath(currentPath.slice(0, index + 1))}
+                onClick={() => handleNavigate(currentPath.slice(0, index + 1))}
                 className={`hover:text-[var(--admin-primary)] ${index === currentPath.length - 1 ? 'font-semibold text-[var(--admin-ink)]' : ''}`}
               >
                 {cat.name}
@@ -823,7 +829,7 @@ const ProductCategories = () => {
 
         {/* Category table */}
         <div className="overflow-hidden rounded-lg border border-[var(--admin-line)]">
-          {categoriesLoading && (
+          {isTableLoading && (
             <div
               className="space-y-2 py-2"
               role="status"
@@ -855,7 +861,7 @@ const ProductCategories = () => {
               <span className="sr-only">Loading categories…</span>
             </div>
           )}
-          {!categoriesLoading && categoryTableRows.length > 0 ? (
+          {!isTableLoading && categoryTableRows.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-[var(--admin-line)] text-sm">
                 <thead className="bg-[var(--admin-surface-soft)]">
@@ -883,8 +889,7 @@ const ProductCategories = () => {
                           <button
                             type="button"
                             onClick={() => {
-                              setCurrentPath([...currentPath, row.category]);
-                              setCategoryPage(1);
+                              handleNavigate([...currentPath, row.category]);
                             }}
                             className="flex items-center gap-2 text-left font-semibold text-[var(--admin-primary)] hover:underline capitalize"
                           >
@@ -950,7 +955,7 @@ const ProductCategories = () => {
                 </div>
               )}
             </div>
-          ) : !categoriesLoading ? (
+          ) : !isTableLoading ? (
             <div className="text-center py-8 text-gray-400 text-sm">
               {filters.search
                 ? "No categories match your search"
