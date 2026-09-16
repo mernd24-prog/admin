@@ -35,6 +35,7 @@ export default function SearchComponent({
   isPermanentDeleteAction = false,
   productOptions = [],
   userOptions = [],
+  sellerLoading = false,
   categoryOptions = [],
   activationStatusOptions = [],
   approvalOptions = [],
@@ -168,7 +169,7 @@ export default function SearchComponent({
         ? {
             sellerName: {
               value: "",
-              label: "Search By User Name",
+              label: "Search By Store Name",
             },
           }
         : {}),
@@ -528,13 +529,23 @@ export default function SearchComponent({
                   <FilterSelect
                     label="Seller Store Name"
                     value={
-                      filters?.sellerName || { value: "", label: "All Sellers" }
+                      filters?.sellerName || {
+                        value: "",
+                        label: sellerLoading
+                          ? "Loading Store Names..."
+                          : "Search By Store Name",
+                      }
                     }
                     options={[
-                      { value: "", label: "All Sellers" },
+                      {
+                        value: "",
+                        label: sellerLoading
+                          ? "Loading Store Names..."
+                          : "All Store Names",
+                      },
                       ...(userOptions || []),
                     ]}
-                    isSearchable={true}
+                    isSearchable={!sellerLoading}
                     onChange={(option) =>
                       handleFilterChange("sellerName", option)
                     }

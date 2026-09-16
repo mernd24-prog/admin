@@ -25,7 +25,16 @@ import Loader from "../../../../components/Loader/Loader";
 import { getAllStateList } from "../../../../Redux/stateSlice";
 import { getAllCityList } from "../../../../Redux/citySlice";
 import { GrDocument } from "react-icons/gr";
-import { FiTrash2, FiAlertCircle, FiPlus, FiImage, FiVideo, FiSearch, FiCheck, FiX } from "react-icons/fi";
+import {
+  FiTrash2,
+  FiAlertCircle,
+  FiPlus,
+  FiImage,
+  FiVideo,
+  FiSearch,
+  FiCheck,
+  FiX,
+} from "react-icons/fi";
 import { toast } from "sonner";
 import { useNavigate, useParams } from "react-router-dom";
 import TabNavigation from "./TabNavigation";
@@ -126,10 +135,14 @@ const getVariantAxisValue = (variant = {}, axis = {}) => {
   const key = getVariantAxisKey(axis);
   const candidateKeys = [
     key,
-    String(axis.name || "").trim().toLowerCase(),
+    String(axis.name || "")
+      .trim()
+      .toLowerCase(),
     key.replace(/-/g, "_"),
   ].filter(Boolean);
-  const matchingKey = candidateKeys.find((candidate) => attributes[candidate] != null);
+  const matchingKey = candidateKeys.find(
+    (candidate) => attributes[candidate] != null,
+  );
   return matchingKey ? attributes[matchingKey] : "";
 };
 const getVariantCombinationKey = (variant = {}, axes = []) =>
@@ -304,7 +317,7 @@ const getCollectionInitials = (name = "") => {
   return words[0].slice(0, 2).toUpperCase();
 };
 
-const CollectionCardThumbnail = ({ image, name }) => {
+export const CollectionCardThumbnail = ({ image, name }) => {
   const [imageFailed, setImageFailed] = useState(false);
   const initials = useMemo(() => getCollectionInitials(name), [name]);
 
@@ -421,28 +434,47 @@ export default function ProductManagementUI() {
   );
 
   const collectionOptions = useMemo(
-    () => prefillList("collections").filter((item) => (item.active ?? item.isActive) !== false),
+    () =>
+      prefillList("collections").filter(
+        (item) => (item.active ?? item.isActive) !== false,
+      ),
     [prefillList],
   );
   const selectedCollectionIds = useMemo(
-    () => new Set((Array.isArray(formData?.collectionIds) ? formData.collectionIds : []).map(String)),
+    () =>
+      new Set(
+        (Array.isArray(formData?.collectionIds)
+          ? formData.collectionIds
+          : []
+        ).map(String),
+      ),
     [formData?.collectionIds],
   );
   const collectionReferences = useCallback(
-    (collection = {}) => [collection._id, collection.id, collection.slug, collection.name]
-      .filter(Boolean)
-      .map(String),
+    (collection = {}) =>
+      [collection._id, collection.id, collection.slug, collection.name]
+        .filter(Boolean)
+        .map(String),
     [],
   );
   const isCollectionSelected = useCallback(
-    (collection) => collectionReferences(collection).some((value) => selectedCollectionIds.has(value)),
+    (collection) =>
+      collectionReferences(collection).some((value) =>
+        selectedCollectionIds.has(value),
+      ),
     [collectionReferences, selectedCollectionIds],
   );
   const filteredCollectionOptions = useMemo(() => {
     const query = collectionSearch.trim().toLowerCase();
     if (!query) return collectionOptions;
     return collectionOptions.filter((collection) =>
-      [collection.name, collection.slug, collection.type, collection.description, ...(collection.tags || [])]
+      [
+        collection.name,
+        collection.slug,
+        collection.type,
+        collection.description,
+        ...(collection.tags || []),
+      ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query)),
     );
@@ -451,20 +483,37 @@ export default function ProductManagementUI() {
     () => collectionOptions.filter(isCollectionSelected),
     [collectionOptions, isCollectionSelected],
   );
-  const toggleCollection = useCallback((collection) => {
-    const references = collectionReferences(collection);
-    const primaryValue = String(collection._id || collection.id || collection.slug || collection.name || "");
-    if (!primaryValue) return;
-    setFormData((current) => {
-      const currentIds = (Array.isArray(current.collectionIds) ? current.collectionIds : []).map(String);
-      const wasSelected = references.some((value) => currentIds.includes(value));
-      const withoutCollection = currentIds.filter((value) => !references.includes(value));
-      return {
-        ...current,
-        collectionIds: wasSelected ? withoutCollection : [...withoutCollection, primaryValue],
-      };
-    });
-  }, [collectionReferences]);
+  const toggleCollection = useCallback(
+    (collection) => {
+      const references = collectionReferences(collection);
+      const primaryValue = String(
+        collection._id ||
+          collection.id ||
+          collection.slug ||
+          collection.name ||
+          "",
+      );
+      if (!primaryValue) return;
+      setFormData((current) => {
+        const currentIds = (
+          Array.isArray(current.collectionIds) ? current.collectionIds : []
+        ).map(String);
+        const wasSelected = references.some((value) =>
+          currentIds.includes(value),
+        );
+        const withoutCollection = currentIds.filter(
+          (value) => !references.includes(value),
+        );
+        return {
+          ...current,
+          collectionIds: wasSelected
+            ? withoutCollection
+            : [...withoutCollection, primaryValue],
+        };
+      });
+    },
+    [collectionReferences],
+  );
 
   const toSelectId = (record = {}) =>
     String(
@@ -1001,7 +1050,12 @@ export default function ProductManagementUI() {
         }
       })
       .catch(() => {});
-  }, [dispatch, sellerPanelMode, prefillData.optionValuesByOptionId, prefillList]);
+  }, [
+    dispatch,
+    sellerPanelMode,
+    prefillData.optionValuesByOptionId,
+    prefillList,
+  ]);
 
   // When a platform-linked axis is added to variantAxes, load its values
   useEffect(() => {
@@ -1078,33 +1132,33 @@ export default function ProductManagementUI() {
       );
     }
     requests.push(
-        dispatch(
-          getShippingProfileTemplates({
-            status: "published",
-            active: true,
-            limit: 100,
-          }),
-        )
-          .unwrap()
-          .then((res) => {
-            const data = res?.data?.data || res?.data || res || {};
-            const list = Array.isArray(data)
-              ? data
-              : data.templates || data.items || data.list || [];
-            return list.map((template) => ({
-              value: `template:${template.id}`,
-              label: `Template: ${template.name}`,
-              profile: {
-                ...template,
-                id: `template:${template.id}`,
-                sourceTemplateId: template.id,
-                sourceType: "template",
-              },
-              type: "template",
-            }));
-          })
-          .catch(() => []),
-      );
+      dispatch(
+        getShippingProfileTemplates({
+          status: "published",
+          active: true,
+          limit: 100,
+        }),
+      )
+        .unwrap()
+        .then((res) => {
+          const data = res?.data?.data || res?.data || res || {};
+          const list = Array.isArray(data)
+            ? data
+            : data.templates || data.items || data.list || [];
+          return list.map((template) => ({
+            value: `template:${template.id}`,
+            label: `Template: ${template.name}`,
+            profile: {
+              ...template,
+              id: `template:${template.id}`,
+              sourceTemplateId: template.id,
+              sourceType: "template",
+            },
+            type: "template",
+          }));
+        })
+        .catch(() => []),
+    );
     if (!requests.length) {
       setShippingProfileOptions([]);
       return;
@@ -1481,9 +1535,7 @@ export default function ProductManagementUI() {
           formData?.shipping?.serviceablePincodes,
       );
 
-      if (
-        allowedPincodes.some((pincode) => !isValidIndianPincode(pincode))
-      ) {
+      if (allowedPincodes.some((pincode) => !isValidIndianPincode(pincode))) {
         newErrors.shipping = "Every pincode must be a valid 6-digit pincode.";
       }
     }
@@ -1491,7 +1543,9 @@ export default function ProductManagementUI() {
     // Variant field validation
     if (Array.isArray(variantsData) && variantsData.length) {
       const skuCounts = variantsData.reduce((counts, variant) => {
-        const sku = String(variant?.sku || "").trim().toLowerCase();
+        const sku = String(variant?.sku || "")
+          .trim()
+          .toLowerCase();
         if (sku) counts.set(sku, (counts.get(sku) || 0) + 1);
         return counts;
       }, new Map());
@@ -1542,7 +1596,8 @@ export default function ProductManagementUI() {
               (allowedValue) => String(allowedValue) === String(value),
             )
           ) {
-            axisErrors[axisKey] = `${value} is not an allowed ${axis.name || axisKey} value.`;
+            axisErrors[axisKey] =
+              `${value} is not an allowed ${axis.name || axisKey} value.`;
           }
           return axisErrors;
         }, {});
@@ -2072,14 +2127,13 @@ export default function ProductManagementUI() {
     const updatedFormData = { ...formData };
     // persist manual-attributes selection to payload
     updatedFormData.attributesManual = useManualAttributes;
-    const selectedShippingOption =
-      updatedFormData.shipping?.shippingProfileId
-        ? shippingProfileOptions.find(
-            (option) =>
-              String(option.value) ===
-              String(updatedFormData.shipping.shippingProfileId),
-          ) || null
-        : null;
+    const selectedShippingOption = updatedFormData.shipping?.shippingProfileId
+      ? shippingProfileOptions.find(
+          (option) =>
+            String(option.value) ===
+            String(updatedFormData.shipping.shippingProfileId),
+        ) || null
+      : null;
     const selectedShippingProfile = selectedShippingOption?.profile || null;
     const profileShippingCharge = selectedShippingProfile
       ? toOptionalNumber(selectedShippingProfile.shippingCharge)
@@ -2169,10 +2223,11 @@ export default function ProductManagementUI() {
       period: toOptionalNumber(updatedFormData.warranty?.period),
       returnPolicy: (() => {
         const current = updatedFormData.warranty?.returnPolicy || {};
-        const isNonReturnable = String(current.type || "").toLowerCase() === "non_returnable";
+        const isNonReturnable =
+          String(current.type || "").toLowerCase() === "non_returnable";
         const returnable = isNonReturnable
           ? false
-          : current.returnable ?? current.eligible ?? true;
+          : (current.returnable ?? current.eligible ?? true);
         const returnWindowDays = returnable
           ? Number(current.returnWindowDays ?? current.days ?? 0)
           : 0;
@@ -2474,35 +2529,46 @@ export default function ProductManagementUI() {
     }));
   }, []);
 
-  const copyShippingTemplateToProduct = useCallback((templateOption) => {
-    const template = templateOption?.profile;
-    if (!template) return;
-    const pincodes = normalizePincodeList(
-      template.allowedPincodes || template.allowPincodes || template.serviceablePincodes,
-    );
-    patchShipping({
-      shippingProfileId: null,
-      serviceabilityMode: normalizeProductServiceabilityMode(template.serviceabilityMode),
-      allowPincodes: pincodes,
-      serviceablePincodes: pincodes,
-      regions: [],
-      states: [],
-      cities: [],
-      freeShipping: Number(template.shippingCharge || 0) === 0,
-      shippingCharge: toOptionalNumber(template.shippingCharge),
-      additionalCost: toOptionalNumber(template.shippingCharge),
-      handlingCharge: toOptionalNumber(template.handlingCharge),
-      freeShippingMinOrder: toOptionalNumber(template.freeShippingThreshold),
-      processingDays: toOptionalNumber(template.etaMin),
-      estimatedDaysMin: toOptionalNumber(template.etaMin),
-      estimatedDaysMax: toOptionalNumber(template.etaMax),
-      shippingMethod: template.shippingMethod || "standard",
-      codAvailable: template.codAvailable !== false,
-      copiedFromShippingTemplateId: template.sourceTemplateId || template.id || null,
-      copiedFromShippingTemplateName: template.name || templateOption.label || "",
-    });
-    toast.success(`Copied ${template.name || "shipping template"} into product delivery settings`);
-  }, [patchShipping]);
+  const copyShippingTemplateToProduct = useCallback(
+    (templateOption) => {
+      const template = templateOption?.profile;
+      if (!template) return;
+      const pincodes = normalizePincodeList(
+        template.allowedPincodes ||
+          template.allowPincodes ||
+          template.serviceablePincodes,
+      );
+      patchShipping({
+        shippingProfileId: null,
+        serviceabilityMode: normalizeProductServiceabilityMode(
+          template.serviceabilityMode,
+        ),
+        allowPincodes: pincodes,
+        serviceablePincodes: pincodes,
+        regions: [],
+        states: [],
+        cities: [],
+        freeShipping: Number(template.shippingCharge || 0) === 0,
+        shippingCharge: toOptionalNumber(template.shippingCharge),
+        additionalCost: toOptionalNumber(template.shippingCharge),
+        handlingCharge: toOptionalNumber(template.handlingCharge),
+        freeShippingMinOrder: toOptionalNumber(template.freeShippingThreshold),
+        processingDays: toOptionalNumber(template.etaMin),
+        estimatedDaysMin: toOptionalNumber(template.etaMin),
+        estimatedDaysMax: toOptionalNumber(template.etaMax),
+        shippingMethod: template.shippingMethod || "standard",
+        codAvailable: template.codAvailable !== false,
+        copiedFromShippingTemplateId:
+          template.sourceTemplateId || template.id || null,
+        copiedFromShippingTemplateName:
+          template.name || templateOption.label || "",
+      });
+      toast.success(
+        `Copied ${template.name || "shipping template"} into product delivery settings`,
+      );
+    },
+    [patchShipping],
+  );
 
   const addProductPincode = useCallback(() => {
     const value = allowedPincodeInput.trim();
@@ -2722,9 +2788,7 @@ export default function ProductManagementUI() {
       }
       const optionId = String(option._id || option.id);
       setPlatformOptions((previous) => [
-        ...previous.filter(
-          (item) => String(item._id || item.id) !== optionId,
-        ),
+        ...previous.filter((item) => String(item._id || item.id) !== optionId),
         option,
       ]);
       setPlatformValues((previous) => ({
@@ -3010,75 +3074,82 @@ export default function ProductManagementUI() {
           </div>
         ),
       },
-       {
+      {
         id: "common-images",
         title: "Media",
-        description: "Images and one product video shown on the customer product page.",
+        description:
+          "Images and one product video shown on the customer product page.",
         icon: <BsMenuApp />,
         component: (
-          <section
-            ref={refs["common-images"]}
-            className="space-y-5"
-          >
+          <section ref={refs["common-images"]} className="space-y-5">
             <div className="product-form-section-header">
               <h3>Media</h3>
-              <p>Upload product images and one product video for the storefront.</p>
+              <p>
+                Upload product images and one product video for the storefront.
+              </p>
             </div>
             <div className="flex flex-col gap-6">
               <div className="order-2 min-w-0">
                 <span className="mb-2 inline-flex rounded-full bg-[var(--admin-gold-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--admin-gold-dark)]">
-                  Images {(formData.commonImages || []).length}/{MAX_COMMON_PRODUCT_IMAGES}
+                  Images {(formData.commonImages || []).length}/
+                  {MAX_COMMON_PRODUCT_IMAGES}
                 </span>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,112px))] gap-3">
-              {(formData.commonImages || []).map((image, imageIndex) => (
-                <div
-                  key={`${image}-${imageIndex}`}
-                    className="group relative aspect-square w-full overflow-hidden rounded-lg border border-[var(--admin-field-line)] bg-[var(--admin-field)]"
-                >
-                  <img
-                    src={image}
-                    alt={`Catalog image ${imageIndex + 1}`}
-                    className="h-full w-full object-contain p-2"
-                  />
-                  {imageIndex === 0 && (
-                    <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold text-white">
-                      Cover
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => removeCommonProductImage(imageIndex)}
-                    className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-semibold text-red-600 opacity-100 shadow-sm transition hover:bg-red-50 sm:opacity-0 sm:group-hover:opacity-100"
-                    aria-label={`Remove catalog image ${imageIndex + 1}`}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+                  {(formData.commonImages || []).map((image, imageIndex) => (
+                    <div
+                      key={`${image}-${imageIndex}`}
+                      className="group relative aspect-square w-full overflow-hidden rounded-lg border border-[var(--admin-field-line)] bg-[var(--admin-field)]"
+                    >
+                      <img
+                        src={image}
+                        alt={`Catalog image ${imageIndex + 1}`}
+                        className="h-full w-full object-contain p-2"
+                      />
+                      {imageIndex === 0 && (
+                        <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+                          Cover
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeCommonProductImage(imageIndex)}
+                        className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-semibold text-red-600 opacity-100 shadow-sm transition hover:bg-red-50 sm:opacity-0 sm:group-hover:opacity-100"
+                        aria-label={`Remove catalog image ${imageIndex + 1}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
 
-              {(formData.commonImages || []).length <
-                MAX_COMMON_PRODUCT_IMAGES && (
-                <label
-                  className={`group flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-field)] px-3 text-center text-xs text-gray-500 transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]/40 hover:text-[var(--admin-gold-dark)] ${(formData.commonImages || []).length === 0 ? "col-span-full h-32 w-full" : "aspect-square w-full"} ${commonImagesUploading ? "pointer-events-none opacity-50" : ""}`}
-                >
-                  <span className="mb-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm"><FiImage size={15} /></span>
-                  <span className="font-semibold">{commonImagesUploading ? "Uploading…" : "Add images"}</span>
-                  <span className="mt-1 text-[10px] text-gray-400">PNG, JPG or WebP</span>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    multiple
-                    className="hidden"
-                    onChange={(event) => {
-                      uploadCommonProductImages(event.target.files);
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-              )}
+                  {(formData.commonImages || []).length <
+                    MAX_COMMON_PRODUCT_IMAGES && (
+                    <label
+                      className={`group flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-field)] px-3 text-center text-xs text-gray-500 transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]/40 hover:text-[var(--admin-gold-dark)] ${(formData.commonImages || []).length === 0 ? "col-span-full h-32 w-full" : "aspect-square w-full"} ${commonImagesUploading ? "pointer-events-none opacity-50" : ""}`}
+                    >
+                      <span className="mb-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm">
+                        <FiImage size={15} />
+                      </span>
+                      <span className="font-semibold">
+                        {commonImagesUploading ? "Uploading…" : "Add images"}
+                      </span>
+                      <span className="mt-1 text-[10px] text-gray-400">
+                        PNG, JPG or WebP
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        multiple
+                        className="hidden"
+                        onChange={(event) => {
+                          uploadCommonProductImages(event.target.files);
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
               </div>
-            {/* 
+              {/* 
               {(formData.commonImages || []).length < MAX_COMMON_PRODUCT_IMAGES && (
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
@@ -3099,48 +3170,56 @@ export default function ProductManagementUI() {
               )} */}
 
               <div className="order-1 min-w-0">
-              <span className="mb-2 inline-flex rounded-full bg-[var(--admin-gold-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--admin-gold-dark)]">
-                Video {(formData.videos || []).filter(Boolean).length}/1
-              </span>
-              {(formData.videos || []).filter(Boolean).length ? (
-                <div className="w-full overflow-hidden rounded-lg border border-[var(--admin-field-line)] bg-[var(--admin-field)]">
-                  <video
-                    src={(formData.videos || []).filter(Boolean)[0]}
-                    className="aspect-video w-full max-h-[360px] bg-black"
-                    controls
-                    preload="metadata"
-                  />
-                  <div className="flex items-center justify-between gap-3 px-3 py-2">
-                    <span className="truncate text-xs text-gray-500">
-                      Product video uploaded
-                    </span>
-                    <button
-                      type="button"
-                      onClick={removeProductVideo}
-                      className="rounded-md px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
-                    >
-                      Remove
-                    </button>
+                <span className="mb-2 inline-flex rounded-full bg-[var(--admin-gold-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--admin-gold-dark)]">
+                  Video {(formData.videos || []).filter(Boolean).length}/1
+                </span>
+                {(formData.videos || []).filter(Boolean).length ? (
+                  <div className="w-full overflow-hidden rounded-lg border border-[var(--admin-field-line)] bg-[var(--admin-field)]">
+                    <video
+                      src={(formData.videos || []).filter(Boolean)[0]}
+                      className="aspect-video w-full max-h-[360px] bg-black"
+                      controls
+                      preload="metadata"
+                    />
+                    <div className="flex items-center justify-between gap-3 px-3 py-2">
+                      <span className="truncate text-xs text-gray-500">
+                        Product video uploaded
+                      </span>
+                      <button
+                        type="button"
+                        onClick={removeProductVideo}
+                        className="rounded-md px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <label
-                  className={`flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-field)] px-3 text-center text-xs text-gray-500 transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]/40 hover:text-[var(--admin-gold-dark)] ${productVideoUploading ? "pointer-events-none opacity-50" : ""}`}
-                >
-                  <span className="mb-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm"><FiVideo size={16} /></span>
-                  <span className="font-semibold">{productVideoUploading ? "Uploading video…" : "Add product video"}</span>
-                  <span className="mt-1 text-[10px] leading-tight text-gray-400">MP4, WebM, MOV or OGG</span>
-                  <input
-                    type="file"
-                    accept="video/mp4,video/webm,video/ogg,video/quicktime"
-                    className="hidden"
-                    onChange={(event) => {
-                      uploadProductVideo(event.target.files?.[0]);
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-              )}
+                ) : (
+                  <label
+                    className={`flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-field)] px-3 text-center text-xs text-gray-500 transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]/40 hover:text-[var(--admin-gold-dark)] ${productVideoUploading ? "pointer-events-none opacity-50" : ""}`}
+                  >
+                    <span className="mb-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm">
+                      <FiVideo size={16} />
+                    </span>
+                    <span className="font-semibold">
+                      {productVideoUploading
+                        ? "Uploading video…"
+                        : "Add product video"}
+                    </span>
+                    <span className="mt-1 text-[10px] leading-tight text-gray-400">
+                      MP4, WebM, MOV or OGG
+                    </span>
+                    <input
+                      type="file"
+                      accept="video/mp4,video/webm,video/ogg,video/quicktime"
+                      className="hidden"
+                      onChange={(event) => {
+                        uploadProductVideo(event.target.files?.[0]);
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                )}
               </div>
             </div>
           </section>
@@ -3173,84 +3252,96 @@ export default function ProductManagementUI() {
                 </p>
               </div>
             )}
-            <div
-                className="space-y-3"
-              >
-                <div className="flex items-start justify-end gap-2">
-                  {formData?.shipping?.shippingProfileId && (
-                    <div className="flex items-center gap-3 whitespace-nowrap">
-                      <a
-                        href={`/app/shipping-profiles?edit=${encodeURIComponent(formData.shipping.shippingProfileId)}`}
-                        className="text-xs font-semibold text-[var(--admin-blue)] hover:underline"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Edit profile
-                      </a>
-                      <button
-                        type="button"
-                        className="text-xs text-red-500 hover:underline"
-                        onClick={() => patchShipping({ shippingProfileId: null })}
-                      >
-                        Remove profile
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <FilterSelect
-                  label="Shipping profile (optional)"
-                  options={shippingProfileOptions.filter((opt) => opt.type === "profile").map((opt) => ({
+            <div className="space-y-3">
+              <div className="flex items-start justify-end gap-2">
+                {formData?.shipping?.shippingProfileId && (
+                  <div className="flex items-center gap-3 whitespace-nowrap">
+                    <a
+                      href={`/app/shipping-profiles?edit=${encodeURIComponent(formData.shipping.shippingProfileId)}`}
+                      className="text-xs font-semibold text-[var(--admin-blue)] hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Edit profile
+                    </a>
+                    <button
+                      type="button"
+                      className="text-xs text-red-500 hover:underline"
+                      onClick={() => patchShipping({ shippingProfileId: null })}
+                    >
+                      Remove profile
+                    </button>
+                  </div>
+                )}
+              </div>
+              <FilterSelect
+                label="Shipping profile (optional)"
+                options={shippingProfileOptions
+                  .filter((opt) => opt.type === "profile")
+                  .map((opt) => ({
                     ...opt,
                     label:
                       opt.label + (opt.profile?.isDefault ? " (Default)" : ""),
                   }))}
-                  value={
-                    shippingProfileOptions.filter((opt) => opt.type === "profile").find(
+                value={
+                  shippingProfileOptions
+                    .filter((opt) => opt.type === "profile")
+                    .find(
                       (opt) =>
                         opt.value === formData?.shipping?.shippingProfileId,
                     ) || null
-                  }
-                  onChange={(selected) => {
-                    const profileId = selected?.value || null;
-                    patchShipping({
-                      shippingProfileId: profileId,
-                      ...(profileId
-                        ? {
-                            serviceabilityMode: "all_pincodes",
-                            allowPincodes: [],
-                            serviceablePincodes: [],
-                          }
-                        : {}),
-                    });
-                  }}
-                  placeholder="Select a saved shipping profile"
-                  isClearable
-                  isSearchable
-                />
+                }
+                onChange={(selected) => {
+                  const profileId = selected?.value || null;
+                  patchShipping({
+                    shippingProfileId: profileId,
+                    ...(profileId
+                      ? {
+                          serviceabilityMode: "all_pincodes",
+                          allowPincodes: [],
+                          serviceablePincodes: [],
+                        }
+                      : {}),
+                  });
+                }}
+                placeholder="Select a saved shipping profile"
+                isClearable
+                isSearchable
+              />
 
-                {!formData?.shipping?.shippingProfileId &&
-                  shippingProfileOptions.some((option) => option.type === "template") && (
-                    <div className="pt-1">
-                      <p className="mb-2 text-xs text-gray-500">
-                        Or copy an admin template into editable product settings.
-                      </p>
-                      <FilterSelect
-                        options={shippingProfileOptions.filter((option) => option.type === "template")}
-                        value={null}
-                        onChange={copyShippingTemplateToProduct}
-                        placeholder="Copy settings from a template"
-                        isSearchable
-                        isClearable={false}
-                      />
-                    </div>
-                  )}
+              {!formData?.shipping?.shippingProfileId &&
+                shippingProfileOptions.some(
+                  (option) => option.type === "template",
+                ) && (
+                  <div className="pt-1">
+                    <p className="mb-2 text-xs text-gray-500">
+                      Or copy an admin template into editable product settings.
+                    </p>
+                    <FilterSelect
+                      options={shippingProfileOptions.filter(
+                        (option) => option.type === "template",
+                      )}
+                      value={null}
+                      onChange={copyShippingTemplateToProduct}
+                      placeholder="Copy settings from a template"
+                      isSearchable
+                      isClearable={false}
+                    />
+                  </div>
+                )}
 
-                {shippingProfileOptions.filter((option) => option.type === "profile").length === 0 && !formData?.sellerId && (
+              {shippingProfileOptions.filter(
+                (option) => option.type === "profile",
+              ).length === 0 &&
+                !formData?.sellerId && (
                   <p className="text-xs text-[var(--admin-gold-dark)]">
                     Select a seller to view saved profiles.
                   </p>
                 )}
-                {shippingProfileOptions.filter((option) => option.type === "profile").length === 0 && formData?.sellerId && (
+              {shippingProfileOptions.filter(
+                (option) => option.type === "profile",
+              ).length === 0 &&
+                formData?.sellerId && (
                   <p className="text-xs text-gray-400">
                     No active shipping profiles found.{" "}
                     <a
@@ -3263,16 +3354,16 @@ export default function ProductManagementUI() {
                     </a>
                   </p>
                 )}
-                {formData?.shipping?.shippingProfileId &&
-                  (() => {
-                    const selected = shippingProfileOptions.find(
-                      (o) => o.value === formData.shipping.shippingProfileId,
-                    );
-                    const p = selected?.profile;
-                    if (!p) return null;
-                    return (
-                      <div className="space-y-3 pt-1">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {formData?.shipping?.shippingProfileId &&
+                (() => {
+                  const selected = shippingProfileOptions.find(
+                    (o) => o.value === formData.shipping.shippingProfileId,
+                  );
+                  const p = selected?.profile;
+                  if (!p) return null;
+                  return (
+                    <div className="space-y-3 pt-1">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {[
                           { label: "Method", value: p.shippingMethod },
                           {
@@ -3310,35 +3401,42 @@ export default function ProductManagementUI() {
                             </p>
                           </div>
                         ))}
-                        </div>
-                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                            Delivery coverage
-                          </p>
-                          {p.serviceabilityMode === "all_india" ? (
-                            <p className="text-xs font-semibold text-emerald-700">All India pincodes</p>
-                          ) : (p.allowedPincodes || []).length ? (
-                            <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
-                              {(p.allowedPincodes || []).map((pincode) => (
-                                <span key={pincode} className="rounded-full border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-medium text-blue-700">
-                                  {pincode}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-gray-600">No pincodes configured</p>
-                          )}
-                        </div>
                       </div>
-                    );
-                  })()}
-                {formData?.shipping?.shippingProfileId && (
-                  <p className="text-xs text-[var(--admin-blue)]">
-                    Manual shipping fields are hidden while this profile is
-                    active. Remove the profile to edit product-level shipping
-                    manually.
-                  </p>
-                )}
+                      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                          Delivery coverage
+                        </p>
+                        {p.serviceabilityMode === "all_india" ? (
+                          <p className="text-xs font-semibold text-emerald-700">
+                            All India pincodes
+                          </p>
+                        ) : (p.allowedPincodes || []).length ? (
+                          <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+                            {(p.allowedPincodes || []).map((pincode) => (
+                              <span
+                                key={pincode}
+                                className="rounded-full border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-medium text-blue-700"
+                              >
+                                {pincode}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-600">
+                            No pincodes configured
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              {formData?.shipping?.shippingProfileId && (
+                <p className="text-xs text-[var(--admin-blue)]">
+                  Manual shipping fields are hidden while this profile is
+                  active. Remove the profile to edit product-level shipping
+                  manually.
+                </p>
+              )}
             </div>
 
             <div className="space-y-4 border-t border-[var(--admin-line)] pt-5">
@@ -3355,8 +3453,8 @@ export default function ProductManagementUI() {
               {formData?.shipping?.shippingProfileId && (
                 <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
                   Product-level serviceability is automatically All India and
-                  its pincode list is cleared. The selected profile provides
-                  the actual checkout delivery rules. Remove the profile to add
+                  its pincode list is cleared. The selected profile provides the
+                  actual checkout delivery rules. Remove the profile to add
                   product-specific allowed pincodes.
                 </p>
               )}
@@ -3370,7 +3468,10 @@ export default function ProductManagementUI() {
 
                   <div className="space-y-2">
                     <label className="admin-label">
-                      Allowed pincodes <span className="font-normal text-gray-400">(optional)</span>
+                      Allowed pincodes{" "}
+                      <span className="font-normal text-gray-400">
+                        (optional)
+                      </span>
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -3466,9 +3567,7 @@ export default function ProductManagementUI() {
           <div className="space-y-6">
             <div className="product-form-section-header">
               <h3>Tags &amp; Discovery</h3>
-              <p>
-                Tags and discoverability settings.
-              </p>
+              <p>Tags and discoverability settings.</p>
             </div>
             <div className="space-y-2">
               <p className="text-xs text-gray-500">
@@ -3493,11 +3592,16 @@ export default function ProductManagementUI() {
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
-                    Optional merchandising groups shown in customer discovery and collection pages.
+                    Optional merchandising groups shown in customer discovery
+                    and collection pages.
                   </p>
                 </div>
                 {!sellerPanelMode && (
-                  <button type="button" className="admin-btn-secondary shrink-0" onClick={() => navigate("/app/collections")}>
+                  <button
+                    type="button"
+                    className="admin-btn-secondary shrink-0"
+                    onClick={() => navigate("/app/collections")}
+                  >
                     <FiPlus size={14} /> Manage collections
                   </button>
                 )}
@@ -3507,7 +3611,9 @@ export default function ProductManagementUI() {
                 <div className="space-y-4 p-4">
                   {selectedCollections.length > 0 && (
                     <div>
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Selected collections</p>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                        Selected collections
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         {selectedCollections.map((collection) => (
                           <button
@@ -3523,7 +3629,12 @@ export default function ProductManagementUI() {
                         ))}
                         <button
                           type="button"
-                          onClick={() => setFormData((current) => ({ ...current, collectionIds: [] }))}
+                          onClick={() =>
+                            setFormData((current) => ({
+                              ...current,
+                              collectionIds: [],
+                            }))
+                          }
                           className="px-2 py-1 text-xs font-semibold text-gray-500 hover:text-red-600"
                         >
                           Clear all
@@ -3533,11 +3644,16 @@ export default function ProductManagementUI() {
                   )}
 
                   <div className="relative">
-                    <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <FiSearch
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={16}
+                    />
                     <input
                       type="search"
                       value={collectionSearch}
-                      onChange={(event) => setCollectionSearch(event.target.value)}
+                      onChange={(event) =>
+                        setCollectionSearch(event.target.value)
+                      }
                       placeholder="Search collections by name, type, or tag…"
                       className="admin-input !pl-9"
                       aria-label="Search collections"
@@ -3547,9 +3663,12 @@ export default function ProductManagementUI() {
                   {filteredCollectionOptions.length ? (
                     <div className="grid max-h-96 gap-3.5 overflow-y-auto pr-1 sm:grid-cols-2">
                       {filteredCollectionOptions.map((collection) => {
-                        const value = String(collection._id || collection.slug || collection.name);
+                        const value = String(
+                          collection._id || collection.slug || collection.name,
+                        );
                         const selected = isCollectionSelected(collection);
-                        const image = collection.thumbnailImage || collection.bannerImage;
+                        const image =
+                          collection.thumbnailImage || collection.bannerImage;
                         return (
                           <button
                             key={value}
@@ -3563,7 +3682,10 @@ export default function ProductManagementUI() {
                             }`}
                           >
                             <div className="flex items-start gap-3.5 p-3.5">
-                              <CollectionCardThumbnail image={image} name={collection.name} />
+                              <CollectionCardThumbnail
+                                image={image}
+                                name={collection.name}
+                              />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -3571,7 +3693,10 @@ export default function ProductManagementUI() {
                                       {collection.name}
                                     </span>
                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--admin-surface-soft)] text-gray-600 border border-gray-200/60 capitalize shrink-0">
-                                      {(collection.type || "custom").replace(/_/g, " ")}
+                                      {(collection.type || "custom").replace(
+                                        /_/g,
+                                        " ",
+                                      )}
                                     </span>
                                   </div>
                                   <span
@@ -3604,7 +3729,10 @@ export default function ProductManagementUI() {
               ) : (
                 <div className="p-4">
                   <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                    No active collections are available. {sellerPanelMode ? "An admin must create and activate a collection first." : "Create one from Catalog Management → Collections."}
+                    No active collections are available.{" "}
+                    {sellerPanelMode
+                      ? "An admin must create and activate a collection first."
+                      : "Create one from Catalog Management → Collections."}
                   </p>
                 </div>
               )}

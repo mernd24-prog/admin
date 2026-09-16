@@ -218,7 +218,7 @@ const ProductCategories = () => {
 
   const categoriesLoading =
     !hasLoadedCategories || selector?.getListData?.loading;
-  
+
   const [isDrillDownLoading, setIsDrillDownLoading] = useState(false);
   const isTableLoading = categoriesLoading || isDrillDownLoading;
 
@@ -642,7 +642,9 @@ const ProductCategories = () => {
     }
 
     const selectedMainExists = categories.some(
-      (category) => String(category.categoryKey || category._id) === selectedMainCategoryKey,
+      (category) =>
+        String(category.categoryKey || category._id) ===
+        selectedMainCategoryKey,
     );
     if (!selectedMainExists) {
       setSelectedMainCategoryKey("");
@@ -677,7 +679,11 @@ const ProductCategories = () => {
 
     // Navigate to current path level
     for (const step of currentPath) {
-      const found = activeCategories.find((c) => String(c._id || c.categoryKey || c.name) === String(step._id || step.categoryKey || step.name));
+      const found = activeCategories.find(
+        (c) =>
+          String(c._id || c.categoryKey || c.name) ===
+          String(step._id || step.categoryKey || step.name),
+      );
       if (found) {
         activeCategories = found.subCategories || [];
       } else {
@@ -726,11 +732,7 @@ const ProductCategories = () => {
 
   const renderCategoryActions = (category) => (
     <div className="flex items-center justify-end gap-3">
-      <PermissionGuard
-        module="categories"
-        action={ACTIONS.STATUS_CHANGE}
-        hide
-      >
+      <PermissionGuard module="categories" action={ACTIONS.STATUS_CHANGE} hide>
         <ToggleButton
           isToggle={!category.isDisable}
           handleClick={() => setStatusTarget(category)}
@@ -802,13 +804,10 @@ const ProductCategories = () => {
 
         {/* Category Breadcrumbs */}
         <div className="flex items-center gap-2 mb-4 text-sm text-[var(--admin-muted)]">
-         
-     
-          
-          <button 
+          <button
             type="button"
-            onClick={() => handleNavigate([])} 
-            className={`hover:text-[var(--admin-primary)] ${currentPath.length === 0 ? 'font-semibold text-[var(--admin-ink)]' : ''}`}
+            onClick={() => handleNavigate([])}
+            className={`hover:text-[var(--admin-primary)] ${currentPath.length === 0 ? "font-semibold text-[var(--admin-ink)]" : ""}`}
           >
             Categories
           </button>
@@ -816,10 +815,10 @@ const ProductCategories = () => {
           {currentPath.map((cat, index) => (
             <React.Fragment key={cat._id || cat.name || index}>
               <FaChevronRight size={10} className="text-gray-400" />
-              <button 
+              <button
                 type="button"
                 onClick={() => handleNavigate(currentPath.slice(0, index + 1))}
-                className={`hover:text-[var(--admin-primary)] ${index === currentPath.length - 1 ? 'font-semibold text-[var(--admin-ink)]' : ''}`}
+                className={`hover:text-[var(--admin-primary)] ${index === currentPath.length - 1 ? "font-semibold text-[var(--admin-ink)]" : ""}`}
               >
                 {cat.name}
               </button>
@@ -869,7 +868,7 @@ const ProductCategories = () => {
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--admin-muted)]">
                       Category Name
                     </th>
-                  
+
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--admin-muted)]">
                       Subcategories
                     </th>
@@ -882,16 +881,21 @@ const ProductCategories = () => {
                   {pagedCategoryRows.map((row) => (
                     <tr
                       key={row.category._id}
-                      className="transition-colors hover:bg-[var(--admin-surface-soft)]"
+                      onClick={() => {
+                        if (row.hasSubCategories) {
+                          handleNavigate([...currentPath, row.category]);
+                        }
+                      }}
+                      className="transition-colors hover:bg-[var(--admin-surface-soft)] cursor-pointer"
                     >
                       <td className="min-w-[260px] px-4 py-3">
                         {row.hasSubCategories ? (
                           <button
                             type="button"
-                            onClick={() => {
-                              handleNavigate([...currentPath, row.category]);
-                            }}
-                            className="flex items-center gap-2 text-left font-semibold text-[var(--admin-primary)] hover:underline capitalize"
+                            // onClick={() => {
+                            //   handleNavigate([...currentPath, row.category]);
+                            // }}
+                            className="flex items-center gap-2 text-left font-semibold text-[var(--admin-primary)]  capitalize"
                           >
                             <MdFolder size={18} className="text-gray-400" />
                             {row.name}
@@ -902,7 +906,7 @@ const ProductCategories = () => {
                           </div>
                         )}
                       </td>
-                    
+
                       <td className="whitespace-nowrap px-4 py-3">
                         <span className="rounded bg-cyan-100 px-2 py-1 text-xs font-medium text-cyan-700">
                           {formatCount(row.count)}

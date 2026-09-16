@@ -44,13 +44,12 @@ import {
 } from "../../../_helpers/productMedia";
 import { useListPage } from "../../../hooks/useListPage";
 import { getSelectedSellerOrganizationId } from "../../../_helpers/sellerOrganizationContext";
-import { formatDateTime12Hour } from "../../../utils/formatters";
-// import { GoDesktopDownload } from "react-icons/go";
+import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 
 const INITIAL_FILTERS = {
   search: "",
   product: { value: "All", label: "All" },
-  sellerName: { value: "", label: "Search By User Name" },
+  sellerName: { value: "", label: "Search By Store Name" },
   category: { value: "", label: "Search By Category" },
   activationStatus: { value: "All", label: "All" },
   approvalStatus: { value: "All", label: "All" },
@@ -169,6 +168,7 @@ const ProductCatalog = () => {
   const [loading, setLoading] = useState(false);
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
   const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState(null);
+  const [sellerLoading, setSellerLoading] = useState(false);
   const [duplicateConfirmation, setDuplicateConfirmation] = useState({
     open: false,
     product: null,
@@ -232,7 +232,7 @@ const ProductCatalog = () => {
 
         return {
           value: sellerId,
-          label: storeDisplayName,
+          label: formatLabel(storeDisplayName, "Unknown Seller"),
         };
       })
       .filter((seller) => seller.value);
@@ -348,7 +348,11 @@ const ProductCatalog = () => {
   }, [fetchProductsList]);
 
   useEffect(() => {
-    dispatch(getAllSellerList());
+    setSellerLoading(true);
+    dispatch(getAllSellerList()).finally(() => {
+      setSellerLoading(false);
+    });
+
     dispatch(getCategoryList({ tree: true, limit: 100 }))
       .then((res) => {
         const raw = res?.payload?.data?.data || res?.payload?.data || [];
@@ -990,6 +994,7 @@ const ProductCatalog = () => {
             dateFrom={true}
             dateTo={true}
             userOptions={sellerListData}
+            sellerLoading={sellerLoading}
             approvalOptions={APPROVAL_STATUS_OPTIONS}
             activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
             applyFilters={handleSearchApply}
