@@ -31,7 +31,7 @@ import {
 } from "../../../Redux/productSlice";
 // import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
 import { toast } from "sonner";
-import { dropdownApi } from "../../../_helpers/dropdownApi";
+import { getAllSellerList } from "../../../Redux/StoreSlice";
 import { transformArray } from "../../../_helpers/globalFunctions";
 import ProductReviewModal from "../../../components/Product/ProductReviewModal";
 import ProductStatusBadge from "../../../components/Product/ProductStatusBadge";
@@ -50,7 +50,7 @@ import { formatDateTime12Hour } from "../../../utils/formatters";
 const INITIAL_FILTERS = {
   search: "",
   product: { value: "All", label: "All" },
-  sellerName: { value: "", label: "All Sellers" },
+  sellerName: { value: "", label: "Search By User Name" },
   category: { value: "", label: "Search By Category" },
   activationStatus: { value: "All", label: "All" },
   approvalStatus: { value: "All", label: "All" },
@@ -158,19 +158,11 @@ const formatMoney = (value) => {
   return amount === null ? "N/A" : `₹${amount.toLocaleString("en-IN")}`;
 };
 
-const formatExportDate = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString();
-};
-
 const getInitialFiltersForPath = () => INITIAL_FILTERS;
 
 const ProductCatalog = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state);
-  const [sellerOptions, setSellerOptions] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
@@ -218,16 +210,33 @@ const ProductCatalog = () => {
   });
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
   const sellerView = isSellerPanel();
-  const showSellerFilter = !isSellerPanelUser;
-  const sellerListData = useMemo(() => {
-    const sellers =
-      selector?.store?.getAllSellerListData?.data?.data?.list || [];
 
-    return sellers.map((seller) => ({
-      value: seller?._id || seller?.sellerId,
-      label: seller?.organizationSnapshot?.legalBusinessName || "N/A",
-    }));
-  }, [selector?.store?.getAllSellerListData?.data?.data?.list]);
+  const sellerList = useSelector(
+    (state) => state?.store?.getAllSellerListData?.data?.data?.list || [],
+  );
+
+  const sellerListData = useMemo(() => {
+    return sellerList
+      .map((seller) => {
+        const sellerId =
+          seller?.sellerId || seller?.userId || seller?._id || seller?.id;
+
+        const storeDisplayName =
+          seller?.storeDisplayName ||
+          seller?.organization?.storeDisplayName ||
+          seller?.storeName ||
+          seller?.businessName ||
+          seller?.legalBusinessName ||
+          seller?.name ||
+          "Unknown Seller";
+
+        return {
+          value: sellerId,
+          label: storeDisplayName,
+        };
+      })
+      .filter((seller) => seller.value);
+  }, [sellerList]);
 
   const isChangePendingFilter =
     appliedFilters?.approvalStatus?.value === "Change Pending";
@@ -298,24 +307,25 @@ const ProductCatalog = () => {
 
   const fetchProductsList = useCallback(async () => {
     setLoading(true);
+
     try {
-      const response = await dispatch(
-        getProducts(buildProductQuery(list.page)),
-      );
-      setApiRes(response?.payload?.data || { list: [], total: 0 });
+      const query = buildProductQuery(list.page);
+
+      const response = await dispatch(getProducts(query));
+
+      const productData = response?.payload?.data || {
+        list: [],
+        total: 0,
+      };
+
+      setApiRes(productData);
     } catch (err) {
+      console.error("Failed to fetch products:", err);
       toast.error("Failed to fetch products");
     } finally {
       setLoading(false);
     }
-  }, [
-    dispatch,
-    appliedFilters,
-    isChangePendingFilter,
-    buildProductQuery,
-    list.page,
-    list.pageSize,
-  ]);
+  }, [dispatch, buildProductQuery, list.page]);
 
   const updateVisibleProducts = useCallback((productIds, changes) => {
     const ids = new Set(
@@ -338,87 +348,33 @@ const ProductCatalog = () => {
   }, [fetchProductsList]);
 
   useEffect(() => {
-    let mounted = true;
-
-    const loadDropdownData = async () => {
-      try {
-        // Load sellers using the same API used by ProductReviews
-        if (showSellerFilter) {
-          const sellers = await dropdownApi.getSellers({
-            limit: 100,
-            searchFields: "full_name,email,businessName",
-          });
-
-          if (mounted) {
-            setSellerOptions(Array.isArray(sellers) ? sellers : []);
-          }
-        } else {
-          setSellerOptions([]);
-        }
-
-        // Load categories
-        const categoryResponse = await dispatch(
-          getCategoryList({
-            tree: true,
-            limit: 100,
-          }),
-        );
-
-        const raw =
-          categoryResponse?.payload?.data?.data ||
-          categoryResponse?.payload?.data ||
-          [];
-
+    dispatch(getAllSellerList());
+    dispatch(getCategoryList({ tree: true, limit: 100 }))
+      .then((res) => {
+        const raw = res?.payload?.data?.data || res?.payload?.data || [];
         const flattenTree = (nodes = [], out = [], prefix = "") => {
           nodes.forEach((node) => {
             const name = node?.title || node?.name || node?.categoryKey || "";
-
             const key = node?.categoryKey || String(node?._id || "");
-
-            if (name && key) {
+            if (name && key)
               out.push({
                 value: key,
                 label: prefix ? `${prefix} > ${name}` : name,
               });
-            }
-
             const children = node?.children || node?.subCategories || [];
-
-            if (children.length) {
+            if (children.length)
               flattenTree(children, out, prefix ? `${prefix} > ${name}` : name);
-            }
           });
-
           return out;
         };
-
         const source = Array.isArray(raw) ? raw : raw?.items || raw?.list || [];
-
-        if (mounted) {
-          setCategoryOptions([
-            {
-              value: "",
-              label: "All Categories",
-            },
-            ...flattenTree(source),
-          ]);
-        }
-      } catch (error) {
-        console.error("Failed to load dropdown data:", error);
-
-        if (mounted) {
-          setSellerOptions([]);
-          setCategoryOptions([]);
-        }
-      }
-    };
-
-    loadDropdownData();
-
-    return () => {
-      mounted = false;
-    };
-  }, [dispatch, showSellerFilter]);
+        setCategoryOptions([
+          { value: "", label: "All Categories" },
+          ...flattenTree(source),
+        ]);
+      })
+      .catch(() => {});
+  }, [dispatch]);
 
   useEffect(() => {
     const nextFilters = getInitialFiltersForPath(
@@ -773,7 +729,6 @@ const ProductCatalog = () => {
     list.setPage(1);
   };
 
-  // Apply selections and dates immediately, while lightly debouncing text input.
   useEffect(() => {
     const delay = filters.search !== appliedFilters.search ? 300 : 0;
     const timer = setTimeout(() => {
@@ -793,10 +748,6 @@ const ProductCatalog = () => {
     list.clearSelection();
   };
   const handleBulkAction = async (action) => {
-    // if (isSellerPanelUser && action === "Active") {
-    //   toast.error("Seller products must be approved by admin before activation.");
-    //   return;
-    // }
     if (action === "Active" || action === "Inactive") {
       const nextStatus = action === "Active" ? "active" : "inactive";
       setStatusConfirmation({
@@ -851,48 +802,48 @@ const ProductCatalog = () => {
 
   const productColumns = useMemo(
     () => [
-      // {
-      //   key: "image",
-      //   label: "Image",
-      //   render: (_, product) => {
-      //     const productImages = getProductImages(product);
-      //     const primaryImage = getPrimaryProductImage(product);
+      {
+        key: "image",
+        label: "Image",
+        render: (_, product) => {
+          const productImages = getProductImages(product);
+          const primaryImage = getPrimaryProductImage(product);
 
-      //     return (
-      //       <div className="flex flex-col items-center gap-1">
-      //         {primaryImage ? (
-      //           <button
-      //             type="button"
-      //             className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
-      //             onClick={() => handleImageClick(productImages)}
-      //             title="View product images"
-      //           >
-      //             <span
-      //               role="img"
-      //               aria-label={product?.title || product?.name || "Product"}
-      //               className="block h-full w-full bg-cover bg-center"
-      //               style={{
-      //                 backgroundImage: `url("${String(primaryImage).replace(/"/g, "%22")}")`,
-      //               }}
-      //             />
-      //           </button>
-      //         ) : (
-      //           <span className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400">
-      //             No
-      //           </span>
-      //         )}
-      //         <button
-      //           type="button"
-      //           className={`text-xs ${productImages.length ? "text-blue-500 hover:underline" : "cursor-not-allowed text-gray-400"}`}
-      //           onClick={() => handleImageClick(productImages)}
-      //           disabled={!productImages.length}
-      //         >
-      //           View
-      //         </button>
-      //       </div>
-      //     );
-      //   },
-      // },
+          return (
+            <div className="flex flex-col items-center gap-1">
+              {primaryImage ? (
+                <button
+                  type="button"
+                  className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
+                  onClick={() => handleImageClick(productImages)}
+                  title="View product images"
+                >
+                  <span
+                    role="img"
+                    aria-label={product?.title || product?.name || "Product"}
+                    className="block h-full w-full bg-cover bg-center"
+                    style={{
+                      backgroundImage: `url("${String(primaryImage).replace(/"/g, "%22")}")`,
+                    }}
+                  />
+                </button>
+              ) : (
+                <span className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400">
+                  No
+                </span>
+              )}
+              <button
+                type="button"
+                className={`text-xs ${productImages.length ? "text-blue-500 hover:underline" : "cursor-not-allowed text-gray-400"}`}
+                onClick={() => handleImageClick(productImages)}
+                disabled={!productImages.length}
+              >
+                View
+              </button>
+            </div>
+          );
+        },
+      },
       {
         key: "title",
         label: "Product",
@@ -903,16 +854,6 @@ const ProductCatalog = () => {
           </span>
         ),
       },
-      // {
-      //   key: "sku",
-      //   label: "SKU",
-      //   sortable: true,
-      //   render: (value) => (
-      //     <span className="block max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">
-      //       {value || "N/A"}
-      //     </span>
-      //   ),
-      // },
       {
         key: "Varients",
         label: "Varients",
@@ -937,47 +878,7 @@ const ProductCatalog = () => {
           return stock === null ? "N/A" : stock;
         },
       },
-      // {
-      //   key: "_deal",
-      //   label: "Deal",
-      //   render: (_, product) =>
-      //     product?.metadata?.isDealProduct ? (
-      //       <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-      //         {product.metadata.dealBadge || "Deal"}
-      //       </span>
-      //     ) : (
-      //       <span className="text-xs text-gray-400">N/A</span>
-      //     ),
-      // },
-      // {
-      //   key: "_completeness",
-      //   label: "Complete",
-      //   render: (_, product) => {
-      //     const checks = [
-      //       !!product?.title,
-      //       !!product?.description,
-      //       !!product?.category,
-      //       Number(getEffectivePrice(product) || 0) > 0,
-      //       getProductImages(product).length >= 1,
-      //       !!(getDefaultVariant(product)?.sku || product?.sku),
-      //       Number(getEffectiveStock(product) ?? product?.availableStock ?? 0) >= 0,
-      //       !!product?.hsnCode,
-      //     ];
-      //     const score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
-      //     const color = score >= 80 ? "#15803d" : score >= 50 ? "#b45309" : "#dc2626";
-      //     const bg = score >= 80 ? "#f0fdf4" : score >= 50 ? "#fffbeb" : "#fef2f2";
-      //     return (
-      //       <div title={`${score}% complete`} className="flex items-center gap-1.5">
-      //         <div className="relative h-1.5 w-14 overflow-hidden rounded-full bg-gray-200">
-      //           <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${score}%`, backgroundColor: color }} />
-      //         </div>
-      //         <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ color, backgroundColor: bg }}>
-      //           {score}%
-      //         </span>
-      //       </div>
-      //     );
-      //   },
-      // },
+
       {
         key: "status",
         label: "Status",
@@ -1054,13 +955,6 @@ const ProductCatalog = () => {
       navigate,
     ],
   );
-  const products = apiRes?.list || [];
-
-  const selectedProducts = products.filter((product) => {
-    const productId = product?._id || product?.id;
-    return selectedRow.includes(productId);
-  });
-
   return (
     <div className="overflow-x-auto overflow-y-auto">
       <PageHeader
@@ -1089,12 +983,13 @@ const ProductCatalog = () => {
             setFilters={setFilters}
             isSearchShow={true}
             isActivationStatus={true}
+            isApprovalOptions={true}
             isCategory={true}
+            isSellerStoreName={true}
             categoryOptions={categoryOptions}
             dateFrom={true}
             dateTo={true}
-            isUser={showSellerFilter}
-            userOptions={sellerOptions}
+            userOptions={sellerListData}
             approvalOptions={APPROVAL_STATUS_OPTIONS}
             activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
             applyFilters={handleSearchApply}
@@ -1127,6 +1022,7 @@ const ProductCatalog = () => {
             sortDir={list.sortDir}
             selectable
             selectedKeys={selectedRow}
+            exportConfig={null}
             onSelectionChange={setSelectedRow}
             rowKey={(product) => product?._id || product?.id}
             emptyText="No products found."

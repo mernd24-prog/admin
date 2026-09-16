@@ -19,6 +19,7 @@ export default function SearchComponent({
   loading = false,
   filters,
   setFilters,
+  isSellerStoreName = false,
   isProduct = false,
   isUser = false,
   isCategory = false,
@@ -73,6 +74,7 @@ export default function SearchComponent({
     isBrand ||
     isProduct ||
     isUser ||
+    isSellerStoreName ||
     isDelete ||
     isCategory ||
     isActivationStatus ||
@@ -155,22 +157,50 @@ export default function SearchComponent({
     (previousFilters = {}) => ({
       ...previousFilters,
       search: "",
+
       ...(isSelectNearSearch ? { country: { value: "", label: "All" } } : {}),
+
       ...(isBrand ? { brand: { value: "", label: "All" } } : {}),
-      ...(isProduct ? { product: { value: "", label: "All" } } : {}),
+
+      ...(isProduct ? { product: { value: "All", label: "All" } } : {}),
+
       ...(isUser || isDelete
-        ? { sellerName: { value: "", label: "Search By User Name" } }
+        ? {
+            sellerName: {
+              value: "",
+              label: "Search By User Name",
+            },
+          }
         : {}),
+
+      ...(isSellerStoreName
+        ? {
+            sellerName: {
+              value: "",
+              label: "All Sellers",
+            },
+          }
+        : {}),
+
       ...(isCategory
-        ? { category: { value: "", label: "Search By Category" } }
+        ? {
+            category: {
+              value: "",
+              label: "Search By Category",
+            },
+          }
         : {}),
+
       ...(isActivationStatus
         ? { activationStatus: { value: "All", label: "All" } }
         : {}),
+
       ...(isApprovalOptions
         ? { approvalStatus: { value: "All", label: "All" } }
         : {}),
+
       ...(isProductType ? { productType: { value: "", label: "All" } } : {}),
+
       ...(dateFrom ? { dateFrom: "" } : {}),
       ...(dateTo ? { dateTo: "" } : {}),
     }),
@@ -185,6 +215,7 @@ export default function SearchComponent({
       isProduct,
       isProductType,
       isSelectNearSearch,
+      isSellerStoreName,
       isUser,
     ],
   );
@@ -487,6 +518,25 @@ export default function SearchComponent({
                     isSearchable={false}
                     onChange={(option) =>
                       handleFilterChange("productType", option)
+                    }
+                  />
+                </div>
+              )}
+
+              {isSellerStoreName && (
+                <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
+                  <FilterSelect
+                    label="Seller Store Name"
+                    value={
+                      filters?.sellerName || { value: "", label: "All Sellers" }
+                    }
+                    options={[
+                      { value: "", label: "All Sellers" },
+                      ...(userOptions || []),
+                    ]}
+                    isSearchable={true}
+                    onChange={(option) =>
+                      handleFilterChange("sellerName", option)
                     }
                   />
                 </div>
