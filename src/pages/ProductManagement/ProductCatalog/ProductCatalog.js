@@ -31,7 +31,7 @@ import {
 } from "../../../Redux/productSlice";
 // import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
 import { toast } from "sonner";
-import { getAllSellerList } from "../../../Redux/StoreSlice";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { transformArray } from "../../../_helpers/globalFunctions";
 import ProductReviewModal from "../../../components/Product/ProductReviewModal";
 import ProductStatusBadge from "../../../components/Product/ProductStatusBadge";
@@ -50,7 +50,7 @@ import { formatDateTime12Hour } from "../../../utils/formatters";
 const INITIAL_FILTERS = {
   search: "",
   product: { value: "All", label: "All" },
-  sellerName: { value: "", label: "Search By User Name" },
+  sellerName: { value: "", label: "All Sellers" },
   category: { value: "", label: "Search By Category" },
   activationStatus: { value: "All", label: "All" },
   approvalStatus: { value: "All", label: "All" },
@@ -170,6 +170,7 @@ const getInitialFiltersForPath = () => INITIAL_FILTERS;
 const ProductCatalog = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state);
+  const [sellerOptions, setSellerOptions] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
@@ -217,9 +218,16 @@ const ProductCatalog = () => {
   });
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
   const sellerView = isSellerPanel();
-  const sellerListData = transformArray(
-    selector?.store?.getAllSellerListData?.data?.data?.list || [],
-  );
+  const showSellerFilter = !isSellerPanelUser;
+  const sellerListData = useMemo(() => {
+    const sellers =
+      selector?.store?.getAllSellerListData?.data?.data?.list || [];
+
+    return sellers.map((seller) => ({
+      value: seller?._id || seller?.sellerId,
+      label: seller?.organizationSnapshot?.legalBusinessName || "N/A",
+    }));
+  }, [selector?.store?.getAllSellerListData?.data?.data?.list]);
 
   const isChangePendingFilter =
     appliedFilters?.approvalStatus?.value === "Change Pending";
@@ -330,33 +338,87 @@ const ProductCatalog = () => {
   }, [fetchProductsList]);
 
   useEffect(() => {
-    dispatch(getAllSellerList());
-    dispatch(getCategoryList({ tree: true, limit: 100 }))
-      .then((res) => {
-        const raw = res?.payload?.data?.data || res?.payload?.data || [];
+    let mounted = true;
+
+    const loadDropdownData = async () => {
+      try {
+        // Load sellers using the same API used by ProductReviews
+        if (showSellerFilter) {
+          const sellers = await dropdownApi.getSellers({
+            limit: 100,
+            searchFields: "full_name,email,businessName",
+          });
+
+          if (mounted) {
+            setSellerOptions(Array.isArray(sellers) ? sellers : []);
+          }
+        } else {
+          setSellerOptions([]);
+        }
+
+        // Load categories
+        const categoryResponse = await dispatch(
+          getCategoryList({
+            tree: true,
+            limit: 100,
+          }),
+        );
+
+        const raw =
+          categoryResponse?.payload?.data?.data ||
+          categoryResponse?.payload?.data ||
+          [];
+
         const flattenTree = (nodes = [], out = [], prefix = "") => {
           nodes.forEach((node) => {
             const name = node?.title || node?.name || node?.categoryKey || "";
+
             const key = node?.categoryKey || String(node?._id || "");
-            if (name && key)
+
+            if (name && key) {
               out.push({
                 value: key,
                 label: prefix ? `${prefix} > ${name}` : name,
               });
+            }
+
             const children = node?.children || node?.subCategories || [];
-            if (children.length)
+
+            if (children.length) {
               flattenTree(children, out, prefix ? `${prefix} > ${name}` : name);
+            }
           });
+
           return out;
         };
+
         const source = Array.isArray(raw) ? raw : raw?.items || raw?.list || [];
-        setCategoryOptions([
-          { value: "", label: "All Categories" },
-          ...flattenTree(source),
-        ]);
-      })
-      .catch(() => {});
-  }, [dispatch]);
+
+        if (mounted) {
+          setCategoryOptions([
+            {
+              value: "",
+              label: "All Categories",
+            },
+            ...flattenTree(source),
+          ]);
+        }
+      } catch (error) {
+        console.error("Failed to load dropdown data:", error);
+
+        if (mounted) {
+          setSellerOptions([]);
+          setCategoryOptions([]);
+        }
+      }
+    };
+
+    loadDropdownData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [dispatch, showSellerFilter]);
 
   useEffect(() => {
     const nextFilters = getInitialFiltersForPath(
@@ -789,48 +851,48 @@ const ProductCatalog = () => {
 
   const productColumns = useMemo(
     () => [
-      {
-        key: "image",
-        label: "Image",
-        render: (_, product) => {
-          const productImages = getProductImages(product);
-          const primaryImage = getPrimaryProductImage(product);
+      // {
+      //   key: "image",
+      //   label: "Image",
+      //   render: (_, product) => {
+      //     const productImages = getProductImages(product);
+      //     const primaryImage = getPrimaryProductImage(product);
 
-          return (
-            <div className="flex flex-col items-center gap-1">
-              {primaryImage ? (
-                <button
-                  type="button"
-                  className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
-                  onClick={() => handleImageClick(productImages)}
-                  title="View product images"
-                >
-                  <span
-                    role="img"
-                    aria-label={product?.title || product?.name || "Product"}
-                    className="block h-full w-full bg-cover bg-center"
-                    style={{
-                      backgroundImage: `url("${String(primaryImage).replace(/"/g, "%22")}")`,
-                    }}
-                  />
-                </button>
-              ) : (
-                <span className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400">
-                  No
-                </span>
-              )}
-              <button
-                type="button"
-                className={`text-xs ${productImages.length ? "text-blue-500 hover:underline" : "cursor-not-allowed text-gray-400"}`}
-                onClick={() => handleImageClick(productImages)}
-                disabled={!productImages.length}
-              >
-                View
-              </button>
-            </div>
-          );
-        },
-      },
+      //     return (
+      //       <div className="flex flex-col items-center gap-1">
+      //         {primaryImage ? (
+      //           <button
+      //             type="button"
+      //             className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
+      //             onClick={() => handleImageClick(productImages)}
+      //             title="View product images"
+      //           >
+      //             <span
+      //               role="img"
+      //               aria-label={product?.title || product?.name || "Product"}
+      //               className="block h-full w-full bg-cover bg-center"
+      //               style={{
+      //                 backgroundImage: `url("${String(primaryImage).replace(/"/g, "%22")}")`,
+      //               }}
+      //             />
+      //           </button>
+      //         ) : (
+      //           <span className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400">
+      //             No
+      //           </span>
+      //         )}
+      //         <button
+      //           type="button"
+      //           className={`text-xs ${productImages.length ? "text-blue-500 hover:underline" : "cursor-not-allowed text-gray-400"}`}
+      //           onClick={() => handleImageClick(productImages)}
+      //           disabled={!productImages.length}
+      //         >
+      //           View
+      //         </button>
+      //       </div>
+      //     );
+      //   },
+      // },
       {
         key: "title",
         label: "Product",
@@ -1027,15 +1089,14 @@ const ProductCatalog = () => {
             setFilters={setFilters}
             isSearchShow={true}
             isActivationStatus={true}
-            // isApprovalOptions={true}
             isCategory={true}
             categoryOptions={categoryOptions}
             dateFrom={true}
             dateTo={true}
-            // isUser={true}
+            isUser={showSellerFilter}
+            userOptions={sellerOptions}
             approvalOptions={APPROVAL_STATUS_OPTIONS}
             activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
-            userOptions={sellerListData}
             applyFilters={handleSearchApply}
             handleSearchRemove={clearFilters}
             isActionButton={true}
@@ -1046,11 +1107,6 @@ const ProductCatalog = () => {
             isSearchDown={false}
             defaultSearchOpen={true}
             exclusiveStatusFilters={true}
-            // filterGridClassName={
-            //   sellerView
-            //     ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-            //     : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-            // }
             compactFilterBar={true}
             hideFilterActions={true}
             largeSearchInput={true}

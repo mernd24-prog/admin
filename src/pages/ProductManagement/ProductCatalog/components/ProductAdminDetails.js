@@ -25,11 +25,9 @@ import {
   formatLabel,
 } from "../../../../utils/formatters";
 
-import {
-  getStoredRole,
-  normalizeRole,
-} from "../../../../_helpers/authStorage";
+import { getStoredRole, normalizeRole } from "../../../../_helpers/authStorage";
 import Breadcrumb from "./Breadcrumb";
+import { DataTable, ImageThumbnail } from "../../../../components/Shared";
 
 /* -------------------------------------------------------------------------- */
 /*                                  Constants                                 */
@@ -94,9 +92,7 @@ const getShippingPincodeSummary = (shipping = {}) => {
   const mode = shipping?.serviceabilityMode || "inherit";
 
   const allowed =
-    shipping?.allowPincodes ||
-    shipping?.serviceablePincodes ||
-    [];
+    shipping?.allowPincodes || shipping?.serviceablePincodes || [];
 
   if (mode === "disabled") {
     return "Delivery disabled for this product";
@@ -182,6 +178,11 @@ const ProductAdminDetails = () => {
       ? revisionData.items
       : [];
 
+  const variantTableData = (product?.variants || []).map((variant, index) => ({
+    ...variant,
+    serialNumber: index + 1,
+  }));
+
   const pendingRevision =
     product.pendingRevision ||
     revisions.find((revision) => revision.status === "pending") ||
@@ -189,11 +190,9 @@ const ProductAdminDetails = () => {
 
   const currentRole = normalizeRole(getStoredRole());
 
-  const isSellerRole = [
-    "seller",
-    "seller-admin",
-    "seller-sub-admin",
-  ].includes(currentRole);
+  const isSellerRole = ["seller", "seller-admin", "seller-sub-admin"].includes(
+    currentRole,
+  );
 
   const REVIEWABLE_STATUSES = new Set(["pending_approval"]);
 
@@ -387,9 +386,7 @@ const ProductAdminDetails = () => {
     setActionLoading(true);
 
     try {
-      const response = await dispatch(
-        duplicateProduct({ _id: id }),
-      ).unwrap();
+      const response = await dispatch(duplicateProduct({ _id: id })).unwrap();
 
       const newId =
         response?.data?.data?._id ||
@@ -397,9 +394,7 @@ const ProductAdminDetails = () => {
         response?.data?.data?.id ||
         response?.data?.id;
 
-      toast.success(
-        response?.message || "Product duplicated successfully.",
-      );
+      toast.success(response?.message || "Product duplicated successfully.");
 
       setDuplicateConfirm(false);
 
@@ -407,29 +402,116 @@ const ProductAdminDetails = () => {
         navigate(`/app/product-catalog/form/${newId}`);
       }
     } catch (error) {
-      toast.error(
-        error?.message || "Failed to duplicate product.",
-      );
+      toast.error(error?.message || "Failed to duplicate product.");
     } finally {
       setActionLoading(false);
     }
   };
+  
+  const variantColumns = [
+    {
+      key: "serialNumber",
+      label: "S.No.",
+    },
+
+    {
+      key: "image",
+      label: "Image",
+      render: (_value, variant) => (
+        <ImageThumbnail
+          src={getVariantImage(variant)}
+          images={getVariantImagesList(variant)}
+          alt={variant?.sku || variant?.title || "Variant"}
+          size="md"
+          showZoomIcon={true}
+          showViewButton={true}
+          viewButtonText="View"
+          onClick={() => {
+            setVariantGalleryImages(getVariantImagesList(variant));
+            setVariantGalleryOpen(true);
+          }}
+        />
+      ),
+    },
+
+    {
+      key: "sku",
+      label: "SKU",
+      render: (_value, variant) => (
+        <span className="rounded-md bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
+          {variant?.sku || "N/A"}
+        </span>
+      ),
+    },
+
+    {
+      key: "price",
+      label: "Price",
+      render: (_value, variant) => (
+        <span className="font-bold text-gray-900">
+          {variant?.price !== undefined
+            ? `₹${Number(variant.price).toLocaleString("en-IN")}`
+            : "N/A"}
+        </span>
+      ),
+    },
+
+    {
+      key: "mrp",
+      label: "MRP",
+      render: (_value, variant) => (
+        <span className="text-gray-600">
+          {variant?.mrp !== undefined
+            ? `₹${Number(variant.mrp).toLocaleString("en-IN")}`
+            : "N/A"}
+        </span>
+      ),
+    },
+
+    {
+      key: "stock",
+      label: "Stock",
+      render: (_value, variant) => (
+        <span
+          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+            Number(variant?.stock) > 0
+              ? "bg-green-50 text-green-700"
+              : "bg-red-50 text-red-600"
+          }`}
+        >
+          {variant?.stock ?? "N/A"}
+        </span>
+      ),
+    },
+
+    {
+      key: "attributes",
+      label: "Attributes",
+      render: (_value, variant) => (
+        <div className="max-w-md text-xs leading-5 text-gray-500">
+          {variant?.attributes
+            ? Object.entries(
+                variant.attributes instanceof Map
+                  ? Object.fromEntries(variant.attributes)
+                  : variant.attributes,
+              )
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(", ")
+            : "N/A"}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="min-h-screen px-1 pb-8 sm:px-0">
-      <Loader
-        loading={
-          selector.loading ||
-          reviewLoading ||
-          actionLoading
-        }
-      />
+      <Loader loading={selector.loading || reviewLoading || actionLoading} />
 
       {/* ------------------------------------------------------------------ */}
       {/* Breadcrumb                                                         */}
       {/* ------------------------------------------------------------------ */}
 
- <Breadcrumb currentLabel="Product Details" />
+      <Breadcrumb currentLabel="Product Details" />
 
       {/* ------------------------------------------------------------------ */}
       {/* Product Header                                                     */}
@@ -520,11 +602,7 @@ const ProductAdminDetails = () => {
       {/* Tabs                                                               */}
       {/* ------------------------------------------------------------------ */}
 
-      <Tabs
-        tabs={productTabs}
-        activeTab={activeTab}
-        onChange={setActiveTab}
-      />
+      <Tabs tabs={productTabs} activeTab={activeTab} onChange={setActiveTab} />
 
       {/* ------------------------------------------------------------------ */}
       {/* Content                                                            */}
@@ -539,13 +617,9 @@ const ProductAdminDetails = () => {
           <section className={sectionClass}>
             <div className={sectionHeaderClass}>
               <div>
-                <p className={sectionEyebrowClass}>
-                  Product information
-                </p>
+                <p className={sectionEyebrowClass}>Product information</p>
 
-                <h2 className={sectionTitleClass}>
-                  Overview
-                </h2>
+                <h2 className={sectionTitleClass}>Overview</h2>
               </div>
 
               <span className="inline-flex w-fit rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
@@ -556,23 +630,14 @@ const ProductAdminDetails = () => {
             <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
               <Row label="Title" value={product.title} />
 
-              <Row
-                label="Seller"
-                value={refToLabel(sellerDisplayName)}
-              />
+              <Row label="Seller" value={refToLabel(sellerDisplayName)} />
 
               <Row
                 label="Seller Email"
-                value={
-                  product.sellerEmail ||
-                  product.seller?.email
-                }
+                value={product.sellerEmail || product.seller?.email}
               />
 
-              <Row
-                label="Seller ID"
-                value={refToLabel(product.sellerId)}
-              />
+              <Row label="Seller ID" value={refToLabel(product.sellerId)} />
 
               <Row
                 label="Organization"
@@ -588,43 +653,28 @@ const ProductAdminDetails = () => {
                 }
               />
 
-              <Row
-                label="Brand"
-                value={refToLabel(product.brand)}
-              />
+              <Row label="Brand" value={refToLabel(product.brand)} />
 
               <Row
                 label="GST Rate"
                 value={
-                  product.gstRate !== undefined
-                    ? `${product.gstRate}%`
-                    : null
+                  product.gstRate !== undefined ? `${product.gstRate}%` : null
                 }
               />
 
               <Row
                 label="GST Mode"
-                value={
-                  product.gstInclusive === false
-                    ? "Excluded"
-                    : "Included"
-                }
+                value={product.gstInclusive === false ? "Excluded" : "Included"}
               />
 
-              <Row
-                label="HSN Code"
-                value={product.hsnCode}
-              />
+              <Row label="HSN Code" value={product.hsnCode} />
 
               <Row
                 label="Deal Product"
                 value={
                   product.metadata?.isDealProduct
-                    ? `${
-                        product.metadata?.dealBadge || "Deal"
-                      } (${
-                        product.metadata?.dealSource ||
-                        "admin_direct"
+                    ? `${product.metadata?.dealBadge || "Deal"} (${
+                        product.metadata?.dealSource || "admin_direct"
                       })`
                     : "No"
                 }
@@ -651,13 +701,9 @@ const ProductAdminDetails = () => {
           <section className={sectionClass}>
             <div className={sectionHeaderClass}>
               <div>
-                <p className={sectionEyebrowClass}>
-                  Performance overview
-                </p>
+                <p className={sectionEyebrowClass}>Performance overview</p>
 
-                <h2 className={sectionTitleClass}>
-                  Analytics
-                </h2>
+                <h2 className={sectionTitleClass}>Analytics</h2>
               </div>
 
               <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
@@ -669,39 +715,37 @@ const ProductAdminDetails = () => {
               {[
                 {
                   label: "Total Views",
-                  value: (
-                    product.analytics.views || 0
-                  ).toLocaleString("en-IN"),
+                  value: (product.analytics.views || 0).toLocaleString("en-IN"),
                 },
                 {
                   label: "Purchases",
-                  value: (
-                    product.analytics.purchases || 0
-                  ).toLocaleString("en-IN"),
+                  value: (product.analytics.purchases || 0).toLocaleString(
+                    "en-IN",
+                  ),
                 },
                 {
                   label: "Revenue",
-                  value: `₹${(
-                    product.analytics.revenue || 0
-                  ).toLocaleString("en-IN")}`,
+                  value: `₹${(product.analytics.revenue || 0).toLocaleString(
+                    "en-IN",
+                  )}`,
                 },
                 {
                   label: "Wishlists",
-                  value: (
-                    product.analytics.wishlistAdds || 0
-                  ).toLocaleString("en-IN"),
+                  value: (product.analytics.wishlistAdds || 0).toLocaleString(
+                    "en-IN",
+                  ),
                 },
                 {
                   label: "Cart Adds",
-                  value: (
-                    product.analytics.cartAdds || 0
-                  ).toLocaleString("en-IN"),
+                  value: (product.analytics.cartAdds || 0).toLocaleString(
+                    "en-IN",
+                  ),
                 },
                 {
                   label: "Returns",
-                  value: (
-                    product.analytics.returns || 0
-                  ).toLocaleString("en-IN"),
+                  value: (product.analytics.returns || 0).toLocaleString(
+                    "en-IN",
+                  ),
                 },
                 {
                   label: "Avg Rating",
@@ -711,9 +755,7 @@ const ProductAdminDetails = () => {
                 },
                 {
                   label: "Reviews",
-                  value: (
-                    product.reviewCount || 0
-                  ).toLocaleString("en-IN"),
+                  value: (product.reviewCount || 0).toLocaleString("en-IN"),
                 },
               ].map(({ label, value }) => (
                 <div
@@ -737,40 +779,35 @@ const ProductAdminDetails = () => {
         {/* Attributes                                                       */}
         {/* ---------------------------------------------------------------- */}
 
-        {activeTab === "attributes" &&
-          Object.keys(attributes).length > 0 && (
-            <section className={sectionClass}>
-              <div className={sectionHeaderClass}>
-                <div>
-                  <p className={sectionEyebrowClass}>
-                    Product specifications
-                  </p>
+        {activeTab === "attributes" && Object.keys(attributes).length > 0 && (
+          <section className={sectionClass}>
+            <div className={sectionHeaderClass}>
+              <div>
+                <p className={sectionEyebrowClass}>Product specifications</p>
 
-                  <h2 className={sectionTitleClass}>
-                    Attributes
-                  </h2>
-                </div>
-
-                <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
-                  {Object.keys(attributes).length} fields
-                </span>
+                <h2 className={sectionTitleClass}>Attributes</h2>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(attributes).map(([key, value]) => (
-                  <Row
-                    key={key}
-                    label={formatLabel(key)}
-                    value={
-                      Array.isArray(value)
-                        ? value.join(", ")
-                        : String(value ?? "")
-                    }
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+              <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
+                {Object.keys(attributes).length} fields
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
+              {Object.entries(attributes).map(([key, value]) => (
+                <Row
+                  key={key}
+                  label={formatLabel(key)}
+                  value={
+                    Array.isArray(value)
+                      ? value.join(", ")
+                      : String(value ?? "")
+                  }
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ---------------------------------------------------------------- */}
         {/* Variants                                                         */}
@@ -780,13 +817,9 @@ const ProductAdminDetails = () => {
           <section className={sectionClass}>
             <div className={sectionHeaderClass}>
               <div>
-                <p className={sectionEyebrowClass}>
-                  Product variants
-                </p>
+                <p className={sectionEyebrowClass}>Product variants</p>
 
-                <h2 className={sectionTitleClass}>
-                  Variants
-                </h2>
+                <h2 className={sectionTitleClass}>Variants</h2>
               </div>
 
               <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
@@ -795,136 +828,18 @@ const ProductAdminDetails = () => {
             </div>
 
             <div className="overflow-x-auto p-3 sm:p-4">
-              <table className="w-full min-w-[850px] text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-[var(--admin-surface-soft)]">
-                    {[
-                      "Image",
-                      "SKU",
-                      "Price",
-                      "MRP",
-                      "Stock",
-                      "Attributes",
-                    ].map((heading) => (
-                      <th
-                        key={heading}
-                        className="whitespace-nowrap px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-gray-500"
-                      >
-                        {heading}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {product.variants.map((variant, index) => (
-                    <tr
-                      key={variant.sku || index}
-                      className="border-b border-gray-100 transition-colors last:border-b-0 hover:bg-[var(--admin-surface-soft)]"
-                    >
-                      <td className="px-4 py-3 align-middle">
-                        <div className="flex flex-col items-center gap-3">
-                          {getVariantImage(variant) ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setVariantGalleryImages(
-                                  getVariantImagesList(variant),
-                                );
-                                setVariantGalleryOpen(true);
-                              }}
-                              className="group relative h-12 w-12 overflow-hidden rounded-xl border border-gray-200 bg-white"
-                              title="View variant images"
-                            >
-                              <img
-                                src={getVariantImage(variant)}
-                                alt={
-                                  variant.sku ||
-                                  variant.title ||
-                                  "Variant"
-                                }
-                                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-110"
-                              />
-                            </button>
-                          ) : (
-                            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 text-sm text-gray-400">
-                              —
-                            </div>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setVariantGalleryImages(
-                                getVariantImagesList(variant),
-                              );
-                              setVariantGalleryOpen(true);
-                            }}
-                            className="text-xs font-bold text-[var(--admin-blue)] transition-colors hover:text-[var(--admin-gold)] hover:underline"
-                          >
-                            View  
-                          </button>
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-3 align-middle">
-                        <span className="rounded-md bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
-                          {variant.sku || "N/A"}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3 align-middle">
-                        <span className="font-bold text-gray-900">
-                          {variant.price !== undefined
-                            ? `₹${Number(
-                                variant.price,
-                              ).toLocaleString("en-IN")}`
-                            : "N/A"}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3 align-middle">
-                        <span className="text-gray-600">
-                          {variant.mrp !== undefined
-                            ? `₹${Number(
-                                variant.mrp,
-                              ).toLocaleString("en-IN")}`
-                            : "N/A"}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3 align-middle">
-                        <span
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                            Number(variant.stock) > 0
-                              ? "bg-green-50 text-green-700"
-                              : "bg-red-50 text-red-600"
-                          }`}
-                        >
-                          {variant.stock ?? "N/A"}
-                        </span>
-                      </td>
-
-                      <td className="max-w-md px-4 py-3 align-middle text-xs leading-5 text-gray-500">
-                        {variant.attributes
-                          ? Object.entries(
-                              variant.attributes instanceof Map
-                                ? Object.fromEntries(
-                                    variant.attributes,
-                                  )
-                                : variant.attributes,
-                            )
-                              .map(
-                                ([key, value]) =>
-                                  `${key}: ${value}`,
-                              )
-                              .join(", ")
-                          : "N/A"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                columns={variantColumns}
+                data={variantTableData}
+                loading={selector.loading}
+                totalCount={product.variants?.length || 0}
+                rowKey={(variant, index) =>
+                  variant?.sku || variant?._id || variant?.id || index
+                }
+                emptyText="No variants found."
+                cardClassName="overflow-hidden rounded-none border-0 shadow-none"
+                tableContainerClassName="overflow-x-auto"
+              />
             </div>
           </section>
         )}
@@ -951,13 +866,9 @@ const ProductAdminDetails = () => {
             <section className={sectionClass}>
               <div className={sectionHeaderClass}>
                 <div>
-                  <p className={sectionEyebrowClass}>
-                    Operations
-                  </p>
+                  <p className={sectionEyebrowClass}>Operations</p>
 
-                  <h2 className={sectionTitleClass}>
-                    Shipping & Compliance
-                  </h2>
+                  <h2 className={sectionTitleClass}>Shipping & Compliance</h2>
                 </div>
               </div>
 
@@ -966,9 +877,7 @@ const ProductAdminDetails = () => {
                   <>
                     <Row
                       label="Delivery Pincode Rule"
-                      value={getShippingPincodeSummary(
-                        product.shipping,
-                      )}
+                      value={getShippingPincodeSummary(product.shipping)}
                     />
 
                     <Row
@@ -976,8 +885,8 @@ const ProductAdminDetails = () => {
                       value={
                         product.shipping.freeShipping
                           ? "Free shipping"
-                          : product.shipping.shippingCharge ??
-                            product.shipping.additionalCost
+                          : (product.shipping.shippingCharge ??
+                            product.shipping.additionalCost)
                       }
                     />
 
@@ -1048,22 +957,18 @@ const ProductAdminDetails = () => {
                     label="Warranty"
                     value={`${product.warranty.period} ${
                       product.warranty.periodUnit || "months"
-                    } (${
-                      product.warranty.type || "manufacturer"
-                    })`}
+                    } (${product.warranty.type || "manufacturer"})`}
                   />
                 )}
 
-                {product.warranty?.returnPolicy?.eligible !==
-                  undefined && (
+                {product.warranty?.returnPolicy?.eligible !== undefined && (
                   <Row
                     label="Return Policy"
                     value={
                       product.warranty.returnPolicy.eligible
                         ? `Eligible — ${
                             product.warranty.returnPolicy.days ??
-                            product.warranty.returnPolicy
-                              .returnWindowDays ??
+                            product.warranty.returnPolicy.returnWindowDays ??
                             0
                           } days`
                         : "Not eligible"
@@ -1086,9 +991,7 @@ const ProductAdminDetails = () => {
               <section className={sectionClass}>
                 <div className={sectionHeaderClass}>
                   <div>
-                    <p className={sectionEyebrowClass}>
-                      Digital information
-                    </p>
+                    <p className={sectionEyebrowClass}>Digital information</p>
 
                     <h2 className={sectionTitleClass}>
                       Digital Product Details
@@ -1097,10 +1000,7 @@ const ProductAdminDetails = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
-                  <Row
-                    label="File Type"
-                    value={product.digital.fileType}
-                  />
+                  <Row label="File Type" value={product.digital.fileType} />
 
                   <Row
                     label="File Size"
@@ -1134,21 +1034,13 @@ const ProductAdminDetails = () => {
                     value={product.digital.licenseType}
                   />
 
-                  <Row
-                    label="Version"
-                    value={product.digital.version}
-                  />
+                  <Row label="Version" value={product.digital.version} />
 
-                  <Row
-                    label="Platform"
-                    value={product.digital.platform}
-                  />
+                  <Row label="Platform" value={product.digital.platform} />
 
                   <Row
                     label="Requires Auth"
-                    value={
-                      product.digital.requiresAuth ? "Yes" : "No"
-                    }
+                    value={product.digital.requiresAuth ? "Yes" : "No"}
                   />
                 </div>
 
@@ -1173,127 +1065,113 @@ const ProductAdminDetails = () => {
 
             {/* Subscription --------------------------------------------- */}
 
-            {product.productType === "subscription" &&
-              product.subscription && (
-                <section className={sectionClass}>
-                  <div className={sectionHeaderClass}>
-                    <div>
-                      <p className={sectionEyebrowClass}>
-                        Subscription information
-                      </p>
+            {product.productType === "subscription" && product.subscription && (
+              <section className={sectionClass}>
+                <div className={sectionHeaderClass}>
+                  <div>
+                    <p className={sectionEyebrowClass}>
+                      Subscription information
+                    </p>
 
-                      <h2 className={sectionTitleClass}>
-                        Subscription Details
-                      </h2>
-                    </div>
+                    <h2 className={sectionTitleClass}>Subscription Details</h2>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
-                    <Row
-                      label="Billing Cycle"
-                      value={product.subscription.billingCycle}
-                    />
+                <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
+                  <Row
+                    label="Billing Cycle"
+                    value={product.subscription.billingCycle}
+                  />
 
-                    <Row
-                      label="Recurring Price"
-                      value={
-                        product.subscription.recurringPrice !==
-                        undefined
-                          ? `₹${Number(
-                              product.subscription.recurringPrice,
-                            ).toLocaleString("en-IN")}`
-                          : null
-                      }
-                    />
+                  <Row
+                    label="Recurring Price"
+                    value={
+                      product.subscription.recurringPrice !== undefined
+                        ? `₹${Number(
+                            product.subscription.recurringPrice,
+                          ).toLocaleString("en-IN")}`
+                        : null
+                    }
+                  />
 
-                    <Row
-                      label="Trial Period"
-                      value={
-                        product.subscription.trialDays
-                          ? `${product.subscription.trialDays} days`
-                          : "No trial"
-                      }
-                    />
+                  <Row
+                    label="Trial Period"
+                    value={
+                      product.subscription.trialDays
+                        ? `${product.subscription.trialDays} days`
+                        : "No trial"
+                    }
+                  />
 
-                    <Row
-                      label="Setup Fee"
-                      value={
-                        product.subscription.setupFee
-                          ? `₹${Number(
-                              product.subscription.setupFee,
-                            ).toLocaleString("en-IN")}`
-                          : "Free"
-                      }
-                    />
+                  <Row
+                    label="Setup Fee"
+                    value={
+                      product.subscription.setupFee
+                        ? `₹${Number(
+                            product.subscription.setupFee,
+                          ).toLocaleString("en-IN")}`
+                        : "Free"
+                    }
+                  />
 
-                    <Row
-                      label="Grace Period"
-                      value={
-                        product.subscription.gracePeriodDays
-                          ? `${product.subscription.gracePeriodDays} days`
-                          : "None"
-                      }
-                    />
+                  <Row
+                    label="Grace Period"
+                    value={
+                      product.subscription.gracePeriodDays
+                        ? `${product.subscription.gracePeriodDays} days`
+                        : "None"
+                    }
+                  />
 
-                    <Row
-                      label="Auto-renew"
-                      value={
-                        product.subscription.autoRenew
-                          ? "Enabled"
-                          : "Disabled"
-                      }
-                    />
+                  <Row
+                    label="Auto-renew"
+                    value={
+                      product.subscription.autoRenew ? "Enabled" : "Disabled"
+                    }
+                  />
 
-                    <Row
-                      label="Pause Allowed"
-                      value={
-                        product.subscription.pauseAllowed
-                          ? "Yes"
-                          : "No"
-                      }
-                    />
-                  </div>
+                  <Row
+                    label="Pause Allowed"
+                    value={product.subscription.pauseAllowed ? "Yes" : "No"}
+                  />
+                </div>
 
-                  {product.subscription.features?.length > 0 && (
-                    <div className="border-t border-gray-100 px-5 py-5">
-                      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                        Plan Features
-                      </p>
+                {product.subscription.features?.length > 0 && (
+                  <div className="border-t border-gray-100 px-5 py-5">
+                    <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                      Plan Features
+                    </p>
 
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                        {product.subscription.features.map(
-                          (feature, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-2 rounded-xl border border-gray-100 bg-[var(--admin-surface-soft)] px-3 py-3 text-sm font-medium text-gray-700"
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {product.subscription.features.map((feature, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 rounded-xl border border-gray-100 bg-[var(--admin-surface-soft)] px-3 py-3 text-sm font-medium text-gray-700"
+                        >
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100">
+                            <svg
+                              className="h-3.5 w-3.5 text-green-600"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2.5}
                             >
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100">
-                                <svg
-                                  className="h-3.5 w-3.5 text-green-600"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  strokeWidth={2.5}
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                              </span>
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          </span>
 
-                              <span className="break-words">
-                                {feature}
-                              </span>
-                            </div>
-                          ),
-                        )}
-                      </div>
+                          <span className="break-words">{feature}</span>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </section>
-              )}
+                  </div>
+                )}
+              </section>
+            )}
 
             {/* Bundle Items --------------------------------------------- */}
 
@@ -1302,13 +1180,9 @@ const ProductAdminDetails = () => {
                 <section className={sectionClass}>
                   <div className={sectionHeaderClass}>
                     <div>
-                      <p className={sectionEyebrowClass}>
-                        Bundle information
-                      </p>
+                      <p className={sectionEyebrowClass}>Bundle information</p>
 
-                      <h2 className={sectionTitleClass}>
-                        Bundle Items
-                      </h2>
+                      <h2 className={sectionTitleClass}>Bundle Items</h2>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -1356,9 +1230,7 @@ const ProductAdminDetails = () => {
                                 {item.image ? (
                                   <img
                                     src={item.image}
-                                    alt={
-                                      item.title || "Bundle product"
-                                    }
+                                    alt={item.title || "Bundle product"}
                                     className="h-12 w-12 rounded-xl border border-gray-200 object-cover"
                                   />
                                 ) : (
@@ -1422,27 +1294,18 @@ const ProductAdminDetails = () => {
             {/* SEO ------------------------------------------------------- */}
 
             {product.seo &&
-              Object.keys(product.seo).some(
-                (key) => product.seo[key],
-              ) && (
+              Object.keys(product.seo).some((key) => product.seo[key]) && (
                 <section className={sectionClass}>
                   <div className={sectionHeaderClass}>
                     <div>
-                      <p className={sectionEyebrowClass}>
-                        Search visibility
-                      </p>
+                      <p className={sectionEyebrowClass}>Search visibility</p>
 
-                      <h2 className={sectionTitleClass}>
-                        SEO Metadata
-                      </h2>
+                      <h2 className={sectionTitleClass}>SEO Metadata</h2>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2">
-                    <Row
-                      label="Meta Title"
-                      value={product.seo.metaTitle}
-                    />
+                    <Row label="Meta Title" value={product.seo.metaTitle} />
 
                     <Row
                       label="Meta Description"
@@ -1454,10 +1317,7 @@ const ProductAdminDetails = () => {
                       value={product.seo.canonicalUrl}
                     />
 
-                    <Row
-                      label="OG Title"
-                      value={product.seo.ogTitle}
-                    />
+                    <Row label="OG Title" value={product.seo.ogTitle} />
                   </div>
 
                   {product.seo.keywords?.length > 0 && (
@@ -1487,13 +1347,9 @@ const ProductAdminDetails = () => {
               <section className={sectionClass}>
                 <div className={sectionHeaderClass}>
                   <div>
-                    <p className={sectionEyebrowClass}>
-                      Product organization
-                    </p>
+                    <p className={sectionEyebrowClass}>Product organization</p>
 
-                    <h2 className={sectionTitleClass}>
-                      Tags
-                    </h2>
+                    <h2 className={sectionTitleClass}>Tags</h2>
                   </div>
 
                   <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">

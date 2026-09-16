@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Info } from "lucide-react";
 import {
   bulkUpdateSpecialPrices,
   getProducts,
@@ -63,16 +63,35 @@ const normalizeSpecialPriceValue = (value) => {
 
 const getRowFlags = (row) => {
   const current = normalizeSpecialPriceValue(row.specialPrice ?? "");
-  const original = normalizeSpecialPriceValue(row.originalSpecialPrice ?? "");
+  const original = normalizeSpecialPriceValue(
+    row.originalSpecialPrice ?? ""
+  );
+
   const sellingPrice = Number(row.sellingPrice) || 0;
   const minimumSpecialPrice = getMinimumSpecialPrice(sellingPrice);
+
+  // Check whether the input is empty
+  const isEmpty =
+    row.specialPrice === "" ||
+    row.specialPrice === null ||
+    row.specialPrice === undefined;
+
+  // Validate only when a value has been entered
   const hasError =
+    !isEmpty &&
     current !== null &&
     (current < minimumSpecialPrice ||
       sellingPrice <= 0 ||
       current >= sellingPrice);
+
   const isZeroPrice = sellingPrice === 0;
-  const isPending = current !== original && !hasError && !isZeroPrice;
+
+  const isPending =
+    !isEmpty &&
+    current !== original &&
+    !hasError &&
+    !isZeroPrice;
+
   return {
     current,
     original,
@@ -81,6 +100,7 @@ const getRowFlags = (row) => {
     hasError,
     isZeroPrice,
     isPending,
+    isEmpty,
   };
 };
 
@@ -401,20 +421,25 @@ const filterFields = useMemo(() => {
   );
   const canSave = pendingCount > 0 && !saving && !importing && !detailLoading;
 
-  const handleRowChange = useCallback((rowId, value) => {
-    setImportError("");
-    setImportInfo("");
-    setImportSuccess("");
-    setRows((current) =>
-      current.map((row) => {
-        if (row.id === rowId) {
-          const normalizedValue = normalizeSpecialPriceValue(value);
-          return { ...row, specialPrice: normalizedValue };
-        }
-        return row;
-      }),
-    );
-  }, []);
+const handleRowChange = useCallback((rowId, value) => {
+  setImportError("");
+  setImportInfo("");
+  setImportSuccess("");
+
+  setRows((current) =>
+    current.map((row) => {
+      if (row.id === rowId) {
+        return {
+          ...row,
+          // Keep the input empty when the user clears it
+          specialPrice: value === "" ? "" : normalizeSpecialPriceValue(value),
+        };
+      }
+
+      return row;
+    })
+  );
+}, []);
 
   const persistRows = async (
     nextRows = rows,
@@ -793,25 +818,25 @@ const filterFields = useMemo(() => {
             <div>
               <div className="relative flex items-center">
                 <span className="absolute left-2.5 text-xs font-medium text-gray-400">₹</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={value ?? ""}
-                  onChange={(e) => handleRowChange(row.id, e.target.value)}
-                  placeholder="Enter price"
-                  className={`w-36 rounded-lg border pl-6 pr-2 py-1.5 text-sm font-mono transition-colors ${
-                    hasError
-                      ? "border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                      : "border-gray-300 bg-white focus:border-[var(--admin-blue)] focus:ring-1 focus:ring-[var(--admin-blue)]"
-                  }`}
-                />
+              <input
+  type="number"
+  min="0"
+  step="0.01"
+  value={value ?? ""}
+  onChange={(e) => handleRowChange(row.id, e.target.value)}
+  placeholder="Enter price"
+  className={`w-36 rounded-lg border py-1.5 pl-6 pr-2 text-sm font-mono transition-colors ${
+    hasError
+      ? "border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+      : "border-gray-300 bg-white focus:border-[var(--admin-blue)] focus:ring-1 focus:ring-[var(--admin-blue)]"
+  }`}
+/>
               </div>
               {hasError && (
                 <p className="mt-1 text-[10px] font-medium text-red-600">
-                {`Must be between ${formatMoney(minimumSpecialPrice)} & ${formatMoney(
-  row.sellingPrice
-)}`}
+                {`Must be at least ${formatMoney(
+  minimumSpecialPrice
+)} and below ${formatMoney(row.sellingPrice)}`}
                 </p>
               )}
             </div>
@@ -961,7 +986,28 @@ const filterFields = useMemo(() => {
             </div>
           </div>
         )}
+{/* Special Price Suggestion */}
+<div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+  <div className="flex items-start gap-2.5">
+   <Info size={16} className="mt-0.5 shrink-0 text-blue-600" />
 
+    <div>
+      <h3 className="text-xs font-semibold text-gray-900">
+        Special Price Suggestion
+      </h3>
+
+      <p className="mt-1 text-[11px] text-gray-600">
+        Enter a price that is <strong>below the Selling Price</strong> and at
+        least <strong>50% of it</strong>. Then click{" "}
+        <strong>Save Changes</strong>.
+      </p>
+
+      <p className="mt-1 text-[11px] font-medium text-blue-700">
+        Example: Selling Price ₹1,999 → Special Price: ₹999.50 to ₹1,998.99
+      </p>
+    </div>
+  </div>
+</div>
         {/* Variants Data Table */}
         {detailLoading ? (
           <Loader />

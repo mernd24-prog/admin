@@ -19,6 +19,7 @@ import {
   ConfirmModal,
   DataTable,
   FilterBar,
+  ImageThumbnail,
   PageHeader,
   SellerLink,
   StatusBadge,
@@ -36,6 +37,7 @@ import {
 } from "../../Redux/inventorySlice";
 import { formatDateTime12Hour } from "../../utils/formatters";
 import { toast } from "../../utils/toast";
+import ImageGallery from "../../components/Atoms/ImageGallery/ImageGallery";
 
 const isSeller = isSellerPanel();
 
@@ -178,6 +180,22 @@ const numberCell = (value, className = "") => (
 
 const firstImage = (row = {}) => row.image || "";
 
+const getVariantImage = (variant = {}) => {
+  if (Array.isArray(variant.images) && variant.images.length > 0) {
+    return variant.images.filter(Boolean)[0] || "";
+  }
+
+  return variant.image || "";
+};
+
+const getVariantImagesList = (variant = {}) => {
+  if (Array.isArray(variant.images) && variant.images.length > 0) {
+    return variant.images.filter(Boolean);
+  }
+
+  return variant.image ? [variant.image] : [];
+};
+
 const variantTitle = (row = {}) => (
   <div className="min-w-[160px]">
     <p className="font-semibold text-[var(--admin-ink)]">
@@ -190,21 +208,7 @@ const variantTitle = (row = {}) => (
 );
 
 const productTitle = (row = {}) => (
-  <div className="flex min-w-[220px] max-w-[52vw] items-center gap-3 xl:w-[560px]">
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[var(--admin-line)] bg-white">
-      {firstImage(row) ? (
-        <img
-          src={firstImage(row)}
-          alt={row.productName || "Variant"}
-          className="h-full w-full object-contain p-1"
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-[var(--admin-muted)]">
-          <MdInventory2 size={20} />
-        </div>
-      )}
-    </div>
-
+  <div className="min-w-[220px] max-w-[52vw] xl:w-[560px]">
     <div className="min-w-0">
       <p
         className="truncate font-semibold text-[var(--admin-ink)]"
@@ -567,6 +571,10 @@ const Inventory = () => {
 
   const [detail, setDetail] = useState(null);
   const [detailRows, setDetailRows] = useState([]);
+  const [variantSearch, setVariantSearch] = useState("");
+
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryImages, setGalleryImages] = useState([]);
 
   const [adjustTarget, setAdjustTarget] = useState(null);
   const [adjusting, setAdjusting] = useState(false);
@@ -678,6 +686,25 @@ const Inventory = () => {
   }, [historyPage, transactions]);
 
   const productRows = useMemo(() => groupInventoryByProduct(rows), [rows]);
+  const filteredDetailRows = useMemo(() => {
+    const searchValue = variantSearch.trim().toLowerCase();
+
+    if (!searchValue) {
+      return detailRows;
+    }
+
+    return detailRows.filter((row) =>
+      [
+        row.productName,
+        row.productSku,
+        row.variantName,
+        row.variantSku,
+        row.sku,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(searchValue)),
+    );
+  }, [detailRows, variantSearch]);
 
   const listTableLoading = loading && productRows.length === 0;
 
@@ -1010,6 +1037,18 @@ const Inventory = () => {
   //   }
   // };
 
+  const openImageGallery = useCallback((variant) => {
+    const images = getVariantImagesList(variant);
+
+    setGalleryImages(images);
+    setGalleryOpen(true);
+  }, []);
+
+  const closeImageGallery = useCallback(() => {
+    setGalleryOpen(false);
+    setGalleryImages([]);
+  }, []);
+
   const adjustRows = async (target, payload) => {
     setAdjusting(true);
 
@@ -1031,13 +1070,15 @@ const Inventory = () => {
       setAdjusting(false);
     }
   };
-
   const listColumns = [
     {
       key: "productName",
       label: "Product",
       sortable: true,
-      render: (_, row) => productTitle(row),
+      width: "260px",
+      render: (_, row) => (
+        <div className="max-w-[300px] truncate">{productTitle(row)}</div>
+      ),
     },
     {
       key: "variants",
@@ -1099,13 +1140,31 @@ const Inventory = () => {
   const detailColumns = useMemo(
     () => [
       {
+        key: "image",
+        label: "Image",
+        width: "150px",
+        render: (_value, variant) => (
+          <ImageThumbnail
+            src={getVariantImage(variant)}
+            images={getVariantImagesList(variant)}
+            alt={variant?.sku || variant?.variantName || "Variant"}
+            size="md"
+            showZoomIcon
+            showViewButton
+            viewButtonText="View"
+            onClick={() => openImageGallery(variant)}
+          />
+        ),
+      },
+      {
         key: "productName",
         label: "Product",
         sortable: true,
+        width: "280px",
         render: (_, row) => (
           <button
             type="button"
-            className="text-left hover:underline"
+            className="block w-[280px] max-w-[280px] truncate text-left hover:underline"
             onClick={(event) => {
               event.stopPropagation();
 
@@ -1118,6 +1177,7 @@ const Inventory = () => {
           </button>
         ),
       },
+
       {
         key: "variantName",
         label: "Variant",
@@ -1187,7 +1247,7 @@ const Inventory = () => {
         render: (value) => formatDateTime12Hour(value, "N/A"),
       },
     ],
-    [handleStockChange, navigate],
+    [handleStockChange, navigate, openImageGallery],
   );
 
   const transactionColumns = [
@@ -1241,31 +1301,15 @@ const Inventory = () => {
           backPath="/app/inventory"
           status={product.status}
           actions={
-            <>
-              <button
-                type="button"
-                className="admin-btn-secondary inline-flex items-center gap-1.5"
-                onClick={refresh}
-                disabled={loading}
-              >
-                <MdRefresh
-                  size={17}
-                  className={loading ? "animate-spin" : ""}
-                />
-                {loading ? "Refreshing..." : "Refresh"}
-              </button>
-              <OrangeButton
-                onClick={handleSave}
-                disabled={!canSave}
-                title={
-                  pendingCount ? "Save inventory changes" : "No changes to save"
-                }
-              >
-                {saving
-                  ? "Saving…"
-                  : `Save ${pendingCount ? `(${pendingCount})` : ""}`}
-              </OrangeButton>
-            </>
+            <button
+              type="button"
+              className="admin-btn-secondary inline-flex items-center gap-1.5"
+              onClick={refresh}
+              disabled={loading}
+            >
+              <MdRefresh size={17} className={loading ? "animate-spin" : ""} />
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
           }
         />
 
@@ -1322,12 +1366,26 @@ const Inventory = () => {
 
         <DataTable
           columns={detailColumns}
-          data={detailRows}
+          data={filteredDetailRows}
           loading={loading}
           error={error}
-          totalCount={detailRows.length}
+          totalCount={filteredDetailRows.length}
           rowKey="id"
-          searchPlaceholder="Search variants"
+          onSearch={setVariantSearch}
+          searchPlaceholder="Search variant name or SKU"
+          actions={
+            <OrangeButton
+              onClick={handleSave}
+              disabled={!canSave}
+              title={
+                pendingCount ? "Save inventory changes" : "No changes to save"
+              }
+            >
+              {saving
+                ? "Saving…"
+                : `Save ${pendingCount ? `(${pendingCount})` : ""}`}
+            </OrangeButton>
+          }
           emptyText="No variants found"
           rowActions={(row) => [
             {
@@ -1358,6 +1416,12 @@ const Inventory = () => {
           />
         </div>
 
+        <ImageGallery
+          images={galleryImages}
+          isOpen={galleryOpen}
+          onClose={closeImageGallery}
+        />
+
         <AdjustModal
           open={Boolean(adjustTarget)}
           target={adjustTarget}
@@ -1374,7 +1438,6 @@ const Inventory = () => {
       <PageHeader
         title="Inventory"
         subtitle="View product-level inventory and manage variant stock inside each product."
-        count={total}
         breadcrumbs={[
           {
             label: sellerView ? "Inventory" : "Inventory Management",
