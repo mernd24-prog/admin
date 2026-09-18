@@ -169,7 +169,7 @@ export default function SearchComponent({
         ? {
             sellerName: {
               value: "",
-              label: "Search By Store Name",
+              label: "All Store Name",
             },
           }
         : {}),
@@ -465,7 +465,7 @@ export default function SearchComponent({
                   />
                 </div>
               )}
-  {isSellerStoreName && (
+              {isSellerStoreName && (
                 <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
                   <FilterSelect
                     label="Seller Store Name"
@@ -537,35 +537,6 @@ export default function SearchComponent({
                     isSearchable={false}
                     onChange={(option) =>
                       handleFilterChange("productType", option)
-                    }
-                  />
-                </div>
-              )}
-
-              {isSellerStoreName && (
-                <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
-                  <FilterSelect
-                    label="Seller Store Name"
-                    value={
-                      filters?.sellerName || {
-                        value: "",
-                        label: sellerLoading
-                          ? "Loading Store Names..."
-                          : "Search By Store Name",
-                      }
-                    }
-                    options={[
-                      {
-                        value: "",
-                        label: sellerLoading
-                          ? "Loading Store Names..."
-                          : "All Store Names",
-                      },
-                      ...(userOptions || []),
-                    ]}
-                    isSearchable={!sellerLoading}
-                    onChange={(option) =>
-                      handleFilterChange("sellerName", option)
                     }
                   />
                 </div>

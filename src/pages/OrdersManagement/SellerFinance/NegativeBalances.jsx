@@ -33,12 +33,14 @@ const RECOVERY_ACTIONS = [
   {
     value: "collected_from_seller",
     label: "Record external payment",
-    description: "Use only when the seller paid separately by bank transfer, UPI, or another verified method.",
+    description:
+      "Use only when the seller paid separately by bank transfer, UPI, or another verified method.",
   },
   {
     value: "platform_write_off",
     label: "Write off remaining amount",
-    description: "Stop recovery without collecting the balance. This should require an approved business reason.",
+    description:
+      "Stop recovery without collecting the balance. This should require an approved business reason.",
   },
 ];
 
@@ -46,7 +48,7 @@ const FILTER_FIELDS = [
   {
     key: "sellerId",
     type: "asyncDropdown",
-    label: "Seller",
+    label: "Seller Store name",
     width: "w-52",
     load: (search) =>
       dropdownApi.getSellers({
@@ -149,7 +151,10 @@ const NegativeBalances = () => {
 
   const validateAction = () => {
     if (!settlementId(action.settlement)) return "Settlement ID is missing";
-    if (action.resolveAction === "collected_from_seller" && !action.referenceId.trim()) {
+    if (
+      action.resolveAction === "collected_from_seller" &&
+      !action.referenceId.trim()
+    ) {
       return "Payment reference ID is required";
     }
     if (!action.note.trim()) return "Note is required";
@@ -165,7 +170,9 @@ const NegativeBalances = () => {
     const isExternalPayment = action.resolveAction === "collected_from_seller";
     setConfirmAction({
       open: true,
-      title: isExternalPayment ? "Confirm external payment?" : "Confirm write-off?",
+      title: isExternalPayment
+        ? "Confirm external payment?"
+        : "Confirm write-off?",
       message: isExternalPayment
         ? `Confirm that ${money(action.settlement?.remainingAmount ?? action.settlement?.net_amount)} was received outside the payout system. This closes the amount owed.`
         : `This permanently stops recovery of ${money(action.settlement?.remainingAmount ?? action.settlement?.net_amount)}. The amount will not be collected from this seller.`,
@@ -254,9 +261,13 @@ const NegativeBalances = () => {
         render: (value, row) => (
           <div>
             <div className="text-sm font-medium text-gray-800">
-              {value === "seller_collected_cod" ? "Seller-collected COD" : "Other adjustment"}
+              {value === "seller_collected_cod"
+                ? "Seller-collected COD"
+                : "Other adjustment"}
             </div>
-            {row.orderId ? <div className="text-xs text-gray-500">Order: {row.orderId}</div> : null}
+            {row.orderId ? (
+              <div className="text-xs text-gray-500">Order: {row.orderId}</div>
+            ) : null}
           </div>
         ),
       },
@@ -284,7 +295,13 @@ const NegativeBalances = () => {
         render: (value, row) => (
           <div>
             <div className="font-semibold text-red-600">
-              {money(value ?? row.remainingAmount ?? row.net_amount ?? row.netAmount ?? 0)}
+              {money(
+                value ??
+                  row.remainingAmount ??
+                  row.net_amount ??
+                  row.netAmount ??
+                  0,
+              )}
             </div>
             {Number(row.recoveredAmount || 0) > 0 && (
               <div className="mt-1 text-xs text-emerald-600">
@@ -367,7 +384,9 @@ const NegativeBalances = () => {
       <div className="admin-card mb-4 border-l-4 border-l-blue-500 bg-blue-50/40 p-4 text-sm text-[var(--admin-ink)]">
         <div className="font-semibold">Future-payout recovery is automatic</div>
         <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
-          No admin action is needed for normal recovery. Use “Manage recovery” only when payment was received outside the platform or an authorized write-off is required.
+          No admin action is needed for normal recovery. Use “Manage recovery”
+          only when payment was received outside the platform or an authorized
+          write-off is required.
         </p>
       </div>
 
@@ -441,8 +460,12 @@ const NegativeBalances = () => {
                     className="h-4 w-4 text-blue-600"
                   />
                   <span>
-                    <span className="block text-sm font-medium text-gray-700">{opt.label}</span>
-                    <span className="mt-0.5 block text-xs leading-5 text-gray-500">{opt.description}</span>
+                    <span className="block text-sm font-medium text-gray-700">
+                      {opt.label}
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-5 text-gray-500">
+                      {opt.description}
+                    </span>
                   </span>
                 </label>
               ))}
@@ -464,7 +487,11 @@ const NegativeBalances = () => {
           )}
 
           <Input
-            labelName={action.resolveAction === "platform_write_off" ? "Approved write-off reason" : "Payment note"}
+            labelName={
+              action.resolveAction === "platform_write_off"
+                ? "Approved write-off reason"
+                : "Payment note"
+            }
             type="textarea"
             value={action.note}
             onChange={(e) =>

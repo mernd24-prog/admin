@@ -29,31 +29,31 @@ const FILTER_FIELDS = [
   {
     key: "sellerId",
     type: "asyncDropdown",
-    label: "Seller",
+    label: "Seller Store name",
     load: (search) =>
       dropdownApi.getSellers({
         keyWord: search,
         searchFields: "storeName,email",
       }),
   },
-  {
-    key: "organizationId",
-    type: "text",
-    label: "Organization ID",
-    width: "w-52",
-  },
-  {
-    key: "buyerId",
-    type: "asyncDropdown",
-    label: "Buyer",
-    load: (search) =>
-      dropdownApi.getBuyers({
-        keyWord: search,
-        searchFields: "full_name,email",
-      }),
-  },
-  { key: "hsnCode", type: "text", label: "HSN", width: "w-32" },
-  { key: "state", type: "text", label: "State", width: "w-36" },
+  // {
+  //   key: "organizationId",
+  //   type: "text",
+  //   label: "Organization ID",
+  //   width: "w-52",
+  // },
+  // {
+  //   key: "buyerId",
+  //   type: "asyncDropdown",
+  //   label: "Buyer",
+  //   load: (search) =>
+  //     dropdownApi.getBuyers({
+  //       keyWord: search,
+  //       searchFields: "full_name,email",
+  //     }),
+  // },
+  // { key: "hsnCode", type: "text", label: "HSN", width: "w-32" },
+  // { key: "state", type: "text", label: "State", width: "w-36" },
   {
     key: "referenceType",
     type: "select",
@@ -277,7 +277,11 @@ const TaxCompliance = () => {
             row.buyer?.full_name ||
             row.buyer?.email;
           return name ? (
-            <UserLink userId={value || row.buyerId || row.buyer?.id || row.buyer?._id} userName={name} className="text-xs" />
+            <UserLink
+              userId={value || row.buyerId || row.buyer?.id || row.buyer?._id}
+              userName={name}
+              className="text-xs"
+            />
           ) : (
             <span className="font-mono text-xs text-gray-400">
               {value ? `${String(value).slice(0, 10)}…` : "—"}

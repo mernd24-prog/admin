@@ -3,7 +3,14 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { MdGavel, MdAdd, MdEdit, MdDelete, MdCheckCircle, MdBlock } from "react-icons/md";
+import {
+  MdGavel,
+  MdAdd,
+  MdEdit,
+  MdDelete,
+  MdCheckCircle,
+  MdBlock,
+} from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -46,7 +53,9 @@ const COLUMNS = [
     key: "description",
     label: "Description",
     sortable: true,
-    render: (v) => <span className="font-medium text-gray-800 capitalize">{v || "—"}</span>,
+    render: (v) => (
+      <span className="font-medium text-gray-800 capitalize">{v || "—"}</span>
+    ),
   },
   {
     key: "taxId",
@@ -76,7 +85,14 @@ const COLUMNS = [
   },
 ];
 
-const EMPTY_FORM = { _id: "", description: "", tax_id: "", subTaxes_id: [], category_id: "", isDisable: false };
+const EMPTY_FORM = {
+  _id: "",
+  description: "",
+  tax_id: "",
+  subTaxes_id: [],
+  category_id: "",
+  isDisable: false,
+};
 
 const isRowActive = (row = {}) =>
   row?.active !== undefined ? Boolean(row.active) : !row?.isDisable;
@@ -84,7 +100,11 @@ const isRowActive = (row = {}) =>
 const TaxRule = () => {
   const dispatch = useDispatch();
   const { id } = useParams();
-  const list = useListPage({ defaultPageSize: 10, defaultSortKey: "createdAt", defaultSortDir: "desc" });
+  const list = useListPage({
+    defaultPageSize: 10,
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
+  });
 
   const [isRefresh, setIsRefresh] = useState(false);
   const [modalMode, setModalMode] = useState(null);
@@ -116,7 +136,13 @@ const TaxRule = () => {
   }, []);
 
   useEffect(() => {
-    dispatch(getListSubTax({ page: 1, size: 1000, query: id ? JSON.stringify({ tax_id: id }) : "" }));
+    dispatch(
+      getListSubTax({
+        page: 1,
+        size: 1000,
+        query: id ? JSON.stringify({ tax_id: id }) : "",
+      }),
+    );
   }, [id]);
 
   useEffect(() => {
@@ -131,14 +157,14 @@ const TaxRule = () => {
         sortOrder: "desc",
         populate: "tax_id:name||category_id:name||subTaxes_id:name",
         ...(params.isDisable !== undefined && { isDisable: params.isDisable }),
-      })
+      }),
     );
   }, [list.page, list.pageSize, list.search, list.filters, isRefresh]);
 
   useEffect(() => {
     if (selectedTax && subTaxList.length > 0) {
       const filtered = subTaxList.filter(
-        (st) => (st.tax_id?._id || st.tax_id) === selectedTax.value
+        (st) => (st.tax_id?._id || st.tax_id) === selectedTax.value,
       );
       setFilteredSubTaxOptions(transformArray(filtered));
       if (selectedSubTax.length > 0) {
@@ -156,10 +182,14 @@ const TaxRule = () => {
   const categoryOptions = useMemo(() => {
     const options = [];
     const categoryPayload = userSelector?.getListCategoryData?.data?.data;
-    const categories = Array.isArray(categoryPayload) ? categoryPayload : categoryPayload?.list || [];
+    const categories = Array.isArray(categoryPayload)
+      ? categoryPayload
+      : categoryPayload?.list || [];
     if (!categories.length) return options;
 
-    const hasNested = categories.some((c) => Array.isArray(c?.subcategories) || Array.isArray(c?.subCategories));
+    const hasNested = categories.some(
+      (c) => Array.isArray(c?.subcategories) || Array.isArray(c?.subCategories),
+    );
     if (hasNested) {
       const addOptions = (nodes, prefix = "") => {
         if (!Array.isArray(nodes)) return;
@@ -197,8 +227,10 @@ const TaxRule = () => {
 
   const validate = () => {
     const errs = {};
-    if (!formData.description?.trim()) errs.description = "Description is required";
-    else if (formData.description.trim().length < 3) errs.description = "Min 3 characters";
+    if (!formData.description?.trim())
+      errs.description = "Description is required";
+    else if (formData.description.trim().length < 3)
+      errs.description = "Min 3 characters";
     if (!formData.tax_id) errs.tax_id = "Tax is required";
     if (!formData.subTaxes_id?.length) errs.subTaxes_id = "Sub Tax is required";
     if (!formData.category_id) errs.category_id = "Category is required";
@@ -231,13 +263,15 @@ const TaxRule = () => {
   const handleSubTaxChange = (opts) => {
     setSelectedSubTax(opts);
     setFormData((prev) => ({ ...prev, subTaxes_id: opts.map((o) => o.value) }));
-    if (errors.subTaxes_id) setErrors((prev) => ({ ...prev, subTaxes_id: undefined }));
+    if (errors.subTaxes_id)
+      setErrors((prev) => ({ ...prev, subTaxes_id: undefined }));
   };
 
   const handleCategoryChange = (opt) => {
     setSelectedCategory(opt);
     setFormData((prev) => ({ ...prev, category_id: opt.value }));
-    if (errors.category_id) setErrors((prev) => ({ ...prev, category_id: undefined }));
+    if (errors.category_id)
+      setErrors((prev) => ({ ...prev, category_id: undefined }));
   };
 
   const handleSubmit = async (e) => {
@@ -254,23 +288,35 @@ const TaxRule = () => {
     try {
       let res;
       if (modalMode === "edit") {
-        res = await dispatch(updateTaxRule({ ...payload, _id: formData._id })).unwrap();
+        res = await dispatch(
+          updateTaxRule({ ...payload, _id: formData._id }),
+        ).unwrap();
       } else {
         res = await dispatch(createTaxRule(payload)).unwrap();
       }
-      if (res?.error) { toast.error(res.error); return; }
-      toast.success(res?.message || `Tax rule ${modalMode === "edit" ? "updated" : "created"}`);
+      if (res?.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(
+        res?.message ||
+          `Tax rule ${modalMode === "edit" ? "updated" : "created"}`,
+      );
       closeModal();
       setIsRefresh((r) => !r);
     } catch (err) {
       toast.error(err?.message || "Save failed");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     try {
-      const res = await dispatch(softDeleteTaxRule({ _id: [deleteTarget._id] })).unwrap();
+      const res = await dispatch(
+        softDeleteTaxRule({ _id: [deleteTarget._id] }),
+      ).unwrap();
       toast.success(res?.message || "Tax rule deleted");
       setDeleteOpen(false);
       setDeleteTarget(null);
@@ -283,7 +329,12 @@ const TaxRule = () => {
   const handleToggleConfirm = async () => {
     if (!toggleTarget) return;
     try {
-      const res = await dispatch(enableDisableTaxRule({ _id: [toggleTarget._id], isDisable: isRowActive(toggleTarget) })).unwrap();
+      const res = await dispatch(
+        enableDisableTaxRule({
+          _id: [toggleTarget._id],
+          isDisable: isRowActive(toggleTarget),
+        }),
+      ).unwrap();
       toast.success(res?.message || "Status updated");
       setConfirmOpen(false);
       setToggleTarget(null);
@@ -302,27 +353,50 @@ const TaxRule = () => {
           icon: <MdEdit size={16} className="text-blue-600" />,
           onClick: () => {
             const ruleSubTaxes = subTaxList
-              .filter((st) => row.subTaxes_id && (Array.isArray(row.subTaxes_id) ? row.subTaxes_id.some((id) => id._id === st._id) : row.subTaxes_id._id === st._id))
+              .filter(
+                (st) =>
+                  row.subTaxes_id &&
+                  (Array.isArray(row.subTaxes_id)
+                    ? row.subTaxes_id.some((id) => id._id === st._id)
+                    : row.subTaxes_id._id === st._id),
+              )
               .map((st) => ({ value: st._id, label: st.name }));
 
             setFormData({
               _id: row._id,
               description: row.description || "",
-              tax_id: row.taxId?._id || row.tax_id?._id || row.taxId || row.tax_id || "",
+              tax_id:
+                row.taxId?._id ||
+                row.tax_id?._id ||
+                row.taxId ||
+                row.tax_id ||
+                "",
               subTaxes_id: Array.isArray(row.subTaxIds)
                 ? row.subTaxIds.map((s) => s?._id || s)
                 : Array.isArray(row.subTaxes_id)
                   ? row.subTaxes_id.map((s) => s?._id || s)
                   : [row.subTaxes_id?._id || row.subTaxes_id].filter(Boolean),
-              category_id: row.category_id?._id || row.category_id || row.category || "",
+              category_id:
+                row.category_id?._id || row.category_id || row.category || "",
               isDisable: !active,
             });
 
             const taxVal = row.taxId || row.tax_id;
-            setSelectedTax(taxVal ? { value: taxVal._id || taxVal, label: taxVal.name || "Selected Tax" } : null);
+            setSelectedTax(
+              taxVal
+                ? {
+                    value: taxVal._id || taxVal,
+                    label: taxVal.name || "Selected Tax",
+                  }
+                : null,
+            );
             setSelectedSubTax(ruleSubTaxes);
             const catVal = row.category_id || row.category;
-            setSelectedCategory(catVal ? { value: catVal._id || catVal, label: catVal.name || catVal } : null);
+            setSelectedCategory(
+              catVal
+                ? { value: catVal._id || catVal, label: catVal.name || catVal }
+                : null,
+            );
             setModalMode("edit");
           },
         },
@@ -333,18 +407,24 @@ const TaxRule = () => {
           ) : (
             <MdCheckCircle size={16} className="text-green-600" />
           ),
-          onClick: () => { setToggleTarget(row); setConfirmOpen(true); },
+          onClick: () => {
+            setToggleTarget(row);
+            setConfirmOpen(true);
+          },
           danger: active,
         },
         {
           label: "Delete",
           icon: <MdDelete size={16} className="text-red-600" />,
-          onClick: () => { setDeleteTarget(row); setDeleteOpen(true); },
+          onClick: () => {
+            setDeleteTarget(row);
+            setDeleteOpen(true);
+          },
           danger: true,
         },
       ];
     },
-    [subTaxList]
+    [subTaxList],
   );
 
   return (
@@ -359,10 +439,7 @@ const TaxRule = () => {
         ]}
         actions={
           <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
-            <button
-              onClick={() => setModalMode("add")}
-
-            >
+            <button onClick={() => setModalMode("add")}>
               <MdAdd size={16} /> Add Tax Rule
             </button>
           </PermissionGuard>
@@ -419,13 +496,17 @@ const TaxRule = () => {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
                   placeholder="Describe this tax rule"
                 />
-                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+                {errors.description && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.description}
+                  </p>
+                )}
               </div>
 
               <div>
                 <FilterSelect
                   options={taxOptions}
-                  label="Select Tax *"
+                  label="Select Tax"
                   value={selectedTax}
                   onChange={handleTaxChange}
                   error={errors.tax_id}
@@ -436,7 +517,7 @@ const TaxRule = () => {
               <div>
                 <FilterSelect
                   options={filteredSubTaxOptions}
-                  label="Select Sub Tax *"
+                  label="Select Sub Tax"
                   value={selectedSubTax}
                   onChange={handleSubTaxChange}
                   error={errors.subTaxes_id}
@@ -449,7 +530,7 @@ const TaxRule = () => {
               <div>
                 <FilterSelect
                   options={categoryOptions}
-                  label="Select Category *"
+                  label="Select Category"
                   value={selectedCategory}
                   onChange={handleCategoryChange}
                   error={errors.category_id}
@@ -458,14 +539,35 @@ const TaxRule = () => {
               </div>
 
               <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
-                <span className="text-sm font-medium text-gray-700">Active</span>
-                <ToggleButton isToggle={!formData.isDisable} handleClick={() => setFormData((p) => ({ ...p, isDisable: !p.isDisable }))} />
+                <span className="text-sm font-medium text-gray-700">
+                  Active
+                </span>
+                <ToggleButton
+                  isToggle={!formData.isDisable}
+                  handleClick={() =>
+                    setFormData((p) => ({ ...p, isDisable: !p.isDisable }))
+                  }
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={saving} className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors">
-                  {saving ? "Saving…" : modalMode === "add" ? "Create" : "Save Changes"}
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors"
+                >
+                  {saving
+                    ? "Saving…"
+                    : modalMode === "add"
+                      ? "Create"
+                      : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -475,17 +577,27 @@ const TaxRule = () => {
 
       <ConfirmModal
         isOpen={confirmOpen}
-        onClose={() => { setConfirmOpen(false); setToggleTarget(null); }}
+        onClose={() => {
+          setConfirmOpen(false);
+          setToggleTarget(null);
+        }}
         onConfirm={handleToggleConfirm}
         title={`${toggleTarget && isRowActive(toggleTarget) ? "Disable" : "Enable"} Tax Rule`}
         message={`${toggleTarget && isRowActive(toggleTarget) ? "Disable" : "Enable"} rule "${toggleTarget?.description}"?`}
-        variant={toggleTarget && isRowActive(toggleTarget) ? "danger" : "default"}
-        confirmText={toggleTarget && isRowActive(toggleTarget) ? "Disable" : "Enable"}
+        variant={
+          toggleTarget && isRowActive(toggleTarget) ? "danger" : "default"
+        }
+        confirmText={
+          toggleTarget && isRowActive(toggleTarget) ? "Disable" : "Enable"
+        }
       />
 
       <ConfirmModal
         isOpen={deleteOpen}
-        onClose={() => { setDeleteOpen(false); setDeleteTarget(null); }}
+        onClose={() => {
+          setDeleteOpen(false);
+          setDeleteTarget(null);
+        }}
         onConfirm={handleDeleteConfirm}
         title="Delete Tax Rule"
         message={`Delete rule "${deleteTarget?.description}"? This cannot be undone.`}

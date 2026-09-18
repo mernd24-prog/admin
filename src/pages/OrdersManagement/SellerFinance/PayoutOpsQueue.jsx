@@ -78,7 +78,7 @@ const FILTER_FIELDS = [
   {
     key: "sellerId",
     type: "asyncDropdown",
-    label: "Seller",
+    label: "Seller Store name",
     width: "w-52",
     load: (search) =>
       dropdownApi.getSellers({
@@ -177,7 +177,10 @@ const metadataOf = (row = {}) => {
 };
 const razorpayXOf = (row = {}) => metadataOf(row).razorpayX || {};
 const hasRazorpayXProviderPayout = (row = {}) =>
-  Boolean(razorpayXOf(row).payoutId || valueOf(row, "paymentReference", "payment_reference"));
+  Boolean(
+    razorpayXOf(row).payoutId ||
+    valueOf(row, "paymentReference", "payment_reference"),
+  );
 const payoutMethodText = (row = {}) => {
   const method = valueOf(row, "paymentMethod", "payment_method");
   return method === "razorpayx"
@@ -222,7 +225,9 @@ const payoutFailureReason = (row = {}) => {
     rx.raw?.status_details?.source ||
     rx.raw?.error?.source ||
     "";
-  const providerDetail = [providerReason, providerSource].filter(Boolean).join(" / ");
+  const providerDetail = [providerReason, providerSource]
+    .filter(Boolean)
+    .join(" / ");
   return [reason, providerDetail ? `RazorpayX: ${providerDetail}` : ""]
     .filter(Boolean)
     .join(" · ");
@@ -335,8 +340,7 @@ const PayoutOpsQueue = () => {
         "paymentMethod",
         "payment_method",
       );
-      const selectedMethod =
-        action.paymentMethod || existingMethod;
+      const selectedMethod = action.paymentMethod || existingMethod;
       if (selectedMethod === "razorpayx" && !razorpayXEnabled) {
         return "RazorpayX is disabled. Configure RazorpayX keys or enable mock mode before starting bank payout.";
       }
@@ -480,7 +484,7 @@ const PayoutOpsQueue = () => {
     () => [
       {
         key: "sellerId",
-        label: "Seller",
+        label: "Seller Store Name",
         sortable: true,
         render: (_, row) => {
           const name =
@@ -795,14 +799,14 @@ const PayoutOpsQueue = () => {
                 </select>
                 {action.paymentMethod === "razorpayx" && (
                   <span className="mt-1 block text-xs text-gray-500">
-                    Sends money to the seller's verified onboarding bank
-                    account through RazorpayX.
+                    Sends money to the seller's verified onboarding bank account
+                    through RazorpayX.
                   </span>
                 )}
                 {action.paymentMethod === "seller_wallet" && (
                   <span className="mt-1 block text-xs text-gray-500">
-                    Credits this payout to the seller's internal wallet and
-                    does not validate bank IFSC.
+                    Credits this payout to the seller's internal wallet and does
+                    not validate bank IFSC.
                   </span>
                 )}
                 {action.paymentMethod &&
@@ -810,7 +814,9 @@ const PayoutOpsQueue = () => {
                     action.paymentMethod,
                   ) && (
                     <span className="mt-1 block text-xs text-amber-700">
-                      Approval only moves this payout to Processing. Transfer it externally, then use Complete and enter the UTR or transaction reference.
+                      Approval only moves this payout to Processing. Transfer it
+                      externally, then use Complete and enter the UTR or
+                      transaction reference.
                     </span>
                   )}
               </label>

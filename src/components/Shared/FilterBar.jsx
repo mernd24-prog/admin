@@ -492,7 +492,7 @@ export const GoldDateRangeCalendar = ({
           </div>
         ) : (
           <div className="flex justify-end">
-            <div className="inline-flex items-center gap-3 rounded-lg  bg-white/90 px-3 py-1 text-xs font-medium">
+            <div className="inline-flex items-center gap-3 rounded-lg  bg-white/90 py-2 px-3  text-xs font-medium">
               <span className="text-[var(--admin-ink)]">
                 {formatDateLabel(dates.fromDate)}
               </span>
@@ -518,7 +518,7 @@ export const GoldDateRangeCalendar = ({
 
           <button
             type="button"
-            className="inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex h-9 items-center justify-center rounded-lg bg-red-100 px-3 text-xs font-medium text-red-600 transition disabled:cursor-not-allowed disabled:opacity-40"
             onClick={onClear}
             disabled={loading || (!dates.fromDate && !dates.toDate)}
           >
