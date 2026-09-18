@@ -66,21 +66,21 @@ const FILTER_FIELDS = [
     width: "w-44",
     options: DELIVERY_STATUS_OPTIONS,
   },
-  {
-    key: "buyerId",
-    type: "asyncDropdown",
-    label: "Buyer",
-    width: "w-52",
-    load: (search) =>
-      dropdownApi.getBuyers({
-        keyWord: search,
-        searchFields: "full_name,email",
-      }),
-  },
+  // {
+  //   key: "buyerId",
+  //   type: "asyncDropdown",
+  //   label: "Buyer",
+  //   width: "w-52",
+  //   load: (search) =>
+  //     dropdownApi.getBuyers({
+  //       keyWord: search,
+  //       searchFields: "full_name,email",
+  //     }),
+  // },
   {
     key: "sellerId",
     type: "asyncDropdown",
-    label: "Seller",
+    label: "Seller Store name",
     width: "w-52",
     load: (search) =>
       dropdownApi.getSellers({

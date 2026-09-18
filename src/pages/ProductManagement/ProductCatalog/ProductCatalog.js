@@ -29,7 +29,6 @@ import {
   permanentlyDeleteProduct,
   reviewProductRevision,
 } from "../../../Redux/productSlice";
-// import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
 import { toast } from "sonner";
 import { getAllSellerList } from "../../../Redux/StoreSlice";
 import { transformArray } from "../../../_helpers/globalFunctions";
@@ -49,7 +48,7 @@ import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 const INITIAL_FILTERS = {
   search: "",
   product: { value: "All", label: "All" },
-  sellerName: { value: "", label: "Search By Store Name" },
+  sellerName: { value: "", label: "All     Store Name" },
   category: { value: "", label: "Search By Category" },
   activationStatus: { value: "All", label: "All" },
   approvalStatus: { value: "All", label: "All" },
@@ -97,21 +96,6 @@ const isProductActive = (product = {}) =>
 
 const getNextToggleStatus = (product = {}) =>
   isProductActive(product) ? "inactive" : "active";
-
-const refToLabel = (value) => {
-  if (!value) return "N/A";
-  if (typeof value === "object") {
-    return (
-      value?.name ||
-      value?.title ||
-      value?.label ||
-      value?.email ||
-      value?._id ||
-      "N/A"
-    );
-  }
-  return String(value);
-};
 
 const toNumberOrNull = (value) => {
   if (value === undefined || value === null || value === "") return null;

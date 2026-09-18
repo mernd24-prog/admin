@@ -5,13 +5,14 @@ import {
   MdAccountBalance,
   MdLocalOffer,
   MdPayments,
+  MdRefresh,
   MdStorefront,
   MdUndo,
 } from "react-icons/md";
 import PageHeader from "../../../components/Shared/PageHeader";
 import SummaryCard from "../../../components/Shared/SummaryCard";
 import DataTable from "../../../components/Shared/DataTable";
-import {OrderLink} from "../../../components/Shared/EntityLink";
+import { OrderLink } from "../../../components/Shared/EntityLink";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
 import {
@@ -66,7 +67,10 @@ const PromotionFundingLedger = () => {
           return (
             <div className="flex flex-col">
               {/* Order Link / Number */}
-              <OrderLink orderId={orderId} orderNumber={row?.orderNumber || row?.order_number}>
+              <OrderLink
+                orderId={orderId}
+                orderNumber={row?.orderNumber || row?.order_number}
+              >
                 {orderDisplay}
               </OrderLink>
 
@@ -221,6 +225,11 @@ const PromotionFundingLedger = () => {
           },
           { label: "Promotion Funding Ledger" },
         ]}
+        actions={
+          <button type="button" onClick={load}>
+            <MdRefresh size={17} /> Refresh
+          </button>
+        }
       />
 
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
@@ -254,7 +263,7 @@ const PromotionFundingLedger = () => {
         pageSize={Number(filters.limit || 50)}
         rowKey="id"
         emptyText="No funded discounts found."
-        onRefresh={load}
+        // onRefresh={load}
         filterBar={
           <div className="grid gap-3 border-b border-gray-100 p-4 md:grid-cols-[1fr_240px]">
             <input

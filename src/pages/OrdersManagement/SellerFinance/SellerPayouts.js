@@ -53,7 +53,7 @@ const FILTER_FIELDS = [
   {
     key: "sellerId",
     type: "asyncDropdown",
-    label: "Seller",
+    label: "Seller Store Name",
     width: "w-52",
     load: (search) =>
       dropdownApi.getSellers({

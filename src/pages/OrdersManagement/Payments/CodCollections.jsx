@@ -11,6 +11,7 @@ import {
 } from "../../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
+import { ACTIONS } from "../../../_helpers/usePermission";
 
 const money = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -148,31 +149,6 @@ export default function CodCollections() {
         label: "Reference",
         render: (value) => value || "-",
       },
-      {
-        key: "actions",
-        label: "Actions",
-        render: (_, row) =>
-          ["pending", "submitted"].includes(row.status) ? (
-            <button
-              type="button"
-              className="admin-btn-secondary !px-2 !py-1"
-              onClick={() =>
-                setDecision({
-                  open: true,
-                  row,
-                  amount: row.collected_amount || row.expected_amount || "",
-                  referenceId: row.reference_id || "",
-                  notes: row.notes || "",
-                  markRemitted: false,
-                })
-              }
-            >
-              <MdCheckCircle size={15} /> Verify
-            </button>
-          ) : (
-            "-"
-          ),
-      },
     ],
     [],
   );
@@ -186,17 +162,40 @@ export default function CodCollections() {
           { label: "Payments & Finance" },
           { label: "COD Collections" },
         ]}
-        actions={
-          <button type="button" onClick={load}>
-            <MdRefresh size={17} /> Refresh
-          </button>
-        }
+        // actions={
+        //   <button type="button" onClick={load}>
+        //     <MdRefresh size={17} /> Refresh
+        //   </button>
+        // }
       />
       <DataTable
         columns={columns}
         data={items}
         loading={loading}
         totalCount={items.length}
+        rowActions={(row) => {
+          const actions = [];
+
+          if (["pending", "submitted"].includes(row.status)) {
+            actions.push({
+              label: "Verify",
+              icon: <MdCheckCircle size={16} className="text-blue-600" />,
+              requiredModule: "payments",
+              requiredAction: ACTIONS.UPDATE,
+              onClick: () =>
+                setDecision({
+                  open: true,
+                  row,
+                  amount: row.collected_amount || row.expected_amount || "",
+                  referenceId: row.reference_id || "",
+                  notes: row.notes || "",
+                  markRemitted: false,
+                }),
+            });
+          }
+
+          return actions;
+        }}
         page={1}
         pageSize={100}
         onPageChange={() => {}}

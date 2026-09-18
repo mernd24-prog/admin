@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { MdCheckCircle, MdVisibility, MdCancel } from "react-icons/md";
+
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
@@ -27,7 +27,7 @@ import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
-
+import { MdCheckCircle, MdVisibility, MdCancel } from "react-icons/md";
 const PROVIDERS = [
   "razorpay",
   "cod",
@@ -121,6 +121,7 @@ const Payments = () => {
   const [error, setError] = useState("");
   const [detailPayment, setDetailPayment] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
   const [decision, setDecision] = useState({
     open: false,
     type: "",
@@ -299,60 +300,8 @@ const Payments = () => {
         sortable: true,
         render: (value) => formatDateTime12Hour(value, "N/A"),
       },
-      {
-        key: "actions",
-        label: "Actions",
-        render: (_, row) => (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="admin-btn-secondary !px-2 !py-1"
-              onClick={() => openDetail(row)}
-            >
-              <MdVisibility size={15} /> View
-            </button>
-            {canManualDecision(row) && (
-              <PermissionGuard module="payments" action={ACTIONS.APPROVE} hide>
-                <button
-                  type="button"
-                  className="admin-btn-secondary !px-2 !py-1"
-                  onClick={() =>
-                    setDecision({
-                      open: true,
-                      type: "approve",
-                      payment: row,
-                      referenceId:
-                        row.provider_payment_id ||
-                        row.transaction_reference ||
-                        "",
-                      reason: "",
-                    })
-                  }
-                >
-                  <MdCheckCircle size={15} /> Approve
-                </button>
-                <button
-                  type="button"
-                  className="admin-btn-secondary !px-2 !py-1 text-red-600"
-                  onClick={() =>
-                    setDecision({
-                      open: true,
-                      type: "reject",
-                      payment: row,
-                      referenceId: row.provider_payment_id || "",
-                      reason: "",
-                    })
-                  }
-                >
-                  <MdCancel size={15} /> Reject
-                </button>
-              </PermissionGuard>
-            )}
-          </div>
-        ),
-      },
     ],
-    [openDetail],
+    [],
   );
 
   return (
@@ -400,6 +349,50 @@ const Payments = () => {
             activeCount={list.activeFilterCount}
           />
         }
+        rowActions={(row) => {
+          const actions = [
+            {
+              label: "View Details",
+              icon: <MdVisibility size={16} className="text-blue-600" />,
+              onClick: () => openDetail(row),
+            },
+          ];
+
+          if (canManualDecision(row)) {
+            actions.push({
+              label: "Approve Payment",
+              icon: <MdCheckCircle size={16} className="text-blue-600" />,
+              requiredModule: "payments",
+              requiredAction: ACTIONS.APPROVE,
+              onClick: () =>
+                setDecision({
+                  open: true,
+                  type: "approve",
+                  payment: row,
+                  referenceId:
+                    row.provider_payment_id || row.transaction_reference || "",
+                  reason: "",
+                }),
+            });
+
+            actions.push({
+              label: "Reject Payment",
+              icon: <MdCancel size={16} className="text-red-600" />,
+              requiredModule: "payments",
+              requiredAction: ACTIONS.APPROVE,
+              onClick: () =>
+                setDecision({
+                  open: true,
+                  type: "reject",
+                  payment: row,
+                  referenceId: row.provider_payment_id || "",
+                  reason: "",
+                }),
+            });
+          }
+
+          return actions;
+        }}
         requiredModule="payments"
         exportConfig={{ filename: "payments", columns, data: payload.list }}
       />

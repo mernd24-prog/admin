@@ -8,6 +8,7 @@ import {
   PageHeader,
   StatusBadge,
 } from "../../../components/Shared";
+import { useListPage } from "../../../hooks/useListPage";
 import {
   createCollection,
   deleteCollection,
@@ -47,14 +48,32 @@ export default function Collections() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
   const [uploadingField, setUploadingField] = useState(null);
+
+  const list = useListPage({
+    defaultPageSize: 10,
+    defaultSortKey: "createdAt",
+    defaultSortDir: "desc",
+  });
+
   const payload = listData?.data?.data ?? listData?.data ?? [];
+
   const rows = Array.isArray(payload)
     ? payload
     : payload?.items || payload?.list || [];
 
+  const totalCount = Array.isArray(payload)
+    ? rows.length
+    : payload?.total || payload?.totalCount || payload?.count || 0;
+
   const load = useCallback(
-    () => dispatch(listCollections({ page: 1, limit: 200 })),
-    [dispatch],
+    () =>
+      dispatch(
+        listCollections({
+          page: list.page,
+          limit: list.pageSize,
+        }),
+      ),
+    [dispatch, list.page, list.pageSize],
   );
   useEffect(() => {
     load();
@@ -66,6 +85,7 @@ export default function Collections() {
     setUploadingField(null);
     setOpen(true);
   };
+
   const beginEdit = (row) => {
     setEditing(row);
     setUploadingField(null);
@@ -190,12 +210,11 @@ export default function Collections() {
         label: "Collection",
         render: (_, row) => (
           <div className="flex items-center gap-3">
-            {row.thumbnailImage ? (
-              <CollectionCardThumbnail
-                image={row.thumbnailImage}
-                name={row.name}
-              />
-            ) : null}
+            <CollectionCardThumbnail
+              image={row.thumbnailImage}
+              name={row.name}
+            />
+
             <div>
               <strong>{row.name}</strong>
               <div className="text-xs text-gray-500">{row.slug}</div>
@@ -287,7 +306,16 @@ export default function Collections() {
         data={rows}
         columns={columns}
         loading={loading}
-        emptyMessage="No collections found"
+        totalCount={totalCount}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSort={list.setSort}
+        sortKey={list.sortKey}
+        sortDir={list.sortDir}
+        rowKey={(row) => row?._id || row?.id || row?.slug}
+        emptyText="No collections found"
       />
       {open && (
         <div

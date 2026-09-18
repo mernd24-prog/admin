@@ -1135,56 +1135,56 @@ const ProductCategories = () => {
                         className="group/category-row h-[62px] transition-colors hover:bg-[var(--admin-surface-soft)]"
                       >
                         {/* Category Name */}
-             <td className="px-5 py-3.5 text-left align-middle">
-  {row.hasSubCategories ? (
-    <button
-      type="button"
-      onClick={() =>
-        handleNavigate([...currentPath, row.category])
-      }
-      className="grid w-full max-w-full grid-cols-[36px_360px_18px] items-center gap-1 text-left"
-    >
-      {/* Folder Icon */}
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#fffaf0] text-[var(--admin-primary)] transition-all group-hover/category-row:bg-white group-hover/category-row:shadow-sm">
-        <MdFolder size={18} />
-      </span>
+                        <td className="px-5 py-3.5 text-left align-middle">
+                          {row.hasSubCategories ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleNavigate([...currentPath, row.category])
+                              }
+                              className="grid w-full max-w-full grid-cols-[36px_360px_18px] items-center gap-1 text-left"
+                            >
+                              {/* Folder Icon */}
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#fffaf0] text-[var(--admin-primary)] transition-all group-hover/category-row:bg-white group-hover/category-row:shadow-sm">
+                                <MdFolder size={18} />
+                              </span>
 
-      {/* Category Name */}
-      <span className="min-w-0">
-        <span className="block truncate font-semibold capitalize text-[var(--admin-primary)]">
-          {row.name}
-        </span>
+                              {/* Category Name */}
+                              <span className="min-w-0">
+                                <span className="block truncate font-semibold capitalize text-[var(--admin-primary)]">
+                                  {row.name}
+                                </span>
 
-        <span className="mt-0.5 block truncate text-[11px] text-[var(--admin-muted)]">
-          Click to view subcategories
-        </span>
-      </span>
+                                <span className="mt-0.5 block truncate text-[11px] text-[var(--admin-muted)]">
+                                  Click to view subcategories
+                                </span>
+                              </span>
 
-      {/* Arrow */}
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center text-gray-400 transition-transform group-hover/category-row:translate-x-0.5">
-        <FaChevronRight size={8} />
-      </span>
-    </button>
-  ) : (
-    <div className="flex items-center gap-3">
-      {/* Dot Icon */}
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--admin-surface-soft)]">
-        <span className="h-2.5 w-2.5 rounded-full bg-[var(--admin-muted)]" />
-      </span>
+                              {/* Arrow */}
+                              {/* <span className="flex h-5 w-5 shrink-0 items-center justify-center text-gray-400 transition-transform group-hover/category-row:translate-x-0.5">
+                                <FaChevronRight size={8} />
+                              </span> */}
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              {/* Dot Icon */}
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--admin-surface-soft)]">
+                                <span className="h-2.5 w-2.5 rounded-full bg-[var(--admin-muted)]" />
+                              </span>
 
-      {/* Category Name */}
-      <span className="min-w-0">
-        <span className="block truncate text-sm font-semibold text-[var(--admin-ink)]">
-          {row.name}
-        </span>
+                              {/* Category Name */}
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm font-semibold text-[var(--admin-ink)]">
+                                  {row.name}
+                                </span>
 
-        <span className="text-xs text-[var(--admin-muted)]">
-          No subcategories
-        </span>
-      </span>
-    </div>
-  )}
-</td>
+                                <span className="text-xs text-[var(--admin-muted)]">
+                                  No subcategories
+                                </span>
+                              </span>
+                            </div>
+                          )}
+                        </td>
                         {/* Subcategories */}
                         <td className="px-5 py-3.5 text-left align-middle">
                           <span className="inline-flex min-w-[34px] items-center justify-center rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-100">
