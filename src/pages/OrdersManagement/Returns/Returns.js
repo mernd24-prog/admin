@@ -1540,658 +1540,676 @@ const Returns = () => {
           data: visibleReturns,
         }}
       />
-      <DefaultModal
-        isOpen={Boolean(detailReturn)}
-        onClose={() => setDetailReturn(null)}
-        title="Return Detail"
-        isButtonView={false}
-      >
-        <div className="space-y-5 text-sm">
-          {/* Seller Overview */}
-          {isSeller && (
-            <SellerReturnOverview returnRequest={detailReturn || {}} />
-          )}
+    <DefaultModal
+  isOpen={Boolean(detailReturn)}
+  onClose={() => setDetailReturn(null)}
+  title="Return Detail"
+  isButtonView={false}
+>
+  <div className="space-y-5 text-sm">
+    {/* Seller Overview */}
+    {isSeller && (
+      <SellerReturnOverview returnRequest={detailReturn || {}} />
+    )}
 
-          {/* Seller QC Guidance */}
-          {isSeller && sellerQcGuidance(detailReturn) && (
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-900">
-              <div className="flex items-start gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold">
-                    Next step: {sellerQcGuidance(detailReturn).label}
-                  </div>
+    {/* Seller QC Guidance */}
+    {isSeller && sellerQcGuidance(detailReturn) && (
+      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <div className="flex items-start gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-blue-900">
+              Next step: {sellerQcGuidance(detailReturn).label}
+            </p>
 
-                  {detailReturn?.status === "qc_failed" && (
-                    <div className="mt-1.5 text-xs leading-5 text-blue-800">
-                      Only this returned item's payout remains held. Do not
-                      release a refund or change the payout manually. The
-                      customer may dispute the QC result, and an admin must
-                      uphold, override, partially approve, or request more
-                      evidence.
-                    </div>
-                  )}
-
-                  {detailReturn?.status === "qc_failure_upheld" &&
-                    detailReturn?.returnToCustomer?.required !== false && (
-                      <div className="mt-1.5 text-xs leading-5 text-blue-800">
-                        Ship the rejected product back to the customer and keep
-                        its tracking updated. This item's payout hold is
-                        released after delivery is confirmed.
-                      </div>
-                    )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Return Information */}
-          <FormSection
-            title="Return Information"
-            description="Basic information and current status of this return request."
-          >
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {[
-                {
-                  label: "Return Number",
-                  value: detailReturn?.returnNumber || "Not assigned",
-                  className: "break-all",
-                },
-                {
-                  label: "Order",
-                  custom: (
-                    <OrderLink
-                      orderId={detailReturn?.orderId || detailReturn?.order_id}
-                      orderNumber={orderNumber(detailReturn)}
-                    />
-                  ),
-                },
-                {
-                  label: "Buyer",
-                  value: buyerName(detailReturn) || "Not assigned",
-                  subtext: buyerContact(detailReturn),
-                },
-                {
-                  label: "Resolution",
-                  value: display(detailReturn?.resolution),
-                },
-                {
-                  label: "Status",
-                  value: display(detailReturn?.status),
-                  className: "capitalize",
-                },
-                { label: "Reason", value: display(detailReturn?.reason) },
-              ].map((item, idx) => (
-                <div key={idx} className={INFO_CARD_CLASS}>
-                  <p className={LABEL_CLASS}>{item.label}</p>
-                  {item.custom ? (
-                    <div className="mt-1">{item.custom}</div>
-                  ) : (
-                    <p className={`${VALUE_CLASS} ${item.className || ""}`}>
-                      {item.value}
-                    </p>
-                  )}
-                  {item.subtext && (
-                    <p className="mt-1 text-xs text-gray-500">{item.subtext}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </FormSection>
-
-          {/* Refund Information */}
-          <FormSection
-            title="Refund Information"
-            description="Details about the refund amount, method, reference, and processing status."
-          >
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {[
-                {
-                  label: "Refund Amount",
-                  value: money(
-                    detailReturn?.refundAmount ||
-                      detailReturn?.refundBreakup?.totalRefundAmount,
-                  ),
-                  className: "text-base font-semibold text-gray-900",
-                },
-                {
-                  label: "Refund Reference",
-                  value: detailReturn?.refundReferenceId || "Not available",
-                  className: "break-all font-mono text-xs text-gray-800",
-                },
-                {
-                  label: "Refund Method",
-                  value: display(detailReturn?.refundMethod),
-                },
-                {
-                  label: "Refund Status",
-                  value: display(detailReturn?.refund?.status),
-                  className: "capitalize",
-                },
-                {
-                  label: "Provider Refund ID",
-                  value:
-                    detailReturn?.refund?.providerRefundId ||
-                    detailReturn?.providerRefundId ||
-                    "Not available",
-                  className: "break-all font-mono text-xs text-gray-800",
-                  fullWidth: true,
-                },
-              ].map((item, idx) => (
-                <div
-                  key={idx}
-                  className={`${INFO_CARD_CLASS} ${
-                    item.fullWidth ? "md:col-span-2" : ""
-                  }`}
-                >
-                  <p className={LABEL_CLASS}>{item.label}</p>
-
-                  <p className={`${VALUE_CLASS} ${item.className || ""}`}>
-                    {item.value}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </FormSection>
-
-          {/* Refund Processing Attempts */}
-          {!isSeller &&
-            Array.isArray(detailReturn?.refund?.attempts) &&
-            detailReturn.refund.attempts.length > 0 && (
-              <FormSection
-                title="Refund Processing Attempts"
-                description="Payment provider attempts made while processing the refund."
-              >
-                <div className="overflow-x-auto rounded-lg border border-gray-100">
-                  <table className="min-w-full text-left text-xs">
-                    <thead className="bg-gray-50 text-gray-600">
-                      <tr>
-                        {[
-                          "Method",
-                          "Provider",
-                          "Amount",
-                          "Gateway",
-                          "Status",
-                          "Provider Refund",
-                          "Started",
-                          "Failure",
-                        ].map((heading, hIdx) => (
-                          <th
-                            key={hIdx}
-                            className={`whitespace-nowrap px-3 py-2 font-medium ${
-                              ["Amount", "Gateway"].includes(heading)
-                                ? "text-right"
-                                : ""
-                            }`}
-                          >
-                            {heading}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-
-                    <tbody className="divide-y divide-gray-100">
-                      {detailReturn.refund.attempts.map((attempt, index) => (
-                        <tr
-                          key={attempt.attemptId || index}
-                          className="bg-white"
-                        >
-                          <td className="whitespace-nowrap px-3 py-2">
-                            {display(attempt.method)}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2">
-                            {display(attempt.provider)}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-right">
-                            {money(attempt.amount)}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-right">
-                            {money(attempt.providerAmount)}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2">
-                            {display(attempt.status)}
-                          </td>
-                          <td className="px-3 py-2">
-                            <span className="break-all">
-                              {attempt.providerRefundId || "—"}
-                            </span>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2">
-                            {formatDateTime12Hour(attempt.startedAt)}
-                          </td>
-                          <td className="min-w-[160px] px-3 py-2">
-                            {attempt.failureReason || "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </FormSection>
+            {detailReturn?.status === "qc_failed" && (
+              <p className="mt-1.5 text-xs leading-5 text-blue-800">
+                Only this returned item's payout remains held. Do not release
+                a refund or change the payout manually. The customer may
+                dispute the QC result, and an admin must uphold, override,
+                partially approve, or request more evidence.
+              </p>
             )}
 
-          {/* Eligibility & Reverse Shipping */}
-          <FormSection
-            title="Eligibility & Reverse Shipping"
-            description="Return eligibility and reverse shipment information."
+            {detailReturn?.status === "qc_failure_upheld" &&
+              detailReturn?.returnToCustomer?.required !== false && (
+                <p className="mt-1.5 text-xs leading-5 text-blue-800">
+                  Ship the rejected product back to the customer and keep its
+                  tracking updated. This item's payout hold is released after
+                  delivery is confirmed.
+                </p>
+              )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Return Information */}
+    <FormSection
+      title="Return Information"
+      description="Basic information and current status of this return request."
+    >
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {[
+          {
+            label: "Return Number",
+            value: detailReturn?.returnNumber || "Not assigned",
+            className: "break-all",
+          },
+          {
+            label: "Order",
+            custom: (
+              <OrderLink
+                orderId={detailReturn?.orderId || detailReturn?.order_id}
+                orderNumber={orderNumber(detailReturn)}
+              />
+            ),
+          },
+          {
+            label: "Buyer",
+            value: buyerName(detailReturn) || "Not assigned",
+            subtext: buyerContact(detailReturn),
+          },
+          {
+            label: "Resolution",
+            value: display(detailReturn?.resolution),
+          },
+          {
+            label: "Status",
+            value: display(detailReturn?.status),
+            className: "capitalize",
+          },
+          {
+            label: "Reason",
+            value: display(detailReturn?.reason),
+          },
+        ].map((item, index) => (
+          <div key={index} className={INFO_CARD_CLASS}>
+            <p className={LABEL_CLASS}>{item.label}</p>
+
+            {item.custom ? (
+              <div className="mt-1">{item.custom}</div>
+            ) : (
+              <p className={`${VALUE_CLASS} ${item.className || ""}`}>
+                {item.value}
+              </p>
+            )}
+
+            {item.subtext && (
+              <p className="mt-1 text-xs text-gray-500">
+                {item.subtext}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </FormSection>
+
+    {/* Refund Information */}
+    <FormSection
+      title="Refund Information"
+      description="Details about the refund amount, method, reference, and processing status."
+    >
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {[
+          {
+            label: "Refund Amount",
+            value: money(
+              detailReturn?.refundAmount ||
+                detailReturn?.refundBreakup?.totalRefundAmount,
+            ),
+            className: "text-base font-semibold text-gray-900",
+          },
+          {
+            label: "Refund Reference",
+            value:
+              detailReturn?.refundReferenceId || "Not available",
+            className:
+              "break-all font-mono text-xs text-gray-800",
+          },
+          {
+            label: "Refund Method",
+            value: display(detailReturn?.refundMethod),
+          },
+          {
+            label: "Refund Status",
+            value: display(detailReturn?.refund?.status),
+            className: "capitalize",
+          },
+          {
+            label: "Provider Refund ID",
+            value:
+              detailReturn?.refund?.providerRefundId ||
+              detailReturn?.providerRefundId ||
+              "Not available",
+            className:
+              "break-all font-mono text-xs text-gray-800",
+            fullWidth: true,
+          },
+        ].map((item, index) => (
+          <div
+            key={index}
+            className={`${INFO_CARD_CLASS} ${
+              item.fullWidth ? "md:col-span-2" : ""
+            }`}
           >
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {[
-                {
-                  label: "Return Window",
-                  value: detailReturn?.policySnapshot?.returnWindowDays
-                    ? `${detailReturn.policySnapshot.returnWindowDays} days`
-                    : "Not available",
-                },
-                {
-                  label: "Eligible Until",
-                  value: formatDateTime12Hour(
-                    detailReturn?.policySnapshot?.eligibleUntil,
-                  ),
-                },
-                {
-                  label: "AWB",
-                  value:
-                    detailReturn?.reverseShipment?.awbNumber ||
-                    detailReturn?.reverseShipment?.shipment?.awb_number ||
-                    "Not assigned",
-                  className: "break-all font-mono text-xs text-gray-800",
-                },
-                {
-                  label: "Courier",
-                  value:
-                    detailReturn?.reverseShipment?.courierName ||
-                    detailReturn?.reverseShipment?.provider ||
-                    "Not assigned",
-                },
-                {
-                  label: "Tracking",
-                  value:
-                    detailReturn?.reverseShipment?.trackingNumber ||
-                    detailReturn?.reverseShipment?.shipment?.tracking_number ||
-                    detailReturn?.trackingNumber ||
-                    "Not available",
-                  className: "break-all font-mono text-xs text-gray-800",
-                },
-                {
-                  label: "Shipment Status",
-                  value: display(detailReturn?.reverseShipment?.status),
-                  className: "capitalize",
-                },
-              ].map((item, idx) => (
-                <div key={idx} className={INFO_CARD_CLASS}>
-                  <p className={LABEL_CLASS}>{item.label}</p>
-                  <p
-                    className={`mt-1 font-medium text-gray-800 ${
-                      item.className || ""
-                    }`}
-                  >
-                    {item.value}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </FormSection>
+            <p className={LABEL_CLASS}>{item.label}</p>
 
-          {/* Items */}
-          <FormSection
-            title="Items"
-            description="Products and quantities included in this return request."
-          >
-            <div className="space-y-3">
-              {(detailReturn?.items || []).map((item, index) => {
-                const productLabel =
-                  item.productTitle ||
-                  item.productName ||
-                  item.product?.title ||
-                  item.product?.name;
+            <p className={`${VALUE_CLASS} ${item.className || ""}`}>
+              {item.value}
+            </p>
+          </div>
+        ))}
+      </div>
+    </FormSection>
 
-                const sellerLabel = sellerName(item, detailReturn);
-
-                const itemPolicy =
-                  item.policySnapshot || item.policy_snapshot || {};
-
-                const itemReturnWindow =
-                  item.returnWindowDays ||
-                  item.return_window_days ||
-                  itemPolicy.returnWindowDays ||
-                  itemPolicy.return_window_days;
-
-                const itemEligibleUntil =
-                  item.returnEligibleUntil ||
-                  item.return_eligible_until ||
-                  itemPolicy.eligibleUntil ||
-                  itemPolicy.returnUntil;
-
-                const requiresImages =
-                  item.requiresImages ??
-                  item.requires_images ??
-                  itemPolicy.requiresImages ??
-                  itemPolicy.requires_images;
-
-                const inspectionRequired =
-                  item.inspectionRequired ??
-                  item.inspection_required ??
-                  itemPolicy.inspectionRequired ??
-                  itemPolicy.inspection_required;
-
-                const itemFields = [
-                  {
-                    label: "Return Window",
-                    value: itemReturnWindow
-                      ? `${itemReturnWindow} days`
-                      : "Not available",
-                  },
-                  {
-                    label: "Eligible Until",
-                    value: formatDateTime12Hour(itemEligibleUntil),
-                  },
-                  {
-                    label: "Images",
-                    value: requiresImages ? "Required" : "Optional",
-                  },
-                  {
-                    label: "Inspection",
-                    value:
-                      inspectionRequired === false
-                        ? "Not required"
-                        : "Required",
-                  },
-                  {
-                    label: "Quantity",
-                    value: `Requested ${
-                      item.requestedQuantity || item.quantity
-                    } · Approved ${item.approvedQuantity || 0} · Received ${
-                      item.receivedQuantity || 0
-                    }`,
-                  },
-                  {
-                    label: "Refund",
-                    value: money(item.refundAmount),
-                  },
-                  {
-                    label: "QC Result",
-                    value: display(item.qcResult),
-                  },
-                  {
-                    label: "Condition",
-                    value: display(item.condition),
-                  },
-                  {
-                    label: "Restocked",
-                    value: item.restockedQuantity || 0,
-                  },
-                  {
-                    label: "Damaged",
-                    value: item.damagedQuantity || 0,
-                  },
-                ];
-
-                return (
-                  <div
-                    key={`${item.productId}-${index}`}
-                    className="rounded-xl border border-gray-200 bg-gray-50 p-4"
-                  >
-                    {/* Product Header */}
-                    <div className="mb-3">
-                      <p className="font-semibold text-gray-900">
-                        {productLabel || "Product details unavailable"}
-                      </p>
-
-                      <p className="mt-1 text-xs text-gray-500">
-                        Seller: {sellerLabel || "Not assigned"} · SKU:{" "}
-                        {item.variantSku || item.productSku || "Not available"}
-                      </p>
-                    </div>
-
-                    {/* Item Details */}
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {itemFields.map((field, fIdx) => (
-                        <div key={fIdx} className={ITEM_CARD_CLASS}>
-                          <p className={LABEL_CLASS}>{field.label}</p>
-                          <p className="mt-1 text-xs font-medium text-gray-800">
-                            {field.value}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </FormSection>
-
-          {/* Refund Attempts */}
-          {!isSeller && (
-            <FormSection
-              title="Refund Attempts"
-              description="History of refund attempts for this return."
+    {/* Eligibility & Reverse Shipping */}
+    <FormSection
+      title="Eligibility & Reverse Shipping"
+      description="Return eligibility and reverse shipment information."
+    >
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {[
+          {
+            label: "Return Window",
+            value: detailReturn?.policySnapshot?.returnWindowDays
+              ? `${detailReturn.policySnapshot.returnWindowDays} days`
+              : "Not available",
+          },
+          {
+            label: "Eligible Until",
+            value: formatDateTime12Hour(
+              detailReturn?.policySnapshot?.eligibleUntil,
+            ),
+          },
+          {
+            label: "AWB",
+            value:
+              detailReturn?.reverseShipment?.awbNumber ||
+              detailReturn?.reverseShipment?.shipment?.awb_number ||
+              "Not assigned",
+            className:
+              "break-all font-mono text-xs text-gray-800",
+          },
+          {
+            label: "Courier",
+            value:
+              detailReturn?.reverseShipment?.courierName ||
+              detailReturn?.reverseShipment?.provider ||
+              "Not assigned",
+          },
+          {
+            label: "Tracking",
+            value:
+              detailReturn?.reverseShipment?.trackingNumber ||
+              detailReturn?.reverseShipment?.shipment?.tracking_number ||
+              detailReturn?.trackingNumber ||
+              "Not available",
+            className:
+              "break-all font-mono text-xs text-gray-800",
+          },
+          {
+            label: "Shipment Status",
+            value: display(detailReturn?.reverseShipment?.status),
+            className: "capitalize",
+          },
+        ].map((item, index) => (
+          <div key={index} className={INFO_CARD_CLASS}>
+            <p className={LABEL_CLASS}>{item.label}</p>
+            <p
+              className={`${VALUE_CLASS} ${
+                item.className || ""
+              }`}
             >
-              <div className="space-y-2">
-                {(detailReturn?.refund?.attempts || []).map(
-                  (attempt, index) => (
-                    <div
-                      key={attempt.attemptId || index}
-                      className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs text-gray-600"
-                    >
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="font-medium text-gray-900">
-                          {display(attempt.status)}
-                        </div>
+              {item.value}
+            </p>
+          </div>
+        ))}
+      </div>
+    </FormSection>
 
-                        <div className="font-semibold text-gray-900">
-                          {money(attempt.amount)}
-                        </div>
-                      </div>
+    {/* Items */}
+    <FormSection
+      title="Returned Items"
+      description="Products, quantities, refund, and quality check information."
+    >
+      <div className="space-y-3">
+        {(detailReturn?.items || []).map((item, index) => {
+          const productLabel =
+            item.productTitle ||
+            item.productName ||
+            item.product?.title ||
+            item.product?.name;
 
-                      <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
-                        <div>Method: {display(attempt.method)}</div>
-                        <div>Wallet: {money(attempt.walletAmount)}</div>
-                        <div>Provider: {money(attempt.providerAmount)}</div>
-                        {attempt.providerRefundId && (
-                          <div className="break-all">
-                            Provider ID: {attempt.providerRefundId}
-                          </div>
-                        )}
-                      </div>
+          const sellerLabel = sellerName(item, detailReturn);
 
-                      {attempt.failureReason && (
-                        <div className="mt-2 rounded-md bg-red-50 p-2 text-red-600">
-                          {attempt.failureReason}
-                        </div>
-                      )}
-                    </div>
-                  ),
-                )}
+          const itemPolicy =
+            item.policySnapshot || item.policy_snapshot || {};
 
-                {!detailReturn?.refund?.attempts?.length && (
-                  <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-center text-xs text-gray-500">
-                    No refund attempts.
-                  </div>
-                )}
-              </div>
-            </FormSection>
-          )}
+          const itemReturnWindow =
+            item.returnWindowDays ||
+            item.return_window_days ||
+            itemPolicy.returnWindowDays ||
+            itemPolicy.return_window_days;
 
-          {/* QC Review */}
-          {detailReturn?.qcReview &&
-            Object.keys(detailReturn.qcReview).length > 0 && (
-              <section className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-amber-900">
-                    QC Review
-                  </h3>
-                  <p className="mt-1 text-xs text-amber-800">
-                    Quality check and dispute information for the returned item.
-                  </p>
-                </div>
+          const itemEligibleUntil =
+            item.returnEligibleUntil ||
+            item.return_eligible_until ||
+            itemPolicy.eligibleUntil ||
+            itemPolicy.returnUntil;
 
-                <div className="space-y-2 text-xs text-amber-900">
-                  <div className="rounded-lg border border-amber-100 bg-white/70 p-3">
-                    <span className="font-medium">Status:</span>{" "}
-                    {display(detailReturn.qcReview.status)}
-                  </div>
+          const requiresImages =
+            item.requiresImages ??
+            item.requires_images ??
+            itemPolicy.requiresImages ??
+            itemPolicy.requires_images;
 
-                  <div className="rounded-lg border border-amber-100 bg-white/70 p-3">
-                    <span className="font-medium">Dispute deadline:</span>{" "}
-                    {formatDateTime12Hour(
-                      detailReturn.qcReview.disputeDeadline,
-                    )}
-                  </div>
+          const inspectionRequired =
+            item.inspectionRequired ??
+            item.inspection_required ??
+            itemPolicy.inspectionRequired ??
+            itemPolicy.inspection_required;
 
-                  {detailReturn.qcReview.customerDispute?.reason && (
-                    <div className="rounded-lg border border-amber-100 bg-white/70 p-3">
-                      <span className="font-medium">Customer dispute:</span>{" "}
-                      {detailReturn.qcReview.customerDispute.reason}
-                    </div>
-                  )}
+          const itemFields = [
+            {
+              label: "Return Window",
+              value: itemReturnWindow
+                ? `${itemReturnWindow} days`
+                : "Not available",
+            },
+            {
+              label: "Eligible Until",
+              value: formatDateTime12Hour(itemEligibleUntil),
+            },
+            {
+              label: "Images",
+              value: requiresImages ? "Required" : "Optional",
+            },
+            {
+              label: "Inspection",
+              value:
+                inspectionRequired === false
+                  ? "Not required"
+                  : "Required",
+            },
+            {
+              label: "Quantity",
+              value: `Requested ${
+                item.requestedQuantity || item.quantity || 0
+              } · Approved ${item.approvedQuantity || 0} · Received ${
+                item.receivedQuantity || 0
+              }`,
+            },
+            {
+              label: "Refund",
+              value: money(item.refundAmount),
+              className: "font-semibold text-gray-900",
+            },
+            {
+              label: "QC Result",
+              value: display(item.qcResult),
+            },
+            {
+              label: "Condition",
+              value: display(item.condition),
+            },
+            {
+              label: "Restocked",
+              value: item.restockedQuantity || 0,
+            },
+            {
+              label: "Damaged",
+              value: item.damagedQuantity || 0,
+            },
+          ];
 
-                  {detailReturn.qcReview.evidenceRequestReason && (
-                    <div className="rounded-lg border border-amber-100 bg-white/70 p-3">
-                      <span className="font-medium">Evidence requested:</span>{" "}
-                      {detailReturn.qcReview.evidenceRequestReason}
-                    </div>
-                  )}
+          return (
+            <div
+              key={`${item.productId}-${index}`}
+              className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+            >
+              {/* Product Header */}
+              <div className="mb-4 border-b border-gray-200 pb-3">
+                <p className="font-semibold text-gray-900">
+                  {productLabel || "Product details unavailable"}
+                </p>
 
-                  {detailReturn.qcReview.adminDecision && (
-                    <div className="rounded-lg border border-amber-100 bg-white/70 p-3">
-                      <span className="font-medium">Decision:</span>{" "}
-                      {display(detailReturn.qcReview.adminDecision)}{" "}
-                      {detailReturn.qcReview.decisionReason && (
-                        <>— {detailReturn.qcReview.decisionReason}</>
-                      )}
-                    </div>
-                  )}
-
-                  {(detailReturn.qcReview.sellerEvidence || []).map(
-                    (evidence, index) => (
-                      <div
-                        key={evidence.orderItemId || index}
-                        className="rounded-lg border border-amber-100 bg-white p-3"
-                      >
-                        <div className="font-medium text-amber-900">
-                          {display(evidence.result)}:{" "}
-                          {evidence.notes || "No note"}
-                        </div>
-
-                        {(evidence.photos || []).length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {(evidence.photos || []).map((url) => (
-                              <a
-                                key={url}
-                                className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 underline"
-                                href={url}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                Evidence
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ),
-                  )}
-                </div>
-              </section>
-            )}
-
-          {/* Return To Customer Shipment */}
-          {detailReturn?.returnToCustomer?.trackingNumber && (
-            <section className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs text-blue-900">
-              <div className="mb-3">
-                <h3 className="text-sm font-semibold">
-                  Return-to-Customer Shipment
-                </h3>
-                <p className="mt-1 text-xs text-blue-800">
-                  Shipment details for the rejected product being returned to
-                  the customer.
+                <p className="mt-1 text-xs text-gray-500">
+                  Seller: {sellerLabel || "Not assigned"} · SKU:{" "}
+                  {item.variantSku ||
+                    item.productSku ||
+                    "Not available"}
                 </p>
               </div>
 
+              {/* Item Details */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {[
-                  {
-                    label: "Courier",
-                    value:
-                      detailReturn.returnToCustomer.courierName ||
-                      "Not available",
-                  },
-                  {
-                    label: "Tracking Number",
-                    value: detailReturn.returnToCustomer.trackingNumber,
-                    className: "break-all font-mono text-xs font-medium",
-                  },
-                  {
-                    label: "Status",
-                    value: display(detailReturn.returnToCustomer.status),
-                    className: "capitalize",
-                    fullWidth: true,
-                  },
-                ].map((item, idx) => (
+                {itemFields.map((field, fieldIndex) => (
                   <div
-                    key={idx}
-                    className={`rounded-lg border border-blue-100 bg-white/70 p-3 ${
-                      item.fullWidth ? "sm:col-span-2" : ""
-                    }`}
+                    key={fieldIndex}
+                    className={ITEM_CARD_CLASS}
                   >
-                    <p className="text-xs text-blue-700">{item.label}</p>
+                    <p className={LABEL_CLASS}>{field.label}</p>
                     <p
-                      className={`mt-1 font-medium text-blue-900 ${
-                        item.className || ""
+                      className={`${VALUE_CLASS} ${
+                        field.className || ""
                       }`}
                     >
-                      {item.value}
+                      {field.value}
                     </p>
                   </div>
                 ))}
               </div>
-            </section>
-          )}
+            </div>
+          );
+        })}
 
-          {/* Timeline */}
-          <FormSection
-            title="Timeline"
-            description="Track the progress and activity history of this return."
-          >
-            <div className="space-y-3">
-              {(detailReturn?.timeline || []).map((item, index) => (
-                <div
-                  key={`${item.status}-${index}`}
-                  className="relative rounded-lg border border-gray-100 bg-gray-50 p-3"
-                >
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="font-medium capitalize text-gray-900">
-                      {display(item.status)}
-                    </div>
+        {!detailReturn?.items?.length && (
+          <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-center text-xs text-gray-500">
+            No returned items available.
+          </div>
+        )}
+      </div>
+    </FormSection>
 
-                    <div className="text-xs text-gray-500">
-                      {formatDateTime12Hour(item.at)}
-                    </div>
+    {/* Refund Processing Attempts */}
+    {!isSeller && (
+      <FormSection
+        title="Refund Processing Attempts"
+        description="History of payment provider attempts made while processing the refund."
+      >
+        <div className="space-y-2">
+          {(detailReturn?.refund?.attempts || []).map(
+            (attempt, index) => (
+              <div
+                key={attempt.attemptId || index}
+                className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500">
+                      Status
+                    </p>
+                    <p className="font-medium capitalize text-gray-900">
+                      {display(attempt.status)}
+                    </p>
                   </div>
 
-                  <div className="mt-1 text-xs text-gray-500">
-                    Actor: {display(item.actorRole)}
+                  <div className="sm:text-right">
+                    <p className="text-xs text-gray-500">
+                      Refund Amount
+                    </p>
+                    <p className="font-semibold text-gray-900">
+                      {money(attempt.amount)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-gray-600 sm:grid-cols-2">
+                  <div>
+                    <span className="font-medium text-gray-700">
+                      Method:
+                    </span>{" "}
+                    {display(attempt.method)}
                   </div>
 
-                  {item.reason && (
-                    <div className="mt-2 rounded-md border border-gray-100 bg-white p-2 text-xs text-gray-600">
-                      <span className="font-medium text-gray-700">Reason:</span>{" "}
-                      {item.reason}
+                  <div>
+                    <span className="font-medium text-gray-700">
+                      Provider:
+                    </span>{" "}
+                    {display(attempt.provider)}
+                  </div>
+
+                  <div>
+                    <span className="font-medium text-gray-700">
+                      Wallet:
+                    </span>{" "}
+                    {money(attempt.walletAmount)}
+                  </div>
+
+                  <div>
+                    <span className="font-medium text-gray-700">
+                      Provider Amount:
+                    </span>{" "}
+                    {money(attempt.providerAmount)}
+                  </div>
+
+                  {attempt.providerRefundId && (
+                    <div className="break-all sm:col-span-2">
+                      <span className="font-medium text-gray-700">
+                        Provider Refund ID:
+                      </span>{" "}
+                      {attempt.providerRefundId}
                     </div>
                   )}
 
-                  {item.note && (
-                    <div className="mt-2 rounded-md border border-gray-100 bg-white p-2 text-xs text-gray-600">
-                      <span className="font-medium text-gray-700">Note:</span>{" "}
-                      {item.note}
+                  {attempt.startedAt && (
+                    <div>
+                      <span className="font-medium text-gray-700">
+                        Started:
+                      </span>{" "}
+                      {formatDateTime12Hour(attempt.startedAt)}
                     </div>
                   )}
                 </div>
-              ))}
+
+                {attempt.failureReason && (
+                  <div className="mt-3 rounded-md border border-red-100 bg-red-50 p-2.5 text-xs text-red-600">
+                    <span className="font-medium">
+                      Failure:
+                    </span>{" "}
+                    {attempt.failureReason}
+                  </div>
+                )}
+              </div>
+            ),
+          )}
+
+          {!detailReturn?.refund?.attempts?.length && (
+            <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-center text-xs text-gray-500">
+              No refund attempts.
             </div>
-          </FormSection>
+          )}
         </div>
-      </DefaultModal>
+      </FormSection>
+    )}
+
+    {/* QC Review */}
+    {detailReturn?.qcReview &&
+      Object.keys(detailReturn.qcReview).length > 0 && (
+        <FormSection
+          title="QC Review"
+          description="Quality check and dispute information for the returned item."
+        >
+          <div className="space-y-2">
+            <div className={ITEM_CARD_CLASS}>
+              <p className={LABEL_CLASS}>Status</p>
+              <p className={`${VALUE_CLASS} capitalize`}>
+                {display(detailReturn.qcReview.status)}
+              </p>
+            </div>
+
+            <div className={ITEM_CARD_CLASS}>
+              <p className={LABEL_CLASS}>Dispute Deadline</p>
+              <p className={VALUE_CLASS}>
+                {formatDateTime12Hour(
+                  detailReturn.qcReview.disputeDeadline,
+                )}
+              </p>
+            </div>
+
+            {detailReturn.qcReview.customerDispute?.reason && (
+              <div className={ITEM_CARD_CLASS}>
+                <p className={LABEL_CLASS}>Customer Dispute</p>
+                <p className={VALUE_CLASS}>
+                  {detailReturn.qcReview.customerDispute.reason}
+                </p>
+              </div>
+            )}
+
+            {detailReturn.qcReview.evidenceRequestReason && (
+              <div className={ITEM_CARD_CLASS}>
+                <p className={LABEL_CLASS}>Evidence Requested</p>
+                <p className={VALUE_CLASS}>
+                  {detailReturn.qcReview.evidenceRequestReason}
+                </p>
+              </div>
+            )}
+
+            {detailReturn.qcReview.adminDecision && (
+              <div className={ITEM_CARD_CLASS}>
+                <p className={LABEL_CLASS}>Admin Decision</p>
+                <p className={VALUE_CLASS}>
+                  {display(detailReturn.qcReview.adminDecision)}
+                  {detailReturn.qcReview.decisionReason && (
+                    <span className="text-gray-500">
+                      {" "}
+                      — {detailReturn.qcReview.decisionReason}
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+
+            {(detailReturn.qcReview.sellerEvidence || []).map(
+              (evidence, index) => (
+                <div
+                  key={evidence.orderItemId || index}
+                  className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+                >
+                  <p className="text-xs font-medium text-gray-900">
+                    {display(evidence.result)}
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-600">
+                    {evidence.notes || "No note"}
+                  </p>
+
+                  {(evidence.photos || []).length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {evidence.photos.map((url) => (
+                        <a
+                          key={url}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-gray-50"
+                        >
+                          View Evidence
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ),
+            )}
+          </div>
+        </FormSection>
+      )}
+
+    {/* Return To Customer Shipment */}
+    {detailReturn?.returnToCustomer?.trackingNumber && (
+      <FormSection
+        title="Return-to-Customer Shipment"
+        description="Shipment details for the rejected product being returned to the customer."
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {[
+            {
+              label: "Courier",
+              value:
+                detailReturn.returnToCustomer.courierName ||
+                "Not available",
+            },
+            {
+              label: "Tracking Number",
+              value:
+                detailReturn.returnToCustomer.trackingNumber,
+              className:
+                "break-all font-mono text-xs",
+            },
+            {
+              label: "Status",
+              value: display(
+                detailReturn.returnToCustomer.status,
+              ),
+              className: "capitalize",
+              fullWidth: true,
+            },
+          ].map((item, index) => (
+            <div
+              key={index}
+              className={`${INFO_CARD_CLASS} ${
+                item.fullWidth ? "sm:col-span-2" : ""
+              }`}
+            >
+              <p className={LABEL_CLASS}>{item.label}</p>
+              <p
+                className={`${VALUE_CLASS} ${
+                  item.className || ""
+                }`}
+              >
+                {item.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </FormSection>
+    )}
+
+    {/* Timeline */}
+    <FormSection
+      title="Timeline"
+      description="Track the progress and activity history of this return."
+    >
+      <div className="space-y-3">
+        {(detailReturn?.timeline || []).map((item, index) => (
+          <div
+            key={`${item.status}-${index}`}
+            className="relative rounded-lg border border-gray-200 bg-gray-50 p-3"
+          >
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <p className="font-medium capitalize text-gray-900">
+                {display(item.status)}
+              </p>
+
+              <p className="text-xs text-gray-500">
+                {formatDateTime12Hour(item.at)}
+              </p>
+            </div>
+
+            <p className="mt-1 text-xs text-gray-500">
+              Actor: {display(item.actorRole)}
+            </p>
+
+            {item.reason && (
+              <div className="mt-2 rounded-md border border-gray-200 bg-white p-2 text-xs text-gray-600">
+                <span className="font-medium text-gray-700">
+                  Reason:
+                </span>{" "}
+                {item.reason}
+              </div>
+            )}
+
+            {item.note && (
+              <div className="mt-2 rounded-md border border-gray-200 bg-white p-2 text-xs text-gray-600">
+                <span className="font-medium text-gray-700">
+                  Note:
+                </span>{" "}
+                {item.note}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {!detailReturn?.timeline?.length && (
+          <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-center text-xs text-gray-500">
+            No timeline activity available.
+          </div>
+        )}
+      </div>
+    </FormSection>
+  </div>
+</DefaultModal>
       <DefaultModal
         isOpen={action.open}
         onClose={() => setAction(EMPTY_ACTION)}
