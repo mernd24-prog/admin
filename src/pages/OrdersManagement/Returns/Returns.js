@@ -65,6 +65,9 @@ import { useListPage } from "../../../hooks/useListPage";
 import { uploadFileMulti } from "../../../_helpers/globalFunctions";
 import { useNavigate } from "react-router";
 import moment from "moment";
+import FormInput from "../../../components/Atoms/FormInput/FormInput";
+import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
+import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
 
 // const MODAL_SECTION_CLASS = "rounded-xl border border-gray-200 bg-white p-4";
 const INFO_CARD_CLASS = "rounded-lg border border-gray-100 bg-gray-50 p-3";
@@ -2447,600 +2450,894 @@ const Returns = () => {
     </FormSection>
   </div>
 </DefaultModal>
-      <DefaultModal
-        isOpen={action.open}
-        onClose={() => setAction(EMPTY_ACTION)}
-        title={action.title}
-        onSubmit={prepareAction}
-        submitButtonText="Continue"
-        closeButtonText="Cancel"
-        loading={loading}
+     <DefaultModal
+  isOpen={action.open}
+  onClose={() => setAction(EMPTY_ACTION)}
+  title={action.title}
+  onSubmit={prepareAction}
+  submitButtonText="Continue"
+  closeButtonText="Cancel"
+  loading={loading}
+>
+  <div className="space-y-5">
+    {/* =====================================================
+        REFUND DETAILS
+    ====================================================== */}
+    {((!isSeller && action.type === "approve") ||
+      ["refund", "retry_refund"].includes(action.type)) && (
+      <FormSection
+        title="Refund Details"
+        description="Enter the refund amount and related payment information."
       >
-        <div className="space-y-3">
-          {((!isSeller && action.type === "approve") ||
-            ["refund", "retry_refund"].includes(action.type)) && (
-            <Input
-              labelName="Refund Amount"
-              type="number"
-              min="0"
-              value={action.refundAmount}
+        <div className="space-y-4">
+          <FormInput
+            label="Refund Amount"
+            name="refundAmount"
+            type="number"
+            min="0"
+            value={action.refundAmount}
+            onChange={(event) =>
+              setAction((prev) => ({
+                ...prev,
+                refundAmount: event.target.value,
+              }))
+            }
+            required
+          />
+
+          {["refund", "retry_refund"].includes(action.type) && (
+            <FormInput
+              label="Reference ID"
+              name="referenceId"
+              value={action.referenceId}
               onChange={(event) =>
                 setAction((prev) => ({
                   ...prev,
-                  refundAmount: event.target.value,
+                  referenceId: event.target.value,
                 }))
               }
+              placeholder="Enter refund reference ID"
               required
             />
           )}
-          {isSeller && action.type === "approve" && (
-            <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-              Accepting confirms that you will receive this return. The
-              marketplace controls and releases the customer refund after
-              receipt and QC; you cannot change the refund amount here.
-            </div>
-          )}
-          {action.type === "qc_decision" && (
-            <>
-              <label className="block text-sm text-gray-700">
-                <span className="mb-1 block">Decision</span>
-                <select
-                  className="admin-input w-full"
-                  value={action.decision}
-                  onChange={(event) =>
-                    setAction((prev) => ({
-                      ...prev,
-                      decision: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="uphold">
-                    Uphold seller QC failure — no refund
-                  </option>
-                  <option value="override">
-                    Override QC failure — full eligible refund
-                  </option>
-                  <option value="partial">Partially approve refund</option>
-                  <option value="request_evidence">
-                    Request more seller evidence
-                  </option>
-                </select>
-              </label>
-              {action.decision === "uphold" && (
-                <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={action.returnToCustomerRequired}
-                    onChange={(event) =>
-                      setAction((prev) => ({
-                        ...prev,
-                        returnToCustomerRequired: event.target.checked,
-                      }))
-                    }
-                  />
-                  Seller must ship the rejected product back to the customer
-                </label>
-              )}
-              <Input
-                type="textarea"
-                labelName="Decision reason"
-                value={action.reason}
-                onChange={(event) =>
-                  setAction((prev) => ({ ...prev, reason: event.target.value }))
-                }
-                required
-              />
-            </>
-          )}
+
           {["refund", "retry_refund"].includes(action.type) && (
-            <>
-              <Input
-                labelName="Reference ID"
-                value={action.referenceId}
-                onChange={(event) =>
-                  setAction((prev) => ({
-                    ...prev,
-                    referenceId: event.target.value,
-                  }))
-                }
-                required
-              />
-              <label className="block text-sm text-gray-700">
-                <span className="mb-1 block">Refund method</span>
-                <select
-                  className="admin-input w-full"
-                  value={action.method}
-                  onChange={(event) =>
-                    setAction((prev) => ({
-                      ...prev,
-                      method: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="auto">Automatic allocation</option>
-                  <option value="original_payment">Original payment</option>
-                  <option value="wallet">Wallet credit</option>
-                  <option value="split">Wallet + original payment</option>
-                  <option value="manual">Manual bank/cash refund</option>
-                </select>
-              </label>
-              {action.method === "split" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    labelName="Wallet amount"
-                    type="number"
-                    min="0"
-                    value={action.walletAmount}
-                    onChange={(event) =>
-                      setAction((prev) => ({
-                        ...prev,
-                        walletAmount: event.target.value,
-                      }))
-                    }
-                  />
-                  <Input
-                    labelName="Provider amount"
-                    type="number"
-                    min="0"
-                    value={action.providerAmount}
-                    onChange={(event) =>
-                      setAction((prev) => ({
-                        ...prev,
-                        providerAmount: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              )}
-            </>
-          )}
-          {["reject", "close"].includes(action.type) && (
-            <Input
-              labelName={action.type === "reject" ? "Reason" : "Close Reason"}
-              value={action.reason}
-              onChange={(event) =>
-                setAction((prev) => ({ ...prev, reason: event.target.value }))
+            <FormSelectGroup
+              label="Refund Method"
+              value={action.method}
+              options={[
+                {
+                  value: "auto",
+                  label: "Automatic allocation",
+                },
+                {
+                  value: "original_payment",
+                  label: "Original payment",
+                },
+                {
+                  value: "wallet",
+                  label: "Wallet credit",
+                },
+                {
+                  value: "split",
+                  label: "Wallet + original payment",
+                },
+                {
+                  value: "manual",
+                  label: "Manual bank/cash refund",
+                },
+              ]}
+              onChange={(selectedOption) =>
+                setAction((prev) => ({
+                  ...prev,
+                  method:
+                    selectedOption?.value ||
+                    selectedOption ||
+                    "",
+                }))
               }
-              required={action.type === "reject"}
+              placeholder="Select refund method"
             />
           )}
-          {action.type === "schedule" && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <label className="block text-sm text-gray-700">
-                  <span className="mb-1 block">Return mode</span>
-                  <select
-                    className="admin-input w-full"
-                    value={action.mode}
-                    onChange={(event) =>
-                      setAction((prev) => ({
-                        ...prev,
-                        mode: event.target.value,
-                      }))
-                    }
-                  >
-                    <option value="reverse_pickup">
-                      Seller-arranged reverse courier
-                    </option>
-                    <option value="manual_ship_back">
-                      Customer self-ships
-                    </option>
-                  </select>
-                </label>
-                {action.mode === "reverse_pickup" && (
-                  <label className="block text-sm text-gray-700">
-                    <span className="mb-1 block">Shipping mode</span>
-                    <select
-                      className="admin-input w-full"
-                      value={action.shippingMode}
-                      onChange={(event) =>
-                        setAction((prev) => ({
-                          ...prev,
-                          shippingMode: event.target.value,
-                        }))
-                      }
-                    >
-                      <option value="standard">Standard</option>
-                      <option value="express">Express</option>
-                      <option value="same_day">Same day</option>
-                      <option value="hyperlocal">Hyperlocal</option>
-                    </select>
-                  </label>
-                )}
-              </div>
-              {action.mode === "reverse_pickup" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Input
-                    labelName="Courier"
-                    value={action.courierName}
-                    onChange={(event) =>
-                      setAction((prev) => ({
-                        ...prev,
-                        courierName: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                  <Input
-                    labelName="Tracking / AWB"
-                    value={action.trackingNumber}
-                    onChange={(event) =>
-                      setAction((prev) => ({
-                        ...prev,
-                        trackingNumber: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                  <Input
-                    labelName="Pickup date"
-                    type="datetime-local"
-                    value={action.pickupScheduledAt}
-                    min={moment().format("YYYY-MM-DDTHH:mm")}
-                    onChange={(event) => {
-                      const selectedValue = event.target.value;
-                      const selectedDate = moment(selectedValue);
-                      const currentDate = moment();
 
-                      if (selectedDate.isBefore(currentDate)) {
-                        toast.error(
-                          "Pickup date and time cannot be in the past.",
-                        );
-                        return;
-                      }
-
-                      setAction((prev) => ({
-                        ...prev,
-                        pickupScheduledAt: selectedValue,
-                      }));
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                  The customer will provide the return courier and tracking
-                  details. Confirm receipt only after the customer marks the
-                  package as shipped and it reaches you.
-                </div>
-              )}
-            </>
-          )}
-          {action.type === "tracking" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="block text-sm text-gray-700">
-                <span className="mb-1 block">Shipment status</span>
-                <select
-                  className="admin-input w-full"
-                  value={action.shipmentStatus}
-                  onChange={(event) =>
-                    setAction((prev) => ({
-                      ...prev,
-                      shipmentStatus: event.target.value,
-                    }))
-                  }
-                >
-                  {reverseTrackingOptions(action.returnRequest).map(
-                    (option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </label>
-              {/* <Input
-                labelName="Location"
-                value={action.location}
+          {action.method === "split" && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormInput
+                label="Wallet Amount"
+                name="walletAmount"
+                type="number"
+                min="0"
+                value={action.walletAmount}
                 onChange={(event) =>
                   setAction((prev) => ({
                     ...prev,
-                    location: event.target.value,
+                    walletAmount: event.target.value,
                   }))
                 }
-              /> */}
+              />
+
+              <FormInput
+                label="Provider Amount"
+                name="providerAmount"
+                type="number"
+                min="0"
+                value={action.providerAmount}
+                onChange={(event) =>
+                  setAction((prev) => ({
+                    ...prev,
+                    providerAmount: event.target.value,
+                  }))
+                }
+              />
             </div>
           )}
-          {["approve", "receive", "qc", "qc_evidence", "qc_decision"].includes(
-            action.type,
-          ) && (
-            <div className="space-y-2">
-              <div className="text-sm font-semibold text-gray-700">
-                Item decisions
+        </div>
+      </FormSection>
+    )}
+
+    {/* =====================================================
+        SELLER APPROVAL INFORMATION
+    ====================================================== */}
+    {isSeller && action.type === "approve" && (
+      <FormSection
+        title="Approval Information"
+        description="Important information about accepting this return."
+      >
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <p className="text-sm leading-6 text-blue-900">
+            Accepting confirms that you will receive this return. The
+            marketplace controls and releases the customer refund after
+            receipt and QC; you cannot change the refund amount here.
+          </p>
+        </div>
+      </FormSection>
+    )}
+
+    {/* =====================================================
+        QC DECISION
+    ====================================================== */}
+    {action.type === "qc_decision" && (
+      <FormSection
+        title="QC Decision"
+        description="Review the seller QC result and select the appropriate decision."
+      >
+        <div className="space-y-4">
+          <FormSelectGroup
+            label="Decision"
+            value={action.decision}
+            options={[
+              {
+                value: "uphold",
+                label: "Uphold seller QC failure — no refund",
+              },
+              {
+                value: "override",
+                label: "Override QC failure — full eligible refund",
+              },
+              {
+                value: "partial",
+                label: "Partially approve refund",
+              },
+              {
+                value: "request_evidence",
+                label: "Request more seller evidence",
+              },
+            ]}
+            onChange={(selectedOption) =>
+              setAction((prev) => ({
+                ...prev,
+                decision:
+                  selectedOption?.value ||
+                  selectedOption ||
+                  "",
+              }))
+            }
+            placeholder="Select QC decision"
+          />
+
+          {action.decision === "uphold" && (
+            <FormToggleRow
+              title="Return rejected product to customer"
+              description="Seller must ship the rejected product back to the customer."
+              isToggle={action.returnToCustomerRequired}
+              handleClick={() =>
+                setAction((prev) => ({
+                  ...prev,
+                  returnToCustomerRequired:
+                    !prev.returnToCustomerRequired,
+                }))
+              }
+            />
+          )}
+
+          <FormInput
+            label="Decision Reason"
+            name="decisionReason"
+            type="textarea"
+            value={action.reason}
+            onChange={(event) =>
+              setAction((prev) => ({
+                ...prev,
+                reason: event.target.value,
+              }))
+            }
+            placeholder="Enter the reason for this decision"
+            required
+          />
+        </div>
+      </FormSection>
+    )}
+
+    {/* =====================================================
+        REJECT / CLOSE
+    ====================================================== */}
+    {["reject", "close"].includes(action.type) && (
+      <FormSection
+        title={action.type === "reject" ? "Rejection Details" : "Closure Details"}
+        description={
+          action.type === "reject"
+            ? "Provide the reason for rejecting this return."
+            : "Provide a reason for closing this return."
+        }
+      >
+        <FormInput
+          label={action.type === "reject" ? "Reason" : "Close Reason"}
+          name="reason"
+          value={action.reason}
+          onChange={(event) =>
+            setAction((prev) => ({
+              ...prev,
+              reason: event.target.value,
+            }))
+          }
+          placeholder="Enter reason"
+          required={action.type === "reject"}
+        />
+      </FormSection>
+    )}
+
+    {/* =====================================================
+        RETURN SCHEDULE
+    ====================================================== */}
+    {action.type === "schedule" && (
+      <FormSection
+        title="Return Shipment"
+        description="Configure how the returned product will be shipped."
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormSelectGroup
+              label="Return Mode"
+              value={action.mode}
+              options={[
+                {
+                  value: "reverse_pickup",
+                  label: "Seller-arranged reverse courier",
+                },
+                {
+                  value: "manual_ship_back",
+                  label: "Customer self-ships",
+                },
+              ]}
+              onChange={(selectedOption) =>
+                setAction((prev) => ({
+                  ...prev,
+                  mode:
+                    selectedOption?.value ||
+                    selectedOption ||
+                    "",
+                }))
+              }
+              placeholder="Select return mode"
+            />
+
+            {action.mode === "reverse_pickup" && (
+              <FormSelectGroup
+                label="Shipping Mode"
+                value={action.shippingMode}
+                options={[
+                  {
+                    value: "standard",
+                    label: "Standard",
+                  },
+                  {
+                    value: "express",
+                    label: "Express",
+                  },
+                  {
+                    value: "same_day",
+                    label: "Same day",
+                  },
+                  {
+                    value: "hyperlocal",
+                    label: "Hyperlocal",
+                  },
+                ]}
+                onChange={(selectedOption) =>
+                  setAction((prev) => ({
+                    ...prev,
+                    shippingMode:
+                      selectedOption?.value ||
+                      selectedOption ||
+                      "",
+                  }))
+                }
+                placeholder="Select shipping mode"
+              />
+            )}
+          </div>
+
+          {action.mode === "reverse_pickup" ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput
+                label="Courier"
+                name="courierName"
+                value={action.courierName}
+                onChange={(event) =>
+                  setAction((prev) => ({
+                    ...prev,
+                    courierName: event.target.value,
+                  }))
+                }
+                placeholder="Enter courier name"
+                required
+              />
+
+              <FormInput
+                label="Tracking / AWB"
+                name="trackingNumber"
+                value={action.trackingNumber}
+                onChange={(event) =>
+                  setAction((prev) => ({
+                    ...prev,
+                    trackingNumber: event.target.value,
+                  }))
+                }
+                placeholder="Enter tracking number / AWB"
+                required
+              />
+
+              <FormInput
+                label="Pickup Date"
+                name="pickupScheduledAt"
+                type="datetime-local"
+                value={action.pickupScheduledAt}
+                min={moment().format("YYYY-MM-DDTHH:mm")}
+                onChange={(event) => {
+                  const selectedValue = event.target.value;
+                  const selectedDate = moment(selectedValue);
+                  const currentDate = moment();
+
+                  if (selectedDate.isBefore(currentDate)) {
+                    toast.error(
+                      "Pickup date and time cannot be in the past.",
+                    );
+                    return;
+                  }
+
+                  setAction((prev) => ({
+                    ...prev,
+                    pickupScheduledAt: selectedValue,
+                  }));
+                }}
+              />
+            </div>
+          ) : (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <p className="text-sm leading-6 text-blue-900">
+                The customer will provide the return courier and tracking
+                details. Confirm receipt only after the customer marks the
+                package as shipped and it reaches you.
+              </p>
+            </div>
+          )}
+        </div>
+      </FormSection>
+    )}
+
+    {/* =====================================================
+        TRACKING
+    ====================================================== */}
+    {action.type === "tracking" && (
+      <FormSection
+        title="Shipment Tracking"
+        description="Update the current status of the reverse shipment."
+      >
+        <FormSelectGroup
+          label="Shipment Status"
+          value={action.shipmentStatus}
+          options={reverseTrackingOptions(action.returnRequest)}
+          onChange={(selectedOption) =>
+            setAction((prev) => ({
+              ...prev,
+              shipmentStatus:
+                selectedOption?.value ||
+                selectedOption ||
+                "",
+            }))
+          }
+          placeholder="Select shipment status"
+        />
+      </FormSection>
+    )}
+
+    {/* =====================================================
+        ITEM DECISIONS
+    ====================================================== */}
+    {["approve", "receive", "qc", "qc_evidence", "qc_decision"].includes(
+      action.type,
+    ) && (
+      <FormSection
+        title="Item Decisions"
+        description="Review and update the decision for each returned item."
+      >
+        <div className="space-y-4">
+          {action.itemActions.map((item, index) => (
+            <div
+              key={`${item.orderItemId || item.productId}-${index}`}
+              className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+            >
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-gray-900">
+                  {item.label}
+                </p>
+
+                {(item.requestedQuantity ||
+                  item.approvedQuantity ||
+                  item.receivedQuantity) && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Requested: {item.requestedQuantity || item.quantity || 0}
+                    {" · "}
+                    Approved: {item.approvedQuantity || 0}
+                    {" · "}
+                    Received: {item.receivedQuantity || 0}
+                  </p>
+                )}
               </div>
-              {action.itemActions.map((item, index) => (
-                <div
-                  key={`${item.orderItemId || item.productId}-${index}`}
-                  className="rounded border border-gray-200 p-3"
-                >
-                  <div className="mb-2 text-sm font-medium text-gray-800">
-                    {item.label}
+
+              {action.type === "approve" && (
+                <FormInput
+                  label={`Approved Quantity${
+                    item.requestedQuantity || item.quantity
+                      ? ` (max ${
+                          item.requestedQuantity || item.quantity
+                        })`
+                      : ""
+                  }`}
+                  name={`approvedQuantity-${index}`}
+                  type="number"
+                  min="0"
+                  max={
+                    item.requestedQuantity ||
+                    item.quantity ||
+                    undefined
+                  }
+                  value={
+                    item.approvedQuantity ??
+                    item.requestedQuantity ??
+                    item.quantity ??
+                    ""
+                  }
+                  onChange={(event) =>
+                    updateItemAction(
+                      index,
+                      "approvedQuantity",
+                      event.target.value,
+                    )
+                  }
+                  required
+                />
+              )}
+
+              {action.type === "receive" && (
+                <FormInput
+                  label={`Received Quantity${
+                    item.approvedQuantity ||
+                    item.requestedQuantity ||
+                    item.quantity
+                      ? ` (max ${
+                          item.approvedQuantity ||
+                          item.requestedQuantity ||
+                          item.quantity
+                        })`
+                      : ""
+                  }`}
+                  name={`receivedQuantity-${index}`}
+                  type="number"
+                  min="0"
+                  max={
+                    item.approvedQuantity ||
+                    item.requestedQuantity ||
+                    item.quantity ||
+                    undefined
+                  }
+                  value={item.receivedQuantity}
+                  onChange={(event) =>
+                    updateItemAction(
+                      index,
+                      "receivedQuantity",
+                      event.target.value,
+                    )
+                  }
+                  required
+                />
+              )}
+
+              {action.type === "qc" && (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormInput
+                    label={`QC Quantity${
+                      item.receivedQuantity ||
+                      item.approvedQuantity ||
+                      item.quantity
+                        ? ` (max ${
+                            item.receivedQuantity ||
+                            item.approvedQuantity ||
+                            item.quantity
+                          })`
+                        : ""
+                    }`}
+                    name={`qcQuantity-${index}`}
+                    type="number"
+                    min="0"
+                    max={
+                      item.receivedQuantity ||
+                      item.approvedQuantity ||
+                      item.quantity ||
+                      undefined
+                    }
+                    value={item.quantity}
+                    onChange={(event) =>
+                      updateItemAction(
+                        index,
+                        "quantity",
+                        event.target.value,
+                      )
+                    }
+                    required
+                  />
+
+                  <FormSelectGroup
+                    label="Disposition"
+                    value={item.result}
+                    options={[
+                      {
+                        value: "sellable",
+                        label: "Sellable - restock",
+                      },
+                      {
+                        value: "damaged",
+                        label: "Damaged - quarantine",
+                      },
+                      {
+                        value: "missing",
+                        label: "Missing",
+                      },
+                      {
+                        value: "rejected",
+                        label: "Rejected by QC",
+                      },
+                    ]}
+                    onChange={(selectedOption) =>
+                      updateItemAction(
+                        index,
+                        "result",
+                        selectedOption?.value ||
+                          selectedOption ||
+                          "",
+                      )
+                    }
+                    placeholder="Select disposition"
+                  />
+
+                  <FormInput
+                    label="Condition"
+                    name={`condition-${index}`}
+                    value={item.condition}
+                    onChange={(event) =>
+                      updateItemAction(
+                        index,
+                        "condition",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Enter item condition"
+                  />
+
+                  <FormInput
+                    label="Item Note"
+                    name={`itemNote-${index}`}
+                    value={item.notes}
+                    onChange={(event) =>
+                      updateItemAction(
+                        index,
+                        "notes",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Add inspection notes"
+                  />
+
+                  <div className="md:col-span-2">
+                    <QCEvidenceUploader
+                      value={item.photos}
+                      onChange={(value) =>
+                        updateItemAction(index, "photos", value)
+                      }
+                    />
                   </div>
-                  {action.type === "approve" && (
-                    <Input
-                      labelName={`Approved quantity${
-                        item.requestedQuantity || item.quantity
-                          ? ` (max ${item.requestedQuantity || item.quantity})`
+                </div>
+              )}
+
+              {action.type === "qc_evidence" && (
+                <div className="space-y-4">
+                  <FormInput
+                    label="Additional Inspection Notes"
+                    name={`inspectionNotes-${index}`}
+                    type="textarea"
+                    value={item.notes}
+                    onChange={(event) =>
+                      updateItemAction(
+                        index,
+                        "notes",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Enter additional inspection notes"
+                    required
+                  />
+
+                  <QCEvidenceUploader
+                    value={item.photos}
+                    onChange={(value) =>
+                      updateItemAction(index, "photos", value)
+                    }
+                    required
+                  />
+                </div>
+              )}
+
+              {action.type === "qc_decision" &&
+                ["override", "partial"].includes(action.decision) && (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormInput
+                      label={`Refund-Approved Quantity${
+                        item.receivedQuantity ||
+                        item.requestedQuantity ||
+                        item.quantity
+                          ? ` (max ${
+                              item.receivedQuantity ||
+                              item.requestedQuantity ||
+                              item.quantity
+                            })`
                           : ""
                       }`}
-                      type="number"
-                      min="0"
-                      max={item.requestedQuantity || item.quantity || undefined}
-                      value={
-                        item.approvedQuantity ??
-                        item.requestedQuantity ??
-                        item.quantity ??
-                        ""
-                      }
-                      readOnly
-                      required
-                    />
-                  )}
-                  {action.type === "receive" && (
-                    <Input
-                      labelName={`Received quantity${item.approvedQuantity || item.requestedQuantity || item.quantity ? ` (max ${item.approvedQuantity || item.requestedQuantity || item.quantity})` : ""}`}
+                      name={`refundApprovedQuantity-${index}`}
                       type="number"
                       min="0"
                       max={
-                        item.approvedQuantity ||
+                        item.receivedQuantity ||
                         item.requestedQuantity ||
                         item.quantity ||
                         undefined
                       }
-                      value={item.receivedQuantity}
+                      value={item.approvedQuantity}
                       onChange={(event) =>
                         updateItemAction(
                           index,
-                          "receivedQuantity",
+                          "approvedQuantity",
                           event.target.value,
                         )
                       }
                       required
                     />
-                  )}
-                  {action.type === "qc" && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <Input
-                        labelName={`QC quantity${item.receivedQuantity || item.approvedQuantity || item.quantity ? ` (max ${item.receivedQuantity || item.approvedQuantity || item.quantity})` : ""}`}
-                        type="number"
-                        min="0"
-                        max={
-                          item.receivedQuantity ||
-                          item.approvedQuantity ||
-                          item.quantity ||
-                          undefined
-                        }
-                        value={item.quantity}
-                        onChange={(event) =>
-                          updateItemAction(
-                            index,
-                            "quantity",
-                            event.target.value,
-                          )
-                        }
-                        required
-                      />
-                      <label className="block text-sm text-gray-700">
-                        <span className="mb-1 block">Disposition</span>
-                        <select
-                          className="admin-input w-full"
-                          value={item.result}
-                          onChange={(event) =>
-                            updateItemAction(
-                              index,
-                              "result",
-                              event.target.value,
-                            )
-                          }
-                        >
-                          <option value="sellable">Sellable - restock</option>
-                          <option value="damaged">Damaged - quarantine</option>
-                          <option value="missing">Missing</option>
-                          <option value="rejected">Rejected by QC</option>
-                        </select>
-                      </label>
-                      <Input
-                        labelName="Condition"
-                        value={item.condition}
-                        onChange={(event) =>
-                          updateItemAction(
-                            index,
-                            "condition",
-                            event.target.value,
-                          )
-                        }
-                      />
-                      <Input
-                        labelName="Item note"
-                        value={item.notes}
-                        onChange={(event) =>
-                          updateItemAction(index, "notes", event.target.value)
-                        }
-                      />
-                      <QCEvidenceUploader
-                        value={item.photos}
-                        onChange={(value) =>
-                          updateItemAction(index, "photos", value)
-                        }
-                      />
-                    </div>
-                  )}
-                  {action.type === "qc_evidence" && (
-                    <div className="grid grid-cols-1 gap-3">
-                      <Input
-                        type="textarea"
-                        labelName="Additional inspection notes"
-                        value={item.notes}
-                        onChange={(event) =>
-                          updateItemAction(index, "notes", event.target.value)
-                        }
-                        required
-                      />
-                      <QCEvidenceUploader
-                        value={item.photos}
-                        onChange={(value) =>
-                          updateItemAction(index, "photos", value)
-                        }
-                        required
-                      />
-                    </div>
-                  )}
-                  {action.type === "qc_decision" &&
-                    ["override", "partial"].includes(action.decision) && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <Input
-                          labelName={`Refund-approved quantity${item.receivedQuantity || item.requestedQuantity || item.quantity ? ` (max ${item.receivedQuantity || item.requestedQuantity || item.quantity})` : ""}`}
-                          type="number"
-                          min="0"
-                          max={
-                            item.receivedQuantity ||
-                            item.requestedQuantity ||
-                            item.quantity ||
-                            undefined
-                          }
-                          value={item.approvedQuantity}
-                          onChange={(event) =>
-                            updateItemAction(
-                              index,
-                              "approvedQuantity",
-                              event.target.value,
-                            )
-                          }
-                          required
-                        />
-                        <label className="block text-sm text-gray-700">
-                          <span className="mb-1 block">
-                            Inventory disposition
-                          </span>
-                          <select
-                            className="admin-input w-full"
-                            value={
-                              item.result === "sellable"
-                                ? "sellable"
-                                : "damaged"
-                            }
-                            onChange={(event) =>
-                              updateItemAction(
-                                index,
-                                "result",
-                                event.target.value,
-                              )
-                            }
-                          >
-                            <option value="damaged">
-                              Damaged / quarantine
-                            </option>
-                            <option value="sellable">Sellable / restock</option>
-                          </select>
-                        </label>
-                      </div>
-                    )}
-                </div>
-              ))}
+
+                    <FormSelectGroup
+                      label="Inventory Disposition"
+                      value={
+                        item.result === "sellable"
+                          ? "sellable"
+                          : "damaged"
+                      }
+                      options={[
+                        {
+                          value: "damaged",
+                          label: "Damaged / quarantine",
+                        },
+                        {
+                          value: "sellable",
+                          label: "Sellable / restock",
+                        },
+                      ]}
+                      onChange={(selectedOption) =>
+                        updateItemAction(
+                          index,
+                          "result",
+                          selectedOption?.value ||
+                            selectedOption ||
+                            "",
+                        )
+                      }
+                      placeholder="Select disposition"
+                    />
+                  </div>
+                )}
             </div>
-          )}
-          {action.type === "return_customer" && (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <Input
-                labelName="Courier"
-                value={action.courierName}
-                onChange={(event) =>
-                  setAction((prev) => ({
-                    ...prev,
-                    courierName: event.target.value,
-                  }))
-                }
-                required
-              />
-              <Input
-                labelName="Tracking / AWB"
-                value={action.trackingNumber}
-                onChange={(event) =>
-                  setAction((prev) => ({
-                    ...prev,
-                    trackingNumber: event.target.value,
-                  }))
-                }
-                required
-              />
-              <Input
-                labelName="Tracking URL"
-                value={action.trackingUrl}
-                onChange={(event) =>
-                  setAction((prev) => ({
-                    ...prev,
-                    trackingUrl: event.target.value,
-                  }))
-                }
-              />
-            </div>
-          )}
-          {action.type === "return_customer_tracking" && (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label className="block text-sm text-gray-700">
-                <span className="mb-1 block">Shipment status</span>
-                <select
-                  className="admin-input w-full"
-                  value={action.shipmentStatus}
-                  onChange={(event) =>
-                    setAction((prev) => ({
-                      ...prev,
-                      shipmentStatus: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="in_transit">In transit</option>
-                  <option value="delivered">Delivered to customer</option>
-                  <option value="failed">Delivery failed</option>
-                </select>
-              </label>
-              <Input
-                labelName="Location"
-                value={action.location}
-                onChange={(event) =>
-                  setAction((prev) => ({
-                    ...prev,
-                    location: event.target.value,
-                  }))
-                }
-              />
-            </div>
-          )}
-          {action.type === "replacement_ship" && (
-            <>
-              <Input
-                labelName="Courier"
-                value={action.courierName}
-                onChange={(event) =>
-                  setAction((prev) => ({
-                    ...prev,
-                    courierName: event.target.value,
-                  }))
-                }
-                required
-              />
-              <Input
-                labelName="Tracking / AWB"
-                value={action.trackingNumber}
-                onChange={(event) =>
-                  setAction((prev) => ({
-                    ...prev,
-                    trackingNumber: event.target.value,
-                  }))
-                }
-                required
-              />
-            </>
-          )}
-          <Input
-            type="textarea"
-            labelName="Note"
-            value={action.note}
+          ))}
+        </div>
+      </FormSection>
+    )}
+
+    {/* =====================================================
+        RETURN TO CUSTOMER
+    ====================================================== */}
+    {action.type === "return_customer" && (
+      <FormSection
+        title="Return-to-Customer Shipment"
+        description="Enter the courier and tracking information for the rejected product."
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormInput
+            label="Courier"
+            name="courierName"
+            value={action.courierName}
             onChange={(event) =>
-              setAction((prev) => ({ ...prev, note: event.target.value }))
+              setAction((prev) => ({
+                ...prev,
+                courierName: event.target.value,
+              }))
             }
+            placeholder="Enter courier name"
+            required
+          />
+
+          <FormInput
+            label="Tracking / AWB"
+            name="trackingNumber"
+            value={action.trackingNumber}
+            onChange={(event) =>
+              setAction((prev) => ({
+                ...prev,
+                trackingNumber: event.target.value,
+              }))
+            }
+            placeholder="Enter tracking number / AWB"
+            required
+          />
+
+          <FormInput
+            label="Tracking URL"
+            name="trackingUrl"
+            value={action.trackingUrl}
+            onChange={(event) =>
+              setAction((prev) => ({
+                ...prev,
+                trackingUrl: event.target.value,
+              }))
+            }
+            placeholder="https://..."
           />
         </div>
-      </DefaultModal>
+      </FormSection>
+    )}
+
+    {/* =====================================================
+        RETURN CUSTOMER TRACKING
+    ====================================================== */}
+    {action.type === "return_customer_tracking" && (
+      <FormSection
+        title="Return Shipment Tracking"
+        description="Update the shipment status and current location."
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormSelectGroup
+            label="Shipment Status"
+            value={action.shipmentStatus}
+            options={[
+              {
+                value: "in_transit",
+                label: "In transit",
+              },
+              {
+                value: "delivered",
+                label: "Delivered to customer",
+              },
+              {
+                value: "failed",
+                label: "Delivery failed",
+              },
+            ]}
+            onChange={(selectedOption) =>
+              setAction((prev) => ({
+                ...prev,
+                shipmentStatus:
+                  selectedOption?.value ||
+                  selectedOption ||
+                  "",
+              }))
+            }
+            placeholder="Select shipment status"
+          />
+
+          <FormInput
+            label="Location"
+            name="location"
+            value={action.location}
+            onChange={(event) =>
+              setAction((prev) => ({
+                ...prev,
+                location: event.target.value,
+              }))
+            }
+            placeholder="Enter current location"
+          />
+        </div>
+      </FormSection>
+    )}
+
+    {/* =====================================================
+        REPLACEMENT SHIPMENT
+    ====================================================== */}
+    {action.type === "replacement_ship" && (
+      <FormSection
+        title="Replacement Shipment"
+        description="Enter the courier and tracking information for the replacement."
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormInput
+            label="Courier"
+            name="courierName"
+            value={action.courierName}
+            onChange={(event) =>
+              setAction((prev) => ({
+                ...prev,
+                courierName: event.target.value,
+              }))
+            }
+            placeholder="Enter courier name"
+            required
+          />
+
+          <FormInput
+            label="Tracking / AWB"
+            name="trackingNumber"
+            value={action.trackingNumber}
+            onChange={(event) =>
+              setAction((prev) => ({
+                ...prev,
+                trackingNumber: event.target.value,
+              }))
+            }
+            placeholder="Enter tracking number / AWB"
+            required
+          />
+        </div>
+      </FormSection>
+    )}
+
+    {/* =====================================================
+        COMMON NOTE
+    ====================================================== */}
+    <FormSection
+      title="Additional Notes"
+      description="Add any additional information related to this action."
+    >
+      <FormInput
+        label="Note"
+        name="note"
+        type="textarea"
+        value={action.note}
+        onChange={(event) =>
+          setAction((prev) => ({
+            ...prev,
+            note: event.target.value,
+          }))
+        }
+        placeholder="Add an optional note..."
+      />
+    </FormSection>
+  </div>
+</DefaultModal>
 
       <ConfirmModal
         open={confirmAction.open}

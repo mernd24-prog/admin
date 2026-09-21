@@ -24,6 +24,9 @@ import { dropdownApi } from "../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
+import FormSection from "../../components/Atoms/FormSection/FormSection";
+import FormInput from "../../components/Atoms/FormInput/FormInput";
+import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
 
 const REF_TYPES = ["return", "cancellation", "refund", "manual"];
 
@@ -586,82 +589,142 @@ const CreditNotes = () => {
           setForm(EMPTY_FORM);
         }}
         title="Create Credit Note"
+        submitButtonText={saving ? "Creating..." : "Create Credit Note"}
+        closeButtonText="Cancel"
+        isButtonView={true}
+        onSubmit={handleCreate}
+        loading={saving}
       >
-        <div className="p-4 space-y-4">
-          <Input
-            label="Order ID *"
-            value={form.orderId}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, orderId: e.target.value }))
-            }
-            placeholder="Order UUID..."
-          />
-          <Input
-            label="Reference ID"
-            value={form.referenceId}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, referenceId: e.target.value }))
-            }
-            placeholder="Return / cancellation ID..."
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Reference Type
-            </label>
-            <select
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              value={form.referenceType}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, referenceType: e.target.value }))
-              }
-            >
-              {REF_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Input
-            label="Taxable Amount *"
-            type="number"
-            value={form.taxableAmount}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, taxableAmount: e.target.value }))
-            }
-            placeholder="0.00"
-          />
-          <Input
-            label="Tax Amount"
-            type="number"
-            value={form.taxAmount}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, taxAmount: e.target.value }))
-            }
-            placeholder="0.00"
-          />
-          <Input
-            label="Total Credit Amount"
-            type="number"
-            value={form.totalAmount}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, totalAmount: e.target.value }))
-            }
-            placeholder="Taxable + tax"
-          />
-          <Input
-            label="Reason"
-            value={form.reason}
-            onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
-            placeholder="Reason for credit note..."
-          />
-          <button
-            onClick={handleCreate}
-            disabled={saving}
-            className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60"
+        <div className="space-y-5">
+          {/* ==================== Credit Note Information ==================== */}
+          <FormSection
+            title="Credit Note Information"
+            description="Enter the order and reference details for the credit note."
           >
-            {saving ? "Creating..." : "Create Credit Note"}
-          </button>
+            <div className="space-y-4">
+              <FormInput
+                label="Order ID"
+                name="orderId"
+                value={form.orderId}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    orderId: e.target.value,
+                  }))
+                }
+                placeholder="Enter order UUID"
+                required
+              />
+
+              <FormInput
+                label="Reference ID"
+                name="referenceId"
+                value={form.referenceId}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    referenceId: e.target.value,
+                  }))
+                }
+                placeholder="Return / cancellation ID"
+              />
+
+              <FormSelectGroup
+                label="Reference Type"
+                options={REF_TYPES.map((type) => ({
+                  label: type,
+                  value: type,
+                }))}
+                value={
+                  REF_TYPES.map((type) => ({
+                    label: type,
+                    value: type,
+                  })).find((option) => option.value === form.referenceType) ||
+                  null
+                }
+                onChange={(selectedOption) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    referenceType: selectedOption?.value || "",
+                  }))
+                }
+                placeholder="Select reference type"
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Amount Details ==================== */}
+          <FormSection
+            title="Amount Details"
+            description="Enter the taxable amount, tax amount, and total credit amount."
+          >
+            <div className="space-y-4">
+              <FormInput
+                label="Taxable Amount"
+                name="taxableAmount"
+                type="number"
+                min="0"
+                value={form.taxableAmount}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    taxableAmount: e.target.value,
+                  }))
+                }
+                placeholder="0.00"
+                required
+              />
+
+              <FormInput
+                label="Tax Amount"
+                name="taxAmount"
+                type="number"
+                min="0"
+                value={form.taxAmount}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    taxAmount: e.target.value,
+                  }))
+                }
+                placeholder="0.00"
+              />
+
+              <FormInput
+                label="Total Credit Amount"
+                name="totalAmount"
+                type="number"
+                min="0"
+                value={form.totalAmount}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    totalAmount: e.target.value,
+                  }))
+                }
+                placeholder="Taxable amount + tax"
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Reason ==================== */}
+          <FormSection
+            title="Credit Note Reason"
+            description="Provide the reason for issuing this credit note."
+          >
+            <FormInput
+              label="Reason"
+              name="reason"
+              value={form.reason}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  reason: e.target.value,
+                }))
+              }
+              placeholder="Enter reason for credit note"
+            />
+          </FormSection>
         </div>
       </DefaultModal>
     </div>
