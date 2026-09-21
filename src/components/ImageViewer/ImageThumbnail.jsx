@@ -62,7 +62,7 @@ export const ImageThumbnail = ({
   };
 
   return (
-    <div className="flex flex-col items-start gap-3">
+    <div className="flex flex-col items-center gap-3">
       {/* Image Thumbnail */}
       <div
         className={`group relative flex shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white transition-all hover:border-[var(--admin-gold)] hover:shadow-md ${dimensionClass} ${className}`}
@@ -79,19 +79,13 @@ export const ImageThumbnail = ({
 
             {showZoomIcon && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                <MdZoomIn
-                  size={18}
-                  className="text-white drop-shadow-md"
-                />
+                <MdZoomIn size={18} className="text-white drop-shadow-md" />
               </div>
             )}
           </>
         ) : (
           fallbackIcon || (
-            <MdInventory2
-              size={20}
-              className="text-[var(--admin-muted)]"
-            />
+            <MdInventory2 size={20} className="text-[var(--admin-muted)]" />
           )
         )}
       </div>
@@ -102,7 +96,7 @@ export const ImageThumbnail = ({
           type="button"
           disabled={!hasImage}
           onClick={handleViewClick}
-          className="text-xs item-centre font-bold text-[var(--admin-blue)] transition-colors hover:text-[var(--admin-gold)] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+          className="text-xs item-centre justify-center font-bold text-[var(--admin-blue)] transition-colors hover:text-[var(--admin-gold)] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
         >
           {viewButtonText}
         </button>

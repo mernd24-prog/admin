@@ -1,7 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { MdEmail, MdInventory2, MdRefresh, MdSend } from "react-icons/md";
 import { toast } from "sonner";
-import { BulkActionBar, DataTable, PageHeader, StatusBadge } from "../../components/Shared";
+import {
+  BulkActionBar,
+  DataTable,
+  PageHeader,
+  StatusBadge,
+} from "../../components/Shared";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
@@ -72,21 +77,26 @@ const StockNotifications = () => {
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [bulkSending, setBulkSending] = useState(false);
   const selectedStatusOption = useMemo(
-    () => STATUS_OPTIONS.find((option) => option.value === status) || STATUS_OPTIONS[0],
+    () =>
+      STATUS_OPTIONS.find((option) => option.value === status) ||
+      STATUS_OPTIONS[0],
     [status],
   );
 
   const fetchRows = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axiosProvider.get(ENDPOINTS.stockNotifications.list, {
-        params: {
-          search: search || undefined,
-          status: status || undefined,
-          limit: pageSize,
-          offset: (page - 1) * pageSize,
+      const response = await axiosProvider.get(
+        ENDPOINTS.stockNotifications.list,
+        {
+          params: {
+            search: search || undefined,
+            status: status || undefined,
+            limit: pageSize,
+            offset: (page - 1) * pageSize,
+          },
         },
-      });
+      );
       const payload = response?.data || {};
       const list = Array.isArray(payload.data) ? payload.data : [];
       setRows(list);
@@ -102,30 +112,38 @@ const StockNotifications = () => {
     fetchRows();
   }, [fetchRows]);
 
-  const notifyUser = useCallback(async (row) => {
-    if (!row?.productId) return;
-    const message = window.prompt(
-      "Optional message for the customer email",
-      "Your requested product is back in stock. Order soon while it is available.",
-    );
-    if (message === null) return;
+  const notifyUser = useCallback(
+    async (row) => {
+      if (!row?.productId) return;
+      const message = window.prompt(
+        "Optional message for the customer email",
+        "Your requested product is back in stock. Order soon while it is available.",
+      );
+      if (message === null) return;
 
-    try {
-      setSendingId(row.id);
-      const response = await axiosProvider.post(ENDPOINTS.stockNotifications.notify, {
-        productId: row.productId,
-        variantId: row.variantId || null,
-        message,
-      });
-      const result = response?.data?.data || {};
-      toast.success(`Email queued: ${result.queued || 0} queued, ${result.failed || 0} failed`);
-      await fetchRows();
-    } catch (error) {
-      toast.error(error?.message || "Failed to send stock email");
-    } finally {
-      setSendingId("");
-    }
-  }, [fetchRows]);
+      try {
+        setSendingId(row.id);
+        const response = await axiosProvider.post(
+          ENDPOINTS.stockNotifications.notify,
+          {
+            productId: row.productId,
+            variantId: row.variantId || null,
+            message,
+          },
+        );
+        const result = response?.data?.data || {};
+        toast.success(
+          `Email queued: ${result.queued || 0} queued, ${result.failed || 0} failed`,
+        );
+        await fetchRows();
+      } catch (error) {
+        toast.error(error?.message || "Failed to send stock email");
+      } finally {
+        setSendingId("");
+      }
+    },
+    [fetchRows],
+  );
 
   const selectedRows = useMemo(
     () => rows.filter((row) => selectedKeys.includes(row.id)),
@@ -154,10 +172,13 @@ const StockNotifications = () => {
 
     try {
       setBulkSending(true);
-      const response = await axiosProvider.post(ENDPOINTS.stockNotifications.notifyBulk, {
-        items,
-        message,
-      });
+      const response = await axiosProvider.post(
+        ENDPOINTS.stockNotifications.notifyBulk,
+        {
+          items,
+          message,
+        },
+      );
       const result = response?.data?.data || {};
       toast.success(
         `Batch queued: ${result.queued || 0} emails, ${result.skipped || 0} products skipped, ${result.failed || 0} failed`,
@@ -171,50 +192,60 @@ const StockNotifications = () => {
     }
   }, [fetchRows, selectedRows]);
 
-  const columns = useMemo(() => [
-    { key: "customer", label: "User", render: (_, row) => userCell(row) },
-    { key: "product", label: "Product", render: (_, row) => productCell(row) },
-    { key: "sku", label: "SKU" },
-    {
-      key: "price",
-      label: "Price",
-      render: (value) =>
-        value === null || value === undefined
-          ? "N/A"
-          : `₹${Number(value || 0).toLocaleString("en-IN")}`,
-    },
-    {
-      key: "status",
-      label: "Status",
-      render: (value) => <StatusBadge status={value || "pending"} dot />,
-    },
-    {
-      key: "requestedAt",
-      label: "Requested",
-      render: (value) => formatDateTime12Hour(value),
-    },
-    {
-      key: "notifiedAt",
-      label: "Notified",
-      render: (value) => formatDateTime12Hour(value),
-    },
-    ...(!sellerView ? [{ key: "sellerId", label: "Seller ID" }] : []),
-  ], [sellerView]);
+  const columns = useMemo(
+    () => [
+      { key: "customer", label: "User", render: (_, row) => userCell(row) },
+      {
+        key: "product",
+        label: "Product",
+        render: (_, row) => productCell(row),
+      },
+      { key: "sku", label: "SKU" },
+      {
+        key: "price",
+        label: "Price",
+        render: (value) =>
+          value === null || value === undefined
+            ? "N/A"
+            : `₹${Number(value || 0).toLocaleString("en-IN")}`,
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (value) => <StatusBadge status={value || "pending"} dot />,
+      },
+      {
+        key: "requestedAt",
+        label: "Requested",
+        render: (value) => formatDateTime12Hour(value),
+      },
+      {
+        key: "notifiedAt",
+        label: "Notified",
+        render: (value) => formatDateTime12Hour(value),
+      },
+      ...(!sellerView ? [{ key: "sellerId", label: "Seller ID" }] : []),
+    ],
+    [sellerView],
+  );
 
-  const exportColumns = useMemo(() => [
-    { key: "name", label: "Name" },
-    { key: "email", label: "Email" },
-    { key: "productId", label: "Product ID" },
-    { key: "productTitle", label: "Product" },
-    { key: "variantId", label: "Variant ID" },
-    { key: "variantTitle", label: "Variant" },
-    { key: "sku", label: "SKU" },
-    { key: "price", label: "Price" },
-    { key: "sellerId", label: "Seller ID" },
-    { key: "status", label: "Status" },
-    { key: "requestedAt", label: "Requested At" },
-    { key: "notifiedAt", label: "Notified At" },
-  ], []);
+  const exportColumns = useMemo(
+    () => [
+      { key: "name", label: "Name" },
+      { key: "email", label: "Email" },
+      { key: "productId", label: "Product ID" },
+      { key: "productTitle", label: "Product" },
+      { key: "variantId", label: "Variant ID" },
+      { key: "variantTitle", label: "Variant" },
+      { key: "sku", label: "SKU" },
+      { key: "price", label: "Price" },
+      { key: "sellerId", label: "Seller ID" },
+      { key: "status", label: "Status" },
+      { key: "requestedAt", label: "Requested At" },
+      { key: "notifiedAt", label: "Notified At" },
+    ],
+    [],
+  );
 
   const filterBar = (
     <div className="flex flex-wrap items-end gap-3 border-b border-[var(--admin-line)] bg-white px-4 py-3">
@@ -229,7 +260,7 @@ const StockNotifications = () => {
           }}
         />
       </div>
-      <button
+      {/* <button
         type="button"
         className="admin-btn-secondary"
         onClick={fetchRows}
@@ -237,7 +268,7 @@ const StockNotifications = () => {
       >
         <MdRefresh size={17} />
         Refresh
-      </button>
+      </button> */}
     </div>
   );
 
