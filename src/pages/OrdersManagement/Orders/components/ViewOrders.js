@@ -4743,7 +4743,7 @@ const OrderSummary = () => {
           {!isSeller && (
             <FormSection
               title="Order Status"
-              description="Select the status you want to apply to this order."
+              subtitle="Select the status you want to apply to this order."
             >
               <FormSelectGroup
                 label="Status"
@@ -4786,7 +4786,7 @@ const OrderSummary = () => {
           ) && (
             <FormSection
               title="Shipment Details"
-              description="Enter the tracking information for this shipment."
+              subtitle="Enter the tracking information for this shipment."
             >
               <div className="space-y-4">
                 <Input
@@ -4838,7 +4838,7 @@ const OrderSummary = () => {
           {formData.status === "cancelled" && (
             <FormSection
               title="Cancellation Details"
-              description="Select the cancellation reason, refund handling, and items to cancel."
+              subtitle="Select the cancellation reason, refund handling, and items to cancel."
             >
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -5014,7 +5014,7 @@ const OrderSummary = () => {
           {/* Notes */}
           <FormSection
             title="Notes"
-            description="Add a reason or internal note for this status update."
+            subtitle="Add a reason or internal note for this status update."
           >
             <div className="space-y-4">
               <Input
@@ -5065,7 +5065,7 @@ const OrderSummary = () => {
         <div className="space-y-5 py-2">
           <FormSection
             title="Order Note"
-            description="Add a note to this order and choose who can view it."
+            subtitle="Add a note to this order and choose who can view it."
           >
             <div className="space-y-4">
               <FormSelectGroup
