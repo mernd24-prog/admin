@@ -15,6 +15,7 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import { ACTIONS } from "../../../_helpers/usePermission";
 
 const money = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -208,118 +209,118 @@ export default function CodCollections() {
         onRefresh={load}
         requiredModule="payments"
       />
-   <DefaultModal
-  isOpen={decision.open}
-  onClose={() =>
-    setDecision({
-      open: false,
-      row: null,
-      amount: "",
-      referenceId: "",
-      notes: "",
-      markRemitted: false,
-    })
-  }
-  title="Verify COD Collection"
-  onSubmit={verify}
-  submitButtonText="Verify Collection"
-  closeButtonText="Cancel"
-  isButtonView={true}
->
-  <div className="space-y-5">
-    {/* ==================== Collection Information ==================== */}
-    <FormSection
-      title="Collection Information"
-      description="Verify the cash collected for this COD order."
-    >
-      <div className="space-y-4">
-        {/* Expected COD */}
-        <div className="rounded-lg border border-[var(--admin-line)] bg-gray-50 px-4 py-3">
-          <div className="text-xs font-medium uppercase tracking-wide text-gray-400">
-            Expected COD Amount
-          </div>
-
-          <div className="mt-1 text-lg font-semibold text-[var(--admin-ink)]">
-            {money(decision.row?.expected_amount)}
-          </div>
-        </div>
-
-        {/* Collected Amount */}
-        <FormInput
-          label="Collected Amount"
-          name="collectedAmount"
-          type="number"
-          value={decision.amount}
-          onChange={(event) =>
-            setDecision((prev) => ({
-              ...prev,
-              amount: event.target.value,
-            }))
-          }
-          placeholder="Enter collected amount"
-          required
-        />
-
-        {/* Collection Reference */}
-        <FormInput
-          label="Collection / Remittance Reference"
-          name="referenceId"
-          value={decision.referenceId}
-          onChange={(event) =>
-            setDecision((prev) => ({
-              ...prev,
-              referenceId: event.target.value,
-            }))
-          }
-          placeholder="Enter collection or remittance reference"
-          required
-        />
-
-        {/* Notes */}
-        <FormInput
-          label="Notes"
-          name="notes"
-          type="textarea"
-          value={decision.notes}
-          onChange={(event) =>
-            setDecision((prev) => ({
-              ...prev,
-              notes: event.target.value,
-            }))
-          }
-          placeholder="Add any additional notes..."
-        />
-      </div>
-    </FormSection>
-
-    {/* ==================== Remittance Settings ==================== */}
-    {decision.row?.collected_by === "seller" && (
-      <FormSection
-        title="Remittance Confirmation"
-        description="Confirm whether the platform has received the collected cash from the seller."
+      <DefaultModal
+        isOpen={decision.open}
+        onClose={() =>
+          setDecision({
+            open: false,
+            row: null,
+            amount: "",
+            referenceId: "",
+            notes: "",
+            markRemitted: false,
+          })
+        }
+        title="Verify COD Collection"
+        onSubmit={verify}
+        submitButtonText="Verify Collection"
+        closeButtonText="Cancel"
+        isButtonView={true}
       >
-        <FormToggleRow
-          title="Mark as Remitted"
-          description="Platform has actually received the full cash amount from the seller."
-          isToggle={decision.markRemitted}
-          handleClick={() =>
-            setDecision((prev) => ({
-              ...prev,
-              markRemitted: !prev.markRemitted,
-            }))
-          }
-        />
+        <div className="space-y-5">
+          {/* ==================== Collection Information ==================== */}
+          <FormSection
+            title="Collection Information"
+            description="Verify the cash collected for this COD order."
+          >
+            <div className="space-y-4">
+              {/* Expected COD */}
+              <div className="rounded-lg border border-[var(--admin-line)] bg-gray-50 px-4 py-3">
+                <div className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                  Expected COD Amount
+                </div>
 
-        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
-          <p className="text-xs leading-5 text-amber-700">
-            Leave this disabled when you are only verifying that the seller
-            collected cash from the customer.
-          </p>
+                <div className="mt-1 text-lg font-semibold text-[var(--admin-ink)]">
+                  {money(decision.row?.expected_amount)}
+                </div>
+              </div>
+
+              {/* Collected Amount */}
+              <FormInput
+                label="Collected Amount"
+                name="collectedAmount"
+                type="number"
+                value={decision.amount}
+                onChange={(event) =>
+                  setDecision((prev) => ({
+                    ...prev,
+                    amount: event.target.value,
+                  }))
+                }
+                placeholder="Enter collected amount"
+                required
+              />
+
+              {/* Collection Reference */}
+              <FormInput
+                label="Collection / Remittance Reference"
+                name="referenceId"
+                value={decision.referenceId}
+                onChange={(event) =>
+                  setDecision((prev) => ({
+                    ...prev,
+                    referenceId: event.target.value,
+                  }))
+                }
+                placeholder="Enter collection or remittance reference"
+                required
+              />
+
+              {/* Notes */}
+              <FormInput
+                label="Notes"
+                name="notes"
+                type="textarea"
+                value={decision.notes}
+                onChange={(event) =>
+                  setDecision((prev) => ({
+                    ...prev,
+                    notes: event.target.value,
+                  }))
+                }
+                placeholder="Add any additional notes..."
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Remittance Settings ==================== */}
+          {decision.row?.collected_by === "seller" && (
+            <FormSection
+              title="Remittance Confirmation"
+              description="Confirm whether the platform has received the collected cash from the seller."
+            >
+              <FormToggleRow
+                title="Mark as Remitted"
+                description="Platform has actually received the full cash amount from the seller."
+                isToggle={decision.markRemitted}
+                handleClick={() =>
+                  setDecision((prev) => ({
+                    ...prev,
+                    markRemitted: !prev.markRemitted,
+                  }))
+                }
+              />
+
+              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
+                <p className="text-xs leading-5 text-amber-700">
+                  Leave this disabled when you are only verifying that the
+                  seller collected cash from the customer.
+                </p>
+              </div>
+            </FormSection>
+          )}
         </div>
-      </FormSection>
-    )}
-  </div>
-</DefaultModal>
+      </DefaultModal>
     </div>
   );
 }

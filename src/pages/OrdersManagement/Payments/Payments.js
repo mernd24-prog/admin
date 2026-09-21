@@ -59,17 +59,17 @@ const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
 const money = (value) => Number(value || 0).toFixed(2);
 const FILTER_FIELDS = [
   { key: "orderId", type: "text", label: "Order #", width: "w-48" },
-  {
-    key: "buyerId",
-    type: "asyncDropdown",
-    label: "Buyer",
-    width: "w-52",
-    load: (search) =>
-      dropdownApi.getBuyers({
-        keyWord: search,
-        searchFields: "full_name,email",
-      }),
-  },
+  // {
+  //   key: "buyerId",
+  //   type: "asyncDropdown",
+  //   label: "Buyer",
+  //   width: "w-52",
+  //   load: (search) =>
+  //     dropdownApi.getBuyers({
+  //       keyWord: search,
+  //       searchFields: "full_name,email",
+  //     }),
+  // },
   {
     key: "provider",
     type: "select",
