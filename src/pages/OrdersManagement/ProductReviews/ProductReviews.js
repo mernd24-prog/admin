@@ -851,7 +851,21 @@ const ProductReviews = () => {
         onSelectionChange={list.setSelectedKeys}
         rowKey={isDetailMode ? "_id" : "productId"}
         onRowClick={isDetailMode ? undefined : openProductReviews}
-        filterBar={<FilterBar fields={filterFields} listPage={list} />}
+        filterBar={
+          <FilterBar
+            fields={filterFields}
+            listPage={list}
+            onClear={() => {
+              if (isDetailMode && selectedProductId) {
+                // Preserve the product filter so we stay in detail mode
+                list.setFilters({ product: selectedProductId });
+              } else {
+                list.clearFilters();
+              }
+              list.clearSearch();
+            }}
+          />
+        }
         bulkActionBar={
           isDetailMode ? (
             <BulkActionBar

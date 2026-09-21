@@ -386,11 +386,7 @@ export default function FinanceOverview() {
               return (
                 <button
                   type="button"
-                  onClick={() =>
-                    navigate(
-                      `/app/finance-earnings?earning=${item.id || item.commissionId || ""}`,
-                    )
-                  }
+                  onClick={() => navigate("/app/finance-earnings")}
                   key={item.id || item.commissionId || item.orderId}
                   className="flex w-full flex-wrap items-center gap-3 px-5 py-4 text-left hover:bg-[var(--admin-soft)]"
                 >

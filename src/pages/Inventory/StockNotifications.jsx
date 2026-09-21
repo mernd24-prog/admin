@@ -286,7 +286,7 @@ const StockNotifications = () => {
           { label: "Inventory", to: "/app/inventory" },
           { label: "Stock Notifications" },
         ]}
-        count={total}
+        // count={total}
       />
 
       <DataTable
