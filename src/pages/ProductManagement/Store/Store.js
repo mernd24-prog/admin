@@ -29,6 +29,10 @@ import { transformArray } from "../../../_helpers/globalFunctions";
 import moment from "moment-timezone";
 import DefaultMiddleModal from "../../../components/Atoms/Modal/DefaultMiddleModal ";
 import Pagination from "../../../components/Pagination/Pagination";
+import {
+  ACCESS_SCOPES,
+  usePermission,
+} from "../../../_helpers/usePermission";
 
 const PAGE_SIZE = 10;
 const INITIAL_FORM_STATE = {
@@ -59,6 +63,12 @@ const INITIAL_FORM_STATE = {
 
 const Store = () => {
   const dispatch = useDispatch();
+  const { canAccess, isSeller } = usePermission();
+  const canManageSellerDirectory = canAccess({
+    module: "sellers",
+    action: "view",
+    scope: ACCESS_SCOPES.PLATFORM,
+  });
   const selector = useSelector((state) => state);
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -67,7 +77,6 @@ const Store = () => {
   const [pageNo, setPageNo] = useState(1);
   const [selectedShopForDelete, setSelectedShopForDelete] = useState(null);
   const [selectedRow, setSelectedRow] = useState([]);
-  const [userData, setUserData] = useState(null);
 
   const [modalState, setModalState] = useState({
     isOpen: false,
@@ -96,18 +105,6 @@ const Store = () => {
     selector?.store?.getAllSellerListData?.data?.data?.list || [],
   );
 
-  useEffect(() => {
-    const userDataString = sessionStorage.getItem("EcomAdmin");
-    if (userDataString) {
-      try {
-        const parsedData = JSON.parse(userDataString);
-        setUserData(parsedData);
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
-    }
-  }, []);
-
   const fetchStoreList = useCallback(() => {
     const query = {
       page: pageNo,
@@ -133,8 +130,8 @@ const Store = () => {
   useEffect(() => {
     fetchStoreList();
     dispatch(getAllCountryList());
-    dispatch(getAllSellerList());
-  }, [fetchStoreList]);
+    if (canManageSellerDirectory) dispatch(getAllSellerList());
+  }, [canManageSellerDirectory, dispatch, fetchStoreList]);
 
   const handleInputChange = (e, coordIndex = null) => {
     const { name, value } = e.target;
@@ -326,7 +323,7 @@ const Store = () => {
 
   const validateStoreForm = (formValues) => {
     const errors = {};
-    if (userData?.roleId !== 3) {
+    if (canManageSellerDirectory) {
       if (!formValues.user_id) errors.user_id = "Seller is required";
     }
     if (!formValues.name?.trim()) errors.name = "Store name is required";
@@ -488,7 +485,7 @@ const Store = () => {
   // Table configuration
   const tableHeadings = [
     "Shop Name",
-    ...(userData?.roleId !== 3 ? ["Seller Name"] : []),
+    ...(canManageSellerDirectory ? ["Seller Name"] : []),
     "Address",
     "Mobile/ Email",
     "Opening Hours",
@@ -510,7 +507,7 @@ const Store = () => {
         <span className="font-medium">{shop?.name}</span>
       </div>,
     ];
-    if (userData?.roleId !== 3) {
+    if (canManageSellerDirectory) {
       row.push(
         <div key={`seller-${index}`}>
           <p>{shop?.user_id?.userName}</p>
@@ -558,7 +555,7 @@ const Store = () => {
             setIsPasswordUpdateModal(true);
             setFormValues({ user_id: shop?._id });
           }}
-          showPasswordButton={userData?.roleId === 3 ? true : false}
+          showPasswordButton={isSeller}
         />
       </div>,
     );
@@ -688,7 +685,7 @@ const Store = () => {
       >
         <div className="p-4 space-y-4 py-6 text-xs">
           <div className="grid grid-cols-2 gap-4">
-            {userData?.roleId !== 3 && (
+            {canManageSellerDirectory && (
               <div className="col-span-2">
                 <FilterSelect
                   label="Seller *"

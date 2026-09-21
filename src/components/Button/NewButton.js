@@ -14,13 +14,12 @@ const NewButton = React.memo(
     loading = false,
     requiredModule,
     requiredAction,
+    requiredScope = "any",
     ...rest
   }) => {
     const location = useLocation();
     const inferredModule = getRouteModuleCandidates(location.pathname)[0];
-    const guardModule = requiredModule
-      ? inferredModule || requiredModule
-      : null;
+    const guardModule = requiredModule || inferredModule || null;
     const button = (
       <button
         type={type}
@@ -34,7 +33,12 @@ const NewButton = React.memo(
       </button>
     );
     return guardModule ? (
-      <PermissionGuard module={guardModule} action={requiredAction} hide>
+      <PermissionGuard
+        module={guardModule}
+        action={requiredAction}
+        scope={requiredScope}
+        hide
+      >
         {button}
       </PermissionGuard>
     ) : (

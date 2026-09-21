@@ -33,6 +33,12 @@ export const ACTIONS = {
   ADJUST: "adjust",
 };
 
+export const ACCESS_SCOPES = {
+  ANY: "any",
+  PLATFORM: "platform",
+  SELLER: "seller",
+};
+
 const ACTION_ALIASES = {
   add: "create",
   edit: "update",
@@ -349,6 +355,37 @@ export function usePermission() {
     actions.every((a) => can(moduleSlug, a));
 
   /**
+   * canAccess({ module, action, scope })
+   *
+   * Capability checks answer what a user may do. Scope checks answer which
+   * tenant/data boundary they may do it in. Keeping both here prevents pages
+   * from duplicating role-name checks for sensitive platform-wide data.
+   */
+  const canAccess = ({
+    module: moduleSlug,
+    action = ACTIONS.VIEW,
+    scope = ACCESS_SCOPES.ANY,
+  } = {}) => {
+    if (!moduleSlug) return false;
+
+    const sellerIdentity = [
+      ROLES.SELLER,
+      ROLES.SELLER_ADMIN,
+      ROLES.SELLER_SUB_ADMIN,
+    ].includes(role);
+    const platformIdentity = [
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+      ROLES.SUB_ADMIN,
+    ].includes(role);
+
+    if (scope === ACCESS_SCOPES.PLATFORM && !platformIdentity) return false;
+    if (scope === ACCESS_SCOPES.SELLER && !sellerIdentity) return false;
+
+    return can(moduleSlug, action);
+  };
+
+  /**
    * canRoute(path)
    * Returns true if the user can access the given route path.
    */
@@ -374,6 +411,7 @@ export function usePermission() {
     can,
     canAny,
     canAll,
+    canAccess,
     canRoute,
     isRole,
     isSuperAdmin,

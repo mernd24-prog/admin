@@ -10,6 +10,7 @@ const FormToggleRow = ({
   loading = false,
   requiredModule,
   requiredAction,
+  requiredScope = "any",
   className = "",
 }) => {
   return (
@@ -34,6 +35,7 @@ const FormToggleRow = ({
         loading={loading}
         requiredModule={requiredModule}
         requiredAction={requiredAction}
+        requiredScope={requiredScope}
       />
     </div>
   );

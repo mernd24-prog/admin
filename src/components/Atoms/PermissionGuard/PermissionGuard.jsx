@@ -13,7 +13,8 @@ import { usePermission } from "../../../_helpers/usePermission";
  *   allOf    {string[]}        — require ALL of these actions
  *   fallback {React.ReactNode} — what to render when access is denied (default: null)
  *   hide     {boolean}         — if true, renders nothing on deny instead of fallback
- *   allowSeller {boolean}      — allow seller roles for a scoped self-service action
+ *   scope    {"any"|"platform"|"seller"} — required data/tenant scope
+ *   allowSeller {boolean}      — legacy seller self-service override
  *
  * Examples:
  *   <PermissionGuard module="products" action="create">
@@ -31,14 +32,28 @@ const PermissionGuard = ({
   allOf,
   fallback = null,
   hide = false,
+  scope = "any",
   allowSeller = false,
   children,
 }) => {
-  const { can, canAny, canAll, isSeller } = usePermission();
+  const { can, canAny, canAll, canAccess, isSeller } = usePermission();
 
   let allowed = allowSeller && isSeller;
 
-  if (!allowed && allOf && allOf.length > 0) {
+  if (!allowed && scope !== "any") {
+    const requestedActions = allOf?.length
+      ? allOf
+      : actions?.length
+        ? actions
+        : [action || "view"];
+    allowed = allOf?.length
+      ? requestedActions.every((requestedAction) =>
+          canAccess({ module: moduleSlug, action: requestedAction, scope }),
+        )
+      : requestedActions.some((requestedAction) =>
+          canAccess({ module: moduleSlug, action: requestedAction, scope }),
+        );
+  } else if (!allowed && allOf && allOf.length > 0) {
     allowed = canAll(moduleSlug, allOf);
   } else if (!allowed && actions && actions.length > 0) {
     allowed = canAny(moduleSlug, actions);

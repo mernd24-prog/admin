@@ -47,6 +47,7 @@ export const ActionButtons = ({
   viewButton = false,
   onViewClick,
   requiredModule,
+  requiredScope = "any",
   editAction = "update",
   deleteAction = "delete",
   viewAction = "view",
@@ -65,13 +66,18 @@ export const ActionButtons = ({
 }) => {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
-  const guardModule = inferredModule || requiredModule;
+  const guardModule = requiredModule || inferredModule;
   const iconButtonClass = "admin-icon-action";
   const successIconButtonClass = "admin-icon-action success";
   const dangerIconButtonClass = "admin-icon-action danger";
   const guard = (action, node) =>
     guardModule ? (
-      <PermissionGuard module={guardModule} action={action} hide>
+      <PermissionGuard
+        module={guardModule}
+        action={action}
+        scope={requiredScope}
+        hide
+      >
         {node}
       </PermissionGuard>
     ) : (

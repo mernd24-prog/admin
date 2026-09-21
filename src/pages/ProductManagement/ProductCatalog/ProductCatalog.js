@@ -14,6 +14,7 @@ import ImageGallery from "../../../components/Atoms/ImageGallery/ImageGallery";
 import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 import AddButton from "../../../components/Button/AddButton";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
+import { ACCESS_SCOPES, usePermission } from "../../../_helpers/usePermission";
 import { MdVisibility, MdEdit, MdDelete } from "react-icons/md";
 
 // Redux
@@ -147,6 +148,7 @@ const ProductCatalog = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state);
   const navigate = useNavigate();
+  const { canAccess } = usePermission();
   const location = useLocation();
   const [apiRes, setApiRes] = useState({ list: [], total: 0 });
   const [loading, setLoading] = useState(false);
@@ -194,6 +196,11 @@ const ProductCatalog = () => {
   });
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
   const sellerView = isSellerPanel();
+  const canFilterBySeller = canAccess({
+    module: "sellers",
+    action: "view",
+    scope: ACCESS_SCOPES.PLATFORM,
+  });
 
   const sellerList = useSelector(
     (state) => state?.store?.getAllSellerListData?.data?.data?.list || [],
@@ -332,10 +339,12 @@ const ProductCatalog = () => {
   }, [fetchProductsList]);
 
   useEffect(() => {
-    setSellerLoading(true);
-    dispatch(getAllSellerList()).finally(() => {
-      setSellerLoading(false);
-    });
+    if (canFilterBySeller) {
+      setSellerLoading(true);
+      dispatch(getAllSellerList()).finally(() => {
+        setSellerLoading(false);
+      });
+    }
 
     dispatch(getCategoryList({ tree: true, limit: 100 }))
       .then((res) => {
@@ -362,7 +371,7 @@ const ProductCatalog = () => {
         ]);
       })
       .catch(() => {});
-  }, [dispatch]);
+  }, [canFilterBySeller, dispatch]);
 
   useEffect(() => {
     const nextFilters = getInitialFiltersForPath(
@@ -973,7 +982,7 @@ const ProductCatalog = () => {
             isActivationStatus={true}
             isApprovalOptions={true}
             isCategory={true}
-            isSellerStoreName={true}
+            isSellerStoreName={canFilterBySeller}
             categoryOptions={categoryOptions}
             dateFrom={true}
             dateTo={true}

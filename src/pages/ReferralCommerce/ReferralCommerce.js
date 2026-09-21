@@ -71,6 +71,11 @@ import FormInput from "../../components/Atoms/FormInput/FormInput";
 import FormToggleRow from "../../components/Atoms/FormToggleRow/FormToggleRow";
 import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
 import ToggleButton from "../../components/Atoms/ToggleButton/ToggleButton";
+import {
+  resolveProductStoreId,
+  resolveProductStoreName,
+  resolveStoreKey,
+} from "./referralProductStoreUtils";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -690,37 +695,11 @@ const ProductReferralAmounts = () => {
       : value.items || value.list || value.products || [];
   };
 
-  const getProductStoreId = (product) => {
-    return (
-      product?.storeId ||
-      product?.store?._id ||
-      product?.store?.id ||
-      product?.organizationSnapshot?.storeId ||
-      product?.organizationSnapshot?.storeID ||
-      ""
-    );
-  };
+  const getProductStoreId = (product) => resolveProductStoreId(product);
 
-  const getProductStoreName = (product) => {
-    return (
-      product?.organizationSnapshot?.storeDisplayName ||
-      product?.storeDisplayName ||
-      product?.store?.storeDisplayName ||
-      product?.store?.name ||
-      product?.organizationSnapshot?.legalBusinessName ||
-      "Unnamed Store"
-    );
-  };
+  const getProductStoreName = (product) => resolveProductStoreName(product);
 
-  const getProductStoreKey = (product) => {
-    const storeId = getProductStoreId(product);
-
-    if (storeId) {
-      return String(storeId);
-    }
-
-    return String(getProductStoreName(product));
-  };
+  const getProductStoreKey = (product) => resolveStoreKey(product);
 
   const getProductTitle = (product) => {
     return (

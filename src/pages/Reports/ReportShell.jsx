@@ -54,6 +54,7 @@ import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 import { GoldDateRangeCalendar } from "../../components/Shared/FilterBar";
 import { formatDateTime } from "../../utils/formatters";
+import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 
 const CHART_GRID_COLOR = "#e9dfc9";
 const REPORT_GOLD = "#d6a323";
@@ -581,14 +582,24 @@ export const ReportShell = ({
             exportRows?.length ||
             exportCsvSections?.length ||
             exportExcelSheets?.length) && (
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={exporting || loading}
+            <PermissionGuard
+              module="reports"
+              action="export"
+              hide
             >
-              <MdFileDownload size={16} />{" "}
-              {loading ? "Loading" : exporting ? "Exporting" : "Export Report"}
-            </button>
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={exporting || loading}
+              >
+                <MdFileDownload size={16} />{" "}
+                {loading
+                  ? "Loading"
+                  : exporting
+                    ? "Exporting"
+                    : "Export Report"}
+              </button>
+            </PermissionGuard>
           )
         }
       />

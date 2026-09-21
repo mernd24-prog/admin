@@ -8,12 +8,13 @@ const ToggleButton = ({
   isToggle,
   requiredModule,
   requiredAction = "status_change",
+  requiredScope = "any",
   disabled = false,
   loading = false,
 }) => {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
-  const guardModule = inferredModule || requiredModule;
+  const guardModule = requiredModule || inferredModule;
   const toggle = (
     <div className="flex">
       <label className="relative inline-flex items-center w-11 h-6">
@@ -51,7 +52,12 @@ const ToggleButton = ({
     </div>
   );
   return guardModule ? (
-    <PermissionGuard module={guardModule} action={requiredAction} hide>
+    <PermissionGuard
+      module={guardModule}
+      action={requiredAction}
+      scope={requiredScope}
+      hide
+    >
       {toggle}
     </PermissionGuard>
   ) : (

@@ -70,7 +70,7 @@ export default function SearchComponent({
 }) {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
-  const guardModule = inferredModule || requiredModule;
+  const guardModule = requiredModule || inferredModule;
   const hasAdvancedFilters = Boolean(
     isBrand ||
     isProduct ||

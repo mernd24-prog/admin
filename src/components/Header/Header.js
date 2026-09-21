@@ -25,6 +25,7 @@ import {
   setSelectedSellerOrganizationId,
 } from "../../_helpers/sellerOrganizationContext";
 import Tooltip from "../Atoms/tooltip/Tooltip";
+import { usePermission } from "../../_helpers/usePermission";
 
 const SELLER_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
 const REVIEW_LOCKED_APPROVAL_STATUSES = new Set([
@@ -152,6 +153,7 @@ export default function Header({
   hasPermanentOpen,
   isSidebarExpanded,
 }) {
+  const { canRoute } = usePermission();
   const [openModel, setOpenModel] = useState(false);
   const dispatch = useDispatch();
   const dropDownRef = useRef(null);
@@ -507,22 +509,27 @@ export default function Header({
                     </p>
                   </div>
                 </div>
-                {userData?.role_id !== 9 && (
+                {(canRoute("/app/profile") ||
+                  canRoute("/app/changePassword")) && (
                   <div className="py-1 text-xs px-4">
-                    <Link
-                      to="/app/profile"
-                      className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-semibold hover:bg-gray-50 hover:text-[var(--admin-gold)]"
-                    >
-                      <FiUser className="mr-3" />
-                      Profile
-                    </Link>
-                    <Link
-                      to={`/app/changePassword`}
-                      className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-medium hover:bg-gray-50 hover:text-[var(--admin-gold)]"
-                    >
-                      <FiKey className="mr-3" />
-                      Change Password
-                    </Link>
+                    {canRoute("/app/profile") && (
+                      <Link
+                        to="/app/profile"
+                        className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-semibold hover:bg-gray-50 hover:text-[var(--admin-gold)]"
+                      >
+                        <FiUser className="mr-3" />
+                        Profile
+                      </Link>
+                    )}
+                    {canRoute("/app/changePassword") && (
+                      <Link
+                        to="/app/changePassword"
+                        className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-medium hover:bg-gray-50 hover:text-[var(--admin-gold)]"
+                      >
+                        <FiKey className="mr-3" />
+                        Change Password
+                      </Link>
+                    )}
                   </div>
                 )}
 

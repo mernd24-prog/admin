@@ -13,12 +13,12 @@ import {
 } from "../../_helpers/exportToCsv";
 import { getRouteModuleCandidates } from "../../_helpers/rbacRoutes";
 
-const MaybeGuard = ({ module, action, children }) => {
+const MaybeGuard = ({ module, action, scope = "any", children }) => {
   const location = useLocation();
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
-  const guardModule = inferredModule || module;
+  const guardModule = module || inferredModule;
   return guardModule ? (
-    <PermissionGuard module={guardModule} action={action} hide>
+    <PermissionGuard module={guardModule} action={action} scope={scope} hide>
       {children}
     </PermissionGuard>
   ) : (
@@ -34,6 +34,7 @@ export const ExportButton = ({
   format = "csv",
   requiredModule,
   requiredAction = "export",
+  requiredScope = "any",
   label,
 }) => {
   const rows = selectedData.length ? selectedData : data;
@@ -54,7 +55,11 @@ export const ExportButton = ({
   };
 
   return (
-    <MaybeGuard module={requiredModule} action={requiredAction}>
+    <MaybeGuard
+      module={requiredModule}
+      action={requiredAction}
+      scope={requiredScope}
+    >
       <button
         type="button"
         onClick={exportRows}
@@ -73,6 +78,7 @@ export const ImportButton = ({
   duplicateKey,
   requiredModule,
   requiredAction = "import",
+  requiredScope = "any",
   label = "Import",
   templateRows = [],
   templateFilename = "import-template",
@@ -131,7 +137,11 @@ export const ImportButton = ({
   };
 
   return (
-    <MaybeGuard module={requiredModule} action={requiredAction}>
+    <MaybeGuard
+      module={requiredModule}
+      action={requiredAction}
+      scope={requiredScope}
+    >
       <>
         <button
           type="button"
