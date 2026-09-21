@@ -23,6 +23,9 @@ import { ACTIONS } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
 import { formatDateTime12Hour } from "../../utils/formatters";
 import { dropdownApi } from "../../_helpers/dropdownApi";
+import FormSection from "../../components/Atoms/FormSection/FormSection";
+import FormInput from "../../components/Atoms/FormInput/FormInput";
+import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
 
 const FILTER_FIELDS = [
   { key: "orderId", type: "text", label: "Order #", width: "w-56" },
@@ -594,39 +597,41 @@ const TaxCompliance = () => {
 
       <DefaultModal
         isOpen={invoiceModal}
-        onClose={() => setInvoiceModal(false)}
+        onClose={() => {
+          setInvoiceModal(false);
+          setInvoiceForm({ orderId: "" });
+        }}
         title="Generate Invoice"
+        submitButtonText={loading ? "Generating..." : "Generate"}
+        closeButtonText="Cancel"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setConfirmAction("invoice");
+        }}
+        isButtonView={true}
       >
-        <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">
-            Order ID <span className="text-red-500">*</span>
-            <input
-              type="text"
-              value={invoiceForm.orderId}
-              onChange={(event) =>
-                setInvoiceForm({ orderId: event.target.value })
-              }
-              placeholder="Enter order ID"
-              className="admin-input mt-1 w-full"
-            />
-          </label>
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setInvoiceModal(false)}
-              className="admin-btn-secondary"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmAction("invoice")}
-              disabled={loading}
-              className="admin-btn-primary"
-            >
-              Generate
-            </button>
-          </div>
+        <div className="space-y-5">
+          {/* ==================== Invoice Information ==================== */}
+          <FormSection
+            title="Invoice Information"
+            description="Enter the order details to generate the invoice."
+          >
+            <div className="grid grid-cols-1 gap-4">
+              <FormInput
+                label="Order ID"
+                name="orderId"
+                value={invoiceForm.orderId}
+                onChange={(event) =>
+                  setInvoiceForm({
+                    orderId: event.target.value,
+                  })
+                }
+                placeholder="Enter order ID"
+                required
+                error={!invoiceForm.orderId ? "" : undefined}
+              />
+            </div>
+          </FormSection>
         </div>
       </DefaultModal>
 
@@ -634,104 +639,139 @@ const TaxCompliance = () => {
         isOpen={creditModal}
         onClose={() => setCreditModal(false)}
         title="Create Credit Note"
+        submitButtonText="Create"
+        closeButtonText="Cancel"
+        onSubmit={() => setConfirmAction("credit")}
+        isButtonView={true}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <label className="block text-sm font-medium text-gray-700 md:col-span-2">
-            Order ID <span className="text-red-500">*</span>
-            <input
-              type="text"
-              value={creditForm.orderId}
-              onChange={(event) =>
-                setCreditForm((prev) => ({
-                  ...prev,
-                  orderId: event.target.value,
-                }))
-              }
-              placeholder="Enter order ID"
-              className="admin-input mt-1 w-full"
-            />
-          </label>
-          <label className="block text-sm font-medium text-gray-700 md:col-span-2">
-            Invoice ID
-            <input
-              type="text"
-              value={creditForm.invoiceId}
-              onChange={(event) =>
-                setCreditForm((prev) => ({
-                  ...prev,
-                  invoiceId: event.target.value,
-                }))
-              }
-              placeholder="Optional invoice ID"
-              className="admin-input mt-1 w-full"
-            />
-          </label>
-          <label className="block text-sm font-medium text-gray-700">
-            Reference Type
-            <select
-              value={creditForm.referenceType}
-              onChange={(event) =>
-                setCreditForm((prev) => ({
-                  ...prev,
-                  referenceType: event.target.value,
-                }))
-              }
-              className="admin-input mt-1 w-full"
-            >
-              <option value="manual">Manual</option>
-              <option value="cancellation">Cancellation</option>
-              <option value="return">Return</option>
-              <option value="refund">Refund</option>
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-gray-700">
-            Reference ID
-            <input
-              type="text"
-              value={creditForm.referenceId}
-              onChange={(event) =>
-                setCreditForm((prev) => ({
-                  ...prev,
-                  referenceId: event.target.value,
-                }))
-              }
-              placeholder="Optional reference ID"
-              className="admin-input mt-1 w-full"
-            />
-          </label>
-          <label className="block text-sm font-medium text-gray-700">
-            Taxable Amount <span className="text-red-500">*</span>
-            <input
-              type="number"
-              min="0"
-              value={creditForm.taxableAmount}
-              onChange={(event) =>
-                setCreditForm((prev) => ({
-                  ...prev,
-                  taxableAmount: event.target.value,
-                }))
-              }
-              className="admin-input mt-1 w-full"
-            />
-          </label>
-          <label className="block text-sm font-medium text-gray-700">
-            Tax Amount
-            <input
-              type="number"
-              min="0"
-              value={creditForm.taxAmount}
-              onChange={(event) =>
-                setCreditForm((prev) => ({
-                  ...prev,
-                  taxAmount: event.target.value,
-                }))
-              }
-              className="admin-input mt-1 w-full"
-            />
-          </label>
-          <label className="block text-sm font-medium text-gray-700 md:col-span-2">
-            Reason
-            <textarea
+        <div className="space-y-5">
+          {/* ==================== Credit Note Information ==================== */}
+          <FormSection
+            title="Credit Note Information"
+            description="Enter the order and reference details for the credit note."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Order ID */}
+              <div className="md:col-span-2">
+                <FormInput
+                  label="Order ID"
+                  name="orderId"
+                  value={creditForm.orderId}
+                  onChange={(event) =>
+                    setCreditForm((prev) => ({
+                      ...prev,
+                      orderId: event.target.value,
+                    }))
+                  }
+                  placeholder="Enter order ID"
+                  required
+                />
+              </div>
+
+              {/* Invoice ID */}
+              <div className="md:col-span-2">
+                <FormInput
+                  label="Invoice ID"
+                  name="invoiceId"
+                  value={creditForm.invoiceId}
+                  onChange={(event) =>
+                    setCreditForm((prev) => ({
+                      ...prev,
+                      invoiceId: event.target.value,
+                    }))
+                  }
+                  placeholder="Optional invoice ID"
+                />
+              </div>
+
+              {/* Reference Type */}
+              <FormSelectGroup
+                label="Reference Type"
+                name="referenceType"
+                value={creditForm.referenceType}
+                options={[
+                  { label: "Manual", value: "manual" },
+                  { label: "Cancellation", value: "cancellation" },
+                  { label: "Return", value: "return" },
+                  { label: "Refund", value: "refund" },
+                ]}
+                onChange={(selectedOption) =>
+                  setCreditForm((prev) => ({
+                    ...prev,
+                    referenceType:
+                      selectedOption?.value || selectedOption || "manual",
+                  }))
+                }
+                placeholder="Select reference type"
+              />
+
+              {/* Reference ID */}
+              <FormInput
+                label="Reference ID"
+                name="referenceId"
+                value={creditForm.referenceId}
+                onChange={(event) =>
+                  setCreditForm((prev) => ({
+                    ...prev,
+                    referenceId: event.target.value,
+                  }))
+                }
+                placeholder="Optional reference ID"
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Amount Details ==================== */}
+          <FormSection
+            title="Amount Details"
+            description="Enter the taxable and applicable tax amounts for the credit note."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Taxable Amount */}
+              <FormInput
+                label="Taxable Amount"
+                name="taxableAmount"
+                type="number"
+                min="0"
+                value={creditForm.taxableAmount}
+                onChange={(event) =>
+                  setCreditForm((prev) => ({
+                    ...prev,
+                    taxableAmount: event.target.value,
+                  }))
+                }
+                placeholder="0.00"
+                required
+              />
+
+              {/* Tax Amount */}
+              <FormInput
+                label="Tax Amount"
+                name="taxAmount"
+                type="number"
+                min="0"
+                value={creditForm.taxAmount}
+                onChange={(event) =>
+                  setCreditForm((prev) => ({
+                    ...prev,
+                    taxAmount: event.target.value,
+                  }))
+                }
+                placeholder="0.00"
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Additional Information ==================== */}
+          <FormSection
+            title="Additional Information"
+            description="Provide the reason for creating this credit note."
+          >
+            <FormInput
+              label="Reason"
+              name="reason"
+              type="textarea"
+              rows={3}
               value={creditForm.reason}
               onChange={(event) =>
                 setCreditForm((prev) => ({
@@ -739,27 +779,9 @@ const TaxCompliance = () => {
                   reason: event.target.value,
                 }))
               }
-              rows={2}
-              className="admin-input mt-1 w-full"
+              placeholder="Enter the reason for this credit note..."
             />
-          </label>
-          <div className="md:col-span-2 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setCreditModal(false)}
-              className="admin-btn-secondary"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmAction("credit")}
-              disabled={loading}
-              className="admin-btn-primary"
-            >
-              Create
-            </button>
-          </div>
+          </FormSection>
         </div>
       </DefaultModal>
 

@@ -56,6 +56,8 @@ import { axiosPrivate } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { isAdminPanel, isSellerPanel } from "../../../_helpers/panelConfig";
 import { formatDateTime12Hour } from "../../../utils/formatters";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import Tabs from "../../../components/Shared/Tabs";
 
 const DEAL_TYPES = [
   { value: "fixed_price", label: "Fixed Deal Price" },
@@ -1195,26 +1197,17 @@ const DealManagement = () => {
         />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto border-b border-[var(--admin-line)]">
-        {TAB_CONFIG.map((tab) => (
-          <button
-            key={tab.label}
-            type="button"
-            onClick={() => {
-              setActiveTab(tab.key);
-              list.setPage?.(1);
-            }}
-            className={`min-h-10 shrink-0 border-b-2 px-3 text-sm font-semibold transition ${
-              activeTab === tab.key
-                ? "border-[var(--admin-blue)] text-[var(--admin-blue)]"
-                : "border-transparent text-[var(--admin-muted)] hover:text-[var(--admin-ink)]"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
+      <Tabs
+        tabs={TAB_CONFIG.map((tab) => ({
+          value: tab.key,
+          label: tab.label,
+        }))}
+        activeTab={activeTab}
+        onChange={(value) => {
+          setActiveTab(value);
+          list.setPage?.(1);
+        }}
+      />
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
@@ -1257,141 +1250,234 @@ const DealManagement = () => {
               : "Create Direct Deal"
         }
       >
-        <div className="space-y-5 p-4">
-          {isAdminPanel() && (
-            <SellerSearch value={selectedSeller} onSelect={onSellerSelect} />
+        <div className="space-y-5">
+          {/* ==================== Product Selection ==================== */}
+          <FormSection
+            title="Product Selection"
+            description="Select the seller and existing product for this deal."
+          >
+            <div className="space-y-4">
+              {isAdminPanel() && (
+                <SellerSearch
+                  value={selectedSeller}
+                  onSelect={onSellerSelect}
+                />
+              )}
+
+              <ProductSearch
+                sellerId={form.sellerId}
+                value={selectedProduct}
+                onSelect={onProductSelect}
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Deal Information ==================== */}
+          <FormSection
+            title="Deal Information"
+            description="Configure the deal title, type, and pricing details."
+          >
+            <div className="space-y-4">
+              {/* Full Width */}
+              <Input
+                label="Deal Title"
+                value={form.title}
+                onChange={(event) => setField("title", event.target.value)}
+                placeholder="Enter deal title"
+                required
+              />
+
+              {/* 2 Fields */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input
+                  label="Deal Type"
+                  type="select"
+                  value={form.dealType}
+                  options={DEAL_TYPES}
+                  onChange={(option) =>
+                    setField("dealType", option?.value || "fixed_price")
+                  }
+                />
+
+                <Input
+                  label="Deal Source"
+                  type="select"
+                  value={form.dealSource}
+                  options={DEAL_SOURCES}
+                  onChange={(option) =>
+                    setField("dealSource", option?.value || "admin_direct")
+                  }
+                />
+              </div>
+
+              {/* Pricing */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input
+                  label="Original Price"
+                  type="price"
+                  value={form.originalPrice}
+                  readOnly
+                  helperText="Copied for deal snapshot only."
+                />
+
+                <Input
+                  label="Deal Price"
+                  type="price"
+                  value={form.dealPrice}
+                  onChange={(event) =>
+                    setField("dealPrice", event.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              {/* Calculated Values */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input
+                  label="Discount Amount"
+                  value={money(discountAmount(formDeal))}
+                  readOnly
+                />
+
+                <Input
+                  label="Discount Percentage"
+                  value={`${discountPercent(formDeal)}%`}
+                  readOnly
+                />
+              </div>
+            </div>
+          </FormSection>
+
+          {/* ==================== Quantity & Schedule ==================== */}
+          <FormSection
+            title="Quantity & Schedule"
+            description="Set the deal quantity limits and active duration."
+          >
+            <div className="space-y-4">
+              {/* Quantity */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input
+                  label="Deal Quantity Allocation"
+                  type="number"
+                  value={form.allocatedQuantity}
+                  onChange={(event) =>
+                    setField("allocatedQuantity", event.target.value)
+                  }
+                  min="0"
+                />
+
+                <Input
+                  label="Maximum Quantity Per Customer"
+                  type="number"
+                  value={form.maxQuantityPerOrder}
+                  onChange={(event) =>
+                    setField("maxQuantityPerOrder", event.target.value)
+                  }
+                  min="1"
+                />
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input
+                  label="Deal Start"
+                  type="datetime-local"
+                  value={form.startAt}
+                  onChange={(event) => setField("startAt", event.target.value)}
+                  required
+                />
+
+                <Input
+                  label="Deal End"
+                  type="datetime-local"
+                  value={form.endAt}
+                  onChange={(event) => setField("endAt", event.target.value)}
+                  required
+                />
+              </div>
+            </div>
+          </FormSection>
+
+          {/* ==================== Display Settings ==================== */}
+          <FormSection
+            title="Display Settings"
+            description="Configure how the deal is displayed and prioritized."
+          >
+            <div className="space-y-4">
+              {/* 2 Fields */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input
+                  label="Deal Badge"
+                  type="select"
+                  value={form.dealBadge}
+                  options={DEAL_BADGES.map((badge) => ({
+                    label: badge,
+                    value: badge,
+                  }))}
+                  onChange={(option) =>
+                    setField("dealBadge", option?.value || "")
+                  }
+                />
+
+                <Input
+                  label="Priority"
+                  type="number"
+                  value={form.priority}
+                  onChange={(event) => setField("priority", event.target.value)}
+                  min="0"
+                />
+              </div>
+            </div>
+          </FormSection>
+
+          {/* ==================== Seller Request ==================== */}
+          {form.mode === "seller_request" && (
+            <FormSection
+              title="Request Details"
+              description="Provide the reason and any additional message for the deal request."
+            >
+              <div className="space-y-4">
+                {/* Full Width */}
+                <Input
+                  label="Reason"
+                  type="textarea"
+                  value={form.reason}
+                  onChange={(event) => setField("reason", event.target.value)}
+                  placeholder="Why should this product become a deal?"
+                  required
+                />
+
+                {/* Full Width */}
+                <Input
+                  label="Optional Message"
+                  type="textarea"
+                  value={form.message}
+                  onChange={(event) => setField("message", event.target.value)}
+                  placeholder="Add any additional context for admin."
+                />
+              </div>
+            </FormSection>
           )}
 
-          <ProductSearch
-            sellerId={form.sellerId}
-            value={selectedProduct}
-            onSelect={onProductSelect}
-          />
+          {/* ==================== Important Note ==================== */}
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-start gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-amber-900">
+                  Deal Product Note
+                </p>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <Input
-              label="Deal Title"
-              value={form.title}
-              onChange={(event) => setField("title", event.target.value)}
-              required
-            />
-            <Input
-              label="Deal Type"
-              type="select"
-              value={form.dealType}
-              options={DEAL_TYPES}
-              onChange={(option) =>
-                setField("dealType", option?.value || "fixed_price")
-              }
-            />
-            <Input
-              label="Original Price"
-              type="price"
-              value={form.originalPrice}
-              readOnly
-              helperText="Copied for deal snapshot only."
-            />
-            <Input
-              label="Deal Price"
-              type="price"
-              value={form.dealPrice}
-              onChange={(event) => setField("dealPrice", event.target.value)}
-              required
-            />
-            <Input
-              label="Discount Amount"
-              value={money(discountAmount(formDeal))}
-              readOnly
-            />
-            <Input
-              label="Discount Percentage"
-              value={`${discountPercent(formDeal)}%`}
-              readOnly
-            />
-            <Input
-              label="Deal Quantity Allocation"
-              type="number"
-              value={form.allocatedQuantity}
-              onChange={(event) =>
-                setField("allocatedQuantity", event.target.value)
-              }
-            />
-            <Input
-              label="Maximum Quantity Per Customer"
-              type="number"
-              value={form.maxQuantityPerOrder}
-              onChange={(event) =>
-                setField("maxQuantityPerOrder", event.target.value)
-              }
-            />
-            <Input
-              label="Deal Start"
-              type="datetime-local"
-              value={form.startAt}
-              onChange={(event) => setField("startAt", event.target.value)}
-              required
-            />
-            <Input
-              label="Deal End"
-              type="datetime-local"
-              value={form.endAt}
-              onChange={(event) => setField("endAt", event.target.value)}
-              required
-            />
-            <Input
-              label="Deal Source"
-              type="select"
-              value={form.dealSource}
-              options={DEAL_SOURCES}
-              onChange={(option) =>
-                setField("dealSource", option?.value || "admin_direct")
-              }
-            />
-            <Input
-              label="Deal Badge"
-              type="select"
-              value={form.dealBadge}
-              options={DEAL_BADGES.map((badge) => ({
-                label: badge,
-                value: badge,
-              }))}
-              onChange={(option) => setField("dealBadge", option?.value || "")}
-            />
-            <Input
-              label="Priority"
-              type="number"
-              value={form.priority}
-              onChange={(event) => setField("priority", event.target.value)}
-            />
+                <p className="mt-1 text-xs leading-5 text-amber-800">
+                  This creates a deal record for the selected existing product.
+                  It does not create a new product or update the Product Master
+                  price.
+                </p>
+              </div>
+            </div>
           </div>
 
-          {form.mode === "seller_request" && (
-            <Input
-              label="Reason"
-              type="textarea"
-              value={form.reason}
-              onChange={(event) => setField("reason", event.target.value)}
-              placeholder="Why should this product become a deal?"
-              required
-            />
-          )}
-          {form.mode === "seller_request" && (
-            <Input
-              label="Optional Message"
-              type="textarea"
-              value={form.message}
-              onChange={(event) => setField("message", event.target.value)}
-              placeholder="Add any context for admin."
-            />
-          )}
-
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            This creates a deal record for the selected existing product. It
-            does not create a new product and does not update Product Master
-            price.
-          </div>
-
-          <div className="flex justify-end gap-2 border-t border-[var(--admin-line)] pt-4">
+          {/* ==================== Actions ==================== */}
+          <div className="flex justify-end gap-3 border-t border-[var(--admin-line)] pt-4">
             <button
               type="button"
               className="admin-btn-secondary"
@@ -1402,6 +1488,7 @@ const DealManagement = () => {
             >
               Cancel
             </button>
+
             <button
               type="button"
               className="admin-btn-primary"

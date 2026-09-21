@@ -607,7 +607,7 @@ const DataTable = ({
                     >
                       {renderCellValue(
                         col.render
-                          ? col.render(row[col.key], row)
+                          ? col.render(row[col.key], row, index)
                           : row[col.key],
                       )}
                     </td>

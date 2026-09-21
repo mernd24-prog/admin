@@ -76,6 +76,7 @@ import {
   resolveProductStoreName,
   resolveStoreKey,
 } from "./referralProductStoreUtils";
+import Tabs from "../../components/Shared/Tabs";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -171,7 +172,7 @@ const MARKETING_PAGE_META = {
     title: "Payout Requests",
     subtitle: "Review and manage referral partner payout requests",
   },
-  
+
   fraud: {
     title: "Fraud Review",
     subtitle: "Review and manage flagged referral activity",
@@ -703,10 +704,7 @@ const ProductReferralAmounts = () => {
 
   const getProductTitle = (product) => {
     return (
-      product?.name ||
-      product?.title ||
-      product?.productName ||
-      getId(product)
+      product?.name || product?.title || product?.productName || getId(product)
     );
   };
 
@@ -773,8 +771,7 @@ const ProductReferralAmounts = () => {
     }
 
     return products.filter(
-      (product) =>
-        getProductStoreKey(product) === String(form.storeKey),
+      (product) => getProductStoreKey(product) === String(form.storeKey),
     );
   }, [products, form.storeKey]);
 
@@ -803,8 +800,7 @@ const ProductReferralAmounts = () => {
 
     return (
       products.find(
-        (product) =>
-          String(getId(product)) === String(form.productId),
+        (product) => String(getId(product)) === String(form.productId),
       ) || null
     );
   }, [products, form.productId]);
@@ -812,8 +808,7 @@ const ProductReferralAmounts = () => {
   const selectedStore = useMemo(() => {
     return (
       storeOptions.find(
-        (option) =>
-          String(option.value) === String(form.storeKey),
+        (option) => String(option.value) === String(form.storeKey),
       ) || null
     );
   }, [storeOptions, form.storeKey]);
@@ -843,23 +838,15 @@ const ProductReferralAmounts = () => {
       return;
     }
 
-    if (
-      form.amountType === "percentage" &&
-      amountValue > 100
-    ) {
+    if (form.amountType === "percentage" && amountValue > 100) {
       toast.error("Percentage must be between 0 and 100");
       return;
     }
 
     const maximumAmount =
-      form.maximumAmount === ""
-        ? 0
-        : Number(form.maximumAmount);
+      form.maximumAmount === "" ? 0 : Number(form.maximumAmount);
 
-    if (
-      Number.isNaN(maximumAmount) ||
-      maximumAmount < 0
-    ) {
+    if (Number.isNaN(maximumAmount) || maximumAmount < 0) {
       toast.error("Maximum pool amount must be a valid number");
       return;
     }
@@ -872,9 +859,7 @@ const ProductReferralAmounts = () => {
       const payload = {
         productId: form.productId,
         productTitle:
-          getProductTitle(selectedProduct) ||
-          form.productTitle ||
-          "",
+          getProductTitle(selectedProduct) || form.productTitle || "",
         amountType: form.amountType,
         amountValue,
         maximumAmount,
@@ -885,10 +870,7 @@ const ProductReferralAmounts = () => {
         payload.storeId = actualStoreId;
       }
 
-      await axiosPrivate.put(
-        ENDPOINTS.referral.productAmounts,
-        payload,
-      );
+      await axiosPrivate.put(ENDPOINTS.referral.productAmounts, payload);
 
       toast.success(
         isEditMode
@@ -917,9 +899,7 @@ const ProductReferralAmounts = () => {
         ENDPOINTS.referral.productAmount(getId(config)),
       );
 
-      toast.success(
-        "Product override removed; global amount will apply",
-      );
+      toast.success("Product override removed; global amount will apply");
 
       await load();
     } catch (error) {
@@ -934,8 +914,7 @@ const ProductReferralAmounts = () => {
 
   const handleEdit = (row) => {
     const product = products.find(
-      (item) =>
-        String(getId(item)) === String(row.productId),
+      (item) => String(getId(item)) === String(row.productId),
     );
 
     if (!product) {
@@ -943,38 +922,24 @@ const ProductReferralAmounts = () => {
       return;
     }
 
-    const storeKey =
-      row.storeId || getProductStoreKey(product);
+    const storeKey = row.storeId || getProductStoreKey(product);
 
-    const actualStoreId =
-      row.storeId || getProductStoreId(product);
+    const actualStoreId = row.storeId || getProductStoreId(product);
 
     setForm({
-      storeId: actualStoreId
-        ? String(actualStoreId)
-        : "",
+      storeId: actualStoreId ? String(actualStoreId) : "",
 
-      storeKey: storeKey
-        ? String(storeKey)
-        : "",
+      storeKey: storeKey ? String(storeKey) : "",
 
-      productId: row.productId
-        ? String(row.productId)
-        : "",
+      productId: row.productId ? String(row.productId) : "",
 
-      productTitle:
-        row.productTitle ||
-        getProductTitle(product) ||
-        "",
+      productTitle: row.productTitle || getProductTitle(product) || "",
 
-      amountType:
-        row.amountType || "fixed_amount",
+      amountType: row.amountType || "fixed_amount",
 
-      amountValue:
-        row.amountValue ?? "",
+      amountValue: row.amountValue ?? "",
 
-      maximumAmount:
-        row.maximumAmount ?? "",
+      maximumAmount: row.maximumAmount ?? "",
 
       active: row.active !== false,
     });
@@ -1002,27 +967,22 @@ const ProductReferralAmounts = () => {
           </div>
 
           <p className="max-w-3xl text-xs leading-5 text-[var(--admin-muted)]">
-            Configure the referral pool contribution for
-            individual products. Select a store first to view
-            only the products belonging to that store.
+            Configure the referral pool contribution for individual products.
+            Select a store first to view only the products belonging to that
+            store.
           </p>
         </div>
       </div>
 
       {/* Configuration Form */}
-      <form
-        onSubmit={save}
-        className="bg-[var(--admin-surface-soft)] p-5"
-      >
+      <form onSubmit={save} className="bg-[var(--admin-surface-soft)] p-5">
         <div className="rounded-xl border border-[var(--admin-line)] bg-white p-5">
           {/* Configuration Header */}
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
-                  {isEditMode
-                    ? "Edit Product Override"
-                    : "Referral Override"}
+                  {isEditMode ? "Edit Product Override" : "Referral Override"}
                 </h3>
 
                 {isEditMode && (
@@ -1040,47 +1000,41 @@ const ProductReferralAmounts = () => {
             </div>
 
             {/* Active Toggle */}
-           {/* Active Toggle */}
-<div className="flex shrink-0 items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2">
-  <div className="text-right">
-    <p className="text-[11px] font-semibold text-[var(--admin-navy)]">
-      Override Status
-    </p>
+            {/* Active Toggle */}
+            <div className="flex shrink-0 items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2">
+              <div className="text-right">
+                <p className="text-[11px] font-semibold text-[var(--admin-navy)]">
+                  Override Status
+                </p>
 
-    <p
-      className={`text-[10px] font-medium ${
-        form.active
-          ? "text-green-600"
-          : "text-[var(--admin-muted)]"
-      }`}
-    >
-      {form.active
-        ? "Currently active"
-        : "Global rule applied"}
-    </p>
-  </div>
+                <p
+                  className={`text-[10px] font-medium ${
+                    form.active ? "text-green-600" : "text-[var(--admin-muted)]"
+                  }`}
+                >
+                  {form.active ? "Currently active" : "Global rule applied"}
+                </p>
+              </div>
 
-  <ToggleButton
-    isToggle={form.active}
-    handleClick={() => {
-      setForm((current) => ({
-        ...current,
-        active: !current.active,
-      }));
-    }}
-    disabled={loading}
-  />
+              <ToggleButton
+                isToggle={form.active}
+                handleClick={() => {
+                  setForm((current) => ({
+                    ...current,
+                    active: !current.active,
+                  }));
+                }}
+                disabled={loading}
+              />
 
- <span
-  className={`min-w-[48px] -translate-y-0.5 text-xs font-semibold ${
-    form.active
-      ? "text-[var(--admin-navy)]"
-      : "text-gray-500"
-  }`}
->
-  {form.active ? "Active" : "Inactive"}
-</span>
-</div>
+              <span
+                className={`min-w-[48px] -translate-y-0.5 text-xs font-semibold ${
+                  form.active ? "text-[var(--admin-navy)]" : "text-gray-500"
+                }`}
+              >
+                {form.active ? "Active" : "Inactive"}
+              </span>
+            </div>
           </div>
 
           {/* Form Fields */}
@@ -1091,14 +1045,11 @@ const ProductReferralAmounts = () => {
               options={storeOptions}
               value={
                 storeOptions.find(
-                  (option) =>
-                    String(option.value) ===
-                    String(form.storeKey),
+                  (option) => String(option.value) === String(form.storeKey),
                 ) || null
               }
               onChange={(selectedOption) => {
-                const storeKey =
-                  selectedOption?.value || "";
+                const storeKey = selectedOption?.value || "";
 
                 setForm((current) => ({
                   ...current,
@@ -1120,34 +1071,25 @@ const ProductReferralAmounts = () => {
               options={productOptions}
               value={
                 productOptions.find(
-                  (option) =>
-                    String(option.value) ===
-                    String(form.productId),
+                  (option) => String(option.value) === String(form.productId),
                 ) || null
               }
               onChange={(selectedOption) => {
-                const productId =
-                  selectedOption?.value || "";
+                const productId = selectedOption?.value || "";
 
                 const product = storeProducts.find(
-                  (item) =>
-                    String(getId(item)) ===
-                    String(productId),
+                  (item) => String(getId(item)) === String(productId),
                 );
 
                 setForm((current) => ({
                   ...current,
                   productId,
-                  productTitle:
-                    getProductTitle(product),
-                  storeId:
-                    getProductStoreId(product),
+                  productTitle: getProductTitle(product),
+                  storeId: getProductStoreId(product),
                 }));
               }}
               placeholder={
-                form.storeKey
-                  ? "Select product"
-                  : "Select store first"
+                form.storeKey ? "Select product" : "Select store first"
               }
               isDisabled={!form.storeKey}
               isSearchable
@@ -1161,17 +1103,13 @@ const ProductReferralAmounts = () => {
               options={amountTypeOptions}
               value={
                 amountTypeOptions.find(
-                  (option) =>
-                    option.value ===
-                    form.amountType,
+                  (option) => option.value === form.amountType,
                 ) || null
               }
               onChange={(selectedOption) => {
                 setForm((current) => ({
                   ...current,
-                  amountType:
-                    selectedOption?.value ||
-                    "fixed_amount",
+                  amountType: selectedOption?.value || "fixed_amount",
                 }));
               }}
               placeholder="Select amount type"
@@ -1189,11 +1127,7 @@ const ProductReferralAmounts = () => {
               name="amountValue"
               type="number"
               min="0"
-              max={
-                form.amountType === "percentage"
-                  ? "100"
-                  : undefined
-              }
+              max={form.amountType === "percentage" ? "100" : undefined}
               step="0.01"
               value={form.amountValue}
               onChange={(event) => {
@@ -1268,10 +1202,7 @@ const ProductReferralAmounts = () => {
                     </p>
 
                     <p className="text-xs font-semibold text-[var(--admin-navy)]">
-                      ₹
-                      {Number(
-                        selectedProduct.price,
-                      ).toLocaleString("en-IN")}
+                      ₹{Number(selectedProduct.price).toLocaleString("en-IN")}
                     </p>
                   </div>
                 )}
@@ -1289,8 +1220,7 @@ const ProductReferralAmounts = () => {
                   </p>
 
                   <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-                    Estimated contribution based on the selected
-                    configuration.
+                    Estimated contribution based on the selected configuration.
                   </p>
                 </div>
 
@@ -1298,11 +1228,12 @@ const ProductReferralAmounts = () => {
                   <p className="text-sm font-bold text-[var(--admin-navy)]">
                     {form.amountType === "percentage"
                       ? `${Number(form.amountValue || 0)}%`
-                      : `₹${Number(
-                          form.amountValue || 0,
-                        ).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                        })}`}
+                      : `₹${Number(form.amountValue || 0).toLocaleString(
+                          "en-IN",
+                          {
+                            minimumFractionDigits: 2,
+                          },
+                        )}`}
                   </p>
 
                   <p className="text-[11px] text-[var(--admin-muted)]">
@@ -1335,9 +1266,7 @@ const ProductReferralAmounts = () => {
             >
               <Check size={16} />
 
-              {isEditMode
-                ? "Update Product Amount"
-                : "Save Product Amount"}
+              {isEditMode ? "Update Product Amount" : "Save Product Amount"}
             </OrangeButton>
           </div>
         </div>
@@ -1357,8 +1286,7 @@ const ProductReferralAmounts = () => {
           </div>
 
           <div className="rounded-full bg-[var(--admin-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--admin-navy)]">
-            {configs.length}{" "}
-            {configs.length === 1 ? "Override" : "Overrides"}
+            {configs.length} {configs.length === 1 ? "Override" : "Overrides"}
           </div>
         </div>
 
@@ -1369,18 +1297,14 @@ const ProductReferralAmounts = () => {
               label: "Store",
               render: (value, row) => {
                 const product = products.find(
-                  (item) =>
-                    String(getId(item)) ===
-                    String(row.productId),
+                  (item) => String(getId(item)) === String(row.productId),
                 );
 
                 return (
                   row.storeName ||
-                  product?.organizationSnapshot
-                    ?.storeDisplayName ||
+                  product?.organizationSnapshot?.storeDisplayName ||
                   product?.storeDisplayName ||
-                  product?.organizationSnapshot
-                    ?.legalBusinessName ||
+                  product?.organizationSnapshot?.legalBusinessName ||
                   "—"
                 );
               },
@@ -1402,9 +1326,7 @@ const ProductReferralAmounts = () => {
                   return `${value}%`;
                 }
 
-                return `₹${Number(
-                  value || 0,
-                ).toLocaleString("en-IN", {
+                return `₹${Number(value || 0).toLocaleString("en-IN", {
                   minimumFractionDigits: 2,
                 })} / unit`;
               },
@@ -1417,9 +1339,7 @@ const ProductReferralAmounts = () => {
                   return "No Limit";
                 }
 
-                return `₹${Number(
-                  value || 0,
-                ).toLocaleString("en-IN", {
+                return `₹${Number(value || 0).toLocaleString("en-IN", {
                   minimumFractionDigits: 2,
                 })}`;
               },
@@ -1462,8 +1382,7 @@ const ProductReferralAmounts = () => {
               </p>
 
               <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                All products are currently using the global
-                referral pool rule.
+                All products are currently using the global referral pool rule.
               </p>
             </div>
           }
@@ -1857,7 +1776,11 @@ const ReferralCommerce = () => {
       [name]: nextValue,
     }));
     setInfluencerErrors((prev) => {
-      const message = validateGrowthPartnerField(name, nextValue, influencerForm);
+      const message = validateGrowthPartnerField(
+        name,
+        nextValue,
+        influencerForm,
+      );
       const next = { ...prev, [name]: message };
       if (!message) delete next[name];
       return next;
@@ -2233,7 +2156,11 @@ const ReferralCommerce = () => {
     });
     setCodeModalOpen(true);
   };
-
+  const bonusTabs = [
+    { value: "rules", label: "Rules" },
+    { value: "progress", label: "Current Progress" },
+    { value: "history", label: "Achievement History" },
+  ];
   const statItems = [
     {
       label: "Referral Partners",
@@ -2322,21 +2249,32 @@ const ReferralCommerce = () => {
       return links.length ? (
         <div className="flex flex-wrap gap-1">
           {links.map(([label, url]) => (
-            <a key={label} href={url} target="_blank" rel="noreferrer" className="text-xs text-indigo-700 underline">
+            <a
+              key={label}
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-indigo-700 underline"
+            >
               {label}
             </a>
           ))}
         </div>
-      ) : "-";
+      ) : (
+        "-"
+      );
     })(),
     bankDetails: (() => {
       const payout = item.metadata?.details?.payout || {};
-      if (payout.method === "upi" && payout.upiId) return `UPI: ${payout.upiId}`;
+      if (payout.method === "upi" && payout.upiId)
+        return `UPI: ${payout.upiId}`;
       if (!payout.accountNumber) return "-";
       return (
         <div className="text-xs">
           <div>{payout.bankName || "Bank"}</div>
-          <div className="font-mono">••••{String(payout.accountNumber).slice(-4)} · {payout.ifscCode}</div>
+          <div className="font-mono">
+            ••••{String(payout.accountNumber).slice(-4)} · {payout.ifscCode}
+          </div>
         </div>
       );
     })(),
@@ -3355,25 +3293,15 @@ const ReferralCommerce = () => {
 
   const renderBonuses = () => (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-1.5">
-        {[
-          ["rules", "Rules"],
-          ["progress", "Current Progress"],
-          ["history", "Achievement History"],
-        ].map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => {
-              setBonusView(value);
-              setStatus("");
-            }}
-            className={`rounded-md px-4 py-2 text-sm font-medium transition ${bonusView === value ? "bg-[var(--admin-navy)] text-white" : "text-gray-600 hover:bg-gray-100"}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        tabs={bonusTabs}
+        activeTab={bonusView}
+        onChange={(value) => {
+          setBonusView(value);
+          setStatus("");
+        }}
+      />
+
       {bonusView === "rules" && renderBonusRules()}
       {bonusView === "progress" && renderBonusProgress()}
       {bonusView === "history" && renderBonusHistory()}
@@ -3657,7 +3585,7 @@ const ReferralCommerce = () => {
           emptyText="No payout requests found."
         />
       )}
- 
+
       {activeTab === "fraud" && (
         <SharedDataTable
           columns={[
@@ -3683,320 +3611,310 @@ const ReferralCommerce = () => {
         />
       )}
 
-  <DefaultModal
-  isOpen={parentModalOpen}
-  onClose={closeParentModal}
-  onSubmit={submitParent}
-  title="Create Growth Partner"
-  submitButtonText="Create Growth Partner"
-  closeButtonText="Reset"
-  isButtonView={true}
-  width="600px"
-  loading={parentSubmitting}
->
-  <div className="space-y-5">
-    {/* ==================== Basic Information ==================== */}
-    <FormSection
-      title="Basic Information"
-      description="Enter the basic details of the growth partner."
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-        {/* First Name */}
-        <FormInput
-          label="First Name"
-          name="firstName"
-          required
-          value={influencerForm.firstName}
-          onChange={handleInfluencerField}
-          placeholder="Enter first name"
-          error={influencerErrors.firstName}
-          maxLength={50}
-          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
-        />
-
-        {/* Last Name */}
-        <FormInput
-          label="Last Name"
-          name="lastName"
-          required
-          value={influencerForm.lastName}
-          onChange={handleInfluencerField}
-          placeholder="Enter last name"
-          error={influencerErrors.lastName}
-          maxLength={50}
-          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
-        />
-
-        {/* Email */}
-        <FormInput
-          label="Email"
-          name="email"
-          type="email"
-          required
-          value={influencerForm.email}
-          onChange={handleInfluencerField}
-          placeholder="Enter email address"
-          error={influencerErrors.email}
-          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
-        />
-
-        {/* Phone */}
-        <FormInput
-          label="Phone"
-          name="phone"
-          type="phone"
-          value={influencerForm.phone}
-          onChange={handleInfluencerField}
-          placeholder="Enter phone number"
-          error={influencerErrors.phone}
-          maxLength={10}
-          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
-        />
-
-        {/* Temporary Password */}
-        <FormInput
-          label="Temporary Password"
-          name="password"
-          type="password"
-          required
-          value={influencerForm.password}
-          onChange={handleInfluencerField}
-          placeholder="Enter temporary password"
-          hint="At least 8 characters. The influencer uses this for the first login."
-          error={influencerErrors.password}
-          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
-        />
-
-        {/* Referral Code */}
-        <FormInput
-          label="Referral Code"
-          name="code"
-          value={influencerForm.code}
-          onChange={handleInfluencerField}
-          placeholder="Enter referral code"
-          error={influencerErrors.code}
-          maxLength={32}
-          className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
-        />
-      </div>
-    </FormSection>
-
-    {/* ==================== Permissions ==================== */}
-    <FormSection
-      title="Permissions"
-      description="Manage what this parent influencer can do."
-    >
-      <FormToggleRow
-        title="Can Create Brand Associates"
-        description="Allow this influencer to create and manage Brand Associates."
-        isToggle={Boolean(influencerForm.canCreateChildren)}
-        handleClick={() =>
-          handleInfluencerField({
-            target: {
-              name: "canCreateChildren",
-              type: "checkbox",
-              checked: !influencerForm.canCreateChildren,
-            },
-          })
-        }
-      />
-    </FormSection>
-  </div>
-</DefaultModal>
-
-   <DefaultModal
-  isOpen={childModalOpen}
-  onClose={() => setChildModalOpen(false)}
-  onSubmit={submitChild}
-  title="Create Brand Associate"
-  submitButtonText="Create Brand Associate"
-  closeButtonText="Reset"
-  isButtonView={true}
-  width="600px"
-  loading={loading}
->
-  <div className="space-y-5">
-    <FormSection
-      title="Basic Information"
-      description="Enter the basic details of the Brand Associate."
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-        {/* Growth Partner - Full Width */}
-        <div className="md:col-span-2">
-          <FormSelectGroup
-            label="Growth Partner"
-            options={parentOptions.map((parent) => ({
-              label: `${fullName(parent.user)} - ${
-                parent.primaryCode?.code || getId(parent)
-              }`,
-              value: getId(parent),
-            }))}
-            value={parentId}
-            onChange={(selectedOption) =>
-              setParentId(selectedOption?.value || selectedOption || "")
-            }
-            placeholder="Select Growth Partner"
-          />
-        </div>
-
-        {/* First Name */}
-        <FormInput
-          label="First Name"
-          name="firstName"
-          value={influencerForm.firstName}
-          onChange={handleInfluencerField}
-          placeholder="Enter first name"
-        />
-
-        {/* Last Name */}
-        <FormInput
-          label="Last Name"
-          name="lastName"
-          value={influencerForm.lastName}
-          onChange={handleInfluencerField}
-          placeholder="Enter last name"
-        />
-
-        {/* Email */}
-        <FormInput
-          label="Email"
-          name="email"
-          type="email"
-          value={influencerForm.email}
-          onChange={handleInfluencerField}
-          placeholder="Enter email address"
-        />
-
-        {/* Phone */}
-        <FormInput
-          label="Phone"
-          name="phone"
-          value={influencerForm.phone}
-          onChange={handleInfluencerField}
-          placeholder="Enter phone number"
-        />
-
-        {/* Password */}
-        <FormInput
-          label="Password"
-          name="password"
-          type="password"
-          value={influencerForm.password}
-          onChange={handleInfluencerField}
-          placeholder="Enter password"
-        />
-
-        {/* Referral Code */}
-        <FormInput
-          label="Referral Code"
-          name="code"
-          value={influencerForm.code}
-          onChange={handleInfluencerField}
-          placeholder="Enter referral code"
-        />
-      </div>
-    </FormSection>
-  </div>
-</DefaultModal>
-
       <DefaultModal
-  isOpen={codeModalOpen}
-  onClose={() => {
-    setCodeModalOpen(false);
-    setEditingCode(null);
-  }}
-  onSubmit={submitCode}
-  title={
-    editingCode
-      ? "Edit Referral Code"
-      : "Create Referral Code"
-  }
-  submitButtonText="Save Referral Code"
-  closeButtonText="Reset"
-  isButtonView={true}
-  width="600px"
-  loading={loading}
->
-  <div className="space-y-5">
-    {/* ==================== Referral Code Information ==================== */}
-    <FormSection
-      title="Referral Code Information"
-      description={
-        editingCode
-          ? "Update the referral code details."
-          : "Create a referral code for a referral partner."
-      }
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-        {/* Referral Partner */}
-        {!editingCode && (
-          <div className="md:col-span-2">
-            <FormSelectGroup
-              label="Referral Partner"
-              options={influencers.map((item) => ({
-                label: `${fullName(item.user)} - ${getId(item)}`,
-                value: getId(item),
-              }))}
-              value={codeForm.influencerId}
-              onChange={(selectedOption) =>
-                handleCodeField({
+        isOpen={parentModalOpen}
+        onClose={closeParentModal}
+        onSubmit={submitParent}
+        title="Create Growth Partner"
+        submitButtonText="Create Growth Partner"
+        closeButtonText="Reset"
+        isButtonView={true}
+        width="600px"
+        loading={parentSubmitting}
+      >
+        <div className="space-y-5">
+          {/* ==================== Basic Information ==================== */}
+          <FormSection
+            title="Basic Information"
+            description="Enter the basic details of the growth partner."
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+              {/* First Name */}
+              <FormInput
+                label="First Name"
+                name="firstName"
+                required
+                value={influencerForm.firstName}
+                onChange={handleInfluencerField}
+                placeholder="Enter first name"
+                error={influencerErrors.firstName}
+                maxLength={50}
+                className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+              />
+
+              {/* Last Name */}
+              <FormInput
+                label="Last Name"
+                name="lastName"
+                required
+                value={influencerForm.lastName}
+                onChange={handleInfluencerField}
+                placeholder="Enter last name"
+                error={influencerErrors.lastName}
+                maxLength={50}
+                className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+              />
+
+              {/* Email */}
+              <FormInput
+                label="Email"
+                name="email"
+                type="email"
+                required
+                value={influencerForm.email}
+                onChange={handleInfluencerField}
+                placeholder="Enter email address"
+                error={influencerErrors.email}
+                className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+              />
+
+              {/* Phone */}
+              <FormInput
+                label="Phone"
+                name="phone"
+                type="phone"
+                value={influencerForm.phone}
+                onChange={handleInfluencerField}
+                placeholder="Enter phone number"
+                error={influencerErrors.phone}
+                maxLength={10}
+                className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+              />
+
+              {/* Temporary Password */}
+              <FormInput
+                label="Temporary Password"
+                name="password"
+                type="password"
+                required
+                value={influencerForm.password}
+                onChange={handleInfluencerField}
+                placeholder="Enter temporary password"
+                hint="At least 8 characters. The influencer uses this for the first login."
+                error={influencerErrors.password}
+                className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+              />
+
+              {/* Referral Code */}
+              <FormInput
+                label="Referral Code"
+                name="code"
+                value={influencerForm.code}
+                onChange={handleInfluencerField}
+                placeholder="Enter referral code"
+                error={influencerErrors.code}
+                maxLength={32}
+                className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Permissions ==================== */}
+          <FormSection
+            title="Permissions"
+            description="Manage what this parent influencer can do."
+          >
+            <FormToggleRow
+              title="Can Create Brand Associates"
+              description="Allow this influencer to create and manage Brand Associates."
+              isToggle={Boolean(influencerForm.canCreateChildren)}
+              handleClick={() =>
+                handleInfluencerField({
                   target: {
-                    name: "influencerId",
-                    value:
-                      selectedOption?.value ||
-                      selectedOption ||
-                      "",
+                    name: "canCreateChildren",
+                    type: "checkbox",
+                    checked: !influencerForm.canCreateChildren,
                   },
                 })
               }
-              placeholder="Select Referral Partner"
             />
-          </div>
-        )}
-
-        {/* Referral Code */}
-        <FormInput
-          label="Referral Code"
-          name="code"
-          value={codeForm.code}
-          onChange={handleCodeField}
-          placeholder="Enter referral code"
-        />
-
-        {/* Usage Limit */}
-        <FormInput
-          label="Usage Limit"
-          name="usageLimit"
-          type="number"
-          value={codeForm.usageLimit}
-          onChange={handleCodeField}
-          placeholder="Enter usage limit"
-        />
-
-        {/* Status */}
-        <div className="md:col-span-2">
-          <FormSelectGroup
-            label="Status"
-            options={referralCodeStatuses.options}
-            value={codeForm.status}
-            onChange={(selectedOption) =>
-              handleCodeField({
-                target: {
-                  name: "status",
-                  value:
-                    selectedOption?.value ||
-                    selectedOption ||
-                    "",
-                },
-              })
-            }
-            placeholder="Select status"
-          />
+          </FormSection>
         </div>
-      </div>
-    </FormSection>
-  </div>
-</DefaultModal>
+      </DefaultModal>
+
+      <DefaultModal
+        isOpen={childModalOpen}
+        onClose={() => setChildModalOpen(false)}
+        onSubmit={submitChild}
+        title="Create Brand Associate"
+        submitButtonText="Create Brand Associate"
+        closeButtonText="Reset"
+        isButtonView={true}
+        width="600px"
+        loading={loading}
+      >
+        <div className="space-y-5">
+          <FormSection
+            title="Basic Information"
+            description="Enter the basic details of the Brand Associate."
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+              {/* Growth Partner - Full Width */}
+              <div className="md:col-span-2">
+                <FormSelectGroup
+                  label="Growth Partner"
+                  options={parentOptions.map((parent) => ({
+                    label: `${fullName(parent.user)} - ${
+                      parent.primaryCode?.code || getId(parent)
+                    }`,
+                    value: getId(parent),
+                  }))}
+                  value={parentId}
+                  onChange={(selectedOption) =>
+                    setParentId(selectedOption?.value || selectedOption || "")
+                  }
+                  placeholder="Select Growth Partner"
+                />
+              </div>
+
+              {/* First Name */}
+              <FormInput
+                label="First Name"
+                name="firstName"
+                value={influencerForm.firstName}
+                onChange={handleInfluencerField}
+                placeholder="Enter first name"
+              />
+
+              {/* Last Name */}
+              <FormInput
+                label="Last Name"
+                name="lastName"
+                value={influencerForm.lastName}
+                onChange={handleInfluencerField}
+                placeholder="Enter last name"
+              />
+
+              {/* Email */}
+              <FormInput
+                label="Email"
+                name="email"
+                type="email"
+                value={influencerForm.email}
+                onChange={handleInfluencerField}
+                placeholder="Enter email address"
+              />
+
+              {/* Phone */}
+              <FormInput
+                label="Phone"
+                name="phone"
+                value={influencerForm.phone}
+                onChange={handleInfluencerField}
+                placeholder="Enter phone number"
+              />
+
+              {/* Password */}
+              <FormInput
+                label="Password"
+                name="password"
+                type="password"
+                value={influencerForm.password}
+                onChange={handleInfluencerField}
+                placeholder="Enter password"
+              />
+
+              {/* Referral Code */}
+              <FormInput
+                label="Referral Code"
+                name="code"
+                value={influencerForm.code}
+                onChange={handleInfluencerField}
+                placeholder="Enter referral code"
+              />
+            </div>
+          </FormSection>
+        </div>
+      </DefaultModal>
+
+      <DefaultModal
+        isOpen={codeModalOpen}
+        onClose={() => {
+          setCodeModalOpen(false);
+          setEditingCode(null);
+        }}
+        onSubmit={submitCode}
+        title={editingCode ? "Edit Referral Code" : "Create Referral Code"}
+        submitButtonText="Save Referral Code"
+        closeButtonText="Reset"
+        isButtonView={true}
+        width="600px"
+        loading={loading}
+      >
+        <div className="space-y-5">
+          {/* ==================== Referral Code Information ==================== */}
+          <FormSection
+            title="Referral Code Information"
+            description={
+              editingCode
+                ? "Update the referral code details."
+                : "Create a referral code for a referral partner."
+            }
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+              {/* Referral Partner */}
+              {!editingCode && (
+                <div className="md:col-span-2">
+                  <FormSelectGroup
+                    label="Referral Partner"
+                    options={influencers.map((item) => ({
+                      label: `${fullName(item.user)} - ${getId(item)}`,
+                      value: getId(item),
+                    }))}
+                    value={codeForm.influencerId}
+                    onChange={(selectedOption) =>
+                      handleCodeField({
+                        target: {
+                          name: "influencerId",
+                          value: selectedOption?.value || selectedOption || "",
+                        },
+                      })
+                    }
+                    placeholder="Select Referral Partner"
+                  />
+                </div>
+              )}
+
+              {/* Referral Code */}
+              <FormInput
+                label="Referral Code"
+                name="code"
+                value={codeForm.code}
+                onChange={handleCodeField}
+                placeholder="Enter referral code"
+              />
+
+              {/* Usage Limit */}
+              <FormInput
+                label="Usage Limit"
+                name="usageLimit"
+                type="number"
+                value={codeForm.usageLimit}
+                onChange={handleCodeField}
+                placeholder="Enter usage limit"
+              />
+
+              {/* Status */}
+              <div className="md:col-span-2">
+                <FormSelectGroup
+                  label="Status"
+                  options={referralCodeStatuses.options}
+                  value={codeForm.status}
+                  onChange={(selectedOption) =>
+                    handleCodeField({
+                      target: {
+                        name: "status",
+                        value: selectedOption?.value || selectedOption || "",
+                      },
+                    })
+                  }
+                  placeholder="Select status"
+                />
+              </div>
+            </div>
+          </FormSection>
+        </div>
+      </DefaultModal>
 
       <Modal
         title={
@@ -4224,149 +4142,231 @@ const ReferralCommerce = () => {
         </form>
       </Modal>
 
-      <Modal
-        title={editingBonusRule ? "Edit Bonus Rule" : "Create Bonus Rule"}
-        open={bonusRuleModalOpen}
+      <DefaultModal
+        isOpen={bonusRuleModalOpen}
         onClose={() => {
           setBonusRuleModalOpen(false);
           setEditingBonusRule(null);
           setBonusRuleForm(emptyBonusRuleForm);
         }}
-        footer={
-          <OrangeButton type="submit" form="bonusRuleForm">
-            <Check size={16} />
-            Save Bonus Rule
-          </OrangeButton>
-        }
+        title={editingBonusRule ? "Edit Bonus Rule" : "Create Bonus Rule"}
+        submitButtonText="Save Bonus Rule"
+        closeButtonText="Cancel"
+        isButtonView={true}
+        onSubmit={submitBonusRule}
       >
-        <form
-          id="bonusRuleForm"
-          onSubmit={submitBonusRule}
-          className="grid grid-cols-1 gap-4 md:grid-cols-2"
-        >
-          <TextInput
-            label="Bonus Rule Name"
-            name="ruleName"
-            value={bonusRuleForm.ruleName}
-            onChange={handleBonusRuleField}
-          />
-          <SelectInput
-            label="Bonus Period"
-            name="period"
-            value={bonusRuleForm.period}
-            onChange={handleBonusRuleField}
+        <div className="space-y-5">
+          {/* ==================== Basic Information ==================== */}
+          <FormSection
+            title="Basic Information"
+            description="Configure the bonus rule and its applicable period."
           >
-            {referralBonusPeriods.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectInput>
-          {bonusRuleForm.period === "custom" && (
-            <>
-              <TextInput
-                label="Custom Start"
-                name="customStartAt"
-                type="date"
-                value={bonusRuleForm.customStartAt}
+            <div className="space-y-4">
+              {/* Full Width */}
+              <FormInput
+                label="Bonus Rule Name"
+                name="ruleName"
+                value={bonusRuleForm.ruleName}
                 onChange={handleBonusRuleField}
+                placeholder="Enter bonus rule name"
+                required
               />
-              <TextInput
-                label="Custom End"
-                name="customEndAt"
-                type="date"
-                value={bonusRuleForm.customEndAt}
-                onChange={handleBonusRuleField}
+
+              {/* 2 Fields */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormSelectGroup
+                  label="Bonus Period"
+                  options={referralBonusPeriods.options}
+                  value={
+                    referralBonusPeriods.options.find(
+                      (option) => option.value === bonusRuleForm.period,
+                    ) || null
+                  }
+                  onChange={(option) =>
+                    handleBonusRuleField({
+                      target: {
+                        name: "period",
+                        value: option?.value || "",
+                      },
+                    })
+                  }
+                />
+
+                <FormSelectGroup
+                  label="Target Type"
+                  options={referralBonusTargetTypes.options}
+                  value={
+                    referralBonusTargetTypes.options.find(
+                      (option) => option.value === bonusRuleForm.targetType,
+                    ) || null
+                  }
+                  onChange={(option) =>
+                    handleBonusRuleField({
+                      target: {
+                        name: "targetType",
+                        value: option?.value || "",
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              {/* Custom Dates - 2 fields logically belong together */}
+              {bonusRuleForm.period === "custom" && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormInput
+                    label="Custom Start"
+                    name="customStartAt"
+                    type="date"
+                    value={bonusRuleForm.customStartAt}
+                    onChange={handleBonusRuleField}
+                  />
+
+                  <FormInput
+                    label="Custom End"
+                    name="customEndAt"
+                    type="date"
+                    value={bonusRuleForm.customEndAt}
+                    onChange={handleBonusRuleField}
+                  />
+                </div>
+              )}
+            </div>
+          </FormSection>
+
+          {/* ==================== Target & Bonus ==================== */}
+          <FormSection
+            title="Target & Bonus"
+            description="Define the target value and bonus that will be awarded."
+          >
+            <div className="space-y-4">
+              {/* Target Value + Bonus Type */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormInput
+                  label="Target Value"
+                  name="targetValue"
+                  type="number"
+                  step="0.01"
+                  value={bonusRuleForm.targetValue}
+                  onChange={handleBonusRuleField}
+                  placeholder="Enter target value"
+                />
+
+                <FormSelectGroup
+                  label="Bonus Type"
+                  options={referralBonusTypes.options}
+                  value={
+                    referralBonusTypes.options.find(
+                      (option) => option.value === bonusRuleForm.bonusType,
+                    ) || null
+                  }
+                  onChange={(option) =>
+                    handleBonusRuleField({
+                      target: {
+                        name: "bonusType",
+                        value: option?.value || "",
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              {/* Bonus Value + Apply To */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormInput
+                  label="Bonus Value"
+                  name="bonusValue"
+                  type="number"
+                  step="0.01"
+                  value={bonusRuleForm.bonusValue}
+                  onChange={handleBonusRuleField}
+                  placeholder="Enter bonus value"
+                />
+
+                <FormSelectGroup
+                  label="Apply To"
+                  options={referralBonusApplyTo.options}
+                  value={
+                    referralBonusApplyTo.options.find(
+                      (option) => option.value === bonusRuleForm.applyTo,
+                    ) || null
+                  }
+                  onChange={(option) =>
+                    handleBonusRuleField({
+                      target: {
+                        name: "applyTo",
+                        value: option?.value || "",
+                      },
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </FormSection>
+
+          {/* ==================== Rule Settings ==================== */}
+          <FormSection
+            title="Rule Settings"
+            description="Configure the reset cycle and bonus release conditions."
+          >
+            <div className="space-y-4">
+              {/* Reset Cycle + Release Rule */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormSelectGroup
+                  label="Reset Cycle"
+                  options={["monthly", "quarterly", "yearly"].map((value) => ({
+                    label: value.replace(/_/g, " "),
+                    value,
+                  }))}
+                  value={{
+                    label: bonusRuleForm.resetCycle?.replace(/_/g, " "),
+                    value: bonusRuleForm.resetCycle,
+                  }}
+                  onChange={(option) =>
+                    handleBonusRuleField({
+                      target: {
+                        name: "resetCycle",
+                        value: option?.value || "",
+                      },
+                    })
+                  }
+                />
+
+                <FormSelectGroup
+                  label="Release Rule"
+                  options={referralBonusReleaseRules.options}
+                  value={
+                    referralBonusReleaseRules.options.find(
+                      (option) => option.value === bonusRuleForm.releaseRule,
+                    ) || null
+                  }
+                  onChange={(option) =>
+                    handleBonusRuleField({
+                      target: {
+                        name: "releaseRule",
+                        value: option?.value || "",
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              {/* Status - Full Width because it is alone */}
+              <FormToggleRow
+                title="Status"
+                description="Enable this bonus rule to make it active and available."
+                isToggle={bonusRuleForm.status === "active"}
+                handleClick={() =>
+                  setBonusRuleForm((prev) => ({
+                    ...prev,
+                    status: prev.status === "active" ? "inactive" : "active",
+                  }))
+                }
               />
-            </>
-          )}
-          <SelectInput
-            label="Target Type"
-            name="targetType"
-            value={bonusRuleForm.targetType}
-            onChange={handleBonusRuleField}
-          >
-            {referralBonusTargetTypes.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectInput>
-          <TextInput
-            label="Target Value"
-            name="targetValue"
-            type="number"
-            step="0.01"
-            value={bonusRuleForm.targetValue}
-            onChange={handleBonusRuleField}
-          />
-          <SelectInput
-            label="Bonus Type"
-            name="bonusType"
-            value={bonusRuleForm.bonusType}
-            onChange={handleBonusRuleField}
-          >
-            {referralBonusTypes.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectInput>
-          <TextInput
-            label="Bonus Value"
-            name="bonusValue"
-            type="number"
-            step="0.01"
-            value={bonusRuleForm.bonusValue}
-            onChange={handleBonusRuleField}
-          />
-          <SelectInput
-            label="Apply To"
-            name="applyTo"
-            value={bonusRuleForm.applyTo}
-            onChange={handleBonusRuleField}
-          >
-            {referralBonusApplyTo.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectInput>
-          <SelectInput
-            label="Reset Cycle"
-            name="resetCycle"
-            value={bonusRuleForm.resetCycle}
-            onChange={handleBonusRuleField}
-          >
-            {["monthly", "quarterly", "yearly"].map((value) => (
-              <option key={value} value={value}>
-                {value.replace(/_/g, " ")}
-              </option>
-            ))}
-          </SelectInput>
-          <SelectInput
-            label="Release Rule"
-            name="releaseRule"
-            value={bonusRuleForm.releaseRule}
-            onChange={handleBonusRuleField}
-          >
-            {referralBonusReleaseRules.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectInput>
-          <SelectInput
-            label="Status"
-            name="status"
-            value={bonusRuleForm.status}
-            onChange={handleBonusRuleField}
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </SelectInput>
-        </form>
-      </Modal>
+            </div>
+          </FormSection>
+        </div>
+      </DefaultModal>
     </div>
   );
 };
