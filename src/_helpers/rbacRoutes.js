@@ -772,7 +772,7 @@ const ROUTE_MODULES = [
 
   // CMS & Content — additional
   [
-    ["/content-pages", "/auth-testimonials"],
+    ["/content-pages", "/onboarding-testimonials"],
     ["cms_pages", "cms"],
   ],
 

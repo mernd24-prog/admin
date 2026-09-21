@@ -87,7 +87,6 @@ const influencerPortalUrl =
 const tabs = [
   { key: "overview", label: "Overview" },
   { key: "influencers", label: "Referral Partners" },
-  { key: "codes", label: "Referral Codes" },
   { key: "rules", label: "Rules & Coins" },
   { key: "productAmounts", label: "Product Referral Amounts" },
   { key: "bonuses", label: "Bonuses" },
@@ -143,10 +142,7 @@ const MARKETING_PAGE_META = {
     title: "Referral Partners",
     subtitle: "Manage Growth Partners and Brand Associates",
   },
-  codes: {
-    title: "Referral Codes",
-    subtitle: "Create and manage referral codes",
-  },
+ 
   rules: {
     title: "Rules & Coins",
     subtitle: "Configure referral rewards, coin values, and withdrawal rules",
@@ -1735,7 +1731,7 @@ const ReferralCommerce = () => {
           ),
           dispatch(getReferralHierarchy()),
         ]),
-      codes: () => dispatch(getReferralCodes(query)),
+      
       rules: () => dispatch(getReferralRules({ page: 1, limit: 20 })),
       bonuses: () =>
         Promise.all([
@@ -1789,7 +1785,7 @@ const ReferralCommerce = () => {
     if (
       ![
         "influencers",
-        "codes",
+ 
         "bonuses",
         "orders",
         "commissions",
@@ -2360,32 +2356,7 @@ const ReferralCommerce = () => {
     ),
   }));
 
-  const codeRows = codes.map((code) => ({
-    key: getId(code),
-    code: <span className="font-semibold text-gray-900">{code.code}</span>,
-    influencer: renderInfluencerRef(code.influencerId),
-    usage: `${code.usageCount || 0}${code.usageLimit ? ` / ${code.usageLimit}` : ""}`,
-    status: <StatusPill value={code.status} />,
-    actions: (
-      <RowActions
-        actions={[
-          {
-            label: "Edit code",
-            icon: <Pencil size={14} />,
-            onClick: () => openEditCode(code),
-          },
-          {
-            label:
-              code.status === "active" ? "Deactivate code" : "Activate code",
-            icon:
-              code.status === "active" ? <X size={14} /> : <Check size={14} />,
-            danger: code.status === "active",
-            onClick: () => toggleCodeStatus(code),
-          },
-        ]}
-      />
-    ),
-  }));
+ 
 
   const orderRows = orders.map((order) => ({
     key: getId(order),
@@ -3442,7 +3413,7 @@ const ReferralCommerce = () => {
       {hasListFilters &&
         ![
           "influencers",
-          "codes",
+           
           "bonuses",
           "orders",
           "commissions",
@@ -3556,40 +3527,7 @@ const ReferralCommerce = () => {
           cardClassName="overflow-hidden"
         />
       )}
-      {activeTab === "codes" && (
-        <SharedDataTable
-          columns={[
-            { key: "code", label: "Referral Code" },
-            { key: "influencer", label: "Referral Partner" },
-            { key: "usage", label: "Usage" },
-            { key: "status", label: "Status" },
-            { key: "actions", label: "Actions" },
-          ]}
-          data={codeRows}
-          loading={loading}
-          rowKey="key"
-          onSearch={setSearch}
-          searchPlaceholder="Search referral codes..."
-          filterBar={
-            <FilterBar
-              filters={[
-                {
-                  key: "status",
-                  type: "select",
-                  label: "Status",
-                  width: "w-48",
-                  options: activeStatusOptions,
-                },
-              ]}
-              values={{ status }}
-              onChange={(_, value) => setStatus(value)}
-              onClear={() => setStatus("")}
-              loading={loading}
-            />
-          }
-          emptyText="No referral codes found."
-        />
-      )}
+     
       {activeTab === "rules" && renderRules()}
       {activeTab === "productAmounts" && <ProductReferralAmounts />}
       {activeTab === "bonuses" && renderBonuses()}

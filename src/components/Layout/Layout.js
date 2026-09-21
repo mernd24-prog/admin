@@ -741,7 +741,7 @@ function Layout() {
         render: () => <SellerSubAdminManagement />,
       },
       { path: "/content-pages", render: () => <ContentPages /> },
-      { path: "/auth-testimonials", render: () => <AuthTestimonials /> },
+      { path: "/onboarding-testimonials", render: () => <AuthTestimonials /> },
       { path: "/users-addresses", render: () => <Users /> },
       { path: "/preferences", render: () => <Preferences /> },
       { path: "/deal-management", render: () => <DealManagement /> },

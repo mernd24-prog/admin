@@ -190,7 +190,7 @@ const AuthTestimonials = () => {
     if (!file || uploadingAvatar) return;
     try {
       setUploadingAvatar(true);
-      const url = await uploadFile(file, "auth-testimonials");
+      const url = await uploadFile(file, "onboarding-testimonials");
       patchForm("avatarUrl", url);
       toast.success("Avatar uploaded to Cloudinary");
     } catch (error) {
@@ -343,9 +343,9 @@ const AuthTestimonials = () => {
   return (
     <div>
       <PageHeader
-        title="Auth Testimonials"
+        title="Onboarding Testimonials"
         subtitle="Manage testimonials shown on login and seller registration screens"
-        breadcrumbs={[{ label: "Settings" }, { label: "Auth Testimonials" }]}
+        breadcrumbs={[{ label: "Settings" }, { label: "Onboarding Testimonials" }]}
         actions={
           <button
             type="button"
@@ -440,7 +440,7 @@ const AuthTestimonials = () => {
                 />
 
                 <p className="mt-1 text-xs text-[#65718b]">
-                  Upload folder: ecommerce/uploads/auth-testimonials
+                  Upload folder: ecommerce/uploads/onboarding-testimonials
                 </p>
               </div>
             </div>
