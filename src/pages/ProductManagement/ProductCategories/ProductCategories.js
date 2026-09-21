@@ -39,6 +39,7 @@ const ProductCategories = () => {
 
   const [statusTarget, setStatusTarget] = useState(null);
   const [attributeCategory, setAttributeCategory] = useState(null);
+  const [attributePanelLoading, setAttributePanelLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   const [isRefresh, setIsRefresh] = useState(false);
@@ -280,8 +281,7 @@ const ProductCategories = () => {
     };
   }, [dispatch, isRefresh]);
 
-  const categoriesLoading =
-    !hasLoadedCategories || selector?.getListData?.loading;
+  const categoriesLoading = !hasLoadedCategories;
 
   const isTableLoading = categoriesLoading || isDrillDownLoading;
 
@@ -888,7 +888,10 @@ const ProductCategories = () => {
       <PermissionGuard module="categories" action={ACTIONS.UPDATE} hide>
         <button
           type="button"
-          onClick={() => setAttributeCategory(category)}
+          onClick={() => {
+            setAttributePanelLoading(true);
+            setAttributeCategory(category);
+          }}
           className="rounded-lg p-2 text-[var(--admin-blue)] transition-colors hover:bg-[var(--admin-blue-soft)]"
           title="Manage category attributes"
         >
@@ -907,6 +910,88 @@ const ProductCategories = () => {
       priority: !prev?.isDashboardVisible ? prev.priority : 0,
     }));
   };
+
+  //Skeleton loading
+
+  const AttributePanelSkeleton = () => (
+    <div className="h-full overflow-y-auto bg-white">
+      {/* Header skeleton */}
+      <div className="border-b border-[var(--admin-line)] px-6 py-5">
+        <SkeletonLoader height={22} width="180px" />
+
+        <div className="mt-3">
+          <SkeletonLoader height={11} width="80%" />
+        </div>
+      </div>
+
+      {/* Info skeleton */}
+      <div className="border-b border-[var(--admin-line)] px-6 py-5">
+        <SkeletonLoader height={13} width="220px" />
+
+        <div className="mt-4 rounded-xl border border-[var(--admin-line)] p-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <SkeletonLoader height={10} width="70px" />
+              <div className="mt-2">
+                <SkeletonLoader height={38} width="100%" />
+              </div>
+            </div>
+
+            <div>
+              <SkeletonLoader height={10} width="70px" />
+              <div className="mt-2">
+                <SkeletonLoader height={38} width="100%" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Attribute cards skeleton */}
+      <div className="space-y-4 px-6 py-5">
+        {[1, 2, 3].map((item) => (
+          <div
+            key={item}
+            className="rounded-xl border border-[var(--admin-line)] bg-white p-5"
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <SkeletonLoader height={12} width="110px" />
+              <SkeletonLoader height={28} width="65px" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <SkeletonLoader height={10} width="60px" />
+                <div className="mt-2">
+                  <SkeletonLoader height={38} width="100%" />
+                </div>
+              </div>
+
+              <div>
+                <SkeletonLoader height={10} width="60px" />
+                <div className="mt-2">
+                  <SkeletonLoader height={38} width="100%" />
+                </div>
+              </div>
+
+              <div>
+                <SkeletonLoader height={10} width="60px" />
+                <div className="mt-2">
+                  <SkeletonLoader height={38} width="100%" />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex gap-5">
+              <SkeletonLoader height={18} width="75px" />
+              <SkeletonLoader height={18} width="75px" />
+              <SkeletonLoader height={18} width="75px" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   // ---------------------------------------------------------------------------
   // UI
@@ -1307,15 +1392,28 @@ const ProductCategories = () => {
             type="button"
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             aria-label="Close category attributes"
-            onClick={() => setAttributeCategory(null)}
+            onClick={() => {
+              setAttributeCategory(null);
+              setAttributePanelLoading(false);
+            }}
           />
 
-          <aside className="absolute right-0 top-0 h-full w-full max-w-4xl bg-white shadow-xl">
+          <aside className="absolute right-0 top-0 h-full w-full max-w-4xl overflow-hidden bg-white shadow-xl ">
             <CategoryAttributesPanel
               embedded
               initialCategory={attributeCategory}
-              onClose={() => setAttributeCategory(null)}
+              onClose={() => {
+                setAttributeCategory(null);
+                setAttributePanelLoading(false);
+              }}
+              onLoaded={() => setAttributePanelLoading(false)}
             />
+
+            {attributePanelLoading && (
+              <div className="absolute inset-0 z-20 bg-white">
+                <AttributePanelSkeleton />
+              </div>
+            )}
           </aside>
         </div>
       )}

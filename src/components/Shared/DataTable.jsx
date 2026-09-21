@@ -57,7 +57,7 @@ const renderCellValue = (value, nested = false) => {
   }
 
   if (isEmptyCellValue(value)) {
-    return <span className="text-gray-400">N/A</span>;
+    return <span className="inline-flex items-center  text-gray-400">N/A</span>;
   }
 
   if (typeof value === "string") {
@@ -270,7 +270,7 @@ const DataTable = ({
   listPage,
   tableContainerClassName = "",
   tableClassName = "",
-  cardClassName = "admin-card overflow-hidden",
+  cardClassName = "admin-card overflow-visible",
   exportConfig,
   importConfig,
   requiredModule,
@@ -579,14 +579,14 @@ const DataTable = ({
                   }}
                   tabIndex={onRowClick ? 0 : undefined}
                   role={onRowClick ? "button" : undefined}
-                  className={`align-top transition-colors hover:bg-[var(--admin-surface-soft)] ${
+                  className={`align-middle transition-colors hover:bg-[var(--admin-surface-soft)] ${
                     onRowClick
                       ? "cursor-pointer focus:bg-[var(--admin-surface-soft)] focus:outline-none"
                       : ""
                   } ${typeof rowClassName === "function" ? rowClassName(row) : rowClassName}`}
                 >
                   {selectable && (
-                    <td className="px-4 py-3 align-middle">
+                    <td className="px-4 py-3 !align-middle">
                       <CustomCheckbox
                         checked={selectedKeys.includes(getKey(row, index))}
                         onChange={(event) =>
@@ -596,20 +596,24 @@ const DataTable = ({
                     </td>
                   )}
                   {shouldShowSerialNumber && (
-                    <td className="w-16 px-4 py-3 align-middle font-medium text-[var(--admin-muted)]">
-                      {(resolvedPage - 1) * resolvedPageSize + index + 1}.
+                    <td className="w-16 px-4 py-3 !align-middle font-medium text-[var(--admin-muted)]">
+                      <div className="flex min-h-[32px] items-center">
+                        {(resolvedPage - 1) * resolvedPageSize + index + 1}.
+                      </div>
                     </td>
                   )}
                   {safeColumns.map((col, columnIndex) => (
                     <td
                       key={`${col.key}-${columnIndex}`}
-                      className={`px-4 py-3 align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}
+                      className={`px-4 py-3 !align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}
                     >
-                      {renderCellValue(
-                        col.render
-                          ? col.render(row[col.key], row)
-                          : row[col.key],
-                      )}
+                      <div className="flex min-h-[32px] items-center">
+                        {renderCellValue(
+                          col.render
+                            ? col.render(row[col.key], row)
+                            : row[col.key],
+                        )}
+                      </div>
                     </td>
                   ))}
                   {rowActions && (

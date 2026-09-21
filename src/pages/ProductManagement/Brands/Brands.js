@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   PageHeader,
   DataTable,
+  BulkActionBar,
   StatusBadge,
   // FilterBar,
   ConfirmModal,
@@ -543,6 +544,30 @@ const Brands = () => {
     }
   };
 
+  const handleBulkReview = (action) => {
+    const selectedBrands = brands.filter((brand) =>
+      list.selectedKeys.includes(brand._id),
+    );
+
+    const reviewableBrands = selectedBrands.filter(isBrandReviewable);
+
+    if (!reviewableBrands.length) {
+      toast.info("No selected brands require approval review");
+      return;
+    }
+
+    setReviewTarget({
+      selectedData: reviewableBrands,
+      reviewAction: action,
+      _id: reviewableBrands.length === 1 ? reviewableBrands[0]._id : undefined,
+      name:
+        reviewableBrands.length === 1
+          ? reviewableBrands[0].name
+          : `${reviewableBrands.length} selected brands`,
+    });
+    setRejectionReason("");
+  };
+
   const columns = useMemo(
     () => [
       ...BASE_COLUMNS,
@@ -730,6 +755,35 @@ const Brands = () => {
               <MdBrandingWatermark size={40} className="text-gray-200" />
             }
             requiredModule="brands"
+            selectable
+            selectedKeys={list.selectedKeys}
+            onSelectionChange={list.setSelectedKeys}
+            rowKey="_id"
+            bulkActionBar={
+              <BulkActionBar
+                selectedCount={list.selectedCount}
+                totalCount={brands.length}
+                onClear={list.clearSelection}
+                module="brands"
+                loading={loading}
+                actions={[
+                  {
+                    label: "Approve",
+                    icon: <MdCheckCircle />,
+                    action: ACTIONS.UPDATE,
+                    variant: "primary",
+                    onClick: () => handleBulkReview("approve"),
+                  },
+                  {
+                    label: "Reject",
+                    icon: <MdClose />,
+                    action: ACTIONS.UPDATE,
+                    variant: "danger",
+                    onClick: () => handleBulkReview("reject"),
+                  },
+                ]}
+              />
+            }
             // exportConfig={{
             //   filename: "brands",
             //   columns: BASE_COLUMNS,

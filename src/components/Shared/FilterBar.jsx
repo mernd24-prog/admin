@@ -1034,7 +1034,7 @@ const FilterBar = ({
   }
 
   return (
-    <div className="border-b border-[var(--admin-line)] bg-[#FFFDF8] px-3 py-3 sm:px-4">
+    <div className="relative z-20 border-b border-[var(--admin-line)] bg-[#FFFDF8] px-3 py-3 sm:px-4">
       <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
           <MdFilterList size={16} />

@@ -11,7 +11,7 @@ import { MdArrowBack, MdAdd, MdDelete, MdEdit, MdClose } from "react-icons/md";
 import { formatLabel } from "../../../utils/formatters";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import Input from "../../../components/Atoms/Input/Input";
-import Loader from "../../../components/Loader/Loader";
+// import Loader from "../../../components/Loader/Loader";
 import { useNavigate } from "react-router-dom";
 import {
   getCategoryAttributes,
@@ -66,14 +66,15 @@ const idOf = (record = {}) => cleanId(record?._id || record?.id);
 
 const valueName = (record) => {
   if (record == null) return "";
-  if (typeof record === "string" || typeof record === "number") return String(record).trim();
+  if (typeof record === "string" || typeof record === "number")
+    return String(record).trim();
   return String(
     record.name ||
-    record.label ||
-    record.value ||
-    record.valueCode ||
-    record.title ||
-    ""
+      record.label ||
+      record.value ||
+      record.valueCode ||
+      record.title ||
+      "",
   ).trim();
 };
 
@@ -110,24 +111,154 @@ const DEFAULT_OPTION_MASTERS = [
 ];
 
 const PRESET_VALUES_BY_MASTER = {
-  master_size: ["A4", "A5", "B5", "A6", "Pocket Size", "5 x 7 Inches", "6 x 9 Inches", "Small", "Medium", "Large"],
-  master_ruling: ["Ruled", "Unruled", "Single Line", "Double Line", "Four Line", "Square / Grid", "Dot Grid"],
-  master_pages: ["80 Pages", "100 Pages", "120 Pages", "160 Pages", "192 Pages", "200 Pages", "240 Pages", "300 Pages", "400 Pages"],
-  master_cover: ["Hardcover", "Softcover", "Spiral Bound", "Wiro Bound", "Stitched", "Leather Bound", "Paperback"],
+  master_size: [
+    "A4",
+    "A5",
+    "B5",
+    "A6",
+    "Pocket Size",
+    "5 x 7 Inches",
+    "6 x 9 Inches",
+    "Small",
+    "Medium",
+    "Large",
+  ],
+  master_ruling: [
+    "Ruled",
+    "Unruled",
+    "Single Line",
+    "Double Line",
+    "Four Line",
+    "Square / Grid",
+    "Dot Grid",
+  ],
+  master_pages: [
+    "80 Pages",
+    "100 Pages",
+    "120 Pages",
+    "160 Pages",
+    "192 Pages",
+    "200 Pages",
+    "240 Pages",
+    "300 Pages",
+    "400 Pages",
+  ],
+  master_cover: [
+    "Hardcover",
+    "Softcover",
+    "Spiral Bound",
+    "Wiro Bound",
+    "Stitched",
+    "Leather Bound",
+    "Paperback",
+  ],
   master_gsm: ["70 GSM", "80 GSM", "90 GSM", "100 GSM", "120 GSM"],
-  master_color: ["Black", "Blue", "Brown", "Red", "Green", "Grey", "Tan", "Multicolour", "Yellow", "White"],
+  master_color: [
+    "Black",
+    "Blue",
+    "Brown",
+    "Red",
+    "Green",
+    "Grey",
+    "Tan",
+    "Multicolour",
+    "Yellow",
+    "White",
+  ],
 };
 
 const SUGGESTIONS_BY_KEYWORD = {
-  rule: ["Ruled", "Unruled", "Single Line", "Double Line", "Four Line", "Square / Grid", "Dot Grid"],
-  ruling: ["Ruled", "Unruled", "Single Line", "Double Line", "Four Line", "Square / Grid", "Dot Grid"],
-  line: ["Ruled", "Unruled", "Single Line", "Double Line", "Four Line", "Square / Grid", "Dot Grid"],
-  page: ["80 Pages", "100 Pages", "120 Pages", "160 Pages", "192 Pages", "200 Pages", "240 Pages", "300 Pages", "400 Pages"],
-  size: ["A4", "A5", "B5", "A6", "Pocket Size", "5 x 7 Inches", "6 x 9 Inches", "Small", "Medium", "Large"],
-  paper: ["A4", "A5", "B5", "70 GSM", "80 GSM", "90 GSM", "100 GSM", "Recycled Paper", "Bond Paper"],
-  cover: ["Hardcover", "Softcover", "Spiral Bound", "Wiro Bound", "Stitched", "Leather Bound", "Paperback"],
-  bind: ["Hardcover", "Softcover", "Spiral Bound", "Wiro Bound", "Stitched", "Leather Bound", "Paperback"],
-  color: ["Black", "Blue", "Brown", "Red", "Green", "Grey", "Tan", "Multicolour", "Yellow", "White"],
+  rule: [
+    "Ruled",
+    "Unruled",
+    "Single Line",
+    "Double Line",
+    "Four Line",
+    "Square / Grid",
+    "Dot Grid",
+  ],
+  ruling: [
+    "Ruled",
+    "Unruled",
+    "Single Line",
+    "Double Line",
+    "Four Line",
+    "Square / Grid",
+    "Dot Grid",
+  ],
+  line: [
+    "Ruled",
+    "Unruled",
+    "Single Line",
+    "Double Line",
+    "Four Line",
+    "Square / Grid",
+    "Dot Grid",
+  ],
+  page: [
+    "80 Pages",
+    "100 Pages",
+    "120 Pages",
+    "160 Pages",
+    "192 Pages",
+    "200 Pages",
+    "240 Pages",
+    "300 Pages",
+    "400 Pages",
+  ],
+  size: [
+    "A4",
+    "A5",
+    "B5",
+    "A6",
+    "Pocket Size",
+    "5 x 7 Inches",
+    "6 x 9 Inches",
+    "Small",
+    "Medium",
+    "Large",
+  ],
+  paper: [
+    "A4",
+    "A5",
+    "B5",
+    "70 GSM",
+    "80 GSM",
+    "90 GSM",
+    "100 GSM",
+    "Recycled Paper",
+    "Bond Paper",
+  ],
+  cover: [
+    "Hardcover",
+    "Softcover",
+    "Spiral Bound",
+    "Wiro Bound",
+    "Stitched",
+    "Leather Bound",
+    "Paperback",
+  ],
+  bind: [
+    "Hardcover",
+    "Softcover",
+    "Spiral Bound",
+    "Wiro Bound",
+    "Stitched",
+    "Leather Bound",
+    "Paperback",
+  ],
+  color: [
+    "Black",
+    "Blue",
+    "Brown",
+    "Red",
+    "Green",
+    "Grey",
+    "Tan",
+    "Multicolour",
+    "Yellow",
+    "White",
+  ],
   gsm: ["70 GSM", "80 GSM", "90 GSM", "100 GSM", "120 GSM"],
   material: ["Leather", "Paper", "Cardboard", "Kraft Paper", "Plastic / Poly"],
 };
@@ -181,7 +312,15 @@ const NOTEBOOK_ATTRIBUTE_PRESETS = [
     label: "Number of Pages",
     type: "select",
     platformOptionId: "master_pages",
-    options: ["80 Pages", "100 Pages", "160 Pages", "192 Pages", "200 Pages", "300 Pages", "400 Pages"],
+    options: [
+      "80 Pages",
+      "100 Pages",
+      "160 Pages",
+      "192 Pages",
+      "200 Pages",
+      "300 Pages",
+      "400 Pages",
+    ],
     isFilterable: true,
   },
   {
@@ -201,7 +340,13 @@ const NOTEBOOK_ATTRIBUTE_PRESETS = [
     label: "Cover & Binding",
     type: "select",
     platformOptionId: "master_cover",
-    options: ["Hardcover", "Softcover", "Spiral Bound", "Wiro Bound", "Leather Bound"],
+    options: [
+      "Hardcover",
+      "Softcover",
+      "Spiral Bound",
+      "Wiro Bound",
+      "Leather Bound",
+    ],
     isFilterable: true,
   },
   {
@@ -291,7 +436,8 @@ const AttributeRow = ({
     if (
       currentOptionId &&
       !currentOptionId.startsWith("master_") &&
-      (!optionValues[currentOptionId] || optionValues[currentOptionId].length === 0)
+      (!optionValues[currentOptionId] ||
+        optionValues[currentOptionId].length === 0)
     ) {
       onLoadOptionValues(currentOptionId);
     }
@@ -299,13 +445,18 @@ const AttributeRow = ({
 
   const masterValues = useMemo(() => {
     if (!currentOptionId) return [];
-    if (currentOptionId.startsWith("master_") && PRESET_VALUES_BY_MASTER[currentOptionId]) {
+    if (
+      currentOptionId.startsWith("master_") &&
+      PRESET_VALUES_BY_MASTER[currentOptionId]
+    ) {
       return PRESET_VALUES_BY_MASTER[currentOptionId];
     }
     const fromState = optionValues[currentOptionId] || [];
     if (fromState.length > 0) return fromState;
     // Check if matching master preset exists by name
-    const choice = platformOptionChoices.find((c) => c.value === currentOptionId);
+    const choice = platformOptionChoices.find(
+      (c) => c.value === currentOptionId,
+    );
     const label = (choice?.label || "").toLowerCase();
     for (const [mKey, vals] of Object.entries(PRESET_VALUES_BY_MASTER)) {
       const mLabel = mKey.replace("master_", "");
@@ -314,11 +465,14 @@ const AttributeRow = ({
     return [];
   }, [currentOptionId, optionValues, platformOptionChoices]);
 
-  const existingOptions = Array.isArray(attribute.options) ? attribute.options : [];
+  const existingOptions = Array.isArray(attribute.options)
+    ? attribute.options
+    : [];
 
   // Match keyword suggestions based on attribute.key and attribute.label
   const keywordMatches = useMemo(() => {
-    const text = `${attribute.key || ""} ${attribute.label || ""}`.toLowerCase();
+    const text =
+      `${attribute.key || ""} ${attribute.label || ""}`.toLowerCase();
     const matches = new Set();
     Object.entries(SUGGESTIONS_BY_KEYWORD).forEach(([keyword, vals]) => {
       if (text.includes(keyword)) {
@@ -572,6 +726,7 @@ const CategoryAttributesPanel = ({
   embedded = false,
   initialCategory = null,
   onClose,
+  onLoaded,
 }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -627,6 +782,7 @@ const CategoryAttributesPanel = ({
     async (rawOptionId) => {
       const optionId = cleanId(rawOptionId);
       if (!optionId) return;
+
       if (optionId.startsWith("master_")) {
         setOptionValues((prev) => ({
           ...prev,
@@ -634,7 +790,6 @@ const CategoryAttributesPanel = ({
         }));
         return;
       }
-      if (optionValues[optionId] && optionValues[optionId].length > 0) return;
 
       let foundList = null;
 
@@ -646,7 +801,9 @@ const CategoryAttributesPanel = ({
             limit: 200,
           }),
         ).unwrap();
+
         const list = extractList(res);
+
         if (Array.isArray(list) && list.length > 0) {
           foundList = list;
         }
@@ -656,8 +813,11 @@ const CategoryAttributesPanel = ({
 
       if (!foundList || foundList.length === 0) {
         try {
-          const dropdownRes = await dropdownApi.getProductOptionValues(optionId);
+          const dropdownRes =
+            await dropdownApi.getProductOptionValues(optionId);
+
           const list = extractList(dropdownRes);
+
           if (Array.isArray(list) && list.length > 0) {
             foundList = list;
           }
@@ -666,12 +826,19 @@ const CategoryAttributesPanel = ({
         }
       }
 
-      setOptionValues((prev) => ({
-        ...prev,
-        [optionId]: foundList || [],
-      }));
+      setOptionValues((prev) => {
+        // Don't update state if the value is already loaded
+        if (Array.isArray(prev[optionId]) && prev[optionId].length > 0) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [optionId]: foundList || [],
+        };
+      });
     },
-    [dispatch, optionValues],
+    [dispatch],
   );
 
   useEffect(() => {
@@ -738,60 +905,75 @@ const CategoryAttributesPanel = ({
   }, [platformOptions]);
 
   const openEditor = useCallback(
-    (option) => {
-      setLoadingKey(option.value);
-      dispatch(
-        getCategoryAttributes({
-          categoryKey: option.value,
-          categoryId: option.value,
-          _id: option.value,
-          id: option.value,
-        }),
-      )
-        .unwrap()
-        .then((res) => {
-          const schema =
-            res?.data?.attributeSchema ||
-            res?.data?.data?.attributeSchema ||
-            res?.attributeSchema ||
-            (Array.isArray(res?.data) ? res.data : []);
-          const formattedSchema = schema.map((item) => {
-            const optId = cleanId(item.platformOptionId || item.optionId);
-            const rawOpts = Array.isArray(item.options)
-              ? item.options
-              : String(item.options || "")
-                  .split(",")
-                  .map((o) => o.trim())
-                  .filter(Boolean);
-            return {
-              ...EMPTY_ATTRIBUTE,
-              ...item,
-              platformOptionId: optId,
-              options: rawOpts.map((o) => valueName(o)).filter(Boolean),
-            };
-          });
+    async (option) => {
+      if (!option?.value) return;
 
-          setAttributes(formattedSchema);
-          formattedSchema.forEach((item) => {
-            if (item.platformOptionId) {
-              loadOptionValues(item.platformOptionId);
-            }
-          });
-          setAttrCounts((prev) => ({
-            ...prev,
-            [option.value]: formattedSchema.length,
-          }));
-          setSelectedCategory(option);
-          setView("edit");
-        })
-        .catch(() => {
-          setAttributes([]);
-          setSelectedCategory(option);
-          setView("edit");
-        })
-        .finally(() => setLoadingKey(null));
+      setLoadingKey(option.value);
+
+      try {
+        const res = await dispatch(
+          getCategoryAttributes({
+            categoryKey: option.value,
+            categoryId: option.value,
+            _id: option.value,
+            id: option.value,
+          }),
+        ).unwrap();
+
+        const schema =
+          res?.data?.attributeSchema ||
+          res?.data?.data?.attributeSchema ||
+          res?.attributeSchema ||
+          (Array.isArray(res?.data) ? res.data : []);
+
+        const normalizedAttributes = Array.isArray(schema)
+          ? schema.map((attribute) => ({
+              ...EMPTY_ATTRIBUTE,
+              ...attribute,
+              platformOptionId:
+                attribute?.platformOptionId || attribute?.optionId || "",
+              options: Array.isArray(attribute?.options)
+                ? attribute.options
+                : typeof attribute?.options === "string"
+                  ? attribute.options
+                      .split(",")
+                      .map((item) => item.trim())
+                      .filter(Boolean)
+                  : [],
+            }))
+          : [];
+
+        // Load option values where required
+        await Promise.all(
+          normalizedAttributes
+            .map((attribute) => attribute.platformOptionId)
+            .filter(
+              (optionId) => optionId && !String(optionId).startsWith("master_"),
+            )
+            .map((optionId) => loadOptionValues(optionId)),
+        );
+
+        setAttributes(normalizedAttributes);
+
+        setAttrCounts((prev) => ({
+          ...prev,
+          [option.value]: normalizedAttributes.length,
+        }));
+
+        setSelectedCategory(option);
+        setView("edit");
+      } catch (error) {
+        console.error("Error loading category attributes:", error);
+
+        toast.error(error?.message || "Failed to load category attributes");
+      } finally {
+        setLoadingKey("");
+
+        // VERY IMPORTANT
+        onLoaded?.();
+      }
     },
-    [dispatch, loadOptionValues],
+    [dispatch, loadOptionValues, onLoaded],
   );
 
   useEffect(() => {
@@ -800,16 +982,19 @@ const CategoryAttributesPanel = ({
 
   useEffect(() => {
     if (!initialCategoryKey) return;
+
     const matchedOption =
       categoryOptions.find(
         (option) => String(option.value) === initialCategoryKey,
       ) || initialCategoryOption;
+
     if (
       !matchedOption?.value ||
       loadedInitialCategoryRef.current === matchedOption.value
     ) {
       return;
     }
+
     loadedInitialCategoryRef.current = matchedOption.value;
     openEditor(matchedOption);
   }, [categoryOptions, initialCategoryKey, initialCategoryOption, openEditor]);
@@ -928,7 +1113,7 @@ const CategoryAttributesPanel = ({
   if (view === "list") {
     return (
       <div className={`${embedded ? "h-full overflow-y-auto p-5" : ""}`}>
-        <Loader loading={selector.loading} />
+        {/* <Loader loading={selector.loading} /> */}
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-800">
@@ -1005,7 +1190,7 @@ const CategoryAttributesPanel = ({
 
   return (
     <div className={`${embedded ? "h-full overflow-y-auto p-5" : ""}`}>
-      <Loader loading={selector.loading || saving} />
+      {/* <Loader loading={selector.loading || saving} /> */}
 
       {/* Header */}
       <div className="mb-5">
@@ -1036,14 +1221,16 @@ const CategoryAttributesPanel = ({
         <span className="text-blue-500 mt-0.5">ℹ</span>
         <p className="text-xs text-blue-800">
           These attributes control which fields appear when adding/editing
-          products under <strong>{categoryName}</strong>. You can choose from presets below or add custom attributes.
+          products under <strong>{categoryName}</strong>. You can choose from
+          presets below or add custom attributes.
         </p>
       </div>
 
       {/* Quick Notebook Presets */}
       <div className="mb-4 p-3 bg-blue-50/70 border border-blue-200 rounded-lg">
         <p className="text-xs font-semibold text-blue-900 mb-2">
-          Notebook Attribute Presets: Click to quickly add standard attributes with allowed values
+          Notebook Attribute Presets: Click to quickly add standard attributes
+          with allowed values
         </p>
         <div className="flex flex-wrap gap-2">
           {NOTEBOOK_ATTRIBUTE_PRESETS.map((preset) => {
@@ -1067,7 +1254,9 @@ const CategoryAttributesPanel = ({
                       isSearchable: true,
                     },
                   ]);
-                  toast.success(`Added ${preset.label} with standard allowed values`);
+                  toast.success(
+                    `Added ${preset.label} with standard allowed values`,
+                  );
                 }}
                 className={`text-xs px-3 py-1.5 rounded-md font-medium transition-all ${
                   alreadyAdded
@@ -1106,7 +1295,9 @@ const CategoryAttributesPanel = ({
                       isSearchable: true,
                     },
                   ]);
-                  toast.success(`Added ${preset.label} with standard allowed values`);
+                  toast.success(
+                    `Added ${preset.label} with standard allowed values`,
+                  );
                 }}
                 className="text-xs px-3 py-1.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-600 hover:text-white transition-colors"
               >
