@@ -27,6 +27,20 @@ const isEmptyCellValue = (value) =>
 
 const formatCellText = (value) => formatLabel(value, "N/A");
 
+const toNonNegativeNumber = (value, fallback = 0) => {
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) && parsedValue >= 0
+    ? parsedValue
+    : fallback;
+};
+
+const toPositiveInteger = (value, fallback) => {
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? Math.floor(parsedValue)
+    : fallback;
+};
+
 const VOID_ELEMENT_TAGS = new Set([
   "area",
   "base",
@@ -297,9 +311,15 @@ const DataTable = ({
     );
   });
   const shouldShowSerialNumber = showSerialNumber && !hasSerialColumn;
-  const resolvedTotalCount = Number(totalCount ?? total ?? safeData.length);
-  const resolvedPage = Number(listPage?.page ?? page ?? 1);
-  const resolvedPageSize = Number(listPage?.pageSize ?? pageSize ?? 20);
+  const resolvedTotalCount = toNonNegativeNumber(
+    totalCount ?? total,
+    safeData.length,
+  );
+  const resolvedPage = toPositiveInteger(listPage?.page ?? page, 1);
+  const resolvedPageSize = toPositiveInteger(
+    listPage?.pageSize ?? pageSize,
+    20,
+  );
   const resolvedOnPageChange = onPageChange || listPage?.setPage;
   const resolvedOnPageSizeChange = onPageSizeChange || listPage?.setPageSize;
   const resolvedOnSearch = onSearch || listPage?.setSearch;
@@ -366,6 +386,13 @@ const DataTable = ({
     } finally {
       setRefreshing(false);
     }
+  };
+
+  const getSerialNumber = (index) => {
+    const serialNumber =
+      (resolvedPage - 1) * resolvedPageSize + Number(index) + 1;
+
+    return Number.isFinite(serialNumber) ? serialNumber : Number(index) + 1;
   };
 
   const toggleAll = (checked) => {
@@ -598,7 +625,7 @@ const DataTable = ({
                   {shouldShowSerialNumber && (
                     <td className="w-16 px-4 py-3 !align-middle font-medium text-[var(--admin-muted)]">
                       <div className="flex min-h-[32px] items-center">
-                        {(resolvedPage - 1) * resolvedPageSize + index + 1}.
+                        {getSerialNumber(index)}.
                       </div>
                     </td>
                   )}
@@ -610,7 +637,7 @@ const DataTable = ({
                       <div className="flex min-h-[32px] items-center">
                         {renderCellValue(
                           col.render
-                            ? col.render(row[col.key], row)
+                            ? col.render(row[col.key], row, index)
                             : row[col.key],
                         )}
                       </div>

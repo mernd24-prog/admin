@@ -1516,6 +1516,8 @@ const recentOrdersColumns = [
       data={topProducts}
       loading={isDashboardLoading}
       totalCount={topProducts.length}
+      page={1}
+      pageSize={Math.max(topProducts.length, 1)}
       exportConfig={null}
       rowKey={(product, index) =>
         product?.product_id ||
@@ -1549,6 +1551,8 @@ const recentOrdersColumns = [
       data={recentOrders}
       loading={isDashboardLoading}
       totalCount={recentOrders.length}
+      page={1}
+      pageSize={Math.max(recentOrders.length, 1)}
       exportConfig={null}
       rowKey={(order, index) =>
         order?._id ||
