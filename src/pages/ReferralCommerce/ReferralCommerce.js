@@ -92,7 +92,7 @@ const tabs = [
   { key: "productAmounts", label: "Product Referral Amounts" },
   { key: "bonuses", label: "Bonuses" },
   { key: "orders", label: "Referral Orders" },
-  { key: "commissions", label: "Wallet Ledger" },
+  
   { key: "payouts", label: "Payout Requests" },
   { key: "hierarchy", label: "Hierarchy" },
   { key: "fraud", label: "Fraud Review" },
@@ -113,15 +113,7 @@ const FILTER_STATUSES = {
   codes: ["active", "inactive", "expired", "suspended"],
   bonuses: ["active", "inactive", "locked", "released", "reversed"],
   orders: ["pending", "completed", "cancelled", "refunded", "reversed"],
-  commissions: [
-    "pending",
-    "locked",
-    "available",
-    "payout_requested",
-    "paid",
-    "reversed",
-    "expired",
-  ],
+  
   payouts: [
     "pending",
     "approved",
@@ -160,10 +152,7 @@ const MARKETING_PAGE_META = {
     title: "Referral Orders",
     subtitle: "View and manage orders placed through referral codes",
   },
-  commissions: {
-    title: "Wallet Ledger",
-    subtitle: "Track referral coins and wallet transactions",
-  },
+ 
   payouts: {
     title: "Payout Requests",
     subtitle: "Review and manage referral partner payout requests",
@@ -1707,7 +1696,6 @@ const ReferralCommerce = () => {
  
         "bonuses",
         "orders",
-        "commissions",
         "payouts",
         "fraud",
       ].includes(activeTab)
@@ -2310,19 +2298,7 @@ const ReferralCommerce = () => {
     created: formatDate(order.createdAt),
   }));
 
-  const commissionRows = commissions.map((entry) => ({
-    key: getId(entry),
-    order: renderOrderLink(
-      entry.orderId || entry.order_id,
-      entry.orderNumber || entry.order_number,
-    ),
-    influencer: renderInfluencerRef(entry.influencerId),
-    type: entry.commissionType,
-    basis: formatAmount(entry.basisAmount),
-    amount: formatCoins(entry.amount),
-    status: <StatusPill value={entry.status} />,
-    releaseAt: formatDate(entry.releaseAt),
-  }));
+ 
 
   const payoutRows = payouts.map((payout) => ({
     key: getId(payout),
@@ -3479,26 +3455,7 @@ const ReferralCommerce = () => {
           emptyText="No referral orders found."
         />
       )}
-      {activeTab === "commissions" && (
-        <SharedDataTable
-          columns={[
-            { key: "order", label: "Order" },
-            { key: "influencer", label: "Referral Partner" },
-            { key: "type", label: "Type" },
-            { key: "basis", label: "Basis" },
-            { key: "amount", label: "Coins" },
-            { key: "status", label: "Status" },
-            { key: "releaseAt", label: "Release At" },
-          ]}
-          data={commissionRows}
-          loading={loading}
-          rowKey="key"
-          onSearch={setSearch}
-          searchPlaceholder="Search wallet ledger..."
-          filterBar={renderActiveFilterBar()}
-          emptyText="No coin ledger entries found."
-        />
-      )}
+       
       {activeTab === "payouts" && (
         <SharedDataTable
           columns={[

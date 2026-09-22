@@ -60,6 +60,12 @@ const getId = (record = {}) =>
   record.codeId ||
   record.payoutId;
 
+const getReferralOrderOwnerId = (order = {}) =>
+  order.codeOwnerInfluencerId ||
+  order.code_owner_influencer_id ||
+  order.influencerId ||
+  order.influencer_id;
+
 const fullName = (user = {}) => {
   const profile = user.profile || {};
   return (
@@ -268,7 +274,7 @@ const ReferralPartnerDetails = () => {
   const orders = useMemo(
     () =>
       getBranchList(referralState.ordersData).filter(
-        (order) => String(order.influencerId) === String(id),
+        (order) => String(getReferralOrderOwnerId(order)) === String(id),
       ),
     [id, referralState.ordersData],
   );
