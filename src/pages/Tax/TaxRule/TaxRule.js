@@ -34,6 +34,10 @@ import {
   updateTaxRule,
 } from "../../../Redux/cmsSlice";
 import { getListCategory } from "../../../Redux/userManagementSlice";
+import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import FormInput from "../../../components/Atoms/FormInput/FormInput";
+import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
 
 const FILTER_FIELDS = [
   {
@@ -477,57 +481,70 @@ const TaxRule = () => {
       />
 
       {modalMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">
-              {modalMode === "add" ? "Add Tax Rule" : "Edit Tax Rule"}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description <span className="text-red-500">*</span>
-                </label>
-                <textarea
+        <DefaultModal
+          isOpen={Boolean(modalMode)}
+          onClose={closeModal}
+          onSubmit={handleSubmit}
+          title={modalMode === "add" ? "Add Tax Rule" : "Edit Tax Rule"}
+          submitButtonText={
+            saving
+              ? "Saving..."
+              : modalMode === "add"
+                ? "Create Tax Rule"
+                : "Save Changes"
+          }
+          closeButtonText="Cancel"
+          isButtonView={true}
+          loading={saving}
+        >
+          <div className="space-y-5">
+            {/* ==================== Tax Rule Information ==================== */}
+            <FormSection
+              title="Tax Rule Information"
+              description="Configure the tax rule and select the applicable taxes and category."
+            >
+              <div className="space-y-4">
+                {/* Description */}
+                <FormInput
+                  label="Description"
                   name="description"
+                  type="textarea"
                   value={formData.description}
                   onChange={handleInputChange}
-                  rows={2}
-                  maxLength={200}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
+                  error={errors.description}
                   placeholder="Describe this tax rule"
-                />
-                {errors.description && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.description}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <FilterSelect
-                  options={taxOptions}
-                  label="Select Tax"
-                  value={selectedTax}
-                  onChange={handleTaxChange}
-                  error={errors.tax_id}
+                  rows={3}
                   required
                 />
-              </div>
 
-              <div>
-                <FilterSelect
-                  options={filteredSubTaxOptions}
-                  label="Select Sub Tax"
-                  value={selectedSubTax}
-                  onChange={handleSubTaxChange}
-                  error={errors.subTaxes_id}
-                  required
-                  isMulti
-                  isDisabled={!selectedTax}
-                />
-              </div>
+                {/* Tax + Sub Tax */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FilterSelect
+                    options={taxOptions}
+                    label="Select Tax"
+                    value={selectedTax}
+                    onChange={handleTaxChange}
+                    error={errors.tax_id}
+                    required
+                    placeholder="Select tax"
+                  />
 
-              <div>
+                  <FilterSelect
+                    options={filteredSubTaxOptions}
+                    label="Select Sub Tax"
+                    value={selectedSubTax}
+                    onChange={handleSubTaxChange}
+                    error={errors.subTaxes_id}
+                    required
+                    isMulti
+                    isDisabled={!selectedTax}
+                    placeholder={
+                      selectedTax ? "Select sub tax" : "Select tax first"
+                    }
+                  />
+                </div>
+
+                {/* Category */}
                 <FilterSelect
                   options={categoryOptions}
                   label="Select Category"
@@ -535,44 +552,30 @@ const TaxRule = () => {
                   onChange={handleCategoryChange}
                   error={errors.category_id}
                   required
+                  placeholder="Select category"
                 />
               </div>
+            </FormSection>
 
-              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
-                <span className="text-sm font-medium text-gray-700">
-                  Active
-                </span>
-                <ToggleButton
-                  isToggle={!formData.isDisable}
-                  handleClick={() =>
-                    setFormData((p) => ({ ...p, isDisable: !p.isDisable }))
-                  }
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors"
-                >
-                  {saving
-                    ? "Saving…"
-                    : modalMode === "add"
-                      ? "Create"
-                      : "Save Changes"}
-                </button>
-              </div>
-            </form>
+            {/* ==================== Status ==================== */}
+            <FormSection
+              title="Status"
+              description="Control whether this tax rule is active and available for use."
+            >
+              <FormToggleRow
+                title="Active"
+                description="Enable this tax rule for applicable products and categories."
+                isToggle={!formData.isDisable}
+                handleClick={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    isDisable: !prev.isDisable,
+                  }))
+                }
+              />
+            </FormSection>
           </div>
-        </div>
+        </DefaultModal>
       )}
 
       <ConfirmModal

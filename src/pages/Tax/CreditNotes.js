@@ -601,21 +601,25 @@ const CreditNotes = () => {
             title="Credit Note Information"
             description="Enter the order and reference details for the credit note."
           >
-            <div className="space-y-4">
-              <FormInput
-                label="Order ID"
-                name="orderId"
-                value={form.orderId}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    orderId: e.target.value,
-                  }))
-                }
-                placeholder="Enter order UUID"
-                required
-              />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Full width because this is an important single field */}
+              <div className="md:col-span-2">
+                <FormInput
+                  label="Order ID"
+                  name="orderId"
+                  value={form.orderId}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      orderId: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter order UUID"
+                  required
+                />
+              </div>
 
+              {/* Two fields in one row */}
               <FormInput
                 label="Reference ID"
                 name="referenceId"
@@ -658,7 +662,7 @@ const CreditNotes = () => {
             title="Amount Details"
             description="Enter the taxable amount, tax amount, and total credit amount."
           >
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormInput
                 label="Taxable Amount"
                 name="taxableAmount"
@@ -690,20 +694,23 @@ const CreditNotes = () => {
                 placeholder="0.00"
               />
 
-              <FormInput
-                label="Total Credit Amount"
-                name="totalAmount"
-                type="number"
-                min="0"
-                value={form.totalAmount}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    totalAmount: e.target.value,
-                  }))
-                }
-                placeholder="Taxable amount + tax"
-              />
+              {/* Third field → starts a new row and takes full width */}
+              <div className="md:col-span-2">
+                <FormInput
+                  label="Total Credit Amount"
+                  name="totalAmount"
+                  type="number"
+                  min="0"
+                  value={form.totalAmount}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      totalAmount: e.target.value,
+                    }))
+                  }
+                  placeholder="Taxable amount + tax"
+                />
+              </div>
             </div>
           </FormSection>
 
@@ -712,6 +719,7 @@ const CreditNotes = () => {
             title="Credit Note Reason"
             description="Provide the reason for issuing this credit note."
           >
+            {/* Only one field → full width */}
             <FormInput
               label="Reason"
               name="reason"

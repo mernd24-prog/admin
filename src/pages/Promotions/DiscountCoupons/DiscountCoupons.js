@@ -32,6 +32,10 @@ import {
   softDeleteDiscountCoupons,
 } from "../../../Redux/promotionsSlice";
 import { formatDateTime12Hour } from "../../../utils/formatters";
+import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
+import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
 
 // ── Utility helpers ────────────────────────────────────────────────────────────
 const DISCOUNT_TYPE_OPTIONS = [
@@ -554,245 +558,294 @@ const DiscountCoupons = () => {
       />
 
       {/* Add / Edit Modal */}
-      {modalMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">
-              {modalMode === "add" ? "Create Coupon" : "Edit Coupon"}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput
-                  label="Title"
-                  name="title"
-                  type="text"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  error={errors.title}
-                  maxLength={100}
-                  required
-                />
-                <FormInput
-                  label="Coupon Code"
-                  name="code"
-                  type="text"
-                  value={formData.code}
-                  onChange={handleInputChange}
-                  error={errors.code}
-                  maxLength={30}
-                  placeholder="e.g. SAVE20"
-                  required
-                />
-              </div>
+      <DefaultModal
+        isOpen={Boolean(modalMode)}
+        onClose={closeModal}
+        title={modalMode === "add" ? "Create Coupon" : "Edit Coupon"}
+        submitButtonText={
+          saving
+            ? "Saving..."
+            : modalMode === "add"
+              ? "Create Coupon"
+              : "Save Changes"
+        }
+        closeButtonText="Cancel"
+        isButtonView={true}
+        onSubmit={handleSubmit}
+        loading={saving}
+      >
+        <div className="space-y-5">
+          {/* ==================== Basic Information ==================== */}
+          <FormSection
+            title="Basic Information"
+            description="Enter the basic details and coupon code."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput
+                label="Title"
+                name="title"
+                type="text"
+                value={formData.title}
+                onChange={handleInputChange}
+                error={errors.title}
+                placeholder="Enter coupon title"
+                required
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description <span className="text-red-500">*</span>
-                </label>
-                <textarea
+              <FormInput
+                label="Coupon Code"
+                name="code"
+                type="text"
+                value={formData.code}
+                onChange={handleInputChange}
+                error={errors.code}
+                maxLength={30}
+                placeholder="e.g. SAVE20"
+                required
+              />
+
+              {/* Single field → full width */}
+              <div className="md:col-span-2">
+                <FormInput
+                  label="Description"
                   name="description"
+                  type="textarea"
                   value={formData.description}
                   onChange={handleInputChange}
-                  rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)] resize-none"
+                  error={errors.description}
+                  rows={3}
                   placeholder="Describe this coupon"
-                />
-                {errors.description && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.description}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FilterSelect
-                  label="Discount Type"
                   required
-                  name="type"
-                  options={DISCOUNT_TYPE_OPTIONS}
-                  value={
-                    DISCOUNT_TYPE_OPTIONS.find(
-                      (opt) => opt.value === formData.type,
-                    ) || null
-                  }
-                  onChange={(opt) => {
-                    setFormData((prev) => ({
+                />
+              </div>
+            </div>
+          </FormSection>
+
+          {/* ==================== Discount Details ==================== */}
+          <FormSection
+            title="Discount Details"
+            description="Configure the discount type, value, and order limits."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormSelectGroup
+                label="Discount Type"
+                required
+                options={DISCOUNT_TYPE_OPTIONS}
+                value={
+                  DISCOUNT_TYPE_OPTIONS.find(
+                    (option) => option.value === formData.type,
+                  ) || null
+                }
+                onChange={(option) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    type: option?.value || "",
+                  }));
+
+                  if (errors.type) {
+                    setErrors((prev) => ({
                       ...prev,
-                      type: opt?.value || "",
+                      type: undefined,
                     }));
-                    if (errors.type)
-                      setErrors((prev) => ({ ...prev, type: undefined }));
-                  }}
-                  error={errors.type}
-                  placeholder="Select type"
-                  isSearchable={false}
-                />
-                <FormInput
-                  label={`Discount Value ${formData.type === "percentage" ? "(%)" : "(₹)"}`}
-                  name="value"
-                  type="number"
-                  value={formData.value}
-                  onChange={handleInputChange}
-                  error={errors.value}
-                  min="0"
-                  step="0.01"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput
-                  label="Min Order Value (₹)"
-                  name="min_order_value"
-                  type="number"
-                  value={formData.min_order_value}
-                  onChange={handleInputChange}
-                  error={errors.min_order_value}
-                  min="0"
-                  required
-                />
-                <FormInput
-                  label="Max Discount Cap (₹)"
-                  name="max_discount_value"
-                  type="number"
-                  value={formData.max_discount_value}
-                  onChange={handleInputChange}
-                  error={errors.max_discount_value}
-                  min="0"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FilterSelect
-                    label="Discount Funded By"
-                    name="funding_type"
-                    options={[
-                      { value: "marketplace", label: "Marketplace" },
-                      { value: "seller", label: "Seller" },
-                      { value: "shared", label: "Marketplace and seller" },
-                      {
-                        value: "payment_partner",
-                        label: "Payment partner / bank",
-                      },
-                    ]}
-                    value={
-                      [
-                        { value: "marketplace", label: "Marketplace" },
-                        { value: "seller", label: "Seller" },
-                        { value: "shared", label: "Marketplace and seller" },
-                        {
-                          value: "payment_partner",
-                          label: "Payment partner / bank",
-                        },
-                      ].find((opt) => opt.value === formData.funding_type) ||
-                      null
-                    }
-                    onChange={(opt) => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        funding_type: opt?.value || "marketplace",
-                      }));
-                    }}
-                    helperText="Marketplace or partner funding does not reduce the seller tax invoice. It is recorded as a contribution toward payment."
-                  />
-                </div>
-                {formData.funding_type === "shared" && (
-                  <FormInput
-                    label="Seller Share (%)"
-                    name="seller_funding_percent"
-                    type="number"
-                    value={formData.seller_funding_percent}
-                    onChange={handleInputChange}
-                    error={errors.seller_funding_percent}
-                    min="1"
-                    max="99"
-                    required
-                  />
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput
-                  label="Total Uses Limit"
-                  name="uses_per_coupon"
-                  type="number"
-                  value={formData.uses_per_coupon}
-                  onChange={handleInputChange}
-                  error={errors.uses_per_coupon}
-                  min="1"
-                  required
-                />
-                <FormInput
-                  label="Uses Per Customer"
-                  name="uses_per_customer"
-                  type="number"
-                  value={formData.uses_per_customer}
-                  onChange={handleInputChange}
-                  error={errors.uses_per_customer}
-                  min="1"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormInput
-                  label="Valid From"
-                  name="valid_from"
-                  type="date"
-                  value={formData.valid_from}
-                  onChange={handleInputChange}
-                  error={errors.valid_from}
-                  required
-                />
-                <FormInput
-                  label="Valid To"
-                  name="valid_to"
-                  type="date"
-                  value={formData.valid_to}
-                  onChange={handleInputChange}
-                  error={errors.valid_to}
-                  required
-                />
-              </div>
-
-              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
-                <span className="text-sm font-medium text-gray-700">
-                  Active
-                </span>
-                <ToggleButton
-                  isToggle={!formData.isDisable}
-                  handleClick={() =>
-                    setFormData((p) => ({ ...p, isDisable: !p.isDisable }))
                   }
-                />
-              </div>
+                }}
+                error={errors.type}
+                placeholder="Select discount type"
+              />
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors"
-                >
-                  {saving
-                    ? "Saving…"
-                    : modalMode === "add"
-                      ? "Create Coupon"
-                      : "Save Changes"}
-                </button>
-              </div>
-            </form>
-          </div>
+              <FormInput
+                label={`Discount Value ${
+                  formData.type === "percentage" ? "(%)" : "(₹)"
+                }`}
+                name="value"
+                type="number"
+                value={formData.value}
+                onChange={handleInputChange}
+                error={errors.value}
+                min="0"
+                step="0.01"
+                placeholder="Enter discount value"
+                required
+              />
+
+              <FormInput
+                label="Min Order Value (₹)"
+                name="min_order_value"
+                type="number"
+                value={formData.min_order_value}
+                onChange={handleInputChange}
+                error={errors.min_order_value}
+                min="0"
+                placeholder="0.00"
+                required
+              />
+
+              <FormInput
+                label="Max Discount Cap (₹)"
+                name="max_discount_value"
+                type="number"
+                value={formData.max_discount_value}
+                onChange={handleInputChange}
+                error={errors.max_discount_value}
+                min="0"
+                placeholder="0.00"
+                required
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Funding Details ==================== */}
+          <FormSection
+            title="Funding Details"
+            description="Define who will fund the coupon discount."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
+              <FormSelectGroup
+                label="Discount Funded By"
+                options={[
+                  {
+                    value: "marketplace",
+                    label: "Marketplace",
+                  },
+                  {
+                    value: "seller",
+                    label: "Seller",
+                  },
+                  {
+                    value: "shared",
+                    label: "Marketplace and seller",
+                  },
+                  {
+                    value: "payment_partner",
+                    label: "Payment partner / bank",
+                  },
+                ]}
+                value={
+                  [
+                    {
+                      value: "marketplace",
+                      label: "Marketplace",
+                    },
+                    {
+                      value: "seller",
+                      label: "Seller",
+                    },
+                    {
+                      value: "shared",
+                      label: "Marketplace and seller",
+                    },
+                    {
+                      value: "payment_partner",
+                      label: "Payment partner / bank",
+                    },
+                  ].find((option) => option.value === formData.funding_type) ||
+                  null
+                }
+                onChange={(option) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    funding_type: option?.value || "marketplace",
+                  }));
+                }}
+                helperText="Marketplace or partner funding does not reduce the seller tax invoice. It is recorded as a contribution toward payment."
+              />
+
+              {formData.funding_type === "shared" && (
+                <FormInput
+                  label="Seller Share (%)"
+                  name="seller_funding_percent"
+                  type="number"
+                  value={formData.seller_funding_percent}
+                  onChange={handleInputChange}
+                  error={errors.seller_funding_percent}
+                  min="1"
+                  max="99"
+                  placeholder="Enter seller share"
+                  required
+                />
+              )}
+            </div>
+          </FormSection>
+
+          {/* ==================== Usage Limits ==================== */}
+          <FormSection
+            title="Usage Limits"
+            description="Set the total coupon usage and per-customer usage limits."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput
+                label="Total Uses Limit"
+                name="uses_per_coupon"
+                type="number"
+                value={formData.uses_per_coupon}
+                onChange={handleInputChange}
+                error={errors.uses_per_coupon}
+                min="1"
+                placeholder="Enter total usage limit"
+                required
+              />
+
+              <FormInput
+                label="Uses Per Customer"
+                name="uses_per_customer"
+                type="number"
+                value={formData.uses_per_customer}
+                onChange={handleInputChange}
+                error={errors.uses_per_customer}
+                min="1"
+                placeholder="Enter customer usage limit"
+                required
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Validity ==================== */}
+          <FormSection
+            title="Coupon Validity"
+            description="Define the period during which this coupon can be used."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput
+                label="Valid From"
+                name="valid_from"
+                type="date"
+                value={formData.valid_from}
+                onChange={handleInputChange}
+                error={errors.valid_from}
+                required
+              />
+
+              <FormInput
+                label="Valid To"
+                name="valid_to"
+                type="date"
+                value={formData.valid_to}
+                onChange={handleInputChange}
+                error={errors.valid_to}
+                required
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Status ==================== */}
+          <FormSection
+            title="Status"
+            description="Control whether this coupon is currently available for use."
+          >
+            <FormToggleRow
+              title="Active"
+              description="Enable this coupon so customers can use it during the valid period."
+              isToggle={!formData.isDisable}
+              handleClick={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  isDisable: !prev.isDisable,
+                }))
+              }
+            />
+          </FormSection>
         </div>
-      )}
+      </DefaultModal>
 
       <ConfirmModal
         isOpen={confirmOpen}

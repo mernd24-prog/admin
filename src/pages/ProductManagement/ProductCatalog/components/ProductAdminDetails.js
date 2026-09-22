@@ -407,7 +407,7 @@ const ProductAdminDetails = () => {
       setActionLoading(false);
     }
   };
-  
+
   const variantColumns = [
     {
       key: "serialNumber",
@@ -418,19 +418,21 @@ const ProductAdminDetails = () => {
       key: "image",
       label: "Image",
       render: (_value, variant) => (
-        <ImageThumbnail
-          src={getVariantImage(variant)}
-          images={getVariantImagesList(variant)}
-          alt={variant?.sku || variant?.title || "Variant"}
-          size="md"
-          showZoomIcon={true}
-          showViewButton={true}
-          viewButtonText="View"
-          onClick={() => {
-            setVariantGalleryImages(getVariantImagesList(variant));
-            setVariantGalleryOpen(true);
-          }}
-        />
+        <div className="flex w-full justify-start">
+          <ImageThumbnail
+            src={getVariantImage(variant)}
+            images={getVariantImagesList(variant)}
+            alt={variant?.sku || variant?.title || "Variant"}
+            size="md"
+            showZoomIcon={true}
+            showViewButton={true}
+            viewButtonText="View"
+            onClick={() => {
+              setVariantGalleryImages(getVariantImagesList(variant));
+              setVariantGalleryOpen(true);
+            }}
+          />
+        </div>
       ),
     },
 

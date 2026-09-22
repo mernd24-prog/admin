@@ -52,6 +52,7 @@ import { ENDPOINTS } from "../../../_helpers/endpoints";
 import useDropdownOptions from "../../../hooks/useDropdownOptions";
 import { formatLabel } from "../../../utils/formatters";
 import { DocumentPreviewModal } from "../../../components/Shared";
+import Tabs from "../../../components/Shared/Tabs";
 
 // ─── small display helpers ────────────────────────────────────────────────────
 
@@ -1777,25 +1778,16 @@ const UserDetails = () => {
           </div>
 
           {/* Tabs Navigation */}
-          <div className="flex flex-wrap gap-2 pb-2">
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-5 py-2 text-sm font-medium rounded-xl border transition-all duration-200 ${
-                    isActive
-                      ? "bg-[#1f1b5f] border-[#1f1b5f] text-white shadow-sm"
-                      : "bg-white border-[#e2d5c3] text-[#526484] hover:border-[#1f1b5f] hover:text-[#1f1b5f]"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+          {/* Tabs Navigation */}
+          <Tabs
+            tabs={tabs.map((tab) => ({
+              value: tab.id,
+              label: tab.label,
+              count: tab.count,
+            }))}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+          />
 
           {/* Seller Account & Profile Edit */}
           {activeTab === "profile" && (
@@ -2002,7 +1994,8 @@ const UserDetails = () => {
                       Account
                     </h2>
                     <p className="mt-1 text-xs text-gray-500">
-                      User account credentials, role details, and activity timestamps.
+                      User account credentials, role details, and activity
+                      timestamps.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2029,10 +2022,7 @@ const UserDetails = () => {
                       copyable={Boolean(user.phone)}
                       onCopy={(val) => handleCopyText(val, "Phone")}
                     />
-                    <DetailPill
-                      label="Role"
-                      value={formatLabel(user.role)}
-                    />
+                    <DetailPill label="Role" value={formatLabel(user.role)} />
                     <DetailPill label="Status">
                       <div className="flex items-center">
                         <StatusBadge value={accountStatus} />
@@ -2075,9 +2065,15 @@ const UserDetails = () => {
                             : ""
                         }
                       />
-                      <DetailPill label="Owner Admin" value={ownerAdminDisplay} />
+                      <DetailPill
+                        label="Owner Admin"
+                        value={ownerAdminDisplay}
+                      />
                       {user.ownerSellerId && (
-                        <DetailPill label="Owner Seller" value={user.ownerSellerId} />
+                        <DetailPill
+                          label="Owner Seller"
+                          value={user.ownerSellerId}
+                        />
                       )}
                     </div>
                   </section>

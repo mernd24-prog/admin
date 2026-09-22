@@ -31,6 +31,11 @@ import {
   updateTaxList,
 } from "../../Redux/cmsSlice";
 import { getAllCountryList } from "../../Redux/CountrySlice";
+import FormSection from "../../components/Atoms/FormSection/FormSection";
+import FormInput from "../../components/Atoms/FormInput/FormInput";
+import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
+import FormToggleRow from "../../components/Atoms/FormToggleRow/FormToggleRow";
+import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 
 const FILTER_FIELDS = [
   {
@@ -311,90 +316,82 @@ const Tax = () => {
         }
       />
 
-      {modalMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <h2 className="text-lg font-bold text-[var(--admin-navy)] mb-5">
-              {modalMode === "add" ? "Add Tax" : "Edit Tax"}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tax Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
-                  placeholder="e.g. GST, VAT"
-                  maxLength={100}
-                />
-                {errors.name && (
-                  <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-                )}
-              </div>
+      <DefaultModal
+        isOpen={Boolean(modalMode)}
+        onClose={closeModal}
+        title={modalMode === "add" ? "Add Tax" : "Edit Tax"}
+        submitButtonText={
+          saving
+            ? "Saving…"
+            : modalMode === "add"
+              ? "Create Tax"
+              : "Save Changes"
+        }
+        closeButtonText="Cancel"
+        onSubmit={handleSubmit}
+        isButtonView={true}
+      >
+        <div className="space-y-5">
+          {/* ==================== Tax Information ==================== */}
+          <FormSection
+            title="Tax Information"
+            description="Enter the tax name and select the country where this tax applies."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Tax Name */}
+              <FormInput
+                label="Tax Name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                error={errors.name}
+                placeholder="e.g. GST, VAT"
+                required
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Country <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="country_code"
-                  value={formData.country_code}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
-                >
-                  {countryOptions.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.country_code && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.country_code}
-                  </p>
-                )}
-              </div>
+              {/* Country */}
+              <FormSelectGroup
+                label="Country"
+                name="country_code"
+                options={countryOptions}
+                value={
+                  countryOptions.find(
+                    (option) =>
+                      String(option.value) === String(formData.country_code),
+                  ) || null
+                }
+                onChange={(selectedOption) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    country_code: selectedOption?.value || "",
+                  }))
+                }
+                error={errors.country_code}
+                placeholder="Select country"
+                required
+              />
+            </div>
+          </FormSection>
 
-              <div className="flex items-center justify-between border rounded-lg px-4 py-2.5">
-                <span className="text-sm font-medium text-gray-700">
-                  Active
-                </span>
-                <ToggleButton
-                  isToggle={!formData.isDisable}
-                  handleClick={() =>
-                    setFormData((p) => ({ ...p, isDisable: !p.isDisable }))
-                  }
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-5 py-2 text-sm rounded-lg bg-[var(--admin-gold)] text-white hover:bg-[var(--admin-gold-dark)] disabled:opacity-60 transition-colors"
-                >
-                  {saving
-                    ? "Saving…"
-                    : modalMode === "add"
-                      ? "Create Tax"
-                      : "Save Changes"}
-                </button>
-              </div>
-            </form>
-          </div>
+          {/* ==================== Status ==================== */}
+          <FormSection
+            title="Status"
+            description="Control whether this tax is currently available for use."
+          >
+            <FormToggleRow
+              title="Active"
+              description="Enable this tax for applicable tax calculations."
+              isToggle={!formData.isDisable}
+              handleClick={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  isDisable: !prev.isDisable,
+                }))
+              }
+            />
+          </FormSection>
         </div>
-      )}
+      </DefaultModal>
 
       <ConfirmModal
         isOpen={confirmOpen}
