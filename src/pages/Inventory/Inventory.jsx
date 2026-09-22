@@ -19,6 +19,7 @@ import {
   ConfirmModal,
   DataTable,
   FilterBar,
+  FormSection,
   ImageThumbnail,
   PageHeader,
   SellerLink,
@@ -38,6 +39,9 @@ import {
 import { formatDateTime12Hour } from "../../utils/formatters";
 import { toast } from "../../utils/toast";
 import ImageGallery from "../../components/Atoms/ImageGallery/ImageGallery";
+import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
+
+import FormInput from "../../components/Atoms/FormInput/FormInput";
 
 const isSeller = isSellerPanel();
 
@@ -453,19 +457,28 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
   };
 
   return (
-    <ConfirmModal
-      open={open}
-      title="Adjust Variant Inventory"
-      message={`${target?.productName || ""} · ${target?.variantName || ""}`}
-      confirmLabel="Update Stock"
-      variant="info"
-      loading={loading}
-      onClose={onClose}
-      onConfirm={submit}
+   <DefaultModal
+  isOpen={open}
+  onClose={onClose}
+  title="Adjust Variant Inventory"
+  subtitle={`${target?.productName || ""} · ${
+    target?.variantName || ""
+  }`}
+  onSubmit={submit}
+  loading={loading}
+  submitButtonText="Update Stock"
+>
+  <div className="space-y-5">
+    {/* Adjustment Type */}
+    <FormSection
+      title="Adjustment Type"
+      subtitle="Choose how you want to update the available stock."
     >
-      <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-2">
-          {ADJUST_TYPES.map(({ value, label, icon: Icon }) => (
+      <div className="grid grid-cols-3 gap-2">
+        {ADJUST_TYPES.map(({ value, label, icon: Icon }) => {
+          const isActive = form.adjustmentType === value;
+
+          return (
             <button
               key={value}
               type="button"
@@ -475,75 +488,68 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
                   adjustmentType: value,
                 }))
               }
-              className={`flex min-h-10 items-center justify-center gap-1 rounded-md border px-2 text-xs font-semibold transition ${
-                form.adjustmentType === value
-                  ? "border-[var(--admin-blue)] bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]"
-                  : "border-[var(--admin-line)] bg-white text-[var(--admin-muted)] hover:text-[var(--admin-ink)]"
+              className={`flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition ${
+                isActive
+                  ? "bg-[var(--admin-blue)] text-white shadow-sm"
+                  : "bg-[var(--admin-soft)] text-[var(--admin-muted)] hover:bg-[var(--admin-blue)]/10 hover:text-[var(--admin-blue)]"
               }`}
             >
               <Icon size={15} />
-              {label}
+              <span>{label}</span>
             </button>
-          ))}
-        </div>
-
-        <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-[var(--admin-muted)]">
-            Quantity
-          </span>
-
-          <input
-            type="number"
-            min={0}
-            value={form.quantity}
-            onChange={(event) =>
-              setForm((previous) => ({
-                ...previous,
-                quantity: event.target.value,
-              }))
-            }
-            className="admin-input"
-            placeholder="0"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-[var(--admin-muted)]">
-            Reason
-          </span>
-
-          <input
-            value={form.reason}
-            onChange={(event) =>
-              setForm((previous) => ({
-                ...previous,
-                reason: event.target.value,
-              }))
-            }
-            className="admin-input"
-            placeholder="Cycle count, restock, damage, correction"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-[var(--admin-muted)]">
-            Note
-          </span>
-
-          <textarea
-            value={form.note}
-            onChange={(event) =>
-              setForm((previous) => ({
-                ...previous,
-                note: event.target.value,
-              }))
-            }
-            className="admin-input min-h-[72px]"
-            placeholder="Optional internal note"
-          />
-        </label>
+          );
+        })}
       </div>
-    </ConfirmModal>
+    </FormSection>
+
+    {/* Stock Details */}
+    <FormSection
+      title="Stock Details"
+      subtitle="Enter the quantity and reason for this inventory adjustment."
+    >
+      <div className="space-y-4">
+        <FormInput
+          label="Quantity"
+          type="number"
+          min={0}
+          value={form.quantity}
+          onChange={(event) =>
+            setForm((previous) => ({
+              ...previous,
+              quantity: event.target.value,
+            }))
+          }
+          placeholder="Enter quantity"
+        />
+
+        <FormInput
+          label="Reason"
+          value={form.reason}
+          onChange={(event) =>
+            setForm((previous) => ({
+              ...previous,
+              reason: event.target.value,
+            }))
+          }
+          placeholder="Cycle count, restock, damage, correction"
+        />
+
+        <FormInput
+          label="Note"
+          type="textarea"
+          value={form.note}
+          onChange={(event) =>
+            setForm((previous) => ({
+              ...previous,
+              note: event.target.value,
+            }))
+          }
+          placeholder="Add an optional internal note"
+        />
+      </div>
+    </FormSection>
+  </div>
+</DefaultModal>
   );
 };
 

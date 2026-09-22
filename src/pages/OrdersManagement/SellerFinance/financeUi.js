@@ -440,7 +440,7 @@ export const FinanceChoiceFilters = ({
   onChange,
 }) => (
   <section
-    className="finance-filter rounded-xl border border-[var(--admin-line)] bg-white px-4 py-3 shadow-[0_5px_16px_rgba(31,27,95,0.04)]"
+    className="finance-filter d rounded-xl border border-[var(--admin-line)] bg-white px-4 py-3 shadow-[0_5px_16px_rgba(31,27,95,0.04)]"
     aria-label={label}
   >
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center">

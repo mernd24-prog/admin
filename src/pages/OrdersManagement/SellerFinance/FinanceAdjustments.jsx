@@ -33,15 +33,16 @@ import {
   signedFinanceMoney,
   unwrapFinance,
 } from "./financeUi";
+import Tabs from "../../../components/Shared/Tabs";
 
 const CATEGORIES = [
-  ["", "All"],
-  ["returns", "Returns & refunds"],
-  ["promotions", "Promotions"],
-  ["cod", "COD"],
-  ["holds", "Holds"],
-  ["recoveries", "Recoveries"],
-  ["other", "Other"],
+  { value: "", label: "All" },
+  { value: "returns", label: "Returns & refunds" },
+  { value: "promotions", label: "Promotions" },
+  { value: "cod", label: "COD" },
+  { value: "holds", label: "Holds" },
+  { value: "recoveries", label: "Recoveries" },
+  { value: "other", label: "Other" },
 ];
 export default function FinanceAdjustments() {
   const dispatch = useDispatch();
@@ -302,12 +303,17 @@ export default function FinanceAdjustments() {
           onClick={() => setParams({ type: "holds" })}
         />
       </div>
-      <FinanceChoiceFilters
+      {/* <FinanceChoiceFilters
         label="Filter adjustments"
         value={category}
         onChange={(key) => setParams(key ? { type: key } : {})}
         options={CATEGORIES}
-      />
+      /> */}
+      <Tabs
+  tabs={CATEGORIES}
+  activeTab={category}
+  onChange={(key) => setParams(key ? { type: key } : {})}
+/>
       {category === "cod" && (
         <button
           type="button"
