@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
+import Cards from "../../../components/Cards/Cards";
 import {
   MdAdd,
   MdRateReview,
@@ -36,6 +37,7 @@ import { isSellerPanel } from "../../../_helpers/panelConfig";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { getProducts } from "../../../Redux/productSlice";
 import { formatDateTime12Hour } from "../../../utils/formatters";
+import { useNavigate } from "react-router";
 
 const SELLER_PANEL_ROLES = new Set([
   "seller",
@@ -45,7 +47,9 @@ const SELLER_PANEL_ROLES = new Set([
 
 const getSessionUserData = () => {
   const userDataString = sessionStorage.getItem("EcomAdmin");
+
   if (!userDataString) return null;
+
   try {
     return JSON.parse(userDataString);
   } catch {
@@ -100,14 +104,6 @@ const getProductName = (row = {}) =>
   row.title ||
   "";
 
-// const initials = (value = "") =>
-//   String(value || "B")
-//     .trim()
-//     .split(/\s+/)
-//     .slice(0, 2)
-//     .map((part) => part.charAt(0).toUpperCase())
-//     .join("") || "B";
-
 const cssImageUrl = (value) =>
   `url("${String(value || "").replace(/"/g, "%22")}")`;
 
@@ -121,6 +117,7 @@ const displayBuyerName = (review = {}) => {
     review.buyer?.name ||
     review.buyer?.email ||
     "";
+
   return name || "Verified Buyer";
 };
 
@@ -139,8 +136,10 @@ const getMetaTotal = (payload = {}, source = {}, list = []) =>
 
 const getProductReviewSummaryPayload = (state = {}) => {
   const payload = state?.productReviewSummariesData?.data || {};
+
   const source =
     payload?.data && !payload?.list && !payload?.items ? payload.data : payload;
+
   const list = Array.isArray(source?.list)
     ? source.list
     : Array.isArray(source?.items)
@@ -156,8 +155,10 @@ const getProductReviewSummaryPayload = (state = {}) => {
 
 const getProductReviewDetailPayload = (state = {}) => {
   const payload = state?.productReviewSummaryReviewsData?.data || {};
+
   const source =
     payload?.data && !payload?.list && !payload?.items ? payload.data : payload;
+
   const list = Array.isArray(source?.list)
     ? source.list
     : Array.isArray(source?.items)
@@ -178,6 +179,7 @@ const getProductReviewDetailPayload = (state = {}) => {
 
 const RatingStars = ({ value = 0, showValue = true }) => {
   const rating = Number(value || 0);
+
   return (
     <div className="flex items-center gap-1">
       <div className="flex items-center">
@@ -189,6 +191,7 @@ const RatingStars = ({ value = 0, showValue = true }) => {
           ),
         )}
       </div>
+
       {showValue && (
         <span className="text-xs font-semibold text-gray-700">
           {rating ? rating.toFixed(1) : "0.0"}
@@ -200,6 +203,7 @@ const RatingStars = ({ value = 0, showValue = true }) => {
 
 const StatusPill = ({ status = "pending" }) => {
   const normalized = String(status || "pending").toLowerCase();
+
   const styles = {
     published: "border-emerald-200 bg-emerald-50 text-emerald-700",
     pending: "border-amber-200 bg-amber-50 text-amber-700",
@@ -209,7 +213,9 @@ const StatusPill = ({ status = "pending" }) => {
 
   return (
     <span
-      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize ${styles[normalized] || styles.pending}`}
+      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize ${
+        styles[normalized] || styles.pending
+      }`}
     >
       {normalized}
     </span>
@@ -218,34 +224,47 @@ const StatusPill = ({ status = "pending" }) => {
 
 const ProductReviews = () => {
   const dispatch = useDispatch();
+
   const reviewsData = useSelector((state) => state.adminCore);
+
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
   });
+
   const { clearSelection } = list;
 
   const [editTarget, setEditTarget] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
+
   const [deleteConfirm, setDeleteConfirm] = useState({
     open: false,
     review: null,
   });
+
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
+
   const [userData, setUserData] = useState(() => getSessionUserData());
+
   const [sellerOptions, setSellerOptions] = useState([]);
   const [productOptions, setProductOptions] = useState([]);
+
   const [selectedSellerId, setSelectedSellerId] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
 
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
+
   const sellerView = isSellerPanel();
+
   const showSellerFilter = !isSellerPanelUser && !sellerView;
+
   const sellerScoped = isSellerPanelUser || sellerView;
+
   const filterFields = useMemo(
     () => [
       ...(showSellerFilter
@@ -262,11 +281,13 @@ const ProductReviews = () => {
                   searchFields: "full_name,email,businessName",
                   limit: 20,
                 });
+
                 return Array.isArray(result) ? result : [];
               },
             },
           ]
         : []),
+
       {
         key: "product",
         type: "select",
@@ -275,6 +296,7 @@ const ProductReviews = () => {
         options: productOptions,
         placeholder: "All Products",
       },
+
       {
         key: "status",
         type: "select",
@@ -287,6 +309,7 @@ const ProductReviews = () => {
           { value: "rejected", label: "Rejected" },
         ],
       },
+
       {
         key: "rating",
         type: "select",
@@ -303,11 +326,17 @@ const ProductReviews = () => {
     ],
     [productOptions, showSellerFilter],
   );
+
   const summaryPayload = getProductReviewSummaryPayload(reviewsData);
+
   const detailPayload = getProductReviewDetailPayload(reviewsData);
+
   const isDetailMode = Boolean(selectedProductId);
+
   const items = isDetailMode ? detailPayload.list : summaryPayload.list;
+
   const total = isDetailMode ? detailPayload.total : summaryPayload.total;
+
   const selectedSummaryRow =
     selectedProductId && summaryPayload.list.length
       ? summaryPayload.list.find(
@@ -316,9 +345,11 @@ const ProductReviews = () => {
             String(selectedProductId),
         ) || null
       : null;
+
   const selectedProductOption = productOptions.find(
     (product) => String(product.value) === String(selectedProductId),
   );
+
   const selectedProduct =
     detailPayload.product ||
     selectedSummaryRow?.product ||
@@ -328,11 +359,13 @@ const ProductReviews = () => {
           title: selectedProductOption?.label || "Selected product",
         }
       : null);
+
   const selectedProductTitle =
     selectedProduct?.title ||
     selectedProduct?.name ||
     selectedProductOption?.label ||
     "Selected product";
+
   const selectedStatusCounts = detailPayload.list.reduce(
     (counts, review) => ({
       ...counts,
@@ -348,10 +381,12 @@ const ProductReviews = () => {
 
   const fetchReviews = () => {
     const params = list.toQueryParams();
+
     setLoading(true);
     setError("");
-    const productIdFromFilter =
-      list.filters.product || selectedProductId || undefined;
+
+    const productIdFromFilter = list.filters.product || undefined;
+
     const sellerIdFromFilter =
       list.filters.sellerId || selectedSellerId || undefined;
 
@@ -361,23 +396,39 @@ const ProductReviews = () => {
       search: params.search || undefined,
       status: params.status || undefined,
       rating: params.rating ? Number(params.rating) : undefined,
+
       sellerId:
         !isSellerPanelUser && !sellerView ? sellerIdFromFilter : undefined,
+
       sortBy: params.sortBy,
       sortDir: params.sortDir,
       sellerScope: sellerScoped || undefined,
     };
-    const action = productIdFromFilter
-      ? getProductReviewSummaryReviews({
-          ...requestParams,
-          productId: productIdFromFilter,
-        })
-      : getProductReviewSummaries(requestParams);
+
+    let action;
+
+    if (selectedProductId) {
+      // Detail mode is only used when opening reviews
+      // from a product row.
+      action = getProductReviewSummaryReviews({
+        ...requestParams,
+        productId: selectedProductId,
+      });
+    } else {
+      // Main Product Reviews page:
+      // Product filter should filter the summary list
+      // instead of opening detail mode.
+      action = getProductReviewSummaries({
+        ...requestParams,
+        productId: productIdFromFilter,
+      });
+    }
 
     dispatch(action)
       .unwrap()
       .catch((err) => {
         const msg = err?.message || "Failed to load product reviews";
+
         setError(msg);
         toast.error(msg);
       })
@@ -389,19 +440,30 @@ const ProductReviews = () => {
 
     const loadSellerOptions = async () => {
       if (isSellerPanelUser || sellerView) {
-        if (mounted) setSellerOptions([]);
+        if (mounted) {
+          setSellerOptions([]);
+        }
+
         return;
       }
 
       try {
-        const result = await dropdownApi.getSellers({ limit: 100 });
-        if (mounted) setSellerOptions(Array.isArray(result) ? result : []);
+        const result = await dropdownApi.getSellers({
+          limit: 100,
+        });
+
+        if (mounted) {
+          setSellerOptions(Array.isArray(result) ? result : []);
+        }
       } catch {
-        if (mounted) setSellerOptions([]);
+        if (mounted) {
+          setSellerOptions([]);
+        }
       }
     };
 
     loadSellerOptions();
+
     return () => {
       mounted = false;
     };
@@ -444,20 +506,18 @@ const ProductReviews = () => {
             "Unnamed product",
         }));
 
-        if (mounted) setProductOptions(mapped);
+        if (mounted) {
+          setProductOptions(mapped);
+        }
       } catch {
-        if (mounted) setProductOptions([]);
+        if (mounted) {
+          setProductOptions([]);
+        }
       }
     };
 
-    if (isSellerPanelUser || sellerView) {
-      loadProductOptions();
-      return () => {
-        mounted = false;
-      };
-    }
-
     loadProductOptions();
+
     return () => {
       mounted = false;
     };
@@ -465,26 +525,17 @@ const ProductReviews = () => {
 
   useEffect(() => {
     const nextSellerId = list.filters.sellerId || "";
-    const nextProductId = list.filters.product || "";
 
     if (selectedSellerId !== nextSellerId) {
       setSelectedSellerId(nextSellerId);
     }
-    if (selectedProductId !== nextProductId) {
-      setSelectedProductId(nextProductId);
-    }
 
     clearSelection();
-  }, [
-    clearSelection,
-    list.filters.product,
-    list.filters.sellerId,
-    selectedProductId,
-    selectedSellerId,
-  ]);
+  }, [clearSelection, list.filters.sellerId, selectedSellerId]);
 
   useEffect(() => {
     fetchReviews();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     list.page,
@@ -499,7 +550,9 @@ const ProductReviews = () => {
 
   const handleBulkStatus = async (status) => {
     if (!list.selectedKeys.length) return;
+
     setBulkLoading(true);
+
     try {
       await dispatch(
         bulkUpdateProductReviews({
@@ -508,12 +561,15 @@ const ProductReviews = () => {
           sellerScope: sellerScoped,
         }),
       ).unwrap();
+
       toast.success(
         status === "published"
           ? "Selected reviews approved"
           : "Selected reviews updated",
       );
+
       list.clearSelection();
+
       fetchReviews();
     } catch (err) {
       toast.error(err?.message || "Failed to update selected reviews");
@@ -524,11 +580,23 @@ const ProductReviews = () => {
 
   const handleDelete = async () => {
     const reviewId = deleteConfirm.review?._id || deleteConfirm.review?.id;
+
     if (!reviewId) return;
+
     try {
-      await dispatch(deleteProductReview({ reviewId })).unwrap();
+      await dispatch(
+        deleteProductReview({
+          reviewId,
+        }),
+      ).unwrap();
+
       toast.success("Review deleted");
-      setDeleteConfirm({ open: false, review: null });
+
+      setDeleteConfirm({
+        open: false,
+        review: null,
+      });
+
       fetchReviews();
     } catch (err) {
       toast.error(err?.message || "Failed to delete review");
@@ -536,17 +604,29 @@ const ProductReviews = () => {
   };
 
   const handleBulkDelete = async () => {
-    if (sellerScoped || !list.selectedKeys.length) return;
+    if (sellerScoped || !list.selectedKeys.length) {
+      return;
+    }
+
     setBulkLoading(true);
+
     try {
       await Promise.all(
         list.selectedKeys.map((reviewId) =>
-          dispatch(deleteProductReview({ reviewId })).unwrap(),
+          dispatch(
+            deleteProductReview({
+              reviewId,
+            }),
+          ).unwrap(),
         ),
       );
+
       toast.success("Selected reviews deleted");
+
       setBulkDeleteConfirm(false);
+
       list.clearSelection();
+
       fetchReviews();
     } catch (err) {
       toast.error(err?.message || "Failed to delete selected reviews");
@@ -555,10 +635,15 @@ const ProductReviews = () => {
     }
   };
 
+  const navigate = useNavigate();
+
   const handleReviewStatus = async (row, status) => {
     const reviewId = getReviewId(row);
+
     if (!reviewId) return;
+
     setBulkLoading(true);
+
     try {
       await dispatch(
         updateProductReview({
@@ -567,9 +652,11 @@ const ProductReviews = () => {
           sellerScope: sellerScoped,
         }),
       ).unwrap();
+
       toast.success(
         status === "published" ? "Review approved" : "Review updated",
       );
+
       fetchReviews();
     } catch (err) {
       toast.error(err?.message || "Failed to update review");
@@ -580,9 +667,13 @@ const ProductReviews = () => {
 
   const openProductReviews = (row) => {
     const productId = getProductId(row);
+
     if (!productId) return;
+
     list.setPage(1);
+
     list.setFilter("product", String(productId));
+
     setSelectedProductId(String(productId));
   };
 
@@ -590,20 +681,26 @@ const ProductReviews = () => {
     {
       key: "productId",
       label: "Product",
+
       render: (v, row) => {
         const productImage =
           row.productImage || row.product?.image || row.image;
+
         const productName = getProductName(row) || "Product";
+
         return (
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex min-w-0 items-center gap-2.5">
             {productImage && (
               <span
                 role="img"
                 aria-label={productName}
-                className="w-9 h-9 rounded-md border border-gray-200 flex-shrink-0 bg-cover bg-center"
-                style={{ backgroundImage: cssImageUrl(productImage) }}
+                className="h-9 w-9 flex-shrink-0 rounded-md border border-gray-200 bg-cover bg-center"
+                style={{
+                  backgroundImage: cssImageUrl(productImage),
+                }}
               />
             )}
+
             <div className="min-w-0">
               <span
                 className="block max-w-[200px] truncate text-xs font-semibold text-gray-800"
@@ -616,47 +713,60 @@ const ProductReviews = () => {
         );
       },
     },
+
     {
       key: "averageRating",
       label: "Average Rating",
       sortable: true,
+
       render: (v) => <RatingStars value={v} />,
     },
+
     {
       key: "reviewCount",
       label: "Reviews",
       headerClassName: "text-center",
       cellClassName: "text-center",
+
       render: (v) => (
-        <span className="inline-flex items-center justify-center font-semibold text-xs text-gray-800">
+        <span className="inline-flex items-center justify-center text-xs font-semibold text-gray-800">
           {v || 0}
         </span>
       ),
     },
+
     {
       key: "publishedCount",
       label: "Status",
+
       render: (v, row) => (
-        <div className="flex items-center gap-1.5 flex-wrap whitespace-nowrap">
+        <div className="flex flex-wrap items-center gap-1.5 whitespace-nowrap">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+
             <span className="font-bold">{row.publishedCount || 0}</span>
+
             <span>Live</span>
           </span>
+
           <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+
             <span className="font-bold">{row.pendingCount || 0}</span>
+
             <span>Pending</span>
           </span>
         </div>
       ),
     },
+
     {
       key: "latestReviewAt",
       label: "Last Review",
       sortable: true,
+
       render: (v) => (
-        <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
+        <span className="whitespace-nowrap text-xs font-medium text-gray-500">
           {v ? formatDateTime12Hour(v, "—") : "—"}
         </span>
       ),
@@ -667,11 +777,13 @@ const ProductReviews = () => {
     {
       key: "buyerName",
       label: "Buyer",
+
       render: (v, row) => (
         <div className="min-w-0">
           <span className="block max-w-[180px] truncate text-xs font-semibold text-gray-800">
             {displayBuyerName(row)}
           </span>
+
           {row.buyer?.email && (
             <span className="block max-w-[180px] truncate text-[11px] text-gray-400">
               {row.buyer.email}
@@ -680,15 +792,19 @@ const ProductReviews = () => {
         </div>
       ),
     },
+
     {
       key: "rating",
       label: "Rating",
       sortable: true,
+
       render: (v) => <RatingStars value={v} showValue={false} />,
     },
+
     {
       key: "reviewText",
       label: "Review",
+
       render: (v, row) => (
         <div className="min-w-[260px] max-w-[460px]">
           {row.title && (
@@ -696,23 +812,28 @@ const ProductReviews = () => {
               {row.title}
             </p>
           )}
+
           <p className="line-clamp-2 whitespace-normal text-xs leading-5 text-gray-600">
             {v || row.comment || "No review text"}
           </p>
         </div>
       ),
     },
+
     {
       key: "status",
       label: "Status",
+
       render: (v) => <StatusPill status={v} />,
     },
+
     {
       key: "createdAt",
       label: "Reviewed At",
       sortable: true,
+
       render: (v) => (
-        <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
+        <span className="whitespace-nowrap text-xs font-medium text-gray-500">
           {v ? formatDateTime12Hour(v, "—") : "—"}
         </span>
       ),
@@ -721,15 +842,33 @@ const ProductReviews = () => {
 
   const columns = isDetailMode ? detailColumns : summaryColumns;
 
+  const handleBackToProductReviews = () => {
+    list.setFilters({});
+    list.clearSearch();
+    list.clearSelection();
+    setSelectedProductId("");
+    navigate("/app/product-reviews");
+  };
+
   return (
     <div>
       <PageHeader
         title="Product Reviews"
         subtitle="Manage and moderate customer product reviews."
-        breadcrumbs={[
-          { label: sellerView ? "Catalog" : "Orders Management" },
-          { label: "Product Reviews" },
-        ]}
+        backPath={isDetailMode ? "/app/product-reviews" : undefined}
+        onBack={isDetailMode ? handleBackToProductReviews : undefined}
+        breadcrumbs={
+          !isDetailMode
+            ? [
+                {
+                  label: sellerView ? "Catalog" : "Orders Management",
+                },
+                {
+                  label: "Product Reviews",
+                },
+              ]
+            : undefined
+        }
         actions={
           !sellerScoped ? (
             <PermissionGuard module="reviews" action={ACTIONS.CREATE} hide>
@@ -743,79 +882,76 @@ const ProductReviews = () => {
       />
 
       {isDetailMode && (
-        <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Selected Product
-              </p>
-              <h3 className="mt-1 text-lg font-semibold text-gray-800">
-                {selectedProductTitle}
-              </h3>
-            </div>
-            <RatingStars
-              value={
-                detailPayload.summary?.avgRating ||
-                selectedSummaryRow?.averageRating ||
-                selectedProduct?.rating ||
-                0
-              }
-            />
-          </div>
+        <div>
+          <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                  Selected Product
+                </p>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Total Reviews
-              </p>
-              <p className="mt-2 text-lg font-semibold text-gray-800">
-                {Number(
+                <h3 className="mt-1 text-lg font-semibold text-gray-800">
+                  {selectedProductTitle}
+                </h3>
+              </div>
+
+              <RatingStars
+                value={
+                  detailPayload.summary?.avgRating ||
+                  selectedSummaryRow?.averageRating ||
+                  selectedProduct?.rating ||
+                  0
+                }
+              />
+            </div>
+
+            {/* Global Cards component */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <Cards
+                label="Total Reviews"
+                value={Number(
                   detailPayload.summary?.count ||
                     selectedSummaryRow?.reviewCount ||
                     total ||
                     0,
                 )}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Published
-              </p>
-              <p className="mt-2 text-lg font-semibold text-gray-800">
-                {selectedSummaryRow?.publishedCount ||
+              />
+
+              <Cards
+                label="Published"
+                value={
+                  selectedSummaryRow?.publishedCount ||
                   selectedStatusCounts.published ||
-                  0}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Pending
-              </p>
-              <p className="mt-2 text-lg font-semibold text-gray-800">
-                {selectedSummaryRow?.pendingCount ||
+                  0
+                }
+              />
+
+              <Cards
+                label="Pending"
+                value={
+                  selectedSummaryRow?.pendingCount ||
                   selectedStatusCounts.pending ||
-                  0}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Hidden
-              </p>
-              <p className="mt-2 text-lg font-semibold text-gray-800">
-                {selectedSummaryRow?.hiddenCount ||
+                  0
+                }
+              />
+
+              <Cards
+                label="Hidden"
+                value={
+                  selectedSummaryRow?.hiddenCount ||
                   selectedStatusCounts.hidden ||
-                  0}
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Rejected
-              </p>
-              <p className="mt-2 text-lg font-semibold text-gray-800">
-                {selectedSummaryRow?.rejectedCount ||
+                  0
+                }
+              />
+
+              <Cards
+                label="Rejected"
+                value={
+                  selectedSummaryRow?.rejectedCount ||
                   selectedStatusCounts.rejected ||
-                  0}
-              </p>
+                  0
+                }
+              />
             </div>
           </div>
         </div>
@@ -850,18 +986,21 @@ const ProductReviews = () => {
         selectedKeys={list.selectedKeys}
         onSelectionChange={list.setSelectedKeys}
         rowKey={isDetailMode ? "_id" : "productId"}
-        onRowClick={isDetailMode ? undefined : openProductReviews}
+        onRowClick={undefined}
         filterBar={
           <FilterBar
             fields={filterFields}
             listPage={list}
+            excludeCountKeys={isDetailMode ? ["product"] : []}
             onClear={() => {
               if (isDetailMode && selectedProductId) {
-                // Preserve the product filter so we stay in detail mode
-                list.setFilters({ product: selectedProductId });
+                list.setFilters({
+                  product: selectedProductId,
+                });
               } else {
                 list.clearFilters();
               }
+
               list.clearSearch();
             }}
           />
@@ -931,6 +1070,11 @@ const ProductReviews = () => {
           ) : null
         }
         rowActions={(row) => {
+          {
+            /* =====================================================
+              SUMMARY MODE ACTION
+             ===================================================== */
+          }
           if (!isDetailMode) {
             return [
               {
@@ -941,6 +1085,11 @@ const ProductReviews = () => {
             ];
           }
 
+          {
+            /* =====================================================
+              DETAIL MODE ACTIONS
+             ===================================================== */
+          }
           const actions = [
             {
               label: "Approve Review",
@@ -950,6 +1099,7 @@ const ProductReviews = () => {
               hidden: row.status === "published",
               onClick: () => handleReviewStatus(row, "published"),
             },
+
             {
               label: "Hide Review",
               icon: <MdVisibilityOff size={16} className="text-amber-600" />,
@@ -958,6 +1108,7 @@ const ProductReviews = () => {
               hidden: row.status === "hidden",
               onClick: () => handleReviewStatus(row, "hidden"),
             },
+
             {
               label: "Reject Review",
               icon: <MdClose size={16} className="text-red-600" />,
@@ -968,6 +1119,11 @@ const ProductReviews = () => {
             },
           ];
 
+          {
+            /* =====================================================
+              ADMIN ONLY EDIT + DELETE
+             ===================================================== */
+          }
           if (!sellerScoped) {
             actions.push(
               {
@@ -977,12 +1133,17 @@ const ProductReviews = () => {
                 requiredAction: ACTIONS.EDIT,
                 onClick: () => setEditTarget(row),
               },
+
               {
                 label: "Delete Review",
                 icon: <MdDelete size={16} className="text-red-600" />,
                 requiredModule: "reviews",
                 requiredAction: ACTIONS.DELETE,
-                onClick: () => setDeleteConfirm({ open: true, review: row }),
+                onClick: () =>
+                  setDeleteConfirm({
+                    open: true,
+                    review: row,
+                  }),
               },
             );
           }
@@ -991,6 +1152,9 @@ const ProductReviews = () => {
         }}
       />
 
+      {/* =========================================================
+          EDIT REVIEW
+         ========================================================= */}
       <EditProductReview
         isOpen={Boolean(editTarget)}
         onClose={() => {
@@ -1000,12 +1164,18 @@ const ProductReviews = () => {
         reviewData={editTarget}
       />
 
+      {/* =========================================================
+          ADD REVIEW
+         ========================================================= */}
       <AddProductReview
         isOpen={addOpen}
         onClose={() => setAddOpen(false)}
         onCreated={fetchReviews}
       />
 
+      {/* =========================================================
+          SINGLE DELETE CONFIRMATION
+         ========================================================= */}
       <ConfirmModal
         isOpen={deleteConfirm.open}
         title="Delete Review"
@@ -1013,13 +1183,25 @@ const ProductReviews = () => {
         variant="danger"
         confirmLabel="Delete"
         onConfirm={handleDelete}
-        onCancel={() => setDeleteConfirm({ open: false, review: null })}
+        onCancel={() =>
+          setDeleteConfirm({
+            open: false,
+            review: null,
+          })
+        }
       />
 
+      {/* =========================================================
+          BULK DELETE CONFIRMATION
+         ========================================================= */}
       <ConfirmModal
         isOpen={bulkDeleteConfirm}
         title="Delete Selected Reviews"
-        message={`Are you sure you want to delete ${list.selectedCount} selected review${list.selectedCount === 1 ? "" : "s"}? This cannot be undone.`}
+        message={`Are you sure you want to delete ${
+          list.selectedCount
+        } selected review${
+          list.selectedCount === 1 ? "" : "s"
+        }? This cannot be undone.`}
         variant="danger"
         confirmLabel="Delete Selected"
         onConfirm={handleBulkDelete}

@@ -48,17 +48,27 @@ const PageHeader = ({
   actions,
   status,
   backPath,
+  onBack,
   showBack = false,
   count,
 }) => {
   const navigate = useNavigate();
 
   const goBack = () => {
-    if (backPath) navigate(backPath);
-    else navigate(-1);
+    if (onBack) {
+      onBack();
+      return;
+    }
+
+    if (backPath) {
+      navigate(backPath);
+      return;
+    }
+
+    navigate(-1);
   };
 
-  const showBackBtn = showBack || !!backPath;
+  const showBackBtn = showBack || !!backPath || !!onBack;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
