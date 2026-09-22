@@ -369,18 +369,21 @@ const DataTable = ({
   };
 
   const handleSort = (col) => {
-    if (col.sortable && resolvedOnSort)
+    if (col.sortable && resolvedOnSort) {
       resolvedOnSort(
         col.key,
         resolvedSortKey === col.key && resolvedSortDir === "asc"
           ? "desc"
           : "asc",
       );
+    }
   };
 
   const handleRefresh = async () => {
     if (!onRefresh || showRefreshLoading) return;
+
     setRefreshing(true);
+
     try {
       await Promise.resolve(onRefresh());
     } finally {
@@ -392,17 +395,26 @@ const DataTable = ({
     const serialNumber =
       (resolvedPage - 1) * resolvedPageSize + Number(index) + 1;
 
-    return Number.isFinite(serialNumber) ? serialNumber : Number(index) + 1;
+    return Number.isFinite(serialNumber)
+      ? serialNumber
+      : Number(index) + 1;
   };
 
   const toggleAll = (checked) => {
     if (!onSelectionChange) return;
-    const remaining = selectedKeys.filter((key) => !pageKeys.includes(key));
-    onSelectionChange(checked ? [...remaining, ...pageKeys] : remaining);
+
+    const remaining = selectedKeys.filter(
+      (key) => !pageKeys.includes(key),
+    );
+
+    onSelectionChange(
+      checked ? [...remaining, ...pageKeys] : remaining,
+    );
   };
 
   const toggleRow = (key, checked) => {
     if (!onSelectionChange) return;
+
     onSelectionChange(
       checked
         ? [...new Set([...selectedKeys, key])]
@@ -421,7 +433,11 @@ const DataTable = ({
       {exportConfig && (
         <ExportButton
           {...exportConfig}
-          data={Array.isArray(exportConfig.data) ? exportConfig.data : safeData}
+          data={
+            Array.isArray(exportConfig.data)
+              ? exportConfig.data
+              : safeData
+          }
           selectedData={selectedData}
           columns={
             Array.isArray(exportConfig.columns)
@@ -431,9 +447,14 @@ const DataTable = ({
           requiredModule={requiredModule}
         />
       )}
+
       {importConfig && (
-        <ImportButton {...importConfig} requiredModule={requiredModule} />
+        <ImportButton
+          {...importConfig}
+          requiredModule={requiredModule}
+        />
       )}
+
       {onRefresh && (
         <button
           type="button"
@@ -441,7 +462,9 @@ const DataTable = ({
           disabled={showRefreshLoading}
           className="admin-btn-secondary"
           aria-label={
-            showRefreshLoading ? "Refreshing records" : "Refresh records"
+            showRefreshLoading
+              ? "Refreshing records"
+              : "Refresh records"
           }
           aria-busy={showRefreshLoading}
         >
@@ -449,9 +472,11 @@ const DataTable = ({
             size={17}
             className={showRefreshLoading ? "animate-spin" : ""}
           />
+
           {showRefreshLoading ? "Refreshing..." : "Refresh"}
         </button>
       )}
+
       {actions}
     </>
   );
@@ -466,7 +491,7 @@ const DataTable = ({
         onRefresh) && (
         <div className="flex flex-col gap-3 border-b border-[var(--admin-line)] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
           {resolvedOnSearch && (
-            <div className="w-full  min-w-0 sm:max-w-2xl sm:flex-1">
+            <div className="w-full min-w-0 sm:max-w-2xl sm:flex-1">
               <SearchInput
                 searchTerm={searchValue}
                 handleChange={handleSearch}
@@ -474,7 +499,8 @@ const DataTable = ({
               />
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:flex-shrink-0">
+
+          <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:justify-end">
             {tools}
           </div>
         </div>
@@ -484,38 +510,54 @@ const DataTable = ({
       {filterBar}
 
       {/* Bulk action bar slot */}
-      {bulkActionBar && <div className="px-4 pt-3">{bulkActionBar}</div>}
+      {bulkActionBar && (
+        <div className="px-4 pt-3">
+          {bulkActionBar}
+        </div>
+      )}
 
       {/* Table */}
       <div
-        className={`admin-table-scroll ${tableContainerClassName || "overflow-x-auto overscroll-x-contain"}`}
+        className={`admin-table-scroll ${
+          tableContainerClassName ||
+          "overflow-x-auto overscroll-x-contain"
+        }`}
       >
         <table
-          className={`min-w-full  whitespace-nowrap text-sm ${tableClassName}`}
+          className={`min-w-full whitespace-nowrap text-sm ${tableClassName}`}
         >
           <thead className="admin-table-head">
             <tr>
               {selectable && (
-                <th className="px-4 py-3 text-left w-10">
+                <th
+                  className="w-10 px-4 py-3 text-left"
+                  onClick={(event) => event.stopPropagation()}
+                >
                   <CustomCheckbox
                     checked={allSelected}
-                    onChange={(event) => toggleAll(event.target.checked)}
+                    onChange={(event) =>
+                      toggleAll(event.target.checked)
+                    }
                   />
                 </th>
               )}
+
               {shouldShowSerialNumber && (
-                <th className="w-16 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--admin-navy)] whitespace-nowrap">
+                <th className="w-16 whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--admin-navy)]">
                   S.No
                 </th>
               )}
+
               {safeColumns.map((col, columnIndex) => (
                 <th
                   key={`${col.key}-${columnIndex}`}
-                  className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--admin-navy)] whitespace-nowrap ${
+                  className={`whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--admin-navy)] ${
                     col.sortable
                       ? "cursor-pointer select-none hover:text-[var(--admin-blue)]"
                       : ""
-                  } ${col.width ? `w-${col.width}` : ""} ${col.headerClassName || ""}`}
+                  } ${col.width ? `w-${col.width}` : ""} ${
+                    col.headerClassName || ""
+                  }`}
                   onClick={() => handleSort(col)}
                 >
                   <span
@@ -528,6 +570,7 @@ const DataTable = ({
                     }`}
                   >
                     {col.label}
+
                     {col.sortable && (
                       <MdUnfoldMore
                         size={14}
@@ -541,8 +584,9 @@ const DataTable = ({
                   </span>
                 </th>
               ))}
+
               {rowActions && (
-                <th className="w-16 px-4 py-3 text-right text-xs font-semibold text-[var(--admin-navy)] whitespace-nowrap">
+                <th className="w-16 whitespace-nowrap px-4 py-3 text-right text-xs font-semibold text-[var(--admin-navy)]">
                   ACTIONS
                 </th>
               )}
@@ -564,7 +608,11 @@ const DataTable = ({
                     <span className="text-sm font-semibold">
                       Unable to load records
                     </span>
-                    <span className="text-xs text-red-500">{error}</span>
+
+                    <span className="text-xs text-red-500">
+                      {error}
+                    </span>
+
                     {onRefresh && (
                       <button
                         type="button"
@@ -586,6 +634,7 @@ const DataTable = ({
                       alt="No records"
                       className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
                     />
+
                     <span className="text-sm font-medium">
                       {formatLabel(resolvedEmptyText)}
                     </span>
@@ -599,7 +648,11 @@ const DataTable = ({
                   onClick={() => onRowClick?.(row)}
                   onKeyDown={(event) => {
                     if (!onRowClick) return;
-                    if (event.key === "Enter" || event.key === " ") {
+
+                    if (
+                      event.key === "Enter" ||
+                      event.key === " "
+                    ) {
                       event.preventDefault();
                       onRowClick(row);
                     }
@@ -610,18 +663,34 @@ const DataTable = ({
                     onRowClick
                       ? "cursor-pointer focus:bg-[var(--admin-surface-soft)] focus:outline-none"
                       : ""
-                  } ${typeof rowClassName === "function" ? rowClassName(row) : rowClassName}`}
+                  } ${
+                    typeof rowClassName === "function"
+                      ? rowClassName(row)
+                      : rowClassName
+                  }`}
                 >
+                  {/* Row Selection Checkbox */}
                   {selectable && (
-                    <td className="px-4 py-3 !align-middle">
+                    <td
+                      className="px-4 py-3 !align-middle"
+                      onClick={(event) =>
+                        event.stopPropagation()
+                      }
+                    >
                       <CustomCheckbox
-                        checked={selectedKeys.includes(getKey(row, index))}
+                        checked={selectedKeys.includes(
+                          getKey(row, index),
+                        )}
                         onChange={(event) =>
-                          toggleRow(getKey(row, index), event.target.checked)
+                          toggleRow(
+                            getKey(row, index),
+                            event.target.checked,
+                          )
                         }
                       />
                     </td>
                   )}
+
                   {shouldShowSerialNumber && (
                     <td className="w-16 px-4 py-3 !align-middle font-medium text-[var(--admin-muted)]">
                       <div className="flex min-h-[32px] items-center">
@@ -629,20 +698,28 @@ const DataTable = ({
                       </div>
                     </td>
                   )}
+
                   {safeColumns.map((col, columnIndex) => (
                     <td
                       key={`${col.key}-${columnIndex}`}
-                      className={`px-4 py-3 !align-middle text-[var(--admin-ink)] ${col.cellClassName || ""}`}
+                      className={`px-4 py-3 !align-middle text-[var(--admin-ink)] ${
+                        col.cellClassName || ""
+                      }`}
                     >
                       <div className="flex min-h-[32px] items-center">
                         {renderCellValue(
                           col.render
-                            ? col.render(row[col.key], row, index)
+                            ? col.render(
+                                row[col.key],
+                                row,
+                                index,
+                              )
                             : row[col.key],
                         )}
                       </div>
                     </td>
                   ))}
+
                   {rowActions && (
                     <td className="px-4 py-3 align-middle">
                       <div className="flex h-full items-center justify-end">
@@ -676,9 +753,13 @@ const DataTable = ({
                   resolvedTotalCount,
                 )
               : 0}
-            –{Math.min(resolvedPage * resolvedPageSize, resolvedTotalCount)} of{" "}
-            {resolvedTotalCount}
+            –{Math.min(
+              resolvedPage * resolvedPageSize,
+              resolvedTotalCount,
+            )}{" "}
+            of {resolvedTotalCount}
           </span>
+
           <Pagination
             totalPages={totalPages}
             currentPage={resolvedPage}

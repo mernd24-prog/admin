@@ -6,6 +6,7 @@ import {
   BulkActionBar,
   ConfirmModal,
   DataTable,
+  FormSection,
   PageHeader,
   StatusBadge,
   UserLink,
@@ -24,10 +25,12 @@ import { isSellerPanel } from "../../_helpers/panelConfig";
 import { ACTIONS } from "../../_helpers/usePermission";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
 import { QueryDetailsSkeleton } from "../../components/Loader/SkeletonLoader";
+import Tabs from "../../components/Shared/Tabs";
+import FormInput from "../../components/Atoms/FormInput/FormInput";
 
 const TABS = [
-  { key: "customer", label: "Customer Queries" },
-  { key: "seller", label: "Seller Queries" },
+  { value: "customer", label: "Customer Queries" },
+  { value: "seller", label: "Seller Queries" },
 ];
 
 const getStatusHistory = (query = {}) =>
@@ -362,27 +365,16 @@ const AdminQueries = () => {
         // }
       />
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
-              activeTab === tab.key
-                ? "border-[var(--admin-gold)] bg-[var(--admin-gold)] text-[var(--admin-navy)]"
-                : "border-[var(--admin-line)] bg-white text-[var(--admin-ink)] hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]"
-            }`}
-            onClick={() => {
-              setActiveTab(tab.key);
-              setPage(1);
-              setSearch("");
-              setSelectedKeys([]);
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+     <Tabs
+  tabs={TABS}
+  activeTab={activeTab}
+  onChange={(key) => {
+    setActiveTab(key);
+    setPage(1);
+    setSearch("");
+    setSelectedKeys([]);
+  }}
+/>
 
       <DataTable
         columns={columns}
@@ -453,155 +445,242 @@ const AdminQueries = () => {
           },
         ]}
       />
-
-      <DefaultModal
-        isOpen={Boolean(selectedQuery)}
-        onClose={() => setSelectedQuery(null)}
-        onSubmit={updateStatus}
-        title={
-          selectedQuery?.queryId
-            ? `Query ${selectedQuery.queryId}`
-            : "Query Details"
-        }
-        submitButtonText="Update Status"
-        closeButtonText="Close"
-        loading={savingStatus}
+<DefaultModal
+  isOpen={Boolean(selectedQuery)}
+  onClose={() => setSelectedQuery(null)}
+  onSubmit={updateStatus}
+  title={
+    selectedQuery?.queryId
+      ? `Query ${selectedQuery.queryId}`
+      : "Query Details"
+  }
+  submitButtonText="Update Status"
+  closeButtonText="Close"
+  loading={savingStatus}
+>
+  {detailLoading ? (
+    <QueryDetailsSkeleton />
+  ) : selectedQuery ? (
+    <div className="space-y-5">
+      {/* Requester Information */}
+      <FormSection
+        title="Requester Information"
+        subtitle="User details associated with this support query."
       >
-        {detailLoading ? (
-          <QueryDetailsSkeleton />
-        ) : selectedQuery ? (
-          <div className="space-y-5">
-            <div className="grid gap-3 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4 text-sm sm:grid-cols-2">
-              <Info label="User" value={selectedQuery.userName || "N/A"} />
-              <Info label="User Type" value={selectedQuery.userType || "N/A"} />
-              <Info label="Email" value={selectedQuery.userEmail || "N/A"} />
-              <Info label="Phone" value={selectedQuery.userPhone || "N/A"} />
-              {selectedQuery.userType === "seller" ? (
-                <Info
-                  label="Organization"
-                  value={
-                    selectedQuery.sellerOrganizationName ||
-                    selectedQuery.sellerOrganizationId ||
-                    "N/A"
-                  }
-                />
-              ) : null}
-              <Info
-                label="Created"
-                value={formatDateTime(selectedQuery.createdAt)}
-              />
-            </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Info
+            label="User"
+            value={selectedQuery.userName || "N/A"}
+          />
 
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-                Category
-              </p>
-              <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">
-                {categoryLabel(selectedQuery.category)}
-              </p>
-            </div>
+          <Info
+            label="User Type"
+            value={selectedQuery.userType || "N/A"}
+          />
 
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-                Subject
-              </p>
-              <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">
-                {selectedQuery.subject}
-              </p>
-            </div>
+          <Info
+            label="Email"
+            value={selectedQuery.userEmail || "N/A"}
+          />
 
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-                Ticket Conversation
-              </p>
-              <div className="mt-3 space-y-3">
-                {getConversationItems(selectedQuery).map((item) => {
-                  const isAdminMessage = item.type === "admin";
-                  return (
-                    <div
-                      key={item.key}
-                      className={`flex ${isAdminMessage ? "justify-end" : "justify-start"}`}
-                    >
+          <Info
+            label="Phone"
+            value={selectedQuery.userPhone || "N/A"}
+          />
+
+          {selectedQuery.userType === "seller" ? (
+            <Info
+              label="Organization"
+              value={
+                selectedQuery.sellerOrganizationName ||
+                selectedQuery.sellerOrganizationId ||
+                "N/A"
+              }
+            />
+          ) : null}
+
+          <Info
+            label="Created"
+            value={formatDateTime(selectedQuery.createdAt)}
+          />
+        </div>
+      </FormSection>
+
+      {/* Query Information */}
+      <FormSection
+        title="Query Information"
+        subtitle="Review the category and subject of this support request."
+      >
+        <div className="space-y-4">
+          <Info
+            label="Category"
+            value={categoryLabel(selectedQuery.category)}
+          />
+
+          <Info
+            label="Subject"
+            value={selectedQuery.subject || "No subject"}
+          />
+        </div>
+      </FormSection>
+
+      {/* Conversation */}
+      <FormSection
+        title="Ticket Conversation"
+        subtitle="Review the conversation and previous responses."
+      >
+        <div className="space-y-3">
+          {getConversationItems(selectedQuery).map((item) => {
+            const isAdminMessage = item.type === "admin";
+
+            return (
+              <div
+                key={item.key}
+                className={`flex ${
+                  isAdminMessage
+                    ? "justify-end"
+                    : "justify-start"
+                }`}
+              >
+                <div
+                  className={`w-full max-w-[90%] rounded-xl px-4 py-3 ${
+                    isAdminMessage
+                      ? "bg-[var(--admin-blue)] text-white"
+                      : "bg-[var(--admin-surface-soft)] text-[var(--admin-ink)]"
+                  }`}
+                >
+                  {/* Message Header */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
                       <div
-                        className={`max-w-[88%] rounded-md border px-3 py-2 text-sm shadow-sm ${
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                           isAdminMessage
-                            ? "border-[var(--admin-blue)] bg-[var(--admin-blue)] text-white"
-                            : "border-[var(--admin-line)] bg-white text-[var(--admin-ink)]"
+                            ? "bg-white/15 text-white"
+                            : "bg-[var(--admin-blue)]/10 text-[var(--admin-blue)]"
                         }`}
                       >
-                        <div className="mb-1 flex flex-wrap items-center gap-2">
-                          <span className={`text-xs font-semibold ${isAdminMessage ? "text-white" : "text-[var(--admin-ink)]"}`}>
-                            {item.title}
-                          </span>
-                          {isAdminMessage ? (
-                            <StatusBadge status={item.status} label={statusLabel(item.status)} dot />
-                          ) : null}
-                        </div>
-                        <p className={`whitespace-pre-wrap leading-6 ${isAdminMessage ? "text-white" : "text-[var(--admin-ink)]"}`}>
-                          {item.message || "No note added."}
-                        </p>
-                        <p className={`mt-1 text-[11px] ${isAdminMessage ? "text-white/80" : "text-[var(--admin-muted)]"}`}>
-                          {formatDateTime(item.timestamp)}
-                        </p>
+                        {isAdminMessage ? "A" : "U"}
                       </div>
+
+                      <p
+                        className={`truncate text-xs font-semibold ${
+                          isAdminMessage
+                            ? "text-white"
+                            : "text-[var(--admin-ink)]"
+                        }`}
+                      >
+                        {item.title}
+                      </p>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FilterSelect
-                label="Status"
-                options={SUPPORT_STATUSES}
-                value={
-                  SUPPORT_STATUSES.find(
-                    (item) => item.value === statusForm.status,
-                  ) || null
-                }
-                onChange={(selectedOption) =>
-                  setStatusForm((prev) => ({
-                    ...prev,
-                    status: selectedOption?.value || "",
-                  }))
-                }
-                isSearchable={false}
-                isClearable={false}
-              />
-              {statusForm.status !== "resolved" ? (
-                <div className="flex items-end">
-                  <button
-                    type="button"
-                    className="inline-flex min-h-[38px] w-full items-center justify-center gap-2 rounded-md border border-green-600 px-4 text-sm font-semibold text-green-700 transition hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => markResolved(selectedQuery, statusForm.adminNotes)}
-                    disabled={savingStatus}
+                    {isAdminMessage ? (
+                      <StatusBadge
+                        status={item.status}
+                        label={statusLabel(item.status)}
+                        dot
+                      />
+                    ) : null}
+                  </div>
+
+                  {/* Message */}
+                  <p
+                    className={`mt-3 whitespace-pre-wrap text-sm leading-6 ${
+                      isAdminMessage
+                        ? "text-white"
+                        : "text-[var(--admin-ink)]"
+                    }`}
                   >
-                    <MdCheckCircle size={18} />
-                    Mark as Resolved
-                  </button>
+                    {item.message || "No note added."}
+                  </p>
+
+                  {/* Timestamp */}
+                  <p
+                    className={`mt-2 text-[11px] ${
+                      isAdminMessage
+                        ? "text-white/70"
+                        : "text-[var(--admin-muted)]"
+                    }`}
+                  >
+                    {formatDateTime(item.timestamp)}
+                  </p>
                 </div>
-              ) : null}
-            </div>
+              </div>
+            );
+          })}
+        </div>
+      </FormSection>
 
+      {/* Update Query */}
+      <FormSection
+        title="Update Query"
+        subtitle="Update the ticket status and add a new admin note."
+      >
+        <div className="space-y-4">
+          {/* Status */}
+          <div
+            className={`grid grid-cols-1 gap-4 ${
+              statusForm.status !== "resolved"
+                ? "sm:grid-cols-2"
+                : ""
+            }`}
+          >
+            <FilterSelect
+              label="Status"
+              options={SUPPORT_STATUSES}
+              value={
+                SUPPORT_STATUSES.find(
+                  (item) =>
+                    item.value === statusForm.status,
+                ) || null
+              }
+              onChange={(selectedOption) =>
+                setStatusForm((prev) => ({
+                  ...prev,
+                  status: selectedOption?.value || "",
+                }))
+              }
+              isSearchable={false}
+              isClearable={false}
+            />
 
-            <label className="block text-sm font-semibold text-[var(--admin-ink)]">
-              New Admin Note
-              <textarea
-                className="mt-1 min-h-[110px] w-full rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 text-sm focus:outline-none"
-                value={statusForm.adminNotes}
-                onChange={(event) =>
-                  setStatusForm((prev) => ({
-                    ...prev,
-                    adminNotes: event.target.value,
-                  }))
-                }
-                placeholder="Add a new note for this status update"
-              />
-            </label>
-
+            {statusForm.status !== "resolved" ? (
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={() =>
+                    markResolved(
+                      selectedQuery,
+                      statusForm.adminNotes,
+                    )
+                  }
+                  disabled={savingStatus}
+                  className="inline-flex min-h-[40px] w-full items-center justify-center gap-2 rounded-lg bg-green-50 px-4 text-sm font-semibold text-green-700 transition hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <MdCheckCircle size={18} />
+                  Mark as Resolved
+                </button>
+              </div>
+            ) : null}
           </div>
-        ) : null}
-      </DefaultModal>
+
+          {/* Admin Note */}
+          <FormInput
+            label="New Admin Note"
+            value={statusForm.adminNotes}
+            onChange={(event) =>
+              setStatusForm((prev) => ({
+                ...prev,
+                adminNotes: event.target.value,
+              }))
+            }
+            placeholder="Add a note for this status update..."
+            type="textarea"
+          />
+        </div>
+      </FormSection>
+    </div>
+  ) : null}
+</DefaultModal>
 
       <ConfirmModal
         isOpen={Boolean(deleteTarget)}

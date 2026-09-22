@@ -205,6 +205,88 @@ const getProductImage = (product) => {
   return "";
 };
 
+const ImportExportGuide = () => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex w-full items-center gap-2.5 text-left focus:outline-none"
+      >
+        <Info size={16} className="shrink-0 text-blue-600" />
+        <h3 className="flex-1 text-xs font-semibold text-gray-900">
+          Import & Export Guide
+        </h3>
+        <span className="text-xs font-medium text-blue-700">
+          {open ? "Hide ▲" : "Show ▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div className="mt-2.5 space-y-2 pl-[26px]">
+          {/* Export Steps */}
+          <div>
+            <p className="text-[11px] font-semibold text-gray-800">
+              📤 How to Export
+            </p>
+            <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[11px] text-gray-600">
+              <li>Click the <strong>"Export Template"</strong> button above.</li>
+              <li>An Excel file (.xlsx) will download with all variant details.</li>
+              <li>
+                Open the file and edit <strong>only</strong> the{" "}
+                <strong className="text-blue-800">"newSpecialPrice"</strong> column.
+              </li>
+            </ol>
+          </div>
+
+          {/* Import Steps */}
+          <div>
+            <p className="text-[11px] font-semibold text-gray-800">
+              📥 How to Import
+            </p>
+            <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[11px] text-gray-600">
+              <li>
+                Fill in the <strong>"newSpecialPrice"</strong> column in the exported template.
+              </li>
+              <li>Save the file as <strong>.xlsx, .xls, or .csv</strong>.</li>
+              <li>Click the <strong>"Import Excel"</strong> button and select your file.</li>
+              <li>
+                Review the imported values in the table, then click{" "}
+                <strong>"Save Changes"</strong> to apply.
+              </li>
+            </ol>
+          </div>
+
+          {/* Important Notes */}
+          <div className="rounded-md border border-blue-300 bg-blue-100/60 px-3 py-2">
+            <p className="text-[11px] font-semibold text-blue-900">
+              ⚠️ Important Notes
+            </p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[11px] text-gray-700">
+              <li>
+                Do <strong>not</strong> modify columns other than{" "}
+                <strong>"newSpecialPrice"</strong> — they are used for matching.
+              </li>
+              <li>
+                Special price must be <strong>at least 50%</strong> of the selling price and{" "}
+                <strong>below</strong> the selling price.
+              </li>
+              <li>
+                Leave <strong>"newSpecialPrice"</strong> empty to keep the current price unchanged.
+              </li>
+              <li>
+                Always export a <strong>fresh template</strong> before importing to ensure data is up to date.
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const SellerSpecialPriceManager = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -1008,6 +1090,10 @@ const handleRowChange = useCallback((rowId, value) => {
     </div>
   </div>
 </div>
+
+        {/* Import & Export Guide */}
+        <ImportExportGuide />
+
         {/* Variants Data Table */}
         {detailLoading ? (
           <Loader />
