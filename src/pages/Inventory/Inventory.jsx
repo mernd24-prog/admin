@@ -42,6 +42,7 @@ import ImageGallery from "../../components/Atoms/ImageGallery/ImageGallery";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 
 import FormInput from "../../components/Atoms/FormInput/FormInput";
+import { getProductImages } from "../../_helpers/productMedia";
 
 const isSeller = isSellerPanel();
 
@@ -205,28 +206,24 @@ const variantTitle = (row = {}) => (
     <p className="font-semibold text-[var(--admin-ink)]">
       {row.variantName || "Default variant"}
     </p>
-    <p className="text-xs text-[var(--admin-muted)]">
+    {/* <p className="text-xs text-[var(--admin-muted)]">
       {row.variantSku || row.sku || "No SKU"}
-    </p>
+    </p> */}
   </div>
 );
 
 const productTitle = (row = {}) => (
-  <div className="min-w-[220px] max-w-[52vw] xl:w-[560px]">
-    <div className="min-w-0">
+  <div className="min-w-0 w-full">
+    <div className="min-w-0 w-full">
       <p
-        className="truncate font-semibold text-[var(--admin-ink)]"
+        className="w-full truncate font-semibold text-[var(--admin-ink)]"
         title={row.productName || "Untitled product"}
       >
         {row.productName || "Untitled product"}
       </p>
 
-      <p className="truncate text-xs text-[var(--admin-muted)]">
-        {row.productSku || "No product SKU"}
-      </p>
-
       {row.variantCount > 0 && (
-        <p className="text-xs text-[var(--admin-muted)]">
+        <p className="truncate text-xs text-[var(--admin-muted)]">
           {`${row.variantCount} Variant${row.variantCount === 1 ? "" : "s"}`}
         </p>
       )}
@@ -457,99 +454,97 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
   };
 
   return (
-   <DefaultModal
-  isOpen={open}
-  onClose={onClose}
-  title="Adjust Variant Inventory"
-  subtitle={`${target?.productName || ""} · ${
-    target?.variantName || ""
-  }`}
-  onSubmit={submit}
-  loading={loading}
-  submitButtonText="Update Stock"
->
-  <div className="space-y-5">
-    {/* Adjustment Type */}
-    <FormSection
-      title="Adjustment Type"
-      subtitle="Choose how you want to update the available stock."
+    <DefaultModal
+      isOpen={open}
+      onClose={onClose}
+      title="Adjust Variant Inventory"
+      subtitle={`${target?.productName || ""} · ${target?.variantName || ""}`}
+      onSubmit={submit}
+      loading={loading}
+      submitButtonText="Update Stock"
     >
-      <div className="grid grid-cols-3 gap-2">
-        {ADJUST_TYPES.map(({ value, label, icon: Icon }) => {
-          const isActive = form.adjustmentType === value;
+      <div className="space-y-5">
+        {/* Adjustment Type */}
+        <FormSection
+          title="Adjustment Type"
+          subtitle="Choose how you want to update the available stock."
+        >
+          <div className="grid grid-cols-3 gap-2">
+            {ADJUST_TYPES.map(({ value, label, icon: Icon }) => {
+              const isActive = form.adjustmentType === value;
 
-          return (
-            <button
-              key={value}
-              type="button"
-              onClick={() =>
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() =>
+                    setForm((previous) => ({
+                      ...previous,
+                      adjustmentType: value,
+                    }))
+                  }
+                  className={`flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition ${
+                    isActive
+                      ? "bg-[var(--admin-blue)] text-white shadow-sm"
+                      : "bg-[var(--admin-soft)] text-[var(--admin-muted)] hover:bg-[var(--admin-blue)]/10 hover:text-[var(--admin-blue)]"
+                  }`}
+                >
+                  <Icon size={15} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </FormSection>
+
+        {/* Stock Details */}
+        <FormSection
+          title="Stock Details"
+          subtitle="Enter the quantity and reason for this inventory adjustment."
+        >
+          <div className="space-y-4">
+            <FormInput
+              label="Quantity"
+              type="number"
+              min={0}
+              value={form.quantity}
+              onChange={(event) =>
                 setForm((previous) => ({
                   ...previous,
-                  adjustmentType: value,
+                  quantity: event.target.value,
                 }))
               }
-              className={`flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition ${
-                isActive
-                  ? "bg-[var(--admin-blue)] text-white shadow-sm"
-                  : "bg-[var(--admin-soft)] text-[var(--admin-muted)] hover:bg-[var(--admin-blue)]/10 hover:text-[var(--admin-blue)]"
-              }`}
-            >
-              <Icon size={15} />
-              <span>{label}</span>
-            </button>
-          );
-        })}
+              placeholder="Enter quantity"
+            />
+
+            <FormInput
+              label="Reason"
+              value={form.reason}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  reason: event.target.value,
+                }))
+              }
+              placeholder="Cycle count, restock, damage, correction"
+            />
+
+            <FormInput
+              label="Note"
+              type="textarea"
+              value={form.note}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  note: event.target.value,
+                }))
+              }
+              placeholder="Add an optional internal note"
+            />
+          </div>
+        </FormSection>
       </div>
-    </FormSection>
-
-    {/* Stock Details */}
-    <FormSection
-      title="Stock Details"
-      subtitle="Enter the quantity and reason for this inventory adjustment."
-    >
-      <div className="space-y-4">
-        <FormInput
-          label="Quantity"
-          type="number"
-          min={0}
-          value={form.quantity}
-          onChange={(event) =>
-            setForm((previous) => ({
-              ...previous,
-              quantity: event.target.value,
-            }))
-          }
-          placeholder="Enter quantity"
-        />
-
-        <FormInput
-          label="Reason"
-          value={form.reason}
-          onChange={(event) =>
-            setForm((previous) => ({
-              ...previous,
-              reason: event.target.value,
-            }))
-          }
-          placeholder="Cycle count, restock, damage, correction"
-        />
-
-        <FormInput
-          label="Note"
-          type="textarea"
-          value={form.note}
-          onChange={(event) =>
-            setForm((previous) => ({
-              ...previous,
-              note: event.target.value,
-            }))
-          }
-          placeholder="Add an optional internal note"
-        />
-      </div>
-    </FormSection>
-  </div>
-</DefaultModal>
+    </DefaultModal>
   );
 };
 
@@ -1078,12 +1073,63 @@ const Inventory = () => {
   };
   const listColumns = [
     {
+      key: "image",
+      label: "Image",
+      width: "110px",
+      render: (_, row) => {
+        const image = getVariantImage(row);
+        const images = getVariantImagesList(row);
+
+        return (
+          <div className="flex flex-col items-center gap-1">
+            {image ? (
+              <button
+                type="button"
+                className="h-12 w-12 overflow-hidden rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)]"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openImageGallery(row);
+                }}
+                title="View product images"
+              >
+                <img
+                  src={image}
+                  alt={row.productName || "Product"}
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-md border border-dashed border-[var(--admin-line)] text-[10px] text-[var(--admin-muted)]">
+                No Image
+              </div>
+            )}
+
+            <button
+              type="button"
+              disabled={!images.length}
+              onClick={(event) => {
+                event.stopPropagation();
+                openImageGallery(row);
+              }}
+              className={`text-xs ${
+                images.length
+                  ? "text-[var(--admin-blue)] hover:underline"
+                  : "cursor-not-allowed text-[var(--admin-muted)]"
+              }`}
+            >
+              View
+            </button>
+          </div>
+        );
+      },
+    },
+    {
       key: "productName",
       label: "Product",
       sortable: true,
       width: "260px",
       render: (_, row) => (
-        <div className="max-w-[300px] truncate">{productTitle(row)}</div>
+        <div className="max-w-[280px] truncate">{productTitle(row)}</div>
       ),
     },
     {
@@ -1340,7 +1386,7 @@ const Inventory = () => {
           </div>
         ) : null}
 
-        <div className="mb-4">
+        {/* <div className="mb-4">
           <div className="admin-card flex items-center gap-4 p-4">
             <div className="h-16 w-16 overflow-hidden rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)]">
               {product.image ? (
@@ -1368,7 +1414,7 @@ const Inventory = () => {
               )}
             </div>
           </div>
-        </div>
+        </div> */}
 
         <DataTable
           columns={detailColumns}
@@ -1484,6 +1530,12 @@ const Inventory = () => {
             },
           ];
         }}
+      />
+
+      <ImageGallery
+        images={galleryImages}
+        isOpen={galleryOpen}
+        onClose={closeImageGallery}
       />
 
       <AdjustModal

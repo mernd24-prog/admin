@@ -5,6 +5,11 @@ import React, {
   useRef,
   useState,
 } from "react";
+import ImageGallery from "../../../../components/Atoms/ImageGallery/ImageGallery";
+import {
+  getPrimaryProductImage,
+  getProductImages,
+} from "../../../../_helpers/productMedia";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Info } from "lucide-react";
@@ -63,9 +68,7 @@ const normalizeSpecialPriceValue = (value) => {
 
 const getRowFlags = (row) => {
   const current = normalizeSpecialPriceValue(row.specialPrice ?? "");
-  const original = normalizeSpecialPriceValue(
-    row.originalSpecialPrice ?? ""
-  );
+  const original = normalizeSpecialPriceValue(row.originalSpecialPrice ?? "");
 
   const sellingPrice = Number(row.sellingPrice) || 0;
   const minimumSpecialPrice = getMinimumSpecialPrice(sellingPrice);
@@ -87,10 +90,7 @@ const getRowFlags = (row) => {
   const isZeroPrice = sellingPrice === 0;
 
   const isPending =
-    !isEmpty &&
-    current !== original &&
-    !hasError &&
-    !isZeroPrice;
+    !isEmpty && current !== original && !hasError && !isZeroPrice;
 
   return {
     current,
@@ -196,7 +196,9 @@ const getProductImage = (product) => {
     return typeof img === "string" ? img : img?.url || img?.src || "";
   }
   if (product?.image) {
-    return typeof product.image === "string" ? product.image : product.image?.url || "";
+    return typeof product.image === "string"
+      ? product.image
+      : product.image?.url || "";
   }
   if (product?.variants && product.variants.length > 0) {
     const vImg = product.variants[0]?.images?.[0] || product.variants[0]?.image;
@@ -232,11 +234,16 @@ const ImportExportGuide = () => {
               📤 How to Export
             </p>
             <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[11px] text-gray-600">
-              <li>Click the <strong>"Export Template"</strong> button above.</li>
-              <li>An Excel file (.xlsx) will download with all variant details.</li>
+              <li>
+                Click the <strong>"Export Template"</strong> button above.
+              </li>
+              <li>
+                An Excel file (.xlsx) will download with all variant details.
+              </li>
               <li>
                 Open the file and edit <strong>only</strong> the{" "}
-                <strong className="text-blue-800">"newSpecialPrice"</strong> column.
+                <strong className="text-blue-800">"newSpecialPrice"</strong>{" "}
+                column.
               </li>
             </ol>
           </div>
@@ -248,10 +255,16 @@ const ImportExportGuide = () => {
             </p>
             <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[11px] text-gray-600">
               <li>
-                Fill in the <strong>"newSpecialPrice"</strong> column in the exported template.
+                Fill in the <strong>"newSpecialPrice"</strong> column in the
+                exported template.
               </li>
-              <li>Save the file as <strong>.xlsx, .xls, or .csv</strong>.</li>
-              <li>Click the <strong>"Import Excel"</strong> button and select your file.</li>
+              <li>
+                Save the file as <strong>.xlsx, .xls, or .csv</strong>.
+              </li>
+              <li>
+                Click the <strong>"Import Excel"</strong> button and select your
+                file.
+              </li>
               <li>
                 Review the imported values in the table, then click{" "}
                 <strong>"Save Changes"</strong> to apply.
@@ -270,14 +283,16 @@ const ImportExportGuide = () => {
                 <strong>"newSpecialPrice"</strong> — they are used for matching.
               </li>
               <li>
-                Special price must be <strong>at least 50%</strong> of the selling price and{" "}
-                <strong>below</strong> the selling price.
+                Special price must be <strong>at least 50%</strong> of the
+                selling price and <strong>below</strong> the selling price.
               </li>
               <li>
-                Leave <strong>"newSpecialPrice"</strong> empty to keep the current price unchanged.
+                Leave <strong>"newSpecialPrice"</strong> empty to keep the
+                current price unchanged.
               </li>
               <li>
-                Always export a <strong>fresh template</strong> before importing to ensure data is up to date.
+                Always export a <strong>fresh template</strong> before importing
+                to ensure data is up to date.
               </li>
             </ul>
           </div>
@@ -291,6 +306,21 @@ const SellerSpecialPriceManager = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { productId } = useParams();
+
+  const [selectedImages, setSelectedImages] = useState(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+
+  const handleImageClick = useCallback((data) => {
+    const images = Array.isArray(data) ? data : getProductImages(data);
+
+    if (!images.length) {
+      toast.info("No product images available.");
+      return;
+    }
+
+    setSelectedImages(images);
+    setGalleryOpen(true);
+  }, []);
 
   const storeSelector = useSelector((state) => state?.store);
   const sellerContext = useMemo(() => getSellerContext(), []);
@@ -397,9 +427,7 @@ const SellerSpecialPriceManager = () => {
     if (!productId) return;
     setDetailLoading(true);
     try {
-      let foundProduct = products.find(
-        (p) => (p._id || p.id) === productId,
-      );
+      let foundProduct = products.find((p) => (p._id || p.id) === productId);
 
       if (!foundProduct) {
         const res = await dispatch(getProductById({ _id: productId })).unwrap();
@@ -422,8 +450,12 @@ const SellerSpecialPriceManager = () => {
           }),
         ).unwrap();
         const listData =
-          listRes?.data?.data?.list || listRes?.data?.list || listRes?.data?.data || [];
-        foundProduct = listData.find((p) => (p._id || p.id) === productId) || listData[0];
+          listRes?.data?.data?.list ||
+          listRes?.data?.list ||
+          listRes?.data?.data ||
+          [];
+        foundProduct =
+          listData.find((p) => (p._id || p.id) === productId) || listData[0];
       }
 
       if (foundProduct) {
@@ -471,26 +503,27 @@ const SellerSpecialPriceManager = () => {
   }, [products]);
 
   // Filter bar fields for main view
-const filterFields = useMemo(() => {
-  const fields = [];
+  const filterFields = useMemo(() => {
+    const fields = [];
 
-  if (!sellerView) {
-    fields.push({
-      key: "sellerId",
-      type: "select",
-      label: "Seller",
-      placeholder: "All Sellers",
-      options: sellerListData,
-    });
-  }
+    if (!sellerView) {
+      fields.push({
+        key: "sellerId",
+        type: "select",
+        label: "Seller",
+        placeholder: "All Sellers",
+        options: sellerListData,
+      });
+    }
 
-  return fields;
-}, [sellerView, sellerListData]);
+    return fields;
+  }, [sellerView, sellerListData]);
 
   // Handle selecting a product from dropdown
   useEffect(() => {
     const selectedProd = list.filters?.selectedProduct;
-    const prodId = typeof selectedProd === "object" ? selectedProd?.value : selectedProd;
+    const prodId =
+      typeof selectedProd === "object" ? selectedProd?.value : selectedProd;
     if (prodId && !productId) {
       navigate(`/app/seller-special-price-manager/${prodId}`);
     }
@@ -503,25 +536,25 @@ const filterFields = useMemo(() => {
   );
   const canSave = pendingCount > 0 && !saving && !importing && !detailLoading;
 
-const handleRowChange = useCallback((rowId, value) => {
-  setImportError("");
-  setImportInfo("");
-  setImportSuccess("");
+  const handleRowChange = useCallback((rowId, value) => {
+    setImportError("");
+    setImportInfo("");
+    setImportSuccess("");
 
-  setRows((current) =>
-    current.map((row) => {
-      if (row.id === rowId) {
-        return {
-          ...row,
-          // Keep the input empty when the user clears it
-          specialPrice: value === "" ? "" : normalizeSpecialPriceValue(value),
-        };
-      }
+    setRows((current) =>
+      current.map((row) => {
+        if (row.id === rowId) {
+          return {
+            ...row,
+            // Keep the input empty when the user clears it
+            specialPrice: value === "" ? "" : normalizeSpecialPriceValue(value),
+          };
+        }
 
-      return row;
-    })
-  );
-}, []);
+        return row;
+      }),
+    );
+  }, []);
 
   const persistRows = async (
     nextRows = rows,
@@ -679,14 +712,19 @@ const handleRowChange = useCallback((rowId, value) => {
             return String(importedRow.variantId) === String(row.variantId);
           }
           if (importedRow.variantSku && row.variantSku) {
-            return String(importedRow.variantSku).toLowerCase() === String(row.variantSku).toLowerCase();
+            return (
+              String(importedRow.variantSku).toLowerCase() ===
+              String(row.variantSku).toLowerCase()
+            );
           }
           return String(importedRow.productId) === String(row.productId);
         });
 
         if (targetRow) {
           matchesFound += 1;
-          const parsedVal = normalizeSpecialPriceValue(importedRow.newSpecialPrice);
+          const parsedVal = normalizeSpecialPriceValue(
+            importedRow.newSpecialPrice,
+          );
           targetRow.specialPrice = parsedVal;
         }
       });
@@ -711,27 +749,60 @@ const handleRowChange = useCallback((rowId, value) => {
       {
         key: "image",
         label: "Image",
-        render: (_, row) => {
-          const img = getProductImage(row);
+        render: (_, product) => {
+          const productImages = getProductImages(product);
+          const primaryImage = getPrimaryProductImage(product);
+
           return (
             <div className="flex flex-col items-center gap-1">
-              {img ? (
-                <div className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50 p-0.5">
-                  <img
-                    src={img}
-                    alt={row.title || row.name || "Product"}
-                    className="h-full w-full object-contain"
+              {primaryImage ? (
+                <button
+                  type="button"
+                  className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleImageClick(productImages);
+                  }}
+                  title="View product images"
+                >
+                  <span
+                    role="img"
+                    aria-label={product?.title || product?.name || "Product"}
+                    className="block h-full w-full bg-cover bg-center"
+                    style={{
+                      backgroundImage: `url("${String(primaryImage).replace(
+                        /"/g,
+                        "%22",
+                      )}")`,
+                    }}
                   />
-                </div>
+                </button>
               ) : (
                 <span className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400">
                   No
                 </span>
               )}
+
+              <button
+                type="button"
+                className={`text-xs ${
+                  productImages.length
+                    ? "text-blue-500 hover:underline"
+                    : "cursor-not-allowed text-gray-400"
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleImageClick(productImages);
+                }}
+                disabled={!productImages.length}
+              >
+                View
+              </button>
             </div>
           );
         },
       },
+      ,
       {
         key: "title",
         label: "Product",
@@ -740,12 +811,18 @@ const handleRowChange = useCallback((rowId, value) => {
           <div>
             <button
               type="button"
-              onClick={() => navigate(`/app/seller-special-price-manager/${row._id || row.id}`)}
+              onClick={() =>
+                navigate(
+                  `/app/seller-special-price-manager/${row._id || row.id}`,
+                )
+              }
               className="block max-w-[280px] overflow-hidden text-ellipsis whitespace-nowrap text-left font-semibold text-[var(--admin-ink)] hover:text-[var(--admin-blue)] hover:underline focus:outline-none"
             >
               {row.title || row.name || "Untitled Product"}
             </button>
-            <span className="block text-xs text-gray-500">{row.sku || "No SKU"}</span>
+            <span className="block text-xs text-gray-500">
+              {row.sku || "No SKU"}
+            </span>
           </div>
         ),
       },
@@ -756,7 +833,10 @@ const handleRowChange = useCallback((rowId, value) => {
               label: "Seller",
               render: (_, row) => (
                 <span className="block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-xs font-medium text-gray-700">
-                  {row.sellerName || row.seller?.name || row.organizationName || "-"}
+                  {row.sellerName ||
+                    row.seller?.name ||
+                    row.organizationName ||
+                    "-"}
                 </span>
               ),
             },
@@ -790,13 +870,17 @@ const handleRowChange = useCallback((rowId, value) => {
         render: (_, row) => {
           const variants = row.variants || [];
           if (variants.length > 0) {
-            const prices = variants.map((v) => Number(v.price || 0)).filter((p) => p > 0);
+            const prices = variants
+              .map((v) => Number(v.price || 0))
+              .filter((p) => p > 0);
             if (prices.length > 0) {
               const min = Math.min(...prices);
               const max = Math.max(...prices);
               return (
                 <span className="font-mono text-xs font-medium text-gray-800">
-                  {min === max ? formatMoney(min) : `${formatMoney(min)} - ${formatMoney(max)}`}
+                  {min === max
+                    ? formatMoney(min)
+                    : `${formatMoney(min)} - ${formatMoney(max)}`}
                 </span>
               );
             }
@@ -811,29 +895,29 @@ const handleRowChange = useCallback((rowId, value) => {
       {
         key: "status",
         label: "Status",
-        render: (_, row) => <ProductStatusBadge status={row.status || "active"} />,
+        render: (_, row) => (
+          <ProductStatusBadge status={row.status || "active"} />
+        ),
       },
-  
-{
-  key: "action",
-  label: "Action",
-  render: (_, row) => (
-    <button
-      type="button"
-      onClick={() =>
-        navigate(
-          `/app/seller-special-price-manager/${row._id || row.id}`
-        )
-      }
-      className="inline-flex items-center gap-1.5 rounded-md border border-[var(--admin-gold)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--admin-gold)] transition-colors hover:bg-[var(--admin-gold)] hover:text-white focus:border-[var(--admin-gold)] focus:outline-none focus:ring-0"
-    >
-      Manage Special Prices
-      <ArrowRight size={14} />
-    </button>
-  ),
-}
+
+      {
+        key: "action",
+        label: "Action",
+        render: (_, row) => (
+          <button
+            type="button"
+            onClick={() =>
+              navigate(`/app/seller-special-price-manager/${row._id || row.id}`)
+            }
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--admin-gold)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--admin-gold)] transition-colors hover:bg-[var(--admin-gold)] hover:text-white focus:border-[var(--admin-gold)] focus:outline-none focus:ring-0"
+          >
+            Manage Special Prices
+            <ArrowRight size={14} />
+          </button>
+        ),
+      },
     ],
-    [sellerView, navigate],
+    [sellerView, navigate, handleImageClick],
   );
 
   // Filtered variant rows for search in detail view
@@ -856,8 +940,12 @@ const handleRowChange = useCallback((rowId, value) => {
         label: "Variant Name",
         render: (value, row) => (
           <div>
-            <p className="font-semibold text-gray-900">{value || "Default Variant"}</p>
-            <p className="font-mono text-xs text-gray-500">{row.variantSku || row.productSku}</p>
+            <p className="font-semibold text-gray-900">
+              {value || "Default Variant"}
+            </p>
+            <p className="font-mono text-xs text-gray-500">
+              {row.variantSku || row.productSku}
+            </p>
           </div>
         ),
       },
@@ -899,26 +987,28 @@ const handleRowChange = useCallback((rowId, value) => {
           return (
             <div>
               <div className="relative flex items-center">
-                <span className="absolute left-2.5 text-xs font-medium text-gray-400">₹</span>
-              <input
-  type="number"
-  min="0"
-  step="0.01"
-  value={value ?? ""}
-  onChange={(e) => handleRowChange(row.id, e.target.value)}
-  placeholder="Enter price"
-  className={`w-36 rounded-lg border py-1.5 pl-6 pr-2 text-sm font-mono transition-colors ${
-    hasError
-      ? "border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-      : "border-gray-300 bg-white focus:border-[var(--admin-blue)] focus:ring-1 focus:ring-[var(--admin-blue)]"
-  }`}
-/>
+                <span className="absolute left-2.5 text-xs font-medium text-gray-400">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={value ?? ""}
+                  onChange={(e) => handleRowChange(row.id, e.target.value)}
+                  placeholder="Enter price"
+                  className={`w-36 rounded-lg border py-1.5 pl-6 pr-2 text-sm font-mono transition-colors ${
+                    hasError
+                      ? "border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      : "border-gray-300 bg-white focus:border-[var(--admin-blue)] focus:ring-1 focus:ring-[var(--admin-blue)]"
+                  }`}
+                />
               </div>
               {hasError && (
                 <p className="mt-1 text-[10px] font-medium text-red-600">
-                {`Must be at least ${formatMoney(
-  minimumSpecialPrice
-)} and below ${formatMoney(row.sellingPrice)}`}
+                  {`Must be at least ${formatMoney(
+                    minimumSpecialPrice,
+                  )} and below ${formatMoney(row.sellingPrice)}`}
                 </p>
               )}
             </div>
@@ -967,13 +1057,12 @@ const handleRowChange = useCallback((rowId, value) => {
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <button
-  type="button"
-  onClick={() => navigate("/app/seller-special-price-manager")}
-
->
-  <ArrowLeft size={16} />
-  Back to Products
-</button>
+                type="button"
+                onClick={() => navigate("/app/seller-special-price-manager")}
+              >
+                <ArrowLeft size={16} />
+                Back to Products
+              </button>
 
               <button
                 type="button"
@@ -1005,7 +1094,9 @@ const handleRowChange = useCallback((rowId, value) => {
                 disabled={!canSave}
                 // className="inline-flex items-center gap-1 rounded-lg bg-[var(--admin-blue)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
               >
-                {saving ? "Saving..." : `Save Changes ${pendingCount ? `(${pendingCount})` : ""}`}
+                {saving
+                  ? "Saving..."
+                  : `Save Changes ${pendingCount ? `(${pendingCount})` : ""}`}
               </button>
             </div>
           }
@@ -1057,39 +1148,63 @@ const handleRowChange = useCallback((rowId, value) => {
                   {detailProduct.title || detailProduct.name || "Product"}
                 </h2>
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                  <span>SKU: <strong className="text-gray-700">{detailProduct.sku || "-"}</strong></span>
-                  {!sellerView && (detailProduct.sellerName || detailProduct.seller?.name) && (
-                    <span>Seller: <strong className="text-gray-700">{detailProduct.sellerName || detailProduct.seller?.name}</strong></span>
-                  )}
-                  <span>Category: <strong className="text-gray-700">{detailProduct.category?.name || detailProduct.categoryName || "-"}</strong></span>
-                  <span>Total Variants: <strong className="text-gray-700">{rows.length}</strong></span>
+                  <span>
+                    SKU:{" "}
+                    <strong className="text-gray-700">
+                      {detailProduct.sku || "-"}
+                    </strong>
+                  </span>
+                  {!sellerView &&
+                    (detailProduct.sellerName ||
+                      detailProduct.seller?.name) && (
+                      <span>
+                        Seller:{" "}
+                        <strong className="text-gray-700">
+                          {detailProduct.sellerName ||
+                            detailProduct.seller?.name}
+                        </strong>
+                      </span>
+                    )}
+                  <span>
+                    Category:{" "}
+                    <strong className="text-gray-700">
+                      {detailProduct.category?.name ||
+                        detailProduct.categoryName ||
+                        "-"}
+                    </strong>
+                  </span>
+                  <span>
+                    Total Variants:{" "}
+                    <strong className="text-gray-700">{rows.length}</strong>
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         )}
-{/* Special Price Suggestion */}
-<div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-  <div className="flex items-start gap-2.5">
-   <Info size={16} className="mt-0.5 shrink-0 text-blue-600" />
+        {/* Special Price Suggestion */}
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <div className="flex items-start gap-2.5">
+            <Info size={16} className="mt-0.5 shrink-0 text-blue-600" />
 
-    <div>
-      <h3 className="text-xs font-semibold text-gray-900">
-        Special Price Suggestion
-      </h3>
+            <div>
+              <h3 className="text-xs font-semibold text-gray-900">
+                Special Price Suggestion
+              </h3>
 
-      <p className="mt-1 text-[11px] text-gray-600">
-        Enter a price that is <strong>below the Selling Price</strong> and at
-        least <strong>50% of it</strong>. Then click{" "}
-        <strong>Save Changes</strong>.
-      </p>
+              <p className="mt-1 text-[11px] text-gray-600">
+                Enter a price that is <strong>below the Selling Price</strong>{" "}
+                and at least <strong>50% of it</strong>. Then click{" "}
+                <strong>Save Changes</strong>.
+              </p>
 
-      <p className="mt-1 text-[11px] font-medium text-blue-700">
-        Example: Selling Price ₹1,999 → Special Price: ₹999.50 to ₹1,998.99
-      </p>
-    </div>
-  </div>
-</div>
+              <p className="mt-1 text-[11px] font-medium text-blue-700">
+                Example: Selling Price ₹1,999 → Special Price: ₹999.50 to
+                ₹1,998.99
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Import & Export Guide */}
         <ImportExportGuide />
@@ -1144,7 +1259,17 @@ const handleRowChange = useCallback((rowId, value) => {
           />
         }
         emptyText="No products found matching your search or filter criteria."
-        onRowClick={(row) => navigate(`/app/seller-special-price-manager/${row._id || row.id}`)}
+        onRowClick={(row) =>
+          navigate(`/app/seller-special-price-manager/${row._id || row.id}`)
+        }
+      />
+      <ImageGallery
+        images={selectedImages}
+        isOpen={galleryOpen}
+        onClose={() => {
+          setGalleryOpen(false);
+          setSelectedImages(null);
+        }}
       />
     </div>
   );

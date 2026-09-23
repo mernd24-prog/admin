@@ -52,7 +52,7 @@ const FILTER_FIELDS = isSellerPanel()
       {
         key: "sellerId",
         type: "asyncDropdown",
-        label: "STORE NAME",
+        label: "Seller STORE NAME",
         width: "w-52",
         load: (search) =>
           dropdownApi.getSellers({

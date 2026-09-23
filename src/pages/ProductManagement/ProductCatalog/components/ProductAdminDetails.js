@@ -28,6 +28,7 @@ import {
 import { getStoredRole, normalizeRole } from "../../../../_helpers/authStorage";
 import Breadcrumb from "./Breadcrumb";
 import { DataTable, ImageThumbnail } from "../../../../components/Shared";
+import Cards from "../../../../components/Cards/Cards";
 
 /* -------------------------------------------------------------------------- */
 /*                                  Constants                                 */
@@ -236,6 +237,17 @@ const ProductAdminDetails = () => {
     const images = getVariantImagesList(variant);
     return images[0] || "";
   };
+
+  // Product image used in the redesigned header. Keep the existing product data
+  // untouched and simply normalize whichever image field the API provides.
+  const productImage =
+    normalizeImageList(
+      product?.images,
+      product?.image,
+      product?.imageUrls,
+      product?.thumbnail,
+      product?.media?.images,
+    )[0] || "";
 
   const productTabs = [
     {
@@ -519,10 +531,29 @@ const ProductAdminDetails = () => {
       {/* Product Header                                                     */}
       {/* ------------------------------------------------------------------ */}
 
-      <div className="mb-6 rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm sm:px-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="min-w-0">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
+      <div className="mb-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-[150px_minmax(0,1fr)_190px]">
+          {/* Product image */}
+          <div className="flex items-center justify-center border-b border-gray-100 bg-[var(--admin-surface-soft)] p-4 lg:border-b-0 lg:border-r">
+            <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm sm:h-32 sm:w-32">
+              {productImage ? (
+                <img
+                  src={productImage}
+                  alt={product.title || "Product"}
+                  className="h-full w-full object-contain p-2"
+                />
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-gray-50 text-gray-400">
+                  <span className="text-2xl">📦</span>
+                  <span className="text-[10px] font-semibold">No image</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Product information */}
+          <div className="flex min-w-0 flex-col justify-center px-5 py-5 sm:px-7 lg:px-8">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
               {product.status && (
                 <ProductStatusBadge
                   status={product.status}
@@ -530,29 +561,33 @@ const ProductAdminDetails = () => {
                 />
               )}
 
-              {product.productType && (
-                <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-500">
+              {/* {product.productType && (
+                <span className="inline-flex items-center rounded-full border border-[var(--admin-gold)]/25 bg-[var(--admin-gold)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--admin-gold-dark)]">
                   {formatLabel(product.productType)}
                 </span>
-              )}
+              )} */}
             </div>
 
-            <h1 className="truncate text-xl font-bold tracking-tight text-[var(--admin-navy)] sm:text-2xl">
+            <h1
+              className="max-w-4xl text-xl font-bold leading-7 tracking-tight text-[var(--admin-navy)] sm:text-md lg:text-[18px] lg:leading-8"
+              title={product.title || "Product Details"}
+            >
               {product.title || "Product Details"}
             </h1>
 
-            <p className="mt-1 text-xs leading-5 text-gray-500">
+            <p className="mt-2 max-w-3xl text-xs leading-5 text-gray-500 sm:text-sm">
               Review product information, variants, analytics, and compliance
               details.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Actions */}
+          <div className="flex flex-col justify-center gap-2 border-t border-gray-100 bg-gray-50/50 p-4 lg:border-l lg:border-t-0">
             {needsReview && (
               <button
                 type="button"
                 onClick={() => setReviewOpen(true)}
-                className="inline-flex items-center justify-center rounded-xl bg-[var(--admin-navy)] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                className="inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-[var(--admin-navy)] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
                 {pendingRevision ? "Review Revision" : "Review Product"}
               </button>
@@ -561,14 +596,14 @@ const ProductAdminDetails = () => {
             <button
               type="button"
               onClick={() => setDuplicateConfirm(true)}
-              className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-700 transition-all hover:-translate-y-0.5 hover:border-[var(--admin-gold)] hover:text-[var(--admin-navy)] hover:shadow-sm"
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-700 transition-all hover:-translate-y-0.5 hover:border-[var(--admin-gold)] hover:text-[var(--admin-navy)] hover:shadow-sm"
             >
               Duplicate
             </button>
 
             <Link
               to={`/app/product-catalog/form/${id}`}
-              className="inline-flex items-center justify-center rounded-xl bg-[var(--admin-gold)] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-[var(--admin-gold)] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
               Edit Product
             </Link>
@@ -604,8 +639,6 @@ const ProductAdminDetails = () => {
       {/* Tabs                                                               */}
       {/* ------------------------------------------------------------------ */}
 
-      <Tabs tabs={productTabs} activeTab={activeTab} onChange={setActiveTab} />
-
       {/* ------------------------------------------------------------------ */}
       {/* Content                                                            */}
       {/* ------------------------------------------------------------------ */}
@@ -617,17 +650,11 @@ const ProductAdminDetails = () => {
 
         {activeTab === "overview" && (
           <section className={sectionClass}>
-            <div className={sectionHeaderClass}>
-              <div>
-                <p className={sectionEyebrowClass}>Product information</p>
-
-                <h2 className={sectionTitleClass}>Overview</h2>
-              </div>
-
-              <span className="inline-flex w-fit rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
-                General details
-              </span>
-            </div>
+            <Tabs
+              tabs={productTabs}
+              activeTab={activeTab}
+              onChange={setActiveTab}
+            />
 
             <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
               <Row label="Title" value={product.title} />
@@ -639,7 +666,7 @@ const ProductAdminDetails = () => {
                 value={product.sellerEmail || product.seller?.email}
               />
 
-              <Row label="Seller ID" value={refToLabel(product.sellerId)} />
+              {/* <Row label="Seller ID" value={refToLabel(product.sellerId)} /> */}
 
               <Row
                 label="Organization"
@@ -701,7 +728,13 @@ const ProductAdminDetails = () => {
 
         {activeTab === "analytics" && product.analytics && (
           <section className={sectionClass}>
-            <div className={sectionHeaderClass}>
+            <Tabs
+              tabs={productTabs}
+              activeTab={activeTab}
+              onChange={setActiveTab}
+            />
+
+            {/* <div className={sectionHeaderClass}>
               <div>
                 <p className={sectionEyebrowClass}>Performance overview</p>
 
@@ -711,9 +744,9 @@ const ProductAdminDetails = () => {
               <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
                 Product performance
               </span>
-            </div>
+            </div> */}
 
-            <div className="grid grid-cols-2 gap-3 bg-gray-50/50 p-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
+            <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
               {[
                 {
                   label: "Total Views",
@@ -727,9 +760,7 @@ const ProductAdminDetails = () => {
                 },
                 {
                   label: "Revenue",
-                  value: `₹${(product.analytics.revenue || 0).toLocaleString(
-                    "en-IN",
-                  )}`,
+                  value: `₹${(product.analytics.revenue || 0).toLocaleString("en-IN")}`,
                 },
                 {
                   label: "Wishlists",
@@ -760,18 +791,13 @@ const ProductAdminDetails = () => {
                   value: (product.reviewCount || 0).toLocaleString("en-IN"),
                 },
               ].map(({ label, value }) => (
-                <div
+                <Cards
                   key={label}
-                  className="group rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[var(--admin-gold)]/40 hover:shadow-md"
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                    {label}
-                  </p>
-
-                  <p className="mt-2 break-words text-xl font-bold tracking-tight text-[var(--admin-navy)]">
-                    {value}
-                  </p>
-                </div>
+                  label={label}
+                  value={value}
+                  className="min-w-0"
+                  valueClassName="text-lg xl:text-[18px]"
+                />
               ))}
             </div>
           </section>
@@ -783,17 +809,11 @@ const ProductAdminDetails = () => {
 
         {activeTab === "attributes" && Object.keys(attributes).length > 0 && (
           <section className={sectionClass}>
-            <div className={sectionHeaderClass}>
-              <div>
-                <p className={sectionEyebrowClass}>Product specifications</p>
-
-                <h2 className={sectionTitleClass}>Attributes</h2>
-              </div>
-
-              <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
-                {Object.keys(attributes).length} fields
-              </span>
-            </div>
+            <Tabs
+              tabs={productTabs}
+              activeTab={activeTab}
+              onChange={setActiveTab}
+            />
 
             <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
               {Object.entries(attributes).map(([key, value]) => (
@@ -817,17 +837,11 @@ const ProductAdminDetails = () => {
 
         {activeTab === "variants" && product.variants?.length > 0 && (
           <section className={sectionClass}>
-            <div className={sectionHeaderClass}>
-              <div>
-                <p className={sectionEyebrowClass}>Product variants</p>
-
-                <h2 className={sectionTitleClass}>Variants</h2>
-              </div>
-
-              <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
-                {product.variants.length} variants
-              </span>
-            </div>
+            <Tabs
+              tabs={productTabs}
+              activeTab={activeTab}
+              onChange={setActiveTab}
+            />
 
             <div className="overflow-x-auto p-3 sm:p-4">
               <DataTable
@@ -866,13 +880,11 @@ const ProductAdminDetails = () => {
             product.warranty ||
             product.shipping) && (
             <section className={sectionClass}>
-              <div className={sectionHeaderClass}>
-                <div>
-                  <p className={sectionEyebrowClass}>Operations</p>
-
-                  <h2 className={sectionTitleClass}>Shipping & Compliance</h2>
-                </div>
-              </div>
+              <Tabs
+                tabs={productTabs}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+              />
 
               <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
                 {product.shipping && (
@@ -991,15 +1003,11 @@ const ProductAdminDetails = () => {
 
             {product.productType === "digital" && product.digital && (
               <section className={sectionClass}>
-                <div className={sectionHeaderClass}>
-                  <div>
-                    <p className={sectionEyebrowClass}>Digital information</p>
-
-                    <h2 className={sectionTitleClass}>
-                      Digital Product Details
-                    </h2>
-                  </div>
-                </div>
+                <Tabs
+                  tabs={productTabs}
+                  activeTab={activeTab}
+                  onChange={setActiveTab}
+                />
 
                 <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
                   <Row label="File Type" value={product.digital.fileType} />
@@ -1069,15 +1077,11 @@ const ProductAdminDetails = () => {
 
             {product.productType === "subscription" && product.subscription && (
               <section className={sectionClass}>
-                <div className={sectionHeaderClass}>
-                  <div>
-                    <p className={sectionEyebrowClass}>
-                      Subscription information
-                    </p>
-
-                    <h2 className={sectionTitleClass}>Subscription Details</h2>
-                  </div>
-                </div>
+                <Tabs
+                  tabs={productTabs}
+                  activeTab={activeTab}
+                  onChange={setActiveTab}
+                />
 
                 <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
                   <Row
@@ -1180,25 +1184,11 @@ const ProductAdminDetails = () => {
             {product.productType === "bundle" &&
               product.bundleItems?.length > 0 && (
                 <section className={sectionClass}>
-                  <div className={sectionHeaderClass}>
-                    <div>
-                      <p className={sectionEyebrowClass}>Bundle information</p>
-
-                      <h2 className={sectionTitleClass}>Bundle Items</h2>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
-                        {product.bundleItems.length} items
-                      </span>
-
-                      {product.bundleDiscount > 0 && (
-                        <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-[11px] font-bold text-green-700">
-                          {product.bundleDiscount}% discount
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  <Tabs
+                    tabs={productTabs}
+                    activeTab={activeTab}
+                    onChange={setActiveTab}
+                  />
 
                   <div className="overflow-x-auto p-3 sm:p-4">
                     <table className="w-full min-w-[750px] text-sm">
@@ -1298,13 +1288,11 @@ const ProductAdminDetails = () => {
             {product.seo &&
               Object.keys(product.seo).some((key) => product.seo[key]) && (
                 <section className={sectionClass}>
-                  <div className={sectionHeaderClass}>
-                    <div>
-                      <p className={sectionEyebrowClass}>Search visibility</p>
-
-                      <h2 className={sectionTitleClass}>SEO Metadata</h2>
-                    </div>
-                  </div>
+                  <Tabs
+                    tabs={productTabs}
+                    activeTab={activeTab}
+                    onChange={setActiveTab}
+                  />
 
                   <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2">
                     <Row label="Meta Title" value={product.seo.metaTitle} />

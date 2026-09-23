@@ -1,8 +1,4 @@
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "../../../utils/toast";
 
@@ -17,10 +13,7 @@ import {
   DELIVERY_STATUS_OPTIONS,
 } from "../../../constants/statusConstants";
 
-import {
-  useDispatch,
-  useSelector,
-} from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import {
   PageHeader,
@@ -32,10 +25,7 @@ import {
   UserLink,
 } from "../../../components/Shared";
 
-import {
-  ACTIONS,
-  usePermission,
-} from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 
 import { getOrderList } from "../../../Redux/orderSlice";
 import { useListPage } from "../../../hooks/useListPage";
@@ -134,8 +124,7 @@ const FILTER_FIELDS = [
     load: (search) =>
       dropdownApi.getSellers({
         keyWord: search,
-        searchFields:
-          "full_name,email,businessName",
+        searchFields: "full_name,email,businessName",
       }),
   },
   {
@@ -159,32 +148,19 @@ const FILTER_FIELDS = [
 ========================================================= */
 
 const firstDefined = (...values) =>
-  values.find(
-    (value) =>
-      value !== undefined &&
-      value !== null &&
-      value !== "",
-  );
+  values.find((value) => value !== undefined && value !== null && value !== "");
 
 const orderIdOf = (order = {}) =>
-  firstDefined(
-    order._id,
-    order.id,
-    order.orderId,
-    order.order_no,
-  );
+  firstDefined(order._id, order.id, order.orderId, order.order_no);
 
-const formatMoney = (value) =>
-  formatCurrency(value, "—");
+const formatMoney = (value) => formatCurrency(value, "—");
 
 /* =========================================================
    INITIAL FILTERS FROM URL
 ========================================================= */
 
 const getInitialQueryFilters = () => {
-  const params = new URLSearchParams(
-    window.location.search,
-  );
+  const params = new URLSearchParams(window.location.search);
 
   return [
     "status",
@@ -210,10 +186,7 @@ const getInitialQueryFilters = () => {
    JSON NORMALIZER
 ========================================================= */
 
-const normalizeJson = (
-  value,
-  fallback = {},
-) => {
+const normalizeJson = (value, fallback = {}) => {
   if (!value) {
     return fallback;
   }
@@ -233,9 +206,7 @@ const normalizeJson = (
    SELLER HELPERS
 ========================================================= */
 
-const sellerNameOf = (
-  seller = {},
-) =>
+const sellerNameOf = (seller = {}) =>
   firstDefined(
     seller.sellerName,
     seller.seller_name,
@@ -249,9 +220,7 @@ const sellerNameOf = (
     seller.email,
   );
 
-const organizationNameOf = (
-  organization = {},
-) =>
+const organizationNameOf = (organization = {}) =>
   firstDefined(
     organization.organizationName,
     organization.organization_name,
@@ -263,83 +232,56 @@ const organizationNameOf = (
     organization.name,
   );
 
-const sellerGroupsOf = (
-  row = {},
-) => {
-  const relationGroups = Array.isArray(
-    row.relations?.sellerFulfillmentGroups,
-  )
-    ? row.relations
-        .sellerFulfillmentGroups
+const sellerGroupsOf = (row = {}) => {
+  const relationGroups = Array.isArray(row.relations?.sellerFulfillmentGroups)
+    ? row.relations.sellerFulfillmentGroups
     : [];
 
   if (relationGroups.length) {
     return relationGroups;
   }
 
-  const itemGroups = (
-    Array.isArray(row.items)
-      ? row.items
-      : []
-  ).reduce((groups, item) => {
-    const sellerId = firstDefined(
-      item.seller_id,
-      item.sellerId,
-      "platform",
-    );
+  const itemGroups = (Array.isArray(row.items) ? row.items : []).reduce(
+    (groups, item) => {
+      const sellerId = firstDefined(item.seller_id, item.sellerId, "platform");
 
-    const organizationId =
-      firstDefined(
+      const organizationId = firstDefined(
         item.organization_id,
         item.organizationId,
         "default",
       );
 
-    const key = `${sellerId}:${organizationId}`;
+      const key = `${sellerId}:${organizationId}`;
 
-    const sellerSnapshot =
-      normalizeJson(
-        firstDefined(
-          item.seller_snapshot,
-          item.sellerSnapshot,
-        ),
+      const sellerSnapshot = normalizeJson(
+        firstDefined(item.seller_snapshot, item.sellerSnapshot),
         {},
       );
 
-    const organizationSnapshot =
-      normalizeJson(
-        firstDefined(
-          item.organization_snapshot,
-          item.organizationSnapshot,
-        ),
+      const organizationSnapshot = normalizeJson(
+        firstDefined(item.organization_snapshot, item.organizationSnapshot),
         {},
       );
 
-    if (!groups[key]) {
-      groups[key] = {
-        sellerId,
-        organizationId,
-        sellerName:
-          sellerNameOf(
-            sellerSnapshot,
-          ),
-        organizationName:
-          organizationNameOf(
-            organizationSnapshot,
-          ),
-        organizationSnapshot,
-        itemCount: 0,
-        quantity: 0,
-      };
-    }
+      if (!groups[key]) {
+        groups[key] = {
+          sellerId,
+          organizationId,
+          sellerName: sellerNameOf(sellerSnapshot),
+          organizationName: organizationNameOf(organizationSnapshot),
+          organizationSnapshot,
+          itemCount: 0,
+          quantity: 0,
+        };
+      }
 
-    groups[key].itemCount += 1;
-    groups[key].quantity += Number(
-      item.quantity || 0,
-    );
+      groups[key].itemCount += 1;
+      groups[key].quantity += Number(item.quantity || 0);
 
-    return groups;
-  }, {});
+      return groups;
+    },
+    {},
+  );
 
   return Object.values(itemGroups);
 };
@@ -348,30 +290,17 @@ const sellerGroupsOf = (
    ITEM COUNT
 ========================================================= */
 
-const countItems = (
-  row = {},
-) => {
+const countItems = (row = {}) => {
   if (Array.isArray(row.items)) {
-    return row.items.reduce(
-      (sum, item) =>
-        sum +
-        Number(item.quantity || 1),
-      0,
-    );
+    return row.items.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
   }
 
-  const groups =
-    sellerGroupsOf(row);
+  const groups = sellerGroupsOf(row);
 
-  const quantity =
-    groups.reduce(
-      (sum, group) =>
-        sum +
-        Number(
-          group.quantity || 0,
-        ),
-      0,
-    );
+  const quantity = groups.reduce(
+    (sum, group) => sum + Number(group.quantity || 0),
+    0,
+  );
 
   return firstDefined(
     quantity || null,
@@ -389,46 +318,28 @@ const countItems = (
    SHIPMENT STATUS
 ========================================================= */
 
-const shipmentStatusOf = (
-  row = {},
-) => {
+const shipmentStatusOf = (row = {}) => {
   const forwardShipments = (
-    Array.isArray(
-      row.relations?.shipments,
-    )
-      ? row.relations.shipments
-      : []
-  ).filter(
-    (shipment) =>
-      String(
-        shipment.direction ||
-          "forward",
-      ) !== "reverse",
-  );
+    Array.isArray(row.relations?.shipments) ? row.relations.shipments : []
+  ).filter((shipment) => String(shipment.direction || "forward") !== "reverse");
 
-  const statusCounts =
-    forwardShipments.reduce(
-      (counts, shipment) => {
-        const status = firstDefined(
-          shipment.status,
-          shipment.shipment_status,
-          shipment.delivery_status,
-        );
-
-        if (!status) {
-          return counts;
-        }
-
-        counts[status] =
-          (counts[status] || 0) + 1;
-
-        return counts;
-      },
-      {},
+  const statusCounts = forwardShipments.reduce((counts, shipment) => {
+    const status = firstDefined(
+      shipment.status,
+      shipment.shipment_status,
+      shipment.delivery_status,
     );
 
-  const statuses =
-    Object.keys(statusCounts);
+    if (!status) {
+      return counts;
+    }
+
+    counts[status] = (counts[status] || 0) + 1;
+
+    return counts;
+  }, {});
+
+  const statuses = Object.keys(statusCounts);
 
   if (statuses.length === 1) {
     return statuses[0];
@@ -436,10 +347,7 @@ const shipmentStatusOf = (
 
   if (statuses.length > 1) {
     return statuses
-      .map(
-        (status) =>
-          `${status} (${statusCounts[status]})`,
-      )
+      .map((status) => `${status} (${statusCounts[status]})`)
       .join(", ");
   }
 
@@ -455,23 +363,12 @@ const shipmentStatusOf = (
    PAYOUT WINDOW
 ========================================================= */
 
-const payoutWindowOf = (
-  row = {},
-) => {
-  const items = Array.isArray(
-    row.items,
-  )
-    ? row.items
-    : [];
+const payoutWindowOf = (row = {}) => {
+  const items = Array.isArray(row.items) ? row.items : [];
 
-  const commissions =
-    Array.isArray(
-      row.relations
-        ?.sellerCommissions,
-    )
-      ? row.relations
-          .sellerCommissions
-      : [];
+  const commissions = Array.isArray(row.relations?.sellerCommissions)
+    ? row.relations.sellerCommissions
+    : [];
 
   const deadlines = items
     .map((item) =>
@@ -484,43 +381,25 @@ const payoutWindowOf = (
     )
     .filter(Boolean);
 
-  const latestDeadline =
-    deadlines.length
-      ? deadlines.reduce(
-          (latest, value) =>
-            new Date(value).getTime() >
-            new Date(
-              latest,
-            ).getTime()
-              ? value
-              : latest,
-        )
-      : null;
+  const latestDeadline = deadlines.length
+    ? deadlines.reduce((latest, value) =>
+        new Date(value).getTime() > new Date(latest).getTime() ? value : latest,
+      )
+    : null;
 
   const held = items.some(
     (item) =>
-      String(
-        item.payout_status ||
-          item.payoutStatus ||
-          "",
-      ).toLowerCase() === "held",
+      String(item.payout_status || item.payoutStatus || "").toLowerCase() ===
+      "held",
   );
 
   const paid =
     commissions.length > 0 &&
     commissions.every(
-      (commission) =>
-        String(
-          commission.status || "",
-        ).toLowerCase() ===
-        "paid",
+      (commission) => String(commission.status || "").toLowerCase() === "paid",
     );
 
-  const fulfilled =
-    String(
-      row.status || "",
-    ).toLowerCase() ===
-    "fulfilled";
+  const fulfilled = String(row.status || "").toLowerCase() === "fulfilled";
 
   return {
     latestDeadline,
@@ -534,34 +413,24 @@ const payoutWindowOf = (
    RETURN WINDOW LABEL
 ========================================================= */
 
-const returnWindowLabel = (
-  deadline,
-) => {
+const returnWindowLabel = (deadline) => {
   if (!deadline) {
     return "Starts after delivery";
   }
 
-  const remaining =
-    new Date(deadline).getTime() -
-    Date.now();
+  const remaining = new Date(deadline).getTime() - Date.now();
 
   if (remaining <= 0) {
     return "Return window closed";
   }
 
-  const hours = Math.ceil(
-    remaining / 3600000,
-  );
+  const hours = Math.ceil(remaining / 3600000);
 
   if (hours <= 48) {
-    return `${hours} hour${
-      hours === 1 ? "" : "s"
-    } remaining`;
+    return `${hours} hour${hours === 1 ? "" : "s"} remaining`;
   }
 
-  const days = Math.ceil(
-    hours / 24,
-  );
+  const days = Math.ceil(hours / 24);
 
   return `${days} days remaining`;
 };
@@ -585,9 +454,7 @@ const createColumns = (
     render: (value, row) => (
       <OrderLink
         orderId={orderIdOf(row)}
-        orderNumber={
-          value || row.orderNumber
-        }
+        orderNumber={value || row.orderNumber}
       />
     ),
   },
@@ -599,14 +466,10 @@ const createColumns = (
           label: "Buyer",
 
           render: (_, row) => {
-            const shippingAddress =
-              normalizeJson(
-                firstDefined(
-                  row.shipping_address,
-                  row.shippingAddress,
-                ),
-                {},
-              );
+            const shippingAddress = normalizeJson(
+              firstDefined(row.shipping_address, row.shippingAddress),
+              {},
+            );
 
             const buyer =
               row.relations?.buyer ||
@@ -633,13 +496,12 @@ const createColumns = (
               row.buyer_email ||
               shippingAddress.email;
 
-            const buyerId =
-              firstDefined(
-                buyer.id,
-                buyer._id,
-                row.buyer_id,
-                row.buyerId,
-              );
+            const buyerId = firstDefined(
+              buyer.id,
+              buyer._id,
+              row.buyer_id,
+              row.buyerId,
+            );
 
             const buyerContent = (
               <>
@@ -650,15 +512,11 @@ const createColumns = (
                 )}
 
                 {email && !name && (
-                  <div className="text-sm text-gray-700">
-                    {email}
-                  </div>
+                  <div className="text-sm text-gray-700">{email}</div>
                 )}
 
                 {email && name && (
-                  <div className="text-xs text-gray-400">
-                    {email}
-                  </div>
+                  <div className="text-xs text-gray-400">{email}</div>
                 )}
 
                 {!name && !email && (
@@ -669,21 +527,16 @@ const createColumns = (
               </>
             );
 
-            return canOpenBuyerDetails &&
-              buyerId ? (
+            return canOpenBuyerDetails && buyerId ? (
               <UserLink
                 userId={buyerId}
-                userName={
-                  name || email
-                }
+                userName={name || email}
                 className="block text-left"
               >
                 {buyerContent}
               </UserLink>
             ) : (
-              <div className="text-left">
-                {buyerContent}
-              </div>
+              <div className="text-left">{buyerContent}</div>
             );
           },
         },
@@ -697,66 +550,49 @@ const createColumns = (
           label: "Seller / Org",
 
           render: (_, row) => {
-            const sellerGroups =
-              sellerGroupsOf(row);
+            const sellerGroups = sellerGroupsOf(row);
 
-            const primaryGroup =
-              sellerGroups[0] || {};
+            const primaryGroup = sellerGroups[0] || {};
 
             const primarySeller =
-              row.relations
-                ?.sellers?.[0] ||
-              row.seller ||
-              {};
+              row.relations?.sellers?.[0] || row.seller || {};
 
-            const sellerName =
-              firstDefined(
-                row.sellerName,
-                primaryGroup.sellerName,
-                sellerNameOf(
-                  primarySeller,
-                ),
-                row.sellerSnapshot?.name,
-                row.seller_snapshot?.name,
-              );
+            const sellerName = firstDefined(
+              row.sellerName,
+              primaryGroup.sellerName,
+              sellerNameOf(primarySeller),
+              row.sellerSnapshot?.name,
+              row.seller_snapshot?.name,
+            );
 
-            const organizationName =
-              firstDefined(
-                row.organizationName,
-                primaryGroup.organizationName,
-                organizationNameOf(
-                  primaryGroup.organizationSnapshot,
-                ),
-                row.organization?.legalName,
-                row.organizationSnapshot
-                  ?.legalName,
-                row.organization_snapshot
-                  ?.legalName,
-                row.organizationSnapshot
-                  ?.storeDisplayName,
-                row.organization_snapshot
-                  ?.storeDisplayName,
-              );
+            const organizationName = firstDefined(
+              row.organizationName,
+              primaryGroup.organizationName,
+              organizationNameOf(primaryGroup.organizationSnapshot),
+              row.organization?.legalName,
+              row.organizationSnapshot?.legalName,
+              row.organization_snapshot?.legalName,
+              row.organizationSnapshot?.storeDisplayName,
+              row.organization_snapshot?.storeDisplayName,
+            );
 
-            const sellerId =
-              firstDefined(
-                row.sellerId,
-                row.seller_id,
-                primaryGroup.sellerId,
-                primaryGroup.seller_id,
-                primarySeller.id,
-                primarySeller._id,
-                row.seller?.id,
-                row.seller?._id,
-              );
+            const sellerId = firstDefined(
+              row.sellerId,
+              row.seller_id,
+              primaryGroup.sellerId,
+              primaryGroup.seller_id,
+              primarySeller.id,
+              primarySeller._id,
+              row.seller?.id,
+              row.seller?._id,
+            );
 
-            const organizationId =
-              firstDefined(
-                row.organizationId,
-                row.organization_id,
-                primaryGroup.organizationId,
-                primaryGroup.organization_id,
-              );
+            const organizationId = firstDefined(
+              row.organizationId,
+              row.organization_id,
+              primaryGroup.organizationId,
+              primaryGroup.organization_id,
+            );
 
             if (
               !sellerName &&
@@ -764,33 +600,20 @@ const createColumns = (
               !sellerId &&
               !organizationId
             ) {
-              return (
-                <span className="text-gray-400">
-                  —
-                </span>
-              );
+              return <span className="text-gray-400">—</span>;
             }
 
-            const canLinkSeller =
-              Boolean(
-                sellerId &&
-                  canOpenSellerDetails,
-              );
+            const canLinkSeller = Boolean(sellerId && canOpenSellerDetails);
 
             const content = (
               <>
                 <div className="text-sm font-medium text-gray-800">
-                  {organizationName ||
-                    sellerName ||
-                    "Seller"}
+                  {organizationName || sellerName || "Seller"}
                 </div>
 
-                {sellerName &&
-                  organizationName && (
-                    <div className="text-xs text-gray-400">
-                      {sellerName}
-                    </div>
-                  )}
+                {sellerName && organizationName && (
+                  <div className="text-xs text-gray-400">{sellerName}</div>
+                )}
 
                 {canLinkSeller && (
                   <div className="text-[11px] font-medium text-[#2f6fed]">
@@ -798,39 +621,30 @@ const createColumns = (
                   </div>
                 )}
 
-                {sellerGroups.length >
-                  1 && (
+                {sellerGroups.length > 1 && (
                   <div className="text-xs text-gray-400">
-                    +
-                    {sellerGroups.length -
-                      1}{" "}
-                    more seller
+                    +{sellerGroups.length - 1} more seller
                   </div>
                 )}
 
-                {!sellerName &&
-                  sellerId && (
-                    <div className="text-xs text-gray-400">
-                      Seller details unavailable
-                    </div>
-                  )}
+                {!sellerName && sellerId && (
+                  <div className="text-xs text-gray-400">
+                    Seller details unavailable
+                  </div>
+                )}
               </>
             );
 
             return canLinkSeller ? (
               <SellerLink
                 sellerId={sellerId}
-                sellerName={
-                  sellerName
-                }
+                sellerName={sellerName}
                 className="block text-left"
               >
                 {content}
               </SellerLink>
             ) : (
-              <div className="text-left">
-                {content}
-              </div>
+              <div className="text-left">{content}</div>
             );
           },
         },
@@ -841,11 +655,7 @@ const createColumns = (
     key: "items",
     label: "Items",
 
-    render: (_, row) => (
-      <span className="font-mono">
-        {countItems(row)}
-      </span>
-    ),
+    render: (_, row) => <span className="font-mono">{countItems(row)}</span>,
   },
 
   {
@@ -855,12 +665,7 @@ const createColumns = (
 
     render: (value, row) => (
       <span className="font-mono font-semibold">
-        {formatMoney(
-          firstDefined(
-            value,
-            row.totalAmount,
-          ),
-        )}
+        {formatMoney(firstDefined(value, row.totalAmount))}
       </span>
     ),
   },
@@ -870,31 +675,17 @@ const createColumns = (
     label: "Payment Type",
 
     render: (value, row) => {
-      const provider =
-        String(
-          firstDefined(
-            value,
-            row.paymentProvider,
-            "",
-          ),
-        ).toLowerCase();
+      const provider = String(
+        firstDefined(value, row.paymentProvider, ""),
+      ).toLowerCase();
 
-      const label =
-        PAYMENT_TYPE_OPTIONS.find(
-          (option) =>
-            option.value ===
-            provider,
-        )?.label;
+      const label = PAYMENT_TYPE_OPTIONS.find(
+        (option) => option.value === provider,
+      )?.label;
 
       return (
         <span className="text-sm font-medium text-gray-700">
-          {label ||
-            (provider
-              ? provider.replace(
-                  /_/g,
-                  " ",
-                )
-              : "N/A")}
+          {label || (provider ? provider.replace(/_/g, " ") : "N/A")}
         </span>
       );
     },
@@ -905,13 +696,7 @@ const createColumns = (
     label: "Payment Status",
 
     render: (value, row) => (
-      <StatusBadge
-        status={firstDefined(
-          value,
-          row.paymentStatus,
-        )}
-        dot
-      />
+      <StatusBadge status={firstDefined(value, row.paymentStatus)} dot />
     ),
   },
 
@@ -919,9 +704,7 @@ const createColumns = (
     key: "status",
     label: "Order Status",
 
-    render: (value) => (
-      <StatusBadge status={value} />
-    ),
+    render: (value) => <StatusBadge status={value} />,
   },
 
   {
@@ -929,20 +712,12 @@ const createColumns = (
     label: "Shipment Status",
 
     render: (value, row) => {
-      const status = firstDefined(
-        value,
-        shipmentStatusOf(row),
-      );
+      const status = firstDefined(value, shipmentStatusOf(row));
 
       return status ? (
-        <StatusBadge
-          status={status}
-          dot
-        />
+        <StatusBadge status={status} dot />
       ) : (
-        <span className="text-gray-400">
-          N/A
-        </span>
+        <span className="text-gray-400">N/A</span>
       );
     },
   },
@@ -952,12 +727,8 @@ const createColumns = (
    API RESPONSE
 ========================================================= */
 
-const getListPayload = (
-  selector = {},
-) => {
-  const data =
-    selector?.getOrderListData?.data
-      ?.data;
+const getListPayload = (selector = {}) => {
+  const data = selector?.getOrderListData?.data?.data;
 
   if (Array.isArray(data)) {
     return {
@@ -967,16 +738,10 @@ const getListPayload = (
   }
 
   return {
-    items:
-      data?.list ||
-      data?.items ||
-      [],
+    items: data?.list || data?.items || [],
 
     total: Number(
-      data?.total ||
-        data?.list?.length ||
-        data?.items?.length ||
-        0,
+      data?.total || data?.list?.length || data?.items?.length || 0,
     ),
   };
 };
@@ -985,9 +750,7 @@ const getListPayload = (
    EXCEL HELPERS
 ========================================================= */
 
-const excelDate = (
-  value,
-) => {
+const excelDate = (value) => {
   if (!value) {
     return "—";
   }
@@ -998,31 +761,22 @@ const excelDate = (
     return String(value);
   }
 
-  return date.toLocaleString(
-    "en-IN",
-    {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    },
-  );
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 };
 
-const excelNumber = (
-  value,
-) => {
+const excelNumber = (value) => {
   const number = Number(value);
 
-  return Number.isFinite(number)
-    ? number
-    : 0;
+  return Number.isFinite(number) ? number : 0;
 };
 
-const productNameOf = (
-  item = {},
-) =>
+const productNameOf = (item = {}) =>
   firstDefined(
     item.productName,
     item.product_name,
@@ -1033,9 +787,7 @@ const productNameOf = (
     "—",
   );
 
-const skuOf = (
-  item = {},
-) =>
+const skuOf = (item = {}) =>
   firstDefined(
     item.variantSku,
     item.variant_sku,
@@ -1044,9 +796,7 @@ const skuOf = (
     "—",
   );
 
-const variantNameOf = (
-  item = {},
-) =>
+const variantNameOf = (item = {}) =>
   firstDefined(
     item.variantName,
     item.variant_name,
@@ -1056,9 +806,7 @@ const variantNameOf = (
     "—",
   );
 
-const itemAmountOf = (
-  item = {},
-) =>
+const itemAmountOf = (item = {}) =>
   firstDefined(
     item.lineTotal,
     item.line_total,
@@ -1070,14 +818,8 @@ const itemAmountOf = (
     0,
   );
 
-const itemTaxOf = (
-  item = {},
-) =>
-  firstDefined(
-    item.taxAmount,
-    item.tax_amount,
-    0,
-);
+const itemTaxOf = (item = {}) =>
+  firstDefined(item.taxAmount, item.tax_amount, 0);
 
 /* =========================================================
    EXPORT DATE HELPERS
@@ -1092,9 +834,7 @@ const itemTaxOf = (
  * and
  * All - All
  */
-const formatExportDateLabel = (
-  value,
-) => {
+const formatExportDateLabel = (value) => {
   if (!value) {
     return "";
   }
@@ -1105,32 +845,20 @@ const formatExportDateLabel = (
     return String(value);
   }
 
-  return date.toLocaleDateString(
-    "en-IN",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    },
-  );
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 };
 
 /**
  * Creates a readable date range for the Excel summary.
  */
-const formatExportDateRange = (
-  fromDate,
-  toDate,
-) => {
-  const from =
-    formatExportDateLabel(
-      fromDate,
-    );
+const formatExportDateRange = (fromDate, toDate) => {
+  const from = formatExportDateLabel(fromDate);
 
-  const to =
-    formatExportDateLabel(
-      toDate,
-    );
+  const to = formatExportDateLabel(toDate);
 
   if (!from && !to) {
     return "All Dates";
@@ -1150,19 +878,10 @@ const formatExportDateRange = (
 /**
  * Creates a clean filename date range.
  */
-const buildExportFilename = (
-  fromDate,
-  toDate,
-) => {
-  const from =
-    formatExportDateLabel(
-      fromDate,
-    ).replace(/\s+/g, "-");
+const buildExportFilename = (fromDate, toDate) => {
+  const from = formatExportDateLabel(fromDate).replace(/\s+/g, "-");
 
-  const to =
-    formatExportDateLabel(
-      toDate,
-    ).replace(/\s+/g, "-");
+  const to = formatExportDateLabel(toDate).replace(/\s+/g, "-");
 
   if (!from && !to) {
     return "Orders_Report.xlsx";
@@ -1183,18 +902,10 @@ const buildExportFilename = (
    EXPORT SELLER INFO
 ========================================================= */
 
-const sellerExportInfo = (
-  order = {},
-) => {
-  const group =
-    sellerGroupsOf(order)[0] ||
-    {};
+const sellerExportInfo = (order = {}) => {
+  const group = sellerGroupsOf(order)[0] || {};
 
-  const seller =
-    order.relations
-      ?.sellers?.[0] ||
-    order.seller ||
-    {};
+  const seller = order.relations?.sellers?.[0] || order.seller || {};
 
   return {
     sellerName: firstDefined(
@@ -1204,25 +915,17 @@ const sellerExportInfo = (
       "—",
     ),
 
-    organizationName:
-      firstDefined(
-        order.organizationName,
-        group.organizationName,
-        organizationNameOf(
-          group.organizationSnapshot,
-        ),
-        order.organization
-          ?.legalName,
-        order.organizationSnapshot
-          ?.legalName,
-        order.organization_snapshot
-          ?.legalName,
-        order.organizationSnapshot
-          ?.storeDisplayName,
-        order.organization_snapshot
-          ?.storeDisplayName,
-        "—",
-      ),
+    organizationName: firstDefined(
+      order.organizationName,
+      group.organizationName,
+      organizationNameOf(group.organizationSnapshot),
+      order.organization?.legalName,
+      order.organizationSnapshot?.legalName,
+      order.organization_snapshot?.legalName,
+      order.organizationSnapshot?.storeDisplayName,
+      order.organization_snapshot?.storeDisplayName,
+      "—",
+    ),
   };
 };
 
@@ -1230,17 +933,11 @@ const sellerExportInfo = (
    EXPORT BUYER INFO
 ========================================================= */
 
-const buyerNameOf = (
-  order = {},
-) => {
-  const shippingAddress =
-    normalizeJson(
-      firstDefined(
-        order.shipping_address,
-        order.shippingAddress,
-      ),
-      {},
-    );
+const buyerNameOf = (order = {}) => {
+  const shippingAddress = normalizeJson(
+    firstDefined(order.shipping_address, order.shippingAddress),
+    {},
+  );
 
   const buyer =
     order.relations?.buyer ||
@@ -1262,17 +959,11 @@ const buyerNameOf = (
   );
 };
 
-const buyerEmailOf = (
-  order = {},
-) => {
-  const shippingAddress =
-    normalizeJson(
-      firstDefined(
-        order.shipping_address,
-        order.shippingAddress,
-      ),
-      {},
-    );
+const buyerEmailOf = (order = {}) => {
+  const shippingAddress = normalizeJson(
+    firstDefined(order.shipping_address, order.shippingAddress),
+    {},
+  );
 
   const buyer =
     order.relations?.buyer ||
@@ -1295,29 +986,14 @@ const buyerEmailOf = (
    PAYMENT TYPE LABEL
 ========================================================= */
 
-const paymentTypeLabelOf = (
-  order = {},
-) => {
-  const provider =
-    String(
-      firstDefined(
-        order.payment_provider,
-        order.paymentProvider,
-        "",
-      ),
-    ).toLowerCase();
+const paymentTypeLabelOf = (order = {}) => {
+  const provider = String(
+    firstDefined(order.payment_provider, order.paymentProvider, ""),
+  ).toLowerCase();
 
   return (
-    PAYMENT_TYPE_OPTIONS.find(
-      (option) =>
-        option.value === provider,
-    )?.label ||
-    (provider
-      ? provider.replace(
-          /_/g,
-          " ",
-        )
-      : "N/A")
+    PAYMENT_TYPE_OPTIONS.find((option) => option.value === provider)?.label ||
+    (provider ? provider.replace(/_/g, " ") : "N/A")
   );
 };
 
@@ -1325,136 +1001,90 @@ const paymentTypeLabelOf = (
    BUILD EXCEL DATA
 ========================================================= */
 
-const buildOrderExportData = (
-  orders = [],
-  filters = {},
-) => {
-  const totalOrders =
-    orders.length;
+const buildOrderExportData = (orders = [], filters = {}) => {
+  const totalOrders = orders.length;
 
-  const totalItems =
-    orders.reduce(
-      (sum, order) =>
-        sum +
-        Number(
-          countItems(order) || 0,
+  const totalItems = orders.reduce(
+    (sum, order) => sum + Number(countItems(order) || 0),
+    0,
+  );
+
+  const totalOrderAmount = orders.reduce(
+    (sum, order) =>
+      sum + excelNumber(firstDefined(order.total_amount, order.totalAmount, 0)),
+    0,
+  );
+
+  const totalSubtotal = orders.reduce(
+    (sum, order) =>
+      sum +
+      excelNumber(
+        firstDefined(
+          order.subtotal_amount,
+          order.subtotalAmount,
+          order.subtotal,
+          0,
         ),
-      0,
-    );
+      ),
+    0,
+  );
 
-  const totalOrderAmount =
-    orders.reduce(
-      (sum, order) =>
-        sum +
-        excelNumber(
-          firstDefined(
-            order.total_amount,
-            order.totalAmount,
-            0,
-          ),
+  const totalDiscount = orders.reduce(
+    (sum, order) =>
+      sum +
+      excelNumber(
+        firstDefined(
+          order.discount_amount,
+          order.discountAmount,
+          order.discount,
+          0,
         ),
-      0,
-    );
+      ),
+    0,
+  );
 
-  const totalSubtotal =
-    orders.reduce(
-      (sum, order) =>
-        sum +
-        excelNumber(
-          firstDefined(
-            order.subtotal_amount,
-            order.subtotalAmount,
-            order.subtotal,
-            0,
-          ),
+  const totalTax = orders.reduce(
+    (sum, order) =>
+      sum +
+      excelNumber(
+        firstDefined(order.tax_amount, order.taxAmount, order.tax, 0),
+      ),
+    0,
+  );
+
+  const totalShippingFee = orders.reduce(
+    (sum, order) =>
+      sum +
+      excelNumber(
+        firstDefined(
+          order.shipping_fee_amount,
+          order.shippingFeeAmount,
+          order.shipping_fee,
+          order.shippingFee,
+          0,
         ),
-      0,
-    );
+      ),
+    0,
+  );
 
-  const totalDiscount =
-    orders.reduce(
-      (sum, order) =>
-        sum +
-        excelNumber(
-          firstDefined(
-            order.discount_amount,
-            order.discountAmount,
-            order.discount,
-            0,
-          ),
-        ),
-      0,
-    );
+  const totalPayableAmount = orders.reduce(
+    (sum, order) =>
+      sum +
+      excelNumber(firstDefined(order.payable_amount, order.payableAmount, 0)),
+    0,
+  );
 
-  const totalTax =
-    orders.reduce(
-      (sum, order) =>
-        sum +
-        excelNumber(
-          firstDefined(
-            order.tax_amount,
-            order.taxAmount,
-            order.tax,
-            0,
-          ),
-        ),
-      0,
-    );
+  const capturedOrders = orders.filter(
+    (order) =>
+      String(
+        firstDefined(order.payment_status, order.paymentStatus, ""),
+      ).toLowerCase() === "captured",
+  ).length;
 
-  const totalShippingFee =
-    orders.reduce(
-      (sum, order) =>
-        sum +
-        excelNumber(
-          firstDefined(
-            order.shipping_fee_amount,
-            order.shippingFeeAmount,
-            order.shipping_fee,
-            order.shippingFee,
-            0,
-          ),
-        ),
-      0,
-    );
-
-  const totalPayableAmount =
-    orders.reduce(
-      (sum, order) =>
-        sum +
-        excelNumber(
-          firstDefined(
-            order.payable_amount,
-            order.payableAmount,
-            0,
-          ),
-        ),
-      0,
-    );
-
-  const capturedOrders =
-    orders.filter(
-      (order) =>
-        String(
-          firstDefined(
-            order.payment_status,
-            order.paymentStatus,
-            "",
-          ),
-        ).toLowerCase() ===
-        "captured",
-    ).length;
-
-  const deliveredOrders =
-    orders.filter(
-      (order) =>
-        String(
-          firstDefined(
-            order.status,
-            "",
-          ),
-        ).toLowerCase() ===
-        "delivered",
-    ).length;
+  const deliveredOrders = orders.filter(
+    (order) =>
+      String(firstDefined(order.status, "")).toLowerCase() === "delivered",
+  ).length;
 
   /* =====================================================
      SUMMARY SHEET
@@ -1467,10 +1097,7 @@ const buildOrderExportData = (
     },
     {
       field: "Date Range",
-      value: formatExportDateRange(
-        filters.fromDate,
-        filters.toDate,
-      ),
+      value: formatExportDateRange(filters.fromDate, filters.toDate),
     },
     {
       field: "Total Orders",
@@ -1518,202 +1145,128 @@ const buildOrderExportData = (
      DETAILS SHEET
   ===================================================== */
 
-  const detailRows =
-    orders.flatMap(
-      (order, orderIndex) => {
-        const seller =
-          sellerExportInfo(order);
+  const detailRows = orders.flatMap((order, orderIndex) => {
+    const seller = sellerExportInfo(order);
 
-        const items = Array.isArray(
-          order.items,
-        )
-          ? order.items
-          : [];
+    const items = Array.isArray(order.items) ? order.items : [];
 
-        /*
-         * Normalize pricingSummary because
-         * API may return it either as an object
-         * or as a JSON string.
-         */
-        const pricingSummary =
-          normalizeJson(
-            order.metadata
-              ?.pricingSummary,
-            {},
-          );
+    /*
+     * Normalize pricingSummary because
+     * API may return it either as an object
+     * or as a JSON string.
+     */
+    const pricingSummary = normalizeJson(order.metadata?.pricingSummary, {});
 
-        const settlement =
-          Array.isArray(
-            pricingSummary.sellerSettlementBreakup,
-          )
-            ? pricingSummary
-                .sellerSettlementBreakup[0] ||
-              {}
-            : {};
+    const settlement = Array.isArray(pricingSummary.sellerSettlementBreakup)
+      ? pricingSummary.sellerSettlementBreakup[0] || {}
+      : {};
 
-        const base = {
-          serialNumber:
-            orderIndex + 1,
+    const base = {
+      serialNumber: orderIndex + 1,
 
-          orderNumber:
-            firstDefined(
-              order.order_number,
-              order.orderNumber,
-              "—",
-            ),
+      orderNumber: firstDefined(order.order_number, order.orderNumber, "—"),
 
-          orderDate: excelDate(
-            firstDefined(
-              order.created_at,
-              order.createdAt,
-            ),
+      orderDate: excelDate(firstDefined(order.created_at, order.createdAt)),
+
+      buyer: buyerNameOf(order),
+
+      buyerEmail: buyerEmailOf(order),
+
+      seller: seller.sellerName,
+
+      organization: seller.organizationName,
+
+      paymentType: paymentTypeLabelOf(order),
+
+      paymentStatus: firstDefined(
+        order.payment_status,
+        order.paymentStatus,
+        "—",
+      ),
+
+      orderStatus: firstDefined(order.status, "—"),
+
+      shipmentStatus: firstDefined(
+        order.delivery_status,
+        order.deliveryStatus,
+        order.shipmentStatus,
+        order.shipment_status,
+        shipmentStatusOf(order),
+        "—",
+      ),
+    };
+
+    if (!items.length) {
+      return [
+        {
+          ...base,
+
+          productName: "—",
+
+          sku: "—",
+
+          variant: "—",
+
+          quantity: Number(countItems(order)) || 0,
+
+          productAmount: excelNumber(
+            firstDefined(order.subtotal_amount, order.total_amount, 0),
           ),
 
-          buyer:
-            buyerNameOf(order),
+          taxAmount: excelNumber(
+            firstDefined(order.tax_amount, order.taxAmount, 0),
+          ),
 
-          buyerEmail:
-            buyerEmailOf(order),
+          sellerCommission: excelNumber(
+            firstDefined(pricingSummary.sellerCommissionAmount, 0),
+          ),
 
-          seller:
-            seller.sellerName,
-
-          organization:
-            seller.organizationName,
-
-          paymentType:
-            paymentTypeLabelOf(order),
-
-          paymentStatus:
+          sellerPayout: excelNumber(
             firstDefined(
-              order.payment_status,
-              order.paymentStatus,
-              "—",
+              settlement.sellerPayoutAmount,
+              pricingSummary.sellerPayoutAmount,
+              0,
             ),
+          ),
+        },
+      ];
+    }
 
-          orderStatus:
-            firstDefined(
-              order.status,
-              "—",
-            ),
+    return items.map((item) => ({
+      ...base,
 
-          shipmentStatus:
-            firstDefined(
-              order.delivery_status,
-              order.deliveryStatus,
-              order.shipmentStatus,
-              order.shipment_status,
-              shipmentStatusOf(order),
-              "—",
-            ),
-        };
+      productName: productNameOf(item),
 
-        if (!items.length) {
-          return [
-            {
-              ...base,
+      sku: skuOf(item),
 
-              productName: "—",
+      variant: variantNameOf(item),
 
-              sku: "—",
+      quantity: Number(item.quantity || 0),
 
-              variant: "—",
+      productAmount: excelNumber(itemAmountOf(item)),
 
-              quantity:
-                Number(
-                  countItems(order),
-                ) || 0,
+      taxAmount: excelNumber(itemTaxOf(item)),
 
-              productAmount:
-                excelNumber(
-                  firstDefined(
-                    order.subtotal_amount,
-                    order.total_amount,
-                    0,
-                  ),
-                ),
+      sellerCommission: excelNumber(
+        firstDefined(
+          item.sellerCommissionAmount,
+          item.seller_commission_amount,
+          pricingSummary.sellerCommissionAmount,
+          0,
+        ),
+      ),
 
-              taxAmount:
-                excelNumber(
-                  firstDefined(
-                    order.tax_amount,
-                    order.taxAmount,
-                    0,
-                  ),
-                ),
-
-              sellerCommission:
-                excelNumber(
-                  firstDefined(
-                    pricingSummary.sellerCommissionAmount,
-                    0,
-                  ),
-                ),
-
-              sellerPayout:
-                excelNumber(
-                  firstDefined(
-                    settlement.sellerPayoutAmount,
-                    pricingSummary.sellerPayoutAmount,
-                    0,
-                  ),
-                ),
-            },
-          ];
-        }
-
-        return items.map(
-          (item) => ({
-            ...base,
-
-            productName:
-              productNameOf(item),
-
-            sku:
-              skuOf(item),
-
-            variant:
-              variantNameOf(item),
-
-            quantity:
-              Number(
-                item.quantity || 0,
-              ),
-
-            productAmount:
-              excelNumber(
-                itemAmountOf(item),
-              ),
-
-            taxAmount:
-              excelNumber(
-                itemTaxOf(item),
-              ),
-
-            sellerCommission:
-              excelNumber(
-                firstDefined(
-                  item.sellerCommissionAmount,
-                  item.seller_commission_amount,
-                  pricingSummary.sellerCommissionAmount,
-                  0,
-                ),
-              ),
-
-            sellerPayout:
-              excelNumber(
-                firstDefined(
-                  item.sellerPayoutAmount,
-                  item.seller_payout_amount,
-                  settlement.sellerPayoutAmount,
-                  pricingSummary.sellerPayoutAmount,
-                  0,
-                ),
-              ),
-          }),
-        );
-      },
-    );
+      sellerPayout: excelNumber(
+        firstDefined(
+          item.sellerPayoutAmount,
+          item.seller_payout_amount,
+          settlement.sellerPayoutAmount,
+          pricingSummary.sellerPayoutAmount,
+          0,
+        ),
+      ),
+    }));
+  });
 
   return {
     summaryRows,
@@ -1729,53 +1282,35 @@ const Orders = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const {
-    isSeller,
-    isAdmin,
-  } = usePermission();
+  const { isSeller, isAdmin } = usePermission();
 
-  const selector = useSelector(
-    (state) => state.order,
-  );
+  const selector = useSelector((state) => state.order);
 
-  const realtimeRevision =
-    useRealtimeRefresh([
-      "order",
-      "payment",
-      "shipment",
-      "return",
-      "refund",
-    ]);
+  const realtimeRevision = useRealtimeRefresh([
+    "order",
+    "payment",
+    "shipment",
+    "return",
+    "refund",
+  ]);
 
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
-    defaultFilters:
-      getInitialQueryFilters(),
+    defaultFilters: getInitialQueryFilters(),
   });
 
-  const {
-    toQueryParams,
-  } = list;
+  const { toQueryParams } = list;
 
-  const {
-    items,
-    total,
-  } = getListPayload(selector);
+  const { items, total } = getListPayload(selector);
 
-  const orderListState =
-    selector?.getOrderListData;
+  const orderListState = selector?.getOrderListData;
 
   const loading =
-    !!selector?.loading ||
-    (!orderListState?.data &&
-      !orderListState?.error);
+    !!selector?.loading || (!orderListState?.data && !orderListState?.error);
 
-  const [
-    buyerDirectory,
-    setBuyerDirectory,
-  ] = useState({});
+  const [buyerDirectory, setBuyerDirectory] = useState({});
 
   /* =====================================================
      BUYER DIRECTORY
@@ -1785,12 +1320,7 @@ const Orders = () => {
     () => [
       ...new Set(
         items
-          .map((order) =>
-            firstDefined(
-              order.buyer_id,
-              order.buyerId,
-            ),
-          )
+          .map((order) => firstDefined(order.buyer_id, order.buyerId))
           .filter(Boolean),
       ),
     ],
@@ -1798,10 +1328,7 @@ const Orders = () => {
   );
 
   useEffect(() => {
-    if (
-      !isAdmin ||
-      !buyerIds.length
-    ) {
+    if (!isAdmin || !buyerIds.length) {
       setBuyerDirectory({});
       return;
     }
@@ -1819,28 +1346,14 @@ const Orders = () => {
         }
 
         setBuyerDirectory(
-          buyers.reduce(
-            (
-              directory,
-              buyer,
-            ) => {
-              directory[
-                String(
-                  buyer.value,
-                )
-              ] = {
-                name:
-                  buyer.label,
-                email:
-                  buyer.meta
-                    ?.email ||
-                  "",
-              };
+          buyers.reduce((directory, buyer) => {
+            directory[String(buyer.value)] = {
+              name: buyer.label,
+              email: buyer.meta?.email || "",
+            };
 
-              return directory;
-            },
-            {},
-          ),
+            return directory;
+          }, {}),
         );
       })
       .catch(() => {
@@ -1852,142 +1365,84 @@ const Orders = () => {
     return () => {
       active = false;
     };
-  }, [
-    buyerIds,
-    isAdmin,
-  ]);
+  }, [buyerIds, isAdmin]);
 
   /* =====================================================
      DISPLAY ITEMS
   ===================================================== */
 
-  const displayItems =
-    useMemo(
-      () =>
-        items.map((order) => {
-          const buyerId =
-            firstDefined(
-              order.buyer_id,
-              order.buyerId,
-            );
+  const displayItems = useMemo(
+    () =>
+      items.map((order) => {
+        const buyerId = firstDefined(order.buyer_id, order.buyerId);
 
-          const buyer =
-            buyerId
-              ? buyerDirectory[
-                  String(buyerId)
-                ]
-              : null;
+        const buyer = buyerId ? buyerDirectory[String(buyerId)] : null;
 
-          if (!buyer) {
-            return order;
-          }
+        if (!buyer) {
+          return order;
+        }
 
-          return {
-            ...order,
+        return {
+          ...order,
 
-            buyerName:
-              firstDefined(
-                order.buyerName,
-                order.buyer_name,
-                buyer.name,
-              ),
+          buyerName: firstDefined(
+            order.buyerName,
+            order.buyer_name,
+            buyer.name,
+          ),
 
-            buyerEmail:
-              firstDefined(
-                order.buyerEmail,
-                order.buyer_email,
-                buyer.email,
-              ),
-          };
-        }),
-      [
-        items,
-        buyerDirectory,
-      ],
-    );
+          buyerEmail: firstDefined(
+            order.buyerEmail,
+            order.buyer_email,
+            buyer.email,
+          ),
+        };
+      }),
+    [items, buyerDirectory],
+  );
 
   /* =====================================================
      TABLE COLUMNS
   ===================================================== */
 
-  const baseColumns =
-    useMemo(
-      () =>
-        createColumns(
-          navigate,
-          isAdmin,
-          !isSeller,
-          !isSeller,
-          isAdmin,
-        ),
-      [
-        isAdmin,
-        isSeller,
-        navigate,
-      ],
-    );
+  const baseColumns = useMemo(
+    () => createColumns(navigate, isAdmin, !isSeller, !isSeller, isAdmin),
+    [isAdmin, isSeller, navigate],
+  );
 
   /* =====================================================
      FETCH ORDERS
   ===================================================== */
 
   const fetchOrders = () => {
-    const params =
-      toQueryParams();
+    const params = toQueryParams();
+
+    console.log("ORDER FILTER PARAMS:", params);
 
     return dispatch(
       getOrderList({
         page: params.page,
-
         limit: params.limit,
 
-        search:
-          params.search ||
-          undefined,
+        search: params.search || undefined,
+        status: params.status || undefined,
+        paymentStatus: params.paymentStatus || undefined,
+        paymentProvider: params.paymentProvider || undefined,
+        deliveryStatus: params.deliveryStatus || undefined,
 
-        status:
-          params.status ||
-          undefined,
+        buyerId: params.buyerId || undefined,
+        sellerId: params.sellerId || undefined,
 
-        paymentStatus:
-          params.paymentStatus ||
-          undefined,
-
-        paymentProvider:
-          params.paymentProvider ||
-          undefined,
-
-        deliveryStatus:
-          params.deliveryStatus ||
-          undefined,
-
-        buyerId:
-          params.buyerId ||
-          undefined,
-
-        sellerId:
-          params.sellerId ||
-          undefined,
-
-        fromDate:
-          params.fromDate ||
-          undefined,
-
-        toDate:
-          params.toDate ||
-          undefined,
+        fromDate: params.fromDate || undefined,
+        toDate: params.toDate || undefined,
 
         sortBy: params.sortBy,
-
         sortDir: params.sortDir,
       }),
     )
       .unwrap()
       .catch((err) => {
-        toast.error(
-          err?.message ||
-            "Failed to fetch orders",
-        );
+        toast.error(err?.message || "Failed to fetch orders");
       });
   };
 
@@ -2013,153 +1468,134 @@ const Orders = () => {
      EXCEL EXPORT DATA
   ===================================================== */
 
-  const {
-    summaryRows,
-    detailRows,
-  } = useMemo(
-    () =>
-      buildOrderExportData(
-        displayItems,
-        list.filters,
-      ),
-    [
-      displayItems,
-      list.filters,
-    ],
+  const { summaryRows, detailRows } = useMemo(
+    () => buildOrderExportData(displayItems, list.filters),
+    [displayItems, list.filters],
   );
 
   /* =====================================================
      EXCEL FILE NAME
   ===================================================== */
 
-  const exportFilename =
-    useMemo(
-      () =>
-        buildExportFilename(
-          list.filters?.fromDate,
-          list.filters?.toDate,
-        ),
-      [list.filters],
-    );
+  const exportFilename = useMemo(
+    () => buildExportFilename(list.filters?.fromDate, list.filters?.toDate),
+    [list.filters],
+  );
 
   /* =====================================================
      EXCEL SHEETS
   ===================================================== */
 
-  const exportExcelSheets =
-    useMemo(
-      () => [
-        {
-          name: "Order Summary",
+  const exportExcelSheets = useMemo(
+    () => [
+      {
+        name: "Order Summary",
 
-          title: "Order Summary",
+        title: "Order Summary",
 
-          data: summaryRows,
+        data: summaryRows,
 
-          columns: [
-            {
-              key: "field",
-              label: "Field",
-            },
-            {
-              key: "value",
-              label: "Value",
-            },
-          ],
-        },
+        columns: [
+          {
+            key: "field",
+            label: "Field",
+          },
+          {
+            key: "value",
+            label: "Value",
+          },
+        ],
+      },
 
-        {
-          name: "Order Details",
+      {
+        name: "Order Details",
 
-          title: "Order Details",
+        title: "Order Details",
 
-          data: detailRows,
+        data: detailRows,
 
-          columns: [
-            {
-              key: "serialNumber",
-              label: "S.No",
-            },
-            {
-              key: "orderNumber",
-              label: "Order #",
-            },
-            {
-              key: "orderDate",
-              label: "Order Date",
-            },
-            {
-              key: "buyer",
-              label: "Buyer",
-            },
-            {
-              key: "buyerEmail",
-              label: "Buyer Email",
-            },
-            {
-              key: "productName",
-              label: "Product Name",
-            },
-            {
-              key: "sku",
-              label: "SKU",
-            },
-            {
-              key: "variant",
-              label: "Variant",
-            },
-            {
-              key: "quantity",
-              label: "Quantity",
-            },
-            {
-              key: "productAmount",
-              label: "Product Amount",
-            },
-            {
-              key: "taxAmount",
-              label: "Tax Amount",
-            },
-            {
-              key: "seller",
-              label: "Seller",
-            },
-            {
-              key: "organization",
-              label: "Organization",
-            },
-            {
-              key: "sellerCommission",
-              label: "Seller Commission",
-            },
-            {
-              key: "sellerPayout",
-              label: "Seller Payout",
-            },
-            {
-              key: "paymentType",
-              label: "Payment Type",
-            },
-            {
-              key: "paymentStatus",
-              label: "Payment Status",
-            },
-            {
-              key: "orderStatus",
-              label: "Order Status",
-            },
-            {
-              key: "shipmentStatus",
-              label: "Shipment Status",
-            },
-          ],
-        },
-      ],
-      [
-        summaryRows,
-        detailRows,
-      ],
-    );
+        columns: [
+          {
+            key: "serialNumber",
+            label: "S.No",
+          },
+          {
+            key: "orderNumber",
+            label: "Order #",
+          },
+          {
+            key: "orderDate",
+            label: "Order Date",
+          },
+          {
+            key: "buyer",
+            label: "Buyer",
+          },
+          {
+            key: "buyerEmail",
+            label: "Buyer Email",
+          },
+          {
+            key: "productName",
+            label: "Product Name",
+          },
+          {
+            key: "sku",
+            label: "SKU",
+          },
+          {
+            key: "variant",
+            label: "Variant",
+          },
+          {
+            key: "quantity",
+            label: "Quantity",
+          },
+          {
+            key: "productAmount",
+            label: "Product Amount",
+          },
+          {
+            key: "taxAmount",
+            label: "Tax Amount",
+          },
+          {
+            key: "seller",
+            label: "Seller",
+          },
+          {
+            key: "organization",
+            label: "Organization",
+          },
+          {
+            key: "sellerCommission",
+            label: "Seller Commission",
+          },
+          {
+            key: "sellerPayout",
+            label: "Seller Payout",
+          },
+          {
+            key: "paymentType",
+            label: "Payment Type",
+          },
+          {
+            key: "paymentStatus",
+            label: "Payment Status",
+          },
+          {
+            key: "orderStatus",
+            label: "Order Status",
+          },
+          {
+            key: "shipmentStatus",
+            label: "Shipment Status",
+          },
+        ],
+      },
+    ],
+    [summaryRows, detailRows],
+  );
 
   /* =====================================================
      EXPORT HANDLER
@@ -2167,37 +1603,22 @@ const Orders = () => {
 
   const handleExport = () => {
     if (!displayItems.length) {
-      toast.info(
-        "No orders available to export.",
-      );
+      toast.info("No orders available to export.");
       return;
     }
 
     try {
-      const exported =
-        exportToExcelWorkbook(
-          exportExcelSheets,
-          exportFilename,
-        );
+      const exported = exportToExcelWorkbook(exportExcelSheets, exportFilename);
 
       if (exported) {
-        toast.success(
-          "Orders report exported successfully.",
-        );
+        toast.success("Orders report exported successfully.");
       } else {
-        toast.error(
-          "Unable to export orders report.",
-        );
+        toast.error("Unable to export orders report.");
       }
     } catch (error) {
-      console.error(
-        "Orders export error:",
-        error,
-      );
+      console.error("Orders export error:", error);
 
-      toast.error(
-        "Failed to export orders report.",
-      );
+      toast.error("Failed to export orders report.");
     }
   };
 
@@ -2205,35 +1626,21 @@ const Orders = () => {
      FILTER FIELDS
   ===================================================== */
 
-  const filterFields =
-    useMemo(
-      () =>
-        FILTER_FIELDS.filter(
-          (field) => {
-            if (
-              field.key ===
-                "buyerId" &&
-              !isAdmin
-            ) {
-              return false;
-            }
+  const filterFields = useMemo(
+    () =>
+      FILTER_FIELDS.filter((field) => {
+        if (field.key === "buyerId" && !isAdmin) {
+          return false;
+        }
 
-            if (
-              field.key ===
-                "sellerId" &&
-              isSeller
-            ) {
-              return false;
-            }
+        if (field.key === "sellerId" && isSeller) {
+          return false;
+        }
 
-            return true;
-          },
-        ),
-      [
-        isAdmin,
-        isSeller,
-      ],
-    );
+        return true;
+      }),
+    [isAdmin, isSeller],
+  );
 
   /* =====================================================
      FINAL TABLE COLUMNS
@@ -2244,29 +1651,19 @@ const Orders = () => {
 
     {
       key: "_payout_window",
-      label:
-        "Return Window / Payout",
+      label: "Return Window / Payout",
 
       render: (_, row) => {
-        const payout =
-          payoutWindowOf(row);
+        const payout = payoutWindowOf(row);
 
         if (payout.paid) {
-          return (
-            <StatusBadge
-              status="paid"
-              dot
-            />
-          );
+          return <StatusBadge status="paid" dot />;
         }
 
         if (payout.held) {
           return (
             <>
-              <StatusBadge
-                status="held"
-                dot
-              />
+              <StatusBadge status="held" dot />
 
               <div className="mt-1 text-[11px] text-red-600">
                 Return or refund hold
@@ -2278,10 +1675,7 @@ const Orders = () => {
         if (payout.fulfilled) {
           return (
             <>
-              <StatusBadge
-                status="eligible"
-                dot
-              />
+              <StatusBadge status="eligible" dot />
 
               <div className="mt-1 text-[11px] text-green-700">
                 Ready for payout
@@ -2293,26 +1687,17 @@ const Orders = () => {
         return (
           <div>
             <StatusBadge
-              status={
-                payout.latestDeadline
-                  ? "pending"
-                  : "waiting"
-              }
+              status={payout.latestDeadline ? "pending" : "waiting"}
               dot
             />
 
             <div className="mt-1 text-[11px] text-gray-500">
-              {returnWindowLabel(
-                payout.latestDeadline,
-              )}
+              {returnWindowLabel(payout.latestDeadline)}
             </div>
 
             {payout.latestDeadline && (
               <div className="text-[11px] text-gray-400">
-                Until{" "}
-                {formatDateTime12Hour(
-                  payout.latestDeadline,
-                )}
+                Until {formatDateTime12Hour(payout.latestDeadline)}
               </div>
             )}
           </div>
@@ -2326,17 +1711,11 @@ const Orders = () => {
       sortable: true,
 
       render: (value, row) => {
-        const date =
-          firstDefined(
-            value,
-            row.created_at,
-          );
+        const date = firstDefined(value, row.created_at);
 
         return (
           <span className="text-gray-500 text-sm whitespace-nowrap">
-            {formatDateTime12Hour(
-              date,
-            )}
+            {formatDateTime12Hour(date)}
           </span>
         );
       },
@@ -2354,9 +1733,7 @@ const Orders = () => {
         subtitle="Manage and track all customer orders."
         breadcrumbs={[
           {
-            label: isSeller
-              ? "Orders"
-              : "Orders Management",
+            label: isSeller ? "Orders" : "Orders Management",
           },
           {
             label: "Orders List",
@@ -2366,16 +1743,10 @@ const Orders = () => {
           <button
             type="button"
             onClick={handleExport}
-            disabled={
-              loading ||
-              !displayItems.length
-            }
+            disabled={loading || !displayItems.length}
             className="inline-flex items-center gap-2 rounded-md bg-[#CE9F2D] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#b88d25] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <MdFileDownload
-              size={17}
-            />
-
+            <MdFileDownload size={17} />
             Export Report
           </button>
         }
@@ -2388,15 +1759,9 @@ const Orders = () => {
         totalCount={total}
         page={list.page}
         pageSize={list.pageSize}
-        onPageChange={
-          list.setPage
-        }
-        onPageSizeChange={
-          list.setPageSize
-        }
-        onSearch={
-          list.setSearch
-        }
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
+        onSearch={list.setSearch}
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
@@ -2406,121 +1771,61 @@ const Orders = () => {
             : "Search by order number…"
         }
         emptyText="No orders found."
-        emptyIcon={
-          <MdShoppingCart
-            size={40}
-            className="text-gray-200"
-          />
-        }
+        emptyIcon={<MdShoppingCart size={40} className="text-gray-200" />}
         requiredModule="orders"
         filterBar={
           <FilterBar
             filters={filterFields}
             values={list.filters}
-            onChange={
-              list.setFilter
-            }
-            onClear={
-              list.clearFilters
-            }
+            onChange={list.setFilter}
+            onClear={list.clearFilters}
             loading={loading}
-            activeCount={
-              list.activeFilterCount
-            }
+            activeCount={list.activeFilterCount}
           />
         }
         rowActions={(row) => {
-          const payout =
-            payoutWindowOf(row);
+          const payout = payoutWindowOf(row);
 
-          const group =
-            sellerGroupsOf(row)[0] ||
-            {};
+          const group = sellerGroupsOf(row)[0] || {};
 
           const actions = [
             {
               label: "View Details",
 
-              icon: (
-                <MdVisibility
-                  size={16}
-                  className="text-blue-600"
-                />
-              ),
+              icon: <MdVisibility size={16} className="text-blue-600" />,
 
-              requiredModule:
-                "orders",
+              requiredModule: "orders",
 
-              requiredAction:
-                ACTIONS.VIEW,
+              requiredAction: ACTIONS.VIEW,
 
-              onClick: () =>
-                navigate(
-                  `/app/orders/view/${orderIdOf(
-                    row,
-                  )}`,
-                ),
+              onClick: () => navigate(`/app/orders/view/${orderIdOf(row)}`),
             },
           ];
 
-          if (
-            !isSeller &&
-            payout.fulfilled &&
-            !payout.paid
-          ) {
+          if (!isSeller && payout.fulfilled && !payout.paid) {
             actions.push({
-              label:
-                "Manage Payout",
+              label: "Manage Payout",
 
-              icon: (
-                <MdPayments
-                  size={16}
-                  className="text-green-600"
-                />
-              ),
+              icon: <MdPayments size={16} className="text-green-600" />,
 
-              requiredModule:
-                "sellers/commissions",
+              requiredModule: "sellers/commissions",
 
-              requiredAction:
-                ACTIONS.UPDATE,
+              requiredAction: ACTIONS.UPDATE,
 
               onClick: () => {
-                const params =
-                  new URLSearchParams({
-                    orderId:
-                      String(
-                        orderIdOf(
-                          row,
-                        ),
-                      ),
-                  });
+                const params = new URLSearchParams({
+                  orderId: String(orderIdOf(row)),
+                });
 
-                if (
-                  group.sellerId
-                ) {
-                  params.set(
-                    "sellerId",
-                    String(
-                      group.sellerId,
-                    ),
-                  );
+                if (group.sellerId) {
+                  params.set("sellerId", String(group.sellerId));
                 }
 
-                if (
-                  group.organizationId
-                ) {
-                  params.set(
-                    "organizationId",
-                    String(
-                      group.organizationId,
-                    ),
-                  );
+                if (group.organizationId) {
+                  params.set("organizationId", String(group.organizationId));
                 }
 
-                navigate(
-                  `/app/seller-finance?${params.toString()}`,
-                );
+                navigate(`/app/seller-finance?${params.toString()}`);
               },
             });
           }
