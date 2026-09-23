@@ -3388,6 +3388,12 @@ const OrderSummary = () => {
                           "Product",
                         );
                         const variantLabel = getOrderItemVariantLabel(item);
+                        const displayVariant =
+                          variantLabel &&
+                          variantLabel !== "undefined" &&
+                          variantLabel !== "null"
+                            ? variantLabel
+                            : "N/A";
                         const productId = firstDefined(
                           item.product_id,
                           item.productId,
@@ -3417,8 +3423,8 @@ const OrderSummary = () => {
                                 </div>
                               )}
                               {variantLabel && (
-                                <div className="mt-1 text-xs font-semibold text-[#2f6fed]">
-                                  Variant: {variantLabel}
+                                <div className="mt-1 text-xs font-semibold text-[#65718b]">
+                                  Variant: {displayVariant}
                                 </div>
                               )}
                               <div className="text-xs text-[#65718b]">
