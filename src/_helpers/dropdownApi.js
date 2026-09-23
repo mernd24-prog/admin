@@ -87,17 +87,26 @@ export const dropdownApi = {
         limit: Math.min(Math.max(Number(params.limit) || 20, 1), 100),
       },
       (item) => {
+        const profileName = [item.profile?.firstName, item.profile?.lastName]
+          .filter(Boolean)
+          .join(" ");
         const name =
+          // Business/display names often represent an organization. Seller
+          // selectors should identify the seller account holder first.
+          item.sellerName ||
+          item.full_name ||
+          item.fullName ||
+          item.name ||
+          item.userName ||
+          profileName ||
+          item.sellerProfile?.fullName ||
+          item.sellerProfile?.name ||
+          item.sellerProfile?.userName ||
           item.displayName ||
           item.businessName ||
-          item.full_name ||
-          item.userName ||
           item.sellerProfile?.displayName ||
           item.sellerProfile?.businessName ||
           item.sellerProfile?.legalBusinessName ||
-          [item.profile?.firstName, item.profile?.lastName]
-            .filter(Boolean)
-            .join(" ") ||
           item.email ||
           item._id ||
           item.id;

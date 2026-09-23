@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import {
@@ -6,7 +7,6 @@ import {
   MdCheckCircle,
   MdClose,
   MdPayments,
-  MdFilterList,
   MdAccountBalance,
   MdLocalOffer,
   MdLocalShipping,
@@ -23,11 +23,11 @@ import {
   StatusBadge,
   SummaryCard,
   DataTable,
+  FilterBar,
   OrderLink,
 } from "../../../components/Shared";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
@@ -266,6 +266,26 @@ const commissionSearchMatches = (row = {}, search = "", sellerOptions = []) => {
   return haystack.includes(needle);
 };
 
+const commissionMatchesScope = (
+  row = {},
+  sellerId = "",
+  organizationId = "",
+) => {
+  const rowSellerId = row.seller_id || row.sellerId || row.seller?.id;
+  const snapshot = row.organizationSnapshot || row.organization_snapshot || {};
+  const rowOrganizationId =
+    row.organization_id ||
+    row.organizationId ||
+    row.organization?.id ||
+    snapshot.id ||
+    snapshot.organizationId;
+
+  return (
+    (!sellerId || String(rowSellerId) === String(sellerId)) &&
+    (!organizationId || String(rowOrganizationId) === String(organizationId))
+  );
+};
+
 const MetricCard = ({ label, value, hint }) => {
   const Icon =
     {
@@ -331,6 +351,7 @@ const TableShell = ({
   children,
   emptyText,
   loading = false,
+  filterBar,
 }) => {
   const rows = React.Children.toArray(children);
 
@@ -351,17 +372,12 @@ const TableShell = ({
         return cell;
       }
 
-      const className = String(
-        cell.props.className || "",
-      )
-        .replace(
-          /\b(?:px|py|p)-\d+(?:\.\d+)?\b/g,
-          "",
-        )
+      const className = String(cell.props.className || "")
+        .replace(/\b(?:px|py|p)-\d+(?:\.\d+)?\b/g, "")
         .trim();
 
       return (
-        <div className={className}>
+        <div className={`w-full min-w-0 ${className}`}>
           {cell.props.children}
         </div>
       );
@@ -371,9 +387,7 @@ const TableShell = ({
   return (
     <section className="rounded-lg border border-[#E6E6E6] bg-white">
       <div className="border-b border-[#E6E6E6] px-4 py-3">
-        <h2 className="text-sm font-semibold text-[#202337]">
-          {title}
-        </h2>
+        <h2 className="text-sm font-semibold text-[#202337]">{title}</h2>
       </div>
 
       <DataTable
@@ -386,6 +400,7 @@ const TableShell = ({
         emptyText={emptyText}
         cardClassName="overflow-hidden"
         loading={loading}
+        filterBar={filterBar}
       />
     </section>
   );
@@ -458,7 +473,9 @@ const PAYMENT_METHODS = [
 ];
 
 const availablePaymentMethods = (razorpayXEnabled) =>
-  PAYMENT_METHODS.filter((method) => method.value !== "razorpayx" || razorpayXEnabled);
+  PAYMENT_METHODS.filter(
+    (method) => method.value !== "razorpayx" || razorpayXEnabled,
+  );
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
@@ -473,19 +490,42 @@ const STATUS_OPTIONS = [
 
 const SellerFinance = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { sellerId: routeSellerId } = useParams();
+  const detailSellerId = useMemo(() => {
+    if (routeSellerId) return routeSellerId;
+    const match = location.pathname.match(/\/seller-finance\/seller\/([^/]+)/);
+    return match ? decodeURIComponent(match[1]) : "";
+  }, [location.pathname, routeSellerId]);
   const { isSeller } = usePermission();
   const financeState = useSelector((state) => state.sellerCommissions);
   const [financeLoading, setFinanceLoading] = useState(true);
   const initialParams = useMemo(
-    () => new URLSearchParams(window.location.search),
-    [],
+    () => new URLSearchParams(location.search),
+    [location.search],
   );
   const [filters, setFilters] = useState({
-    sellerId: initialParams.get("sellerId") || "",
+    sellerId: detailSellerId || initialParams.get("sellerId") || "",
     organizationId: initialParams.get("organizationId") || "",
     status: "",
     search: initialParams.get("orderId") || "",
   });
+  const isSellerDetail = Boolean(detailSellerId);
+  useEffect(() => {
+    if (!detailSellerId) return;
+    const organizationId = initialParams.get("organizationId") || "";
+    setFilters((previous) =>
+      previous.sellerId === detailSellerId &&
+      previous.organizationId === organizationId
+        ? previous
+        : {
+            ...previous,
+            sellerId: detailSellerId,
+            organizationId,
+          },
+    );
+  }, [detailSellerId, initialParams]);
   const [orderId, setOrderId] = useState(initialParams.get("orderId") || "");
   const [submitting, setSubmitting] = useState(false);
   const [sellerOptions, setSellerOptions] = React.useState([]);
@@ -494,19 +534,29 @@ const SellerFinance = () => {
   const [processOrganizationOptions, setProcessOrganizationOptions] = useState(
     [],
   );
-  const [runtime, setRuntime] = useState({ razorpayX: { enabled: false, mode: "disabled", missingKeys: [] } });
+  const [runtime, setRuntime] = useState({
+    razorpayX: { enabled: false, mode: "disabled", missingKeys: [] },
+  });
   const razorpayXEnabled = runtime?.razorpayX?.enabled === true;
   const defaultPayoutMethod = razorpayXEnabled ? "razorpayx" : "manual";
-  const payoutMethods = useMemo(() => availablePaymentMethods(razorpayXEnabled), [razorpayXEnabled]);
+  const payoutMethods = useMemo(
+    () => availablePaymentMethods(razorpayXEnabled),
+    [razorpayXEnabled],
+  );
 
   const loadRuntime = useCallback(async () => {
     if (isSeller) return;
     try {
-      const response = await apiRequest("GET", ENDPOINTS.commerceSettings.detail);
+      const response = await apiRequest(
+        "GET",
+        ENDPOINTS.commerceSettings.detail,
+      );
       const data = response?.data || response || {};
       setRuntime(data.runtime || {});
     } catch {
-      setRuntime({ razorpayX: { enabled: false, mode: "disabled", missingKeys: [] } });
+      setRuntime({
+        razorpayX: { enabled: false, mode: "disabled", missingKeys: [] },
+      });
     }
   }, [isSeller]);
 
@@ -528,7 +578,7 @@ const SellerFinance = () => {
     open: false,
     mode: "order",
     orderId: initialParams.get("orderId") || "",
-    sellerId: initialParams.get("sellerId") || "",
+    sellerId: detailSellerId || initialParams.get("sellerId") || "",
     organizationId: initialParams.get("organizationId") || "",
     paymentMethod: defaultPayoutMethod,
     paymentReference: "",
@@ -568,81 +618,73 @@ const SellerFinance = () => {
     note: "",
   });
 
-const loadFinance = useCallback(async () => {
-  setFinanceLoading(true);
+  const loadFinance = useCallback(async () => {
+    setFinanceLoading(true);
 
-  try {
-    const cleanSearch = String(filters.search || "")
-      .trim()
-      .replace(/^#/, "");
+    try {
+      const cleanSearch = String(filters.search || "")
+        .trim()
+        .replace(/^#/, "");
 
-    if (isSeller) {
-      const sellerFilters = {
-        status: filters.status,
-        search: cleanSearch,
-        limit: 100,
-      };
+      if (isSeller) {
+        const sellerFilters = {
+          status: filters.status,
+          search: cleanSearch,
+          limit: 100,
+        };
 
-      await Promise.all([
-        dispatch(getSellerCommissions(sellerFilters)).unwrap(),
+        await Promise.all([
+          dispatch(getSellerCommissions(sellerFilters)).unwrap(),
 
-        dispatch(getSellerPayouts(sellerFilters)).unwrap(),
+          dispatch(getSellerPayouts(sellerFilters)).unwrap(),
 
-        dispatch(
-          getMySellerSettlements({
-            ...sellerFilters,
-            limit: 50,
-          }),
-        ).unwrap(),
+          dispatch(
+            getMySellerSettlements({
+              ...sellerFilters,
+              limit: 50,
+            }),
+          ).unwrap(),
 
-        dispatch(
-          getMySellerFinanceSummary(sellerFilters),
-        ).unwrap(),
-      ]);
-    } else {
-      const adminFilters = {
-        ...filters,
-        search: cleanSearch,
-      };
+          dispatch(getMySellerFinanceSummary(sellerFilters)).unwrap(),
+        ]);
+      } else {
+        const adminFilters = {
+          ...filters,
+          search: cleanSearch,
+        };
 
-      await Promise.all([
-        dispatch(
-          getSellerFinanceSummary(adminFilters),
-        ).unwrap(),
+        await Promise.all([
+          dispatch(getSellerFinanceSummary(adminFilters)).unwrap(),
 
-        dispatch(
-          getAdminSellerCommissions({
-            ...adminFilters,
-            limit: 200,
-          }),
-        ).unwrap(),
+          dispatch(
+            getAdminSellerCommissions({
+              ...adminFilters,
+              limit: 200,
+            }),
+          ).unwrap(),
 
-        dispatch(
-          getAdminSellerPayouts({
-            ...adminFilters,
-            limit: 200,
-          }),
-        ).unwrap(),
+          dispatch(
+            getAdminSellerPayouts({
+              ...adminFilters,
+              limit: 200,
+            }),
+          ).unwrap(),
 
-        dispatch(
-          getSellerSettlements({
-            sellerId: filters.sellerId,
-            organizationId: filters.organizationId,
-            limit: 50,
-          }),
-        ).unwrap(),
-      ]);
+          dispatch(
+            getSellerSettlements({
+              sellerId: filters.sellerId,
+              organizationId: filters.organizationId,
+              limit: 50,
+            }),
+          ).unwrap(),
+        ]);
+      }
+    } catch (error) {
+      toast.error(error?.message || error || "Unable to load seller finance");
+    } finally {
+      setFinanceLoading(false);
     }
-  } catch (error) {
-    toast.error(
-      error?.message ||
-        error ||
-        "Unable to load seller finance",
-    );
-  } finally {
-    setFinanceLoading(false);
-  }
-}, [dispatch, filters, isSeller]);
+  }, [dispatch, filters, isSeller]);
 
   useEffect(() => {
     loadFinance();
@@ -679,14 +721,71 @@ const loadFinance = useCallback(async () => {
     ],
     [organizationOptions, filters.sellerId],
   );
+  const sellerFinanceFilters = useMemo(
+    () => [
+      ...(!isSeller && !isSellerDetail
+        ? [
+            {
+              key: "sellerId",
+              type: "select",
+              label: "Seller Name",
+              options: sellerOpts,
+              placeholder: "All Sellers",
+            },
+            {
+              key: "organizationId",
+              type: "select",
+              label: "Store",
+              options: orgOpts,
+              placeholder: filters.sellerId
+                ? "All Organizations"
+                : "Select seller first",
+              disabled: !filters.sellerId,
+            },
+          ]
+        : []),
+      {
+        key: "search",
+        type: "text",
+        label: "Search",
+        placeholder: isSeller
+          ? "Search order or payout..."
+          : "Search order, seller, payout...",
+      },
+      ...(isSeller || isSellerDetail
+        ? [
+            {
+              key: "status",
+              type: "select",
+              label: "Status",
+              options: STATUS_OPTIONS,
+              placeholder: "All Status",
+            },
+          ]
+        : []),
+    ],
+    [filters.sellerId, isSeller, isSellerDetail, orgOpts, sellerOpts],
+  );
   const visibleCommissions = useMemo(
     () =>
       commissions.filter(
         (row) =>
+          commissionMatchesScope(
+            row,
+            filters.sellerId,
+            filters.organizationId,
+          ) &&
           commissionStatusMatches(row, filters.status) &&
           commissionSearchMatches(row, filters.search, sellerOptions),
       ),
-    [commissions, filters.search, filters.status, sellerOptions],
+    [
+      commissions,
+      filters.organizationId,
+      filters.search,
+      filters.sellerId,
+      filters.status,
+      sellerOptions,
+    ],
   );
   const actionableCommissions = useMemo(
     () =>
@@ -1128,7 +1227,8 @@ const loadFinance = useCallback(async () => {
       mode: "order",
       orderId,
       sellerId,
-      organizationId: commission.organization_id || commission.organizationId || "",
+      organizationId:
+        commission.organization_id || commission.organizationId || "",
       paymentMethod: defaultPayoutMethod,
       paymentReference: "",
       periodStart: "",
@@ -1155,7 +1255,9 @@ const loadFinance = useCallback(async () => {
           note: completeModal.note.trim() || undefined,
         }),
       ).unwrap();
-      toast.success(isRazorpayX ? "RazorpayX payout started" : "Payout marked as completed");
+      toast.success(
+        isRazorpayX ? "RazorpayX payout started" : "Payout marked as completed",
+      );
       setCompleteModal({
         open: false,
         payout: null,
@@ -1204,10 +1306,9 @@ const loadFinance = useCallback(async () => {
     setCompleteModal({
       open: true,
       payout,
-      paymentReference:
-        shouldUseRazorpayX
-          ? ""
-          : payout.payment_reference || "",
+      paymentReference: shouldUseRazorpayX
+        ? ""
+        : payout.payment_reference || "",
       paymentMethod:
         payoutMethod === "razorpayx" || payoutMethod === "seller_wallet"
           ? payoutMethod
@@ -1223,7 +1324,11 @@ const loadFinance = useCallback(async () => {
   const refreshPayoutEligibility = async () => {
     try {
       setSubmitting(true);
-      const response = await apiRequest("POST", ENDPOINTS.payouts.refreshEligibility, { limit: 500 });
+      const response = await apiRequest(
+        "POST",
+        ENDPOINTS.payouts.refreshEligibility,
+        { limit: 500 },
+      );
       const result = unwrap(response);
       const eligibleCount = Array.isArray(result.eligibleItems)
         ? result.eligibleItems.filter((item) => item.eligible).length
@@ -1231,10 +1336,14 @@ const loadFinance = useCallback(async () => {
       const fulfilledCount = Array.isArray(result.fulfilledOrders)
         ? result.fulfilledOrders.filter((order) => order.fulfilled).length
         : 0;
-      toast.success(`Payout refresh complete: ${eligibleCount} item(s) eligible, ${fulfilledCount} order(s) fulfilled`);
+      toast.success(
+        `Payout refresh complete: ${eligibleCount} item(s) eligible, ${fulfilledCount} order(s) fulfilled`,
+      );
       await loadFinance();
     } catch (error) {
-      toast.error(error?.message || error || "Unable to refresh payout eligibility");
+      toast.error(
+        error?.message || error || "Unable to refresh payout eligibility",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -1243,20 +1352,48 @@ const loadFinance = useCallback(async () => {
   return (
     <div className="min-h-screen bg-[#f4f6fb]">
       <PageHeader
-        title={isSeller ? "My Finance" : "Seller Finance"}
+        title={
+          isSeller
+            ? "My Finance"
+            : isSellerDetail
+              ? "Seller Finance Details"
+              : "Seller Finance"
+        }
         subtitle={
           isSeller
             ? "View commission deductions, settlement ledger, payout status, and downloadable statements."
-            : "Commission, settlement, refund adjustment, and payout management"
+            : isSellerDetail
+              ? "View commission, settlement, and payout information for the selected seller and organization."
+              : "Commission, settlement, refund adjustment, and payout management"
         }
         breadcrumbs={[
           {
             label: isSeller
               ? "My Finance & Payouts"
               : "Seller Finance & Payouts",
+            to: isSellerDetail ? "/app/seller-finance" : undefined,
           },
-          { label: "Finance Summary" },
+          { label: isSellerDetail ? "Seller Details" : "Finance Summary" },
         ]}
+        backPath={isSellerDetail ? "/app/seller-finance" : undefined}
+        actions={
+          !isSeller && isSellerDetail ? (
+            <PermissionGuard
+              module="sellers/commissions"
+              action={ACTIONS.UPDATE}
+              hide
+            >
+              <button
+                type="button"
+                onClick={refreshPayoutEligibility}
+                disabled={submitting}
+              >
+                <MdRefresh className={submitting ? "animate-spin" : ""} />
+                Refresh Payout Eligibility
+              </button>
+            </PermissionGuard>
+          ) : null
+        }
       />
 
       {/* Commission Breakdown Info Banner */}
@@ -1274,27 +1411,7 @@ const loadFinance = useCallback(async () => {
         value.
       </div>
 
-      {!isSeller && (
-        <div className="mb-4 flex justify-end">
-          <PermissionGuard
-            module="sellers/commissions"
-            action={ACTIONS.UPDATE}
-            hide
-          >
-            <button
-              type="button"
-              onClick={refreshPayoutEligibility}
-              disabled={submitting}
-              className="inline-flex items-center gap-2 rounded-md border border-[#1B1D60] bg-white px-4 py-2 text-sm font-semibold text-[#1B1D60] shadow-sm disabled:opacity-60"
-            >
-              <MdRefresh className={submitting ? "animate-spin" : ""} />
-              Refresh Payout Eligibility
-            </button>
-          </PermissionGuard>
-        </div>
-      )}
-
-      {!isSeller && filters.sellerId && (
+      {!isSeller && isSellerDetail && filters.sellerId && (
         <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           <strong>Eligible</strong> means the item is delivered, its return
           window has closed, and no return, refund, dispute, or payout hold is
@@ -1302,27 +1419,13 @@ const loadFinance = useCallback(async () => {
         </div>
       )}
 
-      {filters.sellerId && (
-        <div className="mb-4 flex flex-wrap gap-2 rounded-lg border border-[#E6E6E6] bg-white p-3">
-          {[
-            ["return_window_open", "Return Window Open"],
-            ["eligible", "Eligible for Payout"],
-            ["held", "Held"],
-            ["", "All"],
-          ].map(([value, label]) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => updateFilter("status", value)}
-              className={`rounded-md px-3 py-2 text-xs font-semibold ${filters.status === value ? "bg-[#2f6fed] text-white" : "bg-[#f3f6ff] text-[#2f6fed]"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {deductionMetrics.map((metric) => (
+          <MetricCard key={metric.label} {...metric} />
+        ))}
+      </div>
 
-      {!isSeller && (
+      {!isSeller && !isSellerDetail && (
         <div className="mb-4">
           <TableShell
             title="Seller-wise Payout Queue"
@@ -1338,70 +1441,135 @@ const loadFinance = useCallback(async () => {
               "Action",
             ]}
             emptyText="No seller commission records found"
+            loading={financeLoading}
+            filterBar={
+              <FilterBar
+                filters={sellerFinanceFilters}
+                values={filters}
+                onChange={updateFilter}
+                onClear={() =>
+                  setFilters({
+                    sellerId: "",
+                    organizationId: "",
+                    status: "",
+                    search: "",
+                  })
+                }
+                loading={financeLoading}
+              />
+            }
           >
             {sellerOverview.length
               ? sellerOverview.map((seller) => (
                   <tr
                     key={seller.sellerId}
                     className={
-                      String(filters.sellerId) === seller.sellerId
+                      String(filters.sellerId) === String(seller.sellerId)
                         ? "bg-blue-50"
                         : ""
                     }
                   >
+                    {/* Seller */}
                     <td className="whitespace-nowrap px-4 py-3">
                       <div className="font-semibold text-[#202337]">
                         {seller.sellerName}
                       </div>
+
                       <div className="font-mono text-[11px] text-[#65718b]">
                         {seller.sellerId}
                       </div>
                     </td>
+
+                    {/* Total Sales */}
                     <td className="whitespace-nowrap px-4 py-3">
-                      {money(seller.gross)}
-                      <div className="text-[11px] text-[#65718b]">
+                      <div className="font-medium text-[#202337]">
+                        {money(seller.gross)}
+                      </div>
+
+                      <div className="mt-1 text-[11px] text-[#65718b]">
                         All rows, including released
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
-                      {money(seller.payableNow)}
-                      <div className="text-[11px] font-normal text-[#65718b]">
+
+                    {/* Payable Now */}
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <div className="font-semibold text-[#208a3c]">
+                        {money(seller.payableNow)}
+                      </div>
+
+                      <div className="mt-1 text-[11px] text-[#65718b]">
                         Eligible and unpaid only
                       </div>
                     </td>
+
+                    {/* Pending Window */}
                     <td className="whitespace-nowrap px-4 py-3">
-                      <StatusBadge status="pending" dot />{" "}
-                      <span className="ml-1">{seller.pending}</span>
-                      <div className="text-[11px] text-[#65718b]">
-                        {money(seller.pendingAmount)}
+                      <div className="flex flex-col items-start">
+                        <StatusBadge status="pending" dot />
+
+                        <span className="mt-1 text-sm font-semibold text-[#202337]">
+                          {seller.pending}
+                        </span>
+
+                        <div className="mt-0.5 text-[11px] text-[#65718b]">
+                          {money(seller.pendingAmount)}
+                        </div>
                       </div>
                     </td>
+
+                    {/* Eligible */}
                     <td className="whitespace-nowrap px-4 py-3">
-                      <StatusBadge status="eligible" dot />{" "}
-                      <span className="ml-1">{seller.eligible}</span>
-                      <div className="text-[11px] text-[#65718b]">
-                        {money(seller.payableNow)}
+                      <div className="flex flex-col items-start">
+                        <StatusBadge status="eligible" dot />
+
+                        <span className="mt-1 text-sm font-semibold text-[#202337]">
+                          {seller.eligible}
+                        </span>
+
+                        <div className="mt-0.5 text-[11px] text-[#65718b]">
+                          {money(seller.payableNow)}
+                        </div>
                       </div>
                     </td>
+
+                    {/* Held */}
                     <td className="whitespace-nowrap px-4 py-3">
-                      <StatusBadge status="held" dot />{" "}
-                      <span className="ml-1">{seller.held}</span>
-                      <div className="text-[11px] text-[#65718b]">
-                        {money(seller.heldAmount)}
+                      <div className="flex flex-col items-start">
+                        <StatusBadge status="held" dot />
+
+                        <span className="mt-1 text-sm font-semibold text-[#202337]">
+                          {seller.held}
+                        </span>
+
+                        <div className="mt-0.5 text-[11px] text-[#65718b]">
+                          {money(seller.heldAmount)}
+                        </div>
                       </div>
                     </td>
+
+                    {/* Already Released */}
                     <td className="whitespace-nowrap px-4 py-3">
-                      <StatusBadge status="released" dot />{" "}
-                      <span className="ml-1">{seller.released}</span>
-                      <div className="text-[11px] text-[#65718b]">
-                        {money(seller.releasedAmount)}
+                      <div className="flex flex-col items-start">
+                        <StatusBadge status="released" dot />
+
+                        <span className="mt-1 text-sm font-semibold text-[#202337]">
+                          {seller.released}
+                        </span>
+
+                        <div className="mt-0.5 text-[11px] text-[#65718b]">
+                          {money(seller.releasedAmount)}
+                        </div>
                       </div>
                     </td>
+
+                    {/* Next Eligible */}
                     <td className="whitespace-nowrap px-4 py-3 text-xs text-[#65718b]">
                       {seller.nextEligibleAt
                         ? formatDateTime12Hour(seller.nextEligibleAt, "—")
                         : "—"}
                     </td>
+
+                    {/* Action */}
                     <td className="whitespace-nowrap px-4 py-3">
                       <div className="flex items-center gap-2 whitespace-nowrap">
                         {seller.eligible > 0 && (
@@ -1420,19 +1588,30 @@ const loadFinance = useCallback(async () => {
                             </button>
                           </PermissionGuard>
                         )}
+
                         <button
                           type="button"
                           className="whitespace-nowrap rounded-md bg-[#2f6fed] px-3 py-2 text-xs font-semibold text-white"
                           onClick={() => {
-                            updateFilter("sellerId", seller.sellerId);
-                            setProcessModal((prev) => ({
-                              ...prev,
-                              sellerId: seller.sellerId,
-                              organizationId: "",
-                            }));
+                            const detailParams = new URLSearchParams();
+
+                            if (filters.organizationId) {
+                              detailParams.set(
+                                "organizationId",
+                                String(filters.organizationId),
+                              );
+                            }
+
+                            const detailQuery = detailParams.toString();
+
+                            navigate(
+                              `/app/seller-finance/seller/${encodeURIComponent(
+                                seller.sellerId,
+                              )}${detailQuery ? `?${detailQuery}` : ""}`,
+                            );
                           }}
                         >
-                          View Seller
+                          View Store
                         </button>
                       </div>
                     </td>
@@ -1443,223 +1622,140 @@ const loadFinance = useCallback(async () => {
         </div>
       )}
 
-      {!isSeller && !filters.sellerId && (
+      {/* {!isSeller && !isSellerDetail && !filters.sellerId && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Select <strong>View Seller</strong> to inspect that seller's
           commissions, return-window dues, settlements, and payout actions.
         </div>
-      )}
+      )} */}
 
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {deductionMetrics.map((metric) => (
-          <MetricCard key={metric.label} {...metric} />
-        ))}
-      </div>
-
-      <div className="rounded-lg border border-[#E6E6E6] bg-white p-3 mb-4">
-        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#202337]">
-          <MdFilterList size={16} className="text-[var(--admin-muted)]" />{" "}
-          Filters
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-          {!isSeller && (
-            <>
-              <FilterSelect
-                options={sellerOpts}
-                value={
-                  sellerOpts.find((opt) => opt.value === filters.sellerId) ||
-                  sellerOpts[0]
+      <div className={`${!isSeller && !isSellerDetail ? "hidden" : "mb-4"}`}>
+        <TableShell
+          title="Order Payout Eligibility"
+          headings={[
+            "Order",
+            "Delivered",
+            "Return Window Starts",
+            "Return Window Ends",
+            "Net Payable",
+            "Can Payout?",
+            "Reason",
+            ...(!isSeller ? ["Action"] : []),
+          ]}
+          emptyText="No order payout records found for this seller"
+          loading={financeLoading}
+          filterBar={
+            isSeller || isSellerDetail ? (
+              <FilterBar
+                filters={sellerFinanceFilters}
+                values={filters}
+                onChange={updateFilter}
+                onClear={() =>
+                  setFilters((prev) => ({ ...prev, status: "", search: "" }))
                 }
-                onChange={(opt) => updateFilter("sellerId", opt?.value || "")}
-                isSearchable={true}
-                isClearable={false}
-                className="w-full [&>div]:!min-w-0"
+                loading={financeLoading}
               />
+            ) : null
+          }
+        >
+          {actionableCommissions.map((row) => {
+            const decision = payoutDecision(row);
 
-              <FilterSelect
-                options={orgOpts}
-                value={
-                  orgOpts.find((opt) => opt.value === filters.organizationId) ||
-                  orgOpts[0]
-                }
-                onChange={(opt) =>
-                  updateFilter("organizationId", opt?.value || "")
-                }
-                isDisabled={!filters.sellerId}
-                isSearchable={true}
-                isClearable={false}
-                className="w-full [&>div]:!min-w-0"
-              />
-            </>
-          )}
+            return (
+              <tr key={`eligibility-${row.id}`}>
+                <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
+                  <OrderLink
+                    orderId={row.order_id || row.orderId}
+                    orderNumber={row.orderNumber || row.order_number}
+                  />
+                </td>
 
-          <input
-            className={inputCls}
-            placeholder={
-              isSeller
-                ? "Search order or payout..."
-                : "Search order, seller, payout..."
-            }
-            value={filters.search}
-            onChange={(e) => updateFilter("search", e.target.value)}
-          />
+                <td className="whitespace-nowrap px-4 py-3 text-xs">
+                  {row.deliveredAt ? (
+                    formatDateTime12Hour(row.deliveredAt, "-")
+                  ) : (
+                    <span className="text-amber-700">Not Delivered</span>
+                  )}
+                </td>
 
-          <FilterSelect
-            options={STATUS_OPTIONS}
-            value={
-              STATUS_OPTIONS.find((opt) => opt.value === filters.status) ||
-              STATUS_OPTIONS[0]
-            }
-            onChange={(opt) => updateFilter("status", opt?.value || "")}
-            isSearchable={false}
-            isClearable={false}
-            className="w-full [&>div]:!min-w-0"
-          />
-        </div>
-      </div>
+                <td className="whitespace-nowrap px-4 py-3 text-xs">
+                  {row.returnWindowStartsAt
+                    ? formatDateTime12Hour(row.returnWindowStartsAt, "-")
+                    : "Starts After Delivery"}
+                </td>
 
-      <div className={`${!isSeller && !filters.sellerId ? "hidden" : "mb-4"}`}>
-  <TableShell
-  title="Order Payout Eligibility"
-  headings={[
-    "Order",
-    "Delivered",
-    "Return Window Starts",
-    "Return Window Ends",
-    "Net Payable",
-    "Can Payout?",
-    "Reason",
-    ...(!isSeller ? ["Action"] : []),
-  ]}
-  emptyText="No order payout records found for this seller"
-  loading={financeLoading}
->
-  {actionableCommissions.map((row) => {
-    const decision = payoutDecision(row);
+                <td className="whitespace-nowrap px-4 py-3 text-xs">
+                  {row.returnWindowEndsAt
+                    ? formatDateTime12Hour(row.returnWindowEndsAt, "—")
+                    : "—"}
 
-    return (
-      <tr key={`eligibility-${row.id}`}>
-        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
-          <OrderLink
-            orderId={row.order_id || row.orderId}
-            orderNumber={
-              row.orderNumber || row.order_number
-            }
-          />
-        </td>
+                  {row.returnWindowEndsAt &&
+                    new Date(row.returnWindowEndsAt) > new Date() && (
+                      <div className="mt-1 font-semibold text-amber-700">
+                        {eligibilityCountdown(row.returnWindowEndsAt)}
+                      </div>
+                    )}
+                </td>
 
-        <td className="whitespace-nowrap px-4 py-3 text-xs">
-          {row.deliveredAt ? (
-            formatDateTime12Hour(
-              row.deliveredAt,
-              "-",
-            )
-          ) : (
-            <span className="text-amber-700">
-              Not Delivered
-            </span>
-          )}
-        </td>
+                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
+                  {money(Math.max(rowMoney(row, "net_amount", "netAmount"), 0))}
+                </td>
 
-        <td className="whitespace-nowrap px-4 py-3 text-xs">
-          {row.returnWindowStartsAt
-            ? formatDateTime12Hour(
-                row.returnWindowStartsAt,
-                "-",
-              )
-            : "Starts After Delivery"}
-        </td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <StatusBadge
+                    status={
+                      decision.allowed
+                        ? "eligible"
+                        : decision.label === "Held"
+                          ? "held"
+                          : decision.label === "Refunded"
+                            ? "refunded"
+                            : "pending"
+                    }
+                    dot
+                  />
 
-        <td className="whitespace-nowrap px-4 py-3 text-xs">
-          {row.returnWindowEndsAt
-            ? formatDateTime12Hour(
-                row.returnWindowEndsAt,
-                "—",
-              )
-            : "—"}
+                  <div className="mt-1 text-xs font-semibold">
+                    {decision.label}
+                  </div>
+                </td>
 
-          {row.returnWindowEndsAt &&
-            new Date(row.returnWindowEndsAt) >
-              new Date() && (
-              <div className="mt-1 font-semibold text-amber-700">
-                {eligibilityCountdown(
-                  row.returnWindowEndsAt,
+                <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">
+                  {formatLabel(decision.reason)}
+                </td>
+
+                {!isSeller && (
+                  <td className="whitespace-nowrap px-4 py-3">
+                    {decision.allowed ? (
+                      <PermissionGuard
+                        module="sellers/commissions"
+                        action={ACTIONS.UPDATE}
+                        hide
+                      >
+                        <button
+                          type="button"
+                          className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white"
+                          onClick={() => openOrderPayoutModal(row)}
+                          disabled={submitting}
+                        >
+                          Payout This Order
+                        </button>
+                      </PermissionGuard>
+                    ) : (
+                      <span className="text-xs text-[#65718b]">
+                        Not Allowed
+                      </span>
+                    )}
+                  </td>
                 )}
-              </div>
-            )}
-        </td>
-
-        <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
-          {money(
-            Math.max(
-              rowMoney(
-                row,
-                "net_amount",
-                "netAmount",
-              ),
-              0,
-            ),
-          )}
-        </td>
-
-        <td className="whitespace-nowrap px-4 py-3">
-          <StatusBadge
-            status={
-              decision.allowed
-                ? "eligible"
-                : decision.label === "Held"
-                  ? "held"
-                  : decision.label === "Refunded"
-                    ? "refunded"
-                    : "pending"
-            }
-            dot
-          />
-
-          <div className="mt-1 text-xs font-semibold">
-            {decision.label}
-          </div>
-        </td>
-
-        <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">
-          {formatLabel(decision.reason)}
-        </td>
-
-        {!isSeller && (
-          <td className="whitespace-nowrap px-4 py-3">
-            {decision.allowed ? (
-              <PermissionGuard
-                module="sellers/commissions"
-                action={ACTIONS.UPDATE}
-                hide
-              >
-                <button
-                  type="button"
-                  className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white"
-                  onClick={() =>
-                    openOrderPayoutModal(row)
-                  }
-                  disabled={submitting}
-                >
-                  Payout This Order
-                </button>
-              </PermissionGuard>
-            ) : (
-              <span className="text-xs text-[#65718b]">
-                Not Allowed
-              </span>
-            )}
-          </td>
-        )}
-      </tr>
-    );
-  })}
-</TableShell>
+              </tr>
+            );
+          })}
+        </TableShell>
       </div>
 
       <details
-        className={`${!isSeller && !filters.sellerId ? "hidden" : "rounded-lg border border-[#E6E6E6] bg-white"}`}
+        className={`${!isSeller && !isSellerDetail ? "hidden" : "rounded-lg border border-[#E6E6E6] bg-white"}`}
       >
         <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#202337]">
           Advanced financial breakdown and payout history
@@ -1685,18 +1781,19 @@ const loadFinance = useCallback(async () => {
               ...(!isSeller ? ["Payout Action"] : []),
             ]}
             emptyText="No commissions found"
+            loading={financeLoading}
           >
-            {commissions.length
-              ? commissions.map((row) => {
+            {visibleCommissions.length
+              ? visibleCommissions.map((row) => {
                   const deductions = deductionOf(row);
                   return (
                     <tr key={row.id}>
-                       <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
-                      <OrderLink
-                        orderId={row.order_id || row.orderId}
-                        orderNumber={row.orderNumber || row.order_number}
-                      />
-                    </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
+                        <OrderLink
+                          orderId={row.order_id || row.orderId}
+                          orderNumber={row.orderNumber || row.order_number}
+                        />
+                      </td>
                       {!isSeller && (
                         <td className="whitespace-nowrap px-4 py-3 text-xs">
                           {row.sellerName ||
@@ -2256,12 +2353,14 @@ const loadFinance = useCallback(async () => {
                 </select>
                 {processModal.paymentMethod === "razorpayx" && (
                   <p className="text-xs text-[#65718b]">
-                    Uses the seller's verified onboarding bank details and sends the payout through RazorpayX.
+                    Uses the seller's verified onboarding bank details and sends
+                    the payout through RazorpayX.
                   </p>
                 )}
                 {!razorpayXEnabled && (
                   <p className="text-xs text-amber-700">
-                    RazorpayX is disabled in backend env, so automatic bank payout is hidden. Enable live keys or mock mode to test it.
+                    RazorpayX is disabled in backend env, so automatic bank
+                    payout is hidden. Enable live keys or mock mode to test it.
                   </p>
                 )}
               </FieldRow>
@@ -2364,12 +2463,14 @@ const loadFinance = useCallback(async () => {
                 </select>
                 {completeModal.paymentMethod === "razorpayx" && (
                   <p className="text-xs text-[#65718b]">
-                    Starts RazorpayX payout; the provider payout ID is saved as the payment reference.
+                    Starts RazorpayX payout; the provider payout ID is saved as
+                    the payment reference.
                   </p>
                 )}
                 {completeModal.paymentMethod !== "razorpayx" && (
                   <p className="text-xs text-amber-700">
-                    Record this only after confirming the external transfer. The UTR or transaction reference is required.
+                    Record this only after confirming the external transfer. The
+                    UTR or transaction reference is required.
                   </p>
                 )}
               </FieldRow>
