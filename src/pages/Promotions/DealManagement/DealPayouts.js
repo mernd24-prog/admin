@@ -12,6 +12,7 @@ import {
   ConfirmModal,
   DataTable,
   FilterBar,
+  FormSection,
   PageHeader,
   SellerLink,
   StatusBadge,
@@ -25,6 +26,7 @@ import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import FormInput from "../../../components/Atoms/FormInput/FormInput";
 
 const PAYOUT_STATUSES = [
   "generated",
@@ -360,53 +362,71 @@ const DealPayouts = () => {
       <DefaultModal
         isOpen={showGenerate}
         onClose={() => setShowGenerate(false)}
-        isButtonView={false}
+        onSubmit={handleGenerate}
+        loading={generating}
         title="Generate Deal Payouts"
+        submitButtonText="Generate Payouts"
+        closeButtonText="Cancel"
       >
-        <div className="p-4 space-y-4">
-          <Input
-            label="From Date *"
-            type="date"
-            value={generateForm.fromDate}
-            onChange={(e) =>
-              setGenerateForm((p) => ({ ...p, fromDate: e.target.value }))
-            }
-          />
-          <Input
-            label="To Date *"
-            type="date"
-            value={generateForm.toDate}
-            onChange={(e) =>
-              setGenerateForm((p) => ({ ...p, toDate: e.target.value }))
-            }
-          />
-          <FilterSelect
-            label="Seller (leave blank for all sellers)"
-            options={sellerOptions}
-            value={
-              sellerOptions.find((o) => o.value === generateForm.sellerId) ||
-              null
-            }
-            onChange={(option) =>
-              setGenerateForm((p) => ({
-                ...p,
-                sellerId: option ? option.value : "",
-              }))
-            }
-            placeholder="— All Sellers —"
-            isClearable
-            isSearchable
-          />
-          <OrangeButton
-            onClick={handleGenerate}
-            disabled={generating}
-            className="w-full justify-center"
+        <div className="space-y-5">
+          {/* Payout Period */}
+          <FormSection
+            title="Payout Period"
+            subtitle="Select the date range for which you want to generate seller payouts."
           >
-            {generating ? "Generating..." : "Generate Payouts"}
-          </OrangeButton>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormInput
+                label="From Date"
+                type="date"
+                value={generateForm.fromDate}
+                onChange={(e) =>
+                  setGenerateForm((prev) => ({
+                    ...prev,
+                    fromDate: e.target.value,
+                  }))
+                }
+              />
+
+              <FormInput
+                label="To Date"
+                type="date"
+                value={generateForm.toDate}
+                onChange={(e) =>
+                  setGenerateForm((prev) => ({
+                    ...prev,
+                    toDate: e.target.value,
+                  }))
+                }
+              />
+            </div>
+          </FormSection>
+
+          {/* Seller Selection */}
+          <FormSection
+            title="Seller Selection"
+            subtitle="Choose a specific seller or leave it blank to generate payouts for all sellers."
+          >
+            <FilterSelect
+              label="Seller"
+              options={sellerOptions}
+              value={
+                sellerOptions.find(
+                  (option) => option.value === generateForm.sellerId,
+                ) || null
+              }
+              onChange={(option) =>
+                setGenerateForm((prev) => ({
+                  ...prev,
+                  sellerId: option?.value || "",
+                }))
+              }
+              placeholder="All Sellers"
+              isClearable
+              isSearchable
+            />
+          </FormSection>
         </div>
       </DefaultModal>
-
       {/* Process payout */}
       <ConfirmModal
         isOpen={processConfirm.open}

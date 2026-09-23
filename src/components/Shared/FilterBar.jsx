@@ -822,6 +822,7 @@ const FilterField = ({ field, value, onChange, values }) => {
           placeholder={field.placeholder || `All ${field.label || ""}`}
           isSearchable={field.isSearchable ?? true}
           isClearable
+          isDisabled={field.disabled}
           inputId={id}
           className="!mb-0"
         />

@@ -585,6 +585,15 @@ function Layout() {
             <SellerFinance />
           ),
       },
+      {
+        path: "/seller-finance/seller/:sellerId",
+        render: () =>
+          isSellerPanel() ? (
+            <Navigate to="/app/finance-overview" replace />
+          ) : (
+            <SellerFinance />
+          ),
+      },
       { path: "/finance-overview", render: () => <FinanceOverview /> },
       { path: "/finance-earnings", render: () => <FinanceEarnings /> },
       { path: "/finance-adjustments", render: () => <FinanceAdjustments /> },
