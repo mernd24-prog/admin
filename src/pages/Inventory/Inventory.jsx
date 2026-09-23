@@ -1522,12 +1522,12 @@ const Inventory = () => {
               icon: <MdOpenInNew />,
               onClick: () => navigate(`/app/inventory/${row.productId}`),
             },
-            {
-              label: "Quick Adjust",
-              icon: <MdInventory2 />,
-              hidden: variants.length !== 1,
-              onClick: () => setAdjustTarget(variants[0]),
-            },
+            // {
+            //   label: "Quick Adjust",
+            //   icon: <MdInventory2 />,
+            //   hidden: variants.length !== 1,
+            //   onClick: () => setAdjustTarget(variants[0]),
+            // },
           ];
         }}
       />
