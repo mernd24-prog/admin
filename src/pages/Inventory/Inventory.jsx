@@ -42,21 +42,18 @@ import ImageGallery from "../../components/Atoms/ImageGallery/ImageGallery";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 
 import FormInput from "../../components/Atoms/FormInput/FormInput";
-import { getProductImages } from "../../_helpers/productMedia";
+import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
 
 const isSeller = isSellerPanel();
 
+const STOCK_FILTER_OPTIONS = [
+  { value: "", label: "All Stock" },
+  { value: "in_stock", label: "In Stock" },
+  { value: "out_of_stock", label: "Out of Stock" },
+  { value: "low_stock", label: "Low Stock" },
+];
+
 const FILTERS = [
-  {
-    key: "stockStatus",
-    type: "select",
-    label: "Stock",
-    options: [
-      { value: "in_stock", label: "In Stock" },
-      { value: "low_stock", label: "Low Stock" },
-      { value: "out_of_stock", label: "Out of Stock" },
-    ],
-  },
   {
     key: "variantStatus",
     type: "select",
@@ -241,19 +238,21 @@ const latestDate = (items = [], key) =>
     .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || "";
 
 const productStatusOf = (variants = []) => {
-  const statuses = variants
-    .flatMap((variant) => [variant.status, variant.stockStatus])
-    .filter(Boolean)
-    .map((status) => String(status).toLowerCase());
-
+  const availableTotal = sumBy(variants, "availableStock");
   if (
-    statuses.includes("out_of_stock") ||
+    availableTotal <= 0 ||
     variants.every((variant) => Number(variant.availableStock || 0) <= 0)
   ) {
     return "out_of_stock";
   }
 
+  const statuses = variants
+    .flatMap((variant) => [variant.status, variant.stockStatus])
+    .filter(Boolean)
+    .map((status) => String(status).toLowerCase());
+
   if (statuses.includes("low_stock")) return "low_stock";
+  if (statuses.includes("in_stock")) return "in_stock";
 
   if (statuses.length && statuses.every((status) => status === "inactive")) {
     return "inactive";
@@ -263,7 +262,7 @@ const productStatusOf = (variants = []) => {
     return "pending_approval";
   }
 
-  return statuses.find(Boolean) || "active";
+  return statuses.find(Boolean) || "in_stock";
 };
 
 const groupInventoryByProduct = (variantRows = []) => {
@@ -686,7 +685,21 @@ const Inventory = () => {
     return transactions.slice(offset, offset + STOCK_HISTORY_PAGE_SIZE);
   }, [historyPage, transactions]);
 
-  const productRows = useMemo(() => groupInventoryByProduct(rows), [rows]);
+  const productRows = useMemo(() => {
+    const grouped = groupInventoryByProduct(rows);
+    const stockStatus = list.filters?.stockStatus;
+
+    if (!stockStatus) {
+      return grouped;
+    }
+
+    return grouped.filter((row) => {
+      if (stockStatus === "in_stock") return row.status === "in_stock";
+      if (stockStatus === "out_of_stock") return row.status === "out_of_stock";
+      if (stockStatus === "low_stock") return row.status === "low_stock";
+      return true;
+    });
+  }, [rows, list.filters?.stockStatus]);
   const filteredDetailRows = useMemo(() => {
     const searchValue = variantSearch.trim().toLowerCase();
 
@@ -1508,6 +1521,26 @@ const Inventory = () => {
         rowKey="id"
         onRefresh={refresh}
         searchPlaceholder="Search product or SKU"
+        searchWrapperClassName="w-full min-w-0 sm:w-72 sm:flex-none"
+        toolbarLeft={
+          <div className="w-full sm:w-48 sm:flex-none">
+            <FilterSelect
+              options={STOCK_FILTER_OPTIONS}
+              value={
+                STOCK_FILTER_OPTIONS.find(
+                  (opt) => opt.value === (list.filters?.stockStatus || ""),
+                ) || STOCK_FILTER_OPTIONS[0]
+              }
+              onChange={(option) =>
+                list.setFilter("stockStatus", option?.value || "")
+              }
+              isClearable={false}
+              isSearchable={false}
+              placeholder="Stock Status"
+              controlHeight={36}
+            />
+          </div>
+        }
         filterBar={
           <FilterBar filters={filterFields} listPage={list} loading={false} />
         }
