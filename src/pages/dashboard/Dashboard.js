@@ -498,8 +498,8 @@ const isDashboardLoading =
           toDate: dateFilters.toDate,
         }),
         value: formatNumber(sellerMetrics.totalOrders ?? commerce.totalOrders),
-        helper: "vs last month",
-        trend: formatTrend(trends.totalOrders),
+        // helper: "vs last month",
+        // trend: formatTrend(trends.totalOrders),
         trendNegative: isNegativeTrend(trends.totalOrders),
       },
       {
@@ -512,8 +512,8 @@ const isDashboardLoading =
           toDate: dateFilters.toDate,
         }),
         value: formatCurrency(sellerMetrics.gmv ?? commerce.gmv),
-        helper: "vs last month",
-        trend: formatTrend(trends.gmv),
+        // helper: "vs last month",
+        // trend: formatTrend(trends.gmv),
         trendNegative: isNegativeTrend(trends.gmv),
       },
       {
@@ -527,7 +527,7 @@ const isDashboardLoading =
             commerce.ordersToday ??
             overview.ordersToday,
         ),
-        helper: "today",
+        // helper: "today",
       },
       {
         icon: "/icons/sold.png",
@@ -541,7 +541,7 @@ const isDashboardLoading =
         value: formatNumber(
           sellerMetrics.unitsSold ?? commerce.unitsSold ?? overview.unitsSold,
         ),
-        helper: "from order items",
+        // helper: "from order items",
       },
       {
         icon: "/icons/pending.png",
@@ -554,7 +554,7 @@ const isDashboardLoading =
             payouts.pendingAmount ??
             overview.pendingPayouts,
         ),
-        helper: "pending amount",
+        // helper: "pending amount",
         warning: true,
       },
       {
@@ -571,8 +571,8 @@ const isDashboardLoading =
             commerce.returnedOrders ??
             overview.returnedOrders,
         ),
-        helper: "vs last month",
-        trend: formatTrend(trends.returnedOrders),
+        // helper: "vs last month",
+        // trend: formatTrend(trends.returnedOrders),
         trendNegative: isNegativeTrend(trends.returnedOrders),
       },
     ];
