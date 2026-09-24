@@ -264,6 +264,8 @@ const DataTable = ({
   onPageChange,
   onSearch,
   searchPlaceholder = "Search…",
+  searchWrapperClassName = "",
+  toolbarLeft = null,
   rowKey = "_id",
   actions,
   emptyText = "No records found.",
@@ -485,18 +487,29 @@ const DataTable = ({
     <div className={cardClassName}>
       {/* Search + toolbar */}
       {(resolvedOnSearch ||
+        toolbarLeft ||
         actions ||
         exportConfig ||
         importConfig ||
         onRefresh) && (
         <div className="flex flex-col gap-3 border-b border-[var(--admin-line)] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
-          {resolvedOnSearch && (
-            <div className="w-full min-w-0 sm:max-w-2xl sm:flex-1">
-              <SearchInput
-                searchTerm={searchValue}
-                handleChange={handleSearch}
-                placeholder={searchPlaceholder}
-              />
+          {(resolvedOnSearch || toolbarLeft) && (
+            <div className="flex flex-1 flex-col gap-3 min-w-0 sm:flex-row sm:items-center">
+              {resolvedOnSearch && (
+                <div
+                  className={
+                    searchWrapperClassName ||
+                    "w-full min-w-0 sm:max-w-2xl sm:flex-1"
+                  }
+                >
+                  <SearchInput
+                    searchTerm={searchValue}
+                    handleChange={handleSearch}
+                    placeholder={searchPlaceholder}
+                  />
+                </div>
+              )}
+              {toolbarLeft}
             </div>
           )}
 

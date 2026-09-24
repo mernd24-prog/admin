@@ -5,7 +5,7 @@ import { twMerge } from "tailwind-merge";
 import StatusBadge from "./StatusBadge";
 
 const HEADER_ACTION_CLASS =
-  "flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg hover:bg-[var(--admin-gold-dark)] transition-colors";
+  "flex items-center gap-2 px-4 py-2 bg-[var(--admin-gold)] text-white text-sm rounded-lg transition-colors";
 
 const applyHeaderActionClass = (children) =>
   React.Children.map(children, (child) => {
