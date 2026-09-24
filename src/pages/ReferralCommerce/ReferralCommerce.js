@@ -77,6 +77,7 @@ import {
   resolveStoreKey,
 } from "./referralProductStoreUtils";
 import Tabs from "../../components/Shared/Tabs";
+import Loader, { ButtonLoader } from "../../components/Loader/Loader";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -92,7 +93,7 @@ const tabs = [
   { key: "productAmounts", label: "Product Referral Amounts" },
   { key: "bonuses", label: "Bonuses" },
   { key: "orders", label: "Referral Orders" },
-  
+
   { key: "payouts", label: "Payout Requests" },
   { key: "hierarchy", label: "Hierarchy" },
   { key: "fraud", label: "Fraud Review" },
@@ -113,7 +114,7 @@ const FILTER_STATUSES = {
   codes: ["active", "inactive", "expired", "suspended"],
   bonuses: ["active", "inactive", "locked", "released", "reversed"],
   orders: ["pending", "completed", "cancelled", "refunded", "reversed"],
-  
+
   payouts: [
     "pending",
     "approved",
@@ -135,7 +136,7 @@ const MARKETING_PAGE_META = {
     title: "Referral Partners",
     subtitle: "Manage Growth Partners and Brand Associates",
   },
- 
+
   rules: {
     title: "Rules & Coins",
     subtitle: "Configure referral rewards, coin values, and withdrawal rules",
@@ -152,7 +153,7 @@ const MARKETING_PAGE_META = {
     title: "Referral Orders",
     subtitle: "View and manage orders placed through referral codes",
   },
- 
+
   payouts: {
     title: "Payout Requests",
     subtitle: "Review and manage referral partner payout requests",
@@ -669,7 +670,7 @@ const ProductReferralAmounts = () => {
   const [form, setForm] = useState(empty);
   const [products, setProducts] = useState([]);
   const [configs, setConfigs] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const isEditMode = Boolean(form.productId);
 
@@ -935,445 +936,462 @@ const ProductReferralAmounts = () => {
   };
 
   return (
-    <section className="admin-card overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--admin-surface-soft)]">
-              <span className="text-sm font-bold text-[var(--admin-navy)]">
-                %
-              </span>
-            </div>
-
-            <h2 className="text-base font-bold text-[var(--admin-navy)]">
-              Product Referral Pool Overrides
-            </h2>
-          </div>
-
-          <p className="max-w-3xl text-xs leading-5 text-[var(--admin-muted)]">
-            Configure the referral pool contribution for individual products.
-            Select a store first to view only the products belonging to that
-            store.
-          </p>
-        </div>
-      </div>
-
-      {/* Configuration Form */}
-      <form onSubmit={save} className="bg-[var(--admin-surface-soft)] p-5">
-        <div className="rounded-xl border border-[var(--admin-line)] bg-white p-5">
-          {/* Configuration Header */}
-          <div className="mb-5 flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
-                  {isEditMode ? "Edit Product Override" : "Referral Override"}
-                </h3>
-
-                {isEditMode && (
-                  <span className="rounded-full bg-[var(--admin-surface-soft)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--admin-navy)]">
-                    Edit Mode
-                  </span>
-                )}
+    <>
+      <Loader loading={loading} label="Loading..." />
+      <section className="admin-card overflow-hidden">
+        {/* Header */}
+        <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--admin-surface-soft)]">
+                <span className="text-sm font-bold text-[var(--admin-navy)]">
+                  %
+                </span>
               </div>
 
-              <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                {isEditMode
-                  ? "Update the referral pool configuration for this product."
-                  : "Select a store first, then choose a product and define the pool contribution rules."}
-              </p>
+              <h2 className="text-base font-bold text-[var(--admin-navy)]">
+                Product Referral Pool Overrides
+              </h2>
             </div>
 
-            {/* Active Toggle */}
-            {/* Active Toggle */}
-            <div className="flex shrink-0 items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2">
-              <div className="text-right">
-                <p className="text-[11px] font-semibold text-[var(--admin-navy)]">
-                  Override Status
-                </p>
-
-                <p
-                  className={`text-[10px] font-medium ${
-                    form.active ? "text-green-600" : "text-[var(--admin-muted)]"
-                  }`}
-                >
-                  {form.active ? "Currently active" : "Global rule applied"}
-                </p>
-              </div>
-
-              <ToggleButton
-                isToggle={form.active}
-                handleClick={() => {
-                  setForm((current) => ({
-                    ...current,
-                    active: !current.active,
-                  }));
-                }}
-                disabled={loading}
-              />
-
-              <span
-                className={`min-w-[48px] -translate-y-0.5 text-xs font-semibold ${
-                  form.active ? "text-[var(--admin-navy)]" : "text-gray-500"
-                }`}
-              >
-                {form.active ? "Active" : "Inactive"}
-              </span>
-            </div>
-          </div>
-
-          {/* Form Fields */}
-          <div className="grid items-end gap-5 md:grid-cols-2 xl:grid-cols-5">
-            {/* Store */}
-            <FormSelectGroup
-              label="Store"
-              options={storeOptions}
-              value={
-                storeOptions.find(
-                  (option) => String(option.value) === String(form.storeKey),
-                ) || null
-              }
-              onChange={(selectedOption) => {
-                const storeKey = selectedOption?.value || "";
-
-                setForm((current) => ({
-                  ...current,
-                  storeKey,
-                  storeId: "",
-                  productId: "",
-                  productTitle: "",
-                }));
-              }}
-              placeholder="Select store"
-              isSearchable
-              isClearable
-              className="w-full"
-            />
-
-            {/* Product */}
-            <FormSelectGroup
-              label="Product"
-              options={productOptions}
-              value={
-                productOptions.find(
-                  (option) => String(option.value) === String(form.productId),
-                ) || null
-              }
-              onChange={(selectedOption) => {
-                const productId = selectedOption?.value || "";
-
-                const product = storeProducts.find(
-                  (item) => String(getId(item)) === String(productId),
-                );
-
-                setForm((current) => ({
-                  ...current,
-                  productId,
-                  productTitle: getProductTitle(product),
-                  storeId: getProductStoreId(product),
-                }));
-              }}
-              placeholder={
-                form.storeKey ? "Select product" : "Select store first"
-              }
-              isDisabled={!form.storeKey}
-              isSearchable
-              isClearable
-              className="w-full"
-            />
-
-            {/* Amount Type */}
-            <FormSelectGroup
-              label="Amount Type"
-              options={amountTypeOptions}
-              value={
-                amountTypeOptions.find(
-                  (option) => option.value === form.amountType,
-                ) || null
-              }
-              onChange={(selectedOption) => {
-                setForm((current) => ({
-                  ...current,
-                  amountType: selectedOption?.value || "fixed_amount",
-                }));
-              }}
-              placeholder="Select amount type"
-              isSearchable={false}
-              className="w-full"
-            />
-
-            {/* Pool Amount */}
-            <FormInput
-              label={
-                form.amountType === "percentage"
-                  ? "Pool Percentage"
-                  : "Pool Amount Per Unit (₹)"
-              }
-              name="amountValue"
-              type="number"
-              min="0"
-              max={form.amountType === "percentage" ? "100" : undefined}
-              step="0.01"
-              value={form.amountValue}
-              onChange={(event) => {
-                setForm((current) => ({
-                  ...current,
-                  amountValue: event.target.value,
-                }));
-              }}
-              className="w-full"
-            />
-
-            {/* Maximum Amount */}
-            <FormInput
-              label="Maximum Pool Per Line (₹)"
-              name="maximumAmount"
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.maximumAmount}
-              onChange={(event) => {
-                setForm((current) => ({
-                  ...current,
-                  maximumAmount: event.target.value,
-                }));
-              }}
-              hint="0 means no additional limit."
-              className="w-full"
-            />
-          </div>
-
-          {/* Selected Product Information */}
-          {selectedProduct && (
-            <div className="mt-5 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3">
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                <div>
-                  <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                    Store
-                  </p>
-
-                  <p className="text-xs font-semibold text-[var(--admin-navy)]">
-                    {selectedStore?.label ||
-                      getProductStoreName(selectedProduct)}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                    Product
-                  </p>
-
-                  <p className="max-w-xl text-xs font-semibold text-[var(--admin-navy)]">
-                    {getProductTitle(selectedProduct)}
-                  </p>
-                </div>
-
-                {selectedProduct?.sku && (
-                  <div>
-                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                      SKU
-                    </p>
-
-                    <p className="text-xs font-semibold text-[var(--admin-navy)]">
-                      {selectedProduct.sku}
-                    </p>
-                  </div>
-                )}
-
-                {selectedProduct?.price !== undefined && (
-                  <div>
-                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                      Price
-                    </p>
-
-                    <p className="text-xs font-semibold text-[var(--admin-navy)]">
-                      ₹{Number(selectedProduct.price).toLocaleString("en-IN")}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Referral Pool Preview */}
-          {form.amountValue !== "" && (
-            <div className="mt-4 rounded-lg border border-[var(--admin-line)] bg-white px-4 py-3">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-[var(--admin-navy)]">
-                    Referral Pool Preview
-                  </p>
-
-                  <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-                    Estimated contribution based on the selected configuration.
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-sm font-bold text-[var(--admin-navy)]">
-                    {form.amountType === "percentage"
-                      ? `${Number(form.amountValue || 0)}%`
-                      : `₹${Number(form.amountValue || 0).toLocaleString(
-                          "en-IN",
-                          {
-                            minimumFractionDigits: 2,
-                          },
-                        )}`}
-                  </p>
-
-                  <p className="text-[11px] text-[var(--admin-muted)]">
-                    {form.amountType === "percentage"
-                      ? "of product line"
-                      : "per unit"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="mt-6 flex justify-end gap-3 border-t border-[var(--admin-line)] pt-5">
-            {isEditMode && (
-              <button
-                type="button"
-                onClick={handleCancelEdit}
-                disabled={loading}
-                className="rounded-md border border-[var(--admin-line)] bg-white px-4 py-2 text-sm font-medium text-[var(--admin-navy)] transition hover:bg-[var(--admin-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            )}
-
-            <OrangeButton
-              type="submit"
-              disabled={loading}
-              className="min-w-[180px]"
-            >
-              <Check size={16} />
-
-              {isEditMode ? "Update Product Amount" : "Save Product Amount"}
-            </OrangeButton>
-          </div>
-        </div>
-      </form>
-
-      {/* Existing Overrides */}
-      <div className="border-t border-[var(--admin-line)]">
-        <div className="flex flex-col gap-1 border-b border-[var(--admin-line)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
-              Existing Overrides
-            </h3>
-
-            <p className="mt-1 text-xs text-[var(--admin-muted)]">
-              Manage product-specific referral pool configurations.
+            <p className="max-w-3xl text-xs leading-5 text-[var(--admin-muted)]">
+              Configure the referral pool contribution for individual products.
+              Select a store first to view only the products belonging to that
+              store.
             </p>
           </div>
-
-          <div className="rounded-full bg-[var(--admin-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--admin-navy)]">
-            {configs.length} {configs.length === 1 ? "Override" : "Overrides"}
-          </div>
         </div>
 
-        <SharedDataTable
-          columns={[
-            {
-              key: "storeId",
-              label: "Store",
-              render: (value, row) => {
-                const product = products.find(
-                  (item) => String(getId(item)) === String(row.productId),
-                );
+        {/* Configuration Form */}
+        <form onSubmit={save} className="bg-[var(--admin-surface-soft)] p-5">
+          <div className="rounded-xl border border-[var(--admin-line)] bg-white p-5">
+            {/* Configuration Header */}
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
+                    {isEditMode ? "Edit Product Override" : "Referral Override"}
+                  </h3>
 
-                return (
-                  row.storeName ||
-                  product?.organizationSnapshot?.storeDisplayName ||
-                  product?.storeDisplayName ||
-                  product?.organizationSnapshot?.legalBusinessName ||
-                  "—"
-                );
-              },
-            },
-            {
-              key: "productTitle",
-              label: "Product",
-            },
-            {
-              key: "amountType",
-              label: "Type",
-              render: (value) => formatLabel(value),
-            },
-            {
-              key: "amountValue",
-              label: "Pool Value",
-              render: (value, row) => {
-                if (row.amountType === "percentage") {
-                  return `${value}%`;
-                }
+                  {isEditMode && (
+                    <span className="rounded-full bg-[var(--admin-surface-soft)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--admin-navy)]">
+                      Edit Mode
+                    </span>
+                  )}
+                </div>
 
-                return `₹${Number(value || 0).toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                })} / unit`;
-              },
-            },
-            {
-              key: "maximumAmount",
-              label: "Maximum",
-              render: (value) => {
-                if (Number(value || 0) === 0) {
-                  return "No Limit";
-                }
+                <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                  {isEditMode
+                    ? "Update the referral pool configuration for this product."
+                    : "Select a store first, then choose a product and define the pool contribution rules."}
+                </p>
+              </div>
 
-                return `₹${Number(value || 0).toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                })}`;
-              },
-            },
-            {
-              key: "active",
-              label: "Status",
-              render: (value) => (
+              {/* Active Toggle */}
+              {/* Active Toggle */}
+              <div className="flex shrink-0 items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2">
+                <div className="text-right">
+                  <p className="text-[11px] font-semibold text-[var(--admin-navy)]">
+                    Override Status
+                  </p>
+
+                  <p
+                    className={`text-[10px] font-medium ${
+                      form.active
+                        ? "text-green-600"
+                        : "text-[var(--admin-muted)]"
+                    }`}
+                  >
+                    {form.active ? "Currently active" : "Global rule applied"}
+                  </p>
+                </div>
+
+                <ToggleButton
+                  isToggle={form.active}
+                  handleClick={() => {
+                    setForm((current) => ({
+                      ...current,
+                      active: !current.active,
+                    }));
+                  }}
+                  disabled={loading}
+                />
+
                 <span
-                  className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                    value
-                      ? "bg-green-50 text-green-700"
-                      : "bg-gray-100 text-gray-500"
+                  className={`min-w-[48px] -translate-y-0.5 text-xs font-semibold ${
+                    form.active ? "text-[var(--admin-navy)]" : "text-gray-500"
                   }`}
                 >
-                  {value ? "Active" : "Inactive"}
+                  {form.active ? "Active" : "Inactive"}
                 </span>
-              ),
-            },
-          ]}
-          data={configs}
-          loading={loading}
-          rowActions={(row) => [
-            {
-              label: "Edit",
-              icon: <Pencil size={15} />,
-              onClick: () => handleEdit(row),
-            },
-            {
-              label: "Remove override",
-              icon: <X size={15} />,
-              danger: true,
-              onClick: () => remove(row),
-            },
-          ]}
-          emptyText={
-            <div className="py-6 text-center">
-              <p className="text-sm font-semibold text-[var(--admin-navy)]">
-                No Product Overrides
-              </p>
+              </div>
+            </div>
+
+            {/* Form Fields */}
+            <div className="grid items-end gap-5 md:grid-cols-2 xl:grid-cols-5">
+              {/* Store */}
+              <FormSelectGroup
+                label="Store"
+                options={storeOptions}
+                value={
+                  storeOptions.find(
+                    (option) => String(option.value) === String(form.storeKey),
+                  ) || null
+                }
+                onChange={(selectedOption) => {
+                  const storeKey = selectedOption?.value || "";
+
+                  setForm((current) => ({
+                    ...current,
+                    storeKey,
+                    storeId: "",
+                    productId: "",
+                    productTitle: "",
+                  }));
+                }}
+                placeholder="Select store"
+                isSearchable
+                isClearable
+                className="w-full"
+              />
+
+              {/* Product */}
+              <FormSelectGroup
+                label="Product"
+                options={productOptions}
+                value={
+                  productOptions.find(
+                    (option) => String(option.value) === String(form.productId),
+                  ) || null
+                }
+                onChange={(selectedOption) => {
+                  const productId = selectedOption?.value || "";
+
+                  const product = storeProducts.find(
+                    (item) => String(getId(item)) === String(productId),
+                  );
+
+                  setForm((current) => ({
+                    ...current,
+                    productId,
+                    productTitle: getProductTitle(product),
+                    storeId: getProductStoreId(product),
+                  }));
+                }}
+                placeholder={
+                  form.storeKey ? "Select product" : "Select store first"
+                }
+                isDisabled={!form.storeKey}
+                isSearchable
+                isClearable
+                className="w-full"
+              />
+
+              {/* Amount Type */}
+              <FormSelectGroup
+                label="Amount Type"
+                options={amountTypeOptions}
+                value={
+                  amountTypeOptions.find(
+                    (option) => option.value === form.amountType,
+                  ) || null
+                }
+                onChange={(selectedOption) => {
+                  setForm((current) => ({
+                    ...current,
+                    amountType: selectedOption?.value || "fixed_amount",
+                  }));
+                }}
+                placeholder="Select amount type"
+                isSearchable={false}
+                className="w-full"
+              />
+
+              {/* Pool Amount */}
+              <FormInput
+                label={
+                  form.amountType === "percentage"
+                    ? "Pool Percentage"
+                    : "Pool Amount Per Unit (₹)"
+                }
+                name="amountValue"
+                type="number"
+                min="0"
+                max={form.amountType === "percentage" ? "100" : undefined}
+                step="0.01"
+                value={form.amountValue}
+                onChange={(event) => {
+                  setForm((current) => ({
+                    ...current,
+                    amountValue: event.target.value,
+                  }));
+                }}
+                className="w-full"
+              />
+
+              {/* Maximum Amount */}
+              <FormInput
+                label="Maximum Pool Per Line (₹)"
+                name="maximumAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.maximumAmount}
+                onChange={(event) => {
+                  setForm((current) => ({
+                    ...current,
+                    maximumAmount: event.target.value,
+                  }));
+                }}
+                hint="0 means no additional limit."
+                className="w-full"
+              />
+            </div>
+
+            {/* Selected Product Information */}
+            {selectedProduct && (
+              <div className="mt-5 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                  <div>
+                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                      Store
+                    </p>
+
+                    <p className="text-xs font-semibold text-[var(--admin-navy)]">
+                      {selectedStore?.label ||
+                        getProductStoreName(selectedProduct)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                      Product
+                    </p>
+
+                    <p className="max-w-xl text-xs font-semibold text-[var(--admin-navy)]">
+                      {getProductTitle(selectedProduct)}
+                    </p>
+                  </div>
+
+                  {selectedProduct?.sku && (
+                    <div>
+                      <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                        SKU
+                      </p>
+
+                      <p className="text-xs font-semibold text-[var(--admin-navy)]">
+                        {selectedProduct.sku}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedProduct?.price !== undefined && (
+                    <div>
+                      <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                        Price
+                      </p>
+
+                      <p className="text-xs font-semibold text-[var(--admin-navy)]">
+                        ₹{Number(selectedProduct.price).toLocaleString("en-IN")}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Referral Pool Preview */}
+            {form.amountValue !== "" && (
+              <div className="mt-4 rounded-lg border border-[var(--admin-line)] bg-white px-4 py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-[var(--admin-navy)]">
+                      Referral Pool Preview
+                    </p>
+
+                    <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+                      Estimated contribution based on the selected
+                      configuration.
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-[var(--admin-navy)]">
+                      {form.amountType === "percentage"
+                        ? `${Number(form.amountValue || 0)}%`
+                        : `₹${Number(form.amountValue || 0).toLocaleString(
+                            "en-IN",
+                            {
+                              minimumFractionDigits: 2,
+                            },
+                          )}`}
+                    </p>
+
+                    <p className="text-[11px] text-[var(--admin-muted)]">
+                      {form.amountType === "percentage"
+                        ? "of product line"
+                        : "per unit"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="mt-6 flex justify-end gap-3 border-t border-[var(--admin-line)] pt-5">
+              {isEditMode && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  disabled={loading}
+                  className="rounded-md border border-[var(--admin-line)] bg-white px-4 py-2 text-sm font-medium text-[var(--admin-navy)] transition hover:bg-[var(--admin-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              )}
+
+              <OrangeButton
+                type="submit"
+                disabled={loading}
+                className="min-w-[180px]"
+              >
+                {loading ? (
+                  <>
+                    <ButtonLoader />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check size={16} />
+                    {isEditMode
+                      ? "Update Product Amount"
+                      : "Save Product Amount"}
+                  </>
+                )}
+              </OrangeButton>
+            </div>
+          </div>
+        </form>
+
+        {/* Existing Overrides */}
+        <div className="border-t border-[var(--admin-line)]">
+          <div className="flex flex-col gap-1 border-b border-[var(--admin-line)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
+                Existing Overrides
+              </h3>
 
               <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                All products are currently using the global referral pool rule.
+                Manage product-specific referral pool configurations.
               </p>
             </div>
-          }
-        />
-      </div>
-    </section>
+
+            <div className="rounded-full bg-[var(--admin-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--admin-navy)]">
+              {configs.length} {configs.length === 1 ? "Override" : "Overrides"}
+            </div>
+          </div>
+
+          <SharedDataTable
+            columns={[
+              {
+                key: "storeId",
+                label: "Store",
+                render: (value, row) => {
+                  const product = products.find(
+                    (item) => String(getId(item)) === String(row.productId),
+                  );
+
+                  return (
+                    row.storeName ||
+                    product?.organizationSnapshot?.storeDisplayName ||
+                    product?.storeDisplayName ||
+                    product?.organizationSnapshot?.legalBusinessName ||
+                    "—"
+                  );
+                },
+              },
+              {
+                key: "productTitle",
+                label: "Product",
+              },
+              {
+                key: "amountType",
+                label: "Type",
+                render: (value) => formatLabel(value),
+              },
+              {
+                key: "amountValue",
+                label: "Pool Value",
+                render: (value, row) => {
+                  if (row.amountType === "percentage") {
+                    return `${value}%`;
+                  }
+
+                  return `₹${Number(value || 0).toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                  })} / unit`;
+                },
+              },
+              {
+                key: "maximumAmount",
+                label: "Maximum",
+                render: (value) => {
+                  if (Number(value || 0) === 0) {
+                    return "No Limit";
+                  }
+
+                  return `₹${Number(value || 0).toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                  })}`;
+                },
+              },
+              {
+                key: "active",
+                label: "Status",
+                render: (value) => (
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      value
+                        ? "bg-green-50 text-green-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {value ? "Active" : "Inactive"}
+                  </span>
+                ),
+              },
+            ]}
+            data={configs}
+            loading={loading}
+            rowActions={(row) => [
+              {
+                label: "Edit",
+                icon: <Pencil size={15} />,
+                onClick: () => handleEdit(row),
+              },
+              {
+                label: "Remove override",
+                icon: <X size={15} />,
+                danger: true,
+                onClick: () => remove(row),
+              },
+            ]}
+            emptyText={
+              <div className="py-6 text-center">
+                <p className="text-sm font-semibold text-[var(--admin-navy)]">
+                  No Product Overrides
+                </p>
+
+                <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                  All products are currently using the global referral pool
+                  rule.
+                </p>
+              </div>
+            }
+          />
+        </div>
+      </section>
+    </>
   );
 };
 
@@ -1639,7 +1657,7 @@ const ReferralCommerce = () => {
           ),
           dispatch(getReferralHierarchy()),
         ]),
-      
+
       rules: () => dispatch(getReferralRules({ page: 1, limit: 20 })),
       bonuses: () =>
         Promise.all([
@@ -1691,14 +1709,9 @@ const ReferralCommerce = () => {
 
   useEffect(() => {
     if (
-      ![
-        "influencers",
- 
-        "bonuses",
-        "orders",
-        "payouts",
-        "fraud",
-      ].includes(activeTab)
+      !["influencers", "bonuses", "orders", "payouts", "fraud"].includes(
+        activeTab,
+      )
     ) {
       return undefined;
     }
@@ -2282,8 +2295,6 @@ const ReferralCommerce = () => {
     ),
   }));
 
- 
-
   const orderRows = orders.map((order) => ({
     key: getId(order),
     order: renderOrderLink(
@@ -2297,8 +2308,6 @@ const ReferralCommerce = () => {
     status: <StatusPill value={order.status} />,
     created: formatDate(order.createdAt),
   }));
-
- 
 
   const payoutRows = payouts.map((payout) => ({
     key: getId(payout),
@@ -2624,8 +2633,8 @@ const ReferralCommerce = () => {
             >
               {/* <span className="absolute inset-y-0 left-0 w-[3px] bg-[var(--admin-gold)]" /> */}
               {/* <div className="absolute right-0 top-0 flex h-10 w-11 items-center justify-center rounded-bl-xl bg-[var(--admin-gold-soft)] text-[var(--admin-navy)]">
-                {item.icon}
-              </div> */}
+                  {item.icon}
+                </div> */}
               <p className="pr-10 text-[10px] font-bold uppercase tracking-wide text-[var(--admin-muted)]">
                 {item.label}
               </p>
@@ -3317,7 +3326,7 @@ const ReferralCommerce = () => {
       {hasListFilters &&
         ![
           "influencers",
-           
+
           "bonuses",
           "orders",
           "commissions",
@@ -3431,7 +3440,7 @@ const ReferralCommerce = () => {
           cardClassName="overflow-hidden"
         />
       )}
-     
+
       {activeTab === "rules" && renderRules()}
       {activeTab === "productAmounts" && <ProductReferralAmounts />}
       {activeTab === "bonuses" && renderBonuses()}
@@ -3455,7 +3464,7 @@ const ReferralCommerce = () => {
           emptyText="No referral orders found."
         />
       )}
-       
+
       {activeTab === "payouts" && (
         <SharedDataTable
           columns={[

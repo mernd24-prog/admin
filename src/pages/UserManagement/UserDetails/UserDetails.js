@@ -556,89 +556,110 @@ const VerificationProgress = ({ stages = [] }) => {
   ];
 
   return (
-    <div className="rounded-lg border border-[#ead7b7] bg-[#fffdf8] px-4 py-4">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9A7A3E]">
-            Seller verification progress
-          </p>
-          <p className="mt-1 text-sm font-semibold text-gray-900">
-            {completeCount}/{stages.length} checks complete
-          </p>
-        </div>
-        <span className="rounded-full border border-[#ead7b7] bg-white px-3 py-1 text-xs font-semibold text-[#8A5A1F] shadow-sm">
-          {progress}%
-        </span>
+  <div className="rounded-lg border border-green-700 bg-white px-4 py-4">
+    <div className="mb-5 flex items-center justify-between gap-3">
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-green-700">
+          Seller verification progress
+        </p>
+
+        <p className="mt-1 text-sm font-semibold text-gray-900">
+          {completeCount}/{stages.length} checks complete
+        </p>
       </div>
 
-      <div className="relative overflow-x-auto px-1 pb-1 pt-1">
-        <div className="relative grid min-w-[620px] grid-cols-4 sm:min-w-0">
-          {stages.map((stage, index) => {
-            const status = stage.status || stage.value;
-            const complete = isStageComplete(status);
-            const rejected = isStageRejected(status);
-            const Icon = icons[index] || MdSettings;
-            const nextComplete = isStageComplete(
-              stages[index + 1]?.status || stages[index + 1]?.value,
-            );
-            const badgeClass = complete
-              ? "border-[var(--admin-gold)] bg-[#fff8e6] text-[var(--admin-gold-dark)]"
-              : rejected
-                ? "border-red-200 bg-red-50 text-red-700"
-                : "border-gray-200 bg-gray-50 text-gray-500";
-            return (
+      <span className="rounded-full border border-green-700 bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+        {progress}%
+      </span>
+    </div>
+
+    <div className="relative overflow-x-auto px-1 pb-1 pt-1">
+      <div className="relative grid min-w-[620px] grid-cols-4 sm:min-w-0">
+        {stages.map((stage, index) => {
+          const status = stage.status || stage.value;
+          const complete = isStageComplete(status);
+          const rejected = isStageRejected(status);
+          const Icon = icons[index] || MdSettings;
+
+          const nextComplete = isStageComplete(
+            stages[index + 1]?.status || stages[index + 1]?.value,
+          );
+
+          const badgeClass = complete
+            ? "border-green-200 bg-green-100 text-green-700"
+            : rejected
+              ? "border-red-100 bg-red-50 text-red-600"
+              : "border-gray-200 bg-gray-50 text-gray-500";
+
+          return (
+            <div
+              key={stage.label}
+              className="relative flex flex-col items-center text-center"
+            >
+              {/* Process line */}
+              {index < stages.length - 1 && (
+                <>
+                  <span className="absolute left-[calc(50%+18px)] right-[calc(-50%+18px)] top-[18px] hidden h-[2px] rounded-full bg-gray-200 sm:block" />
+
+                  {complete && nextComplete && (
+                    <span className="absolute left-[calc(50%+18px)] right-[calc(-50%+18px)] top-[18px] hidden h-[2px] rounded-full bg-green-700 sm:block" />
+                  )}
+                </>
+              )}
+
+              {/* Step */}
               <div
-                key={stage.label}
-                className="relative flex flex-col items-center text-center"
+                className={`relative z-10 grid h-9 w-9 place-items-center rounded-full border-2 bg-white ${
+                  complete
+                    ? "border-green-700"
+                    : rejected
+                      ? "border-red-400"
+                      : "border-gray-300"
+                }`}
               >
-                {index < stages.length - 1 && (
-                  <>
-                    <span className="absolute left-[calc(50%+18px)] right-[calc(-50%+18px)] top-[18px] hidden h-0.5 rounded-full bg-gray-200 sm:block" />
-                    {complete && nextComplete && (
-                      <span className="absolute left-[calc(50%+18px)] right-[calc(-50%+18px)] top-[18px] hidden h-0.5 rounded-full bg-[var(--admin-gold)] sm:block" />
-                    )}
-                  </>
-                )}
-                <div
-                  className={`relative z-10 grid h-9 w-9 place-items-center rounded-full p-[3px] text-sm shadow-[0_3px_8px_rgba(138,90,31,0.28)] ring-4 ring-[#fffdf8] ${
+                <span
+                  className={`grid h-6 w-6 place-items-center rounded-full ${
                     complete
-                      ? "bg-[var(--admin-gold-dark)] text-white"
+                      ? "bg-green-700 text-white"
                       : rejected
-                        ? "bg-red-700 text-white"
-                        : "bg-gray-500 text-white"
+                        ? "bg-red-400 text-white"
+                        : "bg-gray-100 text-gray-400"
                   }`}
                 >
-                  <span
-                    className={`grid h-full w-full place-items-center rounded-full ${
-                      complete
-                        ? "bg-[var(--admin-gold)]"
-                        : rejected
-                          ? "bg-red-500"
-                          : "bg-gray-400"
-                    }`}
-                  >
-                    {complete ? <MdCheck /> : rejected ? <MdClose /> : <Icon />}
-                  </span>
-                </div>
-                <p
-                  className={`mt-3 text-[10px] font-semibold tracking-wide ${complete ? "text-[var(--admin-gold-dark)]" : "text-gray-500"}`}
-                >
-                  {stage.label}
-                </p>
-                <div className="mt-1 flex justify-center">
-                  <span
-                    className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold leading-none ${badgeClass}`}
-                  >
-                    {formatLabel(stage.value) || "N/A"}
-                  </span>
-                </div>
+                  {complete ? (
+                    <MdCheck size={14} />
+                  ) : rejected ? (
+                    <MdClose size={14} />
+                  ) : (
+                    <Icon size={14} />
+                  )}
+                </span>
               </div>
-            );
-          })}
-        </div>
+
+              {/* Label */}
+              <p
+                className={`mt-3 text-[10px] font-semibold tracking-wide ${
+                  complete ? "text-green-700" : "text-gray-500"
+                }`}
+              >
+                {stage.label}
+              </p>
+
+              {/* Status */}
+              <div className="mt-1 flex justify-center">
+                <span
+                  className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold leading-none ${badgeClass}`}
+                >
+                  {formatLabel(stage.value) || "N/A"}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 const hasCompleteBankDetails = (bankDetails = {}) =>

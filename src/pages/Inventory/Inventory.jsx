@@ -43,6 +43,7 @@ import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 
 import FormInput from "../../components/Atoms/FormInput/FormInput";
 import { getProductImages } from "../../_helpers/productMedia";
+import Tabs from "../../components/Shared/Tabs";
 
 const isSeller = isSellerPanel();
 
@@ -587,6 +588,7 @@ const Inventory = () => {
   const [importError, setImportError] = useState("");
   const [importInfo, setImportInfo] = useState("");
   const [importSuccess, setImportSuccess] = useState("");
+  const [activeTab, setActiveTab] = useState("inventory");
 
   const fetchList = useCallback(async () => {
     if (productId) return;
@@ -1386,87 +1388,78 @@ const Inventory = () => {
           </div>
         ) : null}
 
-        {/* <div className="mb-4">
-          <div className="admin-card flex items-center gap-4 p-4">
-            <div className="h-16 w-16 overflow-hidden rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)]">
-              {product.image ? (
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="h-full w-full object-cover"
-                />
-              ) : null}
-            </div>
-
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-[var(--admin-ink)]">
-                {product.name || "Untitled product"}
-              </p>
-
-              <p className="text-xs text-[var(--admin-muted)]">
-                SKU: {product.sku || "N/A"}
-              </p>
-
-              {adminPanel && (
-                <p className="text-xs text-[var(--admin-muted)]">
-                  Seller: {product.seller || "N/A"}
-                </p>
-              )}
-            </div>
-          </div>
-        </div> */}
-
-        <DataTable
-          columns={detailColumns}
-          data={filteredDetailRows}
-          loading={loading}
-          error={error}
-          totalCount={filteredDetailRows.length}
-          rowKey="id"
-          onSearch={setVariantSearch}
-          searchPlaceholder="Search variant name or SKU"
-          actions={
-            <OrangeButton
-              onClick={handleSave}
-              disabled={!canSave}
-              title={
-                pendingCount ? "Save inventory changes" : "No changes to save"
-              }
-            >
-              {saving
-                ? "Saving…"
-                : `Save ${pendingCount ? `(${pendingCount})` : ""}`}
-            </OrangeButton>
-          }
-          emptyText="No variants found"
-          rowActions={(row) => [
-            {
-              label: "Adjust Inventory",
-              icon: <MdInventory2 />,
-              onClick: () => setAdjustTarget(row),
-            },
-          ]}
-        />
-
-        <div className="mt-5">
-          <PageHeader
-            title="Stock History"
-            subtitle="Complete movement log for this product's variants"
-          />
-
-          <DataTable
-            columns={transactionColumns}
-            data={pagedTransactions}
-            loading={loading}
-            totalCount={transactions.length}
-            page={historyPage}
-            pageSize={STOCK_HISTORY_PAGE_SIZE}
-            onPageChange={setHistoryPage}
-            rowKey={(row, index) => row._id || row.id || index}
-            emptyText="No stock history found"
-            cardClassName="admin-card overflow-hidden"
+        {/* Tabs */}
+        <div className="mb-4">
+          <Tabs
+            tabs={[
+              {
+                value: "inventory",
+                label: "Product Inventory",
+                count: filteredDetailRows.length,
+              },
+              {
+                value: "history",
+                label: "Stock History",
+                count: transactions.length,
+              },
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
           />
         </div>
+
+        {/* Product Inventory */}
+        {activeTab === "inventory" && (
+          <DataTable
+            columns={detailColumns}
+            data={filteredDetailRows}
+            loading={loading}
+            error={error}
+            totalCount={filteredDetailRows.length}
+            rowKey="id"
+            onSearch={setVariantSearch}
+            searchPlaceholder="Search variant name or SKU"
+            actions={
+              <OrangeButton
+                onClick={handleSave}
+                disabled={!canSave}
+                title={
+                  pendingCount ? "Save inventory changes" : "No changes to save"
+                }
+              >
+                {saving
+                  ? "Saving…"
+                  : `Save ${pendingCount ? `(${pendingCount})` : ""}`}
+              </OrangeButton>
+            }
+            emptyText="No variants found"
+            rowActions={(row) => [
+              {
+                label: "Adjust Inventory",
+                icon: <MdInventory2 />,
+                onClick: () => setAdjustTarget(row),
+              },
+            ]}
+          />
+        )}
+
+        {/* Stock History */}
+        {activeTab === "history" && (
+          <div>
+            <DataTable
+              columns={transactionColumns}
+              data={pagedTransactions}
+              loading={loading}
+              totalCount={transactions.length}
+              page={historyPage}
+              pageSize={STOCK_HISTORY_PAGE_SIZE}
+              onPageChange={setHistoryPage}
+              rowKey={(row, index) => row._id || row.id || index}
+              emptyText="No stock history found"
+              cardClassName="admin-card overflow-hidden"
+            />
+          </div>
+        )}
 
         <ImageGallery
           images={galleryImages}
