@@ -70,7 +70,9 @@ const DefaultModal = ({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto ">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          {children}
+        </div>
 
         {isButtonView && (
           <div className="shrink-0 bg-[var(--admin-surface-soft)] py-3 px-6 flex justify-between items-center border-t border-[var(--admin-line)] gap-2">

@@ -239,7 +239,6 @@ const emptyRulesForm = {
   customerSharePercent: 50,
   childSharePercent: 30,
   parentSharePercent: 20,
-  releaseDelayDays: 7,
   minimumWithdrawalCoins: 0,
   maximumWithdrawalCoins: 0,
   dailyWithdrawalLimitCoins: 0,
@@ -1911,7 +1910,6 @@ const ReferralCommerce = () => {
       "customerSharePercent",
       "childSharePercent",
       "parentSharePercent",
-      "releaseDelayDays",
       "minimumWithdrawalCoins",
       "maximumWithdrawalCoins",
       "dailyWithdrawalLimitCoins",
@@ -1939,7 +1937,6 @@ const ReferralCommerce = () => {
             "customerSharePercent",
             "childSharePercent",
             "parentSharePercent",
-            "releaseDelayDays",
             "minimumWithdrawalCoins",
             "maximumWithdrawalCoins",
             "dailyWithdrawalLimitCoins",
@@ -2848,13 +2845,6 @@ const ReferralCommerce = () => {
             </option>
           ))}
         </SelectInput>
-        <TextInput
-          label="Release Delay Days"
-          name="releaseDelayDays"
-          type="number"
-          value={rulesForm.releaseDelayDays}
-          onChange={handleRulesField}
-        />
         <TextInput
           label="Minimum Eligible Order Amount"
           name="minOrderAmount"
