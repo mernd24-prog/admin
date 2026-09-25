@@ -28,6 +28,7 @@ import {
   StatusBadge,
   SummaryCard,
 } from "../../components/Shared";
+import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
 import {
   getReferralBonusAchievements,
   getReferralBonusProgress,
@@ -84,39 +85,6 @@ const formatCoins = (value) =>
   `${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })} coins`;
 
 const formatDate = (value) => formatDateTime12Hour(value, "-");
-
-const SectionTabs = ({ tabs = [], activeTab, onChange }) => (
-  <div className="flex flex-wrap gap-2 rounded-xl border border-[var(--admin-navy)]/10 bg-[var(--admin-blue-soft)] p-1.5">
-    {tabs.map((tab) => {
-      const isActive = tab.value === activeTab;
-      return (
-        <button
-          key={tab.value}
-          type="button"
-          onClick={() => onChange?.(tab.value)}
-          className={`rounded-md px-3 py-2 text-xs font-semibold transition-all ${
-            isActive
-              ? "bg-[var(--admin-navy)] text-white shadow-sm ring-1 ring-[var(--admin-navy-dark)]"
-              : "bg-transparent text-[var(--admin-navy)] hover:bg-white hover:text-[var(--admin-navy-dark)]"
-          }`}
-        >
-          {tab.label}
-          {tab.count !== undefined && (
-            <span
-              className={`ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                isActive
-                  ? "bg-white/20 text-white"
-                  : "bg-white text-[var(--admin-navy)]"
-              }`}
-            >
-              {tab.count}
-            </span>
-          )}
-        </button>
-      );
-    })}
-  </div>
-);
 
 const humanize = (value) => formatLabel(value, "-");
 
@@ -242,6 +210,68 @@ const rejectedActionButtonClass =
 
 const findInfluencer = (items = [], influencerId) =>
   items.find((item) => String(getId(item)) === String(influencerId)) || null;
+
+const ReferralPartnerDetailsSkeleton = ({ onBack }) => (
+  <div className="space-y-5">
+    <PageHeader
+      title="Referral Partner Details"
+      subtitle="Loading partner profile..."
+      breadcrumbs={[
+        { label: "Marketing" },
+        { label: "Referral Partners" },
+        { label: "Details" },
+      ]}
+      actions={
+        <button type="button" className="admin-btn-primary" onClick={onBack}>
+          <ArrowLeft size={16} />
+          Back to partners
+        </button>
+      }
+    />
+
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={index} className="admin-card p-4">
+          <SkeletonLoader height={14} width="45%" />
+          <div className="mt-4">
+            <SkeletonLoader height={28} width="60%" />
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div className="admin-card overflow-hidden border-0 shadow-none">
+      <div className="bg-[#f9f4eb] px-4 py-4">
+        <div className="flex flex-wrap gap-2 rounded-md border-0 bg-[var(--admin-blue-soft)] p-1.5">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <SkeletonLoader key={index} height={36} width={120} />
+          ))}
+        </div>
+      </div>
+      <div className="space-y-5 p-4">
+        <div>
+          <SkeletonLoader height={20} width={160} />
+          <div className="mt-2">
+            <SkeletonLoader height={14} width={280} />
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div
+              key={index}
+              className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+            >
+              <SkeletonLoader height={10} width="45%" />
+              <div className="mt-3">
+                <SkeletonLoader height={16} width="70%" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const ReferralPartnerDetails = () => {
   const dispatch = useDispatch();
@@ -575,7 +605,7 @@ const ReferralPartnerDetails = () => {
           </button>
         ),
       })),
-    [brandAssociates, navigate],
+    [brandAssociates, id, influencer, navigate],
   );
 
   const activeSummaryCards = [
@@ -620,6 +650,10 @@ const ReferralPartnerDetails = () => {
       color: "#b45309",
     },
   ];
+
+  if (!influencer && id && detailLoading) {
+    return <ReferralPartnerDetailsSkeleton onBack={handleBack} />;
+  }
 
   if (!influencer && id) {
     return (

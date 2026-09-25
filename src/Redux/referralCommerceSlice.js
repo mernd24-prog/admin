@@ -76,6 +76,7 @@ export const getReferralInfluencers = createApiThunkPrivate(
     transformParams: pickQuery([
       ...listQueryKeys,
       "influencerType",
+      "influencerId",
       "parentInfluencerId",
       "canCreateChildren",
     ]),
