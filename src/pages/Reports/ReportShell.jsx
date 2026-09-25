@@ -582,11 +582,7 @@ export const ReportShell = ({
             exportRows?.length ||
             exportCsvSections?.length ||
             exportExcelSheets?.length) && (
-            <PermissionGuard
-              module="reports"
-              action="export"
-              hide
-            >
+            <PermissionGuard module="reports" action="export" hide>
               <button
                 type="button"
                 onClick={handleExport}
@@ -1330,20 +1326,19 @@ export const SalesReport = () => {
 
       if (!sellerView) return analyticsDashboard;
 
-      const [dashboardOverview, topProducts] =
-        await Promise.all([
-          fetchJson(ENDPOINTS.dashboard.overview, {
-            fromDate,
-            toDate,
-          }),
+      const [dashboardOverview, topProducts] = await Promise.all([
+        fetchJson(ENDPOINTS.dashboard.overview, {
+          fromDate,
+          toDate,
+        }),
 
-          fetchJson(ENDPOINTS.products.analyticsTop, {
-            limit: 10,
-            metric: "purchases",
-            fromDate,
-            toDate,
-          }),
-        ]);
+        fetchJson(ENDPOINTS.products.analyticsTop, {
+          limit: 10,
+          metric: "purchases",
+          fromDate,
+          toDate,
+        }),
+      ]);
 
       return {
         ...analyticsDashboard,
@@ -1354,38 +1349,21 @@ export const SalesReport = () => {
     [sellerView],
   );
 
-  const {
-    data,
-    loading,
-    error,
-    refresh,
-  } = useApiReport(loadData, filters);
+  const { data, loading, error, refresh } = useApiReport(loadData, filters);
 
-  const dashboardOverview =
-    data.dashboardOverview || {};
+  const dashboardOverview = data.dashboardOverview || {};
 
-  const dashboardMetrics =
-    dashboardOverview.metrics || {};
+  const dashboardMetrics = dashboardOverview.metrics || {};
 
-  const dashboardCommerce =
-    dashboardOverview.commerce || {};
+  const dashboardCommerce = dashboardOverview.commerce || {};
 
   const orders = data.orders || {};
 
-  const returns =
-    data.returns ||
-    dashboardOverview.returns ||
-    {};
+  const returns = data.returns || dashboardOverview.returns || {};
 
-  const fallbackProductRows =
-    productRowsFromAnalytics(
-      data.topProducts,
-    );
+  const fallbackProductRows = productRowsFromAnalytics(data.topProducts);
 
-  const fallbackProductTotals =
-    productTotalsFromRows(
-      fallbackProductRows,
-    );
+  const fallbackProductTotals = productTotalsFromRows(fallbackProductRows);
 
   /*
    * ==========================
@@ -1408,13 +1386,10 @@ export const SalesReport = () => {
   );
 
   const totalProductViews = asNumber(
-    fallbackProductTotals.views ||
-      fallbackProductTotals.impressions,
+    fallbackProductTotals.views || fallbackProductTotals.impressions,
   );
 
-  const refundAmount = asNumber(
-    returns.refundAmount,
-  );
+  const refundAmount = asNumber(returns.refundAmount);
 
   const deliveredOrders = asNumber(
     dashboardMetrics.deliveredOrders ??
@@ -1432,16 +1407,14 @@ export const SalesReport = () => {
     {
       label: "Revenue",
       value: totalRevenue,
-      displayValue:
-        formatCurrency(totalRevenue),
+      displayValue: formatCurrency(totalRevenue),
       sub: "Selected range",
     },
 
     {
       label: "Orders",
       value: totalOrders,
-      displayValue:
-        formatNumber(totalOrders),
+      displayValue: formatNumber(totalOrders),
       sub: "All statuses",
     },
 
@@ -1449,23 +1422,20 @@ export const SalesReport = () => {
       ? {
           label: "Views",
           value: totalProductViews,
-          displayValue:
-            formatNumber(totalProductViews),
+          displayValue: formatNumber(totalProductViews),
           sub: "Product activity",
         }
       : {
           label: "Delivered",
           value: deliveredOrders,
-          displayValue:
-            formatNumber(deliveredOrders),
+          displayValue: formatNumber(deliveredOrders),
           sub: "Completed orders",
         },
 
     {
       label: "Refunds",
       value: refundAmount,
-      displayValue:
-        formatCurrency(refundAmount),
+      displayValue: formatCurrency(refundAmount),
       sub: "Return refunds",
     },
   ];
@@ -1490,19 +1460,11 @@ export const SalesReport = () => {
     },
 
     {
-      label: sellerView
-        ? "Product Views"
-        : "Delivered Orders",
+      label: sellerView ? "Product Views" : "Delivered Orders",
 
-      value: formatNumber(
-        sellerView
-          ? totalProductViews
-          : deliveredOrders,
-      ),
+      value: formatNumber(sellerView ? totalProductViews : deliveredOrders),
 
-      sub: sellerView
-        ? "Tracked product views"
-        : "Completed fulfilment",
+      sub: sellerView ? "Tracked product views" : "Completed fulfilment",
     },
 
     {
@@ -1518,8 +1480,7 @@ export const SalesReport = () => {
    * ==========================
    */
 
-  const salesSummary =
-    data.salesSummary || {};
+  const salesSummary = data.salesSummary || {};
 
   /*
    * ==========================
@@ -1527,9 +1488,7 @@ export const SalesReport = () => {
    * ==========================
    */
 
-  const salesDetails = listFrom(
-    data.salesDetails,
-  );
+  const salesDetails = listFrom(data.salesDetails);
 
   /*
    * ==========================
@@ -1540,123 +1499,89 @@ export const SalesReport = () => {
   const salesSummaryRows = [
     {
       field: "Report Name",
-      value: sellerView
-        ? "Sales Report"
-        : "Sales Reports",
+      value: sellerView ? "Sales Report" : "Sales Reports",
     },
 
     {
       field: "Date Range",
-      value: `${formatDateLabel(
-        filters.fromDate,
-      )} - ${formatDateLabel(
+      value: `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(
         filters.toDate,
       )}`,
     },
 
     {
       field: "Generated On",
-      value: formatDateLabel(
-        toIsoDate(new Date()),
-      ),
+      value: formatDateLabel(toIsoDate(new Date())),
     },
 
     {
       field: "Total Revenue",
-      value: asNumber(
-        salesSummary.totalRevenue,
-      ),
+      value: asNumber(salesSummary.totalRevenue),
     },
 
     {
       field: "Total Orders",
-      value: asNumber(
-        salesSummary.totalOrders,
-      ),
+      value: asNumber(salesSummary.totalOrders),
     },
 
     {
       field: "Total Products Sold",
-      value: asNumber(
-        salesSummary.totalProductsSold,
-      ),
+      value: asNumber(salesSummary.totalProductsSold),
     },
 
     {
       field: "Completed Orders",
-      value: asNumber(
-        salesSummary.completedOrders,
-      ),
+      value: asNumber(salesSummary.completedOrders),
     },
 
     {
       field: "Cancelled Orders",
-      value: asNumber(
-        salesSummary.cancelledOrders,
-      ),
+      value: asNumber(salesSummary.cancelledOrders),
     },
 
     {
       field: "Returned Orders",
-      value: asNumber(
-        salesSummary.returnedOrders,
-      ),
+      value: asNumber(salesSummary.returnedOrders),
     },
 
     {
       field: "Refunded Orders",
-      value: asNumber(
-        salesSummary.refundedOrders,
-      ),
+      value: asNumber(salesSummary.refundedOrders),
     },
 
     {
       field: "Product Views",
-      value: asNumber(
-        salesSummary.productViews,
-      ),
+      value: asNumber(salesSummary.productViews),
     },
 
     {
       field: "Gross Sales",
-      value: asNumber(
-        salesSummary.grossSales,
-      ),
+      value: asNumber(salesSummary.grossSales),
     },
 
     {
       field: "Discount",
-      value: asNumber(
-        salesSummary.discount,
-      ),
+      value: asNumber(salesSummary.discount),
     },
 
     {
       field: "Shipping",
-      value: asNumber(
-        salesSummary.shipping,
-      ),
+      value: asNumber(salesSummary.shipping),
     },
 
     {
       field: "Refund Amount",
-      value: asNumber(
-        salesSummary.refundAmount,
-      ),
+      value: asNumber(salesSummary.refundAmount),
     },
 
     {
       field: "Commission",
-      value: asNumber(
-        salesSummary.commission,
-      ),
+      value: asNumber(salesSummary.commission),
     },
 
     {
       field: "Net Seller Earnings",
-      value: asNumber(
-        salesSummary.netSellerEarnings,
-      ),
+      value: asNumber(salesSummary.netSellerEarnings),
     },
   ];
 
@@ -1666,89 +1591,51 @@ export const SalesReport = () => {
    * ==========================
    */
 
-  const salesDetailRows =
-    salesDetails.map(
-      (item, index) => ({
-        serialNumber: index + 1,
+  const salesDetailRows = salesDetails.map((item, index) => ({
+    serialNumber: index + 1,
 
-        orderId:
-          item.orderId || "-",
+    orderId: item.orderId || "-",
 
-        orderDate:
-          item.orderDate
-            ? formatDateTime(
-                item.orderDate,
-                "-",
-              )
-            : "-",
+    orderDate: item.orderDate ? formatDateTime(item.orderDate, "-") : "-",
 
-        orderStatus:
-          item.orderStatus || "-",
+    orderStatus: item.orderStatus || "-",
 
-        paymentStatus:
-          item.paymentStatus || "-",
+    paymentStatus: item.paymentStatus || "-",
 
-        productName:
-          item.productName || "-",
+    productName: item.productName || "-",
 
-        sku:
-          item.sku || "-",
+    sku: item.sku || "-",
 
-        variant:
-          item.variant || "-",
+    variant: item.variant || "-",
 
-        category:
-          item.category || "-",
+    category: item.category || "-",
 
-        quantity:
-          asNumber(item.quantity),
+    quantity: asNumber(item.quantity),
 
-        unitPrice:
-          asNumber(item.unitPrice),
+    unitPrice: asNumber(item.unitPrice),
 
-        subtotal:
-          asNumber(item.subtotal),
+    subtotal: asNumber(item.subtotal),
 
-        discount:
-          asNumber(item.discount),
+    discount: asNumber(item.discount),
 
-        tax:
-          asNumber(item.tax),
+    tax: asNumber(item.tax),
 
-        shipping:
-          asNumber(item.shipping),
+    shipping: asNumber(item.shipping),
 
-        grossAmount:
-          asNumber(item.grossAmount),
+    grossAmount: asNumber(item.grossAmount),
 
-        refundAmount:
-          asNumber(item.refundAmount),
+    refundAmount: asNumber(item.refundAmount),
 
-        commission:
-          asNumber(item.commission),
+    commission: asNumber(item.commission),
 
-        shippingDeduction:
-          asNumber(
-            item.shippingDeduction,
-          ),
+    shippingDeduction: asNumber(item.shippingDeduction),
 
-        netSellerEarnings:
-          asNumber(
-            item.netSellerEarnings,
-          ),
+    netSellerEarnings: asNumber(item.netSellerEarnings),
 
-        payoutStatus:
-          item.payoutStatus || "-",
+    payoutStatus: item.payoutStatus || "-",
 
-        payoutDate:
-          item.payoutDate
-            ? formatDateTime(
-                item.payoutDate,
-                "-",
-              )
-            : "-",
-      }),
-    );
+    payoutDate: item.payoutDate ? formatDateTime(item.payoutDate, "-") : "-",
+  }));
 
   /*
    * ==========================
@@ -1756,63 +1643,36 @@ export const SalesReport = () => {
    * ==========================
    */
 
-  const salesDatePart = (value) =>
-    formatDateLabel(value).replace(
-      /\s+/g,
-      "-",
-    );
+  const salesDatePart = (value) => formatDateLabel(value).replace(/\s+/g, "-");
 
-  const salesExportFilename =
-    `Sales_Report_${salesDatePart(
-      filters.fromDate,
-    )}_to_${salesDatePart(
-      filters.toDate,
-    )}.xlsx`;
+  const salesExportFilename = `Sales_Report_${salesDatePart(
+    filters.fromDate,
+  )}_to_${salesDatePart(filters.toDate)}.xlsx`;
 
   return (
     <ReportShell
-      title={
-        sellerView
-          ? "Sales Report"
-          : "Sales Reports"
-      }
-
+      title={sellerView ? "Sales Report" : "Sales Reports"}
       subtitle={
         sellerView
           ? "Revenue and order status for your seller account."
           : "Revenue, order status, payments, and refunds from live marketplace analytics"
       }
-
       breadcrumbs={[
         {
-          label: sellerView
-            ? SELLER_REPORT_CRUMB
-            : "Reports & Analytics",
+          label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics",
         },
 
         {
-          label: sellerView
-            ? "Sales Report"
-            : "Sales Reports",
+          label: sellerView ? "Sales Report" : "Sales Reports",
         },
       ]}
-
       stats={stats}
-
       loading={loading}
-
       error={error}
-
       filters={filters}
-
       onRefresh={refresh}
-
       exportEndpoint={null}
-
-      exportFilename={
-        salesExportFilename
-      }
-
+      exportFilename={salesExportFilename}
       /*
        * ==========================
        * EXCEL EXPORT
@@ -1852,173 +1712,173 @@ export const SalesReport = () => {
          * ==========================
          */
 
-       {
-  name: "Sales Details",
+        {
+          name: "Sales Details",
 
-  title: "Sales Details",
+          title: "Sales Details",
 
-  data: salesDetailRows,
+          data: salesDetailRows,
 
-  columns: [
-    {
-      key: "serialNumber",
-      label: "S.No",
-    },
+          columns: [
+            {
+              key: "serialNumber",
+              label: "S.No",
+            },
 
-    {
-      key: "orderId",
-      label: "Order ID",
-    },
+            {
+              key: "orderId",
+              label: "Order ID",
+            },
 
-    {
-      key: "orderDate",
-      label: "Order Date",
-    },
+            {
+              key: "orderDate",
+              label: "Order Date",
+            },
 
-    {
-      key: "orderStatus",
-      label: "Order Status",
-    },
+            {
+              key: "orderStatus",
+              label: "Order Status",
+            },
 
-    {
-      key: "paymentStatus",
-      label: "Payment Status",
-    },
+            {
+              key: "paymentStatus",
+              label: "Payment Status",
+            },
 
-    {
-      key: "productName",
-      label: "Product Name",
-    },
+            {
+              key: "productName",
+              label: "Product Name",
+            },
 
-    {
-      key: "sku",
-      label: "SKU",
-    },
+            {
+              key: "sku",
+              label: "SKU",
+            },
 
-    {
-      key: "variant",
-      label: "Variant",
-    },
+            {
+              key: "variant",
+              label: "Variant",
+            },
 
-    {
-      key: "category",
-      label: "Category",
-    },
+            {
+              key: "category",
+              label: "Category",
+            },
 
-    {
-      key: "quantity",
-      label: "Quantity",
-    },
+            {
+              key: "quantity",
+              label: "Quantity",
+            },
 
-    {
-      key: "unitPrice",
-      label: "Unit Price",
-    },
+            {
+              key: "unitPrice",
+              label: "Unit Price",
+            },
 
-    {
-      key: "subtotal",
-      label: "Subtotal",
-    },
+            {
+              key: "subtotal",
+              label: "Subtotal",
+            },
 
-    {
-      key: "discount",
-      label: "Discount",
-    },
+            {
+              key: "discount",
+              label: "Discount",
+            },
 
-    {
-      key: "tax",
-      label: "Tax",
-    },
+            {
+              key: "tax",
+              label: "Tax",
+            },
 
-    {
-      key: "shipping",
-      label: "Shipping",
-    },
+            {
+              key: "shipping",
+              label: "Shipping",
+            },
 
-    {
-      key: "grossAmount",
-      label: "Gross Amount",
-    },
+            {
+              key: "grossAmount",
+              label: "Gross Amount",
+            },
 
-    {
-      key: "refundAmount",
-      label: "Refund Amount",
-    },
+            {
+              key: "refundAmount",
+              label: "Refund Amount",
+            },
 
-    {
-      key: "commission",
-      label: "Commission",
-    },
+            {
+              key: "commission",
+              label: "Commission",
+            },
 
-    {
-      key: "shippingDeduction",
-      label: "Shipping Deduction",
-    },
+            {
+              key: "shippingDeduction",
+              label: "Shipping Deduction",
+            },
 
-    {
-      key: "netSellerEarnings",
-      label: "Net Seller Earnings",
-    },
+            {
+              key: "netSellerEarnings",
+              label: "Net Seller Earnings",
+            },
 
-    {
-      key: "payoutStatus",
-      label: "Payout Status",
-    },
+            {
+              key: "payoutStatus",
+              label: "Payout Status",
+            },
 
-    // {
-    //   key: "payoutDate",
-    //   label: "Payout Date",
-    // },
-  ],
+            // {
+            //   key: "payoutDate",
+            //   label: "Payout Date",
+            // },
+          ],
 
-  cellStyles: {
-    "Payout Status": {
-      pending: {
-        fill: {
-          patternType: "solid",
-          fgColor: { rgb: "FEF3C7" },
+          cellStyles: {
+            "Payout Status": {
+              pending: {
+                fill: {
+                  patternType: "solid",
+                  fgColor: { rgb: "FEF3C7" },
+                },
+                font: {
+                  color: { rgb: "92400E" },
+                  bold: true,
+                },
+              },
+
+              processing: {
+                fill: {
+                  patternType: "solid",
+                  fgColor: { rgb: "DBEAFE" },
+                },
+                font: {
+                  color: { rgb: "1D4ED8" },
+                  bold: true,
+                },
+              },
+
+              completed: {
+                fill: {
+                  patternType: "solid",
+                  fgColor: { rgb: "DCFCE7" },
+                },
+                font: {
+                  color: { rgb: "166534" },
+                  bold: true,
+                },
+              },
+
+              failed: {
+                fill: {
+                  patternType: "solid",
+                  fgColor: { rgb: "FEE2E2" },
+                },
+                font: {
+                  color: { rgb: "991B1B" },
+                  bold: true,
+                },
+              },
+            },
+          },
         },
-        font: {
-          color: { rgb: "92400E" },
-          bold: true,
-        },
-      },
-
-      processing: {
-        fill: {
-          patternType: "solid",
-          fgColor: { rgb: "DBEAFE" },
-        },
-        font: {
-          color: { rgb: "1D4ED8" },
-          bold: true,
-        },
-      },
-
-      completed: {
-        fill: {
-          patternType: "solid",
-          fgColor: { rgb: "DCFCE7" },
-        },
-        font: {
-          color: { rgb: "166534" },
-          bold: true,
-        },
-      },
-
-      failed: {
-        fill: {
-          patternType: "solid",
-          fgColor: { rgb: "FEE2E2" },
-        },
-        font: {
-          color: { rgb: "991B1B" },
-          bold: true,
-        },
-      },
-    },
-  },
-},
       ]}
     >
       <SummaryColumnChart
@@ -2035,22 +1895,21 @@ export const ProductAnalytics = () => {
 
   const loadData = useCallback(
     async ({ fromDate, toDate }) => {
-      const [topProducts, inventoryStats, catalogProducts] =
-        await Promise.all([
-          fetchJson(ENDPOINTS.products.analyticsTop, {
-            limit: 100,
-            metric: sellerView ? "views" : "purchases",
-            fromDate,
-            toDate,
-          }),
+      const [topProducts, inventoryStats, catalogProducts] = await Promise.all([
+        fetchJson(ENDPOINTS.products.analyticsTop, {
+          limit: 100,
+          metric: sellerView ? "views" : "purchases",
+          fromDate,
+          toDate,
+        }),
 
-          fetchJson(ENDPOINTS.products.inventoryStats),
+        fetchJson(ENDPOINTS.products.inventoryStats),
 
-          fetchJson(ENDPOINTS.products.listForPanel, {
-            limit: 100,
-            includeAllStatuses: true,
-          }).catch(() => []),
-        ]);
+        fetchJson(ENDPOINTS.products.listForPanel, {
+          limit: 100,
+          includeAllStatuses: true,
+        }).catch(() => []),
+      ]);
 
       return {
         topProducts: listFrom(topProducts),
@@ -2061,10 +1920,7 @@ export const ProductAnalytics = () => {
     [sellerView],
   );
 
-  const { data, loading, error, refresh } = useApiReport(
-    loadData,
-    filters,
-  );
+  const { data, loading, error, refresh } = useApiReport(loadData, filters);
 
   const products = listFrom(data.topProducts);
   const catalogProducts = listFrom(data.catalogProducts);
@@ -2075,11 +1931,7 @@ export const ProductAnalytics = () => {
    */
   const analyticsById = new Map(
     products.map((product) => [
-      String(
-        product._id ||
-          product.id ||
-          product.productId,
-      ),
+      String(product._id || product.id || product.productId),
       product,
     ]),
   );
@@ -2091,20 +1943,14 @@ export const ProductAnalytics = () => {
   const displayProducts = catalogProducts.length
     ? catalogProducts.map((product) => {
         const productId = String(
-          product._id ||
-            product.id ||
-            product.productId,
+          product._id || product.id || product.productId,
         );
 
-        const analyticsProduct =
-          analyticsById.get(productId) || product;
+        const analyticsProduct = analyticsById.get(productId) || product;
 
         return {
           ...product,
-          analytics:
-            analyticsProduct.analytics ||
-            product.analytics ||
-            {},
+          analytics: analyticsProduct.analytics || product.analytics || {},
         };
       })
     : products;
@@ -2128,40 +1974,21 @@ export const ProductAnalytics = () => {
     const orderCount = asNumber(analytics.orderCount);
 
     return {
-      id:
-        product._id ||
-        product.id ||
-        product.productId,
+      id: product._id || product.id || product.productId,
 
-      title:
-        product.title ||
-        product.name ||
-        "Untitled",
+      title: product.title || product.name || "Untitled",
 
-      label: truncateLabel(
-        product.title ||
-          product.name ||
-          "Untitled",
-        18,
-      ),
+      label: truncateLabel(product.title || product.name || "Untitled", 18),
 
       chartLabel: truncateLabel(
-        product.title ||
-          product.name ||
-          "Untitled",
+        product.title || product.name || "Untitled",
         26,
       ),
 
-      sku:
-        product.sku ||
-        product.skuCode ||
-        "-",
+      sku: product.sku || product.skuCode || "-",
 
       price: formatCurrency(
-        product.price ||
-          product.sellingPrice ||
-          product.salePrice ||
-          0,
+        product.price || product.sellingPrice || product.salePrice || 0,
       ),
 
       purchases,
@@ -2173,11 +2000,9 @@ export const ProductAnalytics = () => {
       wishlistAdds,
       orderCount,
 
-      lastViewedAt:
-        analytics.lastViewedAt || null,
+      lastViewedAt: analytics.lastViewedAt || null,
 
-      status:
-        product.status || "-",
+      status: product.status || "-",
     };
   });
 
@@ -2185,9 +2010,7 @@ export const ProductAnalytics = () => {
    * If inventory has more products than the
    * analytics API returned, add empty rows.
    */
-  const totalProductsCount = asNumber(
-    inventory.totalProducts,
-  );
+  const totalProductsCount = asNumber(inventory.totalProducts);
 
   const rows =
     totalProductsCount > baseRows.length
@@ -2195,30 +2018,16 @@ export const ProductAnalytics = () => {
           ...baseRows,
           ...Array.from(
             {
-              length:
-                totalProductsCount -
-                baseRows.length,
+              length: totalProductsCount - baseRows.length,
             },
             (_, index) => ({
               id: `missing-product-${index + 1}`,
 
-              title: `Product ${
-                baseRows.length +
-                index +
-                1
-              }`,
+              title: `Product ${baseRows.length + index + 1}`,
 
-              label: `Product ${
-                baseRows.length +
-                index +
-                1
-              }`,
+              label: `Product ${baseRows.length + index + 1}`,
 
-              chartLabel: `Product ${
-                baseRows.length +
-                index +
-                1
-              }`,
+              chartLabel: `Product ${baseRows.length + index + 1}`,
 
               sku: "-",
               price: formatCurrency(0),
@@ -2243,50 +2052,42 @@ export const ProductAnalytics = () => {
    * Overall totals
    */
   const purchaseTotal = rows.reduce(
-    (sum, product) =>
-      sum + asNumber(product.purchases),
+    (sum, product) => sum + asNumber(product.purchases),
     0,
   );
 
   const revenueTotal = rows.reduce(
-    (sum, product) =>
-      sum + asNumber(product.revenue),
+    (sum, product) => sum + asNumber(product.revenue),
     0,
   );
 
   const viewsTotal = rows.reduce(
-    (sum, product) =>
-      sum + asNumber(product.views),
+    (sum, product) => sum + asNumber(product.views),
     0,
   );
 
   const uniqueViewsTotal = rows.reduce(
-    (sum, product) =>
-      sum + asNumber(product.uniqueViews),
+    (sum, product) => sum + asNumber(product.uniqueViews),
     0,
   );
 
   const impressionsTotal = rows.reduce(
-    (sum, product) =>
-      sum + asNumber(product.impressions),
+    (sum, product) => sum + asNumber(product.impressions),
     0,
   );
 
   const cartAddTotal = rows.reduce(
-    (sum, product) =>
-      sum + asNumber(product.cartAdds),
+    (sum, product) => sum + asNumber(product.cartAdds),
     0,
   );
 
   const wishlistAddTotal = rows.reduce(
-    (sum, product) =>
-      sum + asNumber(product.wishlistAdds),
+    (sum, product) => sum + asNumber(product.wishlistAdds),
     0,
   );
 
   const orderCountTotal = rows.reduce(
-    (sum, product) =>
-      sum + asNumber(product.orderCount),
+    (sum, product) => sum + asNumber(product.orderCount),
     0,
   );
 
@@ -2296,9 +2097,7 @@ export const ProductAnalytics = () => {
   const stats = [
     {
       label: "Total Products",
-      value: formatNumber(
-        inventory.totalProducts,
-      ),
+      value: formatNumber(inventory.totalProducts),
       sub: "Current catalog",
     },
 
@@ -2328,9 +2127,7 @@ export const ProductAnalytics = () => {
 
     {
       label: "Out of Stock",
-      value: formatNumber(
-        inventory.outOfStockCount,
-      ),
+      value: formatNumber(inventory.outOfStockCount),
       sub: "Current inventory",
     },
   ];
@@ -2341,32 +2138,24 @@ export const ProductAnalytics = () => {
   const productSummaryRows = [
     {
       field: "Report Name",
-      value: sellerView
-        ? "Product Report"
-        : "Product Analytics",
+      value: sellerView ? "Product Report" : "Product Analytics",
     },
 
     {
       field: "Date Range",
-      value: `${formatDateLabel(
-        filters.fromDate,
-      )} - ${formatDateLabel(
+      value: `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(
         filters.toDate,
       )}`,
     },
 
     {
       field: "Generated On",
-      value: formatDateLabel(
-        toIsoDate(new Date()),
-      ),
+      value: formatDateLabel(toIsoDate(new Date())),
     },
 
     {
       field: "Total Products",
-      value: asNumber(
-        inventory.totalProducts,
-      ),
+      value: asNumber(inventory.totalProducts),
     },
 
     {
@@ -2406,109 +2195,77 @@ export const ProductAnalytics = () => {
 
     {
       field: "Out of Stock",
-      value: asNumber(
-        inventory.outOfStockCount,
-      ),
+      value: asNumber(inventory.outOfStockCount),
     },
   ];
 
   /*
    * Product Details Excel rows
    */
-  const productDetailRows = rows.map(
-    (row, index) => ({
-      serialNumber: index + 1,
+  const productDetailRows = rows.map((row, index) => ({
+    serialNumber: index + 1,
 
-      productName: row.title,
+    productName: row.title,
 
-      sku: row.sku,
+    sku: row.sku,
 
-      price: row.price,
+    price: row.price,
 
-      productViews: row.views,
+    productViews: row.views,
 
-      uniqueViews: row.uniqueViews,
+    uniqueViews: row.uniqueViews,
 
-      impressions: row.impressions,
+    impressions: row.impressions,
 
-      cartAdds: row.cartAdds,
+    cartAdds: row.cartAdds,
 
-      wishlistAdds: row.wishlistAdds,
+    wishlistAdds: row.wishlistAdds,
 
-      purchases: row.purchases,
+    purchases: row.purchases,
 
-      orderCount: row.orderCount,
+    orderCount: row.orderCount,
 
-      revenue: row.revenue,
+    revenue: row.revenue,
 
-      lastViewed:
-        row.lastViewedAt
-          ? formatDateTime(row.lastViewedAt, "-")
-          : "-",
+    lastViewed: row.lastViewedAt ? formatDateTime(row.lastViewedAt, "-") : "-",
 
-      status: row.status,
-    }),
-  );
+    status: row.status,
+  }));
 
   /*
    * Excel file name
    */
   const productDatePart = (value) =>
-    formatDateLabel(value).replace(
-      /\s+/g,
-      "-",
-    );
+    formatDateLabel(value).replace(/\s+/g, "-");
 
   const productExportFilename = `Product_Report_${productDatePart(
     filters.fromDate,
-  )}_to_${productDatePart(
-    filters.toDate,
-  )}.xlsx`;
+  )}_to_${productDatePart(filters.toDate)}.xlsx`;
 
   return (
     <ReportShell
-      title={
-        sellerView
-          ? "Product Report"
-          : "Product Analytics"
-      }
-
+      title={sellerView ? "Product Report" : "Product Analytics"}
       subtitle={
         sellerView
           ? "Top-selling products and catalog health for your seller account."
           : "Top-selling products and current catalog health from product analytics APIs"
       }
-
       breadcrumbs={[
         {
-          label: sellerView
-            ? SELLER_REPORT_CRUMB
-            : "Reports & Analytics",
+          label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics",
         },
 
         {
-          label: sellerView
-            ? "Product Report"
-            : "Product Analytics",
+          label: sellerView ? "Product Report" : "Product Analytics",
         },
       ]}
-
       stats={stats}
-
       loading={loading}
-
       error={error}
-
       filters={filters}
-
       onRefresh={refresh}
-
       exportEndpoint={null}
-
-      exportFilename={
-        productExportFilename
-      }
-
+      exportFilename={productExportFilename}
       exportExcelSheets={[
         /*
          * ==========================
@@ -2540,143 +2297,142 @@ export const ProductAnalytics = () => {
          * PRODUCT DETAILS
          * ==========================
          */
-       {
-  name: "Product Details",
+        {
+          name: "Product Details",
 
-  title: "Product Details",
+          title: "Product Details",
 
-  data: productDetailRows,
+          data: productDetailRows,
 
-  columns: [
-    {
-      key: "serialNumber",
-      label: "S.No",
-    },
+          columns: [
+            {
+              key: "serialNumber",
+              label: "S.No",
+            },
 
-    {
-      key: "productName",
-      label: "Product Name",
-    },
+            {
+              key: "productName",
+              label: "Product Name",
+            },
 
-    {
-      key: "sku",
-      label: "SKU",
-    },
+            {
+              key: "sku",
+              label: "SKU",
+            },
 
-    {
-      key: "price",
-      label: "Price",
-    },
+            {
+              key: "price",
+              label: "Price",
+            },
 
-    {
-      key: "productViews",
-      label: "Product Views",
-    },
+            {
+              key: "productViews",
+              label: "Product Views",
+            },
 
-    {
-      key: "uniqueViews",
-      label: "Unique Views",
-    },
+            {
+              key: "uniqueViews",
+              label: "Unique Views",
+            },
 
-    {
-      key: "impressions",
-      label: "Impressions",
-    },
+            {
+              key: "impressions",
+              label: "Impressions",
+            },
 
-    {
-      key: "cartAdds",
-      label: "Cart Adds",
-    },
+            {
+              key: "cartAdds",
+              label: "Cart Adds",
+            },
 
-    {
-      key: "wishlistAdds",
-      label: "Wishlist Adds",
-    },
+            {
+              key: "wishlistAdds",
+              label: "Wishlist Adds",
+            },
 
-    {
-      key: "purchases",
-      label: "Purchases",
-    },
+            {
+              key: "purchases",
+              label: "Purchases",
+            },
 
-    {
-      key: "revenue",
-      label: "Revenue",
-    },
+            {
+              key: "revenue",
+              label: "Revenue",
+            },
 
-    {
-      key: "lastViewed",
-      label: "Last Viewed",
-    },
+            {
+              key: "lastViewed",
+              label: "Last Viewed",
+            },
 
-    {
-      key: "status",
-      label: "Status",
-    },
-  ],
+            {
+              key: "status",
+              label: "Status",
+            },
+          ],
 
-  cellStyles: {
-    Status: {
-      active: {
-        fill: {
-          patternType: "solid",
-          fgColor: { rgb: "DCFCE7" },
+          cellStyles: {
+            Status: {
+              active: {
+                fill: {
+                  patternType: "solid",
+                  fgColor: { rgb: "DCFCE7" },
+                },
+                font: {
+                  color: { rgb: "166534" },
+                  bold: true,
+                },
+              },
+
+              approved: {
+                fill: {
+                  patternType: "solid",
+                  fgColor: { rgb: "DCFCE7" },
+                },
+                font: {
+                  color: { rgb: "166534" },
+                  bold: true,
+                },
+              },
+
+              pending: {
+                fill: {
+                  patternType: "solid",
+                  fgColor: { rgb: "FEF3C7" },
+                },
+                font: {
+                  color: { rgb: "92400E" },
+                  bold: true,
+                },
+              },
+
+              rejected: {
+                fill: {
+                  patternType: "solid",
+                  fgColor: { rgb: "FEE2E2" },
+                },
+                font: {
+                  color: { rgb: "991B1B" },
+                  bold: true,
+                },
+              },
+
+              inactive: {
+                fill: {
+                  patternType: "solid",
+                  fgColor: { rgb: "F3F4F6" },
+                },
+                font: {
+                  color: { rgb: "4B5563" },
+                  bold: true,
+                },
+              },
+            },
+          },
         },
-        font: {
-          color: { rgb: "166534" },
-          bold: true,
-        },
-      },
-
-      approved: {
-        fill: {
-          patternType: "solid",
-          fgColor: { rgb: "DCFCE7" },
-        },
-        font: {
-          color: { rgb: "166534" },
-          bold: true,
-        },
-      },
-
-      pending: {
-        fill: {
-          patternType: "solid",
-          fgColor: { rgb: "FEF3C7" },
-        },
-        font: {
-          color: { rgb: "92400E" },
-          bold: true,
-        },
-      },
-
-      rejected: {
-        fill: {
-          patternType: "solid",
-          fgColor: { rgb: "FEE2E2" },
-        },
-        font: {
-          color: { rgb: "991B1B" },
-          bold: true,
-        },
-      },
-
-      inactive: {
-        fill: {
-          patternType: "solid",
-          fgColor: { rgb: "F3F4F6" },
-        },
-        font: {
-          color: { rgb: "4B5563" },
-          bold: true,
-        },
-      },
-    },
-  },
-},
       ]}
     >
       <div className="space-y-4">
-
         {/* ==========================
             TOP PRODUCT GRAPH
             ========================== */}
@@ -2684,17 +2440,9 @@ export const ProductAnalytics = () => {
           title="Top Product Growth"
           rows={rows}
           barKey="revenue"
-          lineKey={
-            sellerView
-              ? "views"
-              : "purchases"
-          }
+          lineKey={sellerView ? "views" : "purchases"}
           barLabel="Revenue"
-          lineLabel={
-            sellerView
-              ? "Views"
-              : "Purchases"
-          }
+          lineLabel={sellerView ? "Views" : "Purchases"}
           barFormatter={formatCurrency}
           lineFormatter={formatNumber}
           includeZeroRows
@@ -2732,24 +2480,21 @@ export const ProductAnalytics = () => {
               key: "purchases",
               label: "Purchases",
 
-              render: (value) =>
-                formatNumber(value),
+              render: (value) => formatNumber(value),
             },
 
             {
               key: "revenue",
               label: "Revenue",
 
-              render: (value) =>
-                formatCurrency(value),
+              render: (value) => formatCurrency(value),
             },
 
             {
               key: "views",
               label: "Views",
 
-              render: (value) =>
-                formatNumber(value),
+              render: (value) => formatNumber(value),
             },
 
             ...(sellerView
@@ -2758,25 +2503,20 @@ export const ProductAnalytics = () => {
                     key: "cartAdds",
                     label: "Cart Adds",
 
-                    render: (value) =>
-                      formatNumber(value),
+                    render: (value) => formatNumber(value),
                   },
 
                   {
                     key: "wishlistAdds",
                     label: "Wishlist",
 
-                    render: (value) =>
-                      formatNumber(value),
+                    render: (value) => formatNumber(value),
                   },
                 ]
               : []),
           ]}
-
           getRowLink={(row) =>
-            row.id
-              ? `/app/product-catalog/view/${row.id}`
-              : null
+            row.id ? `/app/product-catalog/view/${row.id}` : null
           }
         />
       </div>
@@ -2796,10 +2536,7 @@ export const InventoryAnalytics = () => {
 
     if (isSellerPanel()) {
       const [stats, products] = await Promise.all([
-        fetchJson(
-          ENDPOINTS.products.inventoryStats,
-          dateParams
-        ),
+        fetchJson(ENDPOINTS.products.inventoryStats, dateParams),
         fetchJson(ENDPOINTS.products.listForPanel, {
           limit: 10,
           page: 1,
@@ -2815,10 +2552,7 @@ export const InventoryAnalytics = () => {
     }
 
     const [stats, lowStock] = await Promise.all([
-      fetchJson(
-        ENDPOINTS.inventory.stats,
-        dateParams
-      ),
+      fetchJson(ENDPOINTS.inventory.stats, dateParams),
       fetchJson(ENDPOINTS.inventory.lowStock, {
         ...dateParams,
         limit: 10,
@@ -2832,10 +2566,7 @@ export const InventoryAnalytics = () => {
     };
   }, []);
 
-  const { data, loading, error, refresh } = useApiReport(
-    loadData,
-    filters
-  );
+  const { data, loading, error, refresh } = useApiReport(loadData, filters);
 
   const statsData = data.stats || {};
 
@@ -2843,42 +2574,26 @@ export const InventoryAnalytics = () => {
    * Product-level data
    * Used for the UI table and graph.
    */
-  const lowStockRows = listFrom(data.lowStock).map(
-    (product) => ({
-      id: product._id || product.id,
+  const lowStockRows = listFrom(data.lowStock).map((product) => ({
+    id: product._id || product.id,
 
-      productTitle:
-        product.title ||
-        product.name ||
-        "Untitled",
+    productTitle: product.title || product.name || "Untitled",
 
-      title:
-        product.title ||
-        product.name ||
-        "Untitled",
+    title: product.title || product.name || "Untitled",
 
-      label: truncateLabel(
-        product.title ||
-          product.name ||
-          "Untitled",
-        18
-      ),
+    label: truncateLabel(product.title || product.name || "Untitled", 18),
 
-      sku: product.sku || "-",
+    sku: product.sku || "-",
 
-      stock: asNumber(product.stock),
+    stock: asNumber(product.stock),
 
-      reservedStock: asNumber(
-        product.reservedStock
-      ),
+    reservedStock: asNumber(product.reservedStock),
 
-      availableStock: Math.max(
-        0,
-        asNumber(product.stock) -
-          asNumber(product.reservedStock)
-      ),
-    })
-  );
+    availableStock: Math.max(
+      0,
+      asNumber(product.stock) - asNumber(product.reservedStock),
+    ),
+  }));
 
   /*
    * Export rows
@@ -2886,118 +2601,87 @@ export const InventoryAnalytics = () => {
    * Variants are expanded ONLY for Excel export.
    * The UI table remains product-level.
    */
-  const inventoryExportRows =
-    listFrom(data.lowStock).flatMap(
-      (product) => {
-        const productName =
-          product.title ||
-          product.name ||
-          "Untitled";
+  const inventoryExportRows = listFrom(data.lowStock).flatMap((product) => {
+    const productName = product.title || product.name || "Untitled";
 
-        const variants = Array.isArray(
-          product.variants
-        )
-          ? product.variants
-          : [];
+    const variants = Array.isArray(product.variants) ? product.variants : [];
 
-        /*
-         * Product without variants
-         */
-        if (!variants.length) {
-          const stock = asNumber(
-            product.stock
-          );
+    /*
+     * Product without variants
+     */
+    if (!variants.length) {
+      const stock = asNumber(product.stock);
 
-          const reserved = asNumber(
-            product.reservedStock
-          );
+      const reserved = asNumber(product.reservedStock);
 
-          const available = Math.max(
-            0,
-            stock - reserved
-          );
+      const available = Math.max(0, stock - reserved);
 
-          return [
-            {
-              productName,
-              variant: "-",
-              sku: product.sku || "-",
-              stock,
-              reserved,
-              available,
+      return [
+        {
+          productName,
+          variant: "-",
+          sku: product.sku || "-",
+          stock,
+          reserved,
+          available,
 
-              status:
-                available === 0
-                  ? "Out of Stock"
-                  : available <
-                    LOW_STOCK_THRESHOLD
-                  ? "Low Stock"
-                  : "In Stock",
-            },
-          ];
-        }
-
-        /*
-         * Product with variants
-         */
-        return variants.map((variant) => {
-          const stock = asNumber(
-            variant.stock
-          );
-
-          const reserved = asNumber(
-            variant.reservedStock
-          );
-
-          const available = Math.max(
-            0,
-            stock - reserved
-          );
-
-          const variantName =
-            variant.title ||
-            Object.values(
-              variant.attributes || {}
-            )
-              .filter(Boolean)
-              .join(" / ") ||
-            "Default";
-
-          return {
-            productName,
-
-            variant: variantName,
-
-            sku: variant.sku || "-",
-
-            stock,
-
-            reserved,
-
-            available,
-
-            status:
-              available === 0
-                ? "Out of Stock"
-                : available <
-                  LOW_STOCK_THRESHOLD
+          status:
+            available === 0
+              ? "Out of Stock"
+              : available < LOW_STOCK_THRESHOLD
                 ? "Low Stock"
                 : "In Stock",
-          };
-        });
-      }
-    );
+        },
+      ];
+    }
+
+    /*
+     * Product with variants
+     */
+    return variants.map((variant) => {
+      const stock = asNumber(variant.stock);
+
+      const reserved = asNumber(variant.reservedStock);
+
+      const available = Math.max(0, stock - reserved);
+
+      const variantName =
+        variant.title ||
+        Object.values(variant.attributes || {})
+          .filter(Boolean)
+          .join(" / ") ||
+        "Default";
+
+      return {
+        productName,
+
+        variant: variantName,
+
+        sku: variant.sku || "-",
+
+        stock,
+
+        reserved,
+
+        available,
+
+        status:
+          available === 0
+            ? "Out of Stock"
+            : available < LOW_STOCK_THRESHOLD
+              ? "Low Stock"
+              : "In Stock",
+      };
+    });
+  });
 
   /*
    * Add serial numbers to Excel rows
    */
-  const numberedInventoryExportRows =
-    inventoryExportRows.map(
-      (row, index) => ({
-        serialNumber: index + 1,
-        ...row,
-      })
-    );
+  const numberedInventoryExportRows = inventoryExportRows.map((row, index) => ({
+    serialNumber: index + 1,
+    ...row,
+  }));
 
   /*
    * Dashboard statistics
@@ -3005,33 +2689,25 @@ export const InventoryAnalytics = () => {
   const stats = [
     {
       label: "Total Products",
-      value: formatNumber(
-        statsData.totalProducts
-      ),
+      value: formatNumber(statsData.totalProducts),
       sub: "Inventory-tracked products",
     },
 
     {
       label: "Total Stock",
-      value: formatNumber(
-        statsData.totalStock
-      ),
+      value: formatNumber(statsData.totalStock),
       sub: "Units on hand",
     },
 
     {
       label: "Reserved Stock",
-      value: formatNumber(
-        statsData.totalReserved
-      ),
+      value: formatNumber(statsData.totalReserved),
       sub: "Allocated to orders",
     },
 
     {
       label: "Low Stock Items",
-      value: formatNumber(
-        statsData.lowStockCount
-      ),
+      value: formatNumber(statsData.lowStockCount),
       sub: `Below ${LOW_STOCK_THRESHOLD} units`,
     },
   ];
@@ -3042,51 +2718,36 @@ export const InventoryAnalytics = () => {
   const inventorySummaryRows = [
     {
       field: "Report Name",
-      value: sellerView
-        ? "Inventory Report"
-        : "Inventory Analytics",
+      value: sellerView ? "Inventory Report" : "Inventory Analytics",
     },
 
     {
       field: "Date Range",
-      value: `${formatDateLabel(
-        filters.fromDate
-      )} - ${formatDateLabel(
-        filters.toDate
+      value: `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(
+        filters.toDate,
       )}`,
     },
 
     {
       field: "Total Products",
-      value: asNumber(
-        statsData.totalProducts
-      ),
+      value: asNumber(statsData.totalProducts),
     },
 
     {
       field: "Total Stock",
-      value: asNumber(
-        statsData.totalStock
-      ),
+      value: asNumber(statsData.totalStock),
     },
 
     {
       field: "Reserved Stock",
-      value: asNumber(
-        statsData.totalReserved
-      ),
+      value: asNumber(statsData.totalReserved),
     },
 
     {
       field: "Available Stock",
       value: Math.max(
         0,
-        asNumber(
-          statsData.totalStock
-        ) -
-          asNumber(
-            statsData.totalReserved
-          )
+        asNumber(statsData.totalStock) - asNumber(statsData.totalReserved),
       ),
     },
 
@@ -3098,64 +2759,39 @@ export const InventoryAnalytics = () => {
 
     {
       field: "Low Stock Items",
-      value: asNumber(
-        statsData.lowStockCount
-      ),
+      value: asNumber(statsData.lowStockCount),
     },
   ];
 
   return (
     <ReportShell
-      title={
-        sellerView
-          ? "Inventory Report"
-          : "Inventory Analytics"
-      }
-
+      title={sellerView ? "Inventory Report" : "Inventory Analytics"}
       subtitle={
         sellerView
           ? "Current stock health and low-stock products for your seller account."
           : "Current stock health and low-stock products from inventory APIs"
       }
-
       breadcrumbs={[
         {
-          label: sellerView
-            ? SELLER_REPORT_CRUMB
-            : "Reports & Analytics",
+          label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics",
         },
 
         {
-          label: sellerView
-            ? "Inventory Report"
-            : "Inventory Analytics",
+          label: sellerView ? "Inventory Report" : "Inventory Analytics",
         },
       ]}
-
       stats={stats}
-
       loading={loading}
-
       error={error}
-
       filters={filters}
-
       onRefresh={refresh}
-
       exportEndpoint={null}
-
       exportFilename={`Inventory_Report_${formatDateLabel(
-        filters.fromDate
-      ).replace(
+        filters.fromDate,
+      ).replace(/\s+/g, "-")}_to_${formatDateLabel(filters.toDate).replace(
         /\s+/g,
-        "-"
-      )}_to_${formatDateLabel(
-        filters.toDate
-      ).replace(
-        /\s+/g,
-        "-"
+        "-",
       )}.xlsx`}
-
       exportExcelSheets={[
         /*
          * Inventory Summary Sheet
@@ -3292,7 +2928,6 @@ export const InventoryAnalytics = () => {
       ]}
     >
       <div className="space-y-4">
-
         {/* Product-level graph */}
         <PerformanceOverview
           title="Inventory Stock Growth"
@@ -3307,26 +2942,16 @@ export const InventoryAnalytics = () => {
 
         {/* Product-level table */}
         <ReportTable
-          title={
-            sellerView
-              ? "Inventory Products"
-              : "Low Stock Products"
-          }
-
+          title={sellerView ? "Inventory Products" : "Low Stock Products"}
           rows={lowStockRows}
-
           emptyTitle={
-            sellerView
-              ? "No inventory products"
-              : "No low-stock products"
+            sellerView ? "No inventory products" : "No low-stock products"
           }
-
           emptyText={
             sellerView
               ? "No products are available in your inventory yet."
               : `Your inventory is healthy for the selected range. Products will appear here when available stock falls below ${LOW_STOCK_THRESHOLD} units.`
           }
-
           columns={[
             {
               key: "productTitle",
@@ -3350,8 +2975,7 @@ export const InventoryAnalytics = () => {
 
               label: "Stock",
 
-              render: (value) =>
-                formatNumber(value),
+              render: (value) => formatNumber(value),
             },
 
             {
@@ -3359,8 +2983,7 @@ export const InventoryAnalytics = () => {
 
               label: "Reserved",
 
-              render: (value) =>
-                formatNumber(value),
+              render: (value) => formatNumber(value),
             },
 
             {
@@ -3368,18 +2991,13 @@ export const InventoryAnalytics = () => {
 
               label: "Available",
 
-              render: (value) =>
-                formatNumber(value),
+              render: (value) => formatNumber(value),
             },
           ]}
-
           getRowLink={(row) =>
-            row.id
-              ? `/app/product-catalog/view/${row.id}`
-              : null
+            row.id ? `/app/product-catalog/view/${row.id}` : null
           }
         />
-
       </div>
     </ReportShell>
   );
@@ -3387,9 +3005,11 @@ export const InventoryAnalytics = () => {
 
 export const SellerAnalytics = () => {
   const { filters, data, loading, error, refresh } = useMarketplaceAnalytics();
+
   const sellers = listFrom(data.sellerPerformance);
   const finance = data.finance || {};
   const payouts = data.payouts || {};
+
   const rows = sellers.map((seller) => ({
     sellerId: seller.sellerId,
     sellerName: seller.sellerName || seller.sellerId,
@@ -3401,6 +3021,7 @@ export const SellerAnalytics = () => {
     commissionAmount: asNumber(seller.commissionAmount),
     deliveryRate: asNumber(seller.deliveryRate),
   }));
+
   const gmvTotal = rows.reduce((sum, row) => sum + row.gmvAmount, 0);
 
   const stats = [
@@ -3426,6 +3047,58 @@ export const SellerAnalytics = () => {
     },
   ];
 
+  /*
+   * Seller Summary Excel Sheet
+   */
+  const sellerSummaryRows = [
+    {
+      field: "Report Name",
+      value: "Seller Analytics",
+    },
+    {
+      field: "Date Range",
+      value: `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(
+        filters.toDate,
+      )}`,
+    },
+    {
+      field: "Total Sellers",
+      value: rows.length,
+    },
+    {
+      field: "Total GMV",
+      value: gmvTotal,
+    },
+    {
+      field: "Platform Revenue",
+      value: asNumber(finance.platformRevenueTotalAmount),
+    },
+    {
+      field: "Seller Payable",
+      value: asNumber(finance.sellerPayableAmount),
+    },
+    {
+      field: "Pending Payouts",
+      value: asNumber(payouts.byStatus?.pending?.netAmount),
+    },
+  ];
+
+  /*
+   * Seller Scorecard Excel Rows
+   */
+  const sellerScorecardExportRows = rows.map((row, index) => ({
+    serialNumber: index + 1,
+    sellerId: row.sellerId,
+    sellerName: row.sellerName,
+    orderCount: row.orderCount,
+    deliveredOrders: row.deliveredOrders,
+    deliveryRate: row.deliveryRate,
+    gmvAmount: row.gmvAmount,
+    gstAmount: row.gstAmount,
+    commissionAmount: row.commissionAmount,
+    commissionTaxAmount: row.commissionTaxAmount,
+  }));
+
   return (
     <ReportShell
       title="Seller Analytics"
@@ -3439,8 +3112,84 @@ export const SellerAnalytics = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
-      exportEndpoint={ENDPOINTS.operationsReports.sellerScorecards}
-      exportFilename="seller-analytics.csv"
+      exportEndpoint={null}
+      exportFilename={`Seller_Analytics_${formatDateLabel(
+        filters.fromDate,
+      ).replace(/\s+/g, "-")}_to_${formatDateLabel(filters.toDate).replace(
+        /\s+/g,
+        "-",
+      )}.xlsx`}
+      exportExcelSheets={[
+        /*
+         * Seller Summary
+         */
+        {
+          name: "Seller Summary",
+          title: "Seller Summary",
+          data: sellerSummaryRows,
+          columns: [
+            {
+              key: "field",
+              label: "Field",
+            },
+            {
+              key: "value",
+              label: "Value",
+            },
+          ],
+        },
+
+        /*
+         * Seller Scorecard
+         */
+        {
+          name: "Seller Scorecard",
+          title: "Seller Scorecard",
+          data: sellerScorecardExportRows,
+          columns: [
+            {
+              key: "serialNumber",
+              label: "S.No",
+            },
+            {
+              key: "sellerId",
+              label: "Seller ID",
+            },
+            {
+              key: "sellerName",
+              label: "Seller",
+            },
+            {
+              key: "orderCount",
+              label: "Orders",
+            },
+            {
+              key: "deliveredOrders",
+              label: "Delivered Orders",
+            },
+            {
+              key: "deliveryRate",
+              label: "Delivery Rate",
+            },
+            {
+              key: "gmvAmount",
+              label: "GMV",
+            },
+            {
+              key: "gstAmount",
+              label: "GST",
+            },
+            {
+              key: "commissionAmount",
+              label: "Commission",
+            },
+            {
+              key: "commissionTaxAmount",
+              label: "Commission Tax",
+            },
+          ],
+        },
+      ]}
     >
       <div className="space-y-4">
         <PerformanceOverview
@@ -3453,11 +3202,15 @@ export const SellerAnalytics = () => {
           barFormatter={formatCurrency}
           lineFormatter={formatNumber}
         />
+
         <ReportTable
           title="Seller Scorecard"
           rows={rows}
           columns={[
-            { key: "sellerName", label: "Seller" },
+            {
+              key: "sellerName",
+              label: "Seller",
+            },
             {
               key: "orderCount",
               label: "Orders",
