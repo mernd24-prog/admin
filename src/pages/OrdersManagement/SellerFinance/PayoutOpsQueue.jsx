@@ -952,7 +952,7 @@ const PayoutOpsQueue = () => {
           {action.type === "complete" && (
             <>
               <Input
-                labelName="Payment Reference (optional)"
+                labelName="Payment Reference *"
                 value={action.paymentReference}
                 onChange={(e) =>
                   setAction((prev) => ({

@@ -30,6 +30,7 @@ const VARIANTS = {
   unverified: "bg-amber-50 text-amber-700 border-amber-200",
   seen: "bg-green-50 text-green-700 border-green-200",
   unseen: "bg-blue-50 text-blue-700 border-blue-200",
+  unread: "bg-blue-50 text-blue-700 border-blue-200 font-medium",
   // ── Onboarding, KYC & Go Live ─────────────────────────────────────────────
   live: "bg-emerald-50 text-emerald-700 border-emerald-300 font-semibold",
   ready_for_go_live: "bg-teal-50 text-teal-700 border-teal-200",
@@ -99,6 +100,7 @@ const DOT_COLORS = {
   verified: "bg-emerald-500",
   seen: "bg-green-500",
   unseen: "bg-blue-500",
+  unread: "bg-blue-500",
   approved: "bg-green-500",
   published: "bg-green-500",
   completed: "bg-green-500",

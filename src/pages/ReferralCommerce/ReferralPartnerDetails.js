@@ -338,7 +338,7 @@ const ReferralPartnerDetails = () => {
   );
 
   const influencer = useMemo(
-    () => navigatedInfluencer || findInfluencer(influencers, id),
+    () => findInfluencer(influencers, id) || navigatedInfluencer,
     [id, influencers, navigatedInfluencer],
   );
   const isAssociate = influencer?.influencerType === "child";
