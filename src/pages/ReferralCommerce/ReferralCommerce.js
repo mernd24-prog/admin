@@ -77,7 +77,8 @@ import {
   resolveStoreKey,
 } from "./referralProductStoreUtils";
 import Tabs from "../../components/Shared/Tabs";
-import Loader, { ButtonLoader } from "../../components/Loader/Loader";
+import { ButtonLoader } from "../../components/Loader/Loader";
+import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -935,9 +936,10 @@ const ProductReferralAmounts = () => {
     setForm(empty);
   };
 
+  const showInitialSkeleton = loading && !configs.length && !products.length;
+
   return (
     <>
-      <Loader loading={loading} label="Loading..." />
       <section className="admin-card overflow-hidden">
         {/* Header */}
         <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
@@ -1028,125 +1030,138 @@ const ProductReferralAmounts = () => {
             </div>
 
             {/* Form Fields */}
-            <div className="grid items-end gap-5 md:grid-cols-2 xl:grid-cols-5">
-              {/* Store */}
-              <FormSelectGroup
-                label="Store"
-                options={storeOptions}
-                value={
-                  storeOptions.find(
-                    (option) => String(option.value) === String(form.storeKey),
-                  ) || null
-                }
-                onChange={(selectedOption) => {
-                  const storeKey = selectedOption?.value || "";
+            {showInitialSkeleton ? (
+              <div className="grid items-end gap-5 md:grid-cols-2 xl:grid-cols-5">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index}>
+                    <SkeletonLoader height={12} width={120} />
+                    <div className="mt-2">
+                      <SkeletonLoader height={42} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid items-end gap-5 md:grid-cols-2 xl:grid-cols-5">
+                {/* Store */}
+                <FormSelectGroup
+                  label="Store"
+                  options={storeOptions}
+                  value={
+                    storeOptions.find(
+                      (option) => String(option.value) === String(form.storeKey),
+                    ) || null
+                  }
+                  onChange={(selectedOption) => {
+                    const storeKey = selectedOption?.value || "";
 
-                  setForm((current) => ({
-                    ...current,
-                    storeKey,
-                    storeId: "",
-                    productId: "",
-                    productTitle: "",
-                  }));
-                }}
-                placeholder="Select store"
-                isSearchable
-                isClearable
-                className="w-full"
-              />
+                    setForm((current) => ({
+                      ...current,
+                      storeKey,
+                      storeId: "",
+                      productId: "",
+                      productTitle: "",
+                    }));
+                  }}
+                  placeholder="Select store"
+                  isSearchable
+                  isClearable
+                  className="w-full"
+                />
 
-              {/* Product */}
-              <FormSelectGroup
-                label="Product"
-                options={productOptions}
-                value={
-                  productOptions.find(
-                    (option) => String(option.value) === String(form.productId),
-                  ) || null
-                }
-                onChange={(selectedOption) => {
-                  const productId = selectedOption?.value || "";
+                {/* Product */}
+                <FormSelectGroup
+                  label="Product"
+                  options={productOptions}
+                  value={
+                    productOptions.find(
+                      (option) => String(option.value) === String(form.productId),
+                    ) || null
+                  }
+                  onChange={(selectedOption) => {
+                    const productId = selectedOption?.value || "";
 
-                  const product = storeProducts.find(
-                    (item) => String(getId(item)) === String(productId),
-                  );
+                    const product = storeProducts.find(
+                      (item) => String(getId(item)) === String(productId),
+                    );
 
-                  setForm((current) => ({
-                    ...current,
-                    productId,
-                    productTitle: getProductTitle(product),
-                    storeId: getProductStoreId(product),
-                  }));
-                }}
-                placeholder={
-                  form.storeKey ? "Select product" : "Select store first"
-                }
-                isDisabled={!form.storeKey}
-                isSearchable
-                isClearable
-                className="w-full"
-              />
+                    setForm((current) => ({
+                      ...current,
+                      productId,
+                      productTitle: getProductTitle(product),
+                      storeId: getProductStoreId(product),
+                    }));
+                  }}
+                  placeholder={
+                    form.storeKey ? "Select product" : "Select store first"
+                  }
+                  isDisabled={!form.storeKey}
+                  isSearchable
+                  isClearable
+                  className="w-full"
+                />
 
-              {/* Amount Type */}
-              <FormSelectGroup
-                label="Amount Type"
-                options={amountTypeOptions}
-                value={
-                  amountTypeOptions.find(
-                    (option) => option.value === form.amountType,
-                  ) || null
-                }
-                onChange={(selectedOption) => {
-                  setForm((current) => ({
-                    ...current,
-                    amountType: selectedOption?.value || "fixed_amount",
-                  }));
-                }}
-                placeholder="Select amount type"
-                isSearchable={false}
-                className="w-full"
-              />
+                {/* Amount Type */}
+                <FormSelectGroup
+                  label="Amount Type"
+                  options={amountTypeOptions}
+                  value={
+                    amountTypeOptions.find(
+                      (option) => option.value === form.amountType,
+                    ) || null
+                  }
+                  onChange={(selectedOption) => {
+                    setForm((current) => ({
+                      ...current,
+                      amountType: selectedOption?.value || "fixed_amount",
+                    }));
+                  }}
+                  placeholder="Select amount type"
+                  isSearchable={false}
+                  className="w-full"
+                />
 
-              {/* Pool Amount */}
-              <FormInput
-                label={
-                  form.amountType === "percentage"
-                    ? "Pool Percentage"
-                    : "Pool Amount Per Unit (₹)"
-                }
-                name="amountValue"
-                type="number"
-                min="0"
-                max={form.amountType === "percentage" ? "100" : undefined}
-                step="0.01"
-                value={form.amountValue}
-                onChange={(event) => {
-                  setForm((current) => ({
-                    ...current,
-                    amountValue: event.target.value,
-                  }));
-                }}
-                className="w-full"
-              />
+                {/* Pool Amount */}
+                <FormInput
+                  label={
+                    form.amountType === "percentage"
+                      ? "Pool Percentage"
+                      : "Pool Amount Per Unit (₹)"
+                  }
+                  name="amountValue"
+                  type="number"
+                  min="0"
+                  max={form.amountType === "percentage" ? "100" : undefined}
+                  step="0.01"
+                  value={form.amountValue}
+                  onChange={(event) => {
+                    setForm((current) => ({
+                      ...current,
+                      amountValue: event.target.value,
+                    }));
+                  }}
+                  className="w-full"
+                />
 
-              {/* Maximum Amount */}
-              <FormInput
-                label="Maximum Pool Per Line (₹)"
-                name="maximumAmount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.maximumAmount}
-                onChange={(event) => {
-                  setForm((current) => ({
-                    ...current,
-                    maximumAmount: event.target.value,
-                  }));
-                }}
-                hint="0 means no additional limit."
-                className="w-full"
-              />
-            </div>
+                {/* Maximum Amount */}
+                <FormInput
+                  label="Maximum Pool Per Line (₹)"
+                  name="maximumAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.maximumAmount}
+                  onChange={(event) => {
+                    setForm((current) => ({
+                      ...current,
+                      maximumAmount: event.target.value,
+                    }));
+                  }}
+                  hint="0 means no additional limit."
+                  className="w-full"
+                />
+              </div>
+            )}
 
             {/* Selected Product Information */}
             {selectedProduct && (
@@ -1239,6 +1254,10 @@ const ProductReferralAmounts = () => {
 
             {/* Actions */}
             <div className="mt-6 flex justify-end gap-3 border-t border-[var(--admin-line)] pt-5">
+              {showInitialSkeleton ? (
+                <SkeletonLoader height={40} width={180} />
+              ) : (
+                <>
               {isEditMode && (
                 <button
                   type="button"
@@ -1269,6 +1288,8 @@ const ProductReferralAmounts = () => {
                   </>
                 )}
               </OrangeButton>
+                </>
+              )}
             </div>
           </div>
         </form>

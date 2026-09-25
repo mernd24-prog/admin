@@ -406,7 +406,6 @@ function Layout() {
   const [isExpanded, setIsExpanded] = useState(getInitialSidebarState);
   const [isRefreshConfig, setIsRefreshConfig] = useState(false);
   const [socket, setSocket] = useState(null);
-  const [isPermissionShow, setIsPermissionShow] = useState(false);
   const selector = useSelector((state) => state.user);
   const adminCoreSelector = useSelector((state) => state.adminCore);
   const permissions = selector?.getMyModulePermissionData?.data?.data;
@@ -801,7 +800,6 @@ function Layout() {
 
   useEffect(() => {
     socket?.on("refreshed-configurations", (data) => {
-      setIsPermissionShow(true);
       setIsRefreshConfig((value) => !value);
     });
 
@@ -845,7 +843,21 @@ function Layout() {
 
   const renderRoute = (path, element) => {
     if (!hasPermission(path)) {
-      return <PermissionNotAllowed loading={isPermissionShow} />;
+      const permissionLoading = Boolean(
+        selector?.loading ||
+        adminCoreSelector?.loading ||
+        selector?.getMyModulePermissionData?.loading ||
+        adminCoreSelector?.accessModulesData?.loading ||
+        adminCoreSelector?.rbacSidebarModulesData?.loading,
+      );
+
+      if (permissionLoading) {
+        return path === "/referral-commerce/influencers/view/:id"
+          ? element
+          : <PageSkeletonLoader />;
+      }
+
+      return <PermissionNotAllowed loading />;
     }
 
     return element;
