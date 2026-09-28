@@ -80,6 +80,7 @@ import Tabs from "../../components/Shared/Tabs";
 import Loader, { ButtonLoader } from "../../components/Loader/Loader";
 import ButtonTransparent from "../../components/Atoms/ButtonTransparent/button";
 import Cards from "../../components/Cards/Cards";
+import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
