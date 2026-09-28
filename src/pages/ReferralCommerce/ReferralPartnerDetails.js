@@ -43,6 +43,7 @@ import {
   updateReferralInfluencerStatus,
 } from "../../Redux/referralCommerceSlice";
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
+import DocumentPreviewModal from "../../components/Shared/DocumentPreviewModal";
 
 const getBranchPayload = (branch = {}) =>
   branch?.normalized?.data || branch?.data?.data || branch?.data || {};
@@ -252,6 +253,7 @@ const ReferralPartnerDetails = () => {
   const navigatedInfluencer = location.state?.influencer;
   const returnTo = location.state?.returnTo;
   const [activeMainTab, setActiveMainTab] = useState("overview");
+  const [previewDocument, setPreviewDocument] = useState(null);
   const [activeActivityTab, setActiveActivityTab] = useState("codes");
   const [loadedDetailId, setLoadedDetailId] = useState(null);
   const [loadingAction, setLoadingAction] = useState(null);
@@ -1010,14 +1012,18 @@ const ReferralPartnerDetails = () => {
                               {documentLabel(key)}
                             </span>
                             {String(value).startsWith("http") ? (
-                              <a
-                                href={value}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="font-medium text-indigo-700 underline"
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPreviewDocument({
+                                    label: documentLabel(key),
+                                    url: value,
+                                  })
+                                }
+                                className="font-medium text-indigo-700 hover:text-indigo-900 hover:underline"
                               >
                                 View
-                              </a>
+                              </button>
                             ) : (
                               <span className="max-w-[65%] truncate text-right font-medium text-gray-800">
                                 {String(value)}
@@ -1250,6 +1256,13 @@ const ReferralPartnerDetails = () => {
           )}
         </div>
       </div>
+
+      {previewDocument && (
+        <DocumentPreviewModal
+          document={previewDocument}
+          onClose={() => setPreviewDocument(null)}
+        />
+      )}
     </div>
   );
 };

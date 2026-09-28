@@ -78,6 +78,8 @@ import {
 } from "./referralProductStoreUtils";
 import Tabs from "../../components/Shared/Tabs";
 import Loader, { ButtonLoader } from "../../components/Loader/Loader";
+import ButtonTransparent from "../../components/Atoms/ButtonTransparent/button";
+import Cards from "../../components/Cards/Cards";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -937,7 +939,7 @@ const ProductReferralAmounts = () => {
 
   return (
     <>
-      <Loader loading={loading} label="Loading..." />
+      {/* <Loader loading={loading} label="Loading..." /> */}
       <section className="admin-card overflow-hidden">
         {/* Header */}
         <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
@@ -989,41 +991,42 @@ const ProductReferralAmounts = () => {
 
               {/* Active Toggle */}
               {/* Active Toggle */}
-              <div className="flex shrink-0 items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2">
-                <div className="text-right">
-                  <p className="text-[11px] font-semibold text-[var(--admin-navy)]">
-                    Override Status
-                  </p>
-
-                  <p
-                    className={`text-[10px] font-medium ${
-                      form.active
-                        ? "text-green-600"
-                        : "text-[var(--admin-muted)]"
-                    }`}
-                  >
-                    {form.active ? "Currently active" : "Global rule applied"}
-                  </p>
-                </div>
-
-                <ToggleButton
-                  isToggle={form.active}
-                  handleClick={() => {
+              {/* Override Status */}
+              <div className="flex shrink-0 items-center">
+                <ButtonTransparent
+                  type="button"
+                  onClick={() => {
                     setForm((current) => ({
                       ...current,
                       active: !current.active,
                     }));
                   }}
-                  disabled={loading}
-                />
-
-                <span
-                  className={`min-w-[48px] -translate-y-0.5 text-xs font-semibold ${
-                    form.active ? "text-[var(--admin-navy)]" : "text-gray-500"
+                  isDisable={loading}
+                  className={`!w-auto !space-x-2 !border !border-blue-500 !px-4 !py-2 !text-xs !font-semibold !text-blue-500 !rounded-md !hover:scale-100 ${
+                    form.active
+                      ? "!border-green-500 !text-green-600"
+                      : "!border-blue-500 !text-blue-500"
                   }`}
                 >
-                  {form.active ? "Active" : "Inactive"}
-                </span>
+                  {/* Small toggle icon */}
+                  <span
+                    className={`relative inline-flex h-3.5 w-6 shrink-0 rounded-full border transition-colors ${
+                      form.active
+                        ? "border-green-500 bg-green-50"
+                        : "border-blue-400 bg-white"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-2 w-2 rounded-full transition-transform ${
+                        form.active
+                          ? "translate-x-[11px] bg-green-500"
+                          : "translate-x-0.5 bg-blue-500"
+                      }`}
+                    />
+                  </span>
+
+                  <span>{form.active ? "Active" : "Activate"}</span>
+                </ButtonTransparent>
               </div>
             </div>
 
@@ -2576,7 +2579,7 @@ const ReferralCommerce = () => {
         ))}
       </div>
       <section className="admin-card overflow-hidden">
-        <div className="flex flex-wrap items-center  justify-between gap-3 border-b border-[var(--admin-line)] px-4 py-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] px-4 py-3.5">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--admin-navy)]">
               Wallet Balances
@@ -2585,6 +2588,7 @@ const ReferralCommerce = () => {
               Current referral coin allocation by wallet state
             </p>
           </div>
+
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)]">
             <BadgeIndianRupee size={19} />
           </div>
@@ -2627,24 +2631,16 @@ const ReferralCommerce = () => {
               icon: <RefreshCw size={18} />,
             },
           ].map((item) => (
-            <div
+            <Cards
               key={item.label}
-              className="relative min-h-[104px] doverflow-hidden rounded-lg border border-[var(--admin-line)] bg-gradient-to-br from-white to-[var(--admin-gold-soft)]/45 p-4 shadow-[0_8px_22px_rgba(31,27,95,0.05)] transition duration-200 hover:-translate-y-0.5 hover:border-[var(--admin-gold)] hover:shadow-[var(--admin-shadow)]"
-            >
-              {/* <span className="absolute inset-y-0 left-0 w-[3px] bg-[var(--admin-gold)]" /> */}
-              {/* <div className="absolute right-0 top-0 flex h-10 w-11 items-center justify-center rounded-bl-xl bg-[var(--admin-gold-soft)] text-[var(--admin-navy)]">
-                  {item.icon}
-                </div> */}
-              <p className="pr-10 text-[10px] font-bold uppercase tracking-wide text-[var(--admin-muted)]">
-                {item.label}
-              </p>
-              <p className="mt-2 text-xl font-bold text-[var(--admin-navy)]">
-                {formatCoins(item.value)}
-              </p>
-              <p className="mt-1.5 text-[10px] font-medium text-[var(--admin-muted)]">
-                {item.helper}
-              </p>
-            </div>
+              label={item.label}
+              value={formatCoins(item.value)}
+              helper={item.helper}
+              icon={item.icon}
+              iconBg="var(--admin-gold-soft)"
+              iconColor="var(--admin-gold-dark)"
+              className="min-h-[104px]"
+            />
           ))}
         </div>
       </section>

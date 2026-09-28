@@ -377,23 +377,16 @@ const CreditNotes = () => {
         }
       />
 
-      {/* {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{error}</div>
-      )} */}
-
-      {loading ? (
-        <Loader />
-      ) : (
-        <DataTable
-          columns={COLUMNS}
-          data={payload.list}
-          total={payload.total}
-          listPage={list}
-          emptyMessage="No credit notes found"
-          rowActions={rowActions}
-          filterBar={<FilterBar fields={filterFields} listPage={list} />}
-        />
-      )}
+      <DataTable
+        columns={COLUMNS}
+        data={payload.list}
+        loading={loading}
+        total={payload.total}
+        listPage={list}
+        emptyMessage="No credit notes found"
+        rowActions={rowActions}
+        filterBar={<FilterBar fields={filterFields} listPage={list} />}
+      />
 
       {/* Detail */}
       <DefaultModal

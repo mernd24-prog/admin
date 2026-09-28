@@ -306,7 +306,7 @@ const Payments = () => {
 
   return (
     <div>
-      <Loader loading={loading || detailLoading} />
+      {/* <Loader loading={loading || detailLoading} /> */}
       <PageHeader
         title="Payments"
         subtitle="Reconcile online, COD, and manual payments"
