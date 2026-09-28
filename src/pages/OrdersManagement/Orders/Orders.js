@@ -1674,13 +1674,13 @@ const Orders = () => {
 
         if (payout.fulfilled) {
           return (
-            <>
+            <div className="flex flex-col items-start">
               <StatusBadge status="eligible" dot />
 
-              <div className="mt-1 text-[11px] text-green-700">
+              <div className="mt-1 text-[11px] leading-4 text-green-700">
                 Ready for payout
               </div>
-            </>
+            </div>
           );
         }
 

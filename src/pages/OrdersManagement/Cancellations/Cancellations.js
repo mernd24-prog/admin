@@ -531,122 +531,105 @@ const Cancellations = () => {
         ]}
       />
 
-      {/* {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
-          {error}
-        </div>
-      )} */}
+      <DataTable
+        columns={COLUMNS}
+        data={cancellations}
+        loading={loading}
+        total={payload.total}
+        listPage={list}
+        emptyMessage="No cancellations found"
+        filterBar={<FilterBar fields={filters} listPage={list} />}
+        rowActions={(row) => {
+          const actions = [
+            {
+              label: "View Details",
+              icon: (
+                <MdVisibility size={16} className={CLASS_ACTION_ICON_BLUE} />
+              ),
+              onClick: () => setDetail(row),
+            },
+          ];
 
-      {loading ? (
-        <Loader />
-      ) : (
-        <DataTable
-          columns={COLUMNS}
-          data={cancellations}
-          total={payload.total}
-          listPage={list}
-          emptyMessage="No cancellations found"
-          filterBar={<FilterBar fields={filters} listPage={list} />}
-          rowActions={(row) => {
-            const actions = [
-              {
-                label: "View Details",
-                icon: (
-                  <MdVisibility size={16} className={CLASS_ACTION_ICON_BLUE} />
-                ),
-                onClick: () => setDetail(row),
-              },
-            ];
+          if (
+            row.status === "requested" &&
+            (!isSeller || row.sellerCanReview)
+          ) {
+            actions.push({
+              label: "Approve Cancellation",
+              icon: (
+                <MdCheckCircle size={16} className={CLASS_ACTION_ICON_BLUE} />
+              ),
+              requiredModule: "orders",
+              requiredAction: ACTIONS.UPDATE,
+              onClick: () =>
+                setApproveRequest({ open: true, item: row, note: "" }),
+            });
+            actions.push({
+              label: "Reject Cancellation",
+              icon: <MdCancel size={16} className={CLASS_ACTION_ICON_RED} />,
+              requiredModule: "orders",
+              requiredAction: ACTIONS.UPDATE,
+              onClick: () =>
+                setRejectRequest({ open: true, item: row, reason: "" }),
+            });
+          }
 
+          if (!isSeller && ["refund_pending", "failed"].includes(row.status)) {
+            actions.push({
+              label: "Retry Refund",
+              icon: <MdReplay size={16} className={CLASS_ACTION_ICON_ORANGE} />,
+              requiredModule: "orders",
+              requiredAction: ACTIONS.UPDATE,
+              onClick: () =>
+                setRetryConfirm({
+                  open: true,
+                  item: row,
+                  note: "",
+                }),
+            });
+          }
+
+          if (!isSeller && row.status === "manual_review") {
             if (
-              row.status === "requested" &&
-              (!isSeller || row.sellerCanReview)
-            ) {
+              row.paymentProvider === "razorpay" ||
+              row.providerRefundAmount <= 0
+            )
               actions.push({
-                label: "Approve Cancellation",
+                label: "Approve Refund",
                 icon: (
                   <MdCheckCircle size={16} className={CLASS_ACTION_ICON_BLUE} />
                 ),
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,
                 onClick: () =>
-                  setApproveRequest({ open: true, item: row, note: "" }),
+                  setApproveRefund({ open: true, item: row, note: "" }),
               });
-              actions.push({
-                label: "Reject Cancellation",
-                icon: <MdCancel size={16} className={CLASS_ACTION_ICON_RED} />,
-                requiredModule: "orders",
-                requiredAction: ACTIONS.UPDATE,
-                onClick: () =>
-                  setRejectRequest({ open: true, item: row, reason: "" }),
-              });
-            }
-
             if (
-              !isSeller &&
-              ["refund_pending", "failed"].includes(row.status)
+              row.providerRefundAmount > 0 &&
+              row.paymentProvider !== "razorpay"
             ) {
               actions.push({
-                label: "Retry Refund",
+                label: "Complete Manual Refund",
                 icon: (
-                  <MdReplay size={16} className={CLASS_ACTION_ICON_ORANGE} />
+                  <MdPayment size={16} className={CLASS_ACTION_ICON_GREEN} />
                 ),
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,
                 onClick: () =>
-                  setRetryConfirm({
+                  setManualRefund({
                     open: true,
                     item: row,
+                    referenceId: "",
+                    proofUrl: "",
                     note: "",
                   }),
               });
             }
+          }
 
-            if (!isSeller && row.status === "manual_review") {
-              if (
-                row.paymentProvider === "razorpay" ||
-                row.providerRefundAmount <= 0
-              )
-                actions.push({
-                  label: "Approve Refund",
-                  icon: (
-                    <MdCheckCircle
-                      size={16}
-                      className={CLASS_ACTION_ICON_BLUE}
-                    />
-                  ),
-                  requiredModule: "orders",
-                  requiredAction: ACTIONS.UPDATE,
-                  onClick: () =>
-                    setApproveRefund({ open: true, item: row, note: "" }),
-                });
-              if (
-                row.providerRefundAmount > 0 &&
-                row.paymentProvider !== "razorpay"
-              ) {
-                actions.push({
-                  label: "Complete Manual Refund",
-                  icon: (
-                    <MdPayment size={16} className={CLASS_ACTION_ICON_GREEN} />
-                  ),
-                  requiredModule: "orders",
-                  requiredAction: ACTIONS.UPDATE,
-                  onClick: () =>
-                    setManualRefund({
-                      open: true,
-                      item: row,
-                      referenceId: "",
-                      proofUrl: "",
-                      note: "",
-                    }),
-                });
-              }
-            }
-
-            return actions;
-          }}
-        />
-      )}
+          return actions;
+        }}
+      />
 
       {/* Detail */}
       <DefaultModal

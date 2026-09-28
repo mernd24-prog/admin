@@ -1881,10 +1881,7 @@ export const SalesReport = () => {
         },
       ]}
     >
-      <SummaryColumnChart
-        title="Sales Report Summary"
-        items={salesSummaryItems}
-      />
+      <SummaryColumnChart title="Sales Report" items={salesSummaryItems} />
     </ReportShell>
   );
 };

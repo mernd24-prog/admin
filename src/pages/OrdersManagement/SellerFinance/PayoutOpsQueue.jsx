@@ -242,7 +242,7 @@ const PayoutOpsQueue = () => {
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
-    defaultSortDir: "desc",
+    defaultSortDir: "asc",
   });
   const { toQueryParams } = list;
 

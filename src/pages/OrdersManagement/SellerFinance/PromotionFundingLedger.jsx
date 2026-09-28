@@ -15,6 +15,7 @@ import DataTable from "../../../components/Shared/DataTable";
 import { OrderLink } from "../../../components/Shared/EntityLink";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 import {
   getMyPromotionFundingLedger,
   getPromotionFundingLedger,
@@ -46,7 +47,10 @@ const PromotionFundingLedger = () => {
     (store) => store.sellerCommissions?.promotionLedgerData,
   );
   const payload = state?.data?.data || state?.data || {};
-  const rows = Array.isArray(payload?.items) ? payload.items : [];
+  const rows = useMemo(
+    () => (Array.isArray(payload?.items) ? payload.items : []),
+    [payload?.items],
+  );
   const totals = payload?.totals || {};
   const [filters, setFilters] = useState({
     search: "",
@@ -55,6 +59,55 @@ const PromotionFundingLedger = () => {
     offset: 0,
   });
   const [loading, setLoading] = useState(false);
+  const [sellerOptions, setSellerOptions] = useState([]);
+
+  useEffect(() => {
+    if (sellerMode) return;
+    dropdownApi
+      .getSellers({ limit: 100 })
+      .then((data) => setSellerOptions(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, [sellerMode]);
+
+  const sellerMap = useMemo(() => {
+    const map = new Map();
+    (sellerOptions || []).forEach((item) => {
+      const label = item?.label;
+      if (item?.value) map.set(String(item.value), label);
+      if (item?.id) map.set(String(item.id), label);
+    });
+    return map;
+  }, [sellerOptions]);
+
+  useEffect(() => {
+    if (sellerMode || !rows.length) return;
+    const missingSellerIds = [
+      ...new Set(
+        rows
+          .map((r) => r.sellerId || r.seller_id)
+          .filter((id) => id && !sellerMap.has(String(id))),
+      ),
+    ];
+    if (missingSellerIds.length === 0) return;
+
+    Promise.all(
+      missingSellerIds.map((id) =>
+        dropdownApi.getSellers({ keyWord: id, limit: 10 }).catch(() => []),
+      ),
+    ).then((results) => {
+      const newItems = results.flat().filter(Boolean);
+      if (newItems.length) {
+        setSellerOptions((prev) => {
+          const existingIds = new Set(prev.map((p) => String(p.value || p.id)));
+          const uniqueNew = newItems.filter(
+            (item) => !existingIds.has(String(item.value || item.id)),
+          );
+          return uniqueNew.length ? [...prev, ...uniqueNew] : prev;
+        });
+      }
+    });
+  }, [rows, sellerMode, sellerMap]);
+
   const columns = useMemo(
     () => [
       {
@@ -90,7 +143,29 @@ const PromotionFundingLedger = () => {
             {
               key: "sellerId",
               label: "Seller",
-              cellClassName: "font-mono text-xs",
+              render: (value, row) => {
+                const sellerId = value || row?.sellerId || row?.seller_id;
+                const name =
+                  row?.sellerName ||
+                  row?.seller?.name ||
+                  row?.seller?.displayName ||
+                  row?.seller?.businessName ||
+                  (sellerId ? sellerMap.get(String(sellerId)) : null);
+
+                if (name) {
+                  return (
+                    <span className="text-sm font-medium text-gray-800">
+                      {name}
+                    </span>
+                  );
+                }
+
+                return (
+                  <span className="font-mono text-xs text-gray-400">
+                    {sellerId || "—"}
+                  </span>
+                );
+              },
             },
           ]
         : []),
@@ -158,7 +233,7 @@ const PromotionFundingLedger = () => {
         render: (value) => value || "Not batched",
       },
     ],
-    [sellerMode],
+    [sellerMode, sellerMap],
   );
 
   const load = useCallback(async () => {

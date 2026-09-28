@@ -410,51 +410,44 @@ const TaxInvoices = () => {
         </div>
       )} */}
 
-      {loading ? (
-        <Loader />
-      ) : (
-        <DataTable
-          columns={COLUMNS}
-          data={payload.list}
-          total={payload.total}
-          listPage={list}
-          searchPlaceholder="Search Invoice or Order..."
-          emptyMessage="No tax invoices found"
-          filterBar={
-            <FilterBar
-              filters={FILTER_FIELDS}
-              listPage={list}
-              loading={false}
-            />
-          }
-          rowActions={(row) => {
-            const invoiceId = pick(row, "id", "invoiceId", "invoice_id");
+      <DataTable
+        columns={COLUMNS}
+        data={payload.list}
+        loading={loading}
+        total={payload.total}
+        listPage={list}
+        searchPlaceholder="Search Invoice or Order..."
+        emptyMessage="No tax invoices found"
+        filterBar={
+          <FilterBar filters={FILTER_FIELDS} listPage={list} loading={false} />
+        }
+        rowActions={(row) => {
+          const invoiceId = pick(row, "id", "invoiceId", "invoice_id");
 
-            return [
-              {
-                label: "View",
-                icon: <MdVisibility size={16} className="text-blue-600" />,
-                onClick: () => {
-                  if (!invoiceId) {
-                    toast.error("Invoice ID is missing");
-                    return;
-                  }
+          return [
+            {
+              label: "View",
+              icon: <MdVisibility size={16} className="text-blue-600" />,
+              onClick: () => {
+                if (!invoiceId) {
+                  toast.error("Invoice ID is missing");
+                  return;
+                }
 
-                  navigate(`/app/tax-invoices/${invoiceId}`, {
-                    state: { invoice: row },
-                  });
-                },
+                navigate(`/app/tax-invoices/${invoiceId}`, {
+                  state: { invoice: row },
+                });
               },
-              {
-                label: "Download PDF",
-                icon: <MdDownload size={16} className="text-gray-600" />,
-                disabled: downloadingId === invoiceId,
-                onClick: () => downloadInvoice(row),
-              },
-            ];
-          }}
-        />
-      )}
+            },
+            {
+              label: "Download PDF",
+              icon: <MdDownload size={16} className="text-gray-600" />,
+              disabled: downloadingId === invoiceId,
+              onClick: () => downloadInvoice(row),
+            },
+          ];
+        }}
+      />
     </div>
   );
 };
