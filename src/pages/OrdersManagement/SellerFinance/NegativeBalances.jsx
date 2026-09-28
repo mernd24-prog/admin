@@ -374,11 +374,11 @@ const NegativeBalances = () => {
           { label: "Seller Finance & Payouts" },
           { label: "Seller Amounts Owed" },
         ]}
-        actions={
-          <button type="button" onClick={fetchBalances}>
-            <MdRefresh size={17} /> Refresh
-          </button>
-        }
+        // actions={
+        //   <button type="button" onClick={fetchBalances}>
+        //     <MdRefresh size={17} /> Refresh
+        //   </button>
+        // }
       />
 
       <div className="admin-card mb-4 border-l-4 border-l-blue-500 bg-blue-50/40 p-4 text-sm text-[var(--admin-ink)]">

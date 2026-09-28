@@ -41,42 +41,19 @@ import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal"
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
 
-// const FILTER_FIELDS = [
-//   {
-//     key: "isDisable",
-//     type: "select",
-//     label: "Status",
-//     width: "w-36",
-//     options: [
-//       { value: "false", label: "Active" },
-//       { value: "true", label: "Disabled" },
-//     ],
-//   },
-//   {
-//     key: "approvalStatus",
-//     type: "select",
-//     label: "Approval",
-//     width: "w-36",
-//     options: [
-//       { value: "approved", label: "Approved" },
-//       { value: "pending", label: "Pending" },
-//       { value: "rejected", label: "Rejected" },
-//     ],
-//   },
-// ];
 const INITIAL_FILTERS = {
   search: "",
-  activationStatus: { value: "All", label: "All" },
+  // activationStatus: { value: "All", label: "All" },
   approvalStatus: { value: "All", label: "All" },
   dateFrom: "",
   dateTo: "",
 };
 
-const ACTIVATION_STATUS_OPTIONS = [
-  { value: "All", label: "All" },
-  { value: "Active", label: "Active" },
-  { value: "Inactive", label: "Inactive" },
-];
+// const ACTIVATION_STATUS_OPTIONS = [
+//   { value: "All", label: "All" },
+//   { value: "Active", label: "Active" },
+//   { value: "Inactive", label: "Inactive" },
+// ];
 
 const APPROVAL_STATUS_OPTIONS = [
   { value: "All", label: "All" },
@@ -155,17 +132,12 @@ const BASE_COLUMNS = [
     key: "name",
     label: "Brand Name",
     width: "280px",
-    sortable: true,
-    render: (v) => <span className="font-medium text-gray-800">{v}</span>,
-  },
-  {
-    key: "thumbnails",
-    label: "Thumbnail",
-    width: "120px",
-    render: (v, row) => (
-      <BrandAssetCell src={v} name={row.name} type="thumbnail" />
+    sortable: false,
+    render: (value) => (
+      <span className="font-medium text-gray-800">{value}</span>
     ),
   },
+
   {
     key: "approvalStatus",
     label: "Status",
@@ -200,7 +172,6 @@ const BASE_COLUMNS = [
 const EMPTY_FORM = {
   name: "",
   logo: "",
-  thumbnails: "",
   isDisable: false,
 };
 
@@ -208,15 +179,10 @@ const Brands = () => {
   const dispatch = useDispatch();
   const list = useListPage({
     defaultPageSize: 10,
-    defaultSortKey: "name",
-    defaultSortDir: "asc",
   });
   const [uploadingType, setUploadingType] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
-  const [thumbnailPreview, setThumbnailPreview] = useState("");
-
   const [logoError, setLogoError] = useState(false);
-  const [thumbnailError, setThumbnailError] = useState(false);
   const [brands, setBrands] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -246,10 +212,6 @@ const Brands = () => {
         setLogoError(false);
       }
 
-      if (type === "BRAND_THUMBNAIL") {
-        setThumbnailError(false);
-      }
-
       await handleFileUpload(file, type);
 
       const previewUrl = URL.createObjectURL(file);
@@ -267,20 +229,6 @@ const Brands = () => {
           }));
         }
       }
-
-      if (type === "BRAND_THUMBNAIL") {
-        setThumbnailPreview((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return previewUrl;
-        });
-
-        if (errors.thumbnails) {
-          setErrors((prev) => ({
-            ...prev,
-            thumbnails: undefined,
-          }));
-        }
-      }
     } catch (error) {
       console.error("Image upload failed:", error);
     } finally {
@@ -292,7 +240,7 @@ const Brands = () => {
     setLoading(true);
 
     try {
-      const activationValue = appliedFilters?.activationStatus?.value;
+      // const activationValue = appliedFilters?.activationStatus?.value;
       const approvalValue = appliedFilters?.approvalStatus?.value;
 
       const res = await dispatch(
@@ -304,14 +252,14 @@ const Brands = () => {
           searchFields: "name",
 
           select:
-            "name isDisable createdAt logo thumbnails approvalStatus needsApprovalReview active",
+            "name isDisable createdAt logo  approvalStatus needsApprovalReview active",
 
-          sortBy: list.sortKey || "name",
-          sortOrder: list.sortDir || "asc",
+          // sortBy: list.sortKey || "name",
+          // sortOrder: list.sortDir || "asc",
 
-          ...(activationValue === "Active" ? { isDisable: false } : {}),
+          // ...(activationValue === "Active" ? { isDisable: false } : {}),
 
-          ...(activationValue === "Inactive" ? { isDisable: true } : {}),
+          // ...(activationValue === "Inactive" ? { isDisable: true } : {}),
 
           ...(approvalValue && approvalValue !== "All"
             ? { approvalStatus: approvalValue }
@@ -343,17 +291,6 @@ const Brands = () => {
     appliedFilters,
   ]);
 
-  // useEffect(() => {
-  //   fetchList();
-  // }, [
-  //   list.page,
-  //   list.pageSize,
-  //   list.search,
-  //   list.filters,
-  //   list.sortKey,
-  //   list.sortDir,
-  //   isRefresh,
-  // ]);
   useEffect(() => {
     fetchList();
   }, [fetchList]);
@@ -412,13 +349,14 @@ const Brands = () => {
       const url = await uploadFile(file, type);
       setFormData((prev) => ({
         ...prev,
-        ...(type === "BRANDS" ? { logo: url } : { thumbnails: url }),
+        logo: url,
       }));
-      if (errors[type === "BRANDS" ? "logo" : "thumbnails"])
+      if (errors.logo) {
         setErrors((prev) => ({
           ...prev,
-          [type === "BRANDS" ? "logo" : "thumbnails"]: undefined,
+          logo: undefined,
         }));
+      }
       toast.success("Image uploaded");
     } catch (err) {
       toast.error("Image upload failed");
@@ -434,7 +372,6 @@ const Brands = () => {
     const payload = {
       name: formData.name.trim(),
       logo: formData.logo,
-      thumbnails: formData.thumbnails,
       isDisable: formData.isDisable,
     };
     try {
@@ -568,123 +505,7 @@ const Brands = () => {
     setRejectionReason("");
   };
 
-  const columns = useMemo(
-    () => [
-      ...BASE_COLUMNS,
-      {
-        key: "actions",
-        label: "ACTIONS",
-        headerClassName: "text-left",
-        cellClassName: "admin-table-action-cell !text-left",
-        render: (_, row) => (
-          <div className="flex items-center !justify-start gap-1.5">
-            {/* Edit */}
-            <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--admin-line)] bg-white text-[var(--admin-navy)] transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]"
-                title="Edit brand"
-                onClick={() => {
-                  setFormData({
-                    _id: row._id,
-                    name: row.name || "",
-                    logo: row.logo || "",
-                    thumbnails: row.thumbnails || "",
-                    isDisable: row.isDisable || false,
-                  });
-                  setModalMode("edit");
-                }}
-              >
-                <MdEdit size={18} />
-              </button>
-            </PermissionGuard>
-
-            {/* Enable / Disable */}
-            {!isBrandReviewable(row) && (
-              <PermissionGuard
-                module="brands"
-                action={ACTIONS.STATUS_CHANGE}
-                hide
-              >
-                <button
-                  type="button"
-                  className={`inline-flex h-8 w-8 items-center justify-center rounded-md border shadow-sm transition ${
-                    row.isDisable
-                      ? "border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200"
-                      : "border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)] hover:bg-white"
-                  }`}
-                  title={row.isDisable ? "Enable brand" : "Disable brand"}
-                  onClick={() => {
-                    setToggleTarget(row);
-                    setToggleOpen(true);
-                  }}
-                >
-                  {row.isDisable ? (
-                    <MdCheckCircle size={18} />
-                  ) : (
-                    <MdBlock size={18} />
-                  )}
-                </button>
-              </PermissionGuard>
-            )}
-
-            {/* Delete */}
-            <PermissionGuard module="brands" action={ACTIONS.DELETE} hide>
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-100 bg-white text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-50"
-                title="Delete brand"
-                onClick={() => {
-                  setDeleteTarget(row);
-                  setDeleteOpen(true);
-                }}
-              >
-                <MdDelete size={18} />
-              </button>
-            </PermissionGuard>
-
-            {/* Approve - Last */}
-            {isBrandReviewable(row) && (
-              <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-2 text-xs font-semibold text-emerald-700"
-                  title="Approve brand"
-                  onClick={() => {
-                    setReviewTarget(row);
-                    setRejectionReason("");
-                  }}
-                >
-                  Approve
-                </button>
-              </PermissionGuard>
-            )}
-
-            {/* Reject - Last */}
-            {isBrandReviewable(row) && (
-              <PermissionGuard module="brands" action={ACTIONS.UPDATE} hide>
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center justify-center rounded-md border border-red-200 bg-red-50 px-2 text-xs font-semibold text-red-700"
-                  title="Reject brand"
-                  onClick={() => {
-                    setReviewTarget({
-                      ...row,
-                      reviewAction: "reject",
-                    });
-                    setRejectionReason("");
-                  }}
-                >
-                  Reject
-                </button>
-              </PermissionGuard>
-            )}
-          </div>
-        ),
-      },
-    ],
-    [],
-  );
+  const columns = useMemo(() => [...BASE_COLUMNS], []);
 
   return (
     <div>
@@ -710,8 +531,8 @@ const Brands = () => {
             filters={filters}
             setFilters={setFilters}
             isSearchShow={true}
-            isActivationStatus={true}
-            activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
+            // isActivationStatus={true}
+            // activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
             isApprovalOptions={true}
             approvalOptions={APPROVAL_STATUS_OPTIONS}
             dateFrom={true}
@@ -747,9 +568,9 @@ const Brands = () => {
             pageSize={list.pageSize}
             onPageChange={list.setPage}
             onPageSizeChange={list.setPageSize}
-            onSort={list.setSort}
-            sortKey={list.sortKey}
-            sortDir={list.sortDir}
+            // onSort={handleSort}
+            // sortKey={list.sortKey}
+            // sortDir={list.sortDir}
             emptyText="No brands found."
             emptyIcon={
               <MdBrandingWatermark size={40} className="text-gray-200" />
@@ -759,6 +580,89 @@ const Brands = () => {
             selectedKeys={list.selectedKeys}
             onSelectionChange={list.setSelectedKeys}
             rowKey="_id"
+            rowActions={(row) => {
+              const actions = [];
+
+              // Edit
+              actions.push({
+                label: "Edit Brand",
+                icon: <MdEdit size={16} />,
+                requiredModule: "brands",
+                requiredAction: ACTIONS.UPDATE,
+                onClick: () => {
+                  setFormData({
+                    _id: row._id,
+                    name: row.name || "",
+                    logo: row.logo || "",
+                    isDisable: row.isDisable || false,
+                  });
+
+                  setLogoPreview("");
+                  setErrors({});
+                  setModalMode("edit");
+                },
+              });
+
+              // Enable / Disable
+              if (!isBrandReviewable(row)) {
+                actions.push({
+                  label: row.isDisable ? "Enable Brand" : "Disable Brand",
+                  icon: row.isDisable ? (
+                    <MdCheckCircle size={16} />
+                  ) : (
+                    <MdBlock size={16} />
+                  ),
+                  requiredModule: "brands",
+                  requiredAction: ACTIONS.STATUS_CHANGE,
+                  onClick: () => {
+                    setToggleTarget(row);
+                    setToggleOpen(true);
+                  },
+                });
+              }
+
+              // Delete
+              actions.push({
+                label: "Delete Brand",
+                icon: <MdDelete size={16} />,
+                requiredModule: "brands",
+                requiredAction: ACTIONS.DELETE,
+                onClick: () => {
+                  setDeleteTarget(row);
+                  setDeleteOpen(true);
+                },
+              });
+
+              // Approve / Reject
+              if (isBrandReviewable(row)) {
+                actions.push({
+                  label: "Approve Brand",
+                  icon: <MdCheckCircle size={16} />,
+                  requiredModule: "brands",
+                  requiredAction: ACTIONS.UPDATE,
+                  onClick: () => {
+                    setReviewTarget(row);
+                    setRejectionReason("");
+                  },
+                });
+
+                actions.push({
+                  label: "Reject Brand",
+                  icon: <MdClose size={16} />,
+                  requiredModule: "brands",
+                  requiredAction: ACTIONS.UPDATE,
+                  onClick: () => {
+                    setReviewTarget({
+                      ...row,
+                      reviewAction: "reject",
+                    });
+                    setRejectionReason("");
+                  },
+                });
+              }
+
+              return actions;
+            }}
             bulkActionBar={
               <BulkActionBar
                 selectedCount={list.selectedCount}
@@ -784,11 +688,6 @@ const Brands = () => {
                 ]}
               />
             }
-            // exportConfig={{
-            //   filename: "brands",
-            //   columns: BASE_COLUMNS,
-            // }}
-
             cardClassName="
         overflow-hidden
         rounded-none
@@ -796,12 +695,13 @@ const Brands = () => {
         shadow-none
       "
             tableContainerClassName="
-        hide-scrollbar
-        max-h-[calc(100vh-360px)]
-        overflow-x-auto
-        overflow-y-auto
-        pb-2
-      "
+  hide-scrollbar
+  max-h-[calc(100vh-260px)]
+  overflow-x-auto
+  overflow-y-auto
+  pb-2
+  w-full
+"
           />
         </section>
       </div>
@@ -861,11 +761,8 @@ const Brands = () => {
           </FormSection>
 
           {/* ==================== Brand Images ==================== */}
-          <FormSection
-            title="Brand Images"
-            description="Upload the logo and thumbnail for this brand."
-          >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormSection>
+            <div className="">
               {/* ==================== Brand Logo ==================== */}
               <ImageUpload
                 id="brand-logo"
@@ -889,33 +786,6 @@ const Brands = () => {
                 loadingText="Uploading logo..."
                 isDisabled={uploadingType !== null}
                 errorMessage={errors.logo}
-              />
-
-              {/* ==================== Brand Thumbnail ==================== */}
-              <ImageUpload
-                id="brand-thumbnail"
-                label="Thumbnail"
-                subtext="Used across the catalog."
-                required
-                file={thumbnailPreview || formData.thumbnails}
-                onChange={(file) =>
-                  handleBrandImageUpload(file, "BRAND_THUMBNAIL")
-                }
-                onRemove={() => {
-                  if (thumbnailPreview) {
-                    URL.revokeObjectURL(thumbnailPreview);
-                  }
-                  setThumbnailPreview("");
-                  setThumbnailError(false);
-                  setFormData((prev) => ({
-                    ...prev,
-                    thumbnails: "",
-                  }));
-                }}
-                isLoading={uploadingType === "BRAND_THUMBNAIL"}
-                loadingText="Uploading thumbnail..."
-                isDisabled={uploadingType !== null}
-                errorMessage={errors.thumbnails}
               />
             </div>
           </FormSection>
@@ -951,43 +821,160 @@ const Brands = () => {
       />
 
       {reviewTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[var(--admin-navy)]">
-                {reviewTarget.reviewAction === "reject" ? "Reject" : "Approve"}{" "}
-                Brand
-              </h2>
-              <button type="button" onClick={() => setReviewTarget(null)}>
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 px-4 py-6 backdrop-blur-[3px]">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
+            {/* Header */}
+            <div className="flex items-start justify-between px-6 pt-6">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                    reviewTarget.reviewAction === "reject"
+                      ? "bg-red-50 text-red-600"
+                      : "bg-[rgba(214,163,35,0.12)] text-[var(--admin-gold-dark)]"
+                  }`}
+                >
+                  {reviewTarget.reviewAction === "reject" ? (
+                    <MdClose size={23} />
+                  ) : (
+                    <MdCheckCircle size={23} />
+                  )}
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-bold text-[var(--admin-navy)]">
+                    {reviewTarget.reviewAction === "reject"
+                      ? "Reject Brand"
+                      : "Approve Brand"}
+                  </h2>
+
+                  {/* <p className="mt-0.5 text-xs text-gray-500">
+                    Brand submission review
+                  </p> */}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setReviewTarget(null);
+                  setRejectionReason("");
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                aria-label="Close"
+              >
                 <MdClose size={20} />
               </button>
             </div>
-            <p className="mb-4 text-sm text-gray-600">{reviewTarget.name}</p>
-            {reviewTarget.reviewAction === "reject" && (
-              <textarea
-                value={rejectionReason}
-                onChange={(event) => setRejectionReason(event.target.value)}
-                placeholder="Explain what the seller needs to change"
-                className="mb-4 w-full rounded-lg border border-gray-300 p-2 text-sm"
-                rows={4}
-              />
-            )}
-            <div className="flex justify-end gap-3">
+
+            {/* Content */}
+            <div className="space-y-4 px-6 py-5">
+              {/* Brand Information */}
+              <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/80 p-3">
+                <BrandAssetCell
+                  src={reviewTarget.logo}
+                  name={reviewTarget.name}
+                />
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-gray-800">
+                    {reviewTarget.name}
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    {Array.isArray(reviewTarget.selectedData)
+                      ? `${reviewTarget.selectedData.length} brands selected`
+                      : "Brand submission"}
+                  </p>
+                </div>
+
+                <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                  Pending
+                </span>
+              </div>
+
+              {/* Action Description */}
+              <div
+                className={`rounded-lg border p-3 ${
+                  reviewTarget.reviewAction === "reject"
+                    ? "border-red-100 bg-red-50/60"
+                    : "border-amber-100 bg-amber-50/60"
+                }`}
+              >
+                <p className="text-sm leading-relaxed text-gray-700">
+                  {reviewTarget.reviewAction === "reject"
+                    ? "Rejecting this submission will notify the seller that changes are required before the brand can be approved."
+                    : "Approving this submission will accept the brand and allow it to proceed in the catalog."}
+                </p>
+              </div>
+
+              {/* Rejection Reason */}
+              {reviewTarget.reviewAction === "reject" && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Rejection Reason
+                    <span className="ml-1 text-red-500">*</span>
+                  </label>
+
+                  <textarea
+                    value={rejectionReason}
+                    onChange={(event) => setRejectionReason(event.target.value)}
+                    placeholder="Explain what the seller needs to change..."
+                    className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/15"
+                    rows={4}
+                    maxLength={500}
+                  />
+
+                  <div className="mt-1 flex justify-between">
+                    <p className="text-xs text-gray-400">
+                      Provide a clear reason for rejection.
+                    </p>
+                    <span className="text-xs text-gray-400">
+                      {rejectionReason.length}/500
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-4">
               <button
                 type="button"
-                className="rounded-lg border px-4 py-2 text-sm"
-                onClick={() => setReviewTarget(null)}
+                onClick={() => {
+                  setReviewTarget(null);
+                  setRejectionReason("");
+                }}
+                className="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50"
               >
                 Cancel
               </button>
+
               <button
                 type="button"
-                className="rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm text-white"
+                disabled={
+                  reviewTarget.reviewAction === "reject" &&
+                  rejectionReason.trim().length < 2
+                }
                 onClick={() =>
                   handleReview(reviewTarget.reviewAction || "approve")
                 }
+                className={`inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                  reviewTarget.reviewAction === "reject"
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-[var(--admin-gold)] hover:bg-[var(--admin-gold-dark)]"
+                }`}
               >
-                {reviewTarget.reviewAction === "reject" ? "Reject" : "Approve"}
+                {reviewTarget.reviewAction === "reject" ? (
+                  <>
+                    <MdClose size={17} />
+                    Confirm Rejection
+                  </>
+                ) : (
+                  <>
+                    <MdCheckCircle size={17} />
+                    Confirm Approval
+                  </>
+                )}
               </button>
             </div>
           </div>

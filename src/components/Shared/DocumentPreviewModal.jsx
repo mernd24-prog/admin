@@ -10,41 +10,78 @@ const isPdfDocument = (url = "") =>
 const isImageDocument = (url = "") =>
   /\.(png|jpe?g|webp|gif|bmp|avif)(\?.*)?$/i.test(String(url || ""));
 
-const DocumentPreviewModal = ({ document, onClose }) => {
-  if (!document || !document.url) return null;
+const DocumentPreviewModal = ({ document: documentData, onClose }) => {
+  if (!documentData || !documentData.url) return null;
 
-  const { label, url } = document;
+  const { label, url } = documentData;
+
   const isPdf = isPdfDocument(url);
   const isImage = isImageDocument(url);
 
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error("Failed to download document");
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const fileName =
+        decodeURIComponent(url.split("/").pop()?.split("?")[0]) || "document";
+
+      const link = window.document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+
+      // Revoke the temporary URL after the download starts.
+      setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 1000);
+    } catch (error) {
+      console.error("Document download failed:", error);
+
+      // Fallback: open the document in a new tab.
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(31,27,95,0.45)] backdrop-blur-sm p-4">
-      <div className="relative flex flex-col w-full max-w-4xl max-h-[90vh] bg-white rounded-xl shadow-2xl border border-[var(--admin-line)] overflow-hidden">
+      <div className="relative flex flex-col w-full max-w-4xl max-h-[70vh] bg-white rounded-xl shadow-2xl border border-[var(--admin-line)] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--admin-line)] bg-gray-50">
           <div>
             <h3 className="text-base font-bold text-[var(--admin-navy)]">
               {label || "Document Preview"}
             </h3>
+
             <p className="text-xs text-gray-500 mt-0.5">
               Securely viewing uploaded verification document
             </p>
           </div>
+
           <div className="flex items-center gap-2">
-            <a
-              href={url}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={handleDownload}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
             >
               <PiDownloadSimple size={14} />
               <span>Download</span>
-            </a>
+            </button>
+
             <button
               type="button"
               onClick={onClose}
               className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+              aria-label="Close preview"
             >
               <PiX size={18} />
             </button>
@@ -56,7 +93,7 @@ const DocumentPreviewModal = ({ document, onClose }) => {
           {isPdf ? (
             <iframe
               src={`${url}#toolbar=0`}
-              title={label}
+              title={label || "PDF Preview"}
               className="w-full h-[65vh] rounded-lg border border-gray-200 bg-white"
             />
           ) : isImage ? (
@@ -70,16 +107,15 @@ const DocumentPreviewModal = ({ document, onClose }) => {
               <p className="text-sm text-gray-600 mb-4">
                 This file format cannot be previewed directly in the browser.
               </p>
-              <a
-                href={url}
-                download
-                target="_blank"
-                rel="noopener noreferrer"
+
+              <button
+                type="button"
+                onClick={handleDownload}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[var(--admin-navy)] rounded-lg hover:bg-[var(--admin-navy-dark)] transition-colors"
               >
                 <PiDownloadSimple size={16} />
                 <span>Download Document</span>
-              </a>
+              </button>
             </div>
           )}
         </div>

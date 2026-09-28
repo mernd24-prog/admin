@@ -10,6 +10,7 @@ import {
   MdCheckCircle,
   MdBlock,
 } from "react-icons/md";
+
 import {
   PageHeader,
   DataTable,
@@ -17,11 +18,12 @@ import {
   FilterBar,
   ConfirmModal,
 } from "../../../components/Shared";
+
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
-import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import { useListPage } from "../../../hooks/useListPage";
+
 import {
   createHsn,
   getHsnList,
@@ -29,9 +31,12 @@ import {
   enableDisableHsn,
   softDeleteHsn,
 } from "../../../Redux/productSlice";
+
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
+
+/* ==================== FILTER CONFIGURATION ==================== */
 
 const FILTER_FIELDS = [
   {
@@ -40,11 +45,14 @@ const FILTER_FIELDS = [
     label: "Status",
     width: "w-36",
     options: [
+      { value: "", label: "All Status" },
       { value: "false", label: "Active" },
-      { value: "true", label: "Disabled" },
+      { value: "true", label: "Inactive" },
     ],
   },
 ];
+
+/* ==================== TABLE COLUMNS ==================== */
 
 const COLUMNS = [
   {
@@ -93,6 +101,8 @@ const COLUMNS = [
   },
 ];
 
+/* ==================== EMPTY FORM ==================== */
+
 const EMPTY_FORM = {
   code: "",
   IGST: "",
@@ -103,8 +113,11 @@ const EMPTY_FORM = {
   isDisable: false,
 };
 
+/* ==================== COMPONENT ==================== */
+
 const HsnCode = () => {
   const dispatch = useDispatch();
+
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "code",
@@ -116,7 +129,10 @@ const HsnCode = () => {
   const [loading, setLoading] = useState(false);
   const [isRefresh, setIsRefresh] = useState(false);
 
-  const [modalMode, setModalMode] = useState(null); // "add" | "edit" | null
+  // Dedicated status filter state
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const [modalMode, setModalMode] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -124,23 +140,64 @@ const HsnCode = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  /* ==================== STATUS FILTER HANDLER ==================== */
+
+  const handleStatusFilterChange = useCallback(
+    (key, value) => {
+      // Support both (key, value) and direct value callbacks
+      const selectedValue = value !== undefined ? value : key;
+
+      setStatusFilter(
+        selectedValue === null || selectedValue === undefined
+          ? ""
+          : String(selectedValue),
+      );
+
+      // Always start from the first page after filtering
+      list.setPage(1);
+    },
+    [list.setPage],
+  );
+
+  /* ==================== CLEAR FILTERS ==================== */
+
+  const handleClearFilters = useCallback(() => {
+    setStatusFilter("");
+    list.clearFilters();
+    list.setPage(1);
+  }, [list.clearFilters, list.setPage]);
+
+  /* ==================== FETCH HSN LIST ==================== */
+
   const fetchList = useCallback(async () => {
     setLoading(true);
+
     try {
       const params = list.toQueryParams();
-      const res = await dispatch(
-        getHsnList({
-          page: params.page?.toString(),
-          size: params.limit?.toString() || "20",
-          keyWord: params.search || "",
-          ...(params.isDisable !== undefined && {
-            isDisable: params.isDisable,
-          }),
-        }),
-      ).unwrap();
+
+      const requestParams = {
+        page: String(params.page || 1),
+        size: String(params.limit || 20),
+        keyWord: params.search || "",
+      };
+
+      // Only send the status parameter when a specific
+      // status has been selected.
+      // NOTE: toHsnListParams maps `active` → API; isDisable="false" means Active.
+      if (statusFilter === "true") {
+        requestParams.active = false; // Inactive → active: false
+      } else if (statusFilter === "false") {
+        requestParams.active = true;  // Active   → active: true
+      }
+
+      const res = await dispatch(getHsnList(requestParams)).unwrap();
+
       const data = res?.data?.data || res?.data || {};
+
       const items = Array.isArray(data) ? data : data?.list || [];
+
       const totalCount = Number(data?.total ?? items.length);
+
       setHsnList(items);
       setTotal(totalCount);
     } catch (err) {
@@ -153,50 +210,69 @@ const HsnCode = () => {
     list.page,
     list.pageSize,
     list.search,
-    list.filters,
     list.sortKey,
     list.sortDir,
+    statusFilter,
     isRefresh,
   ]);
 
   useEffect(() => {
     fetchList();
-  }, [
-    list.page,
-    list.pageSize,
-    list.search,
-    list.filters,
-    list.sortKey,
-    list.sortDir,
-    isRefresh,
-  ]);
+  }, [fetchList]);
+
+  /* ==================== FORM HANDLING ==================== */
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (errors[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: undefined,
+      }));
+    }
   };
+
+  /* ==================== FORM VALIDATION ==================== */
 
   const validateForm = () => {
     const errs = {};
-    if (!formData.code?.trim()) errs.code = "HSN Code is required";
-    else if (!/^\d{4,8}$/.test(formData.code.trim()))
+
+    if (!formData.code?.trim()) {
+      errs.code = "HSN Code is required";
+    } else if (!/^\d{4,8}$/.test(formData.code.trim())) {
       errs.code = "Must be 4-8 digits";
-    if (formData.IGST === "" || formData.IGST === null)
+    }
+
+    if (formData.IGST === "" || formData.IGST === null) {
       errs.IGST = "IGST is required";
-    else if (Number(formData.IGST) < 0 || Number(formData.IGST) > 100)
+    } else if (Number(formData.IGST) < 0 || Number(formData.IGST) > 100) {
       errs.IGST = "0-100 only";
-    if (formData.CGST === "" || formData.CGST === null)
+    }
+
+    if (formData.CGST === "" || formData.CGST === null) {
       errs.CGST = "CGST is required";
-    else if (Number(formData.CGST) < 0 || Number(formData.CGST) > 100)
+    } else if (Number(formData.CGST) < 0 || Number(formData.CGST) > 100) {
       errs.CGST = "0-100 only";
-    if (formData.SGST === "" || formData.SGST === null)
+    }
+
+    if (formData.SGST === "" || formData.SGST === null) {
       errs.SGST = "SGST is required";
-    else if (Number(formData.SGST) < 0 || Number(formData.SGST) > 100)
+    } else if (Number(formData.SGST) < 0 || Number(formData.SGST) > 100) {
       errs.SGST = "0-100 only";
+    }
+
     setErrors(errs);
+
     return Object.keys(errs).length === 0;
   };
+
+  /* ==================== CLOSE MODAL ==================== */
 
   const closeModal = () => {
     setModalMode(null);
@@ -204,10 +280,15 @@ const HsnCode = () => {
     setErrors({});
   };
 
+  /* ==================== CREATE / UPDATE ==================== */
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!validateForm()) return;
+
     setSaving(true);
+
     const payload = {
       code: formData.code.trim(),
       IGST: Number(formData.IGST),
@@ -217,24 +298,33 @@ const HsnCode = () => {
       description: formData.description?.trim() || "",
       isDisable: formData.isDisable,
     };
+
     try {
       let res;
+
       if (modalMode === "edit") {
         res = await dispatch(
-          updateHsn({ ...payload, _id: formData._id }),
+          updateHsn({
+            ...payload,
+            _id: formData._id,
+          }),
         ).unwrap();
       } else {
         res = await dispatch(createHsn(payload)).unwrap();
       }
+
       if (res?.error) {
         toast.error(res.error);
         return;
       }
+
       toast.success(
         res?.message ||
           `HSN code ${modalMode === "edit" ? "updated" : "created"}`,
       );
+
       closeModal();
+
       setIsRefresh((r) => !r);
     } catch (err) {
       toast.error(err?.message || "Save failed");
@@ -243,13 +333,20 @@ const HsnCode = () => {
     }
   };
 
+  /* ==================== ENABLE / DISABLE ==================== */
+
   const handleToggleStatus = useCallback(
     async (row) => {
       try {
         const res = await dispatch(
-          enableDisableHsn({ _id: [row._id], isDisable: !row.isDisable }),
+          enableDisableHsn({
+            _id: [row._id],
+            isDisable: !row.isDisable,
+          }),
         ).unwrap();
+
         toast.success(res?.message || "Status updated");
+
         setIsRefresh((r) => !r);
       } catch (err) {
         toast.error(err?.message || "Failed to update status");
@@ -258,20 +355,30 @@ const HsnCode = () => {
     [dispatch],
   );
 
+  /* ==================== DELETE ==================== */
+
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
+
     try {
       const res = await dispatch(
-        softDeleteHsn({ _id: [deleteTarget._id] }),
+        softDeleteHsn({
+          _id: [deleteTarget._id],
+        }),
       ).unwrap();
+
       toast.success(res?.message || "HSN code deleted");
+
       setDeleteOpen(false);
       setDeleteTarget(null);
+
       setIsRefresh((r) => !r);
     } catch (err) {
       toast.error(err?.message || "Delete failed");
     }
   };
+
+  /* ==================== ROW ACTIONS ==================== */
 
   const rowActions = useCallback(
     (row) => [
@@ -289,6 +396,7 @@ const HsnCode = () => {
             description: row.description || "",
             isDisable: row.isDisable || false,
           });
+
           setModalMode("edit");
         },
       },
@@ -315,6 +423,8 @@ const HsnCode = () => {
     [handleToggleStatus],
   );
 
+  /* ==================== RENDER ==================== */
+
   return (
     <div>
       <PageHeader
@@ -324,7 +434,8 @@ const HsnCode = () => {
         actions={
           <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
             <button onClick={() => setModalMode("add")}>
-              <MdAdd size={16} /> Add HSN Code
+              <MdAdd size={16} />
+              Add HSN Code
             </button>
           </PermissionGuard>
         }
@@ -351,16 +462,20 @@ const HsnCode = () => {
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
+            values={{
+              ...list.filters,
+              isDisable: statusFilter,
+            }}
+            onChange={handleStatusFilterChange}
+            onClear={handleClearFilters}
             loading={loading}
-            activeCount={list.activeFilterCount}
+            activeCount={statusFilter !== "" ? 1 : 0}
           />
         }
       />
 
-      {/* Add / Edit Modal */}
+      {/* ==================== ADD / EDIT MODAL ==================== */}
+
       {modalMode && (
         <DefaultModal
           isOpen={Boolean(modalMode)}
@@ -379,7 +494,6 @@ const HsnCode = () => {
           loading={saving}
         >
           <div className="space-y-5">
-            {/* ==================== HSN Information ==================== */}
             <FormSection
               title="HSN Information"
               description="Enter the HSN code and tax details."
@@ -455,7 +569,6 @@ const HsnCode = () => {
               </div>
             </FormSection>
 
-            {/* ==================== Description ==================== */}
             <FormSection
               title="Description"
               description="Add an optional description for this HSN code."
@@ -471,7 +584,6 @@ const HsnCode = () => {
               />
             </FormSection>
 
-            {/* ==================== Status ==================== */}
             <FormSection
               title="Status"
               description="Control whether this HSN code is active."
@@ -491,6 +603,8 @@ const HsnCode = () => {
           </div>
         </DefaultModal>
       )}
+
+      {/* ==================== DELETE CONFIRMATION ==================== */}
 
       <ConfirmModal
         isOpen={deleteOpen}
