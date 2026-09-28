@@ -606,7 +606,10 @@ const Cancellations = () => {
               });
             if (
               row.providerRefundAmount > 0 &&
-              row.paymentProvider !== "razorpay"
+              (row.paymentProvider !== "razorpay" ||
+                row.metadata?.manualRefundRequired ||
+                row.lastError ||
+                row.last_error)
             ) {
               actions.push({
                 label: "Complete Manual Refund",

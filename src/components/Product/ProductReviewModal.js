@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import DefaultMiddleModal from "../Atoms/Modal/DefaultMiddleModal ";
 import ProductStatusBadge from "./ProductStatusBadge";
 
@@ -137,9 +137,80 @@ const DECISIONS = {
 
 const formatReviewValue = (value) => {
   if (value === undefined || value === null || value === "") return "N/A";
-  if (Array.isArray(value)) return value.length ? value.join(", ") : "(empty)";
+  if (Array.isArray(value))
+    return value.length ? JSON.stringify(value, null, 2) : "(empty)";
   if (typeof value === "object") return JSON.stringify(value, null, 2);
   return String(value);
+};
+
+const normalizeReviewValue = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  if (Array.isArray(value)) {
+    const normalized = value.map(normalizeReviewValue);
+    return normalized.length ? normalized : null;
+  }
+  if (typeof value === "object") {
+    const normalized = Object.fromEntries(
+      Object.entries(value)
+        .filter(([, nestedValue]) => nestedValue !== undefined)
+        .map(([key, nestedValue]) => [key, normalizeReviewValue(nestedValue)])
+        .sort(([left], [right]) => left.localeCompare(right)),
+    );
+    return Object.keys(normalized).length ? normalized : null;
+  }
+  return value;
+};
+
+const reviewValuesEqual = (current, proposed) =>
+  JSON.stringify(normalizeReviewValue(current)) ===
+  JSON.stringify(normalizeReviewValue(proposed));
+
+const parseReviewContainer = (value) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+};
+
+const buildRevisionDiffs = (currentProduct = {}, draftChanges = {}) => {
+  const diffs = [];
+
+  const visit = (path, rawCurrent, rawProposed) => {
+    const current = parseReviewContainer(rawCurrent);
+    const proposed = parseReviewContainer(rawProposed);
+    if (reviewValuesEqual(current, proposed)) return;
+
+    if (Array.isArray(current) && Array.isArray(proposed)) {
+      const maxLength = Math.max(current.length, proposed.length);
+      for (let index = 0; index < maxLength; index += 1) {
+        visit(`${path}[${index}]`, current[index], proposed[index]);
+      }
+      return;
+    }
+
+    const currentIsObject =
+      current && typeof current === "object" && !Array.isArray(current);
+    const proposedIsObject =
+      proposed && typeof proposed === "object" && !Array.isArray(proposed);
+
+    if (currentIsObject && proposedIsObject) {
+      Object.keys(proposed).forEach((key) =>
+        visit(path ? `${path}.${key}` : key, current[key], proposed[key]),
+      );
+      return;
+    }
+
+    diffs.push({ field: path, current, proposed });
+  };
+
+  Object.keys(draftChanges).forEach((field) =>
+    visit(field, currentProduct?.[field], draftChanges[field]),
+  );
+  return diffs;
 };
 
 /**
@@ -169,32 +240,38 @@ const ProductReviewModal = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const savedChecklistRef = useRef({});
+  savedChecklistRef.current =
+    revision?.checklist || product?.moderation?.checklist || {};
 
   useEffect(() => {
     if (isOpen) {
       setDecision("active");
       setRejectionReason("");
       setNotes("");
-      setChecklist({
-        ...DEFAULT_CHECKLIST,
-        ...(revision?.checklist || product?.moderation?.checklist || {}),
-      });
+      const savedChecklist = savedChecklistRef.current;
+      setChecklist(
+        Object.fromEntries(
+          CHECKLIST_ITEMS.map(({ key }) => [key, savedChecklist[key] === true]),
+        ),
+      );
       setError("");
       setSubmitted(false);
     }
-  }, [isOpen, product, revision]);
+  }, [isOpen, product?._id, product?.id, revision?._id, revision?.id]);
 
   const isRejecting = decision === "rejected";
-  const allChecked = Object.values(checklist).every(Boolean);
-  const checkedCount = Object.values(checklist).filter(Boolean).length;
+  const checkedCount = CHECKLIST_ITEMS.filter(({ key }) =>
+    Boolean(checklist[key]),
+  ).length;
+  const allChecked = checkedCount === CHECKLIST_ITEMS.length;
 
   const draftChanges = revision?.draftChanges || {};
-  const changedFields = revision?.changedFields?.length
-    ? revision.changedFields
-    : Object.keys(draftChanges);
+  const revisionDiffs = buildRevisionDiffs(product, draftChanges);
 
   const handleChecklistToggle = (key) => {
     setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
+    setSubmitted(false);
     if (error) setError("");
   };
 
@@ -203,6 +280,8 @@ const ProductReviewModal = ({
     setChecklist(
       Object.fromEntries(CHECKLIST_ITEMS.map(({ key }) => [key, next])),
     );
+    setSubmitted(false);
+    setError("");
   };
 
   const handleSubmit = async (e) => {
@@ -309,9 +388,9 @@ const ProductReviewModal = ({
                 </span>
               )}
             </div>
-            {changedFields.length > 0 ? (
+            {revisionDiffs.length > 0 ? (
               <div className="space-y-2">
-                {changedFields.map((field) => (
+                {revisionDiffs.map(({ field, current, proposed }) => (
                   <div
                     key={field}
                     className="overflow-hidden rounded border border-blue-100 bg-white"
@@ -327,7 +406,7 @@ const ProductReviewModal = ({
                           Current
                         </p>
                         <pre className="max-h-24 overflow-auto whitespace-pre-wrap rounded bg-gray-50 p-2 text-xs text-gray-700">
-                          {formatReviewValue(product?.[field])}
+                          {formatReviewValue(current)}
                         </pre>
                       </div>
                       <div className="p-2">
@@ -335,7 +414,7 @@ const ProductReviewModal = ({
                           Proposed
                         </p>
                         <pre className="max-h-24 overflow-auto whitespace-pre-wrap rounded bg-green-50 p-2 text-xs text-green-800">
-                          {formatReviewValue(draftChanges[field])}
+                          {formatReviewValue(proposed)}
                         </pre>
                       </div>
                     </div>

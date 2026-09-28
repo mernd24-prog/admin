@@ -229,8 +229,13 @@ const ProductCatalog = () => {
       .filter((seller) => seller.value);
   }, [sellerList]);
 
-  const isChangePendingFilter =
-    appliedFilters?.approvalStatus?.value === "Change Pending";
+  const normalizedApprovalFilter = String(
+    appliedFilters?.approvalStatus?.value || "",
+  )
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  const isChangePendingFilter = normalizedApprovalFilter === "change_pending";
   const approvalStatusToApiStatus = {
     Pending: "pending",
     Approved: "approved",
@@ -302,9 +307,9 @@ const ProductCatalog = () => {
     try {
       const query = buildProductQuery(list.page);
 
-      const response = await dispatch(getProducts(query));
+      const response = await dispatch(getProducts(query)).unwrap();
 
-      const productData = response?.payload?.data || {
+      const productData = response?.data || {
         list: [],
         total: 0,
       };
@@ -312,7 +317,7 @@ const ProductCatalog = () => {
       setApiRes(productData);
     } catch (err) {
       console.error("Failed to fetch products:", err);
-      toast.error("Failed to fetch products");
+      toast.error(err?.message || err || "Failed to fetch products");
     } finally {
       setLoading(false);
     }
@@ -627,7 +632,7 @@ const ProductCatalog = () => {
       );
       updateVisibleProducts(product?._id, {
         ...(reviewModal.revision
-          ? { revisionStatus: decision === "active" ? "approved" : decision }
+          ? { revisionStatus: "none" }
           : {
               status: decision,
               approvalStatus: decision === "active" ? "approved" : decision,
@@ -880,10 +885,7 @@ const ProductCatalog = () => {
         key: "status",
         label: "Status",
         render: (_, product) => (
-          <ProductStatusBadge
-            status={product?.status}
-            revisionStatus={product?.revisionStatus}
-          />
+          <ProductStatusBadge status={product?.status} />
         ),
       },
       {
@@ -895,6 +897,7 @@ const ProductCatalog = () => {
               product?.approvalStatus ||
               (product?.approvedAt ? "approved" : "pending")
             }
+            revisionStatus={product?.revisionStatus}
           />
         ),
       },
@@ -1029,6 +1032,13 @@ const ProductCatalog = () => {
             tableContainerClassName="hide-scrollbar max-h-[calc(100vh-360px)] overflow-x-auto overflow-y-auto pb-2"
             tableClassName="min-w-[1880px]"
             rowActions={(product) => [
+              {
+                label: "Review Revision",
+                icon: <MdVisibility size={16} className="text-violet-600" />,
+                hidden: sellerView || !hasPendingRevision(product),
+                className: "font-semibold text-violet-700",
+                onClick: () => handleApproveToggle(product),
+              },
               {
                 label: "View Product",
                 icon: <MdVisibility size={16} className="text-blue-600" />,

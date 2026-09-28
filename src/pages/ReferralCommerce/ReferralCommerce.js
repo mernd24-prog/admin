@@ -1577,6 +1577,33 @@ const ReferralCommerce = () => {
     return <OrderLink orderId={orderId} orderNumber={orderNumber} />;
   };
 
+  const renderCustomerDetails = (order = {}) => {
+    const customer =
+      order.customer && typeof order.customer === "object"
+        ? order.customer
+        : {};
+    const name =
+      order.customerName ||
+      customer.name ||
+      customer.fullName ||
+      customer.displayName ||
+      "";
+    const email = order.customerEmail || customer.email || "";
+    const fallbackId =
+      order.customerId || order.buyer_id || order.buyerId || customer.id || "";
+
+    return (
+      <div className="min-w-0">
+        <div className="truncate text-sm font-medium text-gray-800">
+          {name || email || fallbackId || "-"}
+        </div>
+        {name && email && (
+          <div className="truncate text-xs text-gray-500">{email}</div>
+        )}
+      </div>
+    );
+  };
+
   const refreshAll = async (filters = {}) => {
     const baseQuery = {
       q: filters.q ?? search,
@@ -2324,7 +2351,7 @@ const ReferralCommerce = () => {
       order.orderNumber || order.order_number,
     ),
     code: order.code,
-    customer: order.customerId,
+    customer: renderCustomerDetails(order),
     amount: formatAmount(order.eligibleAmount),
     discount: formatAmount(order.discountAmount),
     status: <StatusPill value={order.status} />,
@@ -2713,14 +2740,6 @@ const ReferralCommerce = () => {
                 0;
               const formattedAmount = `₹${Number(amountVal).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
-              const customerName =
-                order.customerName ||
-                order.customer ||
-                order.customerId ||
-                order.buyer_id ||
-                order.buyerId ||
-                "-";
-
               return (
                 <tr
                   key={orderId || index}
@@ -2732,7 +2751,9 @@ const ReferralCommerce = () => {
                   <td className="px-4 py-3 font-medium">
                     {renderOrderLink(orderId, orderNumber)}
                   </td>
-                  <td className="px-4 py-3">{formatLabel(customerName)}</td>
+                  <td className="px-4 py-3">
+                    {renderCustomerDetails(order)}
+                  </td>
                   <td className="px-4 py-3 font-medium text-gray-900">
                     {formattedAmount}
                   </td>

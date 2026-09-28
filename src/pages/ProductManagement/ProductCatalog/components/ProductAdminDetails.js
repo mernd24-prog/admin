@@ -9,7 +9,6 @@ import {
   approveDisapprove,
   duplicateProduct,
   getProductRevisions,
-  reviewProductRevision,
 } from "../../../../Redux/productSlice";
 
 import ProductStatusBadge from "../../../../components/Product/ProductStatusBadge";
@@ -199,10 +198,8 @@ const ProductAdminDetails = () => {
 
   const needsReview =
     !isSellerRole &&
-    (REVIEWABLE_STATUSES.has(product?.status) ||
-      product?.revisionStatus === "change_pending" ||
-      Boolean(product?.pendingRevisionId) ||
-      Boolean(product?.pendingRevision));
+    REVIEWABLE_STATUSES.has(product?.status) &&
+    !pendingRevision;
 
   const attributes =
     product.attributes instanceof Map
@@ -339,28 +336,15 @@ const ProductAdminDetails = () => {
     setReviewLoading(true);
 
     try {
-      if (pendingRevision) {
-        await dispatch(
-          reviewProductRevision({
-            productId: id,
-            revisionId: pendingRevision._id || pendingRevision.id,
-            status: decision,
-            rejectionReason: rejectionReason || null,
-            notes: notes || null,
-            checklist,
-          }),
-        ).unwrap();
-      } else {
-        await dispatch(
-          approveDisapprove({
-            id,
-            status: decision,
-            rejectionReason: rejectionReason || null,
-            notes: notes || null,
-            checklist,
-          }),
-        ).unwrap();
-      }
+      await dispatch(
+        approveDisapprove({
+          id,
+          status: decision,
+          rejectionReason: rejectionReason || null,
+          notes: notes || null,
+          checklist,
+        }),
+      ).unwrap();
 
       const labels = {
         active: "approved",
@@ -369,9 +353,7 @@ const ProductAdminDetails = () => {
       };
 
       toast.success(
-        `${pendingRevision ? "Product revision" : "Product"} ${
-          labels[decision] || "updated"
-        } successfully.`,
+        `Product ${labels[decision] || "updated"} successfully.`,
       );
 
       await Promise.all([
@@ -589,7 +571,7 @@ const ProductAdminDetails = () => {
                 onClick={() => setReviewOpen(true)}
                 className="inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-[var(--admin-navy)] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
-                {pendingRevision ? "Review Revision" : "Review Product"}
+                Review Product
               </button>
             )}
 
@@ -1370,7 +1352,7 @@ const ProductAdminDetails = () => {
       <ProductReviewModal
         isOpen={reviewOpen}
         product={product}
-        revision={pendingRevision}
+        revision={null}
         onClose={() => setReviewOpen(false)}
         onSubmit={handleReviewSubmit}
       />

@@ -61,7 +61,7 @@ const DEFAULT_SETTINGS = {
         fullCancellation: true,
         itemCancellation: false,
         sellerCancellation: true,
-        rtoDeliveryFailed: false,
+        rtoDeliveryFailed: true,
         customerReturn: false,
         partialReturn: false,
       },
@@ -192,14 +192,15 @@ const ToggleField = ({ label, checked, onChange, hint }) => (
   </Field>
 );
 
-const RefundOption = ({ label, checked, onChange }) => (
+const RefundOption = ({ label, checked, onChange, disabled = false }) => (
   <label
-    className={`flex items-center justify-between gap-3  rounded-md border px-3 py-2 text-sm ${checked ? "border-green-200 bg-green-50 text-green-900" : "border-gray-200 bg-white text-gray-700"}`}
+    className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm ${checked ? "border-green-200 bg-green-50 text-green-900" : "border-gray-200 bg-white text-gray-700"} ${disabled ? "cursor-not-allowed opacity-75" : ""}`}
   >
     <span>{label}</span>
     <input
       type="checkbox"
       checked={Boolean(checked)}
+      disabled={disabled}
       onChange={(event) => onChange(event.target.checked)}
     />
   </label>
@@ -212,21 +213,29 @@ const RefundScenario = ({
   platformFee,
   onShippingChange,
   onPlatformFeeChange,
+  required = false,
 }) => (
   <div className="rounded-lg border border-gray-200 bg-white p-4">
     <div className="mb-3">
       <div className="text-sm font-semibold text-gray-900">{title}</div>
       <div className="mt-1 text-xs text-gray-500">{hint}</div>
+      {required && (
+        <div className="mt-1 text-xs font-medium text-green-700">
+          Required because the customer is not responsible for this failure.
+        </div>
+      )}
     </div>
     <div className="grid gap-2 sm:grid-cols-2">
       <RefundOption
         label="Refund shipping"
-        checked={shipping}
+        checked={required || shipping}
+        disabled={required}
         onChange={onShippingChange}
       />
       <RefundOption
         label="Refund platform fee"
-        checked={platformFee}
+        checked={required || platformFee}
+        disabled={required}
         onChange={onPlatformFeeChange}
       />
     </div>
@@ -1171,6 +1180,10 @@ export default function CommerceSettings() {
                   shipping={settings.returns.refundPolicy?.shipping?.[key]}
                   platformFee={
                     settings.returns.refundPolicy?.platformFee?.[key]
+                  }
+                  required={
+                    key === "sellerCancellation" ||
+                    key === "rtoDeliveryFailed"
                   }
                   onShippingChange={(value) =>
                     patchRefundPolicy("shipping", key, value)
