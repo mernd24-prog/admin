@@ -1052,7 +1052,8 @@ const ProductReferralAmounts = () => {
                   options={storeOptions}
                   value={
                     storeOptions.find(
-                      (option) => String(option.value) === String(form.storeKey),
+                      (option) =>
+                        String(option.value) === String(form.storeKey),
                     ) || null
                   }
                   onChange={(selectedOption) => {
@@ -1078,7 +1079,8 @@ const ProductReferralAmounts = () => {
                   options={productOptions}
                   value={
                     productOptions.find(
-                      (option) => String(option.value) === String(form.productId),
+                      (option) =>
+                        String(option.value) === String(form.productId),
                     ) || null
                   }
                   onChange={(selectedOption) => {
@@ -1261,36 +1263,36 @@ const ProductReferralAmounts = () => {
                 <SkeletonLoader height={40} width={180} />
               ) : (
                 <>
-              {isEditMode && (
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  disabled={loading}
-                  className="rounded-md border border-[var(--admin-line)] bg-white px-4 py-2 text-sm font-medium text-[var(--admin-navy)] transition hover:bg-[var(--admin-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              )}
+                  {isEditMode && (
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      disabled={loading}
+                      className="rounded-md border border-[var(--admin-line)] bg-white px-4 py-2 text-sm font-medium text-[var(--admin-navy)] transition hover:bg-[var(--admin-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  )}
 
-              <OrangeButton
-                type="submit"
-                disabled={loading}
-                className="min-w-[180px]"
-              >
-                {loading ? (
-                  <>
-                    <ButtonLoader />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Check size={16} />
-                    {isEditMode
-                      ? "Update Product Amount"
-                      : "Save Product Amount"}
-                  </>
-                )}
-              </OrangeButton>
+                  <OrangeButton
+                    type="submit"
+                    disabled={loading}
+                    className="min-w-[180px]"
+                  >
+                    {loading ? (
+                      <>
+                        <ButtonLoader />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Check size={16} />
+                        {isEditMode
+                          ? "Update Product Amount"
+                          : "Save Product Amount"}
+                      </>
+                    )}
+                  </OrangeButton>
                 </>
               )}
             </div>
@@ -1480,9 +1482,7 @@ const ReferralCommerce = () => {
   const summary = getBranchPayload(referralState.summaryData);
   const rulesPayload = getBranchPayload(referralState.rulesData);
   const influencers = getBranchList(referralState.influencersData);
-  const codes = getBranchList(referralState.codesData);
   const orders = getBranchList(referralState.ordersData);
-  const commissions = getBranchList(referralState.commissionsData);
   const payouts = getBranchList(referralState.payoutsData);
   const bonusRules = getBranchList(referralState.bonusRulesData);
   const bonusAchievements = getBranchList(referralState.bonusAchievementsData);

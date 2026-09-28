@@ -673,11 +673,11 @@ const PayoutOpsQueue = () => {
           { label: "My Finance & Payouts" },
           { label: "Payout Ops Queue" },
         ]}
-        actions={
-          <button type="button" onClick={fetchQueue}>
-            <MdRefresh size={17} /> Refresh
-          </button>
-        }
+        // actions={
+        //   <button type="button" onClick={fetchQueue}>
+        //     <MdRefresh size={17} /> Refresh
+        //   </button>
+        // }
       />
 
       <DataTable

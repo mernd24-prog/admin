@@ -5,7 +5,9 @@ import {
   BadgeCheck,
   BadgeIndianRupee,
   Check,
+  CheckCheck,
   Coins,
+  Copy,
   Eye,
   FileText,
   GitBranch,
@@ -179,6 +181,39 @@ const maskAccountNumber = (value) => {
   return accountNumber.length > 4
     ? `****${accountNumber.slice(-4)}`
     : accountNumber || "-";
+};
+
+const CopyableValue = ({ value }) => {
+  const [copied, setCopied] = useState(false);
+  const displayValue = value || "-";
+
+  const handleCopy = () => {
+    if (!value) return;
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="font-medium text-gray-800">{displayValue}</span>
+      {value && (
+        <button
+          type="button"
+          onClick={handleCopy}
+          title={copied ? "Copied!" : "Copy account number"}
+          className="rounded p-0.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+        >
+          {copied ? (
+            <CheckCheck size={14} className="text-emerald-500" />
+          ) : (
+            <Copy size={14} />
+          )}
+        </button>
+      )}
+    </span>
+  );
 };
 
 const refreshPartner = (dispatch, id) => {
@@ -1122,15 +1157,13 @@ const ReferralPartnerDetails = () => {
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-gray-500">Account</span>
-                      <span className="font-medium text-gray-800">
-                        {maskAccountNumber(
-                          firstValue(
-                            verificationData.bankDetails.accountNumber,
-                            verificationData.bankDetails.bankAccountNumber,
-                            verificationData.bankDetails.accountNo,
-                          ),
+                      <CopyableValue
+                        value={firstValue(
+                          verificationData.bankDetails.accountNumber,
+                          verificationData.bankDetails.bankAccountNumber,
+                          verificationData.bankDetails.accountNo,
                         )}
-                      </span>
+                      />
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-gray-500">IFSC</span>
