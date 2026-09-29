@@ -76,6 +76,51 @@ export const dropdownApi = {
   getTaxes: (params) => load("taxes", params),
   getSystemOptions: (resource, params) => load(resource, params),
 
+  getStoreName: (params = {}) =>
+    loadProtected(
+      "seller-store-names",
+      ENDPOINTS.sellers.list,
+      {
+        ...params,
+        limit: Math.min(Math.max(Number(params.limit) || 20, 1), 100),
+      },
+      (item) => {
+        const storeName =
+          item.organizationName ||
+          item.organisationName ||
+          item.organization_name ||
+          item.organisation_name ||
+          item.storeDisplayName ||
+          item.businessName ||
+          item.sellerProfile?.businessName ||
+          item.legalBusinessName ||
+          item.sellerName ||
+          item.full_name ||
+          item.name ||
+          item.email ||
+          item._id ||
+          item.id;
+
+        const organizationId =
+          item.organizationId ||
+          item.organisationId ||
+          item.organization_id ||
+          item.organisation_id ||
+          item.id ||
+          item._id;
+
+        return {
+          label: formatLabel(storeName, "Unknown Store"),
+          value: organizationId,
+          id: organizationId,
+          meta: {
+            sellerId: item.sellerId || item.seller_id || "",
+            sellerName: item.sellerName || "",
+            organizationName: storeName || "",
+          },
+        };
+      },
+    ),
   getSellers: (params = {}) =>
     loadProtected(
       "sellers",

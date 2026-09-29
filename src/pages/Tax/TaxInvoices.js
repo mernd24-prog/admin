@@ -55,11 +55,12 @@ const FILTER_FIELDS = isSellerPanel()
         label: "Seller STORE NAME",
         width: "w-52",
         load: (search) =>
-          dropdownApi.getSellers({
+          dropdownApi.getStoreName({
             keyWord: search,
-            searchFields: "full_name,email,businessName",
+            searchFields: "organizationName,businessName,legalBusinessName",
           }),
       },
+
       // {
       //   key: "buyerId",
       //   type: "asyncDropdown",

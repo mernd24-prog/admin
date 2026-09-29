@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import {
   MdAccountBalance,
   MdLocalOffer,
@@ -20,11 +21,13 @@ import {
   getMyPromotionFundingLedger,
   getPromotionFundingLedger,
 } from "../../../Redux/sellerCommissionsSlice";
+import { UserLink } from "../../../components/Shared";
 
 const money = (value, currency = "INR") =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency }).format(
-    Number(value || 0),
-  );
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency,
+  }).format(Number(value || 0));
 
 const statusClass = {
   reserved: "bg-gray-100 text-gray-700",
@@ -43,51 +46,76 @@ const FUNDING_OPTIONS = [
 const PromotionFundingLedger = () => {
   const dispatch = useDispatch();
   const sellerMode = isSellerPanel();
+
+  const navigate = useNavigate();
+
   const state = useSelector(
     (store) => store.sellerCommissions?.promotionLedgerData,
   );
+
   const payload = state?.data?.data || state?.data || {};
+
   const rows = useMemo(
     () => (Array.isArray(payload?.items) ? payload.items : []),
     [payload?.items],
   );
+
   const totals = payload?.totals || {};
+
   const [filters, setFilters] = useState({
     search: "",
     fundingType: "",
     limit: 50,
     offset: 0,
   });
+
   const [loading, setLoading] = useState(false);
   const [sellerOptions, setSellerOptions] = useState([]);
+  const [storeMap, setStoreMap] = useState({});
 
+  // Fetch seller dropdown options
   useEffect(() => {
     if (sellerMode) return;
+
     dropdownApi
       .getSellers({ limit: 100 })
-      .then((data) => setSellerOptions(Array.isArray(data) ? data : []))
+      .then((data) => {
+        setSellerOptions(Array.isArray(data) ? data : []);
+      })
       .catch(() => {});
   }, [sellerMode]);
 
+  // Map seller IDs to seller names
   const sellerMap = useMemo(() => {
     const map = new Map();
+
     (sellerOptions || []).forEach((item) => {
       const label = item?.label;
-      if (item?.value) map.set(String(item.value), label);
-      if (item?.id) map.set(String(item.id), label);
+
+      if (item?.value) {
+        map.set(String(item.value), label);
+      }
+
+      if (item?.id) {
+        map.set(String(item.id), label);
+      }
     });
+
     return map;
   }, [sellerOptions]);
 
+  // Fetch missing seller names
   useEffect(() => {
     if (sellerMode || !rows.length) return;
+
     const missingSellerIds = [
       ...new Set(
         rows
-          .map((r) => r.sellerId || r.seller_id)
+          .map((row) => row.sellerId || row.seller_id)
           .filter((id) => id && !sellerMap.has(String(id))),
       ),
     ];
+
     if (missingSellerIds.length === 0) return;
 
     Promise.all(
@@ -96,18 +124,92 @@ const PromotionFundingLedger = () => {
       ),
     ).then((results) => {
       const newItems = results.flat().filter(Boolean);
+
       if (newItems.length) {
         setSellerOptions((prev) => {
-          const existingIds = new Set(prev.map((p) => String(p.value || p.id)));
+          const existingIds = new Set(
+            prev.map((item) => String(item.value || item.id)),
+          );
+
           const uniqueNew = newItems.filter(
             (item) => !existingIds.has(String(item.value || item.id)),
           );
+
           return uniqueNew.length ? [...prev, ...uniqueNew] : prev;
         });
       }
     });
   }, [rows, sellerMode, sellerMap]);
 
+  // Fetch store names using seller organizations
+  useEffect(() => {
+    if (sellerMode || !rows.length) return;
+
+    const sellerIds = [
+      ...new Set(
+        rows
+          .map((row) => row.sellerId || row.seller_id)
+          .filter(Boolean)
+          .map(String),
+      ),
+    ];
+
+    if (!sellerIds.length) return;
+
+    let cancelled = false;
+
+    const fetchStoreNames = async () => {
+      const results = await Promise.all(
+        sellerIds.map(async (sellerId) => {
+          try {
+            const organizations =
+              await dropdownApi.getSellerOrganizations(sellerId);
+
+            return {
+              sellerId,
+              organizations,
+            };
+          } catch (error) {
+            console.error(
+              `Failed to fetch organizations for seller ${sellerId}:`,
+              error,
+            );
+
+            return {
+              sellerId,
+              organizations: [],
+            };
+          }
+        }),
+      );
+
+      if (cancelled) return;
+
+      setStoreMap((prev) => {
+        const updated = { ...prev };
+
+        results.forEach(({ sellerId, organizations }) => {
+          const storeNames = organizations
+            .map((organization) => organization?.label)
+            .filter(Boolean);
+
+          if (storeNames.length) {
+            updated[sellerId] = [...new Set(storeNames)].join(", ");
+          }
+        });
+
+        return updated;
+      });
+    };
+
+    fetchStoreNames();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rows, sellerMode]);
+
+  // Table columns
   const columns = useMemo(
     () => [
       {
@@ -119,7 +221,6 @@ const PromotionFundingLedger = () => {
 
           return (
             <div className="flex flex-col">
-              {/* Order Link / Number */}
               <OrderLink
                 orderId={orderId}
                 orderNumber={row?.orderNumber || row?.order_number}
@@ -127,10 +228,10 @@ const PromotionFundingLedger = () => {
                 {orderDisplay}
               </OrderLink>
 
-              {/* Product Details */}
               <div className="mt-1 font-medium text-gray-900">
                 {row?.productTitle || "Order item"}
               </div>
+
               <div className="text-xs text-gray-500">
                 {row?.productSku || "No SKU"} · Qty {row?.quantity ?? 0}
               </div>
@@ -138,6 +239,7 @@ const PromotionFundingLedger = () => {
           );
         },
       },
+
       ...(!sellerMode
         ? [
             {
@@ -145,36 +247,46 @@ const PromotionFundingLedger = () => {
               label: "Seller",
               render: (value, row) => {
                 const sellerId = value || row?.sellerId || row?.seller_id;
-                const name =
+
+                const sellerName =
                   row?.sellerName ||
                   row?.seller?.name ||
                   row?.seller?.displayName ||
                   row?.seller?.businessName ||
                   (sellerId ? sellerMap.get(String(sellerId)) : null);
 
-                if (name) {
-                  return (
-                    <span className="text-sm font-medium text-gray-800">
-                      {name}
-                    </span>
-                  );
-                }
+                const storeName = sellerId ? storeMap[String(sellerId)] : null;
 
                 return (
-                  <span className="font-mono text-xs text-gray-400">
-                    {sellerId || "—"}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <UserLink
+                      userId={sellerId}
+                      userName={
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium">
+                            {sellerName || "N/A"}
+                          </span>
+
+                          <span className="text-xs text-gray-500">
+                            Store: {storeName || "N/A"}
+                          </span>
+                        </div>
+                      }
+                    />
+                  </div>
                 );
               },
             },
           ]
         : []),
+
       {
         key: "fundingType",
         label: "Funding",
         cellClassName: "capitalize",
         render: (value) => String(value || "").replace(/_/g, " "),
       },
+
       {
         key: "customerDiscountAmount",
         label: "Customer Discount",
@@ -182,6 +294,7 @@ const PromotionFundingLedger = () => {
         cellClassName: "text-right",
         render: (value, row) => money(value, row.currency),
       },
+
       {
         key: "sellerFundedDiscountAmount",
         label: "Seller-funded",
@@ -189,6 +302,7 @@ const PromotionFundingLedger = () => {
         cellClassName: "text-right text-amber-700",
         render: (value, row) => money(value, row.currency),
       },
+
       {
         key: "marketplaceContributionAmount",
         label: "Platform / Partner",
@@ -201,6 +315,7 @@ const PromotionFundingLedger = () => {
             row.currency,
           ),
       },
+
       {
         key: "reversalAmount",
         label: "Reversed",
@@ -208,6 +323,7 @@ const PromotionFundingLedger = () => {
         cellClassName: "text-right text-red-700",
         render: (value, row) => money(value, row.currency),
       },
+
       {
         key: "netPlatformContributionAmount",
         label: "Net Contribution",
@@ -215,17 +331,21 @@ const PromotionFundingLedger = () => {
         cellClassName: "text-right font-semibold text-green-700",
         render: (value, row) => money(value, row.currency),
       },
+
       {
         key: "status",
         label: "Status",
         render: (value) => (
           <span
-            className={`rounded-full px-2 py-1 text-xs font-semibold ${statusClass[value] || statusClass.reserved}`}
+            className={`rounded-full px-2 py-1 text-xs font-semibold ${
+              statusClass[value] || statusClass.reserved
+            }`}
           >
             {value}
           </span>
         ),
       },
+
       {
         key: "payoutId",
         label: "Payout",
@@ -233,15 +353,18 @@ const PromotionFundingLedger = () => {
         render: (value) => value || "Not batched",
       },
     ],
-    [sellerMode, sellerMap],
+    [sellerMode, sellerMap, storeMap],
   );
 
+  // Load promotion funding ledger
   const load = useCallback(async () => {
     setLoading(true);
+
     try {
       const action = sellerMode
         ? getMyPromotionFundingLedger
         : getPromotionFundingLedger;
+
       await dispatch(action(filters)).unwrap();
     } catch (error) {
       toast.error(error?.message || "Failed to load promotion funding ledger");
@@ -254,6 +377,7 @@ const PromotionFundingLedger = () => {
     load();
   }, [load]);
 
+  // Summary cards
   const cards = [
     [
       "Customer discounts",
@@ -298,7 +422,9 @@ const PromotionFundingLedger = () => {
               ? "My Finance & Payouts"
               : "Seller Finance & Payouts",
           },
-          { label: "Promotion Funding Ledger" },
+          {
+            label: "Promotion Funding Ledger",
+          },
         ]}
         actions={
           <button type="button" onClick={load}>
@@ -338,7 +464,6 @@ const PromotionFundingLedger = () => {
         pageSize={Number(filters.limit || 50)}
         rowKey="id"
         emptyText="No funded discounts found."
-        // onRefresh={load}
         filterBar={
           <div className="grid gap-3 border-b border-gray-100 p-4 md:grid-cols-[1fr_240px]">
             <input
