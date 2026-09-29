@@ -1684,133 +1684,125 @@ export default function ProductManagementUI() {
 
     return Object.keys(newErrors).length === 0;
   };
-  useEffect(() => {
-    if (isScrolling) return;
+useEffect(() => {
+  if (isScrolling) return;
 
-    const sectionIds = [
-      "basic-details",
-      "product-details",
-      "common-images",
-      "variants-options",
-      "shipping",
-      "seo",
-      "tags",
-    ];
+  // IMPORTANT:
+  // Keep this in the exact same order as the actual DOM sections.
+  const sectionIds = [
+    "basic-details",
+    "product-details",
+    "variants-options",
+    "common-images",
+    "shipping",
+    "seo",
+    "tags",
+  ];
 
-    let animationFrameId = null;
+  let animationFrameId = null;
 
-    const updateActiveSection = () => {
-      const viewportHeight = window.innerHeight;
+  const updateActiveSection = () => {
+    const viewportHeight = window.innerHeight;
+    const activationLine = 220;
 
-      // Position in viewport where a section becomes active.
-      const activationLine = 220;
+    const sections = sectionIds
+      .map((id) => ({
+        id,
+        element: refs[id]?.current,
+      }))
+      .filter((item) => item.element);
 
-      const sections = sectionIds
-        .map((id) => ({
-          id,
-          element: refs[id]?.current,
-        }))
-        .filter((item) => item.element);
+    if (!sections.length) return;
 
-      if (!sections.length) return;
+    // -----------------------------------------
+    // LAST SECTION
+    // -----------------------------------------
+    const lastSection = sections[sections.length - 1];
+    const lastRect = lastSection.element.getBoundingClientRect();
 
-      // -----------------------------------------
-      // LAST SECTION FIX
-      // -----------------------------------------
-      const lastSection = sections[sections.length - 1];
-      const lastRect = lastSection.element.getBoundingClientRect();
+    if (
+      lastRect.top <= viewportHeight * 0.78 &&
+      lastRect.bottom > 0
+    ) {
+      setActiveTab((prev) =>
+        prev !== lastSection.id ? lastSection.id : prev,
+      );
 
-      /*
-      Last section often cannot move all the way to the top because
-      there is no content after it.
+      return;
+    }
 
-      As soon as Tags & Discovery enters enough of the viewport,
-      activate it.
-    */
-      if (lastRect.top <= viewportHeight * 0.78 && lastRect.bottom > 0) {
-        setActiveTab((prev) =>
-          prev !== lastSection.id ? lastSection.id : prev,
-        );
+    // -----------------------------------------
+    // NORMAL SECTION DETECTION
+    // -----------------------------------------
+    let currentSection = sections[0].id;
 
-        return;
+    sections.forEach(({ id, element }) => {
+      const rect = element.getBoundingClientRect();
+
+      if (rect.top <= activationLine) {
+        currentSection = id;
       }
-
-      // -----------------------------------------
-      // NORMAL SECTION DETECTION
-      // -----------------------------------------
-      let currentSection = sections[0].id;
-
-      sections.forEach(({ id, element }) => {
-        const rect = element.getBoundingClientRect();
-
-        /*
-        The latest section that has crossed the activation line
-        becomes active.
-      */
-        if (rect.top <= activationLine) {
-          currentSection = id;
-        }
-      });
-
-      setActiveTab((prev) => (prev !== currentSection ? currentSection : prev));
-    };
-
-    const handleScroll = () => {
-      if (isScrolling) return;
-
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-
-      animationFrameId = requestAnimationFrame(() => {
-        updateActiveSection();
-        animationFrameId = null;
-      });
-    };
-
-    /*
-    IMPORTANT:
-    true = capture phase.
-
-    This lets us detect scrolling even when your admin layout
-    scrolls inside a nested div instead of window.
-  */
-    document.addEventListener("scroll", handleScroll, true);
-
-    window.addEventListener("resize", handleScroll);
-
-    // Set correct active tab immediately.
-    updateActiveSection();
-
-    return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-
-      document.removeEventListener("scroll", handleScroll, true);
-
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, [isScrolling]);
-
-  const scrollToSection = useCallback((id) => {
-    const target = refs[id]?.current;
-
-    if (!target) return;
-
-    // Immediately highlight clicked navigation item
-    setActiveTab(id);
-    setIsScrolling(true);
-
-    target.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
     });
 
-    setTimeout(() => {
-      setIsScrolling(false);
-    }, 700);
-  }, []);
+    setActiveTab((prev) =>
+      prev !== currentSection ? currentSection : prev,
+    );
+  };
+
+  const handleScroll = () => {
+    if (isScrolling) return;
+
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+    }
+
+    animationFrameId = requestAnimationFrame(() => {
+      updateActiveSection();
+      animationFrameId = null;
+    });
+  };
+
+  // Capture scroll from nested scroll containers also
+  document.addEventListener("scroll", handleScroll, true);
+
+  window.addEventListener("resize", handleScroll);
+
+  updateActiveSection();
+
+  return () => {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+    }
+
+    document.removeEventListener("scroll", handleScroll, true);
+    window.removeEventListener("resize", handleScroll);
+  };
+}, [isScrolling]);
+
+const scrollToSection = useCallback((id) => {
+  const target = refs[id]?.current;
+
+  if (!target) {
+    console.warn(`Section ref not found: ${id}`);
+    return;
+  }
+
+  setActiveTab(id);
+  setIsScrolling(true);
+
+  target.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+
+  // Keep clicked tab active while smooth scrolling is happening
+  const timer = setTimeout(() => {
+    setActiveTab(id);
+    setIsScrolling(false);
+  }, 800);
+
+  return () => clearTimeout(timer);
+}, [refs]);
 
   function calculateDiscount(price, discountPercent = 0) {
     const validPrice = parseFloat(price) || 0;
@@ -2054,7 +2046,7 @@ export default function ProductManagementUI() {
             cityCode: "",
           },
         }));
-        break;
+        break;  
       case "PRODUCT_CITY":
         setFormData((prev) => ({
           ...prev,

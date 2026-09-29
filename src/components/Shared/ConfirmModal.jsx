@@ -157,14 +157,14 @@ const ConfirmModal = ({
             <div
               className={`
                 flex
-                h-12
-                w-12
+                h-8
+                w-8
                 shrink-0
                 items-center
                 justify-center
                 rounded-xl
                 ${bg}
-                ring-4
+                ring-2
                 ${ring}
               `}
             >

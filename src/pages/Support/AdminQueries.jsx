@@ -369,7 +369,7 @@ const AdminQueries = () => {
   );
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Queries"
         subtitle="Customer and seller support queries are listed separately."
