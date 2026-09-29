@@ -26,6 +26,7 @@ import { dropdownApi } from "../../_helpers/dropdownApi";
 import FormSection from "../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
+import Tabs from "../../components/Shared/Tabs";
 
 const FILTER_FIELDS = [
   { key: "orderId", type: "text", label: "Order #", width: "w-56" },
@@ -520,7 +521,7 @@ const TaxCompliance = () => {
   );
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Tax Documents"
         subtitle="Manage tax compliance invoices, credit notes, and tax summaries"
@@ -542,22 +543,15 @@ const TaxCompliance = () => {
         }
       />
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        {[
-          { key: "invoices", label: "Invoices" },
-          { key: "creditNotes", label: "Credit Notes" },
-          { key: "report", label: "Tax Report" },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === tab.key ? "bg-[var(--admin-navy)] text-white" : "border border-gray-300 text-gray-600 hover:bg-gray-50"}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+<Tabs
+  tabs={[
+    { value: "invoices", label: "Invoices" },
+    { value: "creditNotes", label: "Credit Notes" },
+    { value: "report", label: "Tax Report" },
+  ]}
+  activeTab={activeTab}
+  onChange={setActiveTab}
+/>
 
       <DataTable
         columns={activeColumns}

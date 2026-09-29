@@ -42,7 +42,7 @@ export const DateRangePickerModal = ({
         </div>
 
         {/* Content */}
-        <div className="bg-[#FFF7EA] p-5">{children}</div>
+        <div className="bg-[#FFFDF8] p-5">{children}</div>
       </div>
     </div>
   );

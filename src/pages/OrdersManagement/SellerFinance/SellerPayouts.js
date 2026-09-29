@@ -43,6 +43,7 @@ import {
   sellerFinanceStatus,
   shortReference,
 } from "./financeUi";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
 
 /* -------------------------------------------------------------------------- */
 /* Constants                                                                  */
@@ -1308,189 +1309,323 @@ const SellerPayouts = () => {
       {/* ------------------------------------------------------------------ */}
       {/* Payout Detail Modal                                               */}
 
-      <DefaultModal
-        isOpen={Boolean(detail)}
-        onClose={() => setDetail(null)}
-        title="Payout Calculation"
-        isButtonView={false}
-      >
-        {detail && (
-          <div className="space-y-4 p-2 text-sm">
-            {(() => {
-              const breakdown = breakdownOf(detail);
+     <DefaultModal
+  isOpen={Boolean(detail)}
+  onClose={() => setDetail(null)}
+  title="Payout Calculation"
+  isButtonView={false}
+  // closeButtonText="Close"
+>
+  {detail && (
+    <div className="space-y-5">
+      {(() => {
+        const breakdown = breakdownOf(detail);
 
-              const taxWithheld =
-                Number(breakdown.gstTcsAmount || 0) +
-                Number(breakdown.incomeTaxTdsAmount || 0);
+        const taxWithheld =
+          Number(breakdown.gstTcsAmount || 0) +
+          Number(breakdown.incomeTaxTdsAmount || 0);
 
-              const shippingNet =
-                Number(breakdown.shippingReimbursementAmount || 0) -
-                Number(breakdown.shippingDeductionAmount || 0);
+        const shippingNet =
+          Number(breakdown.shippingReimbursementAmount || 0) -
+          Number(breakdown.shippingDeductionAmount || 0);
 
-              return (
-                <>
-                  <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                    <div className="font-semibold text-gray-800">
-                      {sellerName(detail)}
-                    </div>
+        const explanation = payoutExplanation(detail);
 
-                    <div className="mt-1">
-                      <StatusBadge status={detail.status || "pending"} dot />
-                    </div>
-
-                    <div className="mt-2 text-gray-600">
-                      Earning period:{" "}
-                      {fmt(valueOf(detail, "period_start", "periodStart"))} –{" "}
-                      {fmt(valueOf(detail, "period_end", "periodEnd"))}
-                    </div>
+        return (
+          <>
+            {/* ==================== Payout Summary ==================== */}
+            <FormSection
+              title="Payout Summary"
+              description="Overview of the seller payout and earning period."
+            >
+              <div className="space-y-3">
+                <div>
+                  <div className="text-base font-semibold text-gray-800">
+                    {sellerName(detail)}
                   </div>
 
-                  <div className="space-y-2 rounded-lg border border-gray-100 p-4">
-                    <div className="flex justify-between">
-                      <span>Seller receivable</span>
-
-                      <span>
-                        {money(
-                          valueOf(detail, "total_amount", "totalAmount"),
-                          detail.currency,
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>Platform commission</span>
-
-                      <span className="text-red-600">
-                        -
-                        {money(
-                          valueOf(
-                            detail,
-                            "commission_amount",
-                            "commissionAmount",
-                          ),
-                          detail.currency,
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>GST on commission</span>
-
-                      <span className="text-red-600">
-                        -
-                        {money(
-                          valueOf(detail, "tax_amount", "taxAmount"),
-                          detail.currency,
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>GST TCS / income-tax TDS</span>
-
-                      <span className="text-red-600">
-                        -{money(taxWithheld, detail.currency)}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>Shipping collected / reimbursed</span>
-
-                      <span
-                        className={
-                          shippingNet >= 0 ? "text-green-700" : "text-red-600"
-                        }
-                      >
-                        {signedMoney(shippingNet, detail.currency)}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>Refund adjustments</span>
-
-                      <span className="text-red-600">
-                        -
-                        {money(
-                          valueOf(detail, "refund_amount", "refundAmount"),
-                          detail.currency,
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>Other adjustments</span>
-
-                      <span>
-                        {signedMoney(
-                          valueOf(
-                            detail,
-                            "adjustment_amount",
-                            "adjustmentAmount",
-                          ),
-                          detail.currency,
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between border-t pt-2 text-base font-semibold">
-                      <span>Amount to transfer</span>
-
-                      <span className="text-green-700">
-                        {money(
-                          valueOf(detail, "net_amount", "netAmount"),
-                          detail.currency,
-                        )}
-                      </span>
-                    </div>
+                  <div className="mt-1">
+                    <StatusBadge
+                      status={detail.status || "pending"}
+                      dot
+                    />
                   </div>
+                </div>
 
-                  <div
-                    className={`rounded-lg border p-4 ${
-                      payoutExplanation(detail).tone === "green"
-                        ? "border-green-200 bg-green-50 text-green-800"
-                        : "border-amber-200 bg-amber-50 text-amber-900"
+                <div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                  <span className="font-medium text-gray-700">
+                    Earning Period:
+                  </span>{" "}
+                  {fmt(
+                    valueOf(detail, "period_start", "periodStart"),
+                  )}{" "}
+                  –{" "}
+                  {fmt(
+                    valueOf(detail, "period_end", "periodEnd"),
+                  )}
+                </div>
+              </div>
+            </FormSection>
+
+            {/* ==================== Calculation Breakdown ==================== */}
+            <FormSection
+              title="Calculation Breakdown"
+              description="Detailed breakdown of the seller payout calculation."
+            >
+              <div className="space-y-3">
+                {/* Seller Receivable */}
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-gray-600">
+                    Seller receivable
+                  </span>
+
+                  <span className="font-medium text-gray-800">
+                    {money(
+                      valueOf(
+                        detail,
+                        "total_amount",
+                        "totalAmount",
+                      ),
+                      detail.currency,
+                    )}
+                  </span>
+                </div>
+
+                {/* Platform Commission */}
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-gray-600">
+                    Platform commission
+                  </span>
+
+                  <span className="font-medium text-red-600">
+                    -
+                    {money(
+                      valueOf(
+                        detail,
+                        "commission_amount",
+                        "commissionAmount",
+                      ),
+                      detail.currency,
+                    )}
+                  </span>
+                </div>
+
+                {/* GST */}
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-gray-600">
+                    GST on commission
+                  </span>
+
+                  <span className="font-medium text-red-600">
+                    -
+                    {money(
+                      valueOf(
+                        detail,
+                        "tax_amount",
+                        "taxAmount",
+                      ),
+                      detail.currency,
+                    )}
+                  </span>
+                </div>
+
+                {/* TCS / TDS */}
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-gray-600">
+                    GST TCS / income-tax TDS
+                  </span>
+
+                  <span className="font-medium text-red-600">
+                    -{money(taxWithheld, detail.currency)}
+                  </span>
+                </div>
+
+                {/* Shipping */}
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-gray-600">
+                    Shipping collected / reimbursed
+                  </span>
+
+                  <span
+                    className={`font-medium ${
+                      shippingNet >= 0
+                        ? "text-green-700"
+                        : "text-red-600"
                     }`}
                   >
-                    <div className="font-semibold">
-                      {payoutExplanation(detail).title}
-                    </div>
+                    {signedMoney(
+                      shippingNet,
+                      detail.currency,
+                    )}
+                  </span>
+                </div>
 
-                    <p className="mt-1 text-xs leading-5">
-                      {payoutExplanation(detail).detail}
-                    </p>
+                {/* Refund */}
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-gray-600">
+                    Refund adjustments
+                  </span>
+
+                  <span className="font-medium text-red-600">
+                    -
+                    {money(
+                      valueOf(
+                        detail,
+                        "refund_amount",
+                        "refundAmount",
+                      ),
+                      detail.currency,
+                    )}
+                  </span>
+                </div>
+
+                {/* Other Adjustments */}
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-gray-600">
+                    Other adjustments
+                  </span>
+
+                  <span className="font-medium text-gray-800">
+                    {signedMoney(
+                      valueOf(
+                        detail,
+                        "adjustment_amount",
+                        "adjustmentAmount",
+                      ),
+                      detail.currency,
+                    )}
+                  </span>
+                </div>
+
+                {/* Net Amount */}
+                <div className="mt-2 flex items-center justify-between gap-4 border-t border-gray-200 pt-3">
+                  <span className="text-base font-semibold text-gray-800">
+                    Amount to transfer
+                  </span>
+
+                  <span className="text-base font-bold text-green-700">
+                    {money(
+                      valueOf(
+                        detail,
+                        "net_amount",
+                        "netAmount",
+                      ),
+                      detail.currency,
+                    )}
+                  </span>
+                </div>
+              </div>
+            </FormSection>
+
+            {/* ==================== Payout Explanation ==================== */}
+            <FormSection
+              title="Payout Explanation"
+              description="Summary of how the final payout amount was determined."
+            >
+              <div
+                className={`rounded-lg border p-4 ${
+                  explanation.tone === "green"
+                    ? "border-green-200 bg-green-50"
+                    : "border-amber-200 bg-amber-50"
+                }`}
+              >
+                <div
+                  className={`font-semibold ${
+                    explanation.tone === "green"
+                      ? "text-green-800"
+                      : "text-amber-900"
+                  }`}
+                >
+                  {explanation.title}
+                </div>
+
+                <p
+                  className={`mt-1 text-xs leading-5 ${
+                    explanation.tone === "green"
+                      ? "text-green-700"
+                      : "text-amber-800"
+                  }`}
+                >
+                  {explanation.detail}
+                </p>
+              </div>
+            </FormSection>
+
+            {/* ==================== Payment Details ==================== */}
+            <FormSection
+              title="Payment Details"
+              description="Payment information and payout processing details."
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <div className="text-xs font-medium text-gray-500">
+                    Payment Method
                   </div>
-                </>
-              );
-            })()}
 
-            <div className="grid grid-cols-1 gap-2 rounded-lg border border-gray-100 p-4 md:grid-cols-2">
-              <div>
-                <strong>Payment method:</strong>{" "}
-                {String(
-                  valueOf(detail, "payment_method", "paymentMethod") ||
-                    "Not selected",
-                ).replace(/_/g, " ")}
-              </div>
+                  <div className="mt-1 text-sm font-medium capitalize text-gray-800">
+                    {String(
+                      valueOf(
+                        detail,
+                        "payment_method",
+                        "paymentMethod",
+                      ) || "Not selected",
+                    ).replace(/_/g, " ")}
+                  </div>
+                </div>
 
-              <div>
-                <strong>Payment reference:</strong>{" "}
-                {valueOf(detail, "payment_reference", "paymentReference") ||
-                  "Not paid yet"}
-              </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-500">
+                    Payment Reference
+                  </div>
 
-              <div>
-                <strong>Processed:</strong>{" "}
-                {fmt(valueOf(detail, "processed_at", "processedAt"))}
-              </div>
+                  <div className="mt-1 text-sm font-medium text-gray-800">
+                    {valueOf(
+                      detail,
+                      "payment_reference",
+                      "paymentReference",
+                    ) || "Not paid yet"}
+                  </div>
+                </div>
 
-              <div>
-                <strong>Created:</strong>{" "}
-                {fmt(valueOf(detail, "created_at", "createdAt"))}
+                <div>
+                  <div className="text-xs font-medium text-gray-500">
+                    Processed
+                  </div>
+
+                  <div className="mt-1 text-sm font-medium text-gray-800">
+                    {fmt(
+                      valueOf(
+                        detail,
+                        "processed_at",
+                        "processedAt",
+                      ),
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-medium text-gray-500">
+                    Created
+                  </div>
+
+                  <div className="mt-1 text-sm font-medium text-gray-800">
+                    {fmt(
+                      valueOf(
+                        detail,
+                        "created_at",
+                        "createdAt",
+                      ),
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
-      </DefaultModal>
+            </FormSection>
+          </>
+        );
+      })()}
+    </div>
+  )}
+</DefaultModal>
     </div>
   );
 };

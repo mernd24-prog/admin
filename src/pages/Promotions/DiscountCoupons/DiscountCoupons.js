@@ -599,7 +599,6 @@ const DiscountCoupons = () => {
                 value={formData.code}
                 onChange={handleInputChange}
                 error={errors.code}
-                maxLength={30}
                 placeholder="e.g. SAVE20"
                 required
               />
