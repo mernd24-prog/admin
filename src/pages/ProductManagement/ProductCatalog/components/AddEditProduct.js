@@ -3600,124 +3600,143 @@ const scrollToSection = useCallback((id) => {
               </div>
 
               {collectionOptions.length ? (
-                <div className="space-y-4 p-4">
-                  {selectedCollections.length > 0 && (
-                    <div>
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                        Selected collections
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedCollections.map((collection) => (
-                          <button
-                            key={`selected-${collection._id || collection.slug || collection.name}`}
-                            type="button"
-                            onClick={() => toggleCollection(collection)}
-                            className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:border-amber-300 hover:bg-amber-100"
-                            aria-label={`Remove ${collection.name} collection`}
-                          >
-                            <FiCheck size={13} /> {collection.name}
-                            <FiX size={13} className="text-amber-700" />
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setFormData((current) => ({
-                              ...current,
-                              collectionIds: [],
-                            }))
-                          }
-                          className="px-2 py-1 text-xs font-semibold text-gray-500 hover:text-red-600"
-                        >
-                          Clear all
-                        </button>
-                      </div>
-                    </div>
-                  )}
+             <div className="space-y-4 p-4">
+  {selectedCollections.length > 0 && (
+    <div>
+      {/* Header */}
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+          Selected collections
+        </p>
 
-                  <div className="relative">
-                    <FiSearch
-                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={16}
-                    />
-                    <input
-                      type="search"
-                      value={collectionSearch}
-                      onChange={(event) =>
-                        setCollectionSearch(event.target.value)
-                      }
-                      placeholder="Search collections by name, type, or tag…"
-                      className="admin-input !pl-9"
-                      aria-label="Search collections"
-                    />
+        {/* Clear all - top right */}
+        <button
+          type="button"
+          onClick={() =>
+            setFormData((current) => ({
+              ...current,
+              collectionIds: [],
+            }))
+          }
+          className="text-xs font-semibold text-gray-500 transition-colors hover:text-red-600"
+        >
+          Clear all
+        </button>
+      </div>
+
+      {/* Selected collection chips */}
+      <div className="flex flex-wrap gap-2">
+        {selectedCollections.map((collection) => (
+          <button
+            key={`selected-${collection._id || collection.slug || collection.name}`}
+            type="button"
+            onClick={() => toggleCollection(collection)}
+            className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:border-amber-300 hover:bg-amber-100"
+            aria-label={`Remove ${collection.name} collection`}
+          >
+            <FiCheck size={13} />
+
+            <span>{collection.name}</span>
+
+            <FiX
+              size={13}
+              className="text-amber-700"
+            />
+          </button>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <div className="relative">
+    <FiSearch
+      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+      size={16}
+    />
+
+    <input
+      type="search"
+      value={collectionSearch}
+      onChange={(event) => setCollectionSearch(event.target.value)}
+      placeholder="Search collections by name, type, or tag…"
+      className="admin-input !pl-9"
+      aria-label="Search collections"
+    />
+  </div>
+
+  {filteredCollectionOptions.length ? (
+    <div className="grid max-h-96 gap-3.5 overflow-y-auto pr-1 sm:grid-cols-2">
+      {filteredCollectionOptions.map((collection) => {
+        const value = String(
+          collection._id || collection.slug || collection.name,
+        );
+
+        const selected = isCollectionSelected(collection);
+
+        const image =
+          collection.thumbnailImage || collection.bannerImage;
+
+        return (
+          <button
+            key={value}
+            type="button"
+            onClick={() => toggleCollection(collection)}
+            aria-pressed={selected}
+            className={`group relative overflow-hidden rounded-xl border text-left transition-colors duration-150 ${
+              selected
+                ? "border-[var(--admin-gold)] bg-amber-50/50 shadow-sm ring-1 ring-[var(--admin-gold)]/30"
+                : "border-gray-200/80 bg-white hover:border-amber-300"
+            }`}
+          >
+            <div className="flex items-start gap-3.5 p-3.5">
+              <CollectionCardThumbnail
+                image={image}
+                name={collection.name}
+              />
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold leading-snug text-[var(--admin-navy)] transition-colors group-hover:text-[var(--admin-gold-dark)]">
+                      {collection.name}
+                    </span>
+
+                    <span className="inline-flex shrink-0 items-center rounded-full border border-gray-200/60 bg-[var(--admin-surface-soft)] px-2 py-0.5 text-[10px] font-medium capitalize text-gray-600">
+                      {(collection.type || "custom").replace(
+                        /_/g,
+                        " ",
+                      )}
+                    </span>
                   </div>
 
-                  {filteredCollectionOptions.length ? (
-                    <div className="grid max-h-96 gap-3.5 overflow-y-auto pr-1 sm:grid-cols-2">
-                      {filteredCollectionOptions.map((collection) => {
-                        const value = String(
-                          collection._id || collection.slug || collection.name,
-                        );
-                        const selected = isCollectionSelected(collection);
-                        const image =
-                          collection.thumbnailImage || collection.bannerImage;
-                        return (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => toggleCollection(collection)}
-                            aria-pressed={selected}
-                            className={`group relative overflow-hidden rounded-xl border text-left transition-colors duration-150 ${
-                              selected
-                                ? "border-[var(--admin-gold)] bg-amber-50/50 shadow-sm ring-1 ring-[var(--admin-gold)]/30"
-                                : "border-gray-200/80 bg-white hover:border-amber-300"
-                            }`}
-                          >
-                            <div className="flex items-start gap-3.5 p-3.5">
-                              <CollectionCardThumbnail
-                                image={image}
-                                name={collection.name}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex flex-wrap items-center gap-2 min-w-0">
-                                    <span className="text-sm font-semibold text-[var(--admin-navy)] leading-snug group-hover:text-[var(--admin-gold-dark)] transition-colors">
-                                      {collection.name}
-                                    </span>
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--admin-surface-soft)] text-gray-600 border border-gray-200/60 capitalize shrink-0">
-                                      {(collection.type || "custom").replace(
-                                        /_/g,
-                                        " ",
-                                      )}
-                                    </span>
-                                  </div>
-                                  <span
-                                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all ${
-                                      selected
-                                        ? "border-[var(--admin-gold)] bg-[var(--admin-gold)] text-white shadow-xs"
-                                        : "border-gray-300 bg-white text-transparent group-hover:border-[var(--admin-gold)]/60"
-                                    }`}
-                                  >
-                                    <FiCheck size={11} strokeWidth={3} />
-                                  </span>
-                                </div>
-                                {collection.description && (
-                                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-500">
-                                    {collection.description}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-dashed border-[var(--admin-line)] bg-gray-50 p-5 text-center text-xs text-gray-500">
-                      No collections match “{collectionSearch}”.
-                    </div>
-                  )}
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all ${
+                      selected
+                        ? "border-[var(--admin-gold)] bg-[var(--admin-gold)] text-white shadow-xs"
+                        : "border-gray-300 bg-white text-transparent group-hover:border-[var(--admin-gold)]/60"
+                    }`}
+                  >
+                    <FiCheck size={11} strokeWidth={3} />
+                  </span>
                 </div>
+
+                {collection.description && (
+                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-500">
+                    {collection.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  ) : (
+    <div className="rounded-lg border border-dashed border-[var(--admin-line)] bg-gray-50 p-5 text-center text-xs text-gray-500">
+      No collections match “{collectionSearch}”.
+    </div>
+  )}
+</div>
               ) : (
                 <div className="p-4">
                   <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
