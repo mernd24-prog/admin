@@ -105,26 +105,16 @@ const FILTER_FIELDS = [
     width: "w-44",
     options: DELIVERY_STATUS_OPTIONS,
   },
-  // {
-  //   key: "buyerId",
-  //   type: "asyncDropdown",
-  //   label: "Buyer",
-  //   width: "w-52",
-  //   load: (search) =>
-  //     dropdownApi.getBuyers({
-  //       keyWord: search,
-  //       searchFields: "full_name,email",
-  //     }),
-  // },
+
   {
     key: "sellerId",
     type: "asyncDropdown",
     label: "Seller Store name",
     width: "w-52",
     load: (search) =>
-      dropdownApi.getSellers({
+      dropdownApi.getStoreName({
         keyWord: search,
-        searchFields: "full_name,email,businessName",
+        searchFields: "organizationName,businessName,legalBusinessName",
       }),
   },
   {
@@ -1423,25 +1413,37 @@ const Orders = () => {
       getOrderList({
         page: params.page,
         limit: params.limit,
-
         search: params.search || undefined,
         status: params.status || undefined,
         paymentStatus: params.paymentStatus || undefined,
         paymentProvider: params.paymentProvider || undefined,
         deliveryStatus: params.deliveryStatus || undefined,
-
         buyerId: params.buyerId || undefined,
         sellerId: params.sellerId || undefined,
-
         fromDate: params.fromDate || undefined,
         toDate: params.toDate || undefined,
-
         sortBy: params.sortBy,
         sortDir: params.sortDir,
       }),
     )
       .unwrap()
+      .then((response) => {
+        console.log("========== ORDERS API RESPONSE ==========");
+        console.log("Complete Response:", response);
+        console.log(
+          "Orders List:",
+          response?.data?.list || response?.data?.items,
+        );
+        console.log(
+          "First Order:",
+          response?.data?.list?.[0] || response?.data?.items?.[0],
+        );
+        console.log("=========================================");
+
+        return response;
+      })
       .catch((err) => {
+        console.error("Orders API Error:", err);
         toast.error(err?.message || "Failed to fetch orders");
       });
   };
@@ -1526,10 +1528,6 @@ const Orders = () => {
           {
             key: "orderDate",
             label: "Order Date",
-          },
-          {
-            key: "buyer",
-            label: "Buyer",
           },
           {
             key: "buyerEmail",

@@ -50,12 +50,12 @@ const FILTER_FIELDS = [
   {
     key: "sellerId",
     type: "asyncDropdown",
-    label: "Store Name",
+    label: "Seller STORE NAME",
     width: "w-52",
     load: (search) =>
-      dropdownApi.getSellers({
+      dropdownApi.getStoreName({
         keyWord: search,
-        searchFields: "full_name,email,businessName",
+        searchFields: "organizationName,businessName,legalBusinessName",
       }),
   },
   // {

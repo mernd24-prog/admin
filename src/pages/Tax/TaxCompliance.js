@@ -34,9 +34,9 @@ const FILTER_FIELDS = [
     type: "asyncDropdown",
     label: "Seller Store name",
     load: (search) =>
-      dropdownApi.getSellers({
+      dropdownApi.getStoreName({
         keyWord: search,
-        searchFields: "storeName,email",
+        searchFields: "organizationName,businessName,legalBusinessName",
       }),
   },
   // {

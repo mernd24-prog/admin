@@ -32,7 +32,6 @@ import {
 } from "../../../Redux/productSlice";
 import { toast } from "sonner";
 import { getAllSellerList } from "../../../Redux/StoreSlice";
-import { transformArray } from "../../../_helpers/globalFunctions";
 import ProductReviewModal from "../../../components/Product/ProductReviewModal";
 import ProductStatusBadge from "../../../components/Product/ProductStatusBadge";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
@@ -196,6 +195,7 @@ const ProductCatalog = () => {
   });
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
   const sellerView = isSellerPanel();
+
   const canFilterBySeller = canAccess({
     module: "sellers",
     action: "view",
@@ -884,9 +884,7 @@ const ProductCatalog = () => {
       {
         key: "status",
         label: "Status",
-        render: (_, product) => (
-          <ProductStatusBadge status={product?.status} />
-        ),
+        render: (_, product) => <ProductStatusBadge status={product?.status} />,
       },
       {
         key: "approvalStatus",
