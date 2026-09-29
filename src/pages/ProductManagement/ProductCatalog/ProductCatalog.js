@@ -85,6 +85,14 @@ const SELLER_PANEL_ROLES = new Set([
 const STATUS_TOGGLEABLE = new Set(["active", "inactive", "draft"]);
 const REVIEWABLE_STATUSES = new Set(["pending_approval"]);
 
+const normalizeRevisionFilterValue = (value = "") => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized || normalized === "all") return "";
+  return normalized.startsWith("workflow:")
+    ? normalized.replace(/^workflow:/, "")
+    : normalized;
+};
+
 const getProductStatus = (product = {}) =>
   String(product.status || (product.isDisable ? "inactive" : "active"))
     .trim()
@@ -234,8 +242,11 @@ const ProductCatalog = () => {
       .filter((seller) => seller.value);
   }, [sellerList]);
 
-  const revisionFilter = String(appliedFilters?.revisionStatus?.value || "");
-  const [revisionFilterType, revisionFilterValue] = revisionFilter.split(":");
+  const revisionFilter = normalizeRevisionFilterValue(
+    appliedFilters?.revisionStatus?.value,
+  );
+  const revisionFilterType = revisionFilter ? "workflow" : "";
+  const revisionFilterValue = revisionFilter;
   const isApprovedFilter =
     appliedFilters?.approvalStatus?.value === "Approved";
   const approvalStatusToApiStatus = {
