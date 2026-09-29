@@ -58,6 +58,7 @@ import { isAdminPanel, isSellerPanel } from "../../../_helpers/panelConfig";
 import { formatDateTime12Hour } from "../../../utils/formatters";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import Tabs from "../../../components/Shared/Tabs";
+import FormInput from "../../../components/Atoms/FormInput/FormInput";
 
 const DEAL_TYPES = [
   { value: "fixed_price", label: "Fixed Deal Price" },
@@ -1208,11 +1209,11 @@ const DealManagement = () => {
           list.setPage?.(1);
         }}
       />
-      {error && (
+      {/* {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
         </div>
-      )}
+      )} */}
 
       <DataTable
         columns={columns}
@@ -1235,432 +1236,514 @@ const DealManagement = () => {
         tableContainerClassName="overflow-x-auto"
       />
 
-      <DefaultModal
-        isOpen={formOpen}
-        onClose={() => {
-          setFormOpen(false);
-          setEditingDeal(null);
-        }}
-        isButtonView={false}
-        title={
-          editingDeal
-            ? "Edit Deal Product"
-            : form.mode === "seller_request"
-              ? "Request Deal Product"
-              : "Create Direct Deal"
-        }
-      >
-        <div className="space-y-5">
-          {/* ==================== Product Selection ==================== */}
-          <FormSection
-            title="Product Selection"
-            description="Select the seller and existing product for this deal."
-          >
-            <div className="space-y-4">
-              {isAdminPanel() && (
-                <SellerSearch
-                  value={selectedSeller}
-                  onSelect={onSellerSelect}
-                />
-              )}
+     <DefaultModal
+  isOpen={formOpen}
+  onClose={() => {
+    setFormOpen(false);
+    setEditingDeal(null);
+  }}
+  onSubmit={submitForm}
+  title={
+    editingDeal
+      ? "Edit Deal Product"
+      : form.mode === "seller_request"
+        ? "Request Deal Product"
+        : "Create Direct Deal"
+  }
+  submitButtonText={
+    submitLoading
+      ? "Saving..."
+      : editingDeal
+        ? "Update Deal"
+        : form.mode === "seller_request"
+          ? "Submit Request"
+          : "Activate Deal"
+  }
+  closeButtonText="Cancel"
+  isButtonView={true}
+  submitLoading={submitLoading}
+>
+  <div className="space-y-5">
+    {/* ==================== Product Selection ==================== */}
+    <FormSection
+      title="Product Selection"
+      description="Select the seller and existing product for this deal."
+    >
+      <div className="space-y-4">
+        {isAdminPanel() && (
+          <SellerSearch
+            value={selectedSeller}
+            onSelect={onSellerSelect}
+          />
+        )}
 
-              <ProductSearch
-                sellerId={form.sellerId}
-                value={selectedProduct}
-                onSelect={onProductSelect}
-              />
-            </div>
-          </FormSection>
+        <ProductSearch
+          sellerId={form.sellerId}
+          value={selectedProduct}
+          onSelect={onProductSelect}
+        />
+      </div>
+    </FormSection>
 
-          {/* ==================== Deal Information ==================== */}
-          <FormSection
-            title="Deal Information"
-            description="Configure the deal title, type, and pricing details."
-          >
-            <div className="space-y-4">
-              {/* Full Width */}
-              <Input
-                label="Deal Title"
-                value={form.title}
-                onChange={(event) => setField("title", event.target.value)}
-                placeholder="Enter deal title"
-                required
-              />
+    {/* ==================== Deal Information ==================== */}
+    <FormSection
+      title="Deal Information"
+      description="Configure the deal title, type, and pricing details."
+    >
+      <div className="space-y-4">
+        {/* Deal Title */}
+        <Input
+          label="Deal Title"
+          value={form.title}
+          onChange={(event) =>
+            setField("title", event.target.value)
+          }
+          placeholder="Enter deal title"
+          required
+        />
 
-              {/* 2 Fields */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Deal Type"
-                  type="select"
-                  value={form.dealType}
-                  options={DEAL_TYPES}
-                  onChange={(option) =>
-                    setField("dealType", option?.value || "fixed_price")
-                  }
-                />
+        {/* Deal Type + Source */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Deal Type"
+            type="select"
+            value={form.dealType}
+            options={DEAL_TYPES}
+            onChange={(option) =>
+              setField(
+                "dealType",
+                option?.value || "fixed_price",
+              )
+            }
+          />
 
-                <Input
-                  label="Deal Source"
-                  type="select"
-                  value={form.dealSource}
-                  options={DEAL_SOURCES}
-                  onChange={(option) =>
-                    setField("dealSource", option?.value || "admin_direct")
-                  }
-                />
-              </div>
-
-              {/* Pricing */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Original Price"
-                  type="price"
-                  value={form.originalPrice}
-                  readOnly
-                  helperText="Copied for deal snapshot only."
-                />
-
-                <Input
-                  label="Deal Price"
-                  type="price"
-                  value={form.dealPrice}
-                  onChange={(event) =>
-                    setField("dealPrice", event.target.value)
-                  }
-                  required
-                />
-              </div>
-
-              {/* Calculated Values */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Discount Amount"
-                  value={money(discountAmount(formDeal))}
-                  readOnly
-                />
-
-                <Input
-                  label="Discount Percentage"
-                  value={`${discountPercent(formDeal)}%`}
-                  readOnly
-                />
-              </div>
-            </div>
-          </FormSection>
-
-          {/* ==================== Quantity & Schedule ==================== */}
-          <FormSection
-            title="Quantity & Schedule"
-            description="Set the deal quantity limits and active duration."
-          >
-            <div className="space-y-4">
-              {/* Quantity */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Deal Quantity Allocation"
-                  type="number"
-                  value={form.allocatedQuantity}
-                  onChange={(event) =>
-                    setField("allocatedQuantity", event.target.value)
-                  }
-                  min="0"
-                />
-
-                <Input
-                  label="Maximum Quantity Per Customer"
-                  type="number"
-                  value={form.maxQuantityPerOrder}
-                  onChange={(event) =>
-                    setField("maxQuantityPerOrder", event.target.value)
-                  }
-                  min="1"
-                />
-              </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Deal Start"
-                  type="datetime-local"
-                  value={form.startAt}
-                  onChange={(event) => setField("startAt", event.target.value)}
-                  required
-                />
-
-                <Input
-                  label="Deal End"
-                  type="datetime-local"
-                  value={form.endAt}
-                  onChange={(event) => setField("endAt", event.target.value)}
-                  required
-                />
-              </div>
-            </div>
-          </FormSection>
-
-          {/* ==================== Display Settings ==================== */}
-          <FormSection
-            title="Display Settings"
-            description="Configure how the deal is displayed and prioritized."
-          >
-            <div className="space-y-4">
-              {/* 2 Fields */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Deal Badge"
-                  type="select"
-                  value={form.dealBadge}
-                  options={DEAL_BADGES.map((badge) => ({
-                    label: badge,
-                    value: badge,
-                  }))}
-                  onChange={(option) =>
-                    setField("dealBadge", option?.value || "")
-                  }
-                />
-
-                <Input
-                  label="Priority"
-                  type="number"
-                  value={form.priority}
-                  onChange={(event) => setField("priority", event.target.value)}
-                  min="0"
-                />
-              </div>
-            </div>
-          </FormSection>
-
-          {/* ==================== Seller Request ==================== */}
-          {form.mode === "seller_request" && (
-            <FormSection
-              title="Request Details"
-              description="Provide the reason and any additional message for the deal request."
-            >
-              <div className="space-y-4">
-                {/* Full Width */}
-                <Input
-                  label="Reason"
-                  type="textarea"
-                  value={form.reason}
-                  onChange={(event) => setField("reason", event.target.value)}
-                  placeholder="Why should this product become a deal?"
-                  required
-                />
-
-                {/* Full Width */}
-                <Input
-                  label="Optional Message"
-                  type="textarea"
-                  value={form.message}
-                  onChange={(event) => setField("message", event.target.value)}
-                  placeholder="Add any additional context for admin."
-                />
-              </div>
-            </FormSection>
-          )}
-
-          {/* ==================== Important Note ==================== */}
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <div className="flex items-start gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-amber-900">
-                  Deal Product Note
-                </p>
-
-                <p className="mt-1 text-xs leading-5 text-amber-800">
-                  This creates a deal record for the selected existing product.
-                  It does not create a new product or update the Product Master
-                  price.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* ==================== Actions ==================== */}
-          <div className="flex justify-end gap-3 border-t border-[var(--admin-line)] pt-4">
-            <button
-              type="button"
-              className="admin-btn-secondary"
-              onClick={() => {
-                setFormOpen(false);
-                setEditingDeal(null);
-              }}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              className="admin-btn-primary"
-              onClick={submitForm}
-              disabled={submitLoading}
-            >
-              {submitLoading
-                ? "Saving..."
-                : editingDeal
-                  ? "Update Deal"
-                  : form.mode === "seller_request"
-                    ? "Submit Request"
-                    : "Activate Deal"}
-            </button>
-          </div>
+          <Input
+            label="Deal Source"
+            type="select"
+            value={form.dealSource}
+            options={DEAL_SOURCES}
+            onChange={(option) =>
+              setField(
+                "dealSource",
+                option?.value || "admin_direct",
+              )
+            }
+          />
         </div>
-      </DefaultModal>
 
-      <DefaultModal
-        isOpen={!!detail}
-        onClose={() => setDetail(null)}
-        title="Deal Product Detail"
-        isButtonView={false}
+        {/* Pricing */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Original Price"
+            type="price"
+            value={form.originalPrice}
+            readOnly
+            helperText="Copied for deal snapshot only."
+          />
+
+          <Input
+            label="Deal Price"
+            type="price"
+            value={form.dealPrice}
+            onChange={(event) =>
+              setField("dealPrice", event.target.value)
+            }
+            required
+          />
+        </div>
+
+        {/* Calculated Values */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Discount Amount"
+            value={money(discountAmount(formDeal))}
+            readOnly
+          />
+
+          <Input
+            label="Discount Percentage"
+            value={`${discountPercent(formDeal)}%`}
+            readOnly
+          />
+        </div>
+      </div>
+    </FormSection>
+
+    {/* ==================== Quantity & Schedule ==================== */}
+    <FormSection
+      title="Quantity & Schedule"
+      description="Set the deal quantity limits and active duration."
+    >
+      <div className="space-y-4">
+        {/* Quantity */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Deal Quantity Allocation"
+            type="number"
+            value={form.allocatedQuantity}
+            onChange={(event) =>
+              setField(
+                "allocatedQuantity",
+                event.target.value,
+              )
+            }
+            min="0"
+          />
+
+          <Input
+            label="Maximum Quantity Per Customer"
+            type="number"
+            value={form.maxQuantityPerOrder}
+            onChange={(event) =>
+              setField(
+                "maxQuantityPerOrder",
+                event.target.value,
+              )
+            }
+            min="1"
+          />
+        </div>
+
+        {/* Dates */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Deal Start"
+            type="datetime-local"
+            value={form.startAt}
+            onChange={(event) =>
+              setField("startAt", event.target.value)
+            }
+            required
+          />
+
+          <Input
+            label="Deal End"
+            type="datetime-local"
+            value={form.endAt}
+            onChange={(event) =>
+              setField("endAt", event.target.value)
+            }
+            required
+          />
+        </div>
+      </div>
+    </FormSection>
+
+    {/* ==================== Display Settings ==================== */}
+    <FormSection
+      title="Display Settings"
+      description="Configure how the deal is displayed and prioritized."
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Input
+          label="Deal Badge"
+          type="select"
+          value={form.dealBadge}
+          options={DEAL_BADGES.map((badge) => ({
+            label: badge,
+            value: badge,
+          }))}
+          onChange={(option) =>
+            setField("dealBadge", option?.value || "")
+          }
+        />
+
+        <Input
+          label="Priority"
+          type="number"
+          value={form.priority}
+          onChange={(event) =>
+            setField("priority", event.target.value)
+          }
+          min="0"
+        />
+      </div>
+    </FormSection>
+
+    {/* ==================== Seller Request ==================== */}
+    {form.mode === "seller_request" && (
+      <FormSection
+        title="Request Details"
+        description="Provide the reason and any additional message for the deal request."
       >
-        {!detail && detailLoading ? (
-          <div className="flex min-h-[260px] items-center justify-center">
-            <Loader />
-          </div>
-        ) : detail ? (
-          <div className="space-y-5 p-4">
-            {detailLoading ? (
-              <div className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
-                Loading latest deal details...
-              </div>
-            ) : null}
-            <div className="rounded-md border border-[var(--admin-line)] bg-white p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-[var(--admin-ink)]">
-                    {detail.metadata?.productLabel || detail.title}
-                  </p>
-                  <p className="text-xs text-[var(--admin-muted)]">
-                    {detail.dealNumber || getDealId(detail)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge
-                    status={detail.status}
-                    color={STATUS_COLOR[detail.status] || "gray"}
-                  />
-                  <button
-                    type="button"
-                    className="rounded p-1 text-amber-600 transition hover:bg-amber-50"
-                    title="Edit Deal"
-                    onClick={() => {
-                      openEditDeal(detail);
-                      setDetail(null);
-                    }}
-                  >
-                    <MdEdit size={18} />
-                  </button>
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-gray-500">Original Price</p>
-                  <p className="line-through">{money(detail.originalPrice)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Deal Price</p>
-                  <p className="font-semibold text-emerald-700">
-                    {money(detail.dealPrice)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Discount</p>
-                  <p>
-                    {money(discountAmount(detail))} ({discountPercent(detail)}%)
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Deal Badge</p>
-                  <p>{detail.metadata?.dealBadge || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Start</p>
-                  <p>{fmtDateTime(detail.startAt)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">End</p>
-                  <p>{fmtDateTime(detail.endAt)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Allocated</p>
-                  <p>{num(detail.allocatedQuantity)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Remaining</p>
-                  <p>{remainingQty(detail)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Deal Source</p>
-                  <p>{display(detail.metadata?.dealSource)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Max/customer</p>
-                  <p>{detail.maxQuantityPerOrder || "—"}</p>
-                </div>
-              </div>
-            </div>
+        <div className="space-y-4">
+          <Input
+            label="Reason"
+            type="textarea"
+            value={form.reason}
+            onChange={(event) =>
+              setField("reason", event.target.value)
+            }
+            placeholder="Why should this product become a deal?"
+            required
+          />
 
-            {(detail.metadata?.sellerReason ||
-              detail.metadata?.sellerMessage ||
-              detail.description) && (
-              <div className="rounded-md border border-[var(--admin-line)] bg-white p-4 text-sm">
-                <p className="mb-2 font-semibold text-[var(--admin-ink)]">
-                  Notes
-                </p>
-                {detail.metadata?.sellerReason && (
-                  <p>
-                    <span className="text-gray-500">Reason:</span>{" "}
-                    {detail.metadata.sellerReason}
-                  </p>
-                )}
-                {detail.metadata?.sellerMessage && (
-                  <p>
-                    <span className="text-gray-500">Seller message:</span>{" "}
-                    {detail.metadata.sellerMessage}
-                  </p>
-                )}
-                {!detail.metadata?.sellerReason && detail.description && (
-                  <p>{detail.description}</p>
-                )}
-              </div>
+          <Input
+            label="Optional Message"
+            type="textarea"
+            value={form.message}
+            onChange={(event) =>
+              setField("message", event.target.value)
+            }
+            placeholder="Add any additional context for admin."
+          />
+        </div>
+      </FormSection>
+    )}
+
+    {/* ==================== Important Note ==================== */}
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-amber-900">
+          Deal Product Note
+        </p>
+
+        <p className="mt-1 text-xs leading-5 text-amber-800">
+          This creates a deal record for the selected existing
+          product. It does not create a new product or update the
+          Product Master price.
+        </p>
+      </div>
+    </div>
+  </div>
+</DefaultModal>
+<DefaultModal
+  isOpen={!!detail}
+  onClose={() => setDetail(null)}
+  title="Deal Product Detail"
+  isButtonView={true}
+  submitButtonText="Edit Deal"
+  closeButtonText="Close"
+  onSubmit={() => {
+    openEditDeal(detail);
+    setDetail(null);
+  }}
+>
+  {!detail && detailLoading ? (
+    <div className="flex min-h-[260px] items-center justify-center">
+      <Loader />
+    </div>
+  ) : detail ? (
+    <div className="space-y-5">
+      {/* Loading State */}
+      {detailLoading && (
+        <div className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
+          Loading latest deal details...
+        </div>
+      )}
+
+      {/* ==================== Deal Overview ==================== */}
+      <FormSection
+        title="Deal Overview"
+        description="Basic information about this deal."
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormInput
+            label="Product"
+            name="product"
+            value={detail.metadata?.productLabel || detail.title || "—"}
+            disabled
+          />
+
+          <FormInput
+            label="Deal Number"
+            name="dealNumber"
+            value={detail.dealNumber || getDealId(detail) || "—"}
+            disabled
+          />
+
+          <div>
+            <label className="admin-label">Status</label>
+            <div className="flex min-h-[42px] items-center">
+              <StatusBadge
+                status={detail.status}
+                color={STATUS_COLOR[detail.status] || "gray"}
+              />
+            </div>
+          </div>
+
+          <FormInput
+            label="Deal Badge"
+            name="dealBadge"
+            value={detail.metadata?.dealBadge || "—"}
+            disabled
+          />
+
+          <FormInput
+            label="Deal Source"
+            name="dealSource"
+            value={display(detail.metadata?.dealSource)}
+            disabled
+          />
+
+          <FormInput
+            label="Max Quantity / Customer"
+            name="maxQuantity"
+            value={detail.maxQuantityPerOrder || "—"}
+            disabled
+          />
+        </div>
+      </FormSection>
+
+      {/* ==================== Pricing ==================== */}
+      <FormSection
+        title="Pricing & Discount"
+        description="Deal price and discount information."
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormInput
+            label="Original Price"
+            name="originalPrice"
+            value={money(detail.originalPrice)}
+            disabled
+          />
+
+          <FormInput
+            label="Deal Price"
+            name="dealPrice"
+            value={money(detail.dealPrice)}
+            disabled
+          />
+
+          <FormInput
+            label="Discount Amount"
+            name="discountAmount"
+            value={money(discountAmount(detail))}
+            disabled
+          />
+
+          <FormInput
+            label="Discount Percentage"
+            name="discountPercentage"
+            value={`${discountPercent(detail)}%`}
+            disabled
+          />
+        </div>
+      </FormSection>
+
+      {/* ==================== Schedule & Quantity ==================== */}
+      <FormSection
+        title="Schedule & Quantity"
+        description="Deal validity and available quantity."
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormInput
+            label="Start"
+            name="startAt"
+            value={fmtDateTime(detail.startAt)}
+            disabled
+          />
+
+          <FormInput
+            label="End"
+            name="endAt"
+            value={fmtDateTime(detail.endAt)}
+            disabled
+          />
+
+          <FormInput
+            label="Allocated Quantity"
+            name="allocatedQuantity"
+            value={num(detail.allocatedQuantity)}
+            disabled
+          />
+
+          <FormInput
+            label="Remaining Quantity"
+            name="remainingQuantity"
+            value={remainingQty(detail)}
+            disabled
+          />
+        </div>
+      </FormSection>
+
+      {/* ==================== Notes ==================== */}
+      {(detail.metadata?.sellerReason ||
+        detail.metadata?.sellerMessage ||
+        detail.description) && (
+        <FormSection
+          title="Notes"
+          description="Additional information related to this deal."
+        >
+          <div className="space-y-4">
+            {detail.metadata?.sellerReason && (
+              <FormInput
+                label="Reason"
+                name="sellerReason"
+                value={detail.metadata.sellerReason}
+                disabled
+              />
             )}
 
-            <div className="rounded-md border border-[var(--admin-line)] bg-white p-4">
-              <p className="mb-3 font-semibold text-[var(--admin-ink)]">
-                History
-              </p>
-              <div className="space-y-3">
-                {(detail.timeline || []).length ? (
-                  detail.timeline.map((event) => (
-                    <div
-                      key={
-                        event.id || `${event.event_type}-${event.created_at}`
-                      }
-                      className="border-l-2 border-[var(--admin-blue)] pl-3 text-sm"
-                    >
-                      <p className="font-medium">{display(event.event_type)}</p>
-                      <p className="text-xs text-[var(--admin-muted)]">
-                        {fmtDateTime(event.created_at)} ·{" "}
-                        {event.actor_role || "system"}
-                      </p>
-                      {event.reason && (
-                        <p className="mt-1 text-xs">Reason: {event.reason}</p>
-                      )}
-                      {event.note && (
-                        <p className="mt-1 text-xs">Note: {event.note}</p>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-[var(--admin-muted)]">
-                    No history recorded.
+            {detail.metadata?.sellerMessage && (
+              <FormInput
+                label="Seller Message"
+                name="sellerMessage"
+                value={detail.metadata.sellerMessage}
+                disabled
+              />
+            )}
+
+            {!detail.metadata?.sellerReason && detail.description && (
+              <FormInput
+                label="Description"
+                name="description"
+                value={detail.description}
+                disabled
+              />
+            )}
+          </div>
+        </FormSection>
+      )}
+
+      {/* ==================== History ==================== */}
+      <FormSection
+        title="History"
+        description="Activity and status changes recorded for this deal."
+      >
+        <div className="space-y-3">
+          {(detail.timeline || []).length ? (
+            detail.timeline.map((event) => (
+              <div
+                key={
+                  event.id || `${event.event_type}-${event.created_at}`
+                }
+                className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+              >
+                <p className="text-sm font-semibold text-[var(--admin-ink)]">
+                  {display(event.event_type)}
+                </p>
+
+                <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                  {fmtDateTime(event.created_at)} ·{" "}
+                  {event.actor_role || "system"}
+                </p>
+
+                {event.reason && (
+                  <p className="mt-2 text-xs text-gray-600">
+                    <span className="font-medium">Reason:</span>{" "}
+                    {event.reason}
+                  </p>
+                )}
+
+                {event.note && (
+                  <p className="mt-1 text-xs text-gray-600">
+                    <span className="font-medium">Note:</span>{" "}
+                    {event.note}
                   </p>
                 )}
               </div>
+            ))
+          ) : (
+            <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-[var(--admin-muted)]">
+              No history recorded.
             </div>
-          </div>
-        ) : null}
-      </DefaultModal>
+          )}
+        </div>
+      </FormSection>
+    </div>
+  ) : null}
+</DefaultModal>
 
       <ConfirmModal
         isOpen={confirm.open}

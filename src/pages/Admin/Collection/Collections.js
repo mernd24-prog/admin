@@ -507,6 +507,7 @@ export default function Collections() {
         onConfirm={remove}
         title="Delete Collection"
         message={`Delete “${deleteTarget?.name || "this collection"}”? Assigned collections cannot be deleted.`}
+        variant="danger"
       />
     </div>
   );
