@@ -47,6 +47,7 @@ import {
 } from "../../Redux/referralCommerceSlice";
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 import DocumentPreviewModal from "../../components/Shared/DocumentPreviewModal";
+import Tabs from "../../components/Shared/Tabs";
 
 const getBranchPayload = (branch = {}) =>
   branch?.normalized?.data || branch?.data?.data || branch?.data || {};
@@ -870,30 +871,42 @@ const ReferralPartnerDetails = () => {
               icon={<Activity size={18} />}
               className="border-0 shadow-none"
             >
-              <div className="mb-4 flex gap-1 overflow-x-auto">
-                {[
-                  ["codes", "Referral codes", codeRows.length],
-                  ["orders", "Orders", orderRows.length],
-                  ["commissions", "Commissions", commissionRows.length],
-                  ["payouts", "Payouts", payoutRows.length],
-                  ["progress", "Bonus progress", bonusProgress.length],
-                  ["achievements", "Bonus history", bonusAchievements.length],
-                ].map(([value, label, count]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setActiveActivityTab(value)}
-                    className={`whitespace-nowrap rounded-md px-3.5 py-2.5 text-xs font-semibold transition ${activeActivityTab === value ? "bg-[var(--admin-navy)] text-white shadow-sm ring-1 ring-[var(--admin-navy-dark)]" : "bg-white/70 text-[var(--admin-navy)] hover:bg-white hover:text-[var(--admin-navy-dark)]"}`}
-                  >
-                    {label}{" "}
-                    <span
-                      className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] ${activeActivityTab === value ? "bg-white/20 text-white" : "bg-[var(--admin-blue-soft)] text-[var(--admin-navy)]"}`}
-                    >
-                      {count}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <Tabs
+                tabs={[
+                  {
+                    value: "codes",
+                    label: "Referral codes",
+                    count: codeRows.length,
+                  },
+                  {
+                    value: "orders",
+                    label: "Orders",
+                    count: orderRows.length,
+                  },
+                  {
+                    value: "commissions",
+                    label: "Commissions",
+                    count: commissionRows.length,
+                  },
+                  {
+                    value: "payouts",
+                    label: "Payouts",
+                    count: payoutRows.length,
+                  },
+                  {
+                    value: "progress",
+                    label: "Bonus progress",
+                    count: bonusProgress.length,
+                  },
+                  {
+                    value: "achievements",
+                    label: "Bonus history",
+                    count: bonusAchievements.length,
+                  },
+                ]}
+                activeTab={activeActivityTab}
+                onChange={setActiveActivityTab}
+              />
 
               {activeActivityTab === "codes" && (
                 <div className="pt-2">
