@@ -45,16 +45,9 @@ export const getInventoryDetail = createApiThunkPrivate(
 );
 
 export const bulkUpdateInventory = createApiThunkPrivate(
-
     "inventory/bulkUpdateInventory",
-
-    (payload) =>
-      ENDPOINTS.inventory.adjustVariant(
-        payload.productId,
-         payload.updates?.[0]?.variantSku, 
-      ),
-
-    "PATCH",
+    ENDPOINTS.inventory.bulkSetVariants,
+    "POST",
     false,
   {
     transformBody: (payload = {}) => ({
@@ -67,9 +60,7 @@ export const bulkUpdateInventory = createApiThunkPrivate(
             ...(item.variantSku
               ? { variantSku: item.variantSku }
               : {}),
-            adjustmentType:
-              item.adjustmentType || "set",
-            quantity: Number(item.quantity),
+            stock: Number(item.stock ?? item.quantity),
             reason:
               item.reason ||
               "Inventory Excel update",

@@ -48,6 +48,9 @@ const toProductListParams = (params = {}) => ({
   ...(params.category ? { category: params.category } : {}),
   ...(params.status ? { status: params.status } : {}),
   ...(params.revisionStatus ? { revisionStatus: params.revisionStatus } : {}),
+  ...(params.revisionReviewStatus
+    ? { revisionReviewStatus: params.revisionReviewStatus }
+    : {}),
   ...(params.approvalStatus || params.approval_status
     ? { approvalStatus: params.approvalStatus || params.approval_status }
     : {}),

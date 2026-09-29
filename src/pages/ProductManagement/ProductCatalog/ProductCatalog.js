@@ -53,6 +53,7 @@ const INITIAL_FILTERS = {
   category: { value: "", label: "Search By Category" },
   activationStatus: { value: "All", label: "All" },
   approvalStatus: { value: "All", label: "All" },
+  revisionStatus: { value: "All", label: "All" },
   dateFrom: "",
   dateTo: "",
 };
@@ -62,8 +63,12 @@ const APPROVAL_STATUS_OPTIONS = [
   { value: "All", label: "All" },
   { value: "Pending", label: "Pending" },
   { value: "Approved", label: "Approved" },
-  { value: "Change Pending", label: "Change Pending" },
   { value: "Rejected", label: "Rejected" },
+];
+const REVISION_STATUS_OPTIONS = [
+  { value: "All", label: "All" },
+  { value: "workflow:none", label: "No Pending Change" },
+  { value: "workflow:change_pending", label: "Change Pending" },
 ];
 const ACTIVATION_STATUS_OPTIONS = [
   { value: "All", label: "All" },
@@ -229,13 +234,10 @@ const ProductCatalog = () => {
       .filter((seller) => seller.value);
   }, [sellerList]);
 
-  const normalizedApprovalFilter = String(
-    appliedFilters?.approvalStatus?.value || "",
-  )
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-  const isChangePendingFilter = normalizedApprovalFilter === "change_pending";
+  const revisionFilter = String(appliedFilters?.revisionStatus?.value || "");
+  const [revisionFilterType, revisionFilterValue] = revisionFilter.split(":");
+  const isApprovedFilter =
+    appliedFilters?.approvalStatus?.value === "Approved";
   const approvalStatusToApiStatus = {
     Pending: "pending",
     Approved: "approved",
@@ -289,7 +291,11 @@ const ProductCatalog = () => {
               approvalStatusToApiStatus[appliedFilters.approvalStatus.value],
           }
         : {}),
-      ...(isChangePendingFilter ? { revisionStatus: "change_pending" } : {}),
+      ...(revisionFilterType === "workflow" && revisionFilterValue
+        ? { revisionStatus: revisionFilterValue }
+        : isApprovedFilter
+          ? { revisionStatus: "none" }
+          : {}),
     }),
     [
       appliedFilters,
@@ -897,7 +903,21 @@ const ProductCatalog = () => {
               product?.approvalStatus ||
               (product?.approvedAt ? "approved" : "pending")
             }
-            revisionStatus={product?.revisionStatus}
+          />
+        ),
+      },
+      {
+        key: "revisionStatus",
+        label: "Revision Status",
+        render: (_, product) => (
+          <ProductStatusBadge
+            status={
+              product?.revisionStatus === "change_pending" ||
+              Boolean(product?.pendingRevisionId) ||
+              product?.latestRevisionStatus === "pending"
+                ? "change_pending"
+                : "none"
+            }
           />
         ),
       },
@@ -984,6 +1004,7 @@ const ProductCatalog = () => {
             isSearchShow={true}
             isActivationStatus={true}
             isApprovalOptions={true}
+            isRevisionOptions={true}
             isCategory={true}
             isSellerStoreName={canFilterBySeller}
             categoryOptions={categoryOptions}
@@ -992,6 +1013,7 @@ const ProductCatalog = () => {
             userOptions={sellerListData}
             sellerLoading={sellerLoading}
             approvalOptions={APPROVAL_STATUS_OPTIONS}
+            revisionOptions={REVISION_STATUS_OPTIONS}
             activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
             applyFilters={handleSearchApply}
             handleSearchRemove={clearFilters}

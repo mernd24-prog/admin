@@ -256,6 +256,10 @@ export const ENDPOINTS = {
       (productId, variantSku) =>
         `/products/inventory/products/${productId}/variants/${encodeURIComponent(variantSku)}/adjust`,
     ),
+    bulkSetVariants: byPanel(
+      "/admin/inventory/variants/bulk-set",
+      "/products/inventory/variants/bulk-set",
+    ),
     stats: "/admin/inventory/stats",
     lowStock: "/admin/inventory/low-stock",
     transactions: "/admin/inventory/transactions",

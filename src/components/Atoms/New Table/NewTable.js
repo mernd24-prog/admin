@@ -25,6 +25,7 @@ export default function SearchComponent({
   isCategory = false,
   isActivationStatus = false,
   isApprovalOptions = false,
+  isRevisionOptions = false,
   isProductType = false,
   dateFrom = false,
   dateTo = false,
@@ -39,9 +40,11 @@ export default function SearchComponent({
   categoryOptions = [],
   activationStatusOptions = [],
   approvalOptions = [],
+  revisionOptions = [],
   productTypeOptions = [],
   activationStatus,
   approvalStatus,
+  revisionStatus,
   orderFrom,
   orderTo,
   fromLabel,
@@ -80,6 +83,7 @@ export default function SearchComponent({
     isCategory ||
     isActivationStatus ||
     isApprovalOptions ||
+    isRevisionOptions ||
     isProductType ||
     dateFrom ||
     dateTo ||
@@ -200,6 +204,10 @@ export default function SearchComponent({
         ? { approvalStatus: { value: "All", label: "All" } }
         : {}),
 
+      ...(isRevisionOptions
+        ? { revisionStatus: { value: "All", label: "All" } }
+        : {}),
+
       ...(isProductType ? { productType: { value: "", label: "All" } } : {}),
 
       ...(dateFrom ? { dateFrom: "" } : {}),
@@ -210,6 +218,7 @@ export default function SearchComponent({
       dateTo,
       isActivationStatus,
       isApprovalOptions,
+      isRevisionOptions,
       isBrand,
       isCategory,
       isDelete,
@@ -523,6 +532,20 @@ export default function SearchComponent({
                     isSearchable={false}
                     onChange={(option) =>
                       handleFilterChange("approvalStatus", option)
+                    }
+                  />
+                </div>
+              )}
+
+              {isRevisionOptions && (
+                <div className={compactFilterBar ? "min-w-0" : undefined}>
+                  <FilterSelect
+                    label={revisionStatus || "Revision Status"}
+                    value={filters.revisionStatus}
+                    options={revisionOptions}
+                    isSearchable={false}
+                    onChange={(option) =>
+                      handleFilterChange("revisionStatus", option)
                     }
                   />
                 </div>

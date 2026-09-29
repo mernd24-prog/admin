@@ -19,6 +19,11 @@ const STATUS_CONFIG = {
     label: "Change Pending",
     color: "bg-purple-100 text-purple-700",
   },
+  none: { label: "No Pending Change", color: "bg-gray-100 text-gray-600" },
+  revision_pending: {
+    label: "Review Pending",
+    color: "bg-purple-100 text-purple-700",
+  },
 };
 
 const ProductStatusBadge = ({ status, revisionStatus }) => {
