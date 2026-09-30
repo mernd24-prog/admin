@@ -1684,125 +1684,123 @@ export default function ProductManagementUI() {
 
     return Object.keys(newErrors).length === 0;
   };
-useEffect(() => {
-  if (isScrolling) return;
-
-  // IMPORTANT:
-  // Keep this in the exact same order as the actual DOM sections.
-  const sectionIds = [
-    "basic-details",
-    "product-details",
-    "variants-options",
-    "common-images",
-    "shipping",
-    "seo",
-    "tags",
-  ];
-
-  let animationFrameId = null;
-
-  const updateActiveSection = () => {
-    const viewportHeight = window.innerHeight;
-    const activationLine = 220;
-
-    const sections = sectionIds
-      .map((id) => ({
-        id,
-        element: refs[id]?.current,
-      }))
-      .filter((item) => item.element);
-
-    if (!sections.length) return;
-
-    // -----------------------------------------
-    // LAST SECTION
-    // -----------------------------------------
-    const lastSection = sections[sections.length - 1];
-    const lastRect = lastSection.element.getBoundingClientRect();
-
-    if (
-      lastRect.top <= viewportHeight * 0.78 &&
-      lastRect.bottom > 0
-    ) {
-      setActiveTab((prev) =>
-        prev !== lastSection.id ? lastSection.id : prev,
-      );
-
-      return;
-    }
-
-    // -----------------------------------------
-    // NORMAL SECTION DETECTION
-    // -----------------------------------------
-    let currentSection = sections[0].id;
-
-    sections.forEach(({ id, element }) => {
-      const rect = element.getBoundingClientRect();
-
-      if (rect.top <= activationLine) {
-        currentSection = id;
-      }
-    });
-
-    setActiveTab((prev) =>
-      prev !== currentSection ? currentSection : prev,
-    );
-  };
-
-  const handleScroll = () => {
+  useEffect(() => {
     if (isScrolling) return;
 
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
-    }
+    // IMPORTANT:
+    // Keep this in the exact same order as the actual DOM sections.
+    const sectionIds = [
+      "basic-details",
+      "product-details",
+      "variants-options",
+      "common-images",
+      "shipping",
+      "seo",
+      "tags",
+    ];
 
-    animationFrameId = requestAnimationFrame(() => {
-      updateActiveSection();
-      animationFrameId = null;
-    });
-  };
+    let animationFrameId = null;
 
-  // Capture scroll from nested scroll containers also
-  document.addEventListener("scroll", handleScroll, true);
+    const updateActiveSection = () => {
+      const viewportHeight = window.innerHeight;
+      const activationLine = 220;
 
-  window.addEventListener("resize", handleScroll);
+      const sections = sectionIds
+        .map((id) => ({
+          id,
+          element: refs[id]?.current,
+        }))
+        .filter((item) => item.element);
 
-  updateActiveSection();
+      if (!sections.length) return;
 
-  return () => {
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
-    }
+      // -----------------------------------------
+      // LAST SECTION
+      // -----------------------------------------
+      const lastSection = sections[sections.length - 1];
+      const lastRect = lastSection.element.getBoundingClientRect();
 
-    document.removeEventListener("scroll", handleScroll, true);
-    window.removeEventListener("resize", handleScroll);
-  };
-}, [isScrolling]);
+      if (lastRect.top <= viewportHeight * 0.78 && lastRect.bottom > 0) {
+        setActiveTab((prev) =>
+          prev !== lastSection.id ? lastSection.id : prev,
+        );
 
-const scrollToSection = useCallback((id) => {
-  const target = refs[id]?.current;
+        return;
+      }
 
-  if (!target) {
-    console.warn(`Section ref not found: ${id}`);
-    return;
-  }
+      // -----------------------------------------
+      // NORMAL SECTION DETECTION
+      // -----------------------------------------
+      let currentSection = sections[0].id;
 
-  setActiveTab(id);
-  setIsScrolling(true);
+      sections.forEach(({ id, element }) => {
+        const rect = element.getBoundingClientRect();
 
-  target.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
+        if (rect.top <= activationLine) {
+          currentSection = id;
+        }
+      });
 
-  // Keep clicked tab active while smooth scrolling is happening
-  const timer = setTimeout(() => {
-    setActiveTab(id);
-    setIsScrolling(false);
-  }, 800);
+      setActiveTab((prev) => (prev !== currentSection ? currentSection : prev));
+    };
 
-  return () => clearTimeout(timer);
-}, [refs]);
+    const handleScroll = () => {
+      if (isScrolling) return;
+
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+
+      animationFrameId = requestAnimationFrame(() => {
+        updateActiveSection();
+        animationFrameId = null;
+      });
+    };
+
+    // Capture scroll from nested scroll containers also
+    document.addEventListener("scroll", handleScroll, true);
+
+    window.addEventListener("resize", handleScroll);
+
+    updateActiveSection();
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+
+      document.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [isScrolling]);
+
+  const scrollToSection = useCallback(
+    (id) => {
+      const target = refs[id]?.current;
+
+      if (!target) {
+        console.warn(`Section ref not found: ${id}`);
+        return;
+      }
+
+      setActiveTab(id);
+      setIsScrolling(true);
+
+      target.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+
+      // Keep clicked tab active while smooth scrolling is happening
+      const timer = setTimeout(() => {
+        setActiveTab(id);
+        setIsScrolling(false);
+      }, 800);
+
+      return () => clearTimeout(timer);
+    },
+    [refs],
+  );
 
   function calculateDiscount(price, discountPercent = 0) {
     const validPrice = parseFloat(price) || 0;
@@ -2046,7 +2044,7 @@ const scrollToSection = useCallback((id) => {
             cityCode: "",
           },
         }));
-        break;  
+        break;
       case "PRODUCT_CITY":
         setFormData((prev) => ({
           ...prev,
@@ -3600,143 +3598,142 @@ const scrollToSection = useCallback((id) => {
               </div>
 
               {collectionOptions.length ? (
-             <div className="space-y-4 p-4">
-  {selectedCollections.length > 0 && (
-    <div>
-      {/* Header */}
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-          Selected collections
-        </p>
+                <div className="space-y-4 p-4">
+                  {selectedCollections.length > 0 && (
+                    <div>
+                      {/* Header */}
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                          Selected collections
+                        </p>
 
-        {/* Clear all - top right */}
-        <button
-          type="button"
-          onClick={() =>
-            setFormData((current) => ({
-              ...current,
-              collectionIds: [],
-            }))
-          }
-          className="text-xs font-semibold text-gray-500 transition-colors hover:text-red-600"
-        >
-          Clear all
-        </button>
-      </div>
+                        {/* Clear all - top right */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((current) => ({
+                              ...current,
+                              collectionIds: [],
+                            }))
+                          }
+                          className="text-xs font-semibold text-gray-500 transition-colors hover:text-red-600"
+                        >
+                          Clear all
+                        </button>
+                      </div>
 
-      {/* Selected collection chips */}
-      <div className="flex flex-wrap gap-2">
-        {selectedCollections.map((collection) => (
-          <button
-            key={`selected-${collection._id || collection.slug || collection.name}`}
-            type="button"
-            onClick={() => toggleCollection(collection)}
-            className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:border-amber-300 hover:bg-amber-100"
-            aria-label={`Remove ${collection.name} collection`}
-          >
-            <FiCheck size={13} />
+                      {/* Selected collection chips */}
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCollections.map((collection) => (
+                          <button
+                            key={`selected-${collection._id || collection.slug || collection.name}`}
+                            type="button"
+                            onClick={() => toggleCollection(collection)}
+                            className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:border-amber-300 hover:bg-amber-100"
+                            aria-label={`Remove ${collection.name} collection`}
+                          >
+                            <FiCheck size={13} />
 
-            <span>{collection.name}</span>
+                            <span>{collection.name}</span>
 
-            <FiX
-              size={13}
-              className="text-amber-700"
-            />
-          </button>
-        ))}
-      </div>
-    </div>
-  )}
+                            <FiX size={13} className="text-amber-700" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-  <div className="relative">
-    <FiSearch
-      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-      size={16}
-    />
+                  <div className="relative">
+                    <FiSearch
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={16}
+                    />
 
-    <input
-      type="search"
-      value={collectionSearch}
-      onChange={(event) => setCollectionSearch(event.target.value)}
-      placeholder="Search collections by name, type, or tag…"
-      className="admin-input !pl-9"
-      aria-label="Search collections"
-    />
-  </div>
-
-  {filteredCollectionOptions.length ? (
-    <div className="grid max-h-96 gap-3.5 overflow-y-auto pr-1 sm:grid-cols-2">
-      {filteredCollectionOptions.map((collection) => {
-        const value = String(
-          collection._id || collection.slug || collection.name,
-        );
-
-        const selected = isCollectionSelected(collection);
-
-        const image =
-          collection.thumbnailImage || collection.bannerImage;
-
-        return (
-          <button
-            key={value}
-            type="button"
-            onClick={() => toggleCollection(collection)}
-            aria-pressed={selected}
-            className={`group relative overflow-hidden rounded-xl border text-left transition-colors duration-150 ${
-              selected
-                ? "border-[var(--admin-gold)] bg-amber-50/50 shadow-sm ring-1 ring-[var(--admin-gold)]/30"
-                : "border-gray-200/80 bg-white hover:border-amber-300"
-            }`}
-          >
-            <div className="flex items-start gap-3.5 p-3.5">
-              <CollectionCardThumbnail
-                image={image}
-                name={collection.name}
-              />
-
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold leading-snug text-[var(--admin-navy)] transition-colors group-hover:text-[var(--admin-gold-dark)]">
-                      {collection.name}
-                    </span>
-
-                    <span className="inline-flex shrink-0 items-center rounded-full border border-gray-200/60 bg-[var(--admin-surface-soft)] px-2 py-0.5 text-[10px] font-medium capitalize text-gray-600">
-                      {(collection.type || "custom").replace(
-                        /_/g,
-                        " ",
-                      )}
-                    </span>
+                    <input
+                      type="search"
+                      value={collectionSearch}
+                      onChange={(event) =>
+                        setCollectionSearch(event.target.value)
+                      }
+                      placeholder="Search collections by name, type, or tag…"
+                      className="admin-input !pl-9"
+                      aria-label="Search collections"
+                    />
                   </div>
 
-                  <span
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all ${
-                      selected
-                        ? "border-[var(--admin-gold)] bg-[var(--admin-gold)] text-white shadow-xs"
-                        : "border-gray-300 bg-white text-transparent group-hover:border-[var(--admin-gold)]/60"
-                    }`}
-                  >
-                    <FiCheck size={11} strokeWidth={3} />
-                  </span>
-                </div>
+                  {filteredCollectionOptions.length ? (
+                    <div className="grid max-h-96 gap-3.5 overflow-y-auto pr-1 sm:grid-cols-2">
+                      {filteredCollectionOptions.map((collection) => {
+                        const value = String(
+                          collection._id || collection.slug || collection.name,
+                        );
 
-                {collection.description && (
-                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-500">
-                    {collection.description}
-                  </p>
-                )}
-              </div>
-            </div>
-          </button>
-        );
-      })}
-    </div>
-  ) : (
-    <div className="rounded-lg border border-dashed border-[var(--admin-line)] bg-gray-50 p-5 text-center text-xs text-gray-500">
-      No collections match “{collectionSearch}”.
-    </div>
-  )}
-</div>
+                        const selected = isCollectionSelected(collection);
+
+                        const image =
+                          collection.thumbnailImage || collection.bannerImage;
+
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => toggleCollection(collection)}
+                            aria-pressed={selected}
+                            className={`group relative overflow-hidden rounded-xl border text-left transition-colors duration-150 ${
+                              selected
+                                ? "border-[var(--admin-gold)] bg-amber-50/50 shadow-sm ring-1 ring-[var(--admin-gold)]/30"
+                                : "border-gray-200/80 bg-white hover:border-amber-300"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3.5 p-3.5">
+                              <CollectionCardThumbnail
+                                image={image}
+                                name={collection.name}
+                              />
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                    <span className="text-sm font-semibold leading-snug text-[var(--admin-navy)] transition-colors group-hover:text-[var(--admin-gold-dark)]">
+                                      {collection.name}
+                                    </span>
+
+                                    <span className="inline-flex shrink-0 items-center rounded-full border border-gray-200/60 bg-[var(--admin-surface-soft)] px-2 py-0.5 text-[10px] font-medium capitalize text-gray-600">
+                                      {(collection.type || "custom").replace(
+                                        /_/g,
+                                        " ",
+                                      )}
+                                    </span>
+                                  </div>
+
+                                  <span
+                                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all ${
+                                      selected
+                                        ? "border-[var(--admin-gold)] bg-[var(--admin-gold)] text-white shadow-xs"
+                                        : "border-gray-300 bg-white text-transparent group-hover:border-[var(--admin-gold)]/60"
+                                    }`}
+                                  >
+                                    <FiCheck size={11} strokeWidth={3} />
+                                  </span>
+                                </div>
+
+                                {collection.description && (
+                                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-500">
+                                    {collection.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-[var(--admin-line)] bg-gray-50 p-5 text-center text-xs text-gray-500">
+                      No collections match “{collectionSearch}”.
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="p-4">
                   <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
@@ -3748,55 +3745,6 @@ const scrollToSection = useCallback((id) => {
                 </div>
               )}
             </div>
-
-            {/* <div className="rounded-xl border border-[var(--admin-line)] bg-white p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h4 className="text-sm font-semibold text-[var(--admin-ink)]">Deal Product</h4>
-                <p className="text-xs text-gray-500">Mark this existing product so admin can pick it for Deal Management.</p>
-              </div>
-              <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={Boolean(formData?.isDealProduct)}
-                  onChange={() => handleToggleProductSetting('DEAL_PRODUCT')}
-                  className="h-4 w-4 accent-[var(--admin-blue)]"
-                />
-                Show in deal selection
-              </label>
-            </div>
-
-            {formData?.isDealProduct && (
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <div>
-                  <label className="admin-label">Deal Badge</label>
-                  <select
-                    name="dealBadge"
-                    value={formData?.dealBadge || "Today's Deal"}
-                    onChange={handleChange}
-                    className="admin-input"
-                  >
-                    {DEAL_BADGE_OPTIONS.map((badge) => (
-                      <option key={badge} value={badge}>{badge}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="admin-label">Deal Source</label>
-                  <select
-                    name="dealSource"
-                    value={formData?.dealSource || "admin_direct"}
-                    onChange={handleChange}
-                    className="admin-input"
-                  >
-                    {DEAL_SOURCE_OPTIONS.map((source) => (
-                      <option key={source.value} value={source.value}>{source.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-          </div> */}
           </div>
         ),
       },

@@ -96,17 +96,17 @@ const CLASS_FONT_MEDIUM_GRAY = "font-medium text-gray-700";
 const FILTER_FIELDS = [
   { key: "search", type: "text", label: "Search", width: "w-56" },
   { key: "orderId", type: "text", label: "Order #", width: "w-48" },
-  {
-    key: "buyerId",
-    type: "asyncDropdown",
-    label: "Buyer",
-    width: "w-52",
-    load: (search) =>
-      dropdownApi.getBuyers({
-        keyWord: search,
-        searchFields: "full_name,email",
-      }),
-  },
+  // {
+  //   key: "buyerId",
+  //   type: "asyncDropdown",
+  //   label: "Buyer",
+  //   width: "w-52",
+  //   load: (search) =>
+  //     dropdownApi.getBuyers({
+  //       keyWord: search,
+  //       searchFields: "full_name,email",
+  //     }),
+  // },
   {
     key: "status",
     type: "select",
@@ -636,320 +636,302 @@ const Cancellations = () => {
       />
 
       {/* Detail */}
-    <DefaultModal
-  isOpen={Boolean(detail)}
-  onClose={() => setDetail(null)}
-  title="Cancellation Details"
->
-  {detail && (
-    <div className="space-y-5">
-      {/* ==================== Admin Warning ==================== */}
-      {isSeller &&
-        detail.status === "requested" &&
-        !detail.sellerCanReview && (
-          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <div className="mt-0.5 text-amber-600">⚠</div>
-
-            <div>
-              <p className="text-sm font-semibold text-amber-900">
-                Admin approval required
-              </p>
-
-              <p className="mt-1 text-xs leading-5 text-amber-800">
-                This request contains products from multiple sellers. Only
-                an admin can approve or reject the combined request.
-              </p>
-            </div>
-          </div>
-        )}
-
-      {/* ==================== Cancellation Summary ==================== */}
-      <FormSection
-        title="Cancellation Summary"
-        description="Overview of the cancellation request and its current status."
+      <DefaultModal
+        isOpen={Boolean(detail)}
+        onClose={() => setDetail(null)}
+        title="Cancellation Details"
       >
-        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                Cancellation
-              </p>
+        {detail && (
+          <div className="space-y-5">
+            {/* ==================== Admin Warning ==================== */}
+            {isSeller &&
+              detail.status === "requested" &&
+              !detail.sellerCanReview && (
+                <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <div className="mt-0.5 text-amber-600">⚠</div>
 
-              <p className="mt-1 truncate font-mono text-sm font-semibold text-gray-900">
-                {detail.cancellationNumber || detail.id || "—"}
-              </p>
-            </div>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-900">
+                      Admin approval required
+                    </p>
 
-            <StatusBadge
-              status={detail.status || "pending"}
-              color={STATUS_COLOR[detail.status] || "gray"}
-            />
-          </div>
-        </div>
-      </FormSection>
+                    <p className="mt-1 text-xs leading-5 text-amber-800">
+                      This request contains products from multiple sellers. Only
+                      an admin can approve or reject the combined request.
+                    </p>
+                  </div>
+                </div>
+              )}
 
-      {/* ==================== Reference Information ==================== */}
-      <FormSection
-        title="Reference Information"
-        description="Order and cancellation information associated with this request."
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <p className="text-xs font-medium text-gray-500">Order</p>
-
-            <div className="mt-1 text-sm font-medium">
-              <OrderLink
-                orderId={detail.orderId || detail.order_id}
-                orderNumber={
-                  detail.orderNumber || detail.order_number
-                }
-              />
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-medium text-gray-500">
-              Cancellation Status
-            </p>
-
-            <div className="mt-1">
-              <StatusBadge
-                status={detail.status || "pending"}
-                color={STATUS_COLOR[detail.status] || "gray"}
-              />
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-medium text-gray-500">
-              Refund Status
-            </p>
-
-            <p className="mt-1 text-sm font-medium capitalize text-gray-800">
-              {display(detail.refundStatus)}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-xs font-medium text-gray-500">Scope</p>
-
-            <p className="mt-1 text-sm font-medium capitalize text-gray-800">
-              {detail.scope || "—"}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-xs font-medium text-gray-500">Reason</p>
-
-            <p className="mt-1 text-sm text-gray-800">
-              {display(detail.reason)}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-xs font-medium text-gray-500">Created</p>
-
-            <p className="mt-1 text-sm font-medium text-gray-700">
-              {fmt(detail.createdAt)}
-            </p>
-          </div>
-        </div>
-      </FormSection>
-
-      {/* ==================== Financial Impact ==================== */}
-      <FormSection
-        title="Financial Impact"
-        description="Refund and seller finance impact associated with this cancellation."
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-            <p className="text-xs font-medium text-gray-500">
-              {isSeller
-                ? "My Cancelled Item Value"
-                : "Customer Refund"}
-            </p>
-
-            <p className="mt-1 text-lg font-bold text-gray-900">
-              {money(detail.refundAmount)}
-            </p>
-          </div>
-
-          {!isSeller && (
-            <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-              <p className="text-xs font-medium text-gray-500">
-                Seller Cancelled Value
-              </p>
-
-              <p className="mt-1 text-lg font-bold text-gray-900">
-                {money(detail.sellerCancelledValue)}
-              </p>
-            </div>
-          )}
-
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-            <p className="text-xs font-medium text-gray-500">
-              Refunded Through
-            </p>
-
-            <p className="mt-1 text-sm font-medium text-gray-700">
-              {refundSource(detail)}
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-            <p className="text-xs font-medium text-gray-500">
-              Seller Finance Impact
-            </p>
-
-            <p className="mt-1 text-sm font-medium text-gray-700">
-              {detail.sellerFinanceAdjustments?.length
-                ? "Recovered from settlement"
-                : "No payout — cancelled before settlement"}
-            </p>
-          </div>
-        </div>
-      </FormSection>
-
-      {/* ==================== Processing Status ==================== */}
-      <FormSection
-        title="Processing Status"
-        description="Current processing status across inventory, shipment, and seller finance."
-      >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-            <p className="text-xs font-medium text-gray-500">
-              Inventory
-            </p>
-
-            <div className="mt-2">
-              <StatusBadge
-                status={detail.inventoryStatus || "pending"}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-            <p className="text-xs font-medium text-gray-500">
-              Shipment
-            </p>
-
-            <div className="mt-2">
-              <StatusBadge
-                status={detail.shipmentStatus || "pending"}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-            <p className="text-xs font-medium text-gray-500">
-              Seller Finance
-            </p>
-
-            <div className="mt-2">
-              <StatusBadge
-                status={detail.financeStatus || "pending"}
-              />
-            </div>
-          </div>
-        </div>
-      </FormSection>
-
-      {/* ==================== Cancellation Items ==================== */}
-      <FormSection
-        title={
-          detail.status === "requested"
-            ? isSeller
-              ? "My Requested Items"
-              : "Requested Items"
-            : isSeller
-              ? "My Cancelled Items"
-              : "Cancelled Items"
-        }
-        description={
-          detail.items?.length
-            ? `${detail.items.length} ${
-                detail.items.length === 1 ? "item" : "items"
-              }`
-            : "No cancelled items found."
-        }
-      >
-        <div className="space-y-3">
-          {(detail.items || []).map((item) => (
-            <div
-              key={item.orderItemId || item.order_item_id}
-              className="rounded-lg border border-gray-200 bg-white p-4 transition hover:border-gray-300"
+            {/* ==================== Cancellation Summary ==================== */}
+            <FormSection
+              title="Cancellation Summary"
+              description="Overview of the cancellation request and its current status."
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-gray-900">
-                    {item.productTitle ||
-                      item.product_title ||
-                      "Product"}
-                  </p>
+              <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Cancellation
+                    </p>
 
-                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                    <div>
-                      <span className="text-gray-500">SKU</span>
+                    <p className="mt-1 truncate font-mono text-sm font-semibold text-gray-900">
+                      {detail.cancellationNumber || detail.id || "—"}
+                    </p>
+                  </div>
 
-                      <p className="mt-0.5 font-medium text-gray-700">
-                        {item.variantSku ||
-                          item.variant_sku ||
-                          "—"}
-                      </p>
-                    </div>
+                  <StatusBadge
+                    status={detail.status || "pending"}
+                    color={STATUS_COLOR[detail.status] || "gray"}
+                  />
+                </div>
+              </div>
+            </FormSection>
 
-                    <div>
-                      <span className="text-gray-500">Quantity</span>
+            {/* ==================== Reference Information ==================== */}
+            <FormSection
+              title="Reference Information"
+              description="Order and cancellation information associated with this request."
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Order</p>
 
-                      <p className="mt-0.5 font-medium text-gray-700">
-                        {item.quantity || 0}
-                      </p>
-                    </div>
+                  <div className="mt-1 text-sm font-medium">
+                    <OrderLink
+                      orderId={detail.orderId || detail.order_id}
+                      orderNumber={detail.orderNumber || detail.order_number}
+                    />
                   </div>
                 </div>
 
-                <div className="shrink-0 text-right">
-                  <p className="text-xs text-gray-500">Refund</p>
+                <div>
+                  <p className="text-xs font-medium text-gray-500">
+                    Cancellation Status
+                  </p>
 
-                  <p className="mt-1 text-sm font-bold text-gray-900">
-                    {money(
-                      item.refundAmount ??
-                        item.refund_amount ??
-                        item.itemAmount ??
-                        item.item_amount,
-                    )}
+                  <div className="mt-1">
+                    <StatusBadge
+                      status={detail.status || "pending"}
+                      color={STATUS_COLOR[detail.status] || "gray"}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-500">
+                    Refund Status
+                  </p>
+
+                  <p className="mt-1 text-sm font-medium capitalize text-gray-800">
+                    {display(detail.refundStatus)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Scope</p>
+
+                  <p className="mt-1 text-sm font-medium capitalize text-gray-800">
+                    {detail.scope || "—"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Reason</p>
+
+                  <p className="mt-1 text-sm text-gray-800">
+                    {display(detail.reason)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Created</p>
+
+                  <p className="mt-1 text-sm font-medium text-gray-700">
+                    {fmt(detail.createdAt)}
                   </p>
                 </div>
               </div>
-            </div>
-          ))}
+            </FormSection>
 
-          {!detail.items?.length && (
-            <div className="rounded-lg border border-dashed border-gray-200 p-5 text-center">
-              <p className="text-xs text-gray-500">
-                No cancelled items found.
-              </p>
-            </div>
-          )}
-        </div>
-      </FormSection>
+            {/* ==================== Financial Impact ==================== */}
+            <FormSection
+              title="Financial Impact"
+              description="Refund and seller finance impact associated with this cancellation."
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                  <p className="text-xs font-medium text-gray-500">
+                    {isSeller ? "My Cancelled Item Value" : "Customer Refund"}
+                  </p>
 
-      {/* ==================== Note ==================== */}
-      {detail.note && (
-        <FormSection
-          title="Note"
-          description="Additional information provided with the cancellation request."
-        >
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-            <p className="text-sm leading-6 text-gray-700">
-              {detail.note}
-            </p>
+                  <p className="mt-1 text-lg font-bold text-gray-900">
+                    {money(detail.refundAmount)}
+                  </p>
+                </div>
+
+                {!isSeller && (
+                  <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                    <p className="text-xs font-medium text-gray-500">
+                      Seller Cancelled Value
+                    </p>
+
+                    <p className="mt-1 text-lg font-bold text-gray-900">
+                      {money(detail.sellerCancelledValue)}
+                    </p>
+                  </div>
+                )}
+
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                  <p className="text-xs font-medium text-gray-500">
+                    Refunded Through
+                  </p>
+
+                  <p className="mt-1 text-sm font-medium text-gray-700">
+                    {refundSource(detail)}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                  <p className="text-xs font-medium text-gray-500">
+                    Seller Finance Impact
+                  </p>
+
+                  <p className="mt-1 text-sm font-medium text-gray-700">
+                    {detail.sellerFinanceAdjustments?.length
+                      ? "Recovered from settlement"
+                      : "No payout — cancelled before settlement"}
+                  </p>
+                </div>
+              </div>
+            </FormSection>
+
+            {/* ==================== Processing Status ==================== */}
+            <FormSection
+              title="Processing Status"
+              description="Current processing status across inventory, shipment, and seller finance."
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-xs font-medium text-gray-500">Inventory</p>
+
+                  <div className="mt-2">
+                    <StatusBadge status={detail.inventoryStatus || "pending"} />
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-xs font-medium text-gray-500">Shipment</p>
+
+                  <div className="mt-2">
+                    <StatusBadge status={detail.shipmentStatus || "pending"} />
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-xs font-medium text-gray-500">
+                    Seller Finance
+                  </p>
+
+                  <div className="mt-2">
+                    <StatusBadge status={detail.financeStatus || "pending"} />
+                  </div>
+                </div>
+              </div>
+            </FormSection>
+
+            {/* ==================== Cancellation Items ==================== */}
+            <FormSection
+              title={
+                detail.status === "requested"
+                  ? isSeller
+                    ? "My Requested Items"
+                    : "Requested Items"
+                  : isSeller
+                    ? "My Cancelled Items"
+                    : "Cancelled Items"
+              }
+              description={
+                detail.items?.length
+                  ? `${detail.items.length} ${
+                      detail.items.length === 1 ? "item" : "items"
+                    }`
+                  : "No cancelled items found."
+              }
+            >
+              <div className="space-y-3">
+                {(detail.items || []).map((item) => (
+                  <div
+                    key={item.orderItemId || item.order_item_id}
+                    className="rounded-lg border border-gray-200 bg-white p-4 transition hover:border-gray-300"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-900">
+                          {item.productTitle || item.product_title || "Product"}
+                        </p>
+
+                        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                          <div>
+                            <span className="text-gray-500">SKU</span>
+
+                            <p className="mt-0.5 font-medium text-gray-700">
+                              {item.variantSku || item.variant_sku || "—"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <span className="text-gray-500">Quantity</span>
+
+                            <p className="mt-0.5 font-medium text-gray-700">
+                              {item.quantity || 0}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        <p className="text-xs text-gray-500">Refund</p>
+
+                        <p className="mt-1 text-sm font-bold text-gray-900">
+                          {money(
+                            item.refundAmount ??
+                              item.refund_amount ??
+                              item.itemAmount ??
+                              item.item_amount,
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {!detail.items?.length && (
+                  <div className="rounded-lg border border-dashed border-gray-200 p-5 text-center">
+                    <p className="text-xs text-gray-500">
+                      No cancelled items found.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </FormSection>
+
+            {/* ==================== Note ==================== */}
+            {detail.note && (
+              <FormSection
+                title="Note"
+                description="Additional information provided with the cancellation request."
+              >
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                  <p className="text-sm leading-6 text-gray-700">
+                    {detail.note}
+                  </p>
+                </div>
+              </FormSection>
+            )}
           </div>
-        </FormSection>
-      )}
-    </div>
-  )}
-</DefaultModal>
+        )}
+      </DefaultModal>
 
       {/* Cancellation approval */}
       <ConfirmModal

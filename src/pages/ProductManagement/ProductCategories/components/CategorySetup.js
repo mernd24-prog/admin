@@ -212,40 +212,55 @@ const CategorySetup = ({
                 }
                 placeholder="Select parent category"
               />
+            </div>
+          </FormSection>
 
-              {/* Category Icon */}
-              <ImageUpload
-                id="category-icon"
-                label="Icon"
-                subtext="Recommended: PNG or WEBP"
-                file={formData?.iconUrl}
-                onChange={(file) => handleImageChange(file, "iconUrl")}
-                accept={CATEGORY_IMAGE_ACCEPT}
-                helperText={CATEGORY_IMAGE_HELPER_TEXT}
-                onRemove={() =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    iconUrl: "",
-                  }))
-                }
-              />
+          <FormSection
+            title="Media Uploads"
+            description="Upload an icon and banner image for this category."
+          >
+            <div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* Icon Section */}
+                <div className="min-w-0">
+                  {/* Category Icon */}
+                  <ImageUpload
+                    id="category-icon"
+                    label="Icon"
+                    subtext="Recommended: PNG or WEBP"
+                    file={formData?.iconUrl}
+                    onChange={(file) => handleImageChange(file, "iconUrl")}
+                    accept={CATEGORY_IMAGE_ACCEPT}
+                    helperText={CATEGORY_IMAGE_HELPER_TEXT}
+                    onRemove={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        iconUrl: "",
+                      }))
+                    }
+                  />
+                </div>
 
-              {/* Banner Image */}
-              <ImageUpload
-                id="category-banner"
-                label="Banner Image"
-                subtext="Recommended: JPG, PNG or WEBP"
-                file={formData?.bannerUrl}
-                onChange={(file) => handleImageChange(file, "bannerUrl")}
-                accept={CATEGORY_IMAGE_ACCEPT}
-                helperText={CATEGORY_IMAGE_HELPER_TEXT}
-                onRemove={() =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    bannerUrl: "",
-                  }))
-                }
-              />
+                {/* Banner Image Section */}
+                <div className="min-w-0">
+                  {/* Banner Image */}
+                  <ImageUpload
+                    id="category-banner"
+                    label="Banner Image"
+                    subtext="Recommended: JPG, PNG or WEBP"
+                    file={formData?.bannerUrl}
+                    onChange={(file) => handleImageChange(file, "bannerUrl")}
+                    accept={CATEGORY_IMAGE_ACCEPT}
+                    helperText={CATEGORY_IMAGE_HELPER_TEXT}
+                    onRemove={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        bannerUrl: "",
+                      }))
+                    }
+                  />
+                </div>
+              </div>
             </div>
           </FormSection>
 

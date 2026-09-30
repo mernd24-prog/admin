@@ -292,27 +292,37 @@ const TaxCompliance = () => {
       },
       {
         key: "buyer_id",
-        label: "Buyer",
-        render: (value, row) => {
-          const name =
-            row.buyerName ||
-            row.buyer?.name ||
-            row.buyer?.full_name ||
-            row.buyer?.email;
+        label: "Customer",
+        render: (_, row) => {
+          const buyer = row?.metadata?.buyer;
 
-          return name ? (
-            <UserLink
-              userId={value || row.buyerId || row.buyer?.id || row.buyer?._id}
-              userName={name}
-              className="text-xs"
-            />
-          ) : (
-            <span className="font-mono text-xs text-gray-400">
-              {value ? `${String(value).slice(0, 10)}…` : "—"}
-            </span>
+          const firstName = buyer?.profile?.firstName || "";
+          const lastName = buyer?.profile?.lastName || "";
+
+          const customerName =
+            [firstName, lastName].filter(Boolean).join(" ") ||
+            buyer?.shippingAddress?.fullName ||
+            "N/A";
+
+          const customerEmail = buyer?.email || "N/A";
+
+          return (
+            <div className="flex min-w-[160px] flex-col gap-1">
+              <span
+                className="text-sm font-medium text-[var(--admin-navy)]"
+                title={customerName}
+              >
+                {customerName}
+              </span>
+
+              <span className="text-xs text-gray-500" title={customerEmail}>
+                {customerEmail}
+              </span>
+            </div>
           );
         },
       },
+      ,
       {
         key: "taxable_amount",
         label: "Taxable",

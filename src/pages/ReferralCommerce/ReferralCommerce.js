@@ -2605,25 +2605,77 @@ const ReferralCommerce = () => {
     );
   };
 
+  const RecentOrdersSkeleton = () => (
+    <tbody>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <tr key={index} className="border-b border-[#EDE5D8]">
+          {/* S. No. */}
+          <td className="px-4 py-4">
+            <div className="h-4 w-6 animate-pulse rounded bg-gray-200" />
+          </td>
+
+          {/* Order ID */}
+          <td className="px-4 py-4">
+            <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
+          </td>
+
+          {/* Customer */}
+          <td className="px-4 py-4">
+            <div className="space-y-2">
+              <div className="h-4 w-28 animate-pulse rounded bg-gray-200" />
+              <div className="h-3 w-40 animate-pulse rounded bg-gray-200" />
+            </div>
+          </td>
+
+          {/* Amount */}
+          <td className="px-4 py-4">
+            <div className="ml-auto h-4 w-16 animate-pulse rounded bg-gray-200" />
+          </td>
+
+          {/* Status */}
+          <td className="px-4 py-4">
+            <div className="h-7 w-20 animate-pulse rounded-md bg-gray-200" />
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  );
+
   const renderOverview = () => (
     <div className="space-y-4">
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-        {statItems.map((item) => (
-          <SummaryCard
-            key={item.label}
-            title={item.label}
-            value={item.value}
-            description={item.sub}
-            icon={<span style={{ color: item.iconColor }}>{item.icon}</span>}
-            iconClassName="right-0 top-0 h-9 w-10 rounded-none rounded-bl-[10px] border-0"
-            iconStyle={{ backgroundColor: item.iconBg }}
-            className="min-h-[100px]"
-            titleClassName="uppercase text-[10px]"
-            valueClassName="text-[20px]"
-            descriptionClassName="mt-2 text-[10px]"
-          />
-        ))}
+        {loading
+          ? Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="admin-card min-h-[100px] animate-pulse p-4"
+              >
+                <div className="mb-4 h-3 w-24 rounded bg-gray-200" />
+                <div className="mb-3 h-6 w-20 rounded bg-gray-200" />
+                <div className="h-3 w-32 rounded bg-gray-200" />
+              </div>
+            ))
+          : statItems.map((item) => (
+              <SummaryCard
+                key={item.label}
+                title={item.label}
+                value={item.value}
+                description={item.sub}
+                icon={
+                  <span style={{ color: item.iconColor }}>{item.icon}</span>
+                }
+                iconClassName="right-0 top-0 h-9 w-10 rounded-none rounded-bl-[10px] border-0"
+                iconStyle={{ backgroundColor: item.iconBg }}
+                className="min-h-[100px]"
+                titleClassName="uppercase text-[10px]"
+                valueClassName="text-[20px]"
+                descriptionClassName="mt-2 text-[10px]"
+              />
+            ))}
       </div>
+
+      {/* Wallet Balances */}
       <section className="admin-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] px-4 py-3.5">
           <div>
@@ -2641,61 +2693,74 @@ const ReferralCommerce = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-          {[
-            {
-              label: "Locked",
-              value:
-                summary?.wallets?.lockedBalance ??
-                summary?.wallets?.pendingBalance,
-              helper: "Awaiting release",
-              icon: <ShieldAlert size={18} />,
-            },
-            {
-              label: "Available",
-              value: summary?.wallets?.availableBalance,
-              helper: "Ready for payout",
-              icon: <Check size={18} />,
-            },
-            {
-              label: "Reserved",
-              value: summary?.wallets?.reservedBalance,
-              helper: "Held for requests",
-              icon: <GitBranch size={18} />,
-            },
-            {
-              label: "Withdrawn",
-              value:
-                summary?.wallets?.withdrawnBalance ??
-                summary?.wallets?.paidBalance,
-              helper: "Successfully paid",
-              icon: <ExternalLink size={18} />,
-            },
-            {
-              label: "Reversed",
-              value: summary?.wallets?.reversedBalance,
-              helper: "Returned to wallet",
-              icon: <RefreshCw size={18} />,
-            },
-          ].map((item) => (
-            <Cards
-              key={item.label}
-              label={item.label}
-              value={formatCoins(item.value)}
-              helper={item.helper}
-              icon={item.icon}
-              iconBg="var(--admin-gold-soft)"
-              iconColor="var(--admin-gold-dark)"
-              className="min-h-[104px]"
-            />
-          ))}
+          {loading
+            ? Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="admin-card min-h-[104px] animate-pulse p-4"
+                >
+                  <div className="mb-4 h-3 w-20 rounded bg-gray-200" />
+                  <div className="mb-3 h-6 w-24 rounded bg-gray-200" />
+                  <div className="h-3 w-28 rounded bg-gray-200" />
+                </div>
+              ))
+            : [
+                {
+                  label: "Locked",
+                  value:
+                    summary?.wallets?.lockedBalance ??
+                    summary?.wallets?.pendingBalance,
+                  helper: "Awaiting release",
+                  icon: <ShieldAlert size={18} />,
+                },
+                {
+                  label: "Available",
+                  value: summary?.wallets?.availableBalance,
+                  helper: "Ready for payout",
+                  icon: <Check size={18} />,
+                },
+                {
+                  label: "Reserved",
+                  value: summary?.wallets?.reservedBalance,
+                  helper: "Held for requests",
+                  icon: <GitBranch size={18} />,
+                },
+                {
+                  label: "Withdrawn",
+                  value:
+                    summary?.wallets?.withdrawnBalance ??
+                    summary?.wallets?.paidBalance,
+                  helper: "Successfully paid",
+                  icon: <ExternalLink size={18} />,
+                },
+                {
+                  label: "Reversed",
+                  value: summary?.wallets?.reversedBalance,
+                  helper: "Returned to wallet",
+                  icon: <RefreshCw size={18} />,
+                },
+              ].map((item) => (
+                <Cards
+                  key={item.label}
+                  label={item.label}
+                  value={formatCoins(item.value)}
+                  helper={item.helper}
+                  icon={item.icon}
+                  iconBg="var(--admin-gold-soft)"
+                  iconColor="var(--admin-gold-dark)"
+                  className="min-h-[104px]"
+                />
+              ))}
         </div>
       </section>
 
+      {/* Recent Orders */}
       <section className="admin-card overflow-hidden bg-white">
         <div className="flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4">
           <h2 className="text-[17px] font-bold font-inter text-[var(--admin-navy)]">
             Recent Orders
           </h2>
+
           <button
             type="button"
             className="inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
@@ -2704,65 +2769,123 @@ const ReferralCommerce = () => {
             See All
           </button>
         </div>
-        <table className="w-full text-left">
-          <thead className="admin-table-head font-inter text-[12px]">
-            <tr>
-              <th className="px-4 py-3 font-semibold">S. No.</th>
-              <th className="px-4 py-3 font-semibold">Order ID</th>
-              <th className="px-4 py-3 font-semibold">Customer</th>
-              <th className="px-4 py-3 font-semibold">Amount</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-            </tr>
-          </thead>
-          <tbody className="text-[12px] text-slate-600">
-            {orders.slice(0, 5).length === 0 && (
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="admin-table-head font-inter text-[12px]">
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                  No recent orders available.
-                </td>
+                <th className="px-4 py-3 font-semibold">S. No.</th>
+                <th className="px-4 py-3 font-semibold">Order ID</th>
+                <th className="px-4 py-3 font-semibold">Customer</th>
+                <th className="px-4 py-3 font-semibold">Amount</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
               </tr>
+            </thead>
+
+            {loading ? (
+              <tbody className="text-[12px]">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <tr
+                    key={index}
+                    className="border-b border-[#f0e8dc] last:border-0"
+                  >
+                    {/* S. No. */}
+                    <td className="px-4 py-4">
+                      <div className="h-4 w-6 animate-pulse rounded bg-gray-200" />
+                    </td>
+
+                    {/* Order ID */}
+                    <td className="px-4 py-4">
+                      <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
+                    </td>
+
+                    {/* Customer */}
+                    <td className="px-4 py-4">
+                      <div className="space-y-2">
+                        <div className="h-4 w-28 animate-pulse rounded bg-gray-200" />
+                        <div className="h-3 w-40 animate-pulse rounded bg-gray-200" />
+                      </div>
+                    </td>
+
+                    {/* Amount */}
+                    <td className="px-4 py-4">
+                      <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-4">
+                      <div className="h-7 w-20 animate-pulse rounded-md bg-gray-200" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            ) : (
+              <tbody className="text-[12px] text-slate-600">
+                {orders.slice(0, 5).length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
+                      No recent orders available.
+                    </td>
+                  </tr>
+                ) : (
+                  orders.slice(0, 5).map((order, index) => {
+                    const status = order.status || "Pending";
+
+                    const orderId =
+                      order.orderId || order.order_id || order.id || order._id;
+
+                    const orderNumber =
+                      order.orderNumber ||
+                      order.order_number ||
+                      String(orderId || index + 1).slice(0, 10);
+
+                    const amountVal =
+                      order.eligibleAmount ??
+                      order.seller_order_total ??
+                      order.payable_amount ??
+                      order.totalAmount ??
+                      order.total ??
+                      0;
+
+                    const formattedAmount = `₹${Number(
+                      amountVal,
+                    ).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+
+                    return (
+                      <tr
+                        key={orderId || index}
+                        className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
+                      >
+                        <td className="px-4 py-3 text-start tabular-nums">
+                          {index + 1}.
+                        </td>
+
+                        <td className="px-4 py-3 font-medium">
+                          {renderOrderLink(orderId, orderNumber)}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {renderCustomerDetails(order)}
+                        </td>
+
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          {formattedAmount}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <StatusPill value={status} />
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
             )}
-            {orders.slice(0, 5).map((order, index) => {
-              const status = order.status || "Pending";
-              const orderId =
-                order.orderId || order.order_id || order.id || order._id;
-              const orderNumber =
-                order.orderNumber ||
-                order.order_number ||
-                String(orderId || index + 1).slice(0, 10);
-
-              const amountVal =
-                order.eligibleAmount ??
-                order.seller_order_total ??
-                order.payable_amount ??
-                order.totalAmount ??
-                order.total ??
-                0;
-              const formattedAmount = `₹${Number(amountVal).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
-
-              return (
-                <tr
-                  key={orderId || index}
-                  className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
-                >
-                  <td className="px-4 py-3 text-start tabular-nums">
-                    {index + 1}.
-                  </td>
-                  <td className="px-4 py-3 font-medium">
-                    {renderOrderLink(orderId, orderNumber)}
-                  </td>
-                  <td className="px-4 py-3">{renderCustomerDetails(order)}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {formattedAmount}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusPill value={status} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+          </table>
+        </div>
       </section>
     </div>
   );
