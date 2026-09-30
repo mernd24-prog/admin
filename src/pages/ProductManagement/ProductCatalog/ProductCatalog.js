@@ -281,8 +281,7 @@ const ProductCatalog = () => {
   const revisionFilter = normalizeRevisionFilterValue(
     appliedFilters?.revisionStatus?.value,
   );
-  const isApprovedFilter =
-    appliedFilters?.approvalStatus?.value === "Approved";
+  const isApprovedFilter = appliedFilters?.approvalStatus?.value === "Approved";
   const approvalStatusToApiStatus = {
     Pending: "pending",
     Approved: "approved",
@@ -1062,7 +1061,6 @@ const ProductCatalog = () => {
             dateFrom={true}
             dateTo={true}
             userOptions={sellerListData}
-            sellerLoading={sellerLoading}
             approvalOptions={APPROVAL_STATUS_OPTIONS}
             revisionOptions={REVISION_STATUS_OPTIONS}
             activationStatusOptions={ACTIVATION_STATUS_OPTIONS}
