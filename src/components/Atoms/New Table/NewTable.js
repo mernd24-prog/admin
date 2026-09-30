@@ -19,7 +19,12 @@ export default function SearchComponent({
   loading = false,
   filters,
   setFilters,
+  isSellerName = false,
   isSellerStoreName = false,
+  userOptions = [],
+  storeOptions = [],
+  sellerLoading = false,
+  storeLoading = false,
   isProduct = false,
   isUser = false,
   isCategory = false,
@@ -35,8 +40,6 @@ export default function SearchComponent({
   isStatusAction,
   isPermanentDeleteAction = false,
   productOptions = [],
-  userOptions = [],
-  sellerLoading = false,
   categoryOptions = [],
   activationStatusOptions = [],
   approvalOptions = [],
@@ -72,12 +75,15 @@ export default function SearchComponent({
   hideBottomBorder = false,
 }) {
   const location = useLocation();
+
   const inferredModule = getRouteModuleCandidates(location.pathname)[0];
   const guardModule = requiredModule || inferredModule;
+
   const hasAdvancedFilters = Boolean(
     isBrand ||
     isProduct ||
     isUser ||
+    isSellerName ||
     isSellerStoreName ||
     isDelete ||
     isCategory ||
@@ -90,14 +96,16 @@ export default function SearchComponent({
     orderFrom ||
     orderTo,
   );
+
   const [searchDown, setSearchDown] = useState(
     defaultSearchOpen || (!isSearchDown && hasAdvancedFilters),
   );
+
   const [, setFilteredProducts] = useState([]);
   const [isFiltering] = useState(false);
+
   const activeFilterCount = (() => {
     const count = Object.entries(filters || {}).filter(([key, value]) => {
-      // Ignore search and date range keys
       if (
         key === "search" ||
         key === "dateFrom" ||
@@ -119,7 +127,6 @@ export default function SearchComponent({
       );
     }).length;
 
-    // Count Date Range as one filter
     const hasDateRange =
       filters?.dateFrom ||
       filters?.dateTo ||
@@ -136,38 +143,73 @@ export default function SearchComponent({
         [field]: value,
       };
 
+      if (field === "sellerName") {
+        nextFilters.storeName = {
+          value: "",
+          label: "All Stores",
+        };
+      }
+
       if (exclusiveStatusFilters) {
         if (
           field === "activationStatus" &&
           value?.value &&
           value.value !== "All"
         ) {
-          nextFilters.approvalStatus = { value: "All", label: "All" };
+          nextFilters.approvalStatus = {
+            value: "All",
+            label: "All",
+          };
         }
+
         if (
           field === "approvalStatus" &&
           value?.value &&
           value.value !== "All"
         ) {
-          nextFilters.activationStatus = { value: "All", label: "All" };
+          nextFilters.activationStatus = {
+            value: "All",
+            label: "All",
+          };
         }
       }
 
       return nextFilters;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   };
 
   const getClearedFilters = useCallback(
     (previousFilters = {}) => ({
       ...previousFilters,
+
       search: "",
 
-      ...(isSelectNearSearch ? { country: { value: "", label: "All" } } : {}),
+      ...(isSelectNearSearch
+        ? {
+            country: {
+              value: "",
+              label: "All",
+            },
+          }
+        : {}),
 
-      ...(isBrand ? { brand: { value: "", label: "All" } } : {}),
+      ...(isBrand
+        ? {
+            brand: {
+              value: "",
+              label: "All",
+            },
+          }
+        : {}),
 
-      ...(isProduct ? { product: { value: "All", label: "All" } } : {}),
+      ...(isProduct
+        ? {
+            product: {
+              value: "All",
+              label: "All",
+            },
+          }
+        : {}),
 
       ...(isUser || isDelete
         ? {
@@ -178,11 +220,20 @@ export default function SearchComponent({
           }
         : {}),
 
-      ...(isSellerStoreName
+      ...(isSellerName
         ? {
             sellerName: {
               value: "",
               label: "All Sellers",
+            },
+          }
+        : {}),
+
+      ...(isSellerStoreName
+        ? {
+            storeName: {
+              value: "",
+              label: "All Stores",
             },
           }
         : {}),
@@ -197,18 +248,40 @@ export default function SearchComponent({
         : {}),
 
       ...(isActivationStatus
-        ? { activationStatus: { value: "All", label: "All" } }
+        ? {
+            activationStatus: {
+              value: "All",
+              label: "All",
+            },
+          }
         : {}),
 
       ...(isApprovalOptions
-        ? { approvalStatus: { value: "All", label: "All" } }
+        ? {
+            approvalStatus: {
+              value: "All",
+              label: "All",
+            },
+          }
         : {}),
 
       ...(isRevisionOptions
-        ? { revisionStatus: { value: "All", label: "All" } }
+        ? {
+            revisionStatus: {
+              value: "All",
+              label: "All",
+            },
+          }
         : {}),
 
-      ...(isProductType ? { productType: { value: "", label: "All" } } : {}),
+      ...(isProductType
+        ? {
+            productType: {
+              value: "",
+              label: "All",
+            },
+          }
+        : {}),
 
       ...(dateFrom ? { dateFrom: "" } : {}),
       ...(dateTo ? { dateTo: "" } : {}),
@@ -225,6 +298,7 @@ export default function SearchComponent({
       isProduct,
       isProductType,
       isSelectNearSearch,
+      isSellerName,
       isSellerStoreName,
       isUser,
     ],
@@ -234,7 +308,6 @@ export default function SearchComponent({
     setFilters((prev) => getClearedFilters(prev));
     handleSearchRemove?.();
     setFilteredProducts([]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getClearedFilters, handleSearchRemove, setFilters]);
 
   const handleSearchDown = () => {
@@ -247,6 +320,7 @@ export default function SearchComponent({
     if (selectedRow.length === 0) {
       return;
     }
+
     if (handleAction) {
       handleAction(action, selectedRow);
     }
@@ -257,16 +331,19 @@ export default function SearchComponent({
       className="admin-legacy-filter-card w-full"
       style={hideBottomBorder ? { borderBottom: "none" } : undefined}
     >
+      {/* Search Header */}
       <div
-        className={`flex flex-col gap-3 mb-8 md:flex-row md:items-start md:justify-between ${mobailClassName}`}
+        className={`mb-8 flex flex-col gap-3 md:flex-row md:items-start md:justify-between ${mobailClassName}`}
       >
         <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center md:flex-[1_1_640px]">
           <div
-            className={`w-full min-w-0 ${largeSearchInput ? "md:max-w-2xl" : "md:max-w-md"}`}
+            className={`w-full min-w-0 ${
+              largeSearchInput ? "md:max-w-2xl" : "md:max-w-md"
+            }`}
           >
             <SearchInput
               type="text"
-              placeholder={placeholder ? placeholder : "Search"}
+              placeholder={placeholder || "Search"}
               searchTerm={filters.search}
               handleChange={(e) => handleFilterChange("search", e.target.value)}
               disabled={isFiltering}
@@ -276,18 +353,20 @@ export default function SearchComponent({
               large={largeSearchInput}
             />
           </div>
+
           {isSelectNearSearch && (
             <div className="shrink-0">
               <FilterSelect
-                label={""}
+                label=""
                 value={filters.country}
                 options={countryOptions}
                 onChange={(option) => handleFilterChange("country", option)}
-                placeholder={`All `}
-                className={`admin-field-inline w-full sm:w-44`}
+                placeholder="All"
+                className="admin-field-inline w-full sm:w-44"
               />
             </div>
           )}
+
           {isSearchDown && hasAdvancedFilters && (
             <Button
               onClick={handleSearchDown}
@@ -295,7 +374,9 @@ export default function SearchComponent({
               disabled={isFiltering}
             >
               <IoIosArrowDown
-                className={`text-xl text-[var(--admin-blue)] transition-transform duration-200 ${searchDown ? "rotate-180" : ""}`}
+                className={`text-xl text-[var(--admin-blue)] transition-transform duration-200 ${
+                  searchDown ? "rotate-180" : ""
+                }`}
               />
             </Button>
           )}
@@ -303,7 +384,7 @@ export default function SearchComponent({
           {!(isSearchShow && hasAdvancedFilters && searchDown) && (
             <Button
               onClick={applyFilters}
-              className={`button-primary h-9 shrink-0 !min-h-9`}
+              className="button-primary h-9 shrink-0 !min-h-9"
               disabled={isFiltering}
             >
               {isFiltering ? "Searching..." : "Search"}
@@ -355,7 +436,7 @@ export default function SearchComponent({
                 disabled={selectedRow.length === 0 || loading || isFiltering}
                 requiredModule={guardModule}
                 requiredAction="delete"
-                className="h-9 !min-h-9 border-red-700 text-red-700 gap-2"
+                className="h-9 !min-h-9 gap-2 border-red-700 text-red-700"
               >
                 <MdOutlineDeleteOutline className="text-xl" />
                 Delete Permanently
@@ -371,7 +452,7 @@ export default function SearchComponent({
                 className={
                   selectedRow.length === 0
                     ? "h-9 !min-h-9 cursor-not-allowed border-[var(--admin-line)] gap-2"
-                    : "h-9 !min-h-9 border-[var(--admin-blue)] text-[var(--admin-blue)] gap-2"
+                    : "h-9 !min-h-9 gap-2 border-[var(--admin-blue)] text-[var(--admin-blue)]"
                 }
               >
                 <MdOutlineDeleteOutline className="text-xl" />
@@ -382,6 +463,7 @@ export default function SearchComponent({
         )}
       </div>
 
+      {/* Advanced Filters */}
       {isSearchShow && hasAdvancedFilters && (
         <div
           className={`transition-all duration-300 ease-in-out ${
@@ -392,42 +474,53 @@ export default function SearchComponent({
               : "pointer-events-none max-h-0 overflow-hidden opacity-0"
           }`}
         >
-          <div className="flex flex-col gap-3 ">
+          <div className="flex flex-col gap-3">
             <div className="flex shrink-0 items-center justify-between gap-1.5">
               <div className="flex items-center gap-1.5">
                 <MdFilterList size={16} className="text-[var(--admin-muted)]" />
+
                 <span className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
                   Filters
                 </span>
+
                 <span
-                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--admin-gold)] px-1.5 text-[10px] font-bold text-[var(--admin-navy)] ${activeFilterCount > 0 ? "visible" : "invisible"}`}
+                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--admin-gold)] px-1.5 text-[10px] font-bold text-[var(--admin-navy)] ${
+                    activeFilterCount > 0 ? "visible" : "invisible"
+                  }`}
                   aria-hidden={activeFilterCount === 0}
                 >
                   {activeFilterCount || 0}
                 </span>
               </div>
+
               <button
                 type="button"
                 onClick={clearFilters}
                 disabled={isFiltering || activeFilterCount === 0}
                 aria-hidden={activeFilterCount === 0}
                 tabIndex={activeFilterCount > 0 ? 0 : -1}
-                className={`shrink-0 whitespace-nowrap text-xs font-medium text-red-500 transition-colors hover:text-red-700 disabled:cursor-not-allowed ${activeFilterCount > 0 ? "visible" : "invisible pointer-events-none"}`}
+                className={`shrink-0 whitespace-nowrap text-xs font-medium text-red-500 transition-colors hover:text-red-700 disabled:cursor-not-allowed ${
+                  activeFilterCount > 0
+                    ? "visible"
+                    : "pointer-events-none invisible"
+                }`}
               >
                 × Clear filters
               </button>
             </div>
+
             <div
               className={
                 compactFilterBar
                   ? `grid w-full min-w-0 items-start gap-x-3 gap-y-4 text-xs ${filterGridClassName}`
-                  : "flex min-w-0 flex-1 items-center gap-x-3 gap-y-4 text-xs flex-wrap"
+                  : "flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-4 text-xs"
               }
             >
+              {/* Brand */}
               {isBrand && (
                 <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
                   <FilterSelect
-                    label={`Brand`}
+                    label="Brand"
                     value={filters.brand}
                     options={brandOption || []}
                     isSearchable={false}
@@ -436,10 +529,11 @@ export default function SearchComponent({
                 </div>
               )}
 
+              {/* Product */}
               {isProduct && (
                 <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
                   <FilterSelect
-                    label={productLabel ? productLabel : `Product`}
+                    label={productLabel || "Product"}
                     value={filters.product}
                     options={productOptions || []}
                     isSearchable={false}
@@ -448,10 +542,11 @@ export default function SearchComponent({
                 </div>
               )}
 
+              {/* User */}
               {isUser && (
                 <div>
                   <FilterSelect
-                    label={userLabel ? userLabel : "User"}
+                    label={userLabel || "User"}
                     value={filters.sellerName}
                     options={userOptions}
                     isSearchable={false}
@@ -461,10 +556,12 @@ export default function SearchComponent({
                   />
                 </div>
               )}
+
+              {/* Delete */}
               {isDelete && (
                 <div>
                   <FilterSelect
-                    label={deleteLable ? deleteLable : "Delete Order"}
+                    label={deleteLable || "Delete Order"}
                     value={filters.sellerName}
                     options={selectJson?.deleteStatus}
                     isSearchable={false}
@@ -474,18 +571,27 @@ export default function SearchComponent({
                   />
                 </div>
               )}
-              {isSellerStoreName && (
+
+              {/* Seller Name */}
+              {isSellerName && (
                 <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
                   <FilterSelect
-                    label="Seller Store Name"
+                    label="Seller Name"
                     value={
-                      filters?.sellerName || { value: "", label: "All Sellers" }
+                      filters?.sellerName || {
+                        value: "",
+                        label: "All Sellers",
+                      }
                     }
                     options={[
-                      { value: "", label: "All Sellers" },
+                      {
+                        value: "",
+                        label: "All Sellers",
+                      },
                       ...(userOptions || []),
                     ]}
-                    isSearchable={true}
+                    isSearchable
+                    isLoading={sellerLoading}
                     onChange={(option) =>
                       handleFilterChange("sellerName", option)
                     }
@@ -493,13 +599,55 @@ export default function SearchComponent({
                 </div>
               )}
 
+              {/* Store Name */}
+              {isSellerStoreName && (
+                <div className={compactFilterBar ? "min-w-0" : "shrink-0"}>
+                  <FilterSelect
+                    label="Store Name"
+                    value={
+                      filters?.sellerName?.value
+                        ? filters?.storeName || {
+                            value: "",
+                            label: "All Stores",
+                          }
+                        : {
+                            value: "",
+                            label: "First select the seller",
+                          }
+                    }
+                    options={
+                      filters?.sellerName?.value
+                        ? [
+                            {
+                              value: "",
+                              label: "All Stores",
+                            },
+                            ...(storeOptions || []),
+                          ]
+                        : []
+                    }
+                    isSearchable={Boolean(filters?.sellerName?.value)}
+                    isLoading={storeLoading}
+                    isDisabled={!filters?.sellerName?.value}
+                    placeholder={
+                      filters?.sellerName?.value
+                        ? "Select Store"
+                        : "First select the seller"
+                    }
+                    onChange={(option) =>
+                      handleFilterChange("storeName", option)
+                    }
+                  />
+                </div>
+              )}
+              {/* Category */}
               {isCategory && (
                 <div className={compactFilterBar ? "min-w-0" : undefined}>
                   <FilterSelect
-                    label={`Category`}
+                    label="Category"
                     value={filters.category}
                     options={categoryOptions}
-                    isSearchable={true}
+                    isSearchable
                     onChange={(option) =>
                       handleFilterChange("category", option)
                     }
@@ -507,12 +655,11 @@ export default function SearchComponent({
                 </div>
               )}
 
+              {/* Activation Status */}
               {isActivationStatus && (
                 <div className={compactFilterBar ? "min-w-0" : undefined}>
                   <FilterSelect
-                    label={
-                      activationStatus ? activationStatus : `Activation status`
-                    }
+                    label={activationStatus || "Activation status"}
                     value={filters.activationStatus}
                     options={activationStatusOptions}
                     isSearchable={false}
@@ -523,10 +670,11 @@ export default function SearchComponent({
                 </div>
               )}
 
+              {/* Approval Status */}
               {isApprovalOptions && (
                 <div className={compactFilterBar ? "min-w-0" : undefined}>
                   <FilterSelect
-                    label={approvalStatus ? approvalStatus : "Approval Status"}
+                    label={approvalStatus || "Approval Status"}
                     value={filters.approvalStatus}
                     options={approvalOptions}
                     isSearchable={false}
@@ -537,6 +685,7 @@ export default function SearchComponent({
                 </div>
               )}
 
+              {/* Revision Status */}
               {isRevisionOptions && (
                 <div className={compactFilterBar ? "min-w-0" : undefined}>
                   <FilterSelect
@@ -551,10 +700,11 @@ export default function SearchComponent({
                 </div>
               )}
 
+              {/* Product Type */}
               {isProductType && (
                 <div className={compactFilterBar ? "min-w-0" : undefined}>
                   <FilterSelect
-                    label={`Product type`}
+                    label="Product type"
                     value={filters.productType}
                     options={productTypeOptions}
                     isSearchable={false}
@@ -565,6 +715,7 @@ export default function SearchComponent({
                 </div>
               )}
 
+              {/* Date Range */}
               {dateFrom && dateTo && (
                 <div className={compactFilterBar ? "min-w-0" : "min-w-40"}>
                   <DateRangeFilter
@@ -584,9 +735,11 @@ export default function SearchComponent({
                 </div>
               )}
 
+              {/* Date From */}
               {dateFrom && !dateTo && (
                 <div>
                   <label className="admin-label">Date from</label>
+
                   <div className="relative">
                     <Input
                       type="date"
@@ -602,9 +755,11 @@ export default function SearchComponent({
                 </div>
               )}
 
+              {/* Date To */}
               {dateTo && !dateFrom && (
                 <div>
                   <label className="admin-label">To (Date)</label>
+
                   <div className="relative">
                     <Input
                       type="date"
@@ -620,23 +775,28 @@ export default function SearchComponent({
                   </div>
                 </div>
               )}
+
+              {/* Order From */}
               {orderFrom && (
                 <Input
-                  label={`Order From`}
-                  labelName={fromLabel ? fromLabel : "Order From"}
-                  placeholder={`Order from [$]`}
-                />
-              )}
-              {orderTo && (
-                <Input
-                  label={`Order To`}
-                  labelName={toLabel ? toLabel : "Order To"}
-                  placeholder={`Order to [$]`}
+                  label="Order From"
+                  labelName={fromLabel || "Order From"}
+                  placeholder="Order from [$]"
                 />
               )}
 
+              {/* Order To */}
+              {orderTo && (
+                <Input
+                  label="Order To"
+                  labelName={toLabel || "Order To"}
+                  placeholder="Order to [$]"
+                />
+              )}
+
+              {/* Filter Actions */}
               {!hideFilterActions && (
-                <div className="flex items-end gap-2 mb-2">
+                <div className="mb-2 flex items-end gap-2">
                   <Button
                     onClick={applyFilters}
                     className="admin-btn-secondary h-9 !min-h-9 !px-4"
@@ -644,6 +804,7 @@ export default function SearchComponent({
                   >
                     {isFiltering ? "Searching..." : "Search"}
                   </Button>
+
                   <Button
                     onClick={clearFilters}
                     disabled={isFiltering}

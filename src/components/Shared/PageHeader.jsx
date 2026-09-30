@@ -145,7 +145,7 @@ const PageHeader = ({
 
       {/* Action buttons */}
       {actions && (
-        <div className="admin-page-header-actions flex items-center gap-2 flex-wrap flex-shrink-0">
+        <div className="admin-page-header-actions  flex items-center gap-2 flex-wrap flex-shrink-0">
           {applyHeaderActionClass(actions)}
         </div>
       )}
