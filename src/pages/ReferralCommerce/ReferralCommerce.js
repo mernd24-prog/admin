@@ -1426,6 +1426,12 @@ const ProductReferralAmounts = () => {
               {
                 key: "productTitle",
                 label: "Product",
+                className: "w-[280px] max-w-[280px]",
+                render: (value) => (
+                  <div className="max-w-[280px] truncate" title={value || "—"}>
+                    {value || "—"}
+                  </div>
+                ),
               },
               {
                 key: "amountType",
