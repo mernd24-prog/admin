@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdAdd, MdReceiptLong, MdVisibility } from "react-icons/md";
+
 import {
   ConfirmModal,
   DataTable,
@@ -10,8 +11,10 @@ import {
   PageHeader,
   UserLink,
 } from "../../components/Shared";
+
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
+
 import {
   createTaxCreditNote,
   createTaxInvoice,
@@ -19,10 +22,16 @@ import {
   getTaxInvoices,
   getTaxReports,
 } from "../../Redux/adminCoreSlice";
+
 import { ACTIONS } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
+import useStoreNames from "../../hooks/useStoreNames";
+
 import { formatDateTime12Hour } from "../../utils/formatters";
+import { resolveStoreName } from "../../utils/storeNameUtils";
+
 import { dropdownApi } from "../../_helpers/dropdownApi";
+
 import FormSection from "../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
@@ -40,24 +49,6 @@ const FILTER_FIELDS = [
         searchFields: "organizationName,businessName,legalBusinessName",
       }),
   },
-  // {
-  //   key: "organizationId",
-  //   type: "text",
-  //   label: "Organization ID",
-  //   width: "w-52",
-  // },
-  // {
-  //   key: "buyerId",
-  //   type: "asyncDropdown",
-  //   label: "Buyer",
-  //   load: (search) =>
-  //     dropdownApi.getBuyers({
-  //       keyWord: search,
-  //       searchFields: "full_name,email",
-  //     }),
-  // },
-  // { key: "hsnCode", type: "text", label: "HSN", width: "w-32" },
-  // { key: "state", type: "text", label: "State", width: "w-36" },
   {
     key: "referenceType",
     type: "select",
@@ -87,6 +78,7 @@ const FILTER_FIELDS = [
 ];
 
 const EMPTY_INVOICE = { orderId: "" };
+
 const EMPTY_CREDIT = {
   orderId: "",
   invoiceId: "",
@@ -101,16 +93,14 @@ const firstDefined = (...values) =>
   values.find((value) => value !== undefined && value !== null && value !== "");
 
 const money = (value) => Number(value || 0).toFixed(2);
-const shortId = (value = "") => {
-  const text = String(value || "");
-  return text.length > 12
-    ? `${text.slice(0, 8)}...${text.slice(-4)}`
-    : text || "—";
-};
 
 const getListData = (payload = {}) => {
   const data = payload?.data?.data;
-  if (Array.isArray(data)) return { list: data, total: data.length };
+
+  if (Array.isArray(data)) {
+    return { list: data, total: data.length };
+  }
+
   return {
     list: data?.list || data?.items || [],
     total: Number(
@@ -121,18 +111,26 @@ const getListData = (payload = {}) => {
 
 const TaxCompliance = () => {
   const dispatch = useDispatch();
+
+  // Global store-name mapping
+  const { storeNameMap } = useStoreNames();
+
   const selector = useSelector((state) => state.adminCore);
+
   const invoices = getListData(selector.taxInvoicesData);
   const creditNotes = getListData(selector.taxCreditNotesData);
+
   const reportEntries = useMemo(
     () => selector?.taxReportsData?.data?.data?.entries || [],
     [selector?.taxReportsData],
   );
+
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "issued_at",
     defaultSortDir: "desc",
   });
+
   const { toQueryParams } = list;
 
   const [activeTab, setActiveTab] = useState("invoices");
@@ -149,11 +147,14 @@ const TaxCompliance = () => {
     try {
       setLoading(true);
       setError("");
+
       const params = toQueryParams();
+
       const paging = {
         limit: params.limit,
         offset: (params.page - 1) * params.limit,
       };
+
       await Promise.all([
         dispatch(getTaxInvoices({ ...params, ...paging })).unwrap(),
         dispatch(getTaxCreditNotes({ ...params, ...paging })).unwrap(),
@@ -162,6 +163,7 @@ const TaxCompliance = () => {
     } catch (requestError) {
       const message =
         requestError?.message || requestError || "Failed to fetch tax data";
+
       setError(message);
       toast.error(message);
     } finally {
@@ -184,15 +186,20 @@ const TaxCompliance = () => {
       toast.error("Order ID is required");
       return;
     }
+
     try {
       setLoading(true);
+
       await dispatch(
         createTaxInvoice({ orderId: invoiceForm.orderId.trim() }),
       ).unwrap();
+
       toast.success("Invoice generated successfully");
+
       setInvoiceModal(false);
       setConfirmAction(null);
       setInvoiceForm(EMPTY_INVOICE);
+
       await fetchData();
     } catch (requestError) {
       toast.error(
@@ -208,12 +215,15 @@ const TaxCompliance = () => {
       toast.error("Order ID and taxable amount are required");
       return;
     }
+
     if (Number(creditForm.taxableAmount) <= 0) {
       toast.error("Taxable amount must be greater than zero");
       return;
     }
+
     try {
       setLoading(true);
+
       await dispatch(
         createTaxCreditNote({
           ...creditForm,
@@ -228,10 +238,13 @@ const TaxCompliance = () => {
             : {}),
         }),
       ).unwrap();
+
       toast.success("Credit note generated successfully");
+
       setCreditModal(false);
       setConfirmAction(null);
       setCreditForm(EMPTY_CREDIT);
+
       await fetchData();
     } catch (requestError) {
       toast.error(
@@ -243,6 +256,8 @@ const TaxCompliance = () => {
       setLoading(false);
     }
   }, [creditForm, dispatch, fetchData]);
+
+  // ==================== Invoice Columns ====================
 
   const invoiceColumns = useMemo(
     () => [
@@ -264,12 +279,16 @@ const TaxCompliance = () => {
       },
       {
         key: "organization_id",
-        label: "Organization",
-        render: (value, row) => (
-          <span className="font-mono text-xs text-gray-500">
-            {shortId(value || row.organizationId)}
-          </span>
-        ),
+        label: "Store Name",
+        render: (_, row) => {
+          const { name, id } = resolveStoreName(row, storeNameMap);
+
+          return (
+            <span className="font-medium text-[var(--admin-navy)]" title={id}>
+              {name}
+            </span>
+          );
+        },
       },
       {
         key: "buyer_id",
@@ -280,6 +299,7 @@ const TaxCompliance = () => {
             row.buyer?.name ||
             row.buyer?.full_name ||
             row.buyer?.email;
+
           return name ? (
             <UserLink
               userId={value || row.buyerId || row.buyer?.id || row.buyer?._id}
@@ -343,8 +363,10 @@ const TaxCompliance = () => {
         ),
       },
     ],
-    [],
+    [storeNameMap],
   );
+
+  // ==================== Credit Note Columns ====================
 
   const creditColumns = useMemo(
     () => [
@@ -366,12 +388,16 @@ const TaxCompliance = () => {
       },
       {
         key: "organization_id",
-        label: "Organization",
-        render: (value, row) => (
-          <span className="font-mono text-xs text-gray-500">
-            {shortId(value || row.organizationId)}
-          </span>
-        ),
+        label: "Store Name",
+        render: (_, row) => {
+          const { name, id } = resolveStoreName(row, storeNameMap);
+
+          return (
+            <span className="font-medium text-[var(--admin-navy)]" title={id}>
+              {name}
+            </span>
+          );
+        },
       },
       {
         key: "reference",
@@ -426,19 +452,25 @@ const TaxCompliance = () => {
         ),
       },
     ],
-    [],
+    [storeNameMap],
   );
+
+  // ==================== Tax Report Columns ====================
 
   const reportColumns = useMemo(
     () => [
       {
         key: "organization_id",
-        label: "Organization",
-        render: (value, row) => (
-          <span className="font-mono text-xs text-gray-500">
-            {shortId(value || row.organizationId)}
-          </span>
-        ),
+        label: "Store Name",
+        render: (_, row) => {
+          const { name, id } = resolveStoreName(row, storeNameMap);
+
+          return (
+            <span className="font-medium text-[var(--admin-navy)]" title={id}>
+              {name}
+            </span>
+          );
+        },
       },
       {
         key: "tax_component",
@@ -473,7 +505,7 @@ const TaxCompliance = () => {
         ),
       },
     ],
-    [],
+    [storeNameMap],
   );
 
   const activeColumns =
@@ -482,12 +514,14 @@ const TaxCompliance = () => {
       : activeTab === "report"
         ? reportColumns
         : invoiceColumns;
+
   const activeRows =
     activeTab === "creditNotes"
       ? creditNotes.list
       : activeTab === "report"
         ? reportEntries
         : invoices.list;
+
   const activeTotal =
     activeTab === "creditNotes"
       ? creditNotes.total
@@ -506,6 +540,7 @@ const TaxCompliance = () => {
           },
         ];
       }
+
       if (activeTab === "creditNotes") {
         return [
           {
@@ -515,6 +550,7 @@ const TaxCompliance = () => {
           },
         ];
       }
+
       return [];
     },
     [activeTab],
@@ -535,6 +571,7 @@ const TaxCompliance = () => {
               <button type="button" onClick={() => setInvoiceModal(true)}>
                 <MdReceiptLong size={16} /> Generate Invoice
               </button>
+
               <button type="button" onClick={() => setCreditModal(true)}>
                 <MdAdd size={16} /> Credit Note
               </button>
@@ -543,15 +580,15 @@ const TaxCompliance = () => {
         }
       />
 
-<Tabs
-  tabs={[
-    { value: "invoices", label: "Invoices" },
-    { value: "creditNotes", label: "Credit Notes" },
-    { value: "report", label: "Tax Report" },
-  ]}
-  activeTab={activeTab}
-  onChange={setActiveTab}
-/>
+      <Tabs
+        tabs={[
+          { value: "invoices", label: "Invoices" },
+          { value: "creditNotes", label: "Credit Notes" },
+          { value: "report", label: "Tax Report" },
+        ]}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+      />
 
       <DataTable
         columns={activeColumns}
@@ -589,6 +626,7 @@ const TaxCompliance = () => {
         }}
       />
 
+      {/* Generate Invoice Modal */}
       <DefaultModal
         isOpen={invoiceModal}
         onClose={() => {
@@ -605,7 +643,6 @@ const TaxCompliance = () => {
         isButtonView={true}
       >
         <div className="space-y-5">
-          {/* ==================== Invoice Information ==================== */}
           <FormSection
             title="Invoice Information"
             description="Enter the order details to generate the invoice."
@@ -629,6 +666,7 @@ const TaxCompliance = () => {
         </div>
       </DefaultModal>
 
+      {/* Create Credit Note Modal */}
       <DefaultModal
         isOpen={creditModal}
         onClose={() => setCreditModal(false)}
@@ -639,13 +677,11 @@ const TaxCompliance = () => {
         isButtonView={true}
       >
         <div className="space-y-5">
-          {/* ==================== Credit Note Information ==================== */}
           <FormSection
             title="Credit Note Information"
             description="Enter the order and reference details for the credit note."
           >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {/* Order ID */}
               <div className="md:col-span-2">
                 <FormInput
                   label="Order ID"
@@ -662,7 +698,6 @@ const TaxCompliance = () => {
                 />
               </div>
 
-              {/* Invoice ID */}
               <div className="md:col-span-2">
                 <FormInput
                   label="Invoice ID"
@@ -678,7 +713,6 @@ const TaxCompliance = () => {
                 />
               </div>
 
-              {/* Reference Type */}
               <FormSelectGroup
                 label="Reference Type"
                 name="referenceType"
@@ -699,7 +733,6 @@ const TaxCompliance = () => {
                 placeholder="Select reference type"
               />
 
-              {/* Reference ID */}
               <FormInput
                 label="Reference ID"
                 name="referenceId"
@@ -715,13 +748,11 @@ const TaxCompliance = () => {
             </div>
           </FormSection>
 
-          {/* ==================== Amount Details ==================== */}
           <FormSection
             title="Amount Details"
             description="Enter the taxable and applicable tax amounts for the credit note."
           >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {/* Taxable Amount */}
               <FormInput
                 label="Taxable Amount"
                 name="taxableAmount"
@@ -738,7 +769,6 @@ const TaxCompliance = () => {
                 required
               />
 
-              {/* Tax Amount */}
               <FormInput
                 label="Tax Amount"
                 name="taxAmount"
@@ -756,7 +786,6 @@ const TaxCompliance = () => {
             </div>
           </FormSection>
 
-          {/* ==================== Additional Information ==================== */}
           <FormSection
             title="Additional Information"
             description="Provide the reason for creating this credit note."
@@ -779,16 +808,18 @@ const TaxCompliance = () => {
         </div>
       </DefaultModal>
 
+      {/* Document Details Modal */}
       <DefaultModal
         isOpen={Boolean(selectedDoc)}
         onClose={() => setSelectedDoc(null)}
         title={`${selectedDoc?.type || "Document"} Detail`}
       >
-        <pre className="bg-gray-50 rounded p-3 text-xs overflow-auto">
+        <pre className="overflow-auto rounded bg-gray-50 p-3 text-xs">
           {JSON.stringify(selectedDoc?.row || {}, null, 2)}
         </pre>
       </DefaultModal>
 
+      {/* Invoice Confirmation */}
       <ConfirmModal
         open={confirmAction === "invoice"}
         onClose={() => setConfirmAction(null)}
@@ -799,6 +830,8 @@ const TaxCompliance = () => {
         confirmLabel="Generate invoice"
         loading={loading}
       />
+
+      {/* Credit Note Confirmation */}
       <ConfirmModal
         open={confirmAction === "credit"}
         onClose={() => setConfirmAction(null)}

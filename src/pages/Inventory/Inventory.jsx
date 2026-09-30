@@ -18,9 +18,7 @@ import {
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  ConfirmModal,
   DataTable,
-  FilterBar,
   FormSection,
   ImageThumbnail,
   PageHeader,
@@ -44,11 +42,9 @@ import ImageGallery from "../../components/Atoms/ImageGallery/ImageGallery";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 
 import FormInput from "../../components/Atoms/FormInput/FormInput";
-import { getProductImages } from "../../_helpers/productMedia";
+
 import Tabs from "../../components/Shared/Tabs";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
-
-const isSeller = isSellerPanel();
 
 const STOCK_FILTER_OPTIONS = [
   { value: "", label: "All Stock" },
@@ -57,29 +53,29 @@ const STOCK_FILTER_OPTIONS = [
   { value: "low_stock", label: "Low Stock" },
 ];
 
-const FILTERS = [
-  {
-    key: "variantStatus",
-    type: "select",
-    label: "Variant Status",
-    options: [
-      { value: "active", label: "Active" },
-      { value: "inactive", label: "Inactive" },
-      { value: "out_of_stock", label: "Out Of Stock" },
-    ],
-  },
-  {
-    key: "status",
-    type: "select",
-    label: "Product Status",
-    options: [
-      { value: "active", label: "Active" },
-      { value: "inactive", label: "Inactive" },
-      { value: "pending_approval", label: "Pending Approval" },
-      { value: "draft", label: "Draft" },
-    ],
-  },
-];
+// const FILTERS = [
+//   {
+//     key: "variantStatus",
+//     type: "select",
+//     label: "Variant Status",
+//     options: [
+//       { value: "active", label: "Active" },
+//       { value: "inactive", label: "Inactive" },
+//       { value: "out_of_stock", label: "Out Of Stock" },
+//     ],
+//   },
+//   {
+//     key: "status",
+//     type: "select",
+//     label: "Product Status",
+//     options: [
+//       { value: "active", label: "Active" },
+//       { value: "inactive", label: "Inactive" },
+//       { value: "pending_approval", label: "Pending Approval" },
+//       { value: "draft", label: "Draft" },
+//     ],
+//   },
+// ];
 
 const ADJUST_TYPES = [
   { value: "add", label: "Add Stock", icon: MdAdd },
@@ -739,7 +735,7 @@ const Inventory = () => {
 
   const listTableLoading = loading && productRows.length === 0;
 
-  const filterFields = useMemo(() => (isSeller ? [] : FILTERS), []);
+  // const filterFields = useMemo(() => (isSeller ? [] : FILTERS), []);
 
   const pendingCount = useMemo(
     () => detailRows.filter(isPendingStock).length,
@@ -881,10 +877,15 @@ const Inventory = () => {
     const params = { ...toQueryParams(), page: 1, size: 100 };
     const firstResponse = await dispatch(getInventoryList(params)).unwrap();
     const firstRows = getRowsFromResponse(firstResponse);
-    const rowTotal = getVariantTotalFromResponse(firstResponse, firstRows.length);
+    const rowTotal = getVariantTotalFromResponse(
+      firstResponse,
+      firstRows.length,
+    );
     const remaining = await Promise.all(
-      Array.from({ length: Math.max(0, Math.ceil(rowTotal / 100) - 1) }, (_, index) =>
-        dispatch(getInventoryList({ ...params, page: index + 2 })).unwrap(),
+      Array.from(
+        { length: Math.max(0, Math.ceil(rowTotal / 100) - 1) },
+        (_, index) =>
+          dispatch(getInventoryList({ ...params, page: index + 2 })).unwrap(),
       ),
     );
     return [...firstRows, ...remaining.flatMap(getRowsFromResponse)];
@@ -905,7 +906,8 @@ const Inventory = () => {
         currentStock: Number(row.originalStock ?? row.currentStock ?? 0),
         newStock: Number(row.currentStock ?? 0),
       }));
-      if (!exportRows.length) return toast.info("No inventory variants available to export");
+      if (!exportRows.length)
+        return toast.info("No inventory variants available to export");
       exportToExcel(exportRows, {
         filename: `${productId ? normalizeText(detail?.product?.sku || "product") : "inventory"}-stock-template.xlsx`,
         sheetName: "Inventory Stock",
@@ -913,7 +915,10 @@ const Inventory = () => {
       });
       toast.success(`Exported ${exportRows.length} variant rows`);
     } catch (requestError) {
-      const message = getErrorMessage(requestError, "Unable to export inventory");
+      const message = getErrorMessage(
+        requestError,
+        "Unable to export inventory",
+      );
       setImportError(message);
       toast.error(message);
     } finally {
@@ -930,53 +935,124 @@ const Inventory = () => {
       setImportInfo("");
       setImportSuccess("");
       const imported = await parseImportFile(file);
-      if (!imported.length) throw new Error("The selected file did not contain any rows");
+      if (!imported.length)
+        throw new Error("The selected file did not contain any rows");
       const importedColumns = Object.keys(imported[0] || {});
-      const missing = IMPORT_COLUMNS.filter((column) => !importedColumns.includes(column));
-      const unknown = importedColumns.filter((column) => !IMPORT_COLUMNS.includes(column));
-      if (missing.length) throw new Error(buildImportValidationError(`Missing required column(s): ${missing.join(", ")}.`));
-      if (unknown.length) throw new Error(buildImportValidationError(`Unknown column(s): ${unknown.join(", ")}.`));
+      const missing = IMPORT_COLUMNS.filter(
+        (column) => !importedColumns.includes(column),
+      );
+      const unknown = importedColumns.filter(
+        (column) => !IMPORT_COLUMNS.includes(column),
+      );
+      if (missing.length)
+        throw new Error(
+          buildImportValidationError(
+            `Missing required column(s): ${missing.join(", ")}.`,
+          ),
+        );
+      if (unknown.length)
+        throw new Error(
+          buildImportValidationError(
+            `Unknown column(s): ${unknown.join(", ")}.`,
+          ),
+        );
 
-      const catalogRows = productId ? detailRows : await fetchAllInventoryRows();
-      const byIdentity = new Map(catalogRows.map((row) => [getVariantIdentity(row), row]));
-      const bySku = new Map(catalogRows.map((row) => [`${normalizeText(row.productId)}::${normalizeText(row.variantSku)}`, row]));
+      const catalogRows = productId
+        ? detailRows
+        : await fetchAllInventoryRows();
+      const byIdentity = new Map(
+        catalogRows.map((row) => [getVariantIdentity(row), row]),
+      );
+      const bySku = new Map(
+        catalogRows.map((row) => [
+          `${normalizeText(row.productId)}::${normalizeText(row.variantSku)}`,
+          row,
+        ]),
+      );
       const updates = new Map();
       imported.forEach((item, index) => {
         const rowNumber = index + 2;
         const productIdValue = normalizeText(item.productId);
         const variantIdValue = normalizeText(item.variantId);
         const variantSkuValue = normalizeText(item.variantSku);
-        if (!productIdValue || (!variantIdValue && !variantSkuValue)) throw new Error(buildImportValidationError(`Row ${rowNumber}: productId and variantId or variantSku are required.`));
+        if (!productIdValue || (!variantIdValue && !variantSkuValue))
+          throw new Error(
+            buildImportValidationError(
+              `Row ${rowNumber}: productId and variantId or variantSku are required.`,
+            ),
+          );
         const row = variantIdValue
-          ? byIdentity.get([productIdValue, variantIdValue, variantSkuValue].join("::"))
+          ? byIdentity.get(
+              [productIdValue, variantIdValue, variantSkuValue].join("::"),
+            )
           : bySku.get(`${productIdValue}::${variantSkuValue}`);
-        if (!row) throw new Error(buildImportValidationError(`Row ${rowNumber}: product or variant identity was changed or no longer exists.`));
+        if (!row)
+          throw new Error(
+            buildImportValidationError(
+              `Row ${rowNumber}: product or variant identity was changed or no longer exists.`,
+            ),
+          );
         const key = row.id || getVariantIdentity(row);
-        if (updates.has(key)) throw new Error(buildImportValidationError(`Row ${rowNumber}: duplicate variant row.`));
-        const edited = READ_ONLY_IMPORT_COLUMNS.filter((column) => !importValuesMatch(item[column], getExpectedImportValue(row, column), column));
-        if (edited.length) throw new Error(buildImportValidationError(`Row ${rowNumber}: ${edited.join(", ")} cannot be changed.`));
+        if (updates.has(key))
+          throw new Error(
+            buildImportValidationError(
+              `Row ${rowNumber}: duplicate variant row.`,
+            ),
+          );
+        const edited = READ_ONLY_IMPORT_COLUMNS.filter(
+          (column) =>
+            !importValuesMatch(
+              item[column],
+              getExpectedImportValue(row, column),
+              column,
+            ),
+        );
+        if (edited.length)
+          throw new Error(
+            buildImportValidationError(
+              `Row ${rowNumber}: ${edited.join(", ")} cannot be changed.`,
+            ),
+          );
         const stock = Number(item.newStock);
-        if (!Number.isInteger(stock) || stock < 0) throw new Error(`Row ${rowNumber}: newStock must be a non-negative whole number.`);
-        if (stock < Number(row.reservedStock || 0)) throw new Error(`Row ${rowNumber}: newStock cannot be below reserved stock (${row.reservedStock}).`);
+        if (!Number.isInteger(stock) || stock < 0)
+          throw new Error(
+            `Row ${rowNumber}: newStock must be a non-negative whole number.`,
+          );
+        if (stock < Number(row.reservedStock || 0))
+          throw new Error(
+            `Row ${rowNumber}: newStock cannot be below reserved stock (${row.reservedStock}).`,
+          );
         updates.set(key, { row, stock });
       });
-      const changed = [...updates.values()].filter(({ row, stock }) => Number(row.originalStock ?? row.currentStock) !== stock);
+      const changed = [...updates.values()].filter(
+        ({ row, stock }) =>
+          Number(row.originalStock ?? row.currentStock) !== stock,
+      );
       if (!changed.length) {
         setImportInfo("The file is valid, but it contains no stock changes.");
         return;
       }
-      await dispatch(bulkUpdateInventory({ updates: changed.map(({ row, stock }) => ({
-        productId: row.productId,
-        variantId: row.variantId,
-        variantSku: row.variantSku,
-        stock,
-        reason: "Inventory spreadsheet import",
-      })) })).unwrap();
-      setImportSuccess(`Updated stock for ${changed.length} ${changed.length === 1 ? "variant" : "variants"}.`);
+      await dispatch(
+        bulkUpdateInventory({
+          updates: changed.map(({ row, stock }) => ({
+            productId: row.productId,
+            variantId: row.variantId,
+            variantSku: row.variantSku,
+            stock,
+            reason: "Inventory spreadsheet import",
+          })),
+        }),
+      ).unwrap();
+      setImportSuccess(
+        `Updated stock for ${changed.length} ${changed.length === 1 ? "variant" : "variants"}.`,
+      );
       toast.success(`Imported ${changed.length} stock updates`);
       await refresh();
     } catch (importErrorValue) {
-      const message = getErrorMessage(importErrorValue, "Failed to import inventory file");
+      const message = getErrorMessage(
+        importErrorValue,
+        "Failed to import inventory file",
+      );
       setImportError(message);
       toast.error(message);
     } finally {
@@ -1512,11 +1588,23 @@ const Inventory = () => {
     <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
       <p className="font-semibold">How stock import works</p>
       <ol className="mt-1 list-decimal space-y-1 pl-5">
-        <li>Export the latest Excel template. Every product variant is a separate row.</li>
-        <li>Edit only <code className="font-semibold">newStock</code> using a whole number of 0 or more.</li>
-        <li>Import the file. Product IDs, SKUs, names, current stock, and every other column are read-only and are validated.</li>
+        <li>
+          Export the latest Excel template. Every product variant is a separate
+          row.
+        </li>
+        <li>
+          Edit only <code className="font-semibold">newStock</code> using a
+          whole number of 0 or more.
+        </li>
+        <li>
+          Import the file. Product IDs, SKUs, names, current stock, and every
+          other column are read-only and are validated.
+        </li>
       </ol>
-      <p className="mt-2 text-xs">Rows with unchanged stock are skipped. Stock cannot be lower than already reserved stock.</p>
+      <p className="mt-2 text-xs">
+        Rows with unchanged stock are skipped. Stock cannot be lower than
+        already reserved stock.
+      </p>
     </div>
   );
 
@@ -1535,8 +1623,16 @@ const Inventory = () => {
           actions={
             <div className="flex flex-wrap gap-2">
               {importExportActions}
-              <button type="button" className="admin-btn-secondary inline-flex items-center gap-1.5" onClick={refresh} disabled={loading}>
-                <MdRefresh size={17} className={loading ? "animate-spin" : ""} />
+              <button
+                type="button"
+                className="admin-btn-secondary inline-flex items-center gap-1.5"
+                onClick={refresh}
+                disabled={loading}
+              >
+                <MdRefresh
+                  size={17}
+                  className={loading ? "animate-spin" : ""}
+                />
                 {loading ? "Refreshing..." : "Refresh"}
               </button>
             </div>
@@ -1673,13 +1769,20 @@ const Inventory = () => {
       {importHelp}
 
       {importError ? (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><p className="font-semibold">Import issue</p><p className="mt-1 whitespace-pre-wrap">{importError}</p></div>
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="font-semibold">Import issue</p>
+          <p className="mt-1 whitespace-pre-wrap">{importError}</p>
+        </div>
       ) : null}
       {importInfo ? (
-        <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">{importInfo}</div>
+        <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+          {importInfo}
+        </div>
       ) : null}
       {importSuccess ? (
-        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{importSuccess}</div>
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {importSuccess}
+        </div>
       ) : null}
 
       <DataTable
@@ -1712,9 +1815,9 @@ const Inventory = () => {
             />
           </div>
         }
-        filterBar={
-          <FilterBar filters={filterFields} listPage={list} loading={false} />
-        }
+        // filterBar={
+        //   <FilterBar filters={filterFields} listPage={list} loading={false} />
+        // }
         emptyText="No inventory products found"
         onRowClick={(row) => navigate(`/app/inventory/${row.productId}`)}
         rowActions={(row) => {
