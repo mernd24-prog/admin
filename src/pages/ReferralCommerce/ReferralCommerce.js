@@ -2751,9 +2751,7 @@ const ReferralCommerce = () => {
                   <td className="px-4 py-3 font-medium">
                     {renderOrderLink(orderId, orderNumber)}
                   </td>
-                  <td className="px-4 py-3">
-                    {renderCustomerDetails(order)}
-                  </td>
+                  <td className="px-4 py-3">{renderCustomerDetails(order)}</td>
                   <td className="px-4 py-3 font-medium text-gray-900">
                     {formattedAmount}
                   </td>

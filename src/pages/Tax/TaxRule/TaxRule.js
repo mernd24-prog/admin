@@ -503,7 +503,7 @@ const TaxRule = () => {
               title="Tax Rule Information"
               description="Configure the tax rule and select the applicable taxes and category."
             >
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {/* Description */}
                 <FormInput
                   label="Description"
@@ -518,7 +518,8 @@ const TaxRule = () => {
                 />
 
                 {/* Tax + Sub Tax */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                <div className="">
                   <FilterSelect
                     options={taxOptions}
                     label="Select Tax"
@@ -529,21 +530,22 @@ const TaxRule = () => {
                     placeholder="Select tax"
                   />
 
-                  <FilterSelect
-                    options={filteredSubTaxOptions}
-                    label="Select Sub Tax"
-                    value={selectedSubTax}
-                    onChange={handleSubTaxChange}
-                    error={errors.subTaxes_id}
-                    required
-                    isMulti
-                    isDisabled={!selectedTax}
-                    placeholder={
-                      selectedTax ? "Select sub tax" : "Select tax first"
-                    }
-                  />
+                  <div className="min-w-0 my-4">
+                    <FilterSelect
+                      options={filteredSubTaxOptions}
+                      label="Select Sub Tax"
+                      value={selectedSubTax}
+                      onChange={handleSubTaxChange}
+                      error={errors.subTaxes_id}
+                      required
+                      isMulti
+                      isDisabled={!selectedTax}
+                      placeholder={
+                        selectedTax ? "Select sub tax" : "Select tax first"
+                      }
+                    />
+                  </div>
                 </div>
-
                 {/* Category */}
                 <FilterSelect
                   options={categoryOptions}

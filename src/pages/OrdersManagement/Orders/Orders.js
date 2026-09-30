@@ -429,6 +429,176 @@ const returnWindowLabel = (deadline) => {
    ORDER TABLE COLUMNS
 ========================================================= */
 
+/* =========================================================
+   ORDER STATUS BADGE
+========================================================= */
+
+const STATUS_COLORS = {
+  // Green
+  captured: {
+    bg: "bg-green-50",
+    border: "border-green-200",
+    text: "text-green-700",
+    dot: "bg-green-500",
+  },
+  delivered: {
+    bg: "bg-green-50",
+    border: "border-green-200",
+    text: "text-green-700",
+    dot: "bg-green-500",
+  },
+  eligible: {
+    bg: "bg-green-50",
+    border: "border-green-200",
+    text: "text-green-700",
+    dot: "bg-green-500",
+  },
+  paid: {
+    bg: "bg-green-50",
+    border: "border-green-200",
+    text: "text-green-700",
+    dot: "bg-green-500",
+  },
+
+  // Blue
+  confirmed: {
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+    text: "text-blue-700",
+    dot: "bg-blue-500",
+  },
+  "partially delivered": {
+    bg: "bg-sky-50",
+    border: "border-sky-200",
+    text: "text-sky-700",
+    dot: "bg-sky-500",
+  },
+  pending: {
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+    text: "text-blue-700",
+    dot: "bg-blue-500",
+  },
+
+  // Purple
+  shipped: {
+    bg: "bg-purple-50",
+    border: "border-purple-200",
+    text: "text-purple-700",
+    dot: "bg-purple-500",
+  },
+
+  // Orange
+  "return requested": {
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    text: "text-amber-700",
+    dot: "bg-amber-500",
+  },
+  "return pending": {
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    text: "text-amber-700",
+    dot: "bg-amber-500",
+  },
+
+  // Red
+  failed: {
+    bg: "bg-red-50",
+    border: "border-red-200",
+    text: "text-red-700",
+    dot: "bg-red-500",
+  },
+  "payment failed": {
+    bg: "bg-red-50",
+    border: "border-red-200",
+    text: "text-red-700",
+    dot: "bg-red-500",
+  },
+  rejected: {
+    bg: "bg-red-50",
+    border: "border-red-200",
+    text: "text-red-700",
+    dot: "bg-red-500",
+  },
+  held: {
+    bg: "bg-red-50",
+    border: "border-red-200",
+    text: "text-red-700",
+    dot: "bg-red-500",
+  },
+
+  // Gray - Default / Waiting states
+  waiting: {
+    bg: "bg-gray-50",
+    border: "border-[#E9DDC8]",
+    text: "text-gray-600",
+    dot: "bg-gray-400",
+  },
+  "not created": {
+    bg: "bg-gray-50",
+    border: "border-[#E9DDC8]",
+    text: "text-gray-500",
+    dot: "bg-gray-400",
+  },
+  rto: {
+    bg: "bg-gray-50",
+    border: "border-[#E9DDC8]",
+    text: "text-gray-600",
+    dot: "bg-gray-400",
+  },
+  fulfilled: {
+    bg: "bg-green-50",
+    border: "border-green-200",
+    text: "text-green-700",
+    dot: "bg-green-500",
+  },
+  initiated: {
+    bg: "bg-gray-50",
+    border: "border-[#E9DDC8]",
+    text: "text-gray-600",
+    dot: "bg-gray-400",
+  },
+  "return window closed": {
+    bg: "bg-gray-50",
+    border: "border-[#E9DDC8]",
+    text: "text-gray-600",
+    dot: "bg-gray-400",
+  },
+};
+
+const OrderStatusBadge = ({ status, dot = true }) => {
+  const normalizedStatus = String(status || "N/A")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  const colors = STATUS_COLORS[normalizedStatus] || {
+    bg: "bg-gray-50",
+    border: "border-[#E9DDC8]",
+    text: "text-gray-600",
+    dot: "bg-gray-400",
+  };
+
+  const label =
+    normalizedStatus === "n/a"
+      ? "N/A"
+      : normalizedStatus.replace(/\b\w/g, (char) => char.toUpperCase());
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${colors.bg} ${colors.border} ${colors.text}`}
+    >
+      {dot && (
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${colors.dot}`} />
+      )}
+
+      {label}
+    </span>
+  );
+};
+
 const createColumns = (
   navigate,
   canOpenBuyerDetails,
@@ -686,7 +856,7 @@ const createColumns = (
     label: "Payment Status",
 
     render: (value, row) => (
-      <StatusBadge status={firstDefined(value, row.paymentStatus)} dot />
+      <OrderStatusBadge status={firstDefined(value, row.paymentStatus)} dot />
     ),
   },
 
@@ -694,7 +864,7 @@ const createColumns = (
     key: "status",
     label: "Order Status",
 
-    render: (value) => <StatusBadge status={value} />,
+    render: (value) => <OrderStatusBadge status={value} dot />,
   },
 
   {

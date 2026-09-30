@@ -3,10 +3,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdAdd, MdDownload, MdVisibility } from "react-icons/md";
+
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
-import Loader from "../../components/Loader/Loader";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
-import Input from "../../components/Atoms/Input/Input";
+import FormSection from "../../components/Atoms/FormSection/FormSection";
+import FormInput from "../../components/Atoms/FormInput/FormInput";
+import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
+
 import {
   DataTable,
   FilterBar,
@@ -14,24 +17,26 @@ import {
   PageHeader,
   StatusBadge,
 } from "../../components/Shared";
+
 import {
   getTaxCreditNotes,
   createTaxCreditNote,
 } from "../../Redux/adminCoreSlice";
+
 import { ACTIONS, usePermission } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
+import useStoreNames from "../../hooks/useStoreNames";
+
 import { dropdownApi } from "../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
+
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
-import FormSection from "../../components/Atoms/FormSection/FormSection";
-import FormInput from "../../components/Atoms/FormInput/FormInput";
-import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
+import { resolveStoreName } from "../../utils/storeNameUtils";
 
 const REF_TYPES = ["return", "cancellation", "refund", "manual"];
 
 const CLASS_TEXT_XS_MUTED = "text-xs text-gray-500";
-const CLASS_SECTION_TITLE = "mb-3 text-sm font-semibold text-gray-900";
 const CLASS_CARD_WHITE = "rounded-lg border border-gray-100 bg-white p-3";
 const CLASS_CODE_VALUE = "mt-1 break-all font-mono text-xs text-gray-800";
 const CLASS_AMOUNT_CARD = "rounded-xl border border-gray-200 p-4";
@@ -40,12 +45,6 @@ const CLASS_AMOUNT_VALUE = "mt-1 text-base font-semibold text-gray-900";
 const FILTER_FIELDS = [
   // { key: "search", type: "text", label: "Search", width: "w-56" },
   { key: "orderId", type: "text", label: "Order #", width: "w-56" },
-  // {
-  //   key: "organizationId",
-  //   type: "text",
-  //   label: "Organization ID",
-  //   width: "w-52",
-  // },
 
   {
     key: "sellerId",
@@ -58,16 +57,7 @@ const FILTER_FIELDS = [
         searchFields: "organizationName,businessName,legalBusinessName",
       }),
   },
-  // {
-  //   key: "buyerId",
-  //   type: "asyncDropdown",
-  //   label: "Buyer",
-  //   load: (search) =>
-  //     dropdownApi.getBuyers({
-  //       keyWord: search,
-  //       searchFields: "full_name,email",
-  //     }),
-  // },
+
   {
     key: "referenceType",
     type: "select",
@@ -83,7 +73,11 @@ const FILTER_FIELDS = [
 
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
-  if (Array.isArray(data)) return { list: data, total: data.length };
+
+  if (Array.isArray(data)) {
+    return { list: data, total: data.length };
+  }
+
   return {
     list: data?.list || data?.items || data?.creditNotes || data || [],
     total: Number(
@@ -94,18 +88,15 @@ const unwrapList = (payload = {}) => {
 
 const fmt = (value) => formatDateTime12Hour(value, "—");
 const money = (v) => `₹${Number(v || 0).toFixed(2)}`;
+
 const pick = (row = {}, ...keys) => {
   for (const key of keys) {
-    if (row[key] !== undefined && row[key] !== null && row[key] !== "")
+    if (row[key] !== undefined && row[key] !== null && row[key] !== "") {
       return row[key];
+    }
   }
+
   return undefined;
-};
-const shortId = (value = "") => {
-  const text = String(value || "");
-  return text.length > 12
-    ? `${text.slice(0, 8)}...${text.slice(-4)}`
-    : text || "—";
 };
 
 const EMPTY_FORM = {
@@ -121,8 +112,12 @@ const EMPTY_FORM = {
 const CreditNotes = () => {
   const dispatch = useDispatch();
   const { isSeller } = usePermission();
+
+  const { storeNameMap } = useStoreNames();
+
   const selector = useSelector((s) => s.adminCore);
   const payload = unwrapList(selector.taxCreditNotesData);
+
   const filterFields = useMemo(
     () =>
       isSeller
@@ -138,6 +133,7 @@ const CreditNotes = () => {
     defaultSortKey: "issuedAt",
     defaultSortDir: "desc",
   });
+
   const { toQueryParams } = list;
 
   const [loading, setLoading] = useState(false);
@@ -152,7 +148,9 @@ const CreditNotes = () => {
     try {
       setLoading(true);
       setError("");
+
       const params = toQueryParams();
+
       const allowedSortBy = new Set([
         "issuedAt",
         "creditNoteNumber",
@@ -160,9 +158,11 @@ const CreditNotes = () => {
         "taxAmount",
         "totalAmount",
       ]);
+
       const sortBy = allowedSortBy.has(params.sortBy)
         ? params.sortBy
         : "issuedAt";
+
       await dispatch(
         getTaxCreditNotes({
           ...params,
@@ -188,18 +188,23 @@ const CreditNotes = () => {
       toast.error("Credit note creation is admin-only");
       return;
     }
+
     if (!form.orderId.trim()) {
       toast.error("Order ID required");
       return;
     }
+
     if (!form.taxableAmount || Number(form.taxableAmount) <= 0) {
       toast.error("Taxable amount must be > 0");
       return;
     }
+
     try {
       setSaving(true);
+
       const taxableAmount = Number(form.taxableAmount);
       const taxAmount = form.taxAmount ? Number(form.taxAmount) : undefined;
+
       await dispatch(
         createTaxCreditNote({
           orderId: form.orderId,
@@ -213,6 +218,7 @@ const CreditNotes = () => {
           reason: form.reason || undefined,
         }),
       ).unwrap();
+
       toast.success("Credit note created");
       setShowCreate(false);
       setForm(EMPTY_FORM);
@@ -226,20 +232,26 @@ const CreditNotes = () => {
 
   const downloadCreditNote = useCallback(async (row = {}) => {
     const creditNoteId = pick(row, "id", "creditNoteId", "credit_note_id");
+
     if (!creditNoteId) {
       toast.error("Credit note ID is missing");
       return;
     }
+
     try {
       setDownloadingId(creditNoteId);
+
       await downloadApiFile(
         ENDPOINTS.tax.creditNoteDownload(creditNoteId),
         { format: "pdf" },
         {
-          filename: `${pick(row, "creditNoteNumber", "credit_note_number") || creditNoteId}.pdf`,
+          filename: `${
+            pick(row, "creditNoteNumber", "credit_note_number") || creditNoteId
+          }.pdf`,
           format: "pdf",
         },
       );
+
       toast.success("Download started");
     } catch (downloadError) {
       toast.error(downloadError?.message || "Unable to download credit note");
@@ -266,6 +278,7 @@ const CreditNotes = () => {
           label: "Order",
           render: (v, row) => {
             const orderId = v || row?.order_id;
+
             return (
               <OrderLink
                 orderId={orderId}
@@ -285,12 +298,16 @@ const CreditNotes = () => {
         },
         {
           key: "organizationId",
-          label: "Organization",
-          render: (v, row) => (
-            <span className="font-mono text-xs text-gray-500">
-              {shortId(v || row.organization_id)}
-            </span>
-          ),
+          label: "Store Name",
+          render: (_, row) => {
+            const { name, id } = resolveStoreName(row, storeNameMap);
+
+            return (
+              <span className="font-medium text-[var(--admin-navy)]" title={id}>
+                {name}
+              </span>
+            );
+          },
         },
         {
           key: "totalAmount",
@@ -332,12 +349,13 @@ const CreditNotes = () => {
           ),
         },
       ].filter((column) => !(isSeller && column.key === "organizationId")),
-    [isSeller],
+    [isSeller, storeNameMap],
   );
 
   const rowActions = useCallback(
     (row) => {
       const creditNoteId = pick(row, "id", "creditNoteId", "credit_note_id");
+
       return [
         {
           label: "View",
@@ -440,10 +458,10 @@ const CreditNotes = () => {
                 </div>
 
                 <div className={CLASS_CARD_WHITE}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Organization ID</p>
+                  <p className={CLASS_TEXT_XS_MUTED}>Store Name</p>
 
-                  <p className={CLASS_CODE_VALUE}>
-                    {pick(detail, "organizationId", "organization_id") || "—"}
+                  <p className="mt-1 text-sm font-medium text-gray-800">
+                    {resolveStoreName(detail, storeNameMap).name}
                   </p>
                 </div>
 
@@ -589,13 +607,12 @@ const CreditNotes = () => {
         loading={saving}
       >
         <div className="space-y-5">
-          {/* ==================== Credit Note Information ==================== */}
+          {/* Credit Note Information */}
           <FormSection
             title="Credit Note Information"
             description="Enter the order and reference details for the credit note."
           >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {/* Full width because this is an important single field */}
               <div className="md:col-span-2">
                 <FormInput
                   label="Order ID"
@@ -612,7 +629,6 @@ const CreditNotes = () => {
                 />
               </div>
 
-              {/* Two fields in one row */}
               <FormInput
                 label="Reference ID"
                 name="referenceId"
@@ -650,7 +666,7 @@ const CreditNotes = () => {
             </div>
           </FormSection>
 
-          {/* ==================== Amount Details ==================== */}
+          {/* Amount Details */}
           <FormSection
             title="Amount Details"
             description="Enter the taxable amount, tax amount, and total credit amount."
@@ -687,7 +703,6 @@ const CreditNotes = () => {
                 placeholder="0.00"
               />
 
-              {/* Third field → starts a new row and takes full width */}
               <div className="md:col-span-2">
                 <FormInput
                   label="Total Credit Amount"
@@ -707,12 +722,11 @@ const CreditNotes = () => {
             </div>
           </FormSection>
 
-          {/* ==================== Reason ==================== */}
+          {/* Reason */}
           <FormSection
             title="Credit Note Reason"
             description="Provide the reason for issuing this credit note."
           >
-            {/* Only one field → full width */}
             <FormInput
               label="Reason"
               name="reason"
