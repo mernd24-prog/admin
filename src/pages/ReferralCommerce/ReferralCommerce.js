@@ -242,6 +242,7 @@ const emptyRulesForm = {
   customerSharePercent: 50,
   childSharePercent: 30,
   parentSharePercent: 20,
+  releaseDelayDays: 7,
   minimumWithdrawalCoins: 0,
   maximumWithdrawalCoins: 0,
   dailyWithdrawalLimitCoins: 0,
@@ -253,6 +254,78 @@ const emptyRulesForm = {
   referralCodeRandomLength: 6,
   referralCodeCharacterSet: "alphanumeric",
   minOrderAmount: 0,
+  active: true,
+  effectiveFrom: "",
+  effectiveTo: "",
+  metadata: "{}",
+};
+
+const validateRulesForm = (form) => {
+  const errors = {};
+  const number = (name, label, { min = 0, max, integer = false, positive = false } = {}) => {
+    const raw = form[name];
+    const value = Number(raw);
+    if (raw === "" || raw === null || raw === undefined || !Number.isFinite(value)) {
+      errors[name] = `${label} is required and must be a valid number.`;
+    } else if (positive && value <= 0) {
+      errors[name] = `${label} must be greater than 0.`;
+    } else if (value < min || (max !== undefined && value > max)) {
+      errors[name] = max === undefined
+        ? `${label} must be ${min} or greater.`
+        : `${label} must be between ${min} and ${max}.`;
+    } else if (integer && !Number.isInteger(value)) {
+      errors[name] = `${label} must be a whole number.`;
+    }
+  };
+
+  if (!["fixed_amount", "percentage"].includes(form.distributionType)) errors.distributionType = "Select a valid distribution type.";
+  if (form.distributionType === "fixed_amount") number("referralPoolAmount", "Referral pool amount", { positive: true });
+  else number("referralPoolPercent", "Referral pool percentage", { positive: true, max: 100 });
+  number("maximumReferralPoolAmount", "Maximum referral pool", { min: 0 });
+  number("coinValue", "INR per coin", { positive: true });
+  number("coinExpiryDays", "Coin expiry days", { min: 0, integer: true });
+  number("minOrderAmount", "Minimum eligible order amount", { min: 0 });
+  if (!["wallet", "discount", "both"].includes(form.coinUsage)) errors.coinUsage = "Select a valid coin usage option.";
+
+  [
+    ["customerSharePercent", "Customer discount share"],
+    ["childSharePercent", "Brand associate share"],
+    ["parentSharePercent", "Growth partner share"],
+  ].forEach(([name, label]) => number(name, label, { min: 0, max: 100 }));
+  const shareTotal = Number(form.customerSharePercent) + Number(form.childSharePercent) + Number(form.parentSharePercent);
+  if (Number.isFinite(shareTotal) && Math.abs(shareTotal - 100) > 0.000001) errors.shareTotal = "Distribution shares must total exactly 100%.";
+
+  number("releaseDelayDays", "Release delay days", { min: 0, integer: true });
+  [
+    ["minimumWithdrawalCoins", "Minimum withdrawal coins"],
+    ["maximumWithdrawalCoins", "Maximum withdrawal coins"],
+    ["dailyWithdrawalLimitCoins", "Daily withdrawal limit"],
+    ["monthlyWithdrawalLimitCoins", "Monthly withdrawal limit"],
+  ].forEach(([name, label]) => number(name, label, { min: 0 }));
+  const minimum = Number(form.minimumWithdrawalCoins);
+  const maximum = Number(form.maximumWithdrawalCoins);
+  const daily = Number(form.dailyWithdrawalLimitCoins);
+  const monthly = Number(form.monthlyWithdrawalLimitCoins);
+  if (maximum > 0 && maximum < minimum) errors.maximumWithdrawalCoins = "Maximum must be 0 (unlimited) or at least the minimum withdrawal.";
+  if (daily > 0 && daily < minimum) errors.dailyWithdrawalLimitCoins = "Daily limit must be 0 (unlimited) or at least the minimum withdrawal.";
+  if (monthly > 0 && monthly < minimum) errors.monthlyWithdrawalLimitCoins = "Monthly limit must be 0 (unlimited) or at least the minimum withdrawal.";
+  if (daily > 0 && monthly > 0 && monthly < daily) errors.monthlyWithdrawalLimitCoins = "Monthly limit cannot be lower than the daily limit.";
+  if (!["manual", "auto"].includes(form.withdrawalApprovalMode)) errors.withdrawalApprovalMode = "Select a valid approval mode.";
+  if (!Array.isArray(form.withdrawalMethods) || form.withdrawalMethods.length === 0) errors.withdrawalMethods = "Select at least one withdrawal method.";
+
+  if (!/^[A-Z0-9]*$/.test(String(form.referralCodePrefix || "").toUpperCase()) || String(form.referralCodePrefix || "").length > 8) errors.referralCodePrefix = "Use up to 8 letters or numbers only.";
+  number("referralCodeRandomLength", "Random character length", { min: 4, max: 16, integer: true });
+  if (!["alphanumeric", "numeric", "alphabetic"].includes(form.referralCodeCharacterSet)) errors.referralCodeCharacterSet = "Select a valid character set.";
+  if (form.effectiveFrom && Number.isNaN(Date.parse(form.effectiveFrom))) errors.effectiveFrom = "Enter a valid start date.";
+  if (form.effectiveTo && Number.isNaN(Date.parse(form.effectiveTo))) errors.effectiveTo = "Enter a valid end date.";
+  if (form.effectiveFrom && form.effectiveTo && new Date(form.effectiveTo) < new Date(form.effectiveFrom)) errors.effectiveTo = "End date must be on or after the start date.";
+  try {
+    const metadata = JSON.parse(form.metadata || "{}");
+    if (!metadata || Array.isArray(metadata) || typeof metadata !== "object") errors.metadata = "Metadata must be a valid JSON object.";
+  } catch (_error) {
+    errors.metadata = "Metadata must be valid JSON, for example {}.";
+  }
+  return errors;
 };
 
 const emptyBonusRuleForm = {
@@ -505,14 +578,19 @@ const TextInput = ({
   type = "text",
   placeholder = "",
   min,
+  max,
   minLength,
+  maxLength,
+  pattern,
   step,
   hint = "",
   required = false,
+  error = "",
+  onBlur,
 }) => (
   <label className="block">
     <span className="mb-1 block text-xs font-medium uppercase text-gray-500">
-      {label}
+      {label}{required ? <span className="admin-required">*</span> : null}
     </span>
     <input
       type={type}
@@ -521,12 +599,17 @@ const TextInput = ({
       onChange={onChange}
       placeholder={placeholder}
       min={min}
+      max={max}
       minLength={minLength}
+      maxLength={maxLength}
+      pattern={pattern}
       step={step}
       required={required}
-      className="h-10 w-full rounded border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-400"
+      onBlur={onBlur}
+      aria-invalid={Boolean(error)}
+      className={`h-10 w-full rounded border bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-400 ${error ? "border-red-400" : "border-gray-200"}`}
     />
-    {hint ? (
+    {error ? <span className="admin-field-error" role="alert">{error}</span> : hint ? (
       <span className="mt-1 block text-xs font-normal text-gray-500">
         {hint}
       </span>
@@ -546,6 +629,8 @@ const SelectInput = ({
   className = "",
   disabled = false,
   formatOptionLabel,
+  error = "",
+  onBlur,
 }) => {
   const parsedOptions = useMemo(() => {
     if (options && Array.isArray(options)) return options;
@@ -615,6 +700,8 @@ const SelectInput = ({
           </span>
         ))
       }
+      error={error}
+      onBlur={onBlur}
       className={className}
     />
   );
@@ -1477,6 +1564,8 @@ const ReferralCommerce = () => {
   const [influencerErrors, setInfluencerErrors] = useState({});
   const [codeForm, setCodeForm] = useState(emptyCodeForm);
   const [rulesForm, setRulesForm] = useState(emptyRulesForm);
+  const [rulesErrors, setRulesErrors] = useState({});
+  const [rulesSubmitting, setRulesSubmitting] = useState(false);
   const [bonusRuleForm, setBonusRuleForm] = useState(emptyBonusRuleForm);
 
   const summary = getBranchPayload(referralState.summaryData);
@@ -1792,7 +1881,11 @@ const ReferralCommerce = () => {
             ([, value]) => value !== undefined && value !== null,
           ),
         ),
+        effectiveFrom: currentRules.effectiveFrom ? String(currentRules.effectiveFrom).slice(0, 10) : "",
+        effectiveTo: currentRules.effectiveTo ? String(currentRules.effectiveTo).slice(0, 10) : "",
+        metadata: JSON.stringify(currentRules.metadata || {}, null, 2),
       });
+      setRulesErrors({});
     }
   }, [rulesPayload]);
 
@@ -1842,10 +1935,11 @@ const ReferralCommerce = () => {
 
   const handleRulesField = (event) => {
     const { name, value, type, checked } = event.target;
-    setRulesForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setRulesForm((prev) => {
+      const next = { ...prev, [name]: type === "checkbox" ? checked : value };
+      if (Object.keys(rulesErrors).length) setRulesErrors(validateRulesForm(next));
+      return next;
+    });
   };
 
   const toggleWithdrawalMethod = (method) => {
@@ -1855,10 +1949,12 @@ const ReferralCommerce = () => {
       );
       if (selected.has(method)) selected.delete(method);
       else selected.add(method);
-      return {
+      const next = {
         ...prev,
         withdrawalMethods: Array.from(selected),
       };
+      if (Object.keys(rulesErrors).length) setRulesErrors(validateRulesForm(next));
+      return next;
     });
   };
 
@@ -1951,6 +2047,12 @@ const ReferralCommerce = () => {
 
   const submitRules = async (event) => {
     event.preventDefault();
+    const validationErrors = validateRulesForm(rulesForm);
+    setRulesErrors(validationErrors);
+    if (Object.keys(validationErrors).length) {
+      toast.error("Please correct the highlighted rule settings.");
+      return;
+    }
     const cleanRules = [
       "distributionType",
       "referralPoolAmount",
@@ -1962,6 +2064,7 @@ const ReferralCommerce = () => {
       "customerSharePercent",
       "childSharePercent",
       "parentSharePercent",
+      "releaseDelayDays",
       "minimumWithdrawalCoins",
       "maximumWithdrawalCoins",
       "dailyWithdrawalLimitCoins",
@@ -1973,11 +2076,18 @@ const ReferralCommerce = () => {
       "referralCodeRandomLength",
       "referralCodeCharacterSet",
       "minOrderAmount",
+      "active",
+      "effectiveFrom",
+      "effectiveTo",
     ].reduce((acc, key) => {
       if (rulesForm[key] !== undefined) acc[key] = rulesForm[key];
       return acc;
     }, {});
+    cleanRules.effectiveFrom = cleanRules.effectiveFrom || null;
+    cleanRules.effectiveTo = cleanRules.effectiveTo || null;
+    cleanRules.metadata = JSON.parse(rulesForm.metadata || "{}");
     try {
+      setRulesSubmitting(true);
       await dispatch(
         updateReferralRules(
           numberize(cleanRules, [
@@ -1989,6 +2099,7 @@ const ReferralCommerce = () => {
             "customerSharePercent",
             "childSharePercent",
             "parentSharePercent",
+            "releaseDelayDays",
             "minimumWithdrawalCoins",
             "maximumWithdrawalCoins",
             "dailyWithdrawalLimitCoins",
@@ -2002,6 +2113,8 @@ const ReferralCommerce = () => {
       await refreshAll();
     } catch (error) {
       toast.error(error || "Unable to save commission rules");
+    } finally {
+      setRulesSubmitting(false);
     }
   };
 
@@ -2912,6 +3025,7 @@ const ReferralCommerce = () => {
       </div>
       <form
         onSubmit={submitRules}
+        noValidate
         className="grid grid-cols-1 gap-x-4 gap-y-5 p-5 md:grid-cols-4"
       >
         <div className="flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
@@ -2932,6 +3046,8 @@ const ReferralCommerce = () => {
           name="distributionType"
           value={rulesForm.distributionType}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.distributionType}
         >
           {optionList(referralDistributionTypes.options, [
             "percentage",
@@ -2951,6 +3067,8 @@ const ReferralCommerce = () => {
             step="0.01"
             value={rulesForm.referralPoolAmount}
             onChange={handleRulesField}
+            required
+            error={rulesErrors.referralPoolAmount}
           />
         ) : (
           <TextInput
@@ -2961,6 +3079,9 @@ const ReferralCommerce = () => {
             step="0.01"
             value={rulesForm.referralPoolPercent}
             onChange={handleRulesField}
+            max="100"
+            required
+            error={rulesErrors.referralPoolPercent}
           />
         )}
         <TextInput
@@ -2971,6 +3092,8 @@ const ReferralCommerce = () => {
           step="0.01"
           value={rulesForm.maximumReferralPoolAmount}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.maximumReferralPoolAmount}
           hint="Safety cap on the total referral pool calculated for one order. Enter 0 for unlimited; customer and partner shares are then calculated from this capped pool."
         />
         <TextInput
@@ -2981,19 +3104,27 @@ const ReferralCommerce = () => {
           step="0.000001"
           value={rulesForm.coinValue}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.coinValue}
         />
         <TextInput
           label="Coin Expiry Days"
           name="coinExpiryDays"
           type="number"
+          min="0"
+          step="1"
           value={rulesForm.coinExpiryDays}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.coinExpiryDays}
         />
         <SelectInput
           label="Coin Usage"
           name="coinUsage"
           value={rulesForm.coinUsage}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.coinUsage}
         >
           {optionList(referralCoinUsageModes.options, [
             "wallet",
@@ -3013,6 +3144,8 @@ const ReferralCommerce = () => {
           step="0.01"
           value={rulesForm.minOrderAmount}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.minOrderAmount}
         />
 
         <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
@@ -3034,8 +3167,11 @@ const ReferralCommerce = () => {
           type="number"
           min="0"
           step="0.01"
+          max="100"
           value={rulesForm.customerSharePercent}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.customerSharePercent}
         />
         <TextInput
           label="Brand Associate Share %"
@@ -3043,16 +3179,23 @@ const ReferralCommerce = () => {
           type="number"
           min="0"
           step="0.01"
+          max="100"
           value={rulesForm.childSharePercent}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.childSharePercent}
         />
         <TextInput
           label="Growth Partner Share %"
           name="parentSharePercent"
           type="number"
+          min="0"
+          max="100"
           step="0.01"
           value={rulesForm.parentSharePercent}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.parentSharePercent}
         />
 
         <div
@@ -3109,6 +3252,7 @@ const ReferralCommerce = () => {
           <p className="mt-2 text-[10px] text-[var(--admin-muted)]">
             Shares should total exactly 100%
           </p>
+          {rulesErrors.shareTotal ? <p className="admin-field-error" role="alert">{rulesErrors.shareTotal}</p> : null}
         </div>
 
         <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
@@ -3128,93 +3272,65 @@ const ReferralCommerce = () => {
           label="Minimum Withdrawal Coins"
           name="minimumWithdrawalCoins"
           type="number"
+          min="0"
           step="0.01"
           value={rulesForm.minimumWithdrawalCoins}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.minimumWithdrawalCoins}
         />
-        <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
-            4
-          </span>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
-              Referral Code Format
-            </h3>
-            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-              Define the format used for every newly generated influencer code
-            </p>
-          </div>
-        </div>
-        <TextInput
-          label="Code Prefix"
-          name="referralCodePrefix"
-          value={rulesForm.referralCodePrefix}
-          onChange={handleRulesField}
-          hint="Up to 8 uppercase letters or numbers, for example SAM."
-        />
-        <TextInput
-          label="Random Character Length"
-          name="referralCodeRandomLength"
-          type="number"
-          min="4"
-          max="16"
-          value={rulesForm.referralCodeRandomLength}
-          onChange={handleRulesField}
-        />
-        <SelectInput
-          label="Character Set"
-          name="referralCodeCharacterSet"
-          value={rulesForm.referralCodeCharacterSet}
-          onChange={handleRulesField}
-        >
-          <option value="alphanumeric">Letters and numbers</option>
-          <option value="alphabetic">Letters only</option>
-          <option value="numeric">Numbers only</option>
-        </SelectInput>
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-          <span className="block text-[10px] font-semibold uppercase tracking-wide">
-            Example
-          </span>
-          <strong>
-            {String(rulesForm.referralCodePrefix || "").toUpperCase()}
-            {rulesForm.referralCodeCharacterSet === "numeric"
-              ? "0".repeat(
-                  Math.min(Number(rulesForm.referralCodeRandomLength || 6), 16),
-                )
-              : "X".repeat(
-                  Math.min(Number(rulesForm.referralCodeRandomLength || 6), 16),
-                )}
-          </strong>
-        </div>
         <TextInput
           label="Maximum Withdrawal Coins"
           name="maximumWithdrawalCoins"
           type="number"
+          min="0"
           step="0.01"
           value={rulesForm.maximumWithdrawalCoins}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.maximumWithdrawalCoins}
         />
         <TextInput
           label="Daily Withdrawal Limit"
           name="dailyWithdrawalLimitCoins"
           type="number"
+          min="0"
           step="0.01"
           value={rulesForm.dailyWithdrawalLimitCoins}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.dailyWithdrawalLimitCoins}
         />
         <TextInput
           label="Monthly Withdrawal Limit"
           name="monthlyWithdrawalLimitCoins"
           type="number"
+          min="0"
           step="0.01"
           value={rulesForm.monthlyWithdrawalLimitCoins}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.monthlyWithdrawalLimitCoins}
+        />
+        <TextInput
+          label="Coin Release Delay Days"
+          name="releaseDelayDays"
+          type="number"
+          min="0"
+          step="1"
+          value={rulesForm.releaseDelayDays}
+          onChange={handleRulesField}
+          required
+          error={rulesErrors.releaseDelayDays}
+          hint="Whole days before earned referral coins become available."
         />
         <SelectInput
           label="Approval Mode"
           name="withdrawalApprovalMode"
           value={rulesForm.withdrawalApprovalMode}
           onChange={handleRulesField}
+          required
+          error={rulesErrors.withdrawalApprovalMode}
         >
           {optionList(referralWithdrawalApprovalModes.options, [
             "manual",
@@ -3268,12 +3384,40 @@ const ReferralCommerce = () => {
               </label>
             ))}
           </div>
+          {rulesErrors.withdrawalMethods ? <p className="admin-field-error" role="alert">{rulesErrors.withdrawalMethods}</p> : null}
         </div>
 
+        <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">4</span>
+          <div><h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">Referral Code Format</h3><p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">Define the format used for every newly generated influencer code</p></div>
+        </div>
+        <TextInput label="Code Prefix" name="referralCodePrefix" value={rulesForm.referralCodePrefix} onChange={handleRulesField} maxLength="8" pattern="[A-Za-z0-9]*" error={rulesErrors.referralCodePrefix} hint="Optional; up to 8 uppercase letters or numbers, for example SAM." />
+        <TextInput label="Random Character Length" name="referralCodeRandomLength" type="number" min="4" max="16" step="1" value={rulesForm.referralCodeRandomLength} onChange={handleRulesField} required error={rulesErrors.referralCodeRandomLength} />
+        <SelectInput label="Character Set" name="referralCodeCharacterSet" value={rulesForm.referralCodeCharacterSet} onChange={handleRulesField} required error={rulesErrors.referralCodeCharacterSet}>
+          <option value="alphanumeric">Letters and numbers</option><option value="alphabetic">Letters only</option><option value="numeric">Numbers only</option>
+        </SelectInput>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"><span className="block text-[10px] font-semibold uppercase tracking-wide">Example</span><strong>{String(rulesForm.referralCodePrefix || "").toUpperCase()}{rulesForm.referralCodeCharacterSet === "numeric" ? "0".repeat(Math.min(Math.max(Number(rulesForm.referralCodeRandomLength || 4), 4), 16)) : "X".repeat(Math.min(Math.max(Number(rulesForm.referralCodeRandomLength || 4), 4), 16))}</strong></div>
+
+        <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">5</span>
+          <div><h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">Activation & Advanced Settings</h3><p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">Control when this global rule is active and attach optional backend metadata</p></div>
+        </div>
+        <TextInput label="Effective From" name="effectiveFrom" type="date" value={rulesForm.effectiveFrom} onChange={handleRulesField} error={rulesErrors.effectiveFrom} hint="Leave blank to let the backend use its default start date." />
+        <TextInput label="Effective To" name="effectiveTo" type="date" value={rulesForm.effectiveTo} onChange={handleRulesField} error={rulesErrors.effectiveTo} hint="Leave blank for no expiry." />
+        <label className="admin-switch mt-6 h-10 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3">
+          <input type="checkbox" className="sr-only" name="active" checked={Boolean(rulesForm.active)} onChange={handleRulesField} /><span className="admin-switch-track" /><span className="font-semibold">Rule active</span>
+        </label>
+        <div />
+        <label className="block md:col-span-4">
+          <span className="mb-1 block text-xs font-medium uppercase text-gray-500">Metadata (JSON object)</span>
+          <textarea name="metadata" rows="4" value={rulesForm.metadata} onChange={handleRulesField} aria-invalid={Boolean(rulesErrors.metadata)} className={`w-full rounded border bg-white px-3 py-2 font-mono text-sm outline-none focus:border-indigo-400 ${rulesErrors.metadata ? "border-red-400" : "border-gray-200"}`} placeholder='{"campaign": "default"}' />
+          {rulesErrors.metadata ? <span className="admin-field-error" role="alert">{rulesErrors.metadata}</span> : <span className="mt-1 block text-xs text-gray-500">Optional backend metadata. Enter an object or keep {"{}"}.</span>}
+        </label>
+
         <div className="flex justify-end border-t border-[var(--admin-line)] pt-4 md:col-span-4">
-          <OrangeButton type="submit">
+          <OrangeButton type="submit" disabled={rulesSubmitting || loading}>
             <Check size={16} />
-            Save Rules
+            {rulesSubmitting ? "Saving..." : "Save Rules"}
           </OrangeButton>
         </div>
       </form>
