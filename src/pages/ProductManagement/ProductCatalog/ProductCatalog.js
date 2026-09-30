@@ -66,8 +66,8 @@ const APPROVAL_STATUS_OPTIONS = [
 ];
 const REVISION_STATUS_OPTIONS = [
   { value: "All", label: "All" },
-  { value: "workflow:none", label: "No Pending Change" },
-  { value: "workflow:change_pending", label: "Change Pending" },
+  { value: "none", label: "No Pending Change" },
+  { value: "change_pending", label: "Change Pending" },
 ];
 const ACTIVATION_STATUS_OPTIONS = [
   { value: "All", label: "All" },
@@ -192,6 +192,7 @@ const ProductCatalog = () => {
     getInitialFiltersForPath(location.pathname, location.search),
   );
   const didMountRouteRef = useRef(false);
+  const productListRequestRef = useRef(0);
   const list = useListPage({
     defaultPageSize: DEFAULT_PAGE_SIZE,
     defaultSortKey: "createdAt",
@@ -245,8 +246,6 @@ const ProductCatalog = () => {
   const revisionFilter = normalizeRevisionFilterValue(
     appliedFilters?.revisionStatus?.value,
   );
-  const revisionFilterType = revisionFilter ? "workflow" : "";
-  const revisionFilterValue = revisionFilter;
   const isApprovedFilter =
     appliedFilters?.approvalStatus?.value === "Approved";
   const approvalStatusToApiStatus = {
@@ -302,8 +301,8 @@ const ProductCatalog = () => {
               approvalStatusToApiStatus[appliedFilters.approvalStatus.value],
           }
         : {}),
-      ...(revisionFilterType === "workflow" && revisionFilterValue
-        ? { revisionStatus: revisionFilterValue }
+      ...(revisionFilter
+        ? { revisionStatus: revisionFilter }
         : isApprovedFilter
           ? { revisionStatus: "none" }
           : {}),
@@ -319,6 +318,7 @@ const ProductCatalog = () => {
   );
 
   const fetchProductsList = useCallback(async () => {
+    const requestId = ++productListRequestRef.current;
     setLoading(true);
 
     try {
@@ -331,12 +331,17 @@ const ProductCatalog = () => {
         total: 0,
       };
 
-      setApiRes(productData);
+      if (requestId === productListRequestRef.current) {
+        setApiRes(productData);
+      }
     } catch (err) {
+      if (requestId !== productListRequestRef.current) return;
       console.error("Failed to fetch products:", err);
       toast.error(err?.message || err || "Failed to fetch products");
     } finally {
-      setLoading(false);
+      if (requestId === productListRequestRef.current) {
+        setLoading(false);
+      }
     }
   }, [dispatch, buildProductQuery, list.page]);
 
