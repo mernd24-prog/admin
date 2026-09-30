@@ -44,11 +44,12 @@ import {
 import { useListPage } from "../../../hooks/useListPage";
 import { getSelectedSellerOrganizationId } from "../../../_helpers/sellerOrganizationContext";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const INITIAL_FILTERS = {
   search: "",
   product: { value: "All", label: "All" },
-  sellerName: { value: "", label: "All     Store Name" },
+  sellerName: { value: "", label: "All Seller" },
   category: { value: "", label: "Search By Category" },
   activationStatus: { value: "All", label: "All" },
   approvalStatus: { value: "All", label: "All" },
@@ -85,7 +86,9 @@ const STATUS_TOGGLEABLE = new Set(["active", "inactive", "draft"]);
 const REVIEWABLE_STATUSES = new Set(["pending_approval"]);
 
 const normalizeRevisionFilterValue = (value = "") => {
-  const normalized = String(value ?? "").trim().toLowerCase();
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
   if (!normalized || normalized === "all") return "";
   return normalized.startsWith("workflow:")
     ? normalized.replace(/^workflow:/, "")
@@ -159,6 +162,8 @@ const getInitialFiltersForPath = () => INITIAL_FILTERS;
 const ProductCatalog = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state);
+  const [sellerListData, setSellerListData] = useState([]);
+  const [storeListData, setStoreListData] = useState([]);
   const navigate = useNavigate();
   const { canAccess } = usePermission();
   const location = useLocation();
@@ -167,6 +172,7 @@ const ProductCatalog = () => {
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
   const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState(null);
   const [sellerLoading, setSellerLoading] = useState(false);
+  const [storeLoading, setStoreLoading] = useState(false);
   const [duplicateConfirmation, setDuplicateConfirmation] = useState({
     open: false,
     product: null,
@@ -220,29 +226,58 @@ const ProductCatalog = () => {
     (state) => state?.store?.getAllSellerListData?.data?.data?.list || [],
   );
 
-  const sellerListData = useMemo(() => {
-    return sellerList
-      .map((seller) => {
-        const sellerId =
-          seller?.sellerId || seller?.userId || seller?._id || seller?.id;
+  useEffect(() => {
+    if (!canFilterBySeller) return;
 
-        const storeDisplayName =
-          seller?.storeDisplayName ||
-          seller?.organization?.storeDisplayName ||
-          seller?.storeName ||
-          seller?.businessName ||
-          seller?.legalBusinessName ||
-          seller?.name ||
-          "Unknown Seller";
+    const loadSellers = async () => {
+      try {
+        setSellerLoading(true);
 
-        return {
-          value: sellerId,
-          label: formatLabel(storeDisplayName, "Unknown Seller"),
-        };
-      })
-      .filter((seller) => seller.value);
-  }, [sellerList]);
+        const response = await dropdownApi.getSellers({
+          page: 1,
+          limit: 100,
+        });
 
+        setSellerListData(response?.list || response || []);
+      } catch (error) {
+        console.error("Failed to load sellers:", error);
+        setSellerListData([]);
+      } finally {
+        setSellerLoading(false);
+      }
+    };
+
+    loadSellers();
+  }, [canFilterBySeller]);
+  useEffect(() => {
+    const sellerId = filters?.sellerName?.value;
+
+    // Seller select nahi hai
+    if (!sellerId) {
+      setStoreListData([]);
+      return;
+    }
+
+    const loadSellerStores = async () => {
+      try {
+        setStoreLoading(true);
+
+        const response = await dropdownApi.getSellerOrganizations(sellerId, {
+          page: 1,
+          limit: 100,
+        });
+
+        setStoreListData(response?.list || response || []);
+      } catch (error) {
+        console.error("Failed to load seller stores:", error);
+        setStoreListData([]);
+      } finally {
+        setStoreLoading(false);
+      }
+    };
+
+    loadSellerStores();
+  }, [filters?.sellerName?.value]);
   const revisionFilter = normalizeRevisionFilterValue(
     appliedFilters?.revisionStatus?.value,
   );
@@ -1020,6 +1055,8 @@ const ProductCatalog = () => {
             isApprovalOptions={true}
             isRevisionOptions={true}
             isCategory={true}
+            isSellerName={canFilterBySeller}
+            storeOptions={storeListData}
             isSellerStoreName={canFilterBySeller}
             categoryOptions={categoryOptions}
             dateFrom={true}
