@@ -808,33 +808,13 @@ const ProductCategories = () => {
       }
     }
 
-    const countCache = new Map();
-
-    const descendantCount = (category) => {
-      const key = String(category._id || category.categoryKey || category.name);
-
-      if (countCache.has(key)) {
-        return countCache.get(key);
-      }
-
-      const count = (category.subCategories || []).reduce(
-        (total, child) => total + 1 + descendantCount(child),
-        0,
-      );
-
-      countCache.set(key, count);
-
-      return count;
-    };
-
     return activeCategories.map((category) => ({
       category,
-
       name: category.name || "-",
-
       userName: category.userName || "-",
 
-      count: descendantCount(category),
+      // Count only direct subcategories, not nested descendants
+      count: category.subCategories?.length || 0,
 
       hasSubCategories: Boolean(category.subCategories?.length),
     }));
@@ -997,484 +977,477 @@ const ProductCategories = () => {
   // UI
   // ---------------------------------------------------------------------------
 
-return (
-  <div className="min-h-screen">
-    {/* Page Header */}
-    <PageHeader
-      title="Product Categories"
-      subtitle="Manage hierarchical product category tree"
-      breadcrumbs={[{ label: "Catalog" }, { label: "Categories" }]}
-      actions={
-        <PermissionGuard module="categories" action={ACTIONS.CREATE} hide>
-          <button
-            type="button"
-            onClick={() => {
-              handleResetForm();
-              setCategoryOpen(true);
-            }}
-            className="inline-flex items-center gap-2 rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--admin-gold-dark)] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]/30"
-          >
-            <MdAdd size={18} />
-            Add Category
-          </button>
-        </PermissionGuard>
-      }
-    />
-
-    {/* Main Content */}
-    <div className="overflow-hidden rounded-2xl border border-[var(--admin-line)] bg-white shadow-sm">
-      {/* Search Header */}
-      <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-blue-soft)] text-[var(--admin-primary)]">
-              <MdFolder size={21} />
-            </div>
-
-            <div>
-              <h2 className="text-sm font-semibold text-[var(--admin-ink)]">
-                Category Management
-              </h2>
-
-              <p className="mt-0.5 text-xs text-[var(--admin-muted)]">
-                Search and manage your category hierarchy.
-              </p>
-            </div>
-          </div>
-
-          <div className="w-full lg:max-w-md">
-            <div className="relative">
-              <MdSearch
-                size={18}
-                className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[var(--admin-muted)]"
-              />
-
-              <div className="[&_input]:pl-10">
-                <SearchInput
-                  placeholder="Search categories..."
-                  searchTerm={filters.search}
-                  handleChange={(e) =>
-                    setFilters((f) => ({
-                      ...f,
-                      search: e.target.value,
-                    }))
-                  }
-                  handleRemove={handleSearchRemove}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Breadcrumb Navigation */}
-      <div className="border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-5 py-3">
-        <div className="flex min-h-[34px] items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto">
-            {/* Root */}
+  return (
+    <div className="min-h-screen">
+      {/* Page Header */}
+      <PageHeader
+        title="Product Categories"
+        subtitle="Manage hierarchical product category tree"
+        breadcrumbs={[{ label: "Catalog" }, { label: "Categories" }]}
+        actions={
+          <PermissionGuard module="categories" action={ACTIONS.CREATE} hide>
             <button
               type="button"
-              onClick={() => handleNavigate([])}
-              className={`inline-flex shrink-0 items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                currentPath.length === 0
-                  ? "bg-white text-[var(--admin-primary)] shadow-sm ring-1 ring-[#e3e7f5]"
-                  : "text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-primary)]"
-              }`}
+              onClick={() => {
+                handleResetForm();
+                setCategoryOpen(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--admin-gold-dark)] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]/30"
             >
-              Categories
+              <MdAdd size={18} />
+              Add Category
             </button>
+          </PermissionGuard>
+        }
+      />
 
-            {/* Nested Breadcrumbs */}
-            {currentPath.map((item, index) => {
-              const isLast = index === currentPath.length - 1;
+      {/* Main Content */}
+      <div className="overflow-hidden rounded-2xl border border-[var(--admin-line)] bg-white shadow-sm">
+        {/* Search Header */}
+        <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-blue-soft)] text-[var(--admin-primary)]">
+                <MdFolder size={21} />
+              </div>
 
-              return (
-                <React.Fragment
-                  key={item?.categoryKey || item?._id || index}
-                >
-                  <FaChevronRight
-                    className="shrink-0 text-[9px] text-gray-400"
-                    aria-hidden="true"
-                  />
+              <div>
+                <h2 className="text-sm font-semibold text-[var(--admin-ink)]">
+                  Category Management
+                </h2>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleNavigate(currentPath.slice(0, index + 1))
+                <p className="mt-0.5 text-xs text-[var(--admin-muted)]">
+                  Search and manage your category hierarchy.
+                </p>
+              </div>
+            </div>
+
+            <div className="w-full lg:max-w-md">
+              <div className="relative">
+                <MdSearch
+                  size={18}
+                  className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[var(--admin-muted)]"
+                />
+
+                <div className="[&_input]:pl-10">
+                  <SearchInput
+                    placeholder="Search categories..."
+                    searchTerm={filters.search}
+                    handleChange={(e) =>
+                      setFilters((f) => ({
+                        ...f,
+                        search: e.target.value,
+                      }))
                     }
-                    className={`inline-flex max-w-[180px] shrink-0 items-center rounded-lg px-3 py-1.5 text-xs transition-all ${
-                      isLast
-                        ? "bg-white font-semibold text-[var(--admin-primary)] shadow-sm ring-1 ring-[#e3e7f5]"
-                        : "font-medium text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-primary)]"
-                    }`}
-                  >
-                    <span className="truncate">
-                      {item?.name || item?.title || "Category"}
-                    </span>
-                  </button>
-                </React.Fragment>
-              );
-            })}
+                    handleRemove={handleSearchRemove}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
 
-          {/* Current Level Count */}
-          <div className="hidden shrink-0 items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[var(--admin-muted)] shadow-sm ring-1 ring-[var(--admin-line)] sm:flex">
-            <MdFolder className="text-[var(--admin-gold)]" size={15} />
+        {/* Breadcrumb Navigation */}
+        <div className="border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-5 py-3">
+          <div className="flex min-h-[34px] items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto">
+              {/* Root */}
+              <button
+                type="button"
+                onClick={() => handleNavigate([])}
+                className={`inline-flex shrink-0 items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  currentPath.length === 0
+                    ? "bg-white text-[var(--admin-primary)] shadow-sm ring-1 ring-[#e3e7f5]"
+                    : "text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-primary)]"
+                }`}
+              >
+                Categories
+              </button>
 
-            <span>
-              {categoryTableRows.length}{" "}
-              {categoryTableRows.length === 1 ? "category" : "categories"}
-            </span>
+              {/* Nested Breadcrumbs */}
+              {currentPath.map((item, index) => {
+                const isLast = index === currentPath.length - 1;
+
+                return (
+                  <React.Fragment key={item?.categoryKey || item?._id || index}>
+                    <FaChevronRight
+                      className="shrink-0 text-[9px] text-gray-400"
+                      aria-hidden="true"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleNavigate(currentPath.slice(0, index + 1))
+                      }
+                      className={`inline-flex max-w-[180px] shrink-0 items-center rounded-lg px-3 py-1.5 text-xs transition-all ${
+                        isLast
+                          ? "bg-white font-semibold text-[var(--admin-primary)] shadow-sm ring-1 ring-[#e3e7f5]"
+                          : "font-medium text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-primary)]"
+                      }`}
+                    >
+                      <span className="truncate">
+                        {item?.name || item?.title || "Category"}
+                      </span>
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            {/* Current Level Count */}
+            <div className="hidden shrink-0 items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[var(--admin-muted)] shadow-sm ring-1 ring-[var(--admin-line)] sm:flex">
+              <MdFolder className="text-[var(--admin-gold)]" size={15} />
+
+              <span>
+                {categoryTableRows.length}{" "}
+                {categoryTableRows.length === 1 ? "category" : "categories"}
+              </span>
+            </div>
           </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-hidden">
+          {isTableLoading ? (
+            <div
+              className="p-4"
+              role="status"
+              aria-label="Loading categories"
+              aria-busy="true"
+            >
+              {/* Skeleton Header */}
+              <div className="mb-2 grid grid-cols-[50%_25%_25%] items-center rounded-lg bg-[var(--admin-surface-soft)] px-5 py-3">
+                <SkeletonLoader height={11} width="30%" />
+
+                <SkeletonLoader height={11} width="35%" />
+
+                <SkeletonLoader height={11} width="25%" />
+              </div>
+
+              {/* Skeleton Rows */}
+              {[0, 1, 2, 3, 4, 5].map((row) => (
+                <div
+                  key={row}
+                  className="mb-2 grid min-h-[62px] grid-cols-[50%_25%_25%] items-center rounded-lg border border-[var(--admin-line)] bg-white px-5 py-3"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <SkeletonLoader circle height={36} width={36} />
+
+                    <div className="min-w-0 flex-1">
+                      <SkeletonLoader
+                        height={12}
+                        width={row % 2 === 0 ? "38%" : "30%"}
+                      />
+
+                      <div className="mt-2">
+                        <SkeletonLoader
+                          height={8}
+                          width={row % 2 === 0 ? "25%" : "18%"}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <SkeletonLoader height={24} width={45} />
+
+                  <div className="flex items-center gap-2">
+                    <SkeletonLoader height={28} width={35} />
+                    <SkeletonLoader height={28} width={28} />
+                    <SkeletonLoader height={28} width={28} />
+                  </div>
+                </div>
+              ))}
+
+              <span className="sr-only">Loading categories...</span>
+            </div>
+          ) : categoryTableRows.length > 0 ? (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] table-fixed text-sm">
+                  <colgroup>
+                    <col className="w-[50%]" />
+                    <col className="w-[25%]" />
+                    <col className="w-[25%]" />
+                  </colgroup>
+
+                  <thead>
+                    <tr className="border-y border-[#dfe3eb] bg-[#f1f3f7]">
+                      <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
+                        Category Name
+                      </th>
+
+                      <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
+                        Subcategories
+                      </th>
+
+                      <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-[var(--admin-line)]">
+                    {pagedCategoryRows.map((row) => {
+                      const categoryIcon =
+                        row.category?.iconUrl?.trim() || row.iconUrl?.trim();
+
+                      return (
+                        <tr
+                          key={
+                            row.category?._id ||
+                            row.category?.categoryKey ||
+                            row.name
+                          }
+                          className="group/category-row h-[62px] transition-colors hover:bg-[var(--admin-surface-soft)]"
+                        >
+                          {/* Category Name */}
+                          <td className="px-5 py-3.5 text-left align-middle">
+                            {row.hasSubCategories ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleNavigate([...currentPath, row.category])
+                                }
+                                className="grid w-full space-x-2 max-w-full grid-cols-[36px_360px_18px] items-center gap-1 text-left"
+                              >
+                                {/* Category / Subcategory Icon */}
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#fffaf0] transition-all group-hover/category-row:bg-white group-hover/category-row:shadow-sm">
+                                  {categoryIcon ? (
+                                    <img
+                                      src={categoryIcon}
+                                      alt={row.category?.name || row.name}
+                                      className="h-9 w-9 object-contain"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none";
+
+                                        const fallback =
+                                          e.currentTarget.nextElementSibling;
+
+                                        if (fallback) {
+                                          fallback.classList.remove("hidden");
+                                        }
+                                      }}
+                                    />
+                                  ) : null}
+
+                                  {/* Dot fallback */}
+                                  <span
+                                    className={`h-2.5 w-2.5 rounded-full bg-[var(--admin-primary)] ${
+                                      categoryIcon ? "hidden" : ""
+                                    }`}
+                                  />
+                                </span>
+
+                                {/* Category / Subcategory Name */}
+                                <span className="min-w-0">
+                                  <span className="block truncate font-semibold capitalize text-[var(--admin-primary)]">
+                                    {row.name}
+                                  </span>
+
+                                  <span className="mt-0.5 block truncate text-[11px] text-[var(--admin-muted)]">
+                                    Click to view subcategories
+                                  </span>
+                                </span>
+
+                                {/* Arrow */}
+                                {/* <span className="flex h-5 w-5 shrink-0 items-center justify-center text-gray-400 transition-transform group-hover/category-row:translate-x-0.5">
+                                <FaChevronRight size={8} />
+                              </span> */}
+                              </button>
+                            ) : (
+                              <div className="flex items-center gap-3">
+                                {/* Category / Subcategory Icon */}
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--admin-surface-soft)]">
+                                  {categoryIcon ? (
+                                    <img
+                                      src={categoryIcon}
+                                      alt={row.category?.name || row.name}
+                                      className="h-7 w-7 object-contain"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none";
+
+                                        const fallback =
+                                          e.currentTarget.nextElementSibling;
+
+                                        if (fallback) {
+                                          fallback.classList.remove("hidden");
+                                        }
+                                      }}
+                                    />
+                                  ) : null}
+
+                                  {/* Dot fallback */}
+                                  <span
+                                    className={`h-2.5 w-2.5 rounded-full bg-[var(--admin-muted)] ${
+                                      categoryIcon ? "hidden" : ""
+                                    }`}
+                                  />
+                                </span>
+
+                                {/* Category / Subcategory Name */}
+                                <span className="min-w-0">
+                                  <span className="block truncate text-sm font-semibold text-[var(--admin-ink)]">
+                                    {row.name}
+                                  </span>
+
+                                  <span className="text-xs text-[var(--admin-muted)]">
+                                    No subcategories
+                                  </span>
+                                </span>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Subcategories */}
+                          <td className="px-5 py-3.5 text-left align-middle">
+                            <span className="inline-flex min-w-[34px] items-center justify-center rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-100">
+                              {formatCount(row.count)}
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-5 py-3.5 text-left align-middle">
+                            {renderCategoryActions(row.category)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="border-t border-[var(--admin-line)] bg-white px-5 py-3">
+                <Pagination
+                  totalPages={totalCategoryPages}
+                  currentPage={categoryPage}
+                  onPageChange={setCategoryPage}
+                  totalRecords={categoryTableRows.length}
+                  pageSize={categoryPageSize}
+                  pageSizeOptions={[10, 20, 50, 100]}
+                  onPageSizeChange={(size) => {
+                    const newSize = Number(size) || CATEGORY_TABLE_PAGE_SIZE;
+
+                    setCategoryPageSize(newSize);
+                    setCategoryPage(1);
+                  }}
+                />
+              </div>
+            </>
+          ) : (
+            /* Empty State */
+            <div className="flex min-h-[280px] flex-col items-center justify-center px-5 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-surface-soft)] text-[var(--admin-muted)]">
+                <MdFolder size={27} />
+              </div>
+
+              <h3 className="text-sm font-semibold text-[var(--admin-ink)]">
+                {filters.search
+                  ? "No categories found"
+                  : "No categories available"}
+              </h3>
+
+              <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--admin-muted)]">
+                {filters.search
+                  ? "Try adjusting your search term to find a matching category."
+                  : "Create your first category to start building your product catalog hierarchy."}
+              </p>
+
+              {filters.search && (
+                <button
+                  type="button"
+                  onClick={handleSearchRemove}
+                  className="mt-4 rounded-lg border border-[var(--admin-line)] bg-white px-3.5 py-2 text-xs font-semibold text-[var(--admin-primary)] transition hover:bg-[var(--admin-surface-soft)]"
+                >
+                  Clear Search
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden">
-        {isTableLoading ? (
-          <div
-            className="p-4"
-            role="status"
-            aria-label="Loading categories"
-            aria-busy="true"
-          >
-            {/* Skeleton Header */}
-            <div className="mb-2 grid grid-cols-[50%_25%_25%] items-center rounded-lg bg-[var(--admin-surface-soft)] px-5 py-3">
-              <SkeletonLoader height={11} width="30%" />
+      {/* Category Setup */}
+      <CategorySetup
+        isOpen={categoryOpen || categoryEditOpen}
+        handleClose={() => {
+          setCategoryOpen(false);
+          setCategoryEditOpen(false);
+          handleResetForm();
+        }}
+        formData={formData}
+        setFormData={setFormData}
+        parentCategories={createSelectOptions}
+        handleResetForm={handleResetForm}
+        handleSubmit={categoryEditOpen ? handleEditSubmit : handleSubmit}
+        isEditing={categoryEditOpen}
+        isPublish={isPublish}
+        handleIsPublish={handleIsPublish}
+        errors={errors}
+        handleInputChange={handleInputChange}
+        handleDashboardVisible={handleDashboardVisible}
+      />
 
-              <SkeletonLoader height={11} width="35%" />
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        open={showDeleteConfirmation}
+        onClose={() => setShowDeleteConfirmation(false)}
+        onConfirm={handleDeleteConfirmDelete}
+        title={`Delete "${selectedCategory?.name}"`}
+        message="This will permanently remove the category and all its subcategories. This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+      />
 
-              <SkeletonLoader height={11} width="25%" />
-            </div>
+      {/* Status Confirmation */}
+      <ConfirmModal
+        open={Boolean(statusTarget)}
+        onClose={() => setStatusTarget(null)}
+        onConfirm={handleStatusConfirm}
+        title={`${statusTarget?.isDisable ? "Enable" : "Disable"} Category`}
+        message={`${statusTarget?.isDisable ? "Enable" : "Disable"} "${
+          statusTarget?.name || "this category"
+        }"? Disabling a parent also disables its child categories.`}
+        variant={statusTarget?.isDisable ? "success" : "warning"}
+        confirmLabel={statusTarget?.isDisable ? "Enable" : "Disable"}
+        loading={isLoading}
+      />
 
-            {/* Skeleton Rows */}
-            {[0, 1, 2, 3, 4, 5].map((row) => (
-              <div
-                key={row}
-                className="mb-2 grid min-h-[62px] grid-cols-[50%_25%_25%] items-center rounded-lg border border-[var(--admin-line)] bg-white px-5 py-3"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <SkeletonLoader circle height={36} width={36} />
-
-                  <div className="min-w-0 flex-1">
-                    <SkeletonLoader
-                      height={12}
-                      width={row % 2 === 0 ? "38%" : "30%"}
-                    />
-
-                    <div className="mt-2">
-                      <SkeletonLoader
-                        height={8}
-                        width={row % 2 === 0 ? "25%" : "18%"}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <SkeletonLoader height={24} width={45} />
-
-                <div className="flex items-center gap-2">
-                  <SkeletonLoader height={28} width={35} />
-                  <SkeletonLoader height={28} width={28} />
-                  <SkeletonLoader height={28} width={28} />
-                </div>
-              </div>
-            ))}
-
-            <span className="sr-only">Loading categories...</span>
-          </div>
-        ) : categoryTableRows.length > 0 ? (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] table-fixed text-sm">
-                <colgroup>
-                  <col className="w-[50%]" />
-                  <col className="w-[25%]" />
-                  <col className="w-[25%]" />
-                </colgroup>
-
-                <thead>
-                  <tr className="border-y border-[#dfe3eb] bg-[#f1f3f7]">
-                    <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
-                      Category Name
-                    </th>
-
-                    <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
-                      Subcategories
-                    </th>
-
-                    <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-[var(--admin-line)]">
-                  {pagedCategoryRows.map((row) => {
-                    const categoryIcon =
-                      row.category?.iconUrl?.trim() ||
-                      row.iconUrl?.trim();
-
-                    return (
-                      <tr
-                        key={
-                          row.category?._id ||
-                          row.category?.categoryKey ||
-                          row.name
-                        }
-                        className="group/category-row h-[62px] transition-colors hover:bg-[var(--admin-surface-soft)]"
-                      >
-                        {/* Category Name */}
-                        <td className="px-5 py-3.5 text-left align-middle">
-                          {row.hasSubCategories ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleNavigate([
-                                  ...currentPath,
-                                  row.category,
-                                ])
-                              }
-                              className="grid w-full max-w-full grid-cols-[36px_360px_18px] items-center gap-1 text-left"
-                            >
-                              {/* Category / Subcategory Icon */}
-                              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#fffaf0] transition-all group-hover/category-row:bg-white group-hover/category-row:shadow-sm">
-                                {categoryIcon ? (
-                                  <img
-                                    src={categoryIcon}
-                                    alt={row.category?.name || row.name}
-                                    className="h-7 w-7 object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none";
-
-                                      const fallback =
-                                        e.currentTarget.nextElementSibling;
-
-                                      if (fallback) {
-                                        fallback.classList.remove("hidden");
-                                      }
-                                    }}
-                                  />
-                                ) : null}
-
-                                {/* Dot fallback */}
-                                <span
-                                  className={`h-2.5 w-2.5 rounded-full bg-[var(--admin-primary)] ${
-                                    categoryIcon ? "hidden" : ""
-                                  }`}
-                                />
-                              </span>
-
-                              {/* Category / Subcategory Name */}
-                              <span className="min-w-0">
-                                <span className="block truncate font-semibold capitalize text-[var(--admin-primary)]">
-                                  {row.name}
-                                </span>
-
-                                <span className="mt-0.5 block truncate text-[11px] text-[var(--admin-muted)]">
-                                  Click to view subcategories
-                                </span>
-                              </span>
-
-                              {/* Arrow */}
-                              {/* <span className="flex h-5 w-5 shrink-0 items-center justify-center text-gray-400 transition-transform group-hover/category-row:translate-x-0.5">
-                                <FaChevronRight size={8} />
-                              </span> */}
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-3">
-                              {/* Category / Subcategory Icon */}
-                              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--admin-surface-soft)]">
-                                {categoryIcon ? (
-                                  <img
-                                    src={categoryIcon}
-                                    alt={row.category?.name || row.name}
-                                    className="h-7 w-7 object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none";
-
-                                      const fallback =
-                                        e.currentTarget.nextElementSibling;
-
-                                      if (fallback) {
-                                        fallback.classList.remove("hidden");
-                                      }
-                                    }}
-                                  />
-                                ) : null}
-
-                                {/* Dot fallback */}
-                                <span
-                                  className={`h-2.5 w-2.5 rounded-full bg-[var(--admin-muted)] ${
-                                    categoryIcon ? "hidden" : ""
-                                  }`}
-                                />
-                              </span>
-
-                              {/* Category / Subcategory Name */}
-                              <span className="min-w-0">
-                                <span className="block truncate text-sm font-semibold text-[var(--admin-ink)]">
-                                  {row.name}
-                                </span>
-
-                                <span className="text-xs text-[var(--admin-muted)]">
-                                  No subcategories
-                                </span>
-                              </span>
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Subcategories */}
-                        <td className="px-5 py-3.5 text-left align-middle">
-                          <span className="inline-flex min-w-[34px] items-center justify-center rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-100">
-                            {formatCount(row.count)}
-                          </span>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-5 py-3.5 text-left align-middle">
-                          {renderCategoryActions(row.category)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="border-t border-[var(--admin-line)] bg-white px-5 py-3">
-              <Pagination
-                totalPages={totalCategoryPages}
-                currentPage={categoryPage}
-                onPageChange={setCategoryPage}
-                totalRecords={categoryTableRows.length}
-                pageSize={categoryPageSize}
-                pageSizeOptions={[10, 20, 50, 100]}
-                onPageSizeChange={(size) => {
-                  const newSize =
-                    Number(size) || CATEGORY_TABLE_PAGE_SIZE;
-
-                  setCategoryPageSize(newSize);
-                  setCategoryPage(1);
-                }}
-              />
-            </div>
-          </>
-        ) : (
-          /* Empty State */
-          <div className="flex min-h-[280px] flex-col items-center justify-center px-5 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-surface-soft)] text-[var(--admin-muted)]">
-              <MdFolder size={27} />
-            </div>
-
-            <h3 className="text-sm font-semibold text-[var(--admin-ink)]">
-              {filters.search
-                ? "No categories found"
-                : "No categories available"}
-            </h3>
-
-            <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--admin-muted)]">
-              {filters.search
-                ? "Try adjusting your search term to find a matching category."
-                : "Create your first category to start building your product catalog hierarchy."}
-            </p>
-
-            {filters.search && (
-              <button
-                type="button"
-                onClick={handleSearchRemove}
-                className="mt-4 rounded-lg border border-[var(--admin-line)] bg-white px-3.5 py-2 text-xs font-semibold text-[var(--admin-primary)] transition hover:bg-[var(--admin-surface-soft)]"
-              >
-                Clear Search
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-
-    {/* Category Setup */}
-    <CategorySetup
-      isOpen={categoryOpen || categoryEditOpen}
-      handleClose={() => {
-        setCategoryOpen(false);
-        setCategoryEditOpen(false);
-        handleResetForm();
-      }}
-      formData={formData}
-      setFormData={setFormData}
-      parentCategories={createSelectOptions}
-      handleResetForm={handleResetForm}
-      handleSubmit={categoryEditOpen ? handleEditSubmit : handleSubmit}
-      isEditing={categoryEditOpen}
-      isPublish={isPublish}
-      handleIsPublish={handleIsPublish}
-      errors={errors}
-      handleInputChange={handleInputChange}
-      handleDashboardVisible={handleDashboardVisible}
-    />
-
-    {/* Delete Confirmation */}
-    <ConfirmModal
-      open={showDeleteConfirmation}
-      onClose={() => setShowDeleteConfirmation(false)}
-      onConfirm={handleDeleteConfirmDelete}
-      title={`Delete "${selectedCategory?.name}"`}
-      message="This will permanently remove the category and all its subcategories. This action cannot be undone."
-      variant="danger"
-      confirmLabel="Delete"
-    />
-
-    {/* Status Confirmation */}
-    <ConfirmModal
-      open={Boolean(statusTarget)}
-      onClose={() => setStatusTarget(null)}
-      onConfirm={handleStatusConfirm}
-      title={`${statusTarget?.isDisable ? "Enable" : "Disable"} Category`}
-      message={`${statusTarget?.isDisable ? "Enable" : "Disable"} "${
-        statusTarget?.name || "this category"
-      }"? Disabling a parent also disables its child categories.`}
-      variant={statusTarget?.isDisable ? "success" : "warning"}
-      confirmLabel={statusTarget?.isDisable ? "Enable" : "Disable"}
-      loading={isLoading}
-    />
-
-    {/* Category Attributes */}
-    {attributeCategory && (
-      <div className="fixed inset-0 z-50">
-        <button
-          type="button"
-          className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-          aria-label="Close category attributes"
-          onClick={() => {
-            setAttributeCategory(null);
-            setAttributePanelLoading(false);
-          }}
-        />
-
-        <aside className="absolute right-0 top-0 h-full w-full max-w-4xl overflow-hidden bg-white shadow-xl">
-          <CategoryAttributesPanel
-            embedded
-            initialCategory={attributeCategory}
-            onClose={() => {
+      {/* Category Attributes */}
+      {attributeCategory && (
+        <div className="fixed inset-0 z-50">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            aria-label="Close category attributes"
+            onClick={() => {
               setAttributeCategory(null);
               setAttributePanelLoading(false);
             }}
-            onLoaded={() => setAttributePanelLoading(false)}
           />
 
-          {attributePanelLoading && (
-            <div className="absolute inset-0 z-20 bg-white">
-              <AttributePanelSkeleton />
-            </div>
-          )}
-        </aside>
-      </div>
-    )}
-  </div>
-);
+          <aside className="absolute right-0 top-0 h-full w-full max-w-4xl overflow-hidden bg-white shadow-xl">
+            <CategoryAttributesPanel
+              embedded
+              initialCategory={attributeCategory}
+              onClose={() => {
+                setAttributeCategory(null);
+                setAttributePanelLoading(false);
+              }}
+              onLoaded={() => setAttributePanelLoading(false)}
+            />
+
+            {attributePanelLoading && (
+              <div className="absolute inset-0 z-20 bg-white">
+                <AttributePanelSkeleton />
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default ProductCategories;

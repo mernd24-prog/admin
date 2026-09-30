@@ -314,385 +314,367 @@ function ProfileForm({
   };
 
   return (
-<div className="space-y-5 py-2">
-  {/* Profile Identity */}
-  <FormSection
-    title="Profile Identity"
-    description="Enter the basic details and ownership information for this shipping profile."
-  >
-    <div className="space-y-4">
-      {!isTemplate && !isSeller && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* Target Seller */}
+    <div className="space-y-5 py-2">
+      {/* Profile Identity */}
+      <FormSection
+        title="Profile Identity"
+        description="Enter the basic details and ownership information for this shipping profile."
+      >
+        <div className="space-y-4">
+          {!isTemplate && !isSeller && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Target Seller */}
+              <div className="space-y-1.5">
+                <label className="admin-label">
+                  Target Seller <span className="text-red-500">*</span>
+                </label>
+
+                {/* <input
+                  className="admin-input"
+                  placeholder="Search seller by name, email, or business..."
+                  onChange={(event) => onSellerSearch?.(event.target.value)}
+                /> */}
+
+                <FilterSelect
+                  options={sellerOptions}
+                  value={
+                    sellerOptions.find(
+                      (seller) => seller.value === form.sellerId,
+                    ) || null
+                  }
+                  onChange={(option) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      sellerId: option?.value || "",
+                      organizationId: "",
+                    }));
+                  }}
+                  isSearchable
+                  placeholder="Select seller..."
+                  isClearable
+                />
+              </div>
+
+              {/* Organization */}
+              <div className="space-y-1.5">
+                <label className="admin-label">Organization</label>
+
+                <FilterSelect
+                  options={organizationOptions}
+                  value={
+                    organizationOptions.find(
+                      (option) => option.value === form.organizationId,
+                    ) || null
+                  }
+                  onChange={(option) =>
+                    patch("organizationId", option?.value || "")
+                  }
+                  isDisabled={!form.sellerId}
+                  placeholder="Seller-wide default"
+                  isSearchable
+                  isClearable
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Profile Name & Shipping Method */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="admin-label">
+                Profile Name <span className="text-red-500">*</span>
+              </label>
+
+              <input
+                className="admin-input"
+                placeholder="e.g. Standard Shipping, Express, Heavy Products"
+                value={form.name}
+                onChange={(e) => patch("name", e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="admin-label">Shipping Method</label>
+
+              <FilterSelect
+                options={SHIPPING_METHODS}
+                value={
+                  SHIPPING_METHODS.find(
+                    (method) => method.value === form.shippingMethod,
+                  ) || null
+                }
+                onChange={(option) =>
+                  patch("shippingMethod", option?.value || "")
+                }
+                isSearchable={false}
+                placeholder="Select shipping method..."
+              />
+            </div>
+          </div>
+
+          {/* Description */}
           <div className="space-y-1.5">
-            <label className="admin-label">
-              Target Seller <span className="text-red-500">*</span>
-            </label>
+            <label className="admin-label">Description</label>
 
             <input
               className="admin-input"
-              placeholder="Search seller by name, email, or business..."
-              onChange={(event) =>
-                onSellerSearch?.(event.target.value)
-              }
-            />
-
-            <FilterSelect
-              options={sellerOptions}
-              value={
-                sellerOptions.find(
-                  (seller) => seller.value === form.sellerId,
-                ) || null
-              }
-              onChange={(option) => {
-                setForm((prev) => ({
-                  ...prev,
-                  sellerId: option?.value || "",
-                  organizationId: "",
-                }));
-              }}
-              isSearchable
-              placeholder="Select seller..."
-              isClearable
+              placeholder="Optional description"
+              value={form.description}
+              onChange={(e) => patch("description", e.target.value)}
             />
           </div>
+        </div>
+      </FormSection>
 
-          {/* Organization */}
+      {/* Serviceability */}
+      <FormSection
+        title="Serviceability"
+        description="Choose where this shipping profile can be used."
+      >
+        <div className="space-y-2">
+          {SERVICEABILITY_MODES.map((mode) => {
+            const isSelected = form.serviceabilityMode === mode.value;
+
+            return (
+              <label
+                key={mode.value}
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                  isSelected
+                    ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]/5"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="serviceabilityMode"
+                  value={mode.value}
+                  checked={isSelected}
+                  onChange={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      serviceabilityMode: mode.value,
+                    }));
+                  }}
+                  className="sr-only"
+                />
+
+                <span
+                  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                    isSelected
+                      ? "border-[var(--admin-blue)]"
+                      : "border-gray-400 bg-white"
+                  }`}
+                  aria-hidden="true"
+                >
+                  {isSelected && (
+                    <span className="h-2 w-2 rounded-full bg-[var(--admin-blue)]" />
+                  )}
+                </span>
+
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {mode.label}
+                  </p>
+
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    {mode.description}
+                  </p>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+
+        {form.serviceabilityMode === "selected_pincodes" && (
+          <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="mb-3">
+              <label className="admin-label">
+                Allowed Pincodes <span className="text-red-500">*</span>
+              </label>
+
+              <p className="mt-1 text-xs text-gray-500">
+                Add the 6-digit pincodes where this profile is available.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                type="text"
+                value={pincodeInput}
+                onChange={(event) => {
+                  const value = event.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 6);
+
+                  setPincodeInput(value);
+                }}
+                onKeyDown={handlePincodeKeyDown}
+                placeholder="Enter 6-digit pincode"
+                className="admin-input flex-1"
+                maxLength={6}
+                inputMode="numeric"
+              />
+
+              <button
+                type="button"
+                onClick={addPincode}
+                className="admin-btn-primary whitespace-nowrap px-4"
+              >
+                Add
+              </button>
+            </div>
+
+            {form.allowedPincodes.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
+                {form.allowedPincodes.map((pincode) => (
+                  <span
+                    key={pincode}
+                    className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
+                  >
+                    {pincode}
+
+                    <button
+                      type="button"
+                      onClick={() => removePincode(pincode)}
+                      className="ml-1 text-sm leading-none transition-colors hover:text-red-500"
+                      aria-label={`Remove ${pincode}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <p className="mt-2 text-xs text-gray-400">
+              {form.allowedPincodes.length} pincode(s) selected
+            </p>
+          </div>
+        )}
+      </FormSection>
+
+      {/* Charges */}
+      <FormSection
+        title="Charges"
+        description="Configure shipping charges and free-shipping eligibility."
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
-            <label className="admin-label">Organization</label>
+            <label className="admin-label">Shipping Charge (₹)</label>
 
-            <FilterSelect
-              options={organizationOptions}
-              value={
-                organizationOptions.find(
-                  (option) =>
-                    option.value === form.organizationId,
-                ) || null
-              }
-              onChange={(option) =>
-                patch("organizationId", option?.value || "")
-              }
-              isDisabled={!form.sellerId}
-              placeholder="Seller-wide default"
-              isSearchable
-              isClearable
+            <input
+              className="admin-input"
+              type="number"
+              min="0"
+              placeholder="0"
+              value={form.shippingCharge}
+              onChange={(e) => patch("shippingCharge", e.target.value)}
+            />
+
+            <p className="text-xs text-gray-400">Set 0 for free shipping</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="admin-label">Free Shipping Above (₹)</label>
+
+            <input
+              className="admin-input"
+              type="number"
+              min="0"
+              placeholder="Leave blank to disable"
+              value={form.freeShippingThreshold}
+              onChange={(e) => patch("freeShippingThreshold", e.target.value)}
+            />
+
+            <p className="text-xs text-gray-400">Order value threshold</p>
+          </div>
+        </div>
+      </FormSection>
+
+      {/* Estimated Delivery */}
+      <FormSection
+        title="Estimated Delivery Time"
+        description="Define the expected delivery range for this shipping profile."
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-1.5">
+            <label className="admin-label">ETA Min (days)</label>
+
+            <input
+              className="admin-input"
+              type="number"
+              min="0"
+              placeholder="e.g. 2"
+              value={form.etaMin}
+              onChange={(e) => patch("etaMin", e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="admin-label">ETA Max (days)</label>
+
+            <input
+              className="admin-input"
+              type="number"
+              min="0"
+              placeholder="e.g. 5"
+              value={form.etaMax}
+              onChange={(e) => patch("etaMax", e.target.value)}
             />
           </div>
         </div>
-      )}
+      </FormSection>
 
-      {/* Profile Name & Shipping Method */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="space-y-1.5">
-          <label className="admin-label">
-            Profile Name <span className="text-red-500">*</span>
-          </label>
+      {/* Options */}
+      <FormSection
+        title="Options"
+        description="Manage the default and active status of this shipping profile."
+      >
+        <div className="space-y-3">
+          {!isTemplate && (
+            <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition-colors hover:bg-gray-100">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">
+                  Set as Default Profile
+                </p>
 
-          <input
-            className="admin-input"
-            placeholder="e.g. Standard Shipping, Express, Heavy Products"
-            value={form.name}
-            onChange={(e) => patch("name", e.target.value)}
-          />
-        </div>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Products with no profile assigned will use this profile.
+                </p>
+              </div>
 
-        <div className="space-y-1.5">
-          <label className="admin-label">Shipping Method</label>
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[var(--admin-blue)]"
+                checked={Boolean(form.isDefault)}
+                onChange={(e) => patch("isDefault", e.target.checked)}
+              />
+            </label>
+          )}
 
-          <FilterSelect
-            options={SHIPPING_METHODS}
-            value={
-              SHIPPING_METHODS.find(
-                (method) => method.value === form.shippingMethod,
-              ) || null
-            }
-            onChange={(option) =>
-              patch("shippingMethod", option?.value || "")
-            }
-            isSearchable={false}
-            placeholder="Select shipping method..."
-          />
-        </div>
-      </div>
-
-      {/* Description */}
-      <div className="space-y-1.5">
-        <label className="admin-label">Description</label>
-
-        <input
-          className="admin-input"
-          placeholder="Optional description"
-          value={form.description}
-          onChange={(e) => patch("description", e.target.value)}
-        />
-      </div>
-    </div>
-  </FormSection>
-
-  {/* Serviceability */}
-  <FormSection
-    title="Serviceability"
-    description="Choose where this shipping profile can be used."
-  >
-    <div className="space-y-2">
-      {SERVICEABILITY_MODES.map((mode) => {
-        const isSelected = form.serviceabilityMode === mode.value;
-
-        return (
-          <label
-            key={mode.value}
-            className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
-              isSelected
-                ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]/5"
-                : "border-gray-200 hover:border-gray-300"
-            }`}
-          >
-            <input
-              type="radio"
-              name="serviceabilityMode"
-              value={mode.value}
-              checked={isSelected}
-              onChange={() => {
-                setForm((prev) => ({
-                  ...prev,
-                  serviceabilityMode: mode.value,
-                }));
-              }}
-              className="sr-only"
-            />
-
-            <span
-              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                isSelected
-                  ? "border-[var(--admin-blue)]"
-                  : "border-gray-400 bg-white"
-              }`}
-              aria-hidden="true"
-            >
-              {isSelected && (
-                <span className="h-2 w-2 rounded-full bg-[var(--admin-blue)]" />
-              )}
-            </span>
-
+          <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition-colors hover:bg-gray-100">
             <div>
               <p className="text-sm font-semibold text-gray-800">
-                {mode.label}
+                {isTemplate ? "Published / Active" : "Active"}
               </p>
 
               <p className="mt-0.5 text-xs text-gray-500">
-                {mode.description}
+                {isTemplate
+                  ? "Inactive templates cannot be cloned by sellers."
+                  : "Inactive profiles cannot be assigned to products."}
               </p>
             </div>
+
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[var(--admin-blue)]"
+              checked={Boolean(form.active)}
+              onChange={(e) => patch("active", e.target.checked)}
+            />
           </label>
-        );
-      })}
-    </div>
-
-    {form.serviceabilityMode === "selected_pincodes" && (
-      <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-3">
-        <div className="mb-3">
-          <label className="admin-label">
-            Allowed Pincodes{" "}
-            <span className="text-red-500">*</span>
-          </label>
-
-          <p className="mt-1 text-xs text-gray-500">
-            Add the 6-digit pincodes where this profile is available.
-          </p>
         </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <input
-            type="text"
-            value={pincodeInput}
-            onChange={(event) => {
-              const value = event.target.value
-                .replace(/\D/g, "")
-                .slice(0, 6);
-
-              setPincodeInput(value);
-            }}
-            onKeyDown={handlePincodeKeyDown}
-            placeholder="Enter 6-digit pincode"
-            className="admin-input flex-1"
-            maxLength={6}
-            inputMode="numeric"
-          />
-
-          <button
-            type="button"
-            onClick={addPincode}
-            className="admin-btn-primary whitespace-nowrap px-4"
-          >
-            Add
-          </button>
-        </div>
-
-        {form.allowedPincodes.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
-            {form.allowedPincodes.map((pincode) => (
-              <span
-                key={pincode}
-                className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
-              >
-                {pincode}
-
-                <button
-                  type="button"
-                  onClick={() => removePincode(pincode)}
-                  className="ml-1 text-sm leading-none transition-colors hover:text-red-500"
-                  aria-label={`Remove ${pincode}`}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        <p className="mt-2 text-xs text-gray-400">
-          {form.allowedPincodes.length} pincode(s) selected
-        </p>
-      </div>
-    )}
-  </FormSection>
-
-  {/* Charges */}
-  <FormSection
-    title="Charges"
-    description="Configure shipping charges and free-shipping eligibility."
-  >
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <div className="space-y-1.5">
-        <label className="admin-label">Shipping Charge (₹)</label>
-
-        <input
-          className="admin-input"
-          type="number"
-          min="0"
-          placeholder="0"
-          value={form.shippingCharge}
-          onChange={(e) =>
-            patch("shippingCharge", e.target.value)
-          }
-        />
-
-        <p className="text-xs text-gray-400">
-          Set 0 for free shipping
-        </p>
-      </div>
-
-      <div className="space-y-1.5">
-        <label className="admin-label">
-          Free Shipping Above (₹)
-        </label>
-
-        <input
-          className="admin-input"
-          type="number"
-          min="0"
-          placeholder="Leave blank to disable"
-          value={form.freeShippingThreshold}
-          onChange={(e) =>
-            patch("freeShippingThreshold", e.target.value)
-          }
-        />
-
-        <p className="text-xs text-gray-400">
-          Order value threshold
-        </p>
-      </div>
+      </FormSection>
     </div>
-  </FormSection>
-
-  {/* Estimated Delivery */}
-  <FormSection
-    title="Estimated Delivery Time"
-    description="Define the expected delivery range for this shipping profile."
-  >
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <div className="space-y-1.5">
-        <label className="admin-label">ETA Min (days)</label>
-
-        <input
-          className="admin-input"
-          type="number"
-          min="0"
-          placeholder="e.g. 2"
-          value={form.etaMin}
-          onChange={(e) => patch("etaMin", e.target.value)}
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <label className="admin-label">ETA Max (days)</label>
-
-        <input
-          className="admin-input"
-          type="number"
-          min="0"
-          placeholder="e.g. 5"
-          value={form.etaMax}
-          onChange={(e) => patch("etaMax", e.target.value)}
-        />
-      </div>
-    </div>
-  </FormSection>
-
-  {/* Options */}
-  <FormSection
-    title="Options"
-    description="Manage the default and active status of this shipping profile."
-  >
-    <div className="space-y-3">
-      {!isTemplate && (
-        <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition-colors hover:bg-gray-100">
-          <div>
-            <p className="text-sm font-semibold text-gray-800">
-              Set as Default Profile
-            </p>
-
-            <p className="mt-0.5 text-xs text-gray-500">
-              Products with no profile assigned will use this profile.
-            </p>
-          </div>
-
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-[var(--admin-blue)]"
-            checked={Boolean(form.isDefault)}
-            onChange={(e) =>
-              patch("isDefault", e.target.checked)
-            }
-          />
-        </label>
-      )}
-
-      <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition-colors hover:bg-gray-100">
-        <div>
-          <p className="text-sm font-semibold text-gray-800">
-            {isTemplate ? "Published / Active" : "Active"}
-          </p>
-
-          <p className="mt-0.5 text-xs text-gray-500">
-            {isTemplate
-              ? "Inactive templates cannot be cloned by sellers."
-              : "Inactive profiles cannot be assigned to products."}
-          </p>
-        </div>
-
-        <input
-          type="checkbox"
-          className="h-4 w-4 accent-[var(--admin-blue)]"
-          checked={Boolean(form.active)}
-          onChange={(e) =>
-            patch("active", e.target.checked)
-          }
-        />
-      </label>
-    </div>
-  </FormSection>
-</div>
   );
 }
 
@@ -1622,8 +1604,8 @@ export default function ShippingProfiles() {
             Admin Shipping Templates
           </h3>
           <p className="text-xs text-[var(--admin-muted)]">
-            Sellers copy these templates into their own profile, then edit
-            only their private copy. The admin template never changes.
+            Sellers copy these templates into their own profile, then edit only
+            their private copy. The admin template never changes.
           </p>
         </div>
         {templatesPayload.list.length === 0 ? (
@@ -1814,179 +1796,179 @@ export default function ShippingProfiles() {
         />
       </DefaultModal>
 
-  <DefaultModal
-  isOpen={cloneModal.open}
-  onClose={closeCloneModal}
-  title="Copy Admin Template"
-  onSubmit={handleCloneTemplate}
-  submitButtonText="Copy to Seller Profiles"
-  closeButtonText="Cancel"
-  loading={saving}
->
-  <div className="space-y-5 py-2">
-    {/* Copy Information */}
-    <FormSection
-      title="Copy Information"
-      description="Create a private seller profile from the selected admin template."
-    >
-      <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3">
-        <p className="text-xs leading-5 text-emerald-800">
-          This creates a private seller profile. Editing pincodes, charges,
-          ETA, or status after copying will not change the admin template.
-        </p>
-      </div>
-    </FormSection>
-
-    {/* Seller Assignment */}
-    {!isSeller && (
-      <FormSection
-        title="Seller Assignment"
-        description="Select the seller and organization that will receive the private copy."
+      <DefaultModal
+        isOpen={cloneModal.open}
+        onClose={closeCloneModal}
+        title="Copy Admin Template"
+        onSubmit={handleCloneTemplate}
+        submitButtonText="Copy to Seller Profiles"
+        closeButtonText="Cancel"
+        loading={saving}
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* Target Seller */}
-          <div className="space-y-1.5">
-            <label className="admin-label">Target Seller</label>
+        <div className="space-y-5 py-2">
+          {/* Copy Information */}
+          <FormSection
+            title="Copy Information"
+            description="Create a private seller profile from the selected admin template."
+          >
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3">
+              <p className="text-xs leading-5 text-emerald-800">
+                This creates a private seller profile. Editing pincodes,
+                charges, ETA, or status after copying will not change the admin
+                template.
+              </p>
+            </div>
+          </FormSection>
 
-            <input
-              className="admin-input w-full"
-              value={cloneSellerSearch}
-              onChange={(event) =>
-                setCloneSellerSearch(event.target.value)
-              }
-              placeholder="Search seller by name, email, or business..."
-            />
+          {/* Seller Assignment */}
+          {!isSeller && (
+            <FormSection
+              title="Seller Assignment"
+              description="Select the seller and organization that will receive the private copy."
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* Target Seller */}
+                <div className="space-y-1.5">
+                  <label className="admin-label">Target Seller</label>
 
-            <FilterSelect
-              options={sellerOptions}
-              value={
-                sellerOptions.find(
-                  (seller) => seller.value === cloneForm.sellerId,
-                ) || null
-              }
-              onChange={(option) =>
-                setCloneForm((prev) => ({
-                  ...prev,
-                  sellerId: option?.value || "",
-                  organizationId: "",
-                }))
-              }
-              isSearchable
-              placeholder="Select seller..."
-              isClearable
-            />
+                  <input
+                    className="admin-input w-full"
+                    value={cloneSellerSearch}
+                    onChange={(event) =>
+                      setCloneSellerSearch(event.target.value)
+                    }
+                    placeholder="Search seller by name, email, or business..."
+                  />
 
-            <p className="text-xs text-gray-400">
-              This is the seller who will receive the private copy.
-            </p>
-          </div>
+                  <FilterSelect
+                    options={sellerOptions}
+                    value={
+                      sellerOptions.find(
+                        (seller) => seller.value === cloneForm.sellerId,
+                      ) || null
+                    }
+                    onChange={(option) =>
+                      setCloneForm((prev) => ({
+                        ...prev,
+                        sellerId: option?.value || "",
+                        organizationId: "",
+                      }))
+                    }
+                    isSearchable
+                    placeholder="Select seller..."
+                    isClearable
+                  />
 
-          {/* Organization */}
-          <div className="space-y-1.5">
-            <label className="admin-label">Organization</label>
+                  <p className="text-xs text-gray-400">
+                    This is the seller who will receive the private copy.
+                  </p>
+                </div>
 
-            <FilterSelect
-              options={cloneOrganizationOptions}
-              value={
-                cloneOrganizationOptions.find(
-                  (option) =>
-                    option.value === cloneForm.organizationId,
-                ) || null
-              }
-              onChange={(option) =>
-                setCloneForm((prev) => ({
-                  ...prev,
-                  organizationId: option?.value || "",
-                }))
-              }
-              isDisabled={!cloneForm.sellerId}
-              placeholder="Seller-wide default"
-              isSearchable
-              isClearable
-            />
+                {/* Organization */}
+                <div className="space-y-1.5">
+                  <label className="admin-label">Organization</label>
 
-            <p className="text-xs text-gray-400">
-              Select an organization or use the seller-wide default.
-            </p>
-          </div>
+                  <FilterSelect
+                    options={cloneOrganizationOptions}
+                    value={
+                      cloneOrganizationOptions.find(
+                        (option) => option.value === cloneForm.organizationId,
+                      ) || null
+                    }
+                    onChange={(option) =>
+                      setCloneForm((prev) => ({
+                        ...prev,
+                        organizationId: option?.value || "",
+                      }))
+                    }
+                    isDisabled={!cloneForm.sellerId}
+                    placeholder="Seller-wide default"
+                    isSearchable
+                    isClearable
+                  />
+
+                  <p className="text-xs text-gray-400">
+                    Select an organization or use the seller-wide default.
+                  </p>
+                </div>
+              </div>
+            </FormSection>
+          )}
+
+          {/* Profile Details */}
+          <FormSection
+            title="Profile Details"
+            description="Customize the name and description for the seller profile copy."
+          >
+            <div className="space-y-4">
+              {/* Template Name */}
+              <div className="space-y-1.5">
+                <label className="admin-label">Template Name</label>
+
+                <input
+                  className="admin-input w-full"
+                  value={cloneForm.name}
+                  onChange={(event) =>
+                    setCloneForm((prev) => ({
+                      ...prev,
+                      name: event.target.value,
+                    }))
+                  }
+                  placeholder="e.g. Standard Shipping - Delhi NCR"
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <label className="admin-label">Copy Description</label>
+
+                <input
+                  className="admin-input w-full"
+                  value={cloneForm.description}
+                  onChange={(event) =>
+                    setCloneForm((prev) => ({
+                      ...prev,
+                      description: event.target.value,
+                    }))
+                  }
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+          </FormSection>
+
+          {/* Options */}
+          <FormSection
+            title="Options"
+            description="Configure how the copied profile should be used."
+          >
+            <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition-colors hover:bg-gray-100">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">
+                  Set as Default
+                </p>
+
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Use this profile for products without a specific profile
+                  assigned in this seller or organization.
+                </p>
+              </div>
+
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[var(--admin-blue)]"
+                checked={Boolean(cloneForm.isDefault)}
+                onChange={(event) =>
+                  setCloneForm((prev) => ({
+                    ...prev,
+                    isDefault: event.target.checked,
+                  }))
+                }
+              />
+            </label>
+          </FormSection>
         </div>
-      </FormSection>
-    )}
-
-    {/* Profile Details */}
-    <FormSection
-      title="Profile Details"
-      description="Customize the name and description for the seller profile copy."
-    >
-      <div className="space-y-4">
-        {/* Template Name */}
-        <div className="space-y-1.5">
-          <label className="admin-label">Template Name</label>
-
-          <input
-            className="admin-input w-full"
-            value={cloneForm.name}
-            onChange={(event) =>
-              setCloneForm((prev) => ({
-                ...prev,
-                name: event.target.value,
-              }))
-            }
-            placeholder="e.g. Standard Shipping - Delhi NCR"
-          />
-        </div>
-
-        {/* Description */}
-        <div className="space-y-1.5">
-          <label className="admin-label">Copy Description</label>
-
-          <input
-            className="admin-input w-full"
-            value={cloneForm.description}
-            onChange={(event) =>
-              setCloneForm((prev) => ({
-                ...prev,
-                description: event.target.value,
-              }))
-            }
-            placeholder="Optional"
-          />
-        </div>
-      </div>
-    </FormSection>
-
-    {/* Options */}
-    <FormSection
-      title="Options"
-      description="Configure how the copied profile should be used."
-    >
-      <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition-colors hover:bg-gray-100">
-        <div>
-          <p className="text-sm font-semibold text-gray-800">
-            Set as Default
-          </p>
-
-          <p className="mt-0.5 text-xs text-gray-500">
-            Use this profile for products without a specific profile
-            assigned in this seller or organization.
-          </p>
-        </div>
-
-        <input
-          type="checkbox"
-          className="h-4 w-4 accent-[var(--admin-blue)]"
-          checked={Boolean(cloneForm.isDefault)}
-          onChange={(event) =>
-            setCloneForm((prev) => ({
-              ...prev,
-              isDefault: event.target.checked,
-            }))
-          }
-        />
-      </label>
-    </FormSection>
-  </div>
-</DefaultModal>
+      </DefaultModal>
       <ConfirmModal
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}

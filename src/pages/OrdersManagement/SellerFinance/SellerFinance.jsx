@@ -345,66 +345,6 @@ const IconButton = ({
   );
 };
 
-const TableShell = ({
-  title,
-  headings,
-  children,
-  emptyText,
-  loading = false,
-  filterBar,
-}) => {
-  const rows = React.Children.toArray(children);
-
-  const data = rows.map((row, index) => ({
-    id: row.key || `${title}-${index}`,
-    cells: React.Children.toArray(row.props.children),
-    rowClassName: row.props.className || "",
-  }));
-
-  const columns = headings.map((heading, index) => ({
-    key: `column-${index}`,
-    label: heading,
-
-    render: (_, record) => {
-      const cell = record.cells[index];
-
-      if (!React.isValidElement(cell)) {
-        return cell;
-      }
-
-      const className = String(cell.props.className || "")
-        .replace(/\b(?:px|py|p)-\d+(?:\.\d+)?\b/g, "")
-        .trim();
-
-      return (
-        <div className={`w-full min-w-0 ${className}`}>
-          {cell.props.children}
-        </div>
-      );
-    },
-  }));
-
-  return (
-    <section className="rounded-lg border border-[#E6E6E6] bg-white">
-      <div className="border-b border-[#E6E6E6] px-4 py-3">
-        <h2 className="text-sm font-semibold text-[#202337]">{title}</h2>
-      </div>
-
-      <DataTable
-        columns={columns}
-        data={data}
-        totalCount={data.length}
-        pageSize={Math.max(data.length, 1)}
-        rowKey="id"
-        rowClassName={(record) => record.rowClassName}
-        emptyText={emptyText}
-        cardClassName="overflow-hidden"
-        loading={loading}
-        filterBar={filterBar}
-      />
-    </section>
-  );
-};
 const ModalOverlay = ({
   isOpen,
   onClose,
@@ -695,16 +635,6 @@ const SellerFinance = () => {
       ? financeState.myCommissionsData?.data
       : financeState.adminCommissionsData?.data,
   );
-  // const payouts = listOf(
-  //   isSeller
-  //     ? financeState.myPayoutsData?.data
-  //     : financeState.adminPayoutsData?.data,
-  // );
-  // const settlements = listOf(
-  //   isSeller
-  //     ? financeState.mySettlementsData?.data
-  //     : financeState.settlementsData?.data,
-  // );
 
   const sellerOpts = useMemo(
     () => [{ value: "", label: "All Sellers" }, ...sellerOptions],
@@ -1339,21 +1269,133 @@ const SellerFinance = () => {
 
       {!isSeller && !isSellerDetail && (
         <div className="mb-4">
-          <TableShell
-            title="Seller-wise Payout Queue"
-            headings={[
-              "Seller",
-              "Total Sales",
-              "Payable Now",
-              "Pending Window",
-              "Eligible",
-              "Held",
-              "Already Released",
-              "Next Eligible",
-              "Action",
+          <DataTable
+            columns={[
+              {
+                key: "sellerName",
+                label: "Seller",
+                render: (_, seller) => (
+                  <div className="min-w-0">
+                    <div className="font-semibold text-[#202337]">
+                      {seller.sellerName}
+                    </div>
+                    <div className="font-mono text-[11px] text-[#65718b]">
+                      {seller.sellerId}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "gross",
+                label: "Total Sales",
+                render: (value) => (
+                  <div>
+                    <div className="font-medium text-[#202337]">
+                      {money(value)}
+                    </div>
+                    <div className="mt-1 text-[11px] text-[#65718b]">
+                      All rows, including released
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "payableNow",
+                label: "Payable Now",
+                render: (value) => (
+                  <div>
+                    <div className="font-semibold text-[#208a3c]">
+                      {money(value)}
+                    </div>
+                    <div className="mt-1 text-[11px] text-[#65718b]">
+                      Eligible and unpaid only
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "pending",
+                label: "Pending Window",
+                cellClassName: "text-center",
+                render: (value, seller) => (
+                  <div className="flex flex-col items-center justify-center">
+                    <StatusBadge status="pending" dot />
+                    <span className="mt-1 text-sm font-semibold text-[#202337]">
+                      {value}
+                    </span>
+                    <div className="mt-0.5 text-[11px] text-[#65718b]">
+                      {money(seller.pendingAmount)}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "eligible",
+                label: "Eligible",
+                cellClassName: "text-center",
+                render: (value, seller) => (
+                  <div className="flex flex-col items-center justify-center">
+                    <StatusBadge status="eligible" dot />
+                    <span className="mt-1 text-sm font-semibold text-[#202337]">
+                      {value}
+                    </span>
+                    <div className="mt-0.5 text-[11px] text-[#65718b]">
+                      {money(seller.payableNow)}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "held",
+                label: "Held",
+                cellClassName: "text-center",
+                render: (value, seller) => (
+                  <div className="flex flex-col items-center justify-center">
+                    <StatusBadge status="held" dot />
+                    <span className="mt-1 text-sm font-semibold text-[#202337]">
+                      {value}
+                    </span>
+                    <div className="mt-0.5 text-[11px] text-[#65718b]">
+                      {money(seller.heldAmount)}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "released",
+                label: "Already Released",
+                cellClassName: "text-center",
+                render: (value, seller) => (
+                  <div className="flex flex-col items-center justify-center">
+                    <StatusBadge status="released" dot />
+                    <span className="mt-1 text-sm font-semibold text-[#202337]">
+                      {value}
+                    </span>
+                    <div className="mt-0.5 text-[11px] text-[#65718b]">
+                      {money(seller.releasedAmount)}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "nextEligibleAt",
+                label: "Next Eligible",
+                render: (value) =>
+                  value ? formatDateTime12Hour(value, "—") : "—",
+              },
             ]}
-            emptyText="No seller commission records found"
+            data={sellerOverview}
             loading={financeLoading}
+            totalCount={sellerOverview.length}
+            pageSize={Math.max(sellerOverview.length, 1)}
+            rowKey="sellerId"
+            emptyText="No seller commission records found"
+            cardClassName="overflow-hidden"
+            rowClassName={(seller) =>
+              String(filters.sellerId) === String(seller.sellerId)
+                ? "bg-blue-50"
+                : ""
+            }
             filterBar={
               <FilterBar
                 filters={sellerFinanceFilters}
@@ -1370,185 +1412,151 @@ const SellerFinance = () => {
                 loading={financeLoading}
               />
             }
-          >
-            {sellerOverview.length
-              ? sellerOverview.map((seller) => (
-                  <tr
-                    key={seller.sellerId}
-                    className={
-                      String(filters.sellerId) === String(seller.sellerId)
-                        ? "bg-blue-50"
-                        : ""
-                    }
-                  >
-                    {/* Seller */}
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <div className="font-semibold text-[#202337]">
-                        {seller.sellerName}
-                      </div>
+            rowActions={(seller) => [
+              {
+                label: "Create Payout",
+                hidden: seller.eligible <= 0,
+                disabled: submitting,
+                onClick: () => handleSellerEligiblePayout(seller),
+              },
+              {
+                label: "View Store",
+                onClick: () => {
+                  const detailParams = new URLSearchParams();
 
-                      <div className="font-mono text-[11px] text-[#65718b]">
-                        {seller.sellerId}
-                      </div>
-                    </td>
+                  if (filters.organizationId) {
+                    detailParams.set(
+                      "organizationId",
+                      String(filters.organizationId),
+                    );
+                  }
 
-                    {/* Total Sales */}
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <div className="font-medium text-[#202337]">
-                        {money(seller.gross)}
-                      </div>
+                  const detailQuery = detailParams.toString();
 
-                      <div className="mt-1 text-[11px] text-[#65718b]">
-                        All rows, including released
-                      </div>
-                    </td>
-
-                    {/* Payable Now */}
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <div className="font-semibold text-[#208a3c]">
-                        {money(seller.payableNow)}
-                      </div>
-
-                      <div className="mt-1 text-[11px] text-[#65718b]">
-                        Eligible and unpaid only
-                      </div>
-                    </td>
-
-                    {/* Pending Window */}
-                    <td className="whitespace-nowrap  px-4 py-3">
-                      <div className="flex flex-col items-center justify-center">
-                        <StatusBadge status="pending" dot />
-
-                        <span className="mt-1 text-sm  font-semibold text-[#202337]">
-                          {seller.pending}
-                        </span>
-
-                        <div className="mt-0.5 text-[11px] text-[#65718b]">
-                          {money(seller.pendingAmount)}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Eligible */}
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <div className="flex flex-col items-center justify-center">
-                        <StatusBadge status="eligible" dot />
-
-                        <span className="mt-1 text-sm font-semibold text-[#202337]">
-                          {seller.eligible}
-                        </span>
-
-                        <div className="mt-0.5 text-[11px] text-[#65718b]">
-                          {money(seller.payableNow)}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Held */}
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <div className="flex flex-col items-center justify-center">
-                        <StatusBadge status="held" dot />
-
-                        <span className="mt-1 text-sm font-semibold text-[#202337]">
-                          {seller.held}
-                        </span>
-
-                        <div className="mt-0.5 text-[11px] text-[#65718b]">
-                          {money(seller.heldAmount)}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Already Released */}
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <div className="flex flex-col items-center justify-center">
-                        <StatusBadge status="released" dot />
-
-                        <span className="mt-1 text-sm font-semibold text-[#202337]">
-                          {seller.released}
-                        </span>
-
-                        <div className="mt-0.5 text-[11px] text-[#65718b]">
-                          {money(seller.releasedAmount)}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Next Eligible */}
-                    <td className="whitespace-nowrap px-4 py-3 text-xs text-[#65718b]">
-                      {seller.nextEligibleAt
-                        ? formatDateTime12Hour(seller.nextEligibleAt, "—")
-                        : "—"}
-                    </td>
-
-                    {/* Action */}
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <div className="flex items-center gap-2 whitespace-nowrap">
-                        {seller.eligible > 0 && (
-                          <PermissionGuard
-                            module="sellers/commissions"
-                            action={ACTIONS.UPDATE}
-                            hide
-                          >
-                            <button
-                              type="button"
-                              className="whitespace-nowrap rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
-                              onClick={() => handleSellerEligiblePayout(seller)}
-                              disabled={submitting}
-                            >
-                              Create Payout
-                            </button>
-                          </PermissionGuard>
-                        )}
-
-                        <button
-                          type="button"
-                          className="whitespace-nowrap rounded-md bg-[#2f6fed] px-3 py-2 text-xs font-semibold text-white"
-                          onClick={() => {
-                            const detailParams = new URLSearchParams();
-
-                            if (filters.organizationId) {
-                              detailParams.set(
-                                "organizationId",
-                                String(filters.organizationId),
-                              );
-                            }
-
-                            const detailQuery = detailParams.toString();
-
-                            navigate(
-                              `/app/seller-finance/seller/${encodeURIComponent(
-                                seller.sellerId,
-                              )}${detailQuery ? `?${detailQuery}` : ""}`,
-                            );
-                          }}
-                        >
-                          View Store
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              : null}
-          </TableShell>
+                  navigate(
+                    `/app/seller-finance/seller/${encodeURIComponent(
+                      seller.sellerId,
+                    )}${detailQuery ? `?${detailQuery}` : ""}`,
+                  );
+                },
+              },
+            ]}
+          />
         </div>
       )}
 
       <div className={`${!isSeller && !isSellerDetail ? "hidden" : "mb-4"}`}>
-        <TableShell
-          title="Order Payout Eligibility"
-          headings={[
-            "Order",
-            "Delivered",
-            "Return Window Starts",
-            "Return Window Ends",
-            "Net Payable",
-            "Can Payout?",
-            "Reason",
-            ...(!isSeller ? ["Action"] : []),
+        <DataTable
+          columns={[
+            {
+              key: "order_id",
+              label: "Order",
+              render: (_, row) => (
+                <span className="font-mono text-xs">
+                  <OrderLink
+                    orderId={row.order_id || row.orderId}
+                    orderNumber={row.orderNumber || row.order_number}
+                  />
+                </span>
+              ),
+            },
+            {
+              key: "deliveredAt",
+              label: "Delivered",
+              render: (value) =>
+                value ? (
+                  <span className="text-xs">
+                    {formatDateTime12Hour(value, "-")}
+                  </span>
+                ) : (
+                  <span className="text-xs text-amber-700">Not Delivered</span>
+                ),
+            },
+            {
+              key: "returnWindowStartsAt",
+              label: "Return Window Starts",
+              render: (value) => (
+                <span className="text-xs">
+                  {value
+                    ? formatDateTime12Hour(value, "-")
+                    : "Starts After Delivery"}
+                </span>
+              ),
+            },
+            {
+              key: "returnWindowEndsAt",
+              label: "Return Window Ends",
+              render: (value) => (
+                <div className="text-xs">
+                  {value ? formatDateTime12Hour(value, "—") : "—"}
+
+                  {value && new Date(value) > new Date() && (
+                    <div className="mt-1 font-semibold text-amber-700">
+                      {eligibilityCountdown(value)}
+                    </div>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: "net_amount",
+              label: "Net Payable",
+              render: (_, row) => (
+                <span className="font-semibold text-[#208a3c]">
+                  {money(Math.max(rowMoney(row, "net_amount", "netAmount"), 0))}
+                </span>
+              ),
+            },
+            {
+              key: "eligibility",
+              label: "Can Payout?",
+              render: (_, row) => {
+                const decision = payoutDecision(row);
+
+                return (
+                  <div>
+                    <StatusBadge
+                      status={
+                        decision.allowed
+                          ? "eligible"
+                          : decision.label === "Held"
+                            ? "held"
+                            : decision.label === "Refunded"
+                              ? "refunded"
+                              : "pending"
+                      }
+                      dot
+                    />
+
+                    <div className="mt-1 text-xs font-semibold">
+                      {decision.label}
+                    </div>
+                  </div>
+                );
+              },
+            },
+            {
+              key: "reason",
+              label: "Reason",
+              cellClassName: "min-w-[220px]",
+              render: (_, row) => {
+                const decision = payoutDecision(row);
+
+                return (
+                  <span className="text-xs text-[#65718b]">
+                    {formatLabel(decision.reason)}
+                  </span>
+                );
+              },
+            },
           ]}
-          emptyText="No order payout records found for this seller"
+          data={actionableCommissions}
           loading={financeLoading}
+          totalCount={actionableCommissions.length}
+          pageSize={Math.max(actionableCommissions.length, 1)}
+          rowKey={(row) => row.id}
+          emptyText="No order payout records found for this seller"
+          cardClassName="overflow-hidden"
           filterBar={
             isSeller || isSellerDetail ? (
               <FilterBar
@@ -1556,271 +1564,266 @@ const SellerFinance = () => {
                 values={filters}
                 onChange={updateFilter}
                 onClear={() =>
-                  setFilters((prev) => ({ ...prev, status: "", search: "" }))
+                  setFilters((prev) => ({
+                    ...prev,
+                    status: "",
+                    search: "",
+                  }))
                 }
                 loading={financeLoading}
               />
             ) : null
           }
-        >
-          {actionableCommissions.map((row) => {
-            const decision = payoutDecision(row);
+          rowActions={
+            !isSeller
+              ? (row) => {
+                  const decision = payoutDecision(row);
 
-            return (
-              <tr key={`eligibility-${row.id}`}>
-                <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
-                  <OrderLink
-                    orderId={row.order_id || row.orderId}
-                    orderNumber={row.orderNumber || row.order_number}
-                  />
-                </td>
-
-                <td className="whitespace-nowrap px-4 py-3 text-xs">
-                  {row.deliveredAt ? (
-                    formatDateTime12Hour(row.deliveredAt, "-")
-                  ) : (
-                    <span className="text-amber-700">Not Delivered</span>
-                  )}
-                </td>
-
-                <td className="whitespace-nowrap px-4 py-3 text-xs">
-                  {row.returnWindowStartsAt
-                    ? formatDateTime12Hour(row.returnWindowStartsAt, "-")
-                    : "Starts After Delivery"}
-                </td>
-
-                <td className="whitespace-nowrap px-4 py-3 text-xs">
-                  {row.returnWindowEndsAt
-                    ? formatDateTime12Hour(row.returnWindowEndsAt, "—")
-                    : "—"}
-
-                  {row.returnWindowEndsAt &&
-                    new Date(row.returnWindowEndsAt) > new Date() && (
-                      <div className="mt-1 font-semibold text-amber-700">
-                        {eligibilityCountdown(row.returnWindowEndsAt)}
-                      </div>
-                    )}
-                </td>
-
-                <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
-                  {money(Math.max(rowMoney(row, "net_amount", "netAmount"), 0))}
-                </td>
-
-                <td className="whitespace-nowrap px-4 py-3">
-                  <StatusBadge
-                    status={
-                      decision.allowed
-                        ? "eligible"
-                        : decision.label === "Held"
-                          ? "held"
-                          : decision.label === "Refunded"
-                            ? "refunded"
-                            : "pending"
-                    }
-                    dot
-                  />
-
-                  <div className="mt-1 text-xs font-semibold">
-                    {decision.label}
-                  </div>
-                </td>
-
-                <td className="min-w-[220px] px-4 py-3 text-xs text-[#65718b]">
-                  {formatLabel(decision.reason)}
-                </td>
-
-                {!isSeller && (
-                  <td className="whitespace-nowrap px-4 py-3">
-                    {decision.allowed ? (
-                      <PermissionGuard
-                        module="sellers/commissions"
-                        action={ACTIONS.UPDATE}
-                        hide
-                      >
-                        <button
-                          type="button"
-                          className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white"
-                          onClick={() => openOrderPayoutModal(row)}
-                          disabled={submitting}
-                        >
-                          Payout This Order
-                        </button>
-                      </PermissionGuard>
-                    ) : (
-                      <span className="text-xs text-[#65718b]">
-                        Not Allowed
-                      </span>
-                    )}
-                  </td>
-                )}
-              </tr>
-            );
-          })}
-        </TableShell>
+                  return [
+                    {
+                      label: "Payout This Order",
+                      hidden: !decision.allowed,
+                      disabled: submitting,
+                      onClick: () => openOrderPayoutModal(row),
+                    },
+                  ];
+                }
+              : undefined
+          }
+        />
       </div>
 
       <details
-        className={`${!isSeller && !isSellerDetail ? "hidden" : "rounded-lg border border-[#E6E6E6] bg-white"}`}
+        className={`${
+          !isSeller && !isSellerDetail
+            ? "hidden"
+            : "rounded-lg border border-[#E6E6E6] bg-white"
+        }`}
       >
         <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#202337]">
           Advanced financial breakdown and payout history
         </summary>
-        <div className=" border-t border-[#E6E6E6] p-4 ">
-          <TableShell
-            title="Seller Commission / Item Settlement Lines"
-            headings={[
-              "Order",
-              ...(!isSeller ? ["Seller"] : []),
-              "Organization",
-              "Seller Receivable",
-              "Platform Commission",
-              "GST on Commission",
-              "GST TCS",
-              "Income-tax TDS",
-              "Shipping Net",
-              "Refund Adj.",
-              "Other Adj.",
-              "Net Payable",
-              "Status",
-              "Created",
-              ...(!isSeller ? ["Payout Action"] : []),
-            ]}
-            emptyText="No commissions found"
-            loading={financeLoading}
-          >
-            {visibleCommissions.length
-              ? visibleCommissions.map((row) => {
+
+        <div className="border-t border-[#E6E6E6] p-4">
+          <DataTable
+            columns={[
+              {
+                key: "order_id",
+                label: "Order",
+                render: (_, row) => (
+                  <span className="font-mono text-xs">
+                    <OrderLink
+                      orderId={row.order_id || row.orderId}
+                      orderNumber={row.orderNumber || row.order_number}
+                    />
+                  </span>
+                ),
+              },
+              ...(!isSeller
+                ? [
+                    {
+                      key: "sellerName",
+                      label: "Seller",
+                      render: (_, row) =>
+                        row.sellerName ||
+                        row.seller?.displayName ||
+                        row.seller?.businessName ||
+                        sellerLabel(row.seller_id, sellerOptions),
+                    },
+                  ]
+                : []),
+              {
+                key: "organization",
+                label: "Organization",
+                render: (_, row) => organizationName(row),
+              },
+              {
+                key: "amount",
+                label: "Seller Receivable",
+                render: (_, row) =>
+                  money(rowMoney(row, "amount", "gross_amount", "grossAmount")),
+              },
+              {
+                key: "commission",
+                label: "Platform Commission",
+                render: (_, row) => (
+                  <span className="text-[#d92d20]">
+                    −{money(deductionOf(row).commission)}
+                  </span>
+                ),
+              },
+              {
+                key: "commissionGst",
+                label: "GST on Commission",
+                render: (_, row) => (
+                  <span className="text-[#d92d20]">
+                    −{money(deductionOf(row).commissionGst)}
+                  </span>
+                ),
+              },
+              {
+                key: "gstTcs",
+                label: "GST TCS",
+                render: (_, row) => (
+                  <span className="text-[#d92d20]">
+                    −{money(deductionOf(row).gstTcs)}
+                  </span>
+                ),
+              },
+              {
+                key: "incomeTaxTds",
+                label: "Income-tax TDS",
+                render: (_, row) => (
+                  <span className="text-[#d92d20]">
+                    −{money(deductionOf(row).incomeTaxTds)}
+                  </span>
+                ),
+              },
+              {
+                key: "shipping",
+                label: "Shipping Net",
+                render: (_, row) => {
                   const deductions = deductionOf(row);
+                  const isCredit =
+                    deductions.shippingCredit > deductions.shipping;
+
                   return (
-                    <tr key={row.id}>
-                      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
-                        <OrderLink
-                          orderId={row.order_id || row.orderId}
-                          orderNumber={row.orderNumber || row.order_number}
-                        />
-                      </td>
-                      {!isSeller && (
-                        <td className="whitespace-nowrap px-4 py-3 text-xs">
-                          {row.sellerName ||
-                            row.seller?.displayName ||
-                            row.seller?.businessName ||
-                            sellerLabel(row.seller_id, sellerOptions)}
-                        </td>
+                    <span
+                      className={isCredit ? "text-[#208a3c]" : "text-[#d92d20]"}
+                    >
+                      {isCredit ? "+" : "−"}
+                      {money(
+                        Math.abs(
+                          deductions.shippingCredit - deductions.shipping,
+                        ),
                       )}
-                      <td className="whitespace-nowrap px-4 py-3 text-xs">
-                        {organizationName(row)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        {money(
-                          rowMoney(
-                            row,
-                            "amount",
-                            "gross_amount",
-                            "grossAmount",
-                          ),
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
-                        −{money(deductions.commission)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
-                        −{money(deductions.commissionGst)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
-                        −{money(deductions.gstTcs)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
-                        −{money(deductions.incomeTaxTds)}
-                      </td>
-                      <td
-                        className={`whitespace-nowrap px-4 py-3 ${deductions.shippingCredit > deductions.shipping ? "text-[#208a3c]" : "text-[#d92d20]"}`}
-                      >
-                        {deductions.shippingCredit > deductions.shipping
-                          ? "+"
-                          : "−"}
-                        {money(
-                          Math.abs(
-                            deductions.shippingCredit - deductions.shipping,
-                          ),
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-[#d92d20]">
-                        −{money(deductions.refund)}
-                      </td>
-                      <td
-                        className={`whitespace-nowrap px-4 py-3 ${deductions.adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}`}
-                      >
-                        {signedMoney(deductions.adjustment)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 font-semibold text-[#208a3c]">
-                        {money(
-                          Math.max(rowMoney(row, "net_amount", "netAmount"), 0),
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <StatusBadge
-                          status={
-                            row.lifecycleStatus ||
-                            row.releaseStatus ||
-                            row.status
-                          }
-                          dot
-                        />
-                        {row.releaseReason ===
-                          "waiting_for_item_return_window" && (
-                          <div className="mt-1 text-[11px] font-semibold text-amber-700">
-                            Return Window Open ·{" "}
-                            {eligibilityCountdown(row.eligibleAt)}
-                          </div>
-                        )}
-                        {row.eligibleAt && (
-                          <div className="text-[11px] text-gray-500">
-                            Eligible On{" "}
-                            {formatDateTime12Hour(row.eligibleAt, "—")}
-                          </div>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        {formatDateTime12Hour(
-                          valueOf(row, "created_at", "createdAt"),
-                          "-",
-                        )}
-                      </td>
-                      {!isSeller && (
-                        <td className="whitespace-nowrap px-4 py-3">
-                          {["eligible", "available"].includes(
-                            String(
-                              row.lifecycleStatus || row.releaseStatus || "",
-                            ).toLowerCase(),
-                          ) && !row.payout_id ? (
-                            <PermissionGuard
-                              module="sellers/commissions"
-                              action={ACTIONS.UPDATE}
-                              hide
-                            >
-                              <button
-                                type="button"
-                                className="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
-                                onClick={() => openOrderPayoutModal(row)}
-                                disabled={submitting}
-                              >
-                                Payout This Order
-                              </button>
-                            </PermissionGuard>
-                          ) : (
-                            <span className="text-xs text-[#65718b]">
-                              {row.payout_id
-                                ? "Already in payout"
-                                : "Wait until eligible"}
-                            </span>
-                          )}
-                        </td>
-                      )}
-                    </tr>
+                    </span>
                   );
-                })
-              : null}
-          </TableShell>
+                },
+              },
+              {
+                key: "refund",
+                label: "Refund Adj.",
+                render: (_, row) => (
+                  <span className="text-[#d92d20]">
+                    −{money(deductionOf(row).refund)}
+                  </span>
+                ),
+              },
+              {
+                key: "adjustment",
+                label: "Other Adj.",
+                render: (_, row) => {
+                  const adjustment = deductionOf(row).adjustment;
+
+                  return (
+                    <span
+                      className={
+                        adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"
+                      }
+                    >
+                      {signedMoney(adjustment)}
+                    </span>
+                  );
+                },
+              },
+              {
+                key: "net_amount",
+                label: "Net Payable",
+                render: (_, row) => (
+                  <span className="font-semibold text-[#208a3c]">
+                    {money(
+                      Math.max(rowMoney(row, "net_amount", "netAmount"), 0),
+                    )}
+                  </span>
+                ),
+              },
+              {
+                key: "status",
+                label: "Status",
+                render: (_, row) => {
+                  const status =
+                    row.lifecycleStatus || row.releaseStatus || row.status;
+
+                  return (
+                    <div>
+                      <StatusBadge status={status} dot />
+
+                      {row.releaseReason ===
+                        "waiting_for_item_return_window" && (
+                        <div className="mt-1 text-[11px] font-semibold text-amber-700">
+                          Return Window Open ·{" "}
+                          {eligibilityCountdown(row.eligibleAt)}
+                        </div>
+                      )}
+
+                      {row.eligibleAt && (
+                        <div className="text-[11px] text-gray-500">
+                          Eligible On{" "}
+                          {formatDateTime12Hour(row.eligibleAt, "—")}
+                        </div>
+                      )}
+                    </div>
+                  );
+                },
+              },
+              {
+                key: "created_at",
+                label: "Created",
+                render: (_, row) =>
+                  formatDateTime12Hour(
+                    valueOf(row, "created_at", "createdAt"),
+                    "-",
+                  ),
+              },
+            ]}
+            data={visibleCommissions}
+            loading={financeLoading}
+            totalCount={visibleCommissions.length}
+            pageSize={Math.max(visibleCommissions.length, 1)}
+            rowKey={(row) => row.id}
+            emptyText="No commissions found"
+            cardClassName="overflow-hidden"
+            rowActions={
+              !isSeller
+                ? (row) => {
+                    const status = String(
+                      row.lifecycleStatus || row.releaseStatus || "",
+                    ).toLowerCase();
+
+                    const canPayout =
+                      ["eligible", "available"].includes(status) &&
+                      !row.payout_id;
+
+                    return [
+                      {
+                        label: "Payout This Order",
+                        hidden: !canPayout,
+                        disabled: submitting,
+                        onClick: () => openOrderPayoutModal(row),
+                      },
+                      ...(row.payout_id
+                        ? [
+                            {
+                              label: "Already in payout",
+                              disabled: true,
+                              onClick: () => {},
+                            },
+                          ]
+                        : !canPayout
+                          ? [
+                              {
+                                label: "Wait until eligible",
+                                disabled: true,
+                                onClick: () => {},
+                              },
+                            ]
+                          : []),
+                    ];
+                  }
+                : undefined
+            }
+          />
         </div>
       </details>
 

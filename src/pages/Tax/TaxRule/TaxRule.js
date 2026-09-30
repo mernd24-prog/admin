@@ -47,7 +47,7 @@ const FILTER_FIELDS = [
     width: "w-36",
     options: [
       { value: "false", label: "Active" },
-      { value: "true", label: "Disabled" },
+      { value: "true", label: "Inactive" },
     ],
   },
 ];
