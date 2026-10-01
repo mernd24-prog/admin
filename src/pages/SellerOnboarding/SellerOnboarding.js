@@ -2,7 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { CheckCircle2, ChevronDown, FileText, UploadCloud, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import {
+  CheckCircle2,
+  ChevronDown,
+  FileText,
+  UploadCloud,
+  X,
+} from "lucide-react";
 import { LuView } from "react-icons/lu";
 import { FaCalendarAlt } from "react-icons/fa";
 import { BiSolidEdit } from "react-icons/bi";
@@ -57,7 +64,9 @@ const VALID_EMAIL_TLDS = new Set([
   "info",
 ]);
 const isValidEmailAddress = (value) => {
-  const email = String(value || "").trim().toLowerCase();
+  const email = String(value || "")
+    .trim()
+    .toLowerCase();
   if (!EMAIL_REGEX.test(email) || email.length > 254) return false;
 
   const [localPart = "", domain = ""] = email.split("@");
@@ -875,18 +884,13 @@ const DocumentUploadField = ({
 
   return (
     <div className="space-y-2">
-      <label
-        htmlFor={inputId}
-        className="text-sm font-medium text-gray-700"
-      >
+      <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
         {label} {required && STEP_ONE_REQUIRED}
       </label>
 
       <div
         className={`flex min-h-[200px] flex-col items-center justify-center rounded-[8px] border-2 border-dashed bg-[#F4F1ED] px-4 py-3 transition ${
-          error
-            ? "border-red-400"
-            : "border-[#f2b84b]"
+          error ? "border-red-400" : "border-[#f2b84b]"
         }`}
         onDragOver={(event) => {
           event.preventDefault();
@@ -907,8 +911,7 @@ const DocumentUploadField = ({
 
         {file || existingUrl ? (
           <div className="flex w-full flex-col items-center gap-3">
-            {previewUrl ||
-            isPreviewableImageUrl(existingUrl) ? (
+            {previewUrl || isPreviewableImageUrl(existingUrl) ? (
               <img
                 src={previewUrl || existingUrl}
                 alt={label}
@@ -917,21 +920,13 @@ const DocumentUploadField = ({
             ) : (
               <div className="flex flex-col items-center gap-1">
                 <p className="max-w-[260px] truncate text-sm font-medium text-gray-700">
-                  {file?.name ||
-                    getFileNameFromUrl(
-                      existingUrl,
-                      label,
-                    )}
+                  {file?.name || getFileNameFromUrl(existingUrl, label)}
                 </p>
               </div>
             )}
 
             <p className="max-w-[280px] truncate text-xs text-gray-500">
-              {file?.name ||
-                getFileNameFromUrl(
-                  existingUrl,
-                  label,
-                )}
+              {file?.name || getFileNameFromUrl(existingUrl, label)}
             </p>
 
             <label
@@ -944,9 +939,7 @@ const DocumentUploadField = ({
         ) : (
           <>
             <div className="flex flex-col items-center gap-2 text-center">
-              <p className="text-sm font-medium text-gray-700">
-                {emptyText}
-              </p>
+              <p className="text-sm font-medium text-gray-700">{emptyText}</p>
 
               <p className="text-xs text-gray-500">
                 PNG, JPG, WEBP or PDF • Max 5 MB
@@ -965,11 +958,7 @@ const DocumentUploadField = ({
 
       {helpAction}
 
-      {error && (
-        <p className="text-xs text-red-500">
-          {error}
-        </p>
-      )}
+      {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
 };
@@ -1213,8 +1202,7 @@ const SellerOnboarding = () => {
     aadhaarVerification.number === aadhaarNumber;
   const panNumber = kycForm.panNumber.trim();
   const isPanVerified =
-    panVerification.verified &&
-    panVerification.number === panNumber;
+    panVerification.verified && panVerification.number === panNumber;
 
   const canAccess = useMemo(
     () => !!onboardingToken || !!accessToken,
@@ -1848,9 +1836,7 @@ const SellerOnboarding = () => {
     );
   }, [flowState, seller?.onboardingUser]);
 
-
-
-    const hydrateAadhaarVerification = (source = {}) => {
+  const hydrateAadhaarVerification = (source = {}) => {
     const verified =
       source?.aadhaarVerified === true || source?.aadhaar_verified === true;
     const number =
@@ -1871,7 +1857,8 @@ const SellerOnboarding = () => {
   };
 
   const hydratePanVerification = (source = {}) => {
-    const verified = source?.panVerified === true || source?.pan_verified === true;
+    const verified =
+      source?.panVerified === true || source?.pan_verified === true;
     const number = source?.panNumber || source?.pan_number || kycForm.panNumber;
 
     if (!verified || !number) return;
@@ -1883,7 +1870,6 @@ const SellerOnboarding = () => {
       message: "",
     });
   };
-
 
   useEffect(() => {
     if (!flowState) return;
@@ -2006,7 +1992,9 @@ const SellerOnboarding = () => {
     {};
 
   const applyAadhaarPrefill = (prefill = {}) => {
-    const legalName = String(prefill.legalName || prefill.fullName || "").trim();
+    const legalName = String(
+      prefill.legalName || prefill.fullName || "",
+    ).trim();
     const dateOfBirth = toDateInputValue(prefill.dateOfBirth);
 
     if (!legalName && !dateOfBirth) return;
@@ -2037,8 +2025,8 @@ const SellerOnboarding = () => {
       verifiedAt: data.aadhaarVerifiedAt || new Date().toISOString(),
       testMode: Boolean(
         data.testMode ||
-          data.verificationMode === "TEST_MODE" ||
-          data.provider === "static",
+        data.verificationMode === "TEST_MODE" ||
+        data.provider === "static",
       ),
       message: data.message || "Aadhaar is already verified.",
     });
@@ -2065,7 +2053,11 @@ const SellerOnboarding = () => {
     ).unwrap();
     const data = getResponseData(response);
 
-    if (data.aadhaarVerified || data.cached || data.reason === "aadhaar_already_verified") {
+    if (
+      data.aadhaarVerified ||
+      data.cached ||
+      data.reason === "aadhaar_already_verified"
+    ) {
       await applyAadhaarCachedVerification(data, aadhaarNumber, {
         showToast: showCachedToast,
       });
@@ -2084,10 +2076,16 @@ const SellerOnboarding = () => {
     ).unwrap();
     const data = getResponseData(response);
 
-    if (data.panVerified || data.cached || data.reason === "pan_already_verified") {
+    if (
+      data.panVerified ||
+      data.cached ||
+      data.reason === "pan_already_verified"
+    ) {
       setPanVerification({
         verified: true,
-        number: String(panNumber || kycForm.panNumber).trim().toUpperCase(),
+        number: String(panNumber || kycForm.panNumber)
+          .trim()
+          .toUpperCase(),
         verifiedAt: data.panVerifiedAt || new Date().toISOString(),
         message: data.message || "",
       });
@@ -2123,7 +2121,10 @@ const SellerOnboarding = () => {
         referenceId: aadhaarVerification.referenceId,
         showCachedToast: false,
       });
-      if (!aadhaarPrecheck.canProceed && !aadhaarPrecheck.data?.aadhaarVerified) {
+      if (
+        !aadhaarPrecheck.canProceed &&
+        !aadhaarPrecheck.data?.aadhaarVerified
+      ) {
         return false;
       }
     }
@@ -2201,8 +2202,6 @@ const SellerOnboarding = () => {
     }
   };
 
-
-
   const handleSendAadhaarOtp = async () => {
     const number = kycForm.aadhaarNumber.trim();
     if (!AADHAAR_REGEX.test(number)) {
@@ -2236,7 +2235,9 @@ const SellerOnboarding = () => {
         "";
 
       if (!referenceId) {
-        toast.error("Aadhaar OTP reference was not returned. Please try again.");
+        toast.error(
+          "Aadhaar OTP reference was not returned. Please try again.",
+        );
         return;
       }
 
@@ -2247,8 +2248,8 @@ const SellerOnboarding = () => {
         verifiedAt: "",
         testMode: Boolean(
           data.testMode ||
-            data.verificationMode === "TEST_MODE" ||
-            data.provider === "static",
+          data.verificationMode === "TEST_MODE" ||
+          data.provider === "static",
         ),
         message: data.message || "",
       });
@@ -2308,9 +2309,9 @@ const SellerOnboarding = () => {
         verifiedAt: data.aadhaarVerifiedAt || new Date().toISOString(),
         testMode: Boolean(
           aadhaarVerification.testMode ||
-            data.testMode ||
-            data.verificationMode === "TEST_MODE" ||
-            data.provider === "static",
+          data.testMode ||
+          data.verificationMode === "TEST_MODE" ||
+          data.provider === "static",
         ),
         message: data.message || aadhaarVerification.message || "",
       });
@@ -2376,10 +2377,7 @@ const SellerOnboarding = () => {
 
   const handleAadhaarOtpPaste = (index, event) => {
     event.preventDefault();
-    handleAadhaarOtpDigitChange(
-      index,
-      event.clipboardData.getData("text"),
-    );
+    handleAadhaarOtpDigitChange(index, event.clipboardData.getData("text"));
   };
 
   const onKycChange = (event) => {
@@ -2433,206 +2431,192 @@ const SellerOnboarding = () => {
   };
 
   const ALLOWED_KYC_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/pdf",
-];
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/pdf",
+  ];
 
-const ALLOWED_KYC_EXTENSIONS = [
-  "jpg",
-  "jpeg",
-  "png",
-  "webp",
-  "pdf",
-];
+  const ALLOWED_KYC_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "pdf"];
 
-const isInvalidKycDocumentType = (file) => {
-  if (!file) return false;
+  const isInvalidKycDocumentType = (file) => {
+    if (!file) return false;
 
-  const extension = file.name
-    ?.split(".")
-    .pop()
-    ?.toLowerCase();
+    const extension = file.name?.split(".").pop()?.toLowerCase();
 
-  return (
-    !ALLOWED_KYC_TYPES.includes(file.type) ||
-    !ALLOWED_KYC_EXTENSIONS.includes(extension)
-  );
-};
+    return (
+      !ALLOWED_KYC_TYPES.includes(file.type) ||
+      !ALLOWED_KYC_EXTENSIONS.includes(extension)
+    );
+  };
 
   const onKycDocumentFileChange = (fieldName) => (event) => {
-  const file = event.target.files?.[0] || null;
+    const file = event.target.files?.[0] || null;
 
-  if (!file) return;
+    if (!file) return;
 
-  // File type validation
-  if (isInvalidKycDocumentType(file)) {
-    const message =
-      "Only PNG, JPG, JPEG, WEBP or PDF files are allowed";
+    // File type validation
+    if (isInvalidKycDocumentType(file)) {
+      const message = "Only PNG, JPG, JPEG, WEBP or PDF files are allowed";
 
+      setKycForm((prev) => ({
+        ...prev,
+        [fieldName]: null,
+      }));
+
+      setKycErrors((prev) => ({
+        ...prev,
+        [fieldName]: message,
+      }));
+
+      setProfileErrors((prev) => ({
+        ...prev,
+        [fieldName]: message,
+      }));
+
+      event.target.value = "";
+      return;
+    }
+
+    // File size validation
+    if (isDocumentTooLarge(file)) {
+      const message = "Document file must be 5 MB or smaller";
+
+      setKycForm((prev) => ({
+        ...prev,
+        [fieldName]: null,
+      }));
+
+      setKycErrors((prev) => ({
+        ...prev,
+        [fieldName]: message,
+      }));
+
+      setProfileErrors((prev) => ({
+        ...prev,
+        [fieldName]: message,
+      }));
+
+      event.target.value = "";
+      return;
+    }
+
+    // Valid file
     setKycForm((prev) => ({
+      ...prev,
+      [fieldName]: file,
+    }));
+
+    const urlFieldMap = {
+      panDocumentFile: "panDocumentUrl",
+      aadhaarFrontFile: "aadhaarFrontUrl",
+      aadhaarBackFile: "aadhaarBackUrl",
+      addressProofFile: "addressProofUrl",
+      bankProofFile: "bankProofUrl",
+    };
+
+    if (file && urlFieldMap[fieldName]) {
+      setDocumentUrls((prev) => ({
+        ...prev,
+        [urlFieldMap[fieldName]]: "",
+      }));
+    }
+
+    setKycErrors((prev) => ({
       ...prev,
       [fieldName]: null,
     }));
 
-    setKycErrors((prev) => ({
-      ...prev,
-      [fieldName]: message,
-    }));
-
     setProfileErrors((prev) => ({
-      ...prev,
-      [fieldName]: message,
-    }));
-
-    event.target.value = "";
-    return;
-  }
-
-  // File size validation
-  if (isDocumentTooLarge(file)) {
-    const message =
-      "Document file must be 5 MB or smaller";
-
-    setKycForm((prev) => ({
       ...prev,
       [fieldName]: null,
     }));
 
-    setKycErrors((prev) => ({
-      ...prev,
-      [fieldName]: message,
-    }));
-
-    setProfileErrors((prev) => ({
-      ...prev,
-      [fieldName]: message,
-    }));
-
     event.target.value = "";
-    return;
-  }
-
-  // Valid file
-  setKycForm((prev) => ({
-    ...prev,
-    [fieldName]: file,
-  }));
-
-  const urlFieldMap = {
-    panDocumentFile: "panDocumentUrl",
-    aadhaarFrontFile: "aadhaarFrontUrl",
-    aadhaarBackFile: "aadhaarBackUrl",
-    addressProofFile: "addressProofUrl",
-    bankProofFile: "bankProofUrl",
   };
-
-  if (file && urlFieldMap[fieldName]) {
-    setDocumentUrls((prev) => ({
-      ...prev,
-      [urlFieldMap[fieldName]]: "",
-    }));
-  }
-
-  setKycErrors((prev) => ({
-    ...prev,
-    [fieldName]: null,
-  }));
-
-  setProfileErrors((prev) => ({
-    ...prev,
-    [fieldName]: null,
-  }));
-
-  event.target.value = "";
-};
 
   const onKycDocumentDrop = (fieldName) => (event) => {
-  event.preventDefault();
+    event.preventDefault();
 
-  const file =
-    event.dataTransfer.files?.[0] || null;
+    const file = event.dataTransfer.files?.[0] || null;
 
-  if (!file) return;
+    if (!file) return;
 
-  // File type validation
-  if (isInvalidKycDocumentType(file)) {
-    const message =
-      "Only PNG, JPG, JPEG, WEBP or PDF files are allowed";
+    // File type validation
+    if (isInvalidKycDocumentType(file)) {
+      const message = "Only PNG, JPG, JPEG, WEBP or PDF files are allowed";
 
+      setKycForm((prev) => ({
+        ...prev,
+        [fieldName]: null,
+      }));
+
+      setKycErrors((prev) => ({
+        ...prev,
+        [fieldName]: message,
+      }));
+
+      setProfileErrors((prev) => ({
+        ...prev,
+        [fieldName]: message,
+      }));
+
+      return;
+    }
+
+    // File size validation
+    if (isDocumentTooLarge(file)) {
+      const message = "Document file must be 5 MB or smaller";
+
+      setKycForm((prev) => ({
+        ...prev,
+        [fieldName]: null,
+      }));
+
+      setKycErrors((prev) => ({
+        ...prev,
+        [fieldName]: message,
+      }));
+
+      setProfileErrors((prev) => ({
+        ...prev,
+        [fieldName]: message,
+      }));
+
+      return;
+    }
+
+    // Valid file
     setKycForm((prev) => ({
+      ...prev,
+      [fieldName]: file,
+    }));
+
+    const urlFieldMap = {
+      panDocumentFile: "panDocumentUrl",
+      aadhaarFrontFile: "aadhaarFrontUrl",
+      aadhaarBackFile: "aadhaarBackUrl",
+      addressProofFile: "addressProofUrl",
+      bankProofFile: "bankProofUrl",
+    };
+
+    if (urlFieldMap[fieldName]) {
+      setDocumentUrls((prev) => ({
+        ...prev,
+        [urlFieldMap[fieldName]]: "",
+      }));
+    }
+
+    setKycErrors((prev) => ({
       ...prev,
       [fieldName]: null,
     }));
 
-    setKycErrors((prev) => ({
-      ...prev,
-      [fieldName]: message,
-    }));
-
     setProfileErrors((prev) => ({
-      ...prev,
-      [fieldName]: message,
-    }));
-
-    return;
-  }
-
-  // File size validation
-  if (isDocumentTooLarge(file)) {
-    const message =
-      "Document file must be 5 MB or smaller";
-
-    setKycForm((prev) => ({
       ...prev,
       [fieldName]: null,
     }));
-
-    setKycErrors((prev) => ({
-      ...prev,
-      [fieldName]: message,
-    }));
-
-    setProfileErrors((prev) => ({
-      ...prev,
-      [fieldName]: message,
-    }));
-
-    return;
-  }
-
-  // Valid file
-  setKycForm((prev) => ({
-    ...prev,
-    [fieldName]: file,
-  }));
-
-  const urlFieldMap = {
-    panDocumentFile: "panDocumentUrl",
-    aadhaarFrontFile: "aadhaarFrontUrl",
-    aadhaarBackFile: "aadhaarBackUrl",
-    addressProofFile: "addressProofUrl",
-    bankProofFile: "bankProofUrl",
   };
-
-  if (urlFieldMap[fieldName]) {
-    setDocumentUrls((prev) => ({
-      ...prev,
-      [urlFieldMap[fieldName]]: "",
-    }));
-  }
-
-  setKycErrors((prev) => ({
-    ...prev,
-    [fieldName]: null,
-  }));
-
-  setProfileErrors((prev) => ({
-    ...prev,
-    [fieldName]: null,
-  }));
-};
 
   const onProfileDocumentFileChange = (fieldName, urlFieldName) => (event) => {
     const file = event.target.files?.[0] || null;
@@ -3537,71 +3521,73 @@ const isInvalidKycDocumentType = (file) => {
         open={showBankProofGuidance}
         onClose={() => setShowBankProofGuidance(false)}
       />
-      {aadhaarOtpModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
-          <div className="w-full max-w-md rounded-[2px] bg-white p-5 shadow-xl">
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-bold text-[#082f91]">
-                  Verify Aadhaar OTP
-                </h2>
-                <p className="mt-1 text-sm text-[#64748b]">
-                  Enter the OTP sent to the Aadhaar-linked mobile number.
-                </p>
+      {aadhaarOtpModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+            <div className="w-full max-w-md rounded-[2px] bg-white p-5 shadow-xl">
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-[#082f91]">
+                    Verify Aadhaar OTP
+                  </h2>
+                  <p className="mt-1 text-sm text-[#64748b]">
+                    Enter the OTP sent to the Aadhaar-linked mobile number.
+                  </p>
+                </div>
+                {aadhaarVerification.testMode ? (
+                  <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">
+                    TEST_MODE
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setAadhaarOtpModalOpen(false)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#64748b] transition hover:bg-slate-100"
+                  aria-label="Close Aadhaar OTP modal"
+                >
+                  <X size={18} />
+                </button>
               </div>
+              <label className="admin-label">6-Digit OTP</label>
+              <input
+                className="admin-input h-12 pl-[0.35em] text-center font-mono text-[20px] font-semibold tracking-[0.35em] text-[#082f91] placeholder:tracking-normal"
+                value={aadhaarOtp}
+                onChange={(event) =>
+                  setAadhaarOtp(onlyDigits(event.target.value, 6))
+                }
+                inputMode="numeric"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                placeholder="000000"
+                autoFocus
+              />
               {aadhaarVerification.testMode ? (
-                <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">
-                  TEST_MODE
-                </span>
+                <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                  {aadhaarVerification.message || "TEST_MODE: use OTP 123456"}
+                </div>
               ) : null}
-              <button
-                type="button"
-                onClick={() => setAadhaarOtpModalOpen(false)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#64748b] transition hover:bg-slate-100"
-                aria-label="Close Aadhaar OTP modal"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <label className="admin-label">6-Digit OTP</label>
-            <input
-              className="admin-input h-12 pl-[0.35em] text-center font-mono text-[20px] font-semibold tracking-[0.35em] text-[#082f91] placeholder:tracking-normal"
-              value={aadhaarOtp}
-              onChange={(event) =>
-                setAadhaarOtp(onlyDigits(event.target.value, 6))
-              }
-              inputMode="numeric"
-              pattern="[0-9]{6}"
-              maxLength={6}
-              placeholder="000000"
-              autoFocus
-            />
-            {aadhaarVerification.testMode ? (
-              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-                {aadhaarVerification.message || "TEST_MODE: use OTP 123456"}
+              <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={handleSendAadhaarOtp}
+                  disabled={aadhaarOtpSending || aadhaarOtpVerifying}
+                  className="admin-btn-secondary justify-center sm:min-w-[120px]"
+                >
+                  {aadhaarOtpSending ? "Sending..." : "Resend"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleVerifyAadhaarOtp}
+                  disabled={aadhaarOtpVerifying}
+                  className="admin-btn-primary justify-center sm:min-w-[150px]"
+                >
+                  {aadhaarOtpVerifying ? "Verifying..." : "Verify OTP"}
+                </button>
               </div>
-            ) : null}
-            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={handleSendAadhaarOtp}
-                disabled={aadhaarOtpSending || aadhaarOtpVerifying}
-                className="admin-btn-secondary justify-center sm:min-w-[120px]"
-              >
-                {aadhaarOtpSending ? "Sending..." : "Resend"}
-              </button>
-              <button
-                type="button"
-                onClick={handleVerifyAadhaarOtp}
-                disabled={aadhaarOtpVerifying}
-                className="admin-btn-primary justify-center sm:min-w-[150px]"
-              >
-                {aadhaarOtpVerifying ? "Verifying..." : "Verify OTP"}
-              </button>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
       <div className="relative min-h-[calc(100vh-96px)]">
         <OnboardingPageLoader visible={isOnboardingLoading} />
         <OnboardingScreen step={step}>
@@ -3781,7 +3767,7 @@ const isInvalidKycDocumentType = (file) => {
                           isPanVerified ||
                           !PAN_REGEX.test(panNumber)
                         }
-                         className="admin-btn-secondary h-[26px] justify-center whitespace-nowrap px-2 text-[13px] sm:w-[150px]"
+                        className="admin-btn-secondary h-[26px] justify-center whitespace-nowrap px-2 text-[13px] sm:w-[150px]"
                       >
                         {panVerifying
                           ? "Verifying..."
@@ -3850,18 +3836,19 @@ const isInvalidKycDocumentType = (file) => {
                     {kycErrors.aadhaarNumber && (
                       <p className={ERROR_CLASS}>{kycErrors.aadhaarNumber}</p>
                     )}
-                    {!isAadhaarVerified && AADHAAR_REGEX.test(aadhaarNumber) && (
-                      <p className="mt-1 text-xs text-[#6b7280]">
-                        Verify Aadhaar with OTP before final KYC submission.
-                      </p>
-                    )}
-                    {aadhaarVerification.testMode &&
-                      aadhaarVerification.referenceId &&
-                      !isAadhaarVerified ? (
-                        <p className="mt-1 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">
-                          TEST_MODE: use OTP 123456
+                    {/* {!isAadhaarVerified &&
+                      AADHAAR_REGEX.test(aadhaarNumber) && (
+                        <p className="mt-1 text-xs text-[#6b7280]">
+                          Verify Aadhaar with OTP before final KYC submission.
                         </p>
-                      ) : null}
+                      )} */}
+                    {aadhaarVerification.testMode &&
+                    aadhaarVerification.referenceId &&
+                    !isAadhaarVerified ? (
+                      <p className="mt-1 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">
+                        TEST_MODE: use OTP 123456
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               </OnboardingSection>
@@ -4026,7 +4013,8 @@ const isInvalidKycDocumentType = (file) => {
                     ) : (
                       <p className="mt-1 text-[11px] text-[#8a93a5]">
                         Used for organization support, invoices, and business
-                        communication. Login still uses your seller account email.
+                        communication. Login still uses your seller account
+                        email.
                       </p>
                     )}
                   </div>
