@@ -505,7 +505,52 @@ const Brands = () => {
     setRejectionReason("");
   };
 
-  const columns = useMemo(() => [...BASE_COLUMNS], []);
+  const columns = useMemo(
+    () => [
+      ...BASE_COLUMNS,
+      {
+        key: "reviewActions",
+        label: "Approval Actions",
+        width: "220px",
+        render: (_value, row) =>
+          isBrandReviewable(row) ? (
+            <PermissionGuard
+              module="brands"
+              action={ACTIONS.UPDATE}
+              hide
+            >
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReviewTarget({ ...row, reviewAction: "approve" });
+                    setRejectionReason("");
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700"
+                >
+                  <MdCheckCircle size={15} />
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReviewTarget({ ...row, reviewAction: "reject" });
+                    setRejectionReason("");
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+                >
+                  <MdClose size={15} />
+                  Reject
+                </button>
+              </div>
+            </PermissionGuard>
+          ) : (
+            <span className="text-xs text-gray-400">Reviewed</span>
+          ),
+      },
+    ],
+    [],
+  );
 
   return (
     <div>

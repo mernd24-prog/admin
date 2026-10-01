@@ -11,6 +11,7 @@ import {
   getCategoryAttributes,
   getAvailableProductOptionsForSeller,
   submitProductOptionForApproval,
+  approveDisapprove,
 } from "../../../../Redux/productSlice";
 import {
   getPlatformOptions,
@@ -712,6 +713,10 @@ export default function ProductManagementUI() {
             price: productData?.price ?? "",
             mrp: productData?.mrp ?? "",
             salePrice: productData?.salePrice ?? "",
+            isDisable: productData?.status !== "active",
+            isApproved:
+              productData?.approvalStatus === "approved" ||
+              Boolean(productData?.approvedAt),
             isDealProduct: Boolean(productData?.metadata?.isDealProduct),
             dealBadge:
               productData?.metadata?.dealBadge || INITIALS_DATA.dealBadge,
@@ -1962,7 +1967,24 @@ export default function ProductManagementUI() {
       case "BRAND_ID":
         setFormData((prev) => ({
           ...prev,
-          brand: selectedOption?.label || selectedOption?.value || "",
+          // Products keep the immutable master-record ID. The display name is
+          // retained separately for edit forms and legacy API consumers.
+          brand:
+            selectedOption?.resourceId ||
+            selectedOption?._id ||
+            selectedOption?.id ||
+            selectedOption?.value ||
+            "",
+          brandId:
+            selectedOption?.resourceId ||
+            selectedOption?._id ||
+            selectedOption?.id ||
+            "",
+          brandName:
+            selectedOption?.brandName ||
+            selectedOption?.label ||
+            selectedOption?.value ||
+            "",
         }));
         break;
 
@@ -2347,14 +2369,14 @@ export default function ProductManagementUI() {
       ...(Object.keys(dimensions).length ? { dimensions } : {}),
       ...(Object.keys(warranty).length ? { warranty } : {}),
       ...(Object.keys(shipping).length ? { shipping } : {}),
+      // Activation and moderation are separate workflows. Saving form fields
+      // must never approve/unapprove a product as a side effect.
       status: updatedFormData.isDisable
         ? "inactive"
-        : updatedFormData.isApproved
+        : updatedFormData.approvalStatus === "approved" ||
+            updatedFormData.isApproved
           ? "active"
-          : "draft",
-      ...(!isSellerPanelUser && updatedFormData.isApproved
-        ? { approvalStatus: "approved" }
-        : {}),
+          : updatedFormData.status || "draft",
       metadata: {
         ...(updatedFormData.metadata || {}),
         featured: Boolean(updatedFormData.markAsFeatured),
@@ -3823,10 +3845,13 @@ export default function ProductManagementUI() {
         route: "/app/categories",
       });
     }
-    if (!formattedData?.brandList?.length) {
+    const selectedBrand = String(
+      formData?.brand || formData?.brandId || formData?.brand_id || "",
+    ).trim();
+    if (!formattedData?.brandList?.length && !selectedBrand) {
       blockers.push({
         key: "brands",
-        message: "Create at least one brand to assign products properly.",
+        message: "Select or submit a brand before creating the product.",
         route: "/app/brands",
       });
     }
@@ -3864,6 +3889,40 @@ export default function ProductManagementUI() {
     });
     handleSaveSubmit();
   }, [flowGateErrors, handleSaveSubmit]);
+
+  const handleProductModeration = useCallback(
+    async (decision, rejectionReason = "") => {
+      if (!isEditMode || isSellerPanelUser) return;
+
+      setSaving(true);
+      try {
+        const response = await dispatch(
+          approveDisapprove({
+            id,
+            status: decision,
+            rejectionReason: rejectionReason || null,
+          }),
+        ).unwrap();
+        const updated = response?.data || {};
+        const approved = decision === "active";
+
+        setFormData((current) => ({
+          ...current,
+          ...updated,
+          approvalStatus: approved ? "approved" : "rejected",
+          isApproved: approved,
+          status: approved ? "active" : "inactive",
+          isDisable: !approved,
+        }));
+        toast.success(approved ? "Product approved" : "Product rejected");
+      } catch (error) {
+        toast.error(error?.message || error || "Product moderation failed");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [dispatch, id, isEditMode, isSellerPanelUser],
+  );
 
   return (
     <div className="product-catalog-form relative min-h-screen">
@@ -3956,6 +4015,9 @@ export default function ProductManagementUI() {
             handleToggleProductSetting={handleToggleProductSetting}
             saving={saving}
             canManageApproval={!isSellerPanelUser}
+            isEditMode={isEditMode}
+            onApprove={() => handleProductModeration("active")}
+            onReject={(reason) => handleProductModeration("rejected", reason)}
           />
         </div>
       </div>

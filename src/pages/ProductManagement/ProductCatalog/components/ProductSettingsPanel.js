@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import Button from "../../../../components/Atoms/buttons/button";
 import ToggleButton from "../../../../components/Atoms/ToggleButton/ToggleButton";
 
@@ -8,7 +9,12 @@ export default function ProductSettingsPanel({
   handleToggleProductSetting,
   saving = false,
   canManageApproval = false,
+  isEditMode = false,
+  onApprove,
+  onReject,
 }) {
+  const [showRejectReason, setShowRejectReason] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
   const codEnabled =
     formData?.shipping?.codAvailable !== undefined
       ? Boolean(formData.shipping.codAvailable)
@@ -29,25 +35,79 @@ export default function ProductSettingsPanel({
         </Button>
       </div>
 
-      {/* Status toggles */}
+      {/* Activation is intentionally separate from product moderation. */}
       <div className="bg-white border border-gray-100 rounded-xl p-4 space-y-0 divide-y divide-gray-100">
-        {[
-          { label: 'Active', desc: 'Make this product visible on the storefront.', key: 'DISABLE', value: !formData?.isDisable },
-          canManageApproval
-            ? { label: 'Approved', desc: 'Mark this product as approved for sale.', key: 'APPROVE', value: formData?.isApproved }
-            : null,
-        ].filter(Boolean).map(({ label, desc, key, value }) => (
-          <div key={key} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+        <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-800">{label}</p>
-              <p className="text-xs text-gray-500 mt-0.5 leading-snug">{desc}</p>
+              <p className="text-sm font-medium text-gray-800">Active</p>
+              <p className="text-xs text-gray-500 mt-0.5 leading-snug">
+                Enable or disable an already approved product on the storefront.
+              </p>
             </div>
             <div className="flex-shrink-0 mt-0.5">
-              <ToggleButton isToggle={value} handleClick={() => handleToggleProductSetting(key)} />
+              <ToggleButton
+                isToggle={!formData?.isDisable}
+                handleClick={() => handleToggleProductSetting('DISABLE')}
+                disabled={formData?.approvalStatus !== "approved" && !formData?.isApproved}
+              />
+            </div>
+        </div>
+      </div>
+
+      {canManageApproval && isEditMode && (
+        <div className="rounded-xl border border-gray-100 bg-white p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-800">Product Approval</p>
+              <p className="mt-0.5 text-xs leading-snug text-gray-500">
+                Status: <span className="font-semibold capitalize">{formData?.approvalStatus || "pending"}</span>
+              </p>
             </div>
           </div>
-        ))}
-      </div>
+
+          {formData?.approvalStatus !== "approved" && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={onApprove}
+              className="mt-3 w-full rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+            >
+              Approve Product
+            </button>
+          )}
+
+          {formData?.approvalStatus !== "rejected" && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => setShowRejectReason((current) => !current)}
+              className="mt-2 w-full rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+            >
+              Reject Product
+            </button>
+          )}
+
+          {showRejectReason && (
+            <div className="mt-3 space-y-2">
+              <textarea
+                value={rejectionReason}
+                onChange={(event) => setRejectionReason(event.target.value)}
+                placeholder="Reason for rejection"
+                rows={3}
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm outline-none focus:border-red-400"
+              />
+              <button
+                type="button"
+                disabled={saving || rejectionReason.trim().length < 2}
+                onClick={() => onReject?.(rejectionReason.trim())}
+                className="w-full rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                Confirm Rejection
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Featured */}
       <div className="bg-white border border-gray-100 rounded-xl p-4">

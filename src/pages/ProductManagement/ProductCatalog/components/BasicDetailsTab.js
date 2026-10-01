@@ -23,6 +23,7 @@ import {
   createBrand,
   createCategory,
   createHsn,
+  getBrandList,
   getMyBrandSubmissions,
   resubmitBrandForApproval,
   submitBrandForApproval,
@@ -1040,12 +1041,15 @@ const loadSellerOptions = useCallback(async () => {
 
   const loadMyBrandSubmissions =
     useCallback(async () => {
-      if (!isSellerPanelUser) return;
-
       try {
         const response =
           await dispatch(
-            getMyBrandSubmissions(),
+            isSellerPanelUser
+              ? getMyBrandSubmissions()
+              : getBrandList({
+                  page: 1,
+                  limit: 500,
+                }),
           ).unwrap();
 
         const data =
@@ -1360,29 +1364,34 @@ const loadSellerOptions = useCallback(async () => {
         ),
       );
 
-    const ownPendingBrands =
-      isSellerPanelUser
-        ? myBrandSubmissions
-            .filter(
-              (brand) =>
-                brand.approvalStatus ===
-                  "pending" &&
-                !approvedNames.has(
-                  String(
-                    brand.name || "",
-                  ).toLowerCase(),
-                ),
-            )
-            .map((brand) => ({
-              value: brand.name,
-              label: `${brand.name} (Pending approval)`,
-              brandName: brand.name,
-              isPendingBrand: true,
-            }))
-        : [];
+    const submissionBrands = myBrandSubmissions
+      .filter(
+        (brand) =>
+          brand.approvalStatus !== "approved" &&
+          !approvedNames.has(
+            String(brand.name || "").toLowerCase(),
+          ),
+      )
+      .map((brand) => {
+        const approvalStatus = brand.approvalStatus || "pending";
+        const statusLabel =
+          approvalStatus === "rejected"
+            ? "Rejected"
+            : "Pending approval";
+
+        return {
+          value: brand.name,
+          label: `${brand.name} (${statusLabel})`,
+          brandName: brand.name,
+          resourceType: "brand",
+          resourceId: brand._id || brand.id,
+          approvalStatus,
+          isPendingBrand: approvalStatus === "pending",
+        };
+      });
 
     return [
-      ...ownPendingBrands,
+      ...submissionBrands,
       ...(formattedBrandList || []),
     ].map((brand) => {
       const approvalStatus =
@@ -1432,7 +1441,6 @@ const loadSellerOptions = useCallback(async () => {
   }, [
     brandStatusOverrides,
     formattedBrandList,
-    isSellerPanelUser,
     myBrandSubmissions,
   ]);
 
@@ -1480,6 +1488,7 @@ const loadSellerOptions = useCallback(async () => {
               ) ||
             String(
               option.brandId ||
+                option.resourceId ||
                 option._id ||
                 option.id ||
                 "",
