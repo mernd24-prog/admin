@@ -1729,7 +1729,7 @@ const DealManagement = () => {
         onCancel={closeConfirm}
         loading={actionLoading}
         confirmLabel={display(confirm.action)}
-        confirmVariant={
+        variant={
           ["approve", "resume"].includes(confirm.action) ? "success" : "danger"
         }
       >

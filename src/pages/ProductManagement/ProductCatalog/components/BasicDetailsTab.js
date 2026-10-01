@@ -175,6 +175,25 @@ export default function BasicDetailsTab({
 
   const [organizationLoading, setOrganizationLoading] = useState(false);
 
+  const warrantyProviders = {
+  loading: false,
+  options: [
+    { value: "seller", label: "Seller" },
+    { value: "manufacturer", label: "Manufacturer" },
+    { value: "service_partner", label: "Service Partner" },
+  ],
+};
+
+const warrantyTypes = {
+  loading: false,
+  options: [
+    { value: "manufacturer_warranty", label: "Manufacturer Warranty" },
+    { value: "seller_warranty", label: "Seller Warranty" },
+    { value: "service_warranty", label: "Service Warranty" },
+    { value: "extended_warranty", label: "Extended Warranty" },
+  ],
+};
+
   /*
    * ------------------------------------------------------------
    * Load sellers using the same dropdown API pattern
@@ -2956,38 +2975,45 @@ const loadSellerOptions = useCallback(async () => {
                   }
                   isClearable
                 />
+<FilterSelect
+  label="Warranty Provider"
+  value={
+    warrantyProviders.options.find(
+      (option) =>
+        option.value === formData.warranty?.provider
+    ) || null
+  }
+  onChange={(option) =>
+    handleNestedChange(
+      "warranty.provider",
+      option?.value || ""
+    )
+  }
+  options={warrantyProviders.options}
+  placeholder="Select warranty provider"
+  isLoading={warrantyProviders.loading}
+  isClearable
+/>
 
-                <Input
-                  labelName="Warranty Provider"
-                  name="warranty.provider"
-                  value={
-                    formData.warranty
-                      ?.provider || ""
-                  }
-                  onChange={(event) =>
-                    handleNestedChange(
-                      "warranty.provider",
-                      event.target.value,
-                    )
-                  }
-                  placeholder="Seller, manufacturer, or service partner"
-                />
-
-                <Input
-                  labelName="Warranty Type"
-                  name="warranty.type"
-                  value={
-                    formData.warranty
-                      ?.type || ""
-                  }
-                  onChange={(event) =>
-                    handleNestedChange(
-                      "warranty.type",
-                      event.target.value,
-                    )
-                  }
-                  placeholder="Example: Manufacturer warranty"
-                />
+<FilterSelect
+  label="Warranty Type"
+  value={
+    warrantyTypes.options.find(
+      (option) =>
+        option.value === formData.warranty?.type
+    ) || null
+  }
+  onChange={(option) =>
+    handleNestedChange(
+      "warranty.type",
+      option?.value || ""
+    )
+  }
+  options={warrantyTypes.options}
+  placeholder="Select warranty type"
+  isLoading={warrantyTypes.loading}
+  isClearable
+/>
               </div>
 
               <TextEditor
