@@ -100,9 +100,7 @@ const getSessionUser = () => {
   if (typeof window === "undefined") return null;
 
   try {
-    return JSON.parse(
-      window.sessionStorage.getItem("EcomAdmin") || "null",
-    );
+    return JSON.parse(window.sessionStorage.getItem("EcomAdmin") || "null");
   } catch {
     return null;
   }
@@ -134,8 +132,7 @@ export default function BasicDetailsTab({
 
   const warrantyUnits = useDropdownOptions("warranty-units");
 
-  const warrantyTemplatesFromMaster =
-    useDropdownOptions("warranty-templates");
+  const warrantyTemplatesFromMaster = useDropdownOptions("warranty-templates");
 
   const [brandStatusOverrides, setBrandStatusOverrides] = useState({});
 
@@ -151,8 +148,7 @@ export default function BasicDetailsTab({
     ),
   );
 
-  const isSellerPanelUser =
-    isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
+  const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
 
   const [localCategoryOptions, setLocalCategoryOptions] = useState([]);
 
@@ -181,165 +177,134 @@ export default function BasicDetailsTab({
    * ------------------------------------------------------------
    */
 
-const loadSellerOptions = useCallback(async () => {
-  if (isSellerPanelUser) return;
+  const loadSellerOptions = useCallback(async () => {
+    if (isSellerPanelUser) return;
 
-  setSellerLoading(true);
+    setSellerLoading(true);
 
-  try {
-    const response = await dropdownApi.getSellers({
-      limit: 100,
-      searchFields: "full_name,email,businessName",
-    });
+    try {
+      const response = await dropdownApi.getSellers({
+        limit: 100,
+        searchFields: "full_name,email,businessName",
+      });
 
-    console.log("Seller dropdown response:", response);
+      console.log("Seller dropdown response:", response);
 
-    /*
-     * getSellers() can return:
-     *
-     * 1. Direct array:
-     * [
-     *   {
-     *     label: "Akshita Gupta",
-     *     value: "sellerId",
-     *     id: "sellerId",
-     *     meta: {}
-     *   }
-     * ]
-     *
-     * 2. Axios response:
-     * {
-     *   data: [...]
-     * }
-     *
-     * 3. Wrapped response:
-     * {
-     *   data: {
-     *     sellers: [...]
-     *   }
-     * }
-     */
+      /*
+       * getSellers() can return:
+       *
+       * 1. Direct array:
+       * [
+       *   {
+       *     label: "Akshita Gupta",
+       *     value: "sellerId",
+       *     id: "sellerId",
+       *     meta: {}
+       *   }
+       * ]
+       *
+       * 2. Axios response:
+       * {
+       *   data: [...]
+       * }
+       *
+       * 3. Wrapped response:
+       * {
+       *   data: {
+       *     sellers: [...]
+       *   }
+       * }
+       */
 
-    let sellers = [];
+      let sellers = [];
 
-    if (Array.isArray(response)) {
-      sellers = response;
-    } else if (Array.isArray(response?.data)) {
-      sellers = response.data;
-    } else if (
-      Array.isArray(response?.normalized?.data)
-    ) {
-      sellers = response.normalized.data;
-    } else if (
-      Array.isArray(response?.data?.data)
-    ) {
-      sellers = response.data.data;
-    } else if (
-      Array.isArray(response?.data?.sellers)
-    ) {
-      sellers = response.data.sellers;
-    } else if (
-      Array.isArray(response?.data?.items)
-    ) {
-      sellers = response.data.items;
-    } else if (
-      Array.isArray(response?.data?.list)
-    ) {
-      sellers = response.data.list;
+      if (Array.isArray(response)) {
+        sellers = response;
+      } else if (Array.isArray(response?.data)) {
+        sellers = response.data;
+      } else if (Array.isArray(response?.normalized?.data)) {
+        sellers = response.normalized.data;
+      } else if (Array.isArray(response?.data?.data)) {
+        sellers = response.data.data;
+      } else if (Array.isArray(response?.data?.sellers)) {
+        sellers = response.data.sellers;
+      } else if (Array.isArray(response?.data?.items)) {
+        sellers = response.data.items;
+      } else if (Array.isArray(response?.data?.list)) {
+        sellers = response.data.list;
+      }
+
+      const mappedOptions = sellers
+        .map((seller) => {
+          /*
+           * Your current API response already has:
+           * {
+           *   label,
+           *   value,
+           *   id,
+           *   meta
+           * }
+           *
+           * So value should be used as the seller ID.
+           */
+          const sellerId =
+            seller?.value || seller?.sellerId || seller?._id || seller?.id;
+
+          if (!sellerId) return null;
+
+          const sellerName =
+            seller?.label ||
+            seller?.sellerName ||
+            seller?.accountHolderName ||
+            seller?.fullName ||
+            seller?.name ||
+            seller?.businessName ||
+            seller?.meta?.accountHolderName ||
+            seller?.meta?.sellerName ||
+            seller?.meta?.fullName ||
+            seller?.meta?.name ||
+            seller?.meta?.businessName ||
+            seller?.meta?.storeDisplayName ||
+            "Unknown Seller";
+
+          return {
+            ...seller,
+
+            value: String(sellerId),
+
+            id: String(seller?.id || sellerId),
+
+            sellerId: String(sellerId),
+
+            label: String(sellerName),
+          };
+        })
+        .filter(Boolean);
+
+      /*
+       * Remove duplicate sellers by seller ID.
+       */
+      const uniqueOptions = Array.from(
+        new Map(
+          mappedOptions.map((option) => [String(option.value), option]),
+        ).values(),
+      ).sort((a, b) =>
+        String(a.label || "").localeCompare(String(b.label || "")),
+      );
+
+      console.log("Mapped seller options:", uniqueOptions);
+
+      setSellerOptions(uniqueOptions);
+    } catch (error) {
+      console.error("Failed to load seller dropdown:", error);
+
+      toast.error(getErrorMessage(error, "Failed to load seller list"));
+
+      setSellerOptions([]);
+    } finally {
+      setSellerLoading(false);
     }
-
-    const mappedOptions = sellers
-      .map((seller) => {
-        /*
-         * Your current API response already has:
-         * {
-         *   label,
-         *   value,
-         *   id,
-         *   meta
-         * }
-         *
-         * So value should be used as the seller ID.
-         */
-        const sellerId =
-          seller?.value ||
-          seller?.sellerId ||
-          seller?._id ||
-          seller?.id;
-
-        if (!sellerId) return null;
-
-        const sellerName =
-          seller?.label ||
-          seller?.sellerName ||
-          seller?.accountHolderName ||
-          seller?.fullName ||
-          seller?.name ||
-          seller?.businessName ||
-          seller?.meta?.accountHolderName ||
-          seller?.meta?.sellerName ||
-          seller?.meta?.fullName ||
-          seller?.meta?.name ||
-          seller?.meta?.businessName ||
-          seller?.meta?.storeDisplayName ||
-          "Unknown Seller";
-
-        return {
-          ...seller,
-
-          value: String(sellerId),
-
-          id: String(
-            seller?.id || sellerId,
-          ),
-
-          sellerId: String(sellerId),
-
-          label: String(sellerName),
-        };
-      })
-      .filter(Boolean);
-
-    /*
-     * Remove duplicate sellers by seller ID.
-     */
-    const uniqueOptions = Array.from(
-      new Map(
-        mappedOptions.map((option) => [
-          String(option.value),
-          option,
-        ]),
-      ).values(),
-    ).sort((a, b) =>
-      String(a.label || "").localeCompare(
-        String(b.label || ""),
-      ),
-    );
-
-    console.log(
-      "Mapped seller options:",
-      uniqueOptions,
-    );
-
-    setSellerOptions(uniqueOptions);
-  } catch (error) {
-    console.error(
-      "Failed to load seller dropdown:",
-      error,
-    );
-
-    toast.error(
-      getErrorMessage(
-        error,
-        "Failed to load seller list",
-      ),
-    );
-
-    setSellerOptions([]);
-  } finally {
-    setSellerLoading(false);
-  }
-}, [isSellerPanelUser]);
+  }, [isSellerPanelUser]);
 
   /*
    * ------------------------------------------------------------
@@ -371,12 +336,8 @@ const loadSellerOptions = useCallback(async () => {
         let response;
 
         if (typeof dropdownApi.getSellerOrganizations === "function") {
-          response = await dropdownApi.getSellerOrganizations(
-            sellerId,
-          );
-        } else if (
-          typeof dropdownApi.getOrganizations === "function"
-        ) {
+          response = await dropdownApi.getSellerOrganizations(sellerId);
+        } else if (typeof dropdownApi.getOrganizations === "function") {
           response = await dropdownApi.getOrganizations({
             sellerId,
             limit: 100,
@@ -386,10 +347,9 @@ const loadSellerOptions = useCallback(async () => {
            * Fallback to the organization data already supplied
            * by the parent component.
            */
-          const fallbackOrganizations =
-            Array.isArray(organizationList)
-              ? organizationList
-              : [];
+          const fallbackOrganizations = Array.isArray(organizationList)
+            ? organizationList
+            : [];
 
           const mappedFallback = fallbackOrganizations
             .map((organization) => {
@@ -429,9 +389,7 @@ const loadSellerOptions = useCallback(async () => {
           responseData?.organizations ||
           responseData?.items ||
           responseData?.list ||
-          (Array.isArray(responseData)
-            ? responseData
-            : []);
+          (Array.isArray(responseData) ? responseData : []);
 
         const mappedOptions = organizations
           .map((organization) => {
@@ -459,30 +417,17 @@ const loadSellerOptions = useCallback(async () => {
 
         const uniqueOptions = Array.from(
           new Map(
-            mappedOptions.map((option) => [
-              String(option.value),
-              option,
-            ]),
+            mappedOptions.map((option) => [String(option.value), option]),
           ).values(),
         ).sort((a, b) =>
-          String(a.label || "").localeCompare(
-            String(b.label || ""),
-          ),
+          String(a.label || "").localeCompare(String(b.label || "")),
         );
 
         setOrganizationOptions(uniqueOptions);
       } catch (error) {
-        console.error(
-          "Failed to load organization dropdown:",
-          error,
-        );
+        console.error("Failed to load organization dropdown:", error);
 
-        toast.error(
-          getErrorMessage(
-            error,
-            "Failed to load organization list",
-          ),
-        );
+        toast.error(getErrorMessage(error, "Failed to load organization list"));
 
         setOrganizationOptions([]);
       } finally {
@@ -513,11 +458,7 @@ const loadSellerOptions = useCallback(async () => {
     }
 
     loadOrganizationOptions(sellerId);
-  }, [
-    formData?.sellerId,
-    isSellerPanelUser,
-    loadOrganizationOptions,
-  ]);
+  }, [formData?.sellerId, isSellerPanelUser, loadOrganizationOptions]);
 
   /*
    * Fallback organization options.
@@ -555,47 +496,41 @@ const loadSellerOptions = useCallback(async () => {
         };
       })
       .filter(Boolean);
-  }, [
-    organizationOptions,
-    organizationList,
-  ]);
+  }, [organizationOptions, organizationList]);
 
   /*
    * Seller options fallback:
    * if seller dropdown API has not returned data yet,
    * preserve the sellerList prop for existing flows.
    */
- const formattedSellerOptions = useMemo(() => {
-  if (sellerOptions.length > 0) {
-    return sellerOptions;
-  }
+  const formattedSellerOptions = useMemo(() => {
+    if (sellerOptions.length > 0) {
+      return sellerOptions;
+    }
 
-  return (sellerList || [])
-    .map((seller) => {
-      const sellerId =
-        seller?.value ||
-        seller?.sellerId ||
-        seller?._id ||
-        seller?.id;
+    return (sellerList || [])
+      .map((seller) => {
+        const sellerId =
+          seller?.value || seller?.sellerId || seller?._id || seller?.id;
 
-      if (!sellerId) return null;
+        if (!sellerId) return null;
 
-      return {
-        ...seller,
-        value: String(sellerId),
-        sellerId: String(sellerId),
-        label:
-          seller?.label ||
-          seller?.sellerName ||
-          seller?.accountHolderName ||
-          seller?.fullName ||
-          seller?.name ||
-          seller?.businessName ||
-          "Unknown Seller",
-      };
-    })
-    .filter(Boolean);
-}, [sellerOptions, sellerList]);
+        return {
+          ...seller,
+          value: String(sellerId),
+          sellerId: String(sellerId),
+          label:
+            seller?.label ||
+            seller?.sellerName ||
+            seller?.accountHolderName ||
+            seller?.fullName ||
+            seller?.name ||
+            seller?.businessName ||
+            "Unknown Seller",
+        };
+      })
+      .filter(Boolean);
+  }, [sellerOptions, sellerList]);
 
   /*
    * ------------------------------------------------------------
@@ -603,56 +538,30 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const mergeCatalogOptions = useCallback(
-    (localOptions, serverOptions) => {
-      const options = [
-        ...localOptions,
-        ...(serverOptions || []),
-      ];
+  const mergeCatalogOptions = useCallback((localOptions, serverOptions) => {
+    const options = [...localOptions, ...(serverOptions || [])];
 
-      const seen = new Set();
+    const seen = new Set();
 
-      return options.filter((option) => {
-        const key = String(
-          option?.value ??
-            option?.code ??
-            "",
-        );
+    return options.filter((option) => {
+      const key = String(option?.value ?? option?.code ?? "");
 
-        if (!key || seen.has(key)) return false;
+      if (!key || seen.has(key)) return false;
 
-        seen.add(key);
+      seen.add(key);
 
-        return true;
-      });
-    },
-    [],
-  );
+      return true;
+    });
+  }, []);
 
   const categoryOptions = useMemo(
-    () =>
-      mergeCatalogOptions(
-        localCategoryOptions,
-        formattedCategoryList,
-      ),
-    [
-      formattedCategoryList,
-      localCategoryOptions,
-      mergeCatalogOptions,
-    ],
+    () => mergeCatalogOptions(localCategoryOptions, formattedCategoryList),
+    [formattedCategoryList, localCategoryOptions, mergeCatalogOptions],
   );
 
   const hsnOptions = useMemo(
-    () =>
-      mergeCatalogOptions(
-        localHsnOptions,
-        hsnCodeList,
-      ),
-    [
-      hsnCodeList,
-      localHsnOptions,
-      mergeCatalogOptions,
-    ],
+    () => mergeCatalogOptions(localHsnOptions, hsnCodeList),
+    [hsnCodeList, localHsnOptions, mergeCatalogOptions],
   );
 
   /*
@@ -661,10 +570,7 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const approvePendingOption = async (
-    event,
-    option,
-  ) => {
+  const approvePendingOption = async (event, option) => {
     event.preventDefault();
     event.stopPropagation();
 
@@ -685,8 +591,7 @@ const loadSellerOptions = useCallback(async () => {
         }),
       ).unwrap();
 
-      const approvedRecord =
-        response?.data || {};
+      const approvedRecord = response?.data || {};
 
       if (option.resourceType === "brand") {
         const keys = [
@@ -700,60 +605,37 @@ const loadSellerOptions = useCallback(async () => {
           .filter(Boolean)
           .map(String);
 
-        setBrandStatusOverrides(
-          (current) => ({
-            ...current,
-            ...Object.fromEntries(
-              keys.map((key) => [
-                key,
-                "approved",
-              ]),
-            ),
-          }),
-        );
+        setBrandStatusOverrides((current) => ({
+          ...current,
+          ...Object.fromEntries(keys.map((key) => [key, "approved"])),
+        }));
       }
 
       toast.success(
         `${
-          option.resourceType === "hsn"
-            ? "HSN code"
-            : option.resourceType
+          option.resourceType === "hsn" ? "HSN code" : option.resourceType
         } approved`,
       );
 
       await fetchAllData?.();
     } catch (error) {
-      toast.error(
-        getErrorMessage(
-          error,
-          "Approval failed",
-        ),
-      );
+      toast.error(getErrorMessage(error, "Approval failed"));
     }
   };
 
-  const formatCatalogOption = (
-    option,
-  ) => (
+  const formatCatalogOption = (option) => (
     <div className="flex items-center justify-between gap-2">
       <span>{option.label}</span>
 
-      {!isSellerPanelUser &&
-        option.approvalStatus ===
-          "pending" && (
-          <button
-            type="button"
-            className="rounded bg-green-600 px-2 py-1 text-xs font-semibold text-white hover:bg-green-700"
-            onMouseDown={(event) =>
-              approvePendingOption(
-                event,
-                option,
-              )
-            }
-          >
-            Approve
-          </button>
-        )}
+      {!isSellerPanelUser && option.approvalStatus === "pending" && (
+        <button
+          type="button"
+          className="rounded bg-green-600 px-2 py-1 text-xs font-semibold text-white hover:bg-green-700"
+          onMouseDown={(event) => approvePendingOption(event, option)}
+        >
+          Approve
+        </button>
+      )}
     </div>
   );
 
@@ -777,11 +659,8 @@ const loadSellerOptions = useCallback(async () => {
     return (
       categoryOptions.find(
         (opt) =>
-          String(opt.value) ===
-            currentCategory ||
-          String(
-            opt.categoryKey || "",
-          ) === currentCategory,
+          String(opt.value) === currentCategory ||
+          String(opt.categoryKey || "") === currentCategory,
       ) || null
     );
   }, [
@@ -799,28 +678,18 @@ const loadSellerOptions = useCallback(async () => {
    */
 
   const selectedHsnOption = useMemo(() => {
-    const currentHsn = String(
-      formData.hsn_code ||
-        formData.hsnCode ||
-        "",
-    );
+    const currentHsn = String(formData.hsn_code || formData.hsnCode || "");
 
     if (!currentHsn) return null;
 
     return (
       hsnOptions.find(
         (opt) =>
-          String(opt.value) ===
-            currentHsn ||
-          String(opt.code || "") ===
-            currentHsn,
+          String(opt.value) === currentHsn ||
+          String(opt.code || "") === currentHsn,
       ) || null
     );
-  }, [
-    hsnOptions,
-    formData.hsn_code,
-    formData.hsnCode,
-  ]);
+  }, [hsnOptions, formData.hsn_code, formData.hsnCode]);
 
   /*
    * ------------------------------------------------------------
@@ -828,11 +697,9 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const [hsnSuggestion, setHsnSuggestion] =
-    useState(null);
+  const [hsnSuggestion, setHsnSuggestion] = useState(null);
 
-  const userChangedCategoryRef =
-    useRef(false);
+  const userChangedCategoryRef = useRef(false);
 
   const flatCategories = useMemo(() => {
     const result = [];
@@ -843,19 +710,11 @@ const loadSellerOptions = useCallback(async () => {
       cats.forEach((c) => {
         result.push(c);
 
-        flatten(
-          c.subcategories ||
-            c.subCategories ||
-            [],
-        );
+        flatten(c.subcategories || c.subCategories || []);
       });
     };
 
-    flatten(
-      Array.isArray(allCategories)
-        ? allCategories
-        : [],
-    );
+    flatten(Array.isArray(allCategories) ? allCategories : []);
 
     return result;
   }, [allCategories]);
@@ -864,72 +723,50 @@ const loadSellerOptions = useCallback(async () => {
     const map = new Map();
 
     flatCategories.forEach((c) => {
-      const key = String(
-        c.categoryKey ||
-          c._id ||
-          "",
-      );
+      const key = String(c.categoryKey || c._id || "");
 
       if (key && c.parentKey) {
-        map.set(
-          key,
-          String(c.parentKey),
-        );
+        map.set(key, String(c.parentKey));
       }
     });
 
     return map;
   }, [flatCategories]);
 
-  const getCategoryAncestors =
-    useCallback(
-      (key) => {
-        const chain = [];
+  const getCategoryAncestors = useCallback(
+    (key) => {
+      const chain = [];
 
-        let cur = key;
+      let cur = key;
 
-        const seen = new Set();
+      const seen = new Set();
 
-        while (
-          cur &&
-          !seen.has(cur)
-        ) {
-          chain.push(cur);
+      while (cur && !seen.has(cur)) {
+        chain.push(cur);
 
-          seen.add(cur);
+        seen.add(cur);
 
-          cur =
-            categoryParentMap.get(
-              cur,
-            ) || null;
-        }
+        cur = categoryParentMap.get(cur) || null;
+      }
 
-        return chain;
-      },
-      [categoryParentMap],
-    );
+      return chain;
+    },
+    [categoryParentMap],
+  );
 
-  const handleCategoryChange =
-    useCallback(
-      (option) => {
-        userChangedCategoryRef.current =
-          true;
+  const handleCategoryChange = useCallback(
+    (option) => {
+      userChangedCategoryRef.current = true;
 
-        setHsnSuggestion(null);
+      setHsnSuggestion(null);
 
-        handleSelectChange(
-          option,
-          "CATEGORY_ID",
-        );
-      },
-      [handleSelectChange],
-    );
+      handleSelectChange(option, "CATEGORY_ID");
+    },
+    [handleSelectChange],
+  );
 
   useEffect(() => {
-    if (
-      !userChangedCategoryRef.current
-    )
-      return;
+    if (!userChangedCategoryRef.current) return;
 
     const categoryKey = String(
       formData?.category_id ||
@@ -939,27 +776,14 @@ const loadSellerOptions = useCallback(async () => {
         "",
     );
 
-    if (
-      !categoryKey ||
-      !Array.isArray(hsnCodeList) ||
-      !hsnCodeList.length
-    )
+    if (!categoryKey || !Array.isArray(hsnCodeList) || !hsnCodeList.length)
       return;
 
-    const ancestors =
-      getCategoryAncestors(
-        categoryKey,
-      );
+    const ancestors = getCategoryAncestors(categoryKey);
 
     const match = ancestors.reduce(
       (found, ancestor) =>
-        found ||
-        hsnCodeList.find(
-          (o) =>
-            o.hsnCategory ===
-            ancestor,
-        ) ||
-        null,
+        found || hsnCodeList.find((o) => o.hsnCategory === ancestor) || null,
       null,
     );
 
@@ -990,47 +814,32 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const [isCategoryModal, setIsCategoryModal] =
-    useState(false);
+  const [isCategoryModal, setIsCategoryModal] = useState(false);
 
-  const [isHsnAddModal, setIsHsnAddModal] =
-    useState(false);
+  const [isHsnAddModal, setIsHsnAddModal] = useState(false);
 
-  const [isBrandModal, setIsBrandModal] =
-    useState(false);
+  const [isBrandModal, setIsBrandModal] = useState(false);
 
-  const [brandSubmission, setBrandSubmission] =
-    useState({
-      name: "",
-      logo: "",
-      thumbnails: "",
-      description: "",
-    });
+  const [brandSubmission, setBrandSubmission] = useState({
+    name: "",
+    logo: "",
+    thumbnails: "",
+    description: "",
+  });
 
-  const [
-    myBrandSubmissions,
-    setMyBrandSubmissions,
-  ] = useState([]);
+  const [myBrandSubmissions, setMyBrandSubmissions] = useState([]);
 
-  const [brandSubmitting, setBrandSubmitting] =
-    useState(false);
+  const [brandSubmitting, setBrandSubmitting] = useState(false);
 
-  const [
-    brandLogoUploading,
-    setBrandLogoUploading,
-  ] = useState(false);
+  const [brandLogoUploading, setBrandLogoUploading] = useState(false);
 
-  const [formErrors, setFormErrors] =
-    useState({});
+  const [formErrors, setFormErrors] = useState({});
 
-  const [categoryForm, setCategoryForm] =
-    useState(INITIAL_FORM_CATEGORY);
+  const [categoryForm, setCategoryForm] = useState(INITIAL_FORM_CATEGORY);
 
-  const [hsnFormValues, setIsHsnFormValue] =
-    useState(INITIAL_FORM_HSN);
+  const [hsnFormValues, setIsHsnFormValue] = useState(INITIAL_FORM_HSN);
 
-  const [isLoading, setIsLoading] =
-    useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   /*
    * ------------------------------------------------------------
@@ -1038,76 +847,44 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const loadMyBrandSubmissions =
-    useCallback(async () => {
-      if (!isSellerPanelUser) return;
+  const loadMyBrandSubmissions = useCallback(async () => {
+    if (!isSellerPanelUser) return;
 
-      try {
-        const response =
-          await dispatch(
-            getMyBrandSubmissions(),
-          ).unwrap();
+    try {
+      const response = await dispatch(getMyBrandSubmissions()).unwrap();
 
-        const data =
-          response?.data;
+      const data = response?.data;
 
-        setMyBrandSubmissions(
-          Array.isArray(data)
-            ? data
-            : data?.list ||
-                data?.items ||
-                [],
-        );
-      } catch {
-        // Optional request; don't block product editing.
-      }
-    }, [
-      dispatch,
-      isSellerPanelUser,
-    ]);
+      setMyBrandSubmissions(
+        Array.isArray(data) ? data : data?.list || data?.items || [],
+      );
+    } catch {
+      // Optional request; don't block product editing.
+    }
+  }, [dispatch, isSellerPanelUser]);
 
   useEffect(() => {
     loadMyBrandSubmissions();
   }, [loadMyBrandSubmissions]);
 
-  const refreshCatalogList = async (
-    type,
-  ) => {
+  const refreshCatalogList = async (type) => {
     setRefreshingCatalog(type);
 
     try {
       if (type === "brand") {
-        await Promise.all([
-          fetchAllData?.(),
-          loadMyBrandSubmissions(),
-        ]);
+        await Promise.all([fetchAllData?.(), loadMyBrandSubmissions()]);
       } else {
         const call =
           type === "category"
-            ? API_CALL_OBJECT[
-                "Category List"
-              ]
-            : API_CALL_OBJECT[
-                "Hsn code list"
-              ];
+            ? API_CALL_OBJECT["Category List"]
+            : API_CALL_OBJECT["Hsn code list"];
 
         await fetchAllData?.([call]);
       }
 
-      toast.success(
-        `${
-          type === "hsn"
-            ? "HSN code"
-            : type
-        } list refreshed`,
-      );
+      toast.success(`${type === "hsn" ? "HSN code" : type} list refreshed`);
     } catch (error) {
-      toast.error(
-        getErrorMessage(
-          error,
-          `Could not refresh ${type} list`,
-        ),
-      );
+      toast.error(getErrorMessage(error, `Could not refresh ${type} list`));
     } finally {
       setRefreshingCatalog("");
     }
@@ -1119,312 +896,193 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const handleBrandLogoUpload =
-    async (event) => {
-      const file =
-        event.target.files?.[0];
+  const handleBrandLogoUpload = async (file) => {
+    if (!file) return;
 
-      event.target.value = "";
+    const allowedTypes = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
 
-      if (!file) return;
+    const extension = file.name?.split(".").pop()?.toLowerCase();
 
-      const allowedTypes = [
-        "image/png",
-        "image/jpg",
-        "image/jpeg",
-        "image/webp",
-      ];
+    if (
+      !allowedTypes.includes(file.type) &&
+      !["png", "jpg", "jpeg", "webp"].includes(extension)
+    ) {
+      toast.error("Only JPG, PNG, or WEBP images allowed");
+      return;
+    }
 
-      const extension =
-        file.name
-          ?.split(".")
-          .pop()
-          ?.toLowerCase();
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Brand logo must be 5MB or less");
+      return;
+    }
 
-      if (
-        !allowedTypes.includes(
-          file.type,
-        ) &&
-        ![
-          "png",
-          "jpg",
-          "jpeg",
-          "webp",
-        ].includes(extension)
-      ) {
-        toast.error(
-          "Only JPG, PNG, or WEBP images allowed",
-        );
+    setBrandLogoUploading(true);
 
-        return;
-      }
+    try {
+      const logoUrl = await uploadFile(file, "BRANDS");
 
-      if (
-        file.size >
-        5 * 1024 * 1024
-      ) {
-        toast.error(
-          "Brand logo must be 5MB or less",
-        );
+      setBrandSubmission((current) => ({
+        ...current,
+        logo: logoUrl,
+      }));
 
-        return;
-      }
+      toast.success("Brand logo uploaded");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Failed to upload brand logo"));
+    } finally {
+      setBrandLogoUploading(false);
+    }
+  };
 
-      setBrandLogoUploading(true);
+  const submitBrandRequest = async (event) => {
+    event.preventDefault();
 
-      try {
-        const logoUrl =
-          await uploadFile(
-            file,
-            "BRANDS",
-          );
+    if (!brandSubmission.name.trim()) {
+      return toast.error("Brand name is required");
+    }
 
-        setBrandSubmission(
-          (current) => ({
-            ...current,
-            logo: logoUrl,
-          }),
+    if (!brandSubmission.logo) {
+      return toast.error("Please upload a brand logo");
+    }
+
+    if (brandLogoUploading) {
+      return toast.error("Please wait for logo upload to finish");
+    }
+
+    setBrandSubmitting(true);
+
+    try {
+      if (isSellerPanelUser) {
+        const response = await dispatch(
+          brandSubmission._id
+            ? resubmitBrandForApproval({
+                ...brandSubmission,
+                _id: brandSubmission._id,
+              })
+            : submitBrandForApproval(brandSubmission),
+        ).unwrap();
+
+        const createdBrand = response?.data || {};
+
+        const brandName = createdBrand.name || brandSubmission.name.trim();
+
+        setMyBrandSubmissions((current) => [
+          {
+            ...brandSubmission,
+            ...createdBrand,
+            name: brandName,
+            approvalStatus: createdBrand.approvalStatus || "pending",
+          },
+          ...current.filter(
+            (brand) =>
+              String(brand._id || "") !==
+              String(createdBrand._id || brandSubmission._id || ""),
+          ),
+        ]);
+
+        handleSelectChange(
+          {
+            value: brandName,
+            label: brandName,
+            brandName,
+            resourceId: createdBrand._id || createdBrand.id,
+            approvalStatus: createdBrand.approvalStatus || "pending",
+          },
+          "BRAND_ID",
         );
 
         toast.success(
-          "Brand logo uploaded",
+          brandSubmission._id
+            ? "Brand resubmitted for approval"
+            : "Brand submitted for approval",
         );
-      } catch (error) {
-        toast.error(
-          getErrorMessage(
-            error,
-            "Failed to upload brand logo",
-          ),
-        );
-      } finally {
-        setBrandLogoUploading(false);
-      }
-    };
+      } else {
+        const response = await dispatch(
+          createBrand({
+            ...brandSubmission,
+            active: true,
+          }),
+        ).unwrap();
 
-  const submitBrandRequest =
-    async (event) => {
-      event.preventDefault();
+        const createdBrand = response?.data || {};
 
-      if (
-        !brandSubmission.name.trim()
-      ) {
-        return toast.error(
-          "Brand name is required",
-        );
-      }
+        const brandName = createdBrand.name || brandSubmission.name.trim();
 
-      if (brandLogoUploading) {
-        return toast.error(
-          "Please wait for logo upload to finish",
+        handleSelectChange(
+          {
+            value: brandName,
+            label: brandName,
+            brandName,
+            resourceId: createdBrand._id || createdBrand.id,
+            approvalStatus: createdBrand.approvalStatus || "approved",
+          },
+          "BRAND_ID",
         );
+
+        toast.success("Brand created and selected");
       }
 
-      setBrandSubmitting(true);
+      setBrandSubmission({
+        name: "",
+        logo: "",
+        thumbnails: "",
+        description: "",
+      });
 
-      try {
-        if (isSellerPanelUser) {
-          const response =
-            await dispatch(
-              brandSubmission._id
-                ? resubmitBrandForApproval(
-                    {
-                      ...brandSubmission,
-                      _id:
-                        brandSubmission._id,
-                    },
-                  )
-                : submitBrandForApproval(
-                    brandSubmission,
-                  ),
-            ).unwrap();
+      setIsBrandModal(false);
 
-          const createdBrand =
-            response?.data || {};
+      loadMyBrandSubmissions();
 
-          const brandName =
-            createdBrand.name ||
-            brandSubmission.name.trim();
-
-          setMyBrandSubmissions(
-            (current) => [
-              {
-                ...brandSubmission,
-                ...createdBrand,
-                name: brandName,
-                approvalStatus:
-                  createdBrand.approvalStatus ||
-                  "pending",
-              },
-              ...current.filter(
-                (brand) =>
-                  String(
-                    brand._id || "",
-                  ) !==
-                  String(
-                    createdBrand._id ||
-                      brandSubmission._id ||
-                      "",
-                  ),
-              ),
-            ],
-          );
-
-          handleSelectChange(
-            {
-              value: brandName,
-              label: brandName,
-              brandName,
-              resourceId:
-                createdBrand._id ||
-                createdBrand.id,
-              approvalStatus:
-                createdBrand.approvalStatus ||
-                "pending",
-            },
-            "BRAND_ID",
-          );
-
-          toast.success(
-            brandSubmission._id
-              ? "Brand resubmitted for approval"
-              : "Brand submitted for approval",
-          );
-        } else {
-          const response =
-            await dispatch(
-              createBrand({
-                ...brandSubmission,
-                active: true,
-              }),
-            ).unwrap();
-
-          const createdBrand =
-            response?.data || {};
-
-          const brandName =
-            createdBrand.name ||
-            brandSubmission.name.trim();
-
-          handleSelectChange(
-            {
-              value: brandName,
-              label: brandName,
-              brandName,
-              resourceId:
-                createdBrand._id ||
-                createdBrand.id,
-              approvalStatus:
-                createdBrand.approvalStatus ||
-                "approved",
-            },
-            "BRAND_ID",
-          );
-
-          toast.success(
-            "Brand created and selected",
-          );
-        }
-
-        setBrandSubmission({
-          name: "",
-          logo: "",
-          thumbnails: "",
-          description: "",
-        });
-
-        setIsBrandModal(false);
-
-        loadMyBrandSubmissions();
-
-        fetchAllData?.();
-      } catch (error) {
-        toast.error(
-          getErrorMessage(
-            error,
-            "Could not submit brand",
-          ),
-        );
-      } finally {
-        setBrandSubmitting(false);
-      }
-    };
+      fetchAllData?.();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not submit brand"));
+    } finally {
+      setBrandSubmitting(false);
+    }
+  };
 
   const brandOptions = useMemo(() => {
-    const approvedNames =
-      new Set(
-        (formattedBrandList || []).map(
-          (brand) =>
-            String(
-              brand.value || "",
-            ).toLowerCase(),
-        ),
-      );
+    const approvedNames = new Set(
+      (formattedBrandList || []).map((brand) =>
+        String(brand.value || "").toLowerCase(),
+      ),
+    );
 
-    const ownPendingBrands =
-      isSellerPanelUser
-        ? myBrandSubmissions
-            .filter(
-              (brand) =>
-                brand.approvalStatus ===
-                  "pending" &&
-                !approvedNames.has(
-                  String(
-                    brand.name || "",
-                  ).toLowerCase(),
-                ),
-            )
-            .map((brand) => ({
-              value: brand.name,
-              label: `${brand.name} (Pending approval)`,
-              brandName: brand.name,
-              isPendingBrand: true,
-            }))
-        : [];
+    const ownPendingBrands = isSellerPanelUser
+      ? myBrandSubmissions
+          .filter(
+            (brand) =>
+              brand.approvalStatus === "pending" &&
+              !approvedNames.has(String(brand.name || "").toLowerCase()),
+          )
+          .map((brand) => ({
+            value: brand.name,
+            label: `${brand.name} (Pending approval)`,
+            brandName: brand.name,
+            isPendingBrand: true,
+          }))
+      : [];
 
-    return [
-      ...ownPendingBrands,
-      ...(formattedBrandList || []),
-    ].map((brand) => {
+    return [...ownPendingBrands, ...(formattedBrandList || [])].map((brand) => {
       const approvalStatus =
-        brandStatusOverrides[
-          String(
-            brand.resourceId || "",
-          )
-        ] ||
-        brandStatusOverrides[
-          String(
-            brand.value || "",
-          )
-        ] ||
-        brandStatusOverrides[
-          String(
-            brand.brandName || "",
-          )
-        ] ||
+        brandStatusOverrides[String(brand.resourceId || "")] ||
+        brandStatusOverrides[String(brand.value || "")] ||
+        brandStatusOverrides[String(brand.brandName || "")] ||
         brand.approvalStatus;
 
-      if (
-        approvalStatus ===
-        brand.approvalStatus
-      ) {
+      if (approvalStatus === brand.approvalStatus) {
         return brand;
       }
 
       const baseName =
         brand.brandName ||
-        String(
-          brand.label || "",
-        ).replace(
-          / \(\s*Pending approval\s*\)$/,
-          "",
-        );
+        String(brand.label || "").replace(/ \(\s*Pending approval\s*\)$/, "");
 
       return {
         ...brand,
         approvalStatus,
         label:
-          approvalStatus ===
-          "pending"
+          approvalStatus === "pending"
             ? `${baseName} (Pending approval)`
             : baseName,
       };
@@ -1436,91 +1094,42 @@ const loadSellerOptions = useCallback(async () => {
     myBrandSubmissions,
   ]);
 
-  const selectedBrandOption =
-    useMemo(() => {
-      const rawBrand =
-        formData.brand ||
-        formData.brandId ||
-        formData.brand_id ||
-        "";
+  const selectedBrandOption = useMemo(() => {
+    const rawBrand =
+      formData.brand || formData.brandId || formData.brand_id || "";
 
-      const currentBrand =
-        typeof rawBrand ===
-        "object"
-          ? rawBrand.value ||
-            rawBrand._id ||
-            rawBrand.id ||
-            rawBrand.name
-          : rawBrand;
+    const currentBrand =
+      typeof rawBrand === "object"
+        ? rawBrand.value || rawBrand._id || rawBrand.id || rawBrand.name
+        : rawBrand;
 
-      if (!currentBrand)
-        return null;
+    if (!currentBrand) return null;
 
-      return (
-        brandOptions.find(
-          (option) =>
-            String(
-              option.value,
-            ) ===
-              String(
-                currentBrand,
-              ) ||
-            String(
-              option.label,
-            ) ===
-              String(
-                currentBrand,
-              ) ||
-            String(
-              option.brandName ||
-                "",
-            ) ===
-              String(
-                currentBrand,
-              ) ||
-            String(
-              option.brandId ||
-                option._id ||
-                option.id ||
-                "",
-            ) ===
-              String(
-                currentBrand,
-              ),
-        ) ||
-        (typeof rawBrand ===
-        "object"
-          ? {
-              ...rawBrand,
-              value:
-                currentBrand,
-              label:
-                rawBrand.label ||
-                rawBrand.name ||
-                currentBrand,
-            }
-          : {
-              value:
-                currentBrand,
-              label:
-                currentBrand,
-            })
-      );
-    }, [
-      brandOptions,
-      formData.brand,
-      formData.brandId,
-      formData.brand_id,
-    ]);
+    return (
+      brandOptions.find(
+        (option) =>
+          String(option.value) === String(currentBrand) ||
+          String(option.label) === String(currentBrand) ||
+          String(option.brandName || "") === String(currentBrand) ||
+          String(option.brandId || option._id || option.id || "") ===
+            String(currentBrand),
+      ) ||
+      (typeof rawBrand === "object"
+        ? {
+            ...rawBrand,
+            value: currentBrand,
+            label: rawBrand.label || rawBrand.name || currentBrand,
+          }
+        : {
+            value: currentBrand,
+            label: currentBrand,
+          })
+    );
+  }, [brandOptions, formData.brand, formData.brandId, formData.brand_id]);
 
-  const handleBrandSelect = (
-    option,
-  ) => {
+  const handleBrandSelect = (option) => {
     if (!option) {
-      handleSelectChange(
-        null,
-        "BRAND_ID",
-      );
+      handleSelectChange(null, "BRAND_ID");
 
       return;
     }
@@ -1542,8 +1151,7 @@ const loadSellerOptions = useCallback(async () => {
       option.brandName
         ? {
             ...option,
-            label:
-              option.brandName,
+            label: option.brandName,
           }
         : option,
       "BRAND_ID",
@@ -1558,39 +1166,25 @@ const loadSellerOptions = useCallback(async () => {
 
   const warrantyOptions = useMemo(
     () =>
-      warrantyTemplatesFromMaster
-        .options.length > 0
+      warrantyTemplatesFromMaster.options.length > 0
         ? warrantyTemplatesFromMaster.options
         : formattedWarrantyList || [],
-    [
-      formattedWarrantyList,
-      warrantyTemplatesFromMaster.options,
-    ],
+    [formattedWarrantyList, warrantyTemplatesFromMaster.options],
   );
 
-  const selectedWarrantyOption =
-    useMemo(() => {
-      const currentValue = `${String(
-        formData.warranty?.period ??
-          "",
-      )}:${String(
-        formData.warranty
-          ?.periodUnit || "",
-      )}`;
+  const selectedWarrantyOption = useMemo(() => {
+    const currentValue = `${String(formData.warranty?.period ?? "")}:${String(
+      formData.warranty?.periodUnit || "",
+    )}`;
 
-      return (
-        warrantyOptions.find(
-          (opt) =>
-            String(
-              opt.value,
-            ) === currentValue,
-        ) || null
-      );
-    }, [
-      warrantyOptions,
-      formData.warranty?.period,
-      formData.warranty?.periodUnit,
-    ]);
+    return (
+      warrantyOptions.find((opt) => String(opt.value) === currentValue) || null
+    );
+  }, [
+    warrantyOptions,
+    formData.warranty?.period,
+    formData.warranty?.periodUnit,
+  ]);
 
   /*
    * ------------------------------------------------------------
@@ -1598,137 +1192,82 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const handleInputCategoryChange =
-    (e) => {
-      const {
-        name,
-        value,
-      } = e.target;
+  const handleInputCategoryChange = (e) => {
+    const { name, value } = e.target;
 
-      setCategoryForm(
-        (prev) => ({
-          ...prev,
-          [name]: value,
-        }),
-      );
-    };
+    setCategoryForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-  const handleHsnInputChange =
-    (e) => {
-      const {
-        name,
-        value,
-      } = e.target;
+  const handleHsnInputChange = (e) => {
+    const { name, value } = e.target;
 
-      setIsHsnFormValue(
-        (prev) => ({
-          ...prev,
-          [name]: value,
-        }),
-      );
+    setIsHsnFormValue((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
 
-      setFormErrors({});
-    };
+    setFormErrors({});
+  };
 
-  const handleFileUploadCategory =
-    async (file, fieldName) => {
-      if (!file) return;
+  const handleFileUploadCategory = async (file, fieldName) => {
+    if (!file) return;
 
-      const allowedTypes = [
-        "image/png",
-        "image/jpg",
-        "image/jpeg",
-        "image/webp",
-        "image/svg+xml",
-      ];
+    const allowedTypes = [
+      "image/png",
+      "image/jpg",
+      "image/jpeg",
+      "image/webp",
+      "image/svg+xml",
+    ];
 
-      const allowedExtensions = [
-        "png",
-        "jpg",
-        "jpeg",
-        "webp",
-        "svg",
-      ];
+    const allowedExtensions = ["png", "jpg", "jpeg", "webp", "svg"];
 
-      const fileExtension =
-        file.name
-          ?.split(".")
-          .pop()
-          ?.toLowerCase();
+    const fileExtension = file.name?.split(".").pop()?.toLowerCase();
 
-      if (
-        !allowedTypes.includes(
-          file.type,
-        ) &&
-        !allowedExtensions.includes(
-          fileExtension,
-        )
-      ) {
-        toast.error(
-          "Only JPG, PNG, WEBP, or SVG images allowed",
-        );
+    if (
+      !allowedTypes.includes(file.type) &&
+      !allowedExtensions.includes(fileExtension)
+    ) {
+      toast.error("Only JPG, PNG, WEBP, or SVG images allowed");
 
-        return;
-      }
+      return;
+    }
 
-      try {
-        setIsLoading(true);
+    try {
+      setIsLoading(true);
 
-        const uploadedImageUrl =
-          await uploadFile(
-            file,
-            "THUMBNAILS",
-          );
+      const uploadedImageUrl = await uploadFile(file, "THUMBNAILS");
 
-        setCategoryForm(
-          (prev) => ({
-            ...prev,
-            [fieldName]:
-              uploadedImageUrl,
-          }),
-        );
+      setCategoryForm((prev) => ({
+        ...prev,
+        [fieldName]: uploadedImageUrl,
+      }));
 
-        toast.success(
-          "Image uploaded successfully",
-        );
-      } catch (error) {
-        toast.error(
-          error?.message ||
-            "Failed to upload image",
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      toast.success("Image uploaded successfully");
+    } catch (error) {
+      toast.error(error?.message || "Failed to upload image");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleSelectCategoryChange =
-    (
-      selectedOption,
-      name,
-    ) => {
-      setCategoryForm(
-        (prev) => ({
-          ...prev,
-          [name]:
-            selectedOption,
-        }),
-      );
-    };
+  const handleSelectCategoryChange = (selectedOption, name) => {
+    setCategoryForm((prev) => ({
+      ...prev,
+      [name]: selectedOption,
+    }));
+  };
 
-  const handleDashboardVisible =
-    () => {
-      setCategoryForm(
-        (prev) => ({
-          ...prev,
-          isDashboardVisible:
-            !prev?.isDashboardVisible,
-          priority:
-            !prev?.isDashboardVisible
-              ? prev.priority
-              : 0,
-        }),
-      );
-    };
+  const handleDashboardVisible = () => {
+    setCategoryForm((prev) => ({
+      ...prev,
+      isDashboardVisible: !prev?.isDashboardVisible,
+      priority: !prev?.isDashboardVisible ? prev.priority : 0,
+    }));
+  };
 
   /*
    * ------------------------------------------------------------
@@ -1736,175 +1275,97 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const createSelectOptions =
-    useMemo(() => {
-      const options = [
-        {
-          label: "ROOT",
-          value: "ROOT",
-        },
-      ];
+  const createSelectOptions = useMemo(() => {
+    const options = [
+      {
+        label: "ROOT",
+        value: "ROOT",
+      },
+    ];
 
-      if (
-        !Array.isArray(
-          allCategories,
-        ) ||
-        !allCategories.length
-      ) {
-        return options;
-      }
+    if (!Array.isArray(allCategories) || !allCategories.length) {
+      return options;
+    }
 
-      const hasNested =
-        allCategories.some(
-          (item) =>
-            Array.isArray(
-              item?.subcategories,
-            ) ||
-            Array.isArray(
-              item?.subCategories,
-            ),
-        );
+    const hasNested = allCategories.some(
+      (item) =>
+        Array.isArray(item?.subcategories) ||
+        Array.isArray(item?.subCategories),
+    );
 
-      if (hasNested) {
-        const addOptions = (
-          categories,
-          prefix = "",
-          depth = 1,
-        ) => {
-          if (
-            !Array.isArray(
-              categories,
-            )
-          )
-            return;
+    if (hasNested) {
+      const addOptions = (categories, prefix = "", depth = 1) => {
+        if (!Array.isArray(categories)) return;
 
-          categories.forEach(
-            (category) => {
-              const categoryName =
-                category.name ||
-                category.title ||
-                category.categoryKey;
+        categories.forEach((category) => {
+          const categoryName =
+            category.name || category.title || category.categoryKey;
 
-              const label = prefix
-                ? `${prefix} > ${categoryName}`
-                : categoryName;
+          const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
 
-              options.push({
-                value:
-                  category.categoryKey ||
-                  category._id,
-                label,
-              });
+          options.push({
+            value: category.categoryKey || category._id,
+            label,
+          });
 
-              const children =
-                category.subcategories ||
-                category.subCategories ||
-                [];
+          const children =
+            category.subcategories || category.subCategories || [];
 
-              if (
-                depth < 2 &&
-                children.length
-              ) {
-                addOptions(
-                  children,
-                  label,
-                  depth + 1,
-                );
-              }
-            },
-          );
-        };
-
-        addOptions(
-          allCategories,
-        );
-
-        return options;
-      }
-
-      const byParent = new Map();
-
-      allCategories.forEach(
-        (category) => {
-          const parent =
-            category?.parentKey
-              ? String(
-                  category.parentKey,
-                )
-              : "__root__";
-
-          if (
-            !byParent.has(parent)
-          ) {
-            byParent.set(
-              parent,
-              [],
-            );
+          if (depth < 2 && children.length) {
+            addOptions(children, label, depth + 1);
           }
-
-          byParent
-            .get(parent)
-            .push(category);
-        },
-      );
-
-      const walk = (
-        parent = "__root__",
-        prefix = "",
-        depth = 1,
-      ) => {
-        const children =
-          byParent.get(
-            parent,
-          ) || [];
-
-        children
-          .sort(
-            (a, b) =>
-              Number(
-                a?.sortOrder || 0,
-              ) -
-              Number(
-                b?.sortOrder || 0,
-              ),
-          )
-          .forEach(
-            (category) => {
-              const categoryName =
-                category.name ||
-                category.title ||
-                category.categoryKey;
-
-              const label =
-                prefix
-                  ? `${prefix} > ${categoryName}`
-                  : categoryName;
-
-              options.push({
-                value:
-                  category.categoryKey ||
-                  category._id,
-                label,
-              });
-
-              if (depth < 2) {
-                walk(
-                  String(
-                    category.categoryKey ||
-                      category._id,
-                  ),
-                  label,
-                  depth + 1,
-                );
-              }
-            },
-          );
+        });
       };
 
-      walk();
+      addOptions(allCategories);
 
       return options;
-    }, [allCategories]);
+    }
+
+    const byParent = new Map();
+
+    allCategories.forEach((category) => {
+      const parent = category?.parentKey
+        ? String(category.parentKey)
+        : "__root__";
+
+      if (!byParent.has(parent)) {
+        byParent.set(parent, []);
+      }
+
+      byParent.get(parent).push(category);
+    });
+
+    const walk = (parent = "__root__", prefix = "", depth = 1) => {
+      const children = byParent.get(parent) || [];
+
+      children
+        .sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
+        .forEach((category) => {
+          const categoryName =
+            category.name || category.title || category.categoryKey;
+
+          const label = prefix ? `${prefix} > ${categoryName}` : categoryName;
+
+          options.push({
+            value: category.categoryKey || category._id,
+            label,
+          });
+
+          if (depth < 2) {
+            walk(
+              String(category.categoryKey || category._id),
+              label,
+              depth + 1,
+            );
+          }
+        });
+    };
+
+    walk();
+
+    return options;
+  }, [allCategories]);
 
   /*
    * ------------------------------------------------------------
@@ -1912,114 +1373,70 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const handleCategorySubmit =
-    async () => {
-      try {
-        const type =
-          categoryForm.parentCategory
-            ?.value !== "ROOT"
-            ? "CHILD"
-            : "ROOT";
+  const handleCategorySubmit = async () => {
+    try {
+      const type =
+        categoryForm.parentCategory?.value !== "ROOT" ? "CHILD" : "ROOT";
 
-        const reqData = {
-          name:
+      const reqData = {
+        name: categoryForm.categoryName,
+        bannerUrl: categoryForm.bannerUrl,
+        iconUrl: categoryForm.iconUrl,
+        type,
+        isDisable: true,
+        isDashboardVisible: categoryForm?.isDashboardVisible,
+        priority: categoryForm?.priority,
+      };
+
+      if (type === "CHILD") {
+        reqData.parentKey = categoryForm.parentCategory.value;
+
+        reqData.level = 1;
+      }
+
+      setIsLoading(true);
+
+      const res = await dispatch(createCategory(reqData)).unwrap();
+
+      const createdCategory = res?.data || {};
+
+      const categoryValue =
+        createdCategory.categoryKey ||
+        createdCategory._id ||
+        createdCategory.id;
+
+      if (categoryValue) {
+        const newOption = {
+          value: categoryValue,
+          categoryKey: createdCategory.categoryKey || categoryValue,
+          label:
+            createdCategory.title ||
+            createdCategory.name ||
             categoryForm.categoryName,
-          bannerUrl:
-            categoryForm.bannerUrl,
-          iconUrl:
-            categoryForm.iconUrl,
-          type,
-          isDisable: true,
-          isDashboardVisible:
-            categoryForm?.isDashboardVisible,
-          priority:
-            categoryForm?.priority,
+          resourceType: "category",
+          resourceId:
+            createdCategory._id || createdCategory.id || categoryValue,
+          approvalStatus: createdCategory.approvalStatus,
         };
 
-        if (type === "CHILD") {
-          reqData.parentKey =
-            categoryForm.parentCategory.value;
+        setLocalCategoryOptions((current) => [newOption, ...current]);
 
-          reqData.level = 1;
-        }
-
-        setIsLoading(true);
-
-        const res =
-          await dispatch(
-            createCategory(
-              reqData,
-            ),
-          ).unwrap();
-
-        const createdCategory =
-          res?.data || {};
-
-        const categoryValue =
-          createdCategory.categoryKey ||
-          createdCategory._id ||
-          createdCategory.id;
-
-        if (categoryValue) {
-          const newOption = {
-            value: categoryValue,
-            categoryKey:
-              createdCategory.categoryKey ||
-              categoryValue,
-            label:
-              createdCategory.title ||
-              createdCategory.name ||
-              categoryForm.categoryName,
-            resourceType:
-              "category",
-            resourceId:
-              createdCategory._id ||
-              createdCategory.id ||
-              categoryValue,
-            approvalStatus:
-              createdCategory.approvalStatus,
-          };
-
-          setLocalCategoryOptions(
-            (current) => [
-              newOption,
-              ...current,
-            ],
-          );
-
-          handleSelectChange(
-            newOption,
-            "CATEGORY_ID",
-          );
-        }
-
-        toast.success(
-          res.message ||
-            "Category created successfully",
-        );
-
-        setIsCategoryModal(
-          false,
-        );
-
-        setCategoryForm(
-          INITIAL_FORM_CATEGORY,
-        );
-
-        fetchAllData([
-          API_CALL_OBJECT[
-            "Category List"
-          ],
-        ]);
-      } catch (error) {
-        toast.error(
-          error?.message ||
-            "Failed to create category",
-        );
-      } finally {
-        setIsLoading(false);
+        handleSelectChange(newOption, "CATEGORY_ID");
       }
-    };
+
+      toast.success(res.message || "Category created successfully");
+
+      setIsCategoryModal(false);
+
+      setCategoryForm(INITIAL_FORM_CATEGORY);
+
+      fetchAllData([API_CALL_OBJECT["Category List"]]);
+    } catch (error) {
+      toast.error(error?.message || "Failed to create category");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   /*
    * ------------------------------------------------------------
@@ -2027,116 +1444,65 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const handleHsnSubmit =
-    async (e) => {
-      e?.preventDefault();
+  const handleHsnSubmit = async (e) => {
+    e?.preventDefault();
 
-      const basePayload = {
-        code:
-          hsnFormValues.code.trim(),
-        IGST: Number(
-          hsnFormValues.IGST,
-        ),
-        CGST: Number(
-          hsnFormValues.CGST,
-        ),
-        SGST: Number(
-          hsnFormValues.SGST,
-        ),
-        additionalTax: Number(
-          hsnFormValues.additionalTax,
-        ),
-        description:
-          hsnFormValues.description?.trim() ||
-          "",
-        active: true,
+    const basePayload = {
+      code: hsnFormValues.code.trim(),
+      IGST: Number(hsnFormValues.IGST),
+      CGST: Number(hsnFormValues.CGST),
+      SGST: Number(hsnFormValues.SGST),
+      additionalTax: Number(hsnFormValues.additionalTax),
+      description: hsnFormValues.description?.trim() || "",
+      active: true,
+    };
+
+    try {
+      const res = await dispatch(createHsn(basePayload)).unwrap();
+
+      const createdHsn = res?.data || {};
+
+      const hsnValue = createdHsn.code || basePayload.code;
+
+      const newOption = {
+        value: hsnValue,
+        code: hsnValue,
+        label: createdHsn.description
+          ? `${hsnValue} - ${createdHsn.description}`
+          : hsnValue,
+        description: createdHsn.description || basePayload.description,
+        resourceType: "hsn",
+        resourceId: createdHsn._id || createdHsn.id || hsnValue,
+        approvalStatus: createdHsn.approvalStatus,
       };
 
-      try {
-        const res =
-          await dispatch(
-            createHsn(
-              basePayload,
-            ),
-          ).unwrap();
+      setLocalHsnOptions((current) => [newOption, ...current]);
 
-        const createdHsn =
-          res?.data || {};
+      handleSelectChange(newOption, "hsn_code");
 
-        const hsnValue =
-          createdHsn.code ||
-          basePayload.code;
+      toast.success("HSN Code created successfully");
 
-        const newOption = {
-          value: hsnValue,
-          code: hsnValue,
-          label:
-            createdHsn.description
-              ? `${hsnValue} - ${createdHsn.description}`
-              : hsnValue,
-          description:
-            createdHsn.description ||
-            basePayload.description,
-          resourceType:
-            "hsn",
-          resourceId:
-            createdHsn._id ||
-            createdHsn.id ||
-            hsnValue,
-          approvalStatus:
-            createdHsn.approvalStatus,
-        };
+      setIsHsnAddModal(false);
 
-        setLocalHsnOptions(
-          (current) => [
-            newOption,
-            ...current,
-          ],
-        );
+      setIsHsnFormValue(INITIAL_FORM_HSN);
 
-        handleSelectChange(
-          newOption,
-          "hsn_code",
-        );
+      setFormErrors({});
 
-        toast.success(
-          "HSN Code created successfully",
-        );
+      fetchAllData([API_CALL_OBJECT["Hsn code list"]]);
+    } catch (error) {
+      console.error("HSN Create Error:", error);
 
-        setIsHsnAddModal(false);
+      const errorMessage =
+        typeof error === "string"
+          ? error
+          : error?.message ||
+            error?.error?.message ||
+            error?.response?.data?.message ||
+            "Failed to save HSN Code";
 
-        setIsHsnFormValue(
-          INITIAL_FORM_HSN,
-        );
-
-        setFormErrors({});
-
-        fetchAllData([
-          API_CALL_OBJECT[
-            "Hsn code list"
-          ],
-        ]);
-      } catch (error) {
-        console.error(
-          "HSN Create Error:",
-          error,
-        );
-
-        const errorMessage =
-          typeof error ===
-          "string"
-            ? error
-            : error?.message ||
-              error?.error?.message ||
-              error?.response?.data
-                ?.message ||
-              "Failed to save HSN Code";
-
-        toast.error(
-          errorMessage,
-        );
-      }
-    };
+      toast.error(errorMessage);
+    }
+  };
 
   /*
    * ------------------------------------------------------------
@@ -2144,130 +1510,68 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const validateCategoryForm =
-    () => {
-      const newErrors = {};
+  const validateCategoryForm = () => {
+    const newErrors = {};
 
-      if (
-        !categoryForm.categoryName
-      ) {
-        newErrors.categoryName =
-          "Category name is required";
-      }
+    if (!categoryForm.categoryName) {
+      newErrors.categoryName = "Category name is required";
+    }
 
-      setFormErrors(
-        newErrors,
-      );
+    setFormErrors(newErrors);
 
-      return (
-        Object.keys(
-          newErrors,
-        ).length === 0
-      );
-    };
+    return Object.keys(newErrors).length === 0;
+  };
 
-  const validateHsnForm =
-    () => {
-      const newErrors = {};
+  const validateHsnForm = () => {
+    const newErrors = {};
 
-      const hasRate = (
-        value,
-      ) =>
-        value !== "" &&
-        value !== null &&
-        value !== undefined;
+    const hasRate = (value) =>
+      value !== "" && value !== null && value !== undefined;
 
-      if (!hsnFormValues.code) {
-        newErrors.code =
-          "Code is required";
-      }
+    if (!hsnFormValues.code) {
+      newErrors.code = "Code is required";
+    }
 
-      if (
-        !hasRate(
-          hsnFormValues.IGST,
-        )
-      ) {
-        newErrors.IGST =
-          "IGST is required";
-      } else if (
-        Number(
-          hsnFormValues.IGST,
-        ) < 0 ||
-        Number(
-          hsnFormValues.IGST,
-        ) > 100
-      ) {
-        newErrors.IGST =
-          "IGST must be between 0 and 100";
-      }
+    if (!hasRate(hsnFormValues.IGST)) {
+      newErrors.IGST = "IGST is required";
+    } else if (
+      Number(hsnFormValues.IGST) < 0 ||
+      Number(hsnFormValues.IGST) > 100
+    ) {
+      newErrors.IGST = "IGST must be between 0 and 100";
+    }
 
-      if (
-        !hasRate(
-          hsnFormValues.CGST,
-        )
-      ) {
-        newErrors.CGST =
-          "CGST is required";
-      } else if (
-        Number(
-          hsnFormValues.CGST,
-        ) < 0 ||
-        Number(
-          hsnFormValues.CGST,
-        ) > 100
-      ) {
-        newErrors.CGST =
-          "CGST must be between 0 and 100";
-      }
+    if (!hasRate(hsnFormValues.CGST)) {
+      newErrors.CGST = "CGST is required";
+    } else if (
+      Number(hsnFormValues.CGST) < 0 ||
+      Number(hsnFormValues.CGST) > 100
+    ) {
+      newErrors.CGST = "CGST must be between 0 and 100";
+    }
 
-      if (
-        !hasRate(
-          hsnFormValues.SGST,
-        )
-      ) {
-        newErrors.SGST =
-          "SGST is required";
-      } else if (
-        Number(
-          hsnFormValues.SGST,
-        ) < 0 ||
-        Number(
-          hsnFormValues.SGST,
-        ) > 100
-      ) {
-        newErrors.SGST =
-          "SGST must be between 0 and 100";
-      }
+    if (!hasRate(hsnFormValues.SGST)) {
+      newErrors.SGST = "SGST is required";
+    } else if (
+      Number(hsnFormValues.SGST) < 0 ||
+      Number(hsnFormValues.SGST) > 100
+    ) {
+      newErrors.SGST = "SGST must be between 0 and 100";
+    }
 
-      if (
-        !hsnFormValues.description
-      ) {
-        newErrors.description =
-          "Description is required";
-      } else if (
-        hsnFormValues.description
-          .length < 3
-      ) {
-        newErrors.description =
-          "Description must be at least 3 characters";
-      } else if (
-        hsnFormValues.description
-          .length > 100
-      ) {
-        newErrors.description =
-          "Description must be less than or equal to 100 characters";
-      }
+    if (!hsnFormValues.description) {
+      newErrors.description = "Description is required";
+    } else if (hsnFormValues.description.length < 3) {
+      newErrors.description = "Description must be at least 3 characters";
+    } else if (hsnFormValues.description.length > 100) {
+      newErrors.description =
+        "Description must be less than or equal to 100 characters";
+    }
 
-      setFormErrors(
-        newErrors,
-      );
+    setFormErrors(newErrors);
 
-      return (
-        Object.keys(
-          newErrors,
-        ).length === 0
-      );
-    };
+    return Object.keys(newErrors).length === 0;
+  };
 
   /*
    * ------------------------------------------------------------
@@ -2275,32 +1579,18 @@ const loadSellerOptions = useCallback(async () => {
    * ------------------------------------------------------------
    */
 
-  const toTitleCase = (
-    str,
-  ) =>
+  const toTitleCase = (str) =>
     str.replace(
       /\w\S*/g,
-      (txt) =>
-        txt
-          .charAt(0)
-          .toUpperCase() +
-        txt
-          .slice(1)
-          .toLowerCase(),
+      (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase(),
     );
 
-  const handleNameBlur = (
-    e,
-  ) => {
-    const {
-      name,
-      value,
-    } = e.target;
+  const handleNameBlur = (e) => {
+    const { name, value } = e.target;
 
     if (!value.trim()) return;
 
-    const titled =
-      toTitleCase(value);
+    const titled = toTitleCase(value);
 
     if (titled !== value) {
       handleChange({
@@ -2312,12 +1602,7 @@ const loadSellerOptions = useCallback(async () => {
     }
   };
 
-  const isReturnable =
-    Boolean(
-      formData.warranty
-        ?.returnPolicy
-        ?.returnable,
-    );
+  const isReturnable = Boolean(formData.warranty?.returnPolicy?.returnable);
 
   /*
    * ------------------------------------------------------------
@@ -2334,15 +1619,12 @@ const loadSellerOptions = useCallback(async () => {
           <h3>Basic Details</h3>
 
           <p>
-            Customize the product basic
-            details like name, brand, and
-            categories
+            Customize the product basic details like name, brand, and categories
           </p>
         </div>
 
         <div className="space-y-5">
           <div className="grid w-full grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
-
             {/* =====================================================
                 SELLER
                 ===================================================== */}
@@ -2355,13 +1637,8 @@ const loadSellerOptions = useCallback(async () => {
                   value={
                     formattedSellerOptions.find(
                       (option) =>
-                        String(
-                          option.value,
-                        ) ===
-                        String(
-                          formData.sellerId ||
-                            "",
-                        ),
+                        String(option.value) ===
+                        String(formData.sellerId || ""),
                     ) || null
                   }
                   onChange={(option) => {
@@ -2370,31 +1647,17 @@ const loadSellerOptions = useCallback(async () => {
                      * organization/store because stores
                      * belong to the selected seller.
                      */
-                    handleSelectChange(
-                      option,
-                      "SELLER_ID",
-                    );
+                    handleSelectChange(option, "SELLER_ID");
 
-                    handleSelectChange(
-                      null,
-                      "ORGANIZATION_ID",
-                    );
+                    handleSelectChange(null, "ORGANIZATION_ID");
 
-                    setOrganizationOptions(
-                      [],
-                    );
+                    setOrganizationOptions([]);
                   }}
-                  options={
-                    formattedSellerOptions
-                  }
-                  error={
-                    errors?.sellerId
-                  }
+                  options={formattedSellerOptions}
+                  error={errors?.sellerId}
                   placeholder="Select Seller"
                   required
-                  isLoading={
-                    sellerLoading
-                  }
+                  isLoading={sellerLoading}
                   isClearable
                 />
               </div>
@@ -2412,27 +1675,15 @@ const loadSellerOptions = useCallback(async () => {
                   value={
                     formattedOrganizationOptions.find(
                       (option) =>
-                        String(
-                          option.value,
-                        ) ===
-                        String(
-                          formData.organizationId ||
-                            "",
-                        ),
+                        String(option.value) ===
+                        String(formData.organizationId || ""),
                     ) || null
                   }
                   onChange={(option) =>
-                    handleSelectChange(
-                      option,
-                      "ORGANIZATION_ID",
-                    )
+                    handleSelectChange(option, "ORGANIZATION_ID")
                   }
-                  options={
-                    formattedOrganizationOptions
-                  }
-                  error={
-                    errors?.organizationId
-                  }
+                  options={formattedOrganizationOptions}
+                  error={errors?.organizationId}
                   placeholder={
                     !formData.sellerId
                       ? "Select Seller First"
@@ -2441,12 +1692,8 @@ const loadSellerOptions = useCallback(async () => {
                         : "Select Organization"
                   }
                   required
-                  isDisabled={
-                    !formData.sellerId
-                  }
-                  isLoading={
-                    organizationLoading
-                  }
+                  isDisabled={!formData.sellerId}
+                  isLoading={organizationLoading}
                   isClearable
                 />
               </div>
@@ -2458,29 +1705,18 @@ const loadSellerOptions = useCallback(async () => {
 
             <div
               className={`${
-                userRole !==
-                "seller-sub-admin"
-                  ? "col-span-1"
-                  : "col-span-2"
+                userRole !== "seller-sub-admin" ? "col-span-1" : "col-span-2"
               }`}
             >
               <Input
                 labelName="Product Name"
                 name="name"
-                value={
-                  formData.name
-                }
-                onChange={
-                  handleChange
-                }
-                onBlur={
-                  handleNameBlur
-                }
+                value={formData.name}
+                onChange={handleChange}
+                onBlur={handleNameBlur}
                 required
                 helpText="Name of the product as it will be displayed"
-                error={
-                  errors?.name
-                }
+                error={errors?.name}
               />
             </div>
 
@@ -2493,41 +1729,22 @@ const loadSellerOptions = useCallback(async () => {
                 <FilterSelect
                   label="Brand"
                   name="brand"
-                  value={
-                    selectedBrandOption
-                  }
-                  onChange={
-                    handleBrandSelect
-                  }
-                  options={
-                    brandOptions
-                  }
+                  value={selectedBrandOption}
+                  onChange={handleBrandSelect}
+                  options={brandOptions}
                   placeholder="Select Brand"
-                  error={
-                    errors?.brand
-                  }
-                  formatOptionLabel={
-                    formatCatalogOption
-                  }
+                  error={errors?.brand}
+                  formatOptionLabel={formatCatalogOption}
                   isClearable
                   required
                 />
               </div>
 
-              <PermissionGuard
-                module="brands"
-                action="create"
-                allowSeller
-                hide
-              >
+              <PermissionGuard module="brands" action="create" allowSeller hide>
                 <button
                   type="button"
                   className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
-                  onClick={() =>
-                    setIsBrandModal(
-                      true,
-                    )
-                  }
+                  onClick={() => setIsBrandModal(true)}
                 >
                   + Add
                 </button>
@@ -2537,23 +1754,13 @@ const loadSellerOptions = useCallback(async () => {
                 type="button"
                 aria-label="Refresh brand list"
                 title="Refresh brand list"
-                disabled={
-                  refreshingCatalog ===
-                  "brand"
-                }
+                disabled={refreshingCatalog === "brand"}
                 className="mt-6 flex-shrink-0 rounded-md border border-gray-300 p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                onClick={() =>
-                  refreshCatalogList(
-                    "brand",
-                  )
-                }
+                onClick={() => refreshCatalogList("brand")}
               >
                 <FiRefreshCw
                   className={
-                    refreshingCatalog ===
-                    "brand"
-                      ? "animate-spin"
-                      : ""
+                    refreshingCatalog === "brand" ? "animate-spin" : ""
                   }
                 />
               </button>
@@ -2569,23 +1776,13 @@ const loadSellerOptions = useCallback(async () => {
                   <FilterSelect
                     label="Category"
                     name="category_id"
-                    value={
-                      selectedCategoryOption
-                    }
-                    onChange={
-                      handleCategoryChange
-                    }
-                    options={
-                      categoryOptions
-                    }
-                    error={
-                      errors?.category_id
-                    }
+                    value={selectedCategoryOption}
+                    onChange={handleCategoryChange}
+                    options={categoryOptions}
+                    error={errors?.category_id}
                     placeholder="Select Category"
                     helperText="Attributes are controlled by the selected category schema."
-                    formatOptionLabel={
-                      formatCatalogOption
-                    }
+                    formatOptionLabel={formatCatalogOption}
                     required
                     isClearable
                   />
@@ -2600,11 +1797,7 @@ const loadSellerOptions = useCallback(async () => {
                   <button
                     type="button"
                     className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
-                    onClick={() =>
-                      setIsCategoryModal(
-                        true,
-                      )
-                    }
+                    onClick={() => setIsCategoryModal(true)}
                   >
                     + Add
                   </button>
@@ -2614,23 +1807,13 @@ const loadSellerOptions = useCallback(async () => {
                   type="button"
                   aria-label="Refresh category list"
                   title="Refresh category list"
-                  disabled={
-                    refreshingCatalog ===
-                    "category"
-                  }
+                  disabled={refreshingCatalog === "category"}
                   className="mt-6 flex-shrink-0 rounded-md border border-gray-300 p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                  onClick={() =>
-                    refreshCatalogList(
-                      "category",
-                    )
-                  }
+                  onClick={() => refreshCatalogList("category")}
                 >
                   <FiRefreshCw
                     className={
-                      refreshingCatalog ===
-                      "category"
-                        ? "animate-spin"
-                        : ""
+                      refreshingCatalog === "category" ? "animate-spin" : ""
                     }
                   />
                 </button>
@@ -2647,50 +1830,26 @@ const loadSellerOptions = useCallback(async () => {
                   <FilterSelect
                     label="HSN Code"
                     name="hsn_code"
-                    value={
-                      selectedHsnOption
-                    }
-                    onChange={(
-                      option,
-                    ) => {
-                      setHsnSuggestion(
-                        null,
-                      );
+                    value={selectedHsnOption}
+                    onChange={(option) => {
+                      setHsnSuggestion(null);
 
-                      handleSelectChange(
-                        option,
-                        "hsn_code",
-                      );
+                      handleSelectChange(option, "hsn_code");
                     }}
-                    options={
-                      hsnOptions
-                    }
-                    error={
-                      errors?.hsn_code
-                    }
+                    options={hsnOptions}
+                    error={errors?.hsn_code}
                     placeholder="Search by code or description…"
-                    formatOptionLabel={
-                      formatCatalogOption
-                    }
+                    formatOptionLabel={formatCatalogOption}
                     isClearable
                     required
                   />
                 </div>
 
-                <PermissionGuard
-                  module="tax"
-                  action="create"
-                  allowSeller
-                  hide
-                >
+                <PermissionGuard module="tax" action="create" allowSeller hide>
                   <button
                     type="button"
                     className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
-                    onClick={() =>
-                      setIsHsnAddModal(
-                        true,
-                      )
-                    }
+                    onClick={() => setIsHsnAddModal(true)}
                   >
                     + Add
                   </button>
@@ -2700,30 +1859,19 @@ const loadSellerOptions = useCallback(async () => {
                   type="button"
                   aria-label="Refresh HSN code list"
                   title="Refresh HSN code list"
-                  disabled={
-                    refreshingCatalog ===
-                    "hsn"
-                  }
+                  disabled={refreshingCatalog === "hsn"}
                   className="mt-6 flex-shrink-0 rounded-md border border-gray-300 p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                  onClick={() =>
-                    refreshCatalogList(
-                      "hsn",
-                    )
-                  }
+                  onClick={() => refreshCatalogList("hsn")}
                 >
                   <FiRefreshCw
                     className={
-                      refreshingCatalog ===
-                      "hsn"
-                        ? "animate-spin"
-                        : ""
+                      refreshingCatalog === "hsn" ? "animate-spin" : ""
                     }
                   />
                 </button>
               </div>
 
-              {hsnSuggestion?.type ===
-                "suggest" && (
+              {hsnSuggestion?.type === "suggest" && (
                 <div className="mt-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
                   <div className="flex items-start gap-2">
                     <span className="mt-0.5 flex-shrink-0 text-xs text-blue-500">
@@ -2736,15 +1884,9 @@ const loadSellerOptions = useCallback(async () => {
                       </p>
 
                       <p className="mt-0.5 truncate text-xs text-blue-700">
-                        {
-                          hsnSuggestion
-                            .option
-                            .code
-                        }
+                        {hsnSuggestion.option.code}
 
-                        {hsnSuggestion
-                          .option
-                          .description
+                        {hsnSuggestion.option.description
                           ? ` — ${hsnSuggestion.option.description}`
                           : ""}
 
@@ -2756,14 +1898,9 @@ const loadSellerOptions = useCallback(async () => {
                       <button
                         type="button"
                         onClick={() => {
-                          handleSelectChange(
-                            hsnSuggestion.option,
-                            "hsn_code",
-                          );
+                          handleSelectChange(hsnSuggestion.option, "hsn_code");
 
-                          setHsnSuggestion(
-                            null,
-                          );
+                          setHsnSuggestion(null);
                         }}
                         className="rounded-md bg-[var(--admin-blue)] px-2.5 py-1 text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
                       >
@@ -2772,11 +1909,7 @@ const loadSellerOptions = useCallback(async () => {
 
                       <button
                         type="button"
-                        onClick={() =>
-                          setHsnSuggestion(
-                            null,
-                          )
-                        }
+                        onClick={() => setHsnSuggestion(null)}
                         className="rounded-md border border-blue-200 px-2 py-1 text-[11px] font-medium text-blue-600 transition-colors hover:bg-blue-100"
                       >
                         Dismiss
@@ -2786,26 +1919,20 @@ const loadSellerOptions = useCallback(async () => {
                 </div>
               )}
 
-              {hsnSuggestion?.type ===
-                "none" && (
+              {hsnSuggestion?.type === "none" && (
                 <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
                   <span className="flex-shrink-0 text-xs text-amber-500">
                     ⚠
                   </span>
 
                   <p className="flex-1 text-xs text-amber-700">
-                    No HSN mapping found for
-                    this category. Please
-                    select manually.
+                    No HSN mapping found for this category. Please select
+                    manually.
                   </p>
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setHsnSuggestion(
-                        null,
-                      )
-                    }
+                    onClick={() => setHsnSuggestion(null)}
                     className="flex-shrink-0 text-base leading-none text-amber-400 hover:text-amber-700"
                   >
                     ×
@@ -2821,34 +1948,16 @@ const loadSellerOptions = useCallback(async () => {
             <FilterSelect
               label="Product Family Code"
               value={
-                (
-                  formattedProductFamilyList ||
-                  []
-                ).find(
+                (formattedProductFamilyList || []).find(
                   (opt) =>
-                    String(
-                      opt.value,
-                    ) ===
-                    String(
-                      formData.productFamilyCode ||
-                        "",
-                    ),
+                    String(opt.value) ===
+                    String(formData.productFamilyCode || ""),
                 ) || null
               }
-              onChange={(e) =>
-                handleSelectChange(
-                  e,
-                  "PRODUCT_FAMILY",
-                )
-              }
-              options={
-                formattedProductFamilyList ||
-                []
-              }
+              onChange={(e) => handleSelectChange(e, "PRODUCT_FAMILY")}
+              options={formattedProductFamilyList || []}
               placeholder="Select family code"
-              error={
-                errors?.productFamilyCode
-              }
+              error={errors?.productFamilyCode}
               isClearable
             />
 
@@ -2863,21 +1972,13 @@ const loadSellerOptions = useCallback(async () => {
             >
               <TextEditor
                 label="Description"
-                value={
-                  formData.description ||
-                  ""
-                }
+                value={formData.description || ""}
                 onChange={(content) =>
-                  handleInputReactQuillChange?.(
-                    "description",
-                    content,
-                  )
+                  handleInputReactQuillChange?.("description", content)
                 }
                 required
                 placeholder="Enter detailed product description"
-                error={
-                  errors?.description
-                }
+                error={errors?.description}
                 height="220px"
                 className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
               />
@@ -2889,15 +1990,11 @@ const loadSellerOptions = useCallback(async () => {
 
             <section className="product-form-subsection md:col-span-2">
               <div className="product-form-section-header">
-                <h3>
-                  Warranty information
-                </h3>
+                <h3>Warranty information</h3>
 
                 <p>
-                  Describe warranty coverage,
-                  exclusions, claim rules,
-                  required documents, and
-                  support instructions.
+                  Describe warranty coverage, exclusions, claim rules, required
+                  documents, and support instructions.
                 </p>
               </div>
 
@@ -2907,15 +2004,9 @@ const loadSellerOptions = useCallback(async () => {
                   name="warranty.period"
                   type="number"
                   min={0}
-                  value={
-                    formData.warranty
-                      ?.period ?? ""
-                  }
+                  value={formData.warranty?.period ?? ""}
                   onChange={(event) =>
-                    handleNestedChange(
-                      "warranty.period",
-                      event.target.value,
-                    )
+                    handleNestedChange("warranty.period", event.target.value)
                   }
                   placeholder="Example: 12"
                 />
@@ -2925,41 +2016,27 @@ const loadSellerOptions = useCallback(async () => {
                   value={
                     warrantyUnits.options.find(
                       (option) =>
-                        option.value ===
-                        formData
-                          .warranty
-                          ?.periodUnit,
+                        option.value === formData.warranty?.periodUnit,
                     ) || null
                   }
                   onChange={(option) =>
                     handleNestedChange(
                       "warranty.periodUnit",
-                      option?.value ||
-                        "",
+                      option?.value || "",
                     )
                   }
-                  options={
-                    warrantyUnits.options
-                  }
+                  options={warrantyUnits.options}
                   placeholder="Select warranty unit"
-                  isLoading={
-                    warrantyUnits.loading
-                  }
+                  isLoading={warrantyUnits.loading}
                   isClearable
                 />
 
                 <Input
                   labelName="Warranty Provider"
                   name="warranty.provider"
-                  value={
-                    formData.warranty
-                      ?.provider || ""
-                  }
+                  value={formData.warranty?.provider || ""}
                   onChange={(event) =>
-                    handleNestedChange(
-                      "warranty.provider",
-                      event.target.value,
-                    )
+                    handleNestedChange("warranty.provider", event.target.value)
                   }
                   placeholder="Seller, manufacturer, or service partner"
                 />
@@ -2967,15 +2044,9 @@ const loadSellerOptions = useCallback(async () => {
                 <Input
                   labelName="Warranty Type"
                   name="warranty.type"
-                  value={
-                    formData.warranty
-                      ?.type || ""
-                  }
+                  value={formData.warranty?.type || ""}
                   onChange={(event) =>
-                    handleNestedChange(
-                      "warranty.type",
-                      event.target.value,
-                    )
+                    handleNestedChange("warranty.type", event.target.value)
                   }
                   placeholder="Example: Manufacturer warranty"
                 />
@@ -2983,15 +2054,9 @@ const loadSellerOptions = useCallback(async () => {
 
               <TextEditor
                 label="Warranty description and rules"
-                value={
-                  formData.warranty
-                    ?.terms || ""
-                }
+                value={formData.warranty?.terms || ""}
                 onChange={(content) =>
-                  handleNestedChange(
-                    "warranty.terms",
-                    content,
-                  )
+                  handleNestedChange("warranty.terms", content)
                 }
                 height="220px"
                 className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
@@ -3006,24 +2071,17 @@ const loadSellerOptions = useCallback(async () => {
             <section className="product-form-subsection md:col-span-2">
               <div className="product-form-section-header flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h3>
-                    Product Return Policy
-                  </h3>
+                  <h3>Product Return Policy</h3>
 
                   <p className="max-w-2xl">
-                    Set the return window,
-                    available resolution,
-                    shipping responsibility,
-                    and verification
-                    requirements for this
+                    Set the return window, available resolution, shipping
+                    responsibility, and verification requirements for this
                     product.
                   </p>
 
                   <p className="mt-1 text-[11px] text-gray-400">
-                    The policy is saved with
-                    each order and will not
-                    change for existing
-                    orders.
+                    The policy is saved with each order and will not change for
+                    existing orders.
                   </p>
                 </div>
 
@@ -3033,21 +2091,12 @@ const loadSellerOptions = useCallback(async () => {
                     labelName="Returnable"
                     name="warranty.returnPolicy.returnable"
                     type="switch"
-                    value={
-                      isReturnable
-                    }
-                    onChange={(
-                      eventOrValue,
-                    ) => {
+                    value={isReturnable}
+                    onChange={(eventOrValue) => {
                       const checked =
-                        typeof eventOrValue ===
-                        "boolean"
+                        typeof eventOrValue === "boolean"
                           ? eventOrValue
-                          : Boolean(
-                              eventOrValue
-                                ?.target
-                                ?.checked,
-                            );
+                          : Boolean(eventOrValue?.target?.checked);
 
                       handleNestedChange(
                         "warranty.returnPolicy.returnable",
@@ -3061,16 +2110,11 @@ const loadSellerOptions = useCallback(async () => {
 
                       handleNestedChange(
                         "warranty.returnPolicy.type",
-                        checked
-                          ? "standard"
-                          : "non_returnable",
+                        checked ? "standard" : "non_returnable",
                       );
 
                       if (!checked) {
-                        handleNestedChange(
-                          "warranty.returnPolicy.days",
-                          0,
-                        );
+                        handleNestedChange("warranty.returnPolicy.days", 0);
 
                         handleNestedChange(
                           "warranty.returnPolicy.returnWindowDays",
@@ -3089,35 +2133,22 @@ const loadSellerOptions = useCallback(async () => {
                   type="number"
                   min={0}
                   max={365}
-                  disabled={
-                    !isReturnable
-                  }
+                  disabled={!isReturnable}
                   value={
-                    formData.warranty
-                      ?.returnPolicy
-                      ?.returnWindowDays ??
-                    ""
+                    formData.warranty?.returnPolicy?.returnWindowDays ?? ""
                   }
                   onChange={(event) => {
                     const value =
-                      event.target
-                        .value ===
-                      ""
+                      event.target.value === ""
                         ? ""
-                        : Number(
-                            event.target
-                              .value,
-                          );
+                        : Number(event.target.value);
 
                     handleNestedChange(
                       "warranty.returnPolicy.returnWindowDays",
                       value,
                     );
 
-                    handleNestedChange(
-                      "warranty.returnPolicy.days",
-                      value,
-                    );
+                    handleNestedChange("warranty.returnPolicy.days", value);
                   }}
                 />
 
@@ -3126,36 +2157,27 @@ const loadSellerOptions = useCallback(async () => {
                   name="warranty.returnPolicy.resolution"
                   type="select"
                   value={
-                    formData.warranty
-                      ?.returnPolicy
-                      ?.resolution ||
+                    formData.warranty?.returnPolicy?.resolution ||
                     "refund_or_replacement"
                   }
                   onChange={(option) =>
                     handleNestedChange(
                       "warranty.returnPolicy.resolution",
-                      option?.value ||
-                        "refund_or_replacement",
+                      option?.value || "refund_or_replacement",
                     )
                   }
                   options={[
                     {
-                      value:
-                        "refund_or_replacement",
-                      label:
-                        "Refund or replacement",
+                      value: "refund_or_replacement",
+                      label: "Refund or replacement",
                     },
                     {
-                      value:
-                        "refund",
-                      label:
-                        "Refund only",
+                      value: "refund",
+                      label: "Refund only",
                     },
                     {
-                      value:
-                        "replacement",
-                      label:
-                        "Replacement only",
+                      value: "replacement",
+                      label: "Replacement only",
                     },
                   ]}
                 />
@@ -3164,53 +2186,39 @@ const loadSellerOptions = useCallback(async () => {
                   labelName="Return Shipping Paid By"
                   name="warranty.returnPolicy.shippingPaidBy"
                   type="select"
-                  disabled={
-                    isSellerPanelUser
-                  }
+                  disabled={isSellerPanelUser}
                   value={
                     isSellerPanelUser
                       ? "seller"
-                      : formData
-                          .warranty
-                          ?.returnPolicy
-                          ?.shippingPaidBy ||
+                      : formData.warranty?.returnPolicy?.shippingPaidBy ||
                         "seller"
                   }
                   onChange={(option) =>
                     handleNestedChange(
                       "warranty.returnPolicy.shippingPaidBy",
-                      option?.value ||
-                        "seller",
+                      option?.value || "seller",
                     )
                   }
                   options={
                     isSellerPanelUser
                       ? [
                           {
-                            value:
-                              "seller",
-                            label:
-                              "Seller",
+                            value: "seller",
+                            label: "Seller",
                           },
                         ]
                       : [
                           {
-                            value:
-                              "platform",
-                            label:
-                              "Platform",
+                            value: "platform",
+                            label: "Platform",
                           },
                           {
-                            value:
-                              "seller",
-                            label:
-                              "Seller",
+                            value: "seller",
+                            label: "Seller",
                           },
                           {
-                            value:
-                              "customer",
-                            label:
-                              "Customer",
+                            value: "customer",
+                            label: "Customer",
                           },
                         ]
                   }
@@ -3232,18 +2240,12 @@ const loadSellerOptions = useCallback(async () => {
                       name="warranty.returnPolicy.requiresImages"
                       type="switch"
                       value={Boolean(
-                        formData
-                          .warranty
-                          ?.returnPolicy
-                          ?.requiresImages,
+                        formData.warranty?.returnPolicy?.requiresImages,
                       )}
-                      onChange={(
-                        event,
-                      ) =>
+                      onChange={(event) =>
                         handleNestedChange(
                           "warranty.returnPolicy.requiresImages",
-                          event.target
-                            .checked,
+                          event.target.checked,
                         )
                       }
                     />
@@ -3253,19 +2255,13 @@ const loadSellerOptions = useCallback(async () => {
                       name="warranty.returnPolicy.inspectionRequired"
                       type="switch"
                       value={
-                        formData
-                          .warranty
-                          ?.returnPolicy
-                          ?.inspectionRequired !==
+                        formData.warranty?.returnPolicy?.inspectionRequired !==
                         false
                       }
-                      onChange={(
-                        event,
-                      ) =>
+                      onChange={(event) =>
                         handleNestedChange(
                           "warranty.returnPolicy.inspectionRequired",
-                          event.target
-                            .checked,
+                          event.target.checked,
                         )
                       }
                     />
@@ -3282,43 +2278,20 @@ const loadSellerOptions = useCallback(async () => {
           ========================================================== */}
 
       <CategorySetup
-        isOpen={
-          isCategoryModal
-        }
-        formData={
-          categoryForm
-        }
-        setFormData={
-          setCategoryForm
-        }
-        handleFileUpload={
-          handleFileUploadCategory
-        }
-        handleChange={
-          handleInputCategoryChange
-        }
-        parentCategories={
-          createSelectOptions
-        }
+        isOpen={isCategoryModal}
+        formData={categoryForm}
+        setFormData={setCategoryForm}
+        handleFileUpload={handleFileUploadCategory}
+        handleChange={handleInputCategoryChange}
+        parentCategories={createSelectOptions}
         handleClose={() => {
-          setIsCategoryModal(
-            false,
-          );
+          setIsCategoryModal(false);
 
-          setCategoryForm(
-            INITIAL_FORM_CATEGORY,
-          );
+          setCategoryForm(INITIAL_FORM_CATEGORY);
         }}
-        handleSubmit={() =>
-          validateCategoryForm() &&
-          handleCategorySubmit()
-        }
-        handleSelectChange={
-          handleSelectCategoryChange
-        }
-        handleDashboardVisible={
-          handleDashboardVisible
-        }
+        handleSubmit={() => validateCategoryForm() && handleCategorySubmit()}
+        handleSelectChange={handleSelectCategoryChange}
+        handleDashboardVisible={handleDashboardVisible}
         handleIsPublish={() => {}}
         isPublish={false}
         isEditing={false}
@@ -3327,9 +2300,7 @@ const loadSellerOptions = useCallback(async () => {
         submitButtonText="Create"
         closeButtonText="Cancel"
         showPublish={false}
-        handleNameBlur={
-          handleNameBlur
-        }
+        handleNameBlur={handleNameBlur}
       />
 
       {/* ==========================================================
@@ -3337,30 +2308,17 @@ const loadSellerOptions = useCallback(async () => {
           ========================================================== */}
 
       <AddHsnModal
-        isOpen={
-          isHsnAddModal
-        }
-        formData={
-          hsnFormValues
-        }
+        isOpen={isHsnAddModal}
+        formData={hsnFormValues}
         resetForm={() => {
-          setIsHsnAddModal(
-            false,
-          );
+          setIsHsnAddModal(false);
 
-          setIsHsnFormValue(
-            INITIAL_FORM_HSN,
-          );
+          setIsHsnFormValue(INITIAL_FORM_HSN);
 
           setFormErrors({});
         }}
-        handleInputChange={
-          handleHsnInputChange
-        }
-        handleSubmit={(e) =>
-          validateHsnForm() &&
-          handleHsnSubmit(e)
-        }
+        handleInputChange={handleHsnInputChange}
+        handleSubmit={(e) => validateHsnForm() && handleHsnSubmit(e)}
         errors={formErrors}
       />
 
@@ -3369,22 +2327,10 @@ const loadSellerOptions = useCallback(async () => {
           ========================================================== */}
 
       <DefaultModal
-        title={
-          brandSubmission._id
-            ? "Resubmit Brand"
-            : "Add New Brand"
-        }
-        isOpen={
-          isBrandModal
-        }
-        onClose={() =>
-          setIsBrandModal(
-            false,
-          )
-        }
-        onSubmit={
-          submitBrandRequest
-        }
+        title={brandSubmission._id ? "Resubmit Brand" : "Add New Brand"}
+        isOpen={isBrandModal}
+        onClose={() => setIsBrandModal(false)}
+        onSubmit={submitBrandRequest}
         submitButtonText={
           brandSubmitting
             ? "Saving..."
@@ -3397,10 +2343,7 @@ const loadSellerOptions = useCallback(async () => {
                   : "Create Brand"
         }
         closeButtonText="Cancel"
-        loading={
-          brandSubmitting ||
-          brandLogoUploading
-        }
+        loading={brandSubmitting || brandLogoUploading}
         isButtonView
       >
         <div className="space-y-5">
@@ -3417,19 +2360,12 @@ const loadSellerOptions = useCallback(async () => {
                 label="Brand Name"
                 name="name"
                 type="text"
-                value={
-                  brandSubmission.name
-                }
-                onChange={(
-                  event,
-                ) =>
-                  setBrandSubmission(
-                    (current) => ({
-                      ...current,
-                      name: event.target
-                        .value,
-                    }),
-                  )
+                value={brandSubmission.name}
+                onChange={(event) =>
+                  setBrandSubmission((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
                 }
                 placeholder="Enter brand name"
                 maxLength={200}
@@ -3440,20 +2376,12 @@ const loadSellerOptions = useCallback(async () => {
                 label="Description"
                 name="description"
                 type="textarea"
-                value={
-                  brandSubmission.description
-                }
-                onChange={(
-                  event,
-                ) =>
-                  setBrandSubmission(
-                    (current) => ({
-                      ...current,
-                      description:
-                        event.target
-                          .value,
-                    }),
-                  )
+                value={brandSubmission.description}
+                onChange={(event) =>
+                  setBrandSubmission((current) => ({
+                    ...current,
+                    description: event.target.value,
+                  }))
                 }
                 placeholder="Enter brand details (optional)"
                 rows={4}
@@ -3462,36 +2390,29 @@ const loadSellerOptions = useCallback(async () => {
             </div>
           </FormSection>
 
-          <FormSection
-            title="Brand Logo"
-            description="Upload a logo for the brand. This is optional."
-          >
-            <ImageUpload
-              label="Brand Logo"
-              value={
-                brandSubmission.logo
-              }
-              onChange={
-                handleBrandLogoUpload
-              }
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              disabled={
-                brandLogoUploading ||
-                brandSubmitting
-              }
-            />
-
-            <p className="mt-1 text-[11px] text-gray-400">
-              {brandLogoUploading
-                ? "Uploading logo..."
-                : "JPG, PNG, or WEBP up to 5MB"}
-            </p>
-          </FormSection>
+          <ImageUpload
+            label="Brand Logo"
+            file={brandSubmission.logo}
+            onChange={handleBrandLogoUpload}
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            isDisabled={brandLogoUploading || brandSubmitting}
+            isLoading={brandLogoUploading}
+            onRemove={() =>
+              setBrandSubmission((current) => ({
+                ...current,
+                logo: "",
+              }))
+            }
+            required
+          />
+          <p className="mt-1 text-[11px] text-gray-400">
+            {brandLogoUploading
+              ? "Uploading logo..."
+              : "JPG, PNG, or WEBP up to 5MB"}
+          </p>
 
           {myBrandSubmissions.filter(
-            (brand) =>
-              brand.approvalStatus ===
-              "rejected",
+            (brand) => brand.approvalStatus === "rejected",
           ).length > 0 && (
             <FormSection
               title="Rejected Submissions"
@@ -3499,53 +2420,29 @@ const loadSellerOptions = useCallback(async () => {
             >
               <div className="space-y-2">
                 {myBrandSubmissions
-                  .filter(
-                    (brand) =>
-                      brand.approvalStatus ===
-                      "rejected",
-                  )
-                  .map(
-                    (brand) => (
-                      <button
-                        key={
-                          brand._id
-                        }
-                        type="button"
-                        className="w-full rounded-md border border-red-200 bg-red-50 p-3 text-left text-xs text-red-700 transition-colors hover:bg-red-100"
-                        onClick={() =>
-                          setBrandSubmission(
-                            {
-                              _id:
-                                brand._id,
-                              name:
-                                brand.name ||
-                                "",
-                              logo:
-                                brand.logo ||
-                                "",
-                              thumbnails:
-                                brand.thumbnails ||
-                                "",
-                              description:
-                                brand.description ||
-                                "",
-                            },
-                          )
-                        }
-                      >
-                        <span className="font-semibold">
-                          {
-                            brand.name
-                          }
-                        </span>
+                  .filter((brand) => brand.approvalStatus === "rejected")
+                  .map((brand) => (
+                    <button
+                      key={brand._id}
+                      type="button"
+                      className="w-full rounded-md border border-red-200 bg-red-50 p-3 text-left text-xs text-red-700 transition-colors hover:bg-red-100"
+                      onClick={() =>
+                        setBrandSubmission({
+                          _id: brand._id,
+                          name: brand.name || "",
+                          logo: brand.logo || "",
+                          thumbnails: brand.thumbnails || "",
+                          description: brand.description || "",
+                        })
+                      }
+                    >
+                      <span className="font-semibold">{brand.name}</span>
 
-                        <span className="mt-1 block text-red-600">
-                          {brand.rejectionReason ||
-                            "Needs changes"}
-                        </span>
-                      </button>
-                    ),
-                  )}
+                      <span className="mt-1 block text-red-600">
+                        {brand.rejectionReason || "Needs changes"}
+                      </span>
+                    </button>
+                  ))}
               </div>
             </FormSection>
           )}

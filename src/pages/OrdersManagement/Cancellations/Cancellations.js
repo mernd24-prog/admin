@@ -134,8 +134,8 @@ const FILTER_FIELDS = [
       label: formatLabel(s),
     })),
   },
-  // { key: "fromDate", type: "date", label: "From" },
-  // { key: "toDate", type: "date", label: "To" },
+  { key: "fromDate", type: "date", label: "From" },
+  { key: "toDate", type: "date", label: "To" },
 ];
 
 const unwrapList = (payload = {}) => {

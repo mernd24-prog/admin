@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { FaChevronRight } from "react-icons/fa";
 import { MdAdd, MdTune, MdFolder, MdSearch } from "react-icons/md";
-
+import { ChevronRight } from "lucide-react";
 // Components
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
@@ -705,6 +705,10 @@ const ProductCategories = () => {
   // Navigation
   // ---------------------------------------------------------------------------
 
+  const handleGoBack = () => {
+    setCurrentPath((prevPath) => prevPath.slice(0, -1));
+  };
+
   const handleNavigate = useCallback((newPath) => {
     setIsDrillDownLoading(true);
 
@@ -983,7 +987,19 @@ const ProductCategories = () => {
       <PageHeader
         title="Product Categories"
         subtitle="Manage hierarchical product category tree"
-        breadcrumbs={[{ label: "Catalog" }, { label: "Categories" }]}
+        showBack={currentPath.length > 0}
+        onBack={handleGoBack}
+        breadcrumbs={[
+          { label: "Catalog" },
+          {
+            label: "Categories",
+            onClick: () => handleNavigate([]),
+          },
+          ...currentPath.map((category, index) => ({
+            label: category.name,
+            onClick: () => handleNavigate(currentPath.slice(0, index + 1)),
+          })),
+        ]}
         actions={
           <PermissionGuard module="categories" action={ACTIONS.CREATE} hide>
             <button
@@ -1006,23 +1022,7 @@ const ProductCategories = () => {
         {/* Search Header */}
         <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-blue-soft)] text-[var(--admin-primary)]">
-                <MdFolder size={21} />
-              </div>
-
-              <div>
-                <h2 className="text-sm font-semibold text-[var(--admin-ink)]">
-                  Category Management
-                </h2>
-
-                <p className="mt-0.5 text-xs text-[var(--admin-muted)]">
-                  Search and manage your category hierarchy.
-                </p>
-              </div>
-            </div>
-
-            <div className="w-full lg:max-w-md">
+            <div className="w-full lg:max-w-2xl">
               <div className="relative">
                 <MdSearch
                   size={18}
@@ -1031,7 +1031,7 @@ const ProductCategories = () => {
 
                 <div className="[&_input]:pl-10">
                   <SearchInput
-                    placeholder="Search categories..."
+                    placeholder="Search..."
                     searchTerm={filters.search}
                     handleChange={(e) =>
                       setFilters((f) => ({
@@ -1048,64 +1048,6 @@ const ProductCategories = () => {
         </div>
 
         {/* Breadcrumb Navigation */}
-        <div className="border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-5 py-3">
-          <div className="flex min-h-[34px] items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto">
-              {/* Root */}
-              <button
-                type="button"
-                onClick={() => handleNavigate([])}
-                className={`inline-flex shrink-0 items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                  currentPath.length === 0
-                    ? "bg-white text-[var(--admin-primary)] shadow-sm ring-1 ring-[#e3e7f5]"
-                    : "text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-primary)]"
-                }`}
-              >
-                Categories
-              </button>
-
-              {/* Nested Breadcrumbs */}
-              {currentPath.map((item, index) => {
-                const isLast = index === currentPath.length - 1;
-
-                return (
-                  <React.Fragment key={item?.categoryKey || item?._id || index}>
-                    <FaChevronRight
-                      className="shrink-0 text-[9px] text-gray-400"
-                      aria-hidden="true"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleNavigate(currentPath.slice(0, index + 1))
-                      }
-                      className={`inline-flex max-w-[180px] shrink-0 items-center rounded-lg px-3 py-1.5 text-xs transition-all ${
-                        isLast
-                          ? "bg-white font-semibold text-[var(--admin-primary)] shadow-sm ring-1 ring-[#e3e7f5]"
-                          : "font-medium text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-primary)]"
-                      }`}
-                    >
-                      <span className="truncate">
-                        {item?.name || item?.title || "Category"}
-                      </span>
-                    </button>
-                  </React.Fragment>
-                );
-              })}
-            </div>
-
-            {/* Current Level Count */}
-            <div className="hidden shrink-0 items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[var(--admin-muted)] shadow-sm ring-1 ring-[var(--admin-line)] sm:flex">
-              <MdFolder className="text-[var(--admin-gold)]" size={15} />
-
-              <span>
-                {categoryTableRows.length}{" "}
-                {categoryTableRows.length === 1 ? "category" : "categories"}
-              </span>
-            </div>
-          </div>
-        </div>
 
         {/* Table */}
         <div className="overflow-hidden">
@@ -1244,10 +1186,6 @@ const ProductCategories = () => {
                                   <span className="block truncate font-semibold capitalize text-[var(--admin-primary)]">
                                     {row.name}
                                   </span>
-
-                                  <span className="mt-0.5 block truncate text-[11px] text-[var(--admin-muted)]">
-                                    Click to view subcategories
-                                  </span>
                                 </span>
 
                                 {/* Arrow */}
@@ -1300,10 +1238,30 @@ const ProductCategories = () => {
                           </td>
 
                           {/* Subcategories */}
+                          {/* Subcategories */}
                           <td className="px-5 py-3.5 text-left align-middle">
-                            <span className="inline-flex min-w-[34px] items-center justify-center rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-100">
-                              {formatCount(row.count)}
-                            </span>
+                            {row.hasSubCategories ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleNavigate([...currentPath, row.category])
+                                }
+                                className="group inline-flex items-center gap-1.5 rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-100 transition-colors hover:bg-cyan-100"
+                                aria-label={`View ${row.count} subcategories of ${row.name}`}
+                              >
+                                <span>{formatCount(row.count)}</span>
+                                <span>View</span>
+                                <ChevronRight
+                                  size={14}
+                                  strokeWidth={2.5}
+                                  className="transition-transform group-hover:translate-x-0.5"
+                                />
+                              </button>
+                            ) : (
+                              <span className="text-xs text-gray-400">
+                                No subcategories
+                              </span>
+                            )}
                           </td>
 
                           {/* Actions */}

@@ -145,8 +145,8 @@ const FILTER_FIELDS = [
     label: "Reason",
     options: RETURN_REASON_OPTIONS,
   },
-  // { key: "fromDate", type: "date", label: "From" },
-  // { key: "toDate", type: "date", label: "To" },
+  { key: "fromDate", type: "date", label: "From" },
+  { key: "toDate", type: "date", label: "To" },
 ];
 
 const EMPTY_ACTION = {
