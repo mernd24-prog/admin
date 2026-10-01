@@ -200,6 +200,56 @@ const RANGE_PAIRS = [
 const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const EMPTY_FILTER_VALUES = Object.freeze({});
 
+const unwrapFilterValue = (value) => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    if ("value" in value) {
+      return value.value;
+    }
+  }
+
+  return value;
+};
+
+export const normalizeFilterValues = (values = {}) => {
+  if (!values || typeof values !== "object") {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(values).filter(([, value]) => {
+      const normalized = unwrapFilterValue(value);
+      return (
+        normalized !== undefined &&
+        normalized !== null &&
+        normalized !== "" &&
+        String(normalized).toLowerCase() !== "all"
+      );
+    }),
+  );
+};
+
+export const resolveSelectedOption = (field, value) => {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const normalizedValue = unwrapFilterValue(value);
+
+  if (
+    normalizedValue === undefined ||
+    normalizedValue === null ||
+    normalizedValue === ""
+  ) {
+    return null;
+  }
+
+  return (
+    (field.options || []).find(
+      (opt) => String(opt.value) === String(normalizedValue),
+    ) || null
+  );
+};
+
 const normalizeKey = (key = "") => String(key).trim().toLowerCase();
 
 const toInputDate = (date) => {
@@ -799,10 +849,8 @@ const FilterField = ({ field, value, onChange, values }) => {
 
   /* ─────────────── Select ─────────────── */
   if (field.type === "select") {
-    const selectedOption =
-      (field.options || []).find(
-        (opt) => String(opt.value) === String(value),
-      ) || null;
+    const selectedOption = resolveSelectedOption(field, value);
+    const hasActiveValue = selectedOption !== null;
 
     return (
       <div className={wrapperClass}>
@@ -821,7 +869,7 @@ const FilterField = ({ field, value, onChange, values }) => {
           onChange={(opt) => onChange(field.key, opt ? opt.value : "")}
           placeholder={field.placeholder || `All ${field.label || ""}`}
           isSearchable={field.isSearchable ?? true}
-          isClearable
+          isClearable={field.isClearable ?? hasActiveValue}
           isDisabled={field.disabled}
           inputId={id}
           className="!mb-0"
@@ -910,7 +958,7 @@ const FilterBar = ({
   );
 
   const resolvedValues = useMemo(
-    () => listPage?.filters || values,
+    () => normalizeFilterValues(listPage?.filters || values),
     [listPage?.filters, values],
   );
 

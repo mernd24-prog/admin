@@ -1163,7 +1163,7 @@ const VariantBuilder = ({
                         )}
                       </div>
                       <div className="space-y-1">
-                        <FieldLabel>Sale Price (₹)</FieldLabel>
+                        <FieldLabel>Special Price (₹)</FieldLabel>
                         <SmallInput
                           name={`variants.${idx}.salePrice`}
                           data-error-field={

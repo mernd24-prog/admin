@@ -477,25 +477,25 @@ const Sellers = () => {
         requiredAction: ACTIONS.VIEW,
         onClick: () => navigate(`/app/seller/view/${row._id}`),
       },
-      {
-        label: "Edit Seller",
-        icon: <MdEdit size={16} className="text-amber-600" />,
-        requiredModule: "sellers",
-        requiredAction: ACTIONS.UPDATE,
-        onClick: () => {
-          setForm({
-            _id: row._id,
-            full_name: row.full_name || "",
-            userName: row.userName || "",
-            email: row.email || "",
-            phone: row.phone || "",
-            password: "",
-            confirmPassword: "",
-            isDisable: row.isDisable || false,
-          });
-          setIsOpenEditModal(true);
-        },
-      },
+      // {
+      //   label: "Edit Seller",
+      //   icon: <MdEdit size={16} className="text-amber-600" />,
+      //   requiredModule: "sellers",
+      //   requiredAction: ACTIONS.UPDATE,
+      //   onClick: () => {
+      //     setForm({
+      //       _id: row._id,
+      //       full_name: row.full_name || "",
+      //       userName: row.userName || "",
+      //       email: row.email || "",
+      //       phone: row.phone || "",
+      //       password: "",
+      //       confirmPassword: "",
+      //       isDisable: row.isDisable || false,
+      //     });
+      //     setIsOpenEditModal(true);
+      //   },
+      // },
     ],
     [navigate],
   );
@@ -506,18 +506,18 @@ const Sellers = () => {
         title="Sellers"
         subtitle="Manage seller accounts and onboarding"
         breadcrumbs={[{ label: "User Management" }, { label: "Sellers" }]}
-        actions={
-          <PermissionGuard module="sellers" action={ACTIONS.CREATE} hide>
-            <button
-              onClick={() => {
-                resetForm();
-                setIsOpenAddModal(true);
-              }}
-            >
-              <MdAdd size={16} /> Add Seller
-            </button>
-          </PermissionGuard>
-        }
+        // actions={
+        //   <PermissionGuard module="sellers" action={ACTIONS.CREATE} hide>
+        //     <button
+        //       onClick={() => {
+        //         resetForm();
+        //         setIsOpenAddModal(true);
+        //       }}
+        //     >
+        //       <MdAdd size={16} /> Add Seller
+        //     </button>
+        //   </PermissionGuard>
+        // }
       />
 
       <DataTable
@@ -544,7 +544,7 @@ const Sellers = () => {
       />
 
       {/* Add Seller Modal */}
-      <DefaultModal
+      {/* <DefaultModal
         isOpen={isOpenAddModal}
         onClose={() => {
           setIsOpenAddModal(false);
@@ -558,9 +558,6 @@ const Sellers = () => {
         titleClassName="mt-5 font-medium"
       >
         <div className="space-y-5">
-          {/* =========================
-        PERSONAL INFORMATION
-    ========================== */}
           <FormSection
             title="Personal Information"
             description="Enter the seller's basic personal details."
@@ -591,10 +588,6 @@ const Sellers = () => {
               />
             </div>
           </FormSection>
-
-          {/* =========================
-        CONTACT INFORMATION
-    ========================== */}
           <FormSection
             title="Contact Information"
             description="Provide the seller's email address and phone number."
@@ -625,10 +618,6 @@ const Sellers = () => {
               />
             </div>
           </FormSection>
-
-          {/* =========================
-        ACCOUNT SECURITY
-    ========================== */}
           <FormSection
             title="Account Security"
             description="Set a secure password for the seller account."
@@ -660,10 +649,6 @@ const Sellers = () => {
               />
             </div>
           </FormSection>
-
-          {/* =========================
-        ACCOUNT STATUS
-    ========================== */}
           <FormSection
             title="Account Status"
             description="Control whether the seller account is active."
@@ -681,10 +666,10 @@ const Sellers = () => {
             />
           </FormSection>
         </div>
-      </DefaultModal>
+      </DefaultModal> */}
 
       {/* Edit Seller Modal */}
-      <DefaultModal
+      {/* <DefaultModal
         isOpen={isOpenEditModal}
         onClose={() => {
           setIsOpenEditModal(false);
@@ -762,7 +747,7 @@ const Sellers = () => {
             />
           </div>
         </div>
-      </DefaultModal>
+      </DefaultModal> */}
 
       <ConfirmModal
         open={Boolean(statusTarget)}

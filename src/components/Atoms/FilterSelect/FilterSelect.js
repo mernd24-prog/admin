@@ -6,23 +6,40 @@ import { ChevronDown } from "lucide-react";
 const customStyles = (error, controlHeight) => ({
   control: (provided, state) => ({
     ...provided,
-    backgroundColor: "var(--admin-field)",
+
+    // Disabled state
+    backgroundColor: state.isDisabled
+      ? "var(--admin-field-disabled, #f3f4f6)"
+      : "var(--admin-field)",
+
     borderColor: error
       ? "var(--admin-danger)"
-      : state.isFocused
-        ? ""
-        : "var(--admin-field-line)",
+      : state.isDisabled
+        ? "var(--admin-field-line)"
+        : state.isFocused
+          ? ""
+          : "var(--admin-field-line)",
+
     boxShadow: error
       ? "0 0 0 1px var(--admin-danger)"
       : state.isFocused
         ? ""
         : "none",
+
     borderRadius: "0.375rem",
     minHeight: controlHeight ? `${controlHeight}px` : "36px",
     ...(controlHeight ? { height: `${controlHeight}px` } : {}),
-    cursor: "pointer",
+
+    cursor: state.isDisabled ? "not-allowed" : "pointer",
+
+    opacity: state.isDisabled ? 0.7 : 1,
+
     "&:hover": {
-      borderColor: error ? "var(--admin-danger)" : "",
+      borderColor: error
+        ? "var(--admin-danger)"
+        : state.isDisabled
+          ? "var(--admin-field-line)"
+          : "",
     },
   }),
 
@@ -31,16 +48,20 @@ const customStyles = (error, controlHeight) => ({
     padding: "2px 8px",
   }),
 
-  placeholder: (provided) => ({
+  placeholder: (provided, state) => ({
     ...provided,
-    color: "var(--admin-muted)",
+    color: state.isDisabled
+      ? "#9ca3af"
+      : "var(--admin-muted)",
     fontSize: "0.875rem",
     paddingLeft: "2px",
   }),
 
-  singleValue: (provided) => ({
+  singleValue: (provided, state) => ({
     ...provided,
-    color: "var(--admin-ink)",
+    color: state.isDisabled
+      ? "#9ca3af"
+      : "var(--admin-ink)",
     fontSize: "0.875rem",
     paddingLeft: "2px",
   }),
@@ -65,9 +86,10 @@ const customStyles = (error, controlHeight) => ({
     whiteSpace: "nowrap",
   }),
 
-  dropdownIndicator: (provided) => ({
+  dropdownIndicator: (provided, state) => ({
     ...provided,
     padding: "0 8px 0 4px",
+    color: state.isDisabled ? "#9ca3af" : provided.color,
   }),
 
   indicatorsContainer: (provided) => ({
