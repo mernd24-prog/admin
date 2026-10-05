@@ -283,9 +283,6 @@ const DealPayouts = () => {
         breadcrumbs={[{ label: "Marketing" }, { label: "Deal Payouts" }]}
         actions={
           <div className="flex gap-2">
-            {/* <button onClick={fetchPayouts}>
-              <MdRefresh size={16} /> Refresh
-            </button> */}
             <PermissionGuard module="deals" action={ACTIONS.APPROVE} hide>
               <button onClick={() => setShowGenerate(true)}>
                 <MdAdd size={16} /> Generate Payouts
@@ -300,6 +297,7 @@ const DealPayouts = () => {
         total={payload.total}
         listPage={list}
         loading={loading}
+        onRefresh={fetchPayouts}
         searchPlaceholder="Search deal payouts…"
         filterBar={<FilterBar fields={FILTER_FIELDS} listPage={list} />}
         emptyMessage="No deal payouts found"

@@ -988,7 +988,7 @@ const ProductCategories = () => {
         title="Product Categories"
         subtitle="Manage hierarchical product category tree"
         showBack={currentPath.length > 0}
-        onBack={handleGoBack}
+        onBack={currentPath.length > 0 ? handleGoBack : undefined}
         breadcrumbs={[
           { label: "Catalog" },
           {

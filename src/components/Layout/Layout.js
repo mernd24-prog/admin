@@ -469,22 +469,22 @@ function Layout() {
       modules.forEach((module) => {
         const moduleCode = normalizeModule(
           module.slug ||
-          module.moduleKey ||
-          module.moduleSlug ||
-          module.module ||
-          module.module_code?.module_code ||
-          module.module_code ||
-          module.metadata?.requiredModule,
+            module.moduleKey ||
+            module.moduleSlug ||
+            module.module ||
+            module.module_code?.module_code ||
+            module.module_code ||
+            module.metadata?.requiredModule,
         );
 
         if (!moduleCode) return;
 
         const hasViewAction = Array.isArray(module.permissions)
           ? module.permissions.some(
-            (permission) =>
-              String(permission.action || "").toLowerCase() === "view" &&
-              permission.assigned === true,
-          )
+              (permission) =>
+                String(permission.action || "").toLowerCase() === "view" &&
+                permission.assigned === true,
+            )
           : module.assigned !== false;
         const isAssigned = module.assigned !== false && hasViewAction;
 
@@ -852,9 +852,11 @@ function Layout() {
       );
 
       if (permissionLoading) {
-        return path === "/referral-commerce/influencers/view/:id"
-          ? element
-          : <PageSkeletonLoader />;
+        return path.startsWith("/referral-commerce") ? (
+          element
+        ) : (
+          <PageSkeletonLoader />
+        );
       }
 
       return <PermissionNotAllowed loading />;
@@ -893,8 +895,9 @@ function Layout() {
       </div>
 
       <div
-        className={`relative flex flex-col flex-1 overflow-hidden !bg-[var(--admin-shell)] ${navbarOpen ? "" : "lg:ml-0"
-          }`}
+        className={`relative flex flex-col flex-1 overflow-hidden !bg-[var(--admin-shell)] ${
+          navbarOpen ? "" : "lg:ml-0"
+        }`}
       >
         {/* Inner corner notch — sidebar/header junction */}
         <div
@@ -917,8 +920,9 @@ function Layout() {
         />
 
         <main
-          className={`flex-1 overflow-y-auto overflow-x-hidden bg-[var(--admin-canvas)] sidebar-scrollbar admin-inner-shadow rounded-tl-2xl ${hasPermanentOpen ? "" : "pt-[58px]"
-            }`}
+          className={`flex-1 overflow-y-auto overflow-x-hidden bg-[var(--admin-canvas)] sidebar-scrollbar admin-inner-shadow rounded-tl-2xl ${
+            hasPermanentOpen ? "" : "pt-[58px]"
+          }`}
         >
           <Suspense fallback={<PageSkeletonLoader />}>
             <div className="admin-page-transition">

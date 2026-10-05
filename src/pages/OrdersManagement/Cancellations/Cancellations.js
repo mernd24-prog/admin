@@ -538,6 +538,7 @@ const Cancellations = () => {
         loading={loading}
         total={payload.total}
         listPage={list}
+        onRefresh={fetchCancellations}
         emptyMessage="No cancellations found"
         filterBar={<FilterBar fields={filters} listPage={list} />}
         rowActions={(row) => {

@@ -2311,7 +2311,12 @@ const MetricCard = ({ label, value, tone = "default" }) => {
 };
 
 const EmptyState = ({ children }) => (
-  <div className="rounded-lg border border-dashed border-[#eadfbd] bg-[#fffaf0] py-8 text-center text-sm text-[#65718b]">
+  <div className="mx-auto flex flex-col items-center justify-center rounded-lg border border-dashed border-[#eadfbd] bg-[#fffaf0] py-8 text-sm text-[#65718b]">
+    <img
+      src="/Img/noData.png"
+      alt="No records"
+      className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
+    />
     {children}
   </div>
 );

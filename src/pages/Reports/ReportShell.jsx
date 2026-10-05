@@ -55,6 +55,7 @@ import { isSellerPanel } from "../../_helpers/panelConfig";
 import { GoldDateRangeCalendar } from "../../components/Shared/FilterBar";
 import { formatDateTime } from "../../utils/formatters";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
+import { FaChartLine } from "react-icons/fa";
 
 const CHART_GRID_COLOR = "#e9dfc9";
 const REPORT_GOLD = "#d6a323";
@@ -283,8 +284,8 @@ const EmptyPanel = ({
 }) => (
   <div className="flex min-h-[190px] items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-surface-soft)] p-5 text-center">
     <div className="max-w-sm">
-      <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm">
-        <MdInbox size={21} />
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm">
+        <FaChartLine size={28} />
       </span>
       <h4 className="mt-3 text-[13px] font-bold text-[var(--admin-navy)]">
         {title}
@@ -343,7 +344,7 @@ const ReportTable = ({
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className="px-4 py-2.5 text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]"
+                    className="px-4 py-2.5  text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]"
                   >
                     {column.label}
                   </th>
@@ -2457,7 +2458,7 @@ export const ProductAnalytics = () => {
               label: "Product",
 
               render: (value) => (
-                <span className="font-semibold text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">
+                <span className="font-semibold block max-w-2xl text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">
                   {value}
                 </span>
               ),

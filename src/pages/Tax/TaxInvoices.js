@@ -462,6 +462,7 @@ const TaxInvoices = () => {
         listPage={list}
         searchPlaceholder="Search Invoice or Order..."
         emptyMessage={error || "No tax invoices found"}
+        onRefresh={fetchInvoices}
         filterBar={
           <FilterBar filters={FILTER_FIELDS} listPage={list} loading={false} />
         }

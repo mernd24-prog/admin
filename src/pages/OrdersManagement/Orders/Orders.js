@@ -1577,8 +1577,6 @@ const Orders = () => {
   const fetchOrders = () => {
     const params = toQueryParams();
 
-    console.log("ORDER FILTER PARAMS:", params);
-
     return dispatch(
       getOrderList({
         page: params.page,
@@ -1933,6 +1931,7 @@ const Orders = () => {
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
+        onRefresh={fetchOrders}
         searchPlaceholder={
           isAdmin
             ? "Search by order number or buyer…"

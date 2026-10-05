@@ -187,7 +187,7 @@ const HsnCode = () => {
       if (statusFilter === "true") {
         requestParams.active = false; // Inactive → active: false
       } else if (statusFilter === "false") {
-        requestParams.active = true;  // Active   → active: true
+        requestParams.active = true; // Active   → active: true
       }
 
       const res = await dispatch(getHsnList(requestParams)).unwrap();
@@ -454,6 +454,7 @@ const HsnCode = () => {
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
+        onRefresh={fetchList}
         rowActions={rowActions}
         searchPlaceholder="Search HSN code or description…"
         emptyText="No HSN codes found."
@@ -569,37 +570,27 @@ const HsnCode = () => {
               </div>
             </FormSection>
 
-            <FormSection
-              title="Description"
-              description="Add an optional description for this HSN code."
-            >
-              <FormInput
-                label="Description"
-                name="description"
-                type="textarea"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Enter HSN code description"
-                rows={3}
-              />
-            </FormSection>
+            <FormInput
+              label="Description"
+              name="description"
+              type="textarea"
+              value={formData.description}
+              onChange={handleInputChange}
+              placeholder="Enter HSN code description"
+              rows={3}
+            />
 
-            <FormSection
-              title="Status"
-              description="Control whether this HSN code is active."
-            >
-              <FormToggleRow
-                title="Active"
-                description="Allow this HSN code to be used for products and tax calculations."
-                isToggle={!formData.isDisable}
-                handleClick={() =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    isDisable: !prev.isDisable,
-                  }))
-                }
-              />
-            </FormSection>
+            <FormToggleRow
+              title="Active"
+              description="Allow this HSN code to be used for products and tax calculations."
+              isToggle={!formData.isDisable}
+              handleClick={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  isDisable: !prev.isDisable,
+                }))
+              }
+            />
           </div>
         </DefaultModal>
       )}

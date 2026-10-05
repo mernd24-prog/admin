@@ -260,19 +260,11 @@ const sellerLookupFromOption = (option = {}) => ({
 });
 
 function ProductSearch({ sellerId, value, onSelect }) {
-  const [query, setQuery] = useState("");
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [isListOpen, setIsListOpen] = useState(false);
-  const requestRef = useRef(0);
-
-  const searchProducts = useCallback(
+  const loadProductOptions = useCallback(
     async (search = "") => {
-      const requestId = requestRef.current + 1;
-      requestRef.current = requestId;
-      setLoading(true);
       try {
         const trimmed = search.trim();
+
         const response = await axiosPrivate.get(
           ENDPOINTS.products.listForPanel,
           {
@@ -281,119 +273,69 @@ function ProductSearch({ sellerId, value, onSelect }) {
               search: trimmed || undefined,
               keyWord: trimmed || undefined,
               sellerId: sellerId || undefined,
-              limit: 10,
+              limit: 20,
               includeVariants: true,
               includeAllStatuses: true,
             },
           },
         );
-        if (requestRef.current === requestId) {
-          setItems(
-            unwrapApiItems(response)
-              .map(normalizeProduct)
-              .sort(
-                (left, right) =>
-                  Number(right.isDealProduct) - Number(left.isDealProduct),
-              ),
-          );
-        }
+
+        return unwrapApiItems(response)
+          .map(normalizeProduct)
+          .sort(
+            (left, right) =>
+              Number(right.isDealProduct) - Number(left.isDealProduct),
+          )
+          .map((product) => ({
+            value: product.id,
+            label: product.label,
+            sku: product.sku || "",
+            stock: product.stock || 0,
+            price: product.price || 0,
+            product,
+          }));
       } catch (error) {
         toast.error(
           error?.response?.data?.message || "Failed to search products",
         );
-      } finally {
-        if (requestRef.current === requestId) setLoading(false);
+        return [];
       }
     },
     [sellerId],
   );
 
-  useEffect(() => {
-    const timer = setTimeout(() => searchProducts(query), 250);
-    return () => clearTimeout(timer);
-  }, [query, sellerId, searchProducts]);
+  const handleChange = (option) => {
+    if (!option) {
+      onSelect(null);
+      return;
+    }
+
+    onSelect(option.product);
+  };
+
+  const selectedValue = value
+    ? {
+        value: value.id,
+        label: value.label,
+        sku: value.sku || "",
+        stock: value.stock || 0,
+        price: value.price || 0,
+        product: value,
+      }
+    : null;
 
   return (
-    <div className="admin-field">
-      <label className="admin-label">
-        Existing Product <span className="admin-required">*</span>
-      </label>
-      <div className="relative">
-        <MdSearch
-          size={16}
-          className="pointer-events-none absolute  left-3 top-1/2 -translate-y-1/2 text-gray-400"
-        />
-        <input
-          value={query}
-          onFocus={() => setIsListOpen(true)}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setIsListOpen(true);
-          }}
-          className="admin-input w-full !pl-9"
-          placeholder={value?.label || "Search product name or SKU"}
-        />
-      </div>
-      {value?.label && !isListOpen ? (
-        <div className="mt-2 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2 text-sm text-[var(--admin-ink)]">
-          <span className="block truncate font-medium">{value.label}</span>
-          <span className="block truncate text-xs text-[var(--admin-muted)]">
-            {value.sku || "No SKU"} · Stock {value.stock || 0}
-          </span>
-        </div>
-      ) : null}
-      {isListOpen && (
-        <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-[var(--admin-line)] bg-white">
-          {loading ? (
-            <div className="px-3 py-4 text-center text-xs text-[var(--admin-muted)]">
-              Loading products...
-            </div>
-          ) : items.length ? (
-            items.map((item) => {
-              const selected = String(value?.id || "") === String(item.id);
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => {
-                    onSelect(item);
-                    setQuery("");
-                    setIsListOpen(false);
-                  }}
-                  className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition hover:bg-[var(--admin-blue-soft)] ${
-                    selected
-                      ? "bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]"
-                      : "text-[var(--admin-ink)]"
-                  }`}
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium">
-                      {item.label}
-                    </span>
-                    <span className="block truncate text-xs text-[var(--admin-muted)]">
-                      {item.sku || "No SKU"} · Stock {item.stock || 0}
-                    </span>
-                    {item.isDealProduct && (
-                      <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                        {item.dealBadge || "Deal"}
-                      </span>
-                    )}
-                  </span>
-                  <span className="shrink-0 text-xs font-semibold">
-                    {money(item.price)}
-                  </span>
-                </button>
-              );
-            })
-          ) : (
-            <div className="px-3 py-4 text-center text-xs text-[var(--admin-muted)]">
-              Search and select an existing product.
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <FilterSelect
+      label="Existing Product"
+      required
+      name="productId"
+      inputId="deal-product-id"
+      value={selectedValue}
+      onChange={handleChange}
+      loadOptions={loadProductOptions}
+      placeholder="Search product name or SKU"
+      defaultOptions
+    />
   );
 }
 
@@ -662,36 +604,25 @@ const DealManagement = () => {
 
   const onSellerSelect = (seller) => {
     setSelectedSeller(seller);
+
     if (seller?.value) {
       setSellerLookup((current) => ({
         ...current,
         [String(seller.value)]: sellerLookupFromOption(seller),
       }));
     }
-    setForm((current) => {
-      const nextSellerId = seller?.value || "";
-      const sellerChanged =
-        String(current.sellerId || "") !== String(nextSellerId || "");
-      return {
-        ...current,
-        sellerId: nextSellerId,
-        ...(sellerChanged
-          ? {
-              productId: "",
-              productLabel: "",
-              originalPrice: "",
-              allocatedQuantity: "",
-              category: "",
-            }
-          : {}),
-      };
-    });
-    if (
-      !seller?.value ||
-      String(form.sellerId || "") !== String(seller.value)
-    ) {
-      setSelectedProduct(null);
-    }
+
+    setSelectedProduct(null);
+
+    setForm((current) => ({
+      ...current,
+      sellerId: seller?.value || "",
+      productId: "",
+      productLabel: "",
+      originalPrice: "",
+      allocatedQuantity: "",
+      category: "",
+    }));
   };
 
   const formDeal = useMemo(
@@ -869,6 +800,76 @@ const DealManagement = () => {
         listData.reduce((sum, deal) => sum + num(deal.soldQuantity), 0),
     };
   }, [analytics, payload]);
+
+  const tabCounts = useMemo(() => {
+    const listData = payload.list || [];
+
+    const countsFromAnalytics = {};
+    if (Array.isArray(analytics.statusCounts)) {
+      analytics.statusCounts.forEach((item) => {
+        if (item && item.status) {
+          countsFromAnalytics[item.status] = Number(item.count || 0);
+        }
+      });
+    } else if (
+      analytics.statusCounts &&
+      typeof analytics.statusCounts === "object"
+    ) {
+      Object.entries(analytics.statusCounts).forEach(([k, v]) => {
+        countsFromAnalytics[k] = Number(v || 0);
+      });
+    }
+
+    const getStatusCount = (statusKey) => {
+      if (activeTab === statusKey) {
+        return payload.total !== undefined ? payload.total : listData.length;
+      }
+      if (countsFromAnalytics[statusKey] !== undefined) {
+        return countsFromAnalytics[statusKey];
+      }
+      if (statusKey === "active" && metrics.active !== undefined) {
+        return metrics.active;
+      }
+      if (statusKey === "scheduled" && metrics.scheduled !== undefined) {
+        return metrics.scheduled;
+      }
+      if (statusKey === "expired" && metrics.expired !== undefined) {
+        return metrics.expired;
+      }
+      return listData.filter((deal) => deal.status === statusKey).length;
+    };
+
+    const activeCount = getStatusCount("active");
+    const scheduledCount = getStatusCount("scheduled");
+    const expiredCount = getStatusCount("expired");
+    const pendingCount = getStatusCount("pending_approval");
+    const rejectedCount = getStatusCount("rejected");
+    const cancelledCount = getStatusCount("cancelled");
+    const productKeysCount = dealProductKeys.length;
+
+    const allDealsCount =
+      activeTab === ""
+        ? (payload.total !== undefined ? payload.total : listData.length) +
+          productKeysCount
+        : (metrics.total ??
+            activeCount +
+              scheduledCount +
+              expiredCount +
+              pendingCount +
+              rejectedCount +
+              cancelledCount) + productKeysCount;
+
+    return {
+      "": allDealsCount,
+      product_keys: productKeysCount,
+      pending_approval: pendingCount,
+      active: activeCount,
+      scheduled: scheduledCount,
+      expired: expiredCount,
+      rejected: rejectedCount,
+      cancelled: cancelledCount,
+    };
+  }, [analytics, payload, activeTab, metrics, dealProductKeys]);
 
   const tableRows = useMemo(() => {
     const deals = payload.list || [];
@@ -1136,9 +1137,6 @@ const DealManagement = () => {
         breadcrumbs={[{ label: "Marketing" }, { label: "Deal Management" }]}
         actions={
           <>
-            {/* <button onClick={fetchDeals}>
-              <MdRefresh size={16} /> Refresh
-            </button> */}
             <PermissionGuard module="deals" action={ACTIONS.CREATE} hide>
               <button
                 onClick={() =>
@@ -1202,6 +1200,7 @@ const DealManagement = () => {
         tabs={TAB_CONFIG.map((tab) => ({
           value: tab.key,
           label: tab.label,
+          count: tabCounts[tab.key] ?? 0,
         }))}
         activeTab={activeTab}
         onChange={(value) => {
@@ -1218,6 +1217,7 @@ const DealManagement = () => {
       <DataTable
         columns={columns}
         data={tableRows}
+        onRefresh={fetchDeals}
         total={
           activeTab === "product_keys"
             ? tableRows.length
@@ -1278,6 +1278,7 @@ const DealManagement = () => {
               )}
 
               <ProductSearch
+                key={form.sellerId || "no-seller"}
                 sellerId={form.sellerId}
                 value={selectedProduct}
                 onSelect={onProductSelect}
@@ -1502,11 +1503,11 @@ const DealManagement = () => {
         ) : detail ? (
           <div className="space-y-5">
             {/* Loading State */}
-            {detailLoading && (
+            {/* {detailLoading && (
               <div className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
                 Loading latest deal details...
               </div>
-            )}
+            )} */}
 
             {/* ==================== Deal Overview ==================== */}
             <FormSection
