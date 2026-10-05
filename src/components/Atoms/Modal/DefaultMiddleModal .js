@@ -42,9 +42,9 @@ const DefaultMiddleModal = ({
       <div
         className={`
                     fixed left-1/2 top-1/2 transform
-                    ${isOpen ? "-translate-y-1/2 opacity-100 scale-100" : "-translate-y-[200%] opacity-0 scale-95 pointer-events-none"}
+                    ${isOpen ? "-translate-y-1/2 opacity-100 scale-100" : "-translate-y-1/2 opacity-0 scale-95 pointer-events-none"}
                     -translate-x-1/2 admin-card bg-white z-50 flex flex-col overflow-hidden
-                    transition-all duration-500 ease-in-out
+                    transition-all duration-200 ease-in-out
                     w-[calc(100%-2rem)] md:w-[600px] lg:w-[700px]
                     max-h-[calc(100vh-4rem)]
                 `}

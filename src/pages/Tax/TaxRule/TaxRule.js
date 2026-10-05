@@ -560,22 +560,18 @@ const TaxRule = () => {
             </FormSection>
 
             {/* ==================== Status ==================== */}
-            <FormSection
-              title="Status"
-              description="Control whether this tax rule is active and available for use."
-            >
-              <FormToggleRow
-                title="Active"
-                description="Enable this tax rule for applicable products and categories."
-                isToggle={!formData.isDisable}
-                handleClick={() =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    isDisable: !prev.isDisable,
-                  }))
-                }
-              />
-            </FormSection>
+
+            <FormToggleRow
+              title="Active"
+              description="Enable this tax rule for applicable products and categories."
+              isToggle={!formData.isDisable}
+              handleClick={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  isDisable: !prev.isDisable,
+                }))
+              }
+            />
           </div>
         </DefaultModal>
       )}

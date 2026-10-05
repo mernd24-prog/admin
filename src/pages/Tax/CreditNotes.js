@@ -400,6 +400,7 @@ const CreditNotes = () => {
         data={payload.list}
         loading={loading}
         total={payload.total}
+        onRefresh={fetchNotes}
         listPage={list}
         emptyMessage="No credit notes found"
         rowActions={rowActions}

@@ -91,7 +91,7 @@ const CLASS_PAGE_TITLE =
 const CLASS_SECTION_TITLE =
   "text-[17px] font-inter font-bold text-[var(--admin-ink)]";
 const CLASS_TABLE_ACTION =
-  "inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]";
+  "inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]";
 const CLASS_DROPDOWN_BUTTON =
   "flex min-h-8 w-full items-center justify-between gap-2 rounded px-3 text-xs font-semibold transition bg-[#FFFDF8] border border-sidebarGold/60";
 const CLASS_DROPDOWN_OPTION =
@@ -109,7 +109,7 @@ const CLASS_TABLE_PRODUCT_CELL = "px-5 py-3";
 const CLASS_TABLE_INDEX_CELL = "px-4 py-3 text-start tabular-nums";
 const CLASS_TABLE_PRODUCT_TEXT = "px-5 py-3 font-medium text-slate-700";
 const CLASS_PRODUCT_LINK =
-  "line-clamp-1 max-w-[220px] break-normal font-semibold text-[var(--admin-ink)] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]";
+  "block w-[350px] max-w-[420px] truncate font-semibold text-[var(--admin-ink)] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-blue)]";
 const CLASS_STATUS_BADGE =
   "inline-flex rounded-full border px-2 py-1 text-[9px] font-semibold capitalize";
 const CLASS_CARD_HEADER =
@@ -959,7 +959,7 @@ export default function Dashboard() {
           </Link>
         ) : (
           <span
-            className="line-clamp-1 max-w-[220px] break-normal"
+            className="block w-[220px] max-w-[220px] truncate"
             title={productName}
           >
             {productName}

@@ -648,9 +648,13 @@ const DataTable = ({
                       className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
                     />
 
-                    <span className="text-sm font-medium">
-                      {formatLabel(resolvedEmptyText)}
-                    </span>
+                    {React.isValidElement(resolvedEmptyText) ? (
+                      resolvedEmptyText
+                    ) : (
+                      <span className="text-sm font-medium">
+                        {formatLabel(resolvedEmptyText)}
+                      </span>
+                    )}
                   </div>
                 </td>
               </tr>

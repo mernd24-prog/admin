@@ -23,10 +23,10 @@ const Tabs = ({ tabs = [], activeTab, onChange }) => {
 
             {tab.count !== undefined && (
               <span
-                className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${
+                className={`ml-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors ${
                   isActive
                     ? "bg-white/20 text-white"
-                    : "bg-white text-[var(--admin-navy)]"
+                    : "border border-[var(--admin-navy)]/15 bg-white text-[var(--admin-navy)] shadow-xs"
                 }`}
               >
                 {tab.count}
