@@ -1010,10 +1010,12 @@ const warrantyTypes = {
         handleSelectChange(
           {
             value: brandName,
-            label: brandName,
+            label: `${brandName} (Pending approval)`,
             brandName,
             resourceId: createdBrand._id || createdBrand.id,
             approvalStatus: createdBrand.approvalStatus || "pending",
+            isPendingBrand: true,
+            submittedBySellerId: createdBrand.submittedBySellerId,
           },
           "BRAND_ID",
         );
@@ -1058,9 +1060,10 @@ const warrantyTypes = {
 
       setIsBrandModal(false);
 
-      loadMyBrandSubmissions();
-
-      fetchAllData?.();
+      await Promise.allSettled([
+        loadMyBrandSubmissions(),
+        Promise.resolve(fetchAllData?.()),
+      ]);
     } catch (error) {
       toast.error(getErrorMessage(error, "Could not submit brand"));
     } finally {
@@ -1078,7 +1081,7 @@ const warrantyTypes = {
     const submissionBrands = myBrandSubmissions
       .filter(
         (brand) =>
-          brand.approvalStatus !== "approved" &&
+          (brand.approvalStatus || "pending") === "pending" &&
           !approvedNames.has(
             String(brand.name || "").toLowerCase(),
           ),
@@ -1098,6 +1101,7 @@ const warrantyTypes = {
           resourceId: brand._id || brand.id,
           approvalStatus,
           isPendingBrand: approvalStatus === "pending",
+          submittedBySellerId: brand.submittedBySellerId,
         };
       });
 
