@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { useFormik } from "formik";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   BadgeIndianRupee,
@@ -54,6 +55,11 @@ import {
 } from "../../Redux/referralCommerceSlice";
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 import { uploadDocumentFile } from "../../_helpers/globalFunctions";
+import {
+  brandAssociateValidationSchema,
+  parentInfluencerValidationSchema,
+  referralCodeValidationSchema,
+} from "../../_helpers/validationSchemas";
 import { axiosPrivate } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import OrangeButton from "../../components/Atoms/buttons/OrangeButton";
@@ -77,6 +83,7 @@ import {
   resolveStoreKey,
 } from "./referralProductStoreUtils";
 import Tabs from "../../components/Shared/Tabs";
+import { DateRangeFilter } from "../../components/Shared/FilterBar";
 import Loader, { ButtonLoader } from "../../components/Loader/Loader";
 import ButtonTransparent from "../../components/Atoms/ButtonTransparent/button";
 import Cards from "../../components/Cards/Cards";
@@ -177,58 +184,17 @@ const emptyInfluencerForm = {
   canCreateChildren: true,
 };
 
-const validateGrowthPartnerForm = (form = {}) => {
-  const errors = {};
-  const firstName = String(form.firstName || "").trim();
-  const lastName = String(form.lastName || "").trim();
-  const email = String(form.email || "").trim();
-  const password = String(form.password || "");
-  const phone = String(form.phone || "").trim();
-  const code = String(form.code || "").trim();
-
-  if (!firstName) {
-    errors.firstName = "First name is required";
-  } else if (!/^[A-Za-z\s.'-]{2,50}$/.test(firstName)) {
-    errors.firstName = "Enter a valid first name";
-  }
-
-  if (!lastName) {
-    errors.lastName = "Last name is required";
-  } else if (!/^[A-Za-z\s.'-]{1,50}$/.test(lastName)) {
-    errors.lastName = "Enter a valid last name";
-  }
-
-  if (!email) {
-    errors.email = "Email is required";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errors.email = "Enter a valid email address";
-  }
-
-  if (!password) {
-    errors.password = "Temporary password is required";
-  } else if (password.length < 8) {
-    errors.password = "Password must be at least 8 characters";
-  }
-
-  if (phone && !/^[6-9]\d{9}$/.test(phone)) {
-    errors.phone = "Enter 10 digit mobile number";
-  }
-
-  if (code && !/^[A-Za-z0-9_-]{4,32}$/.test(code)) {
-    errors.code = "Use 4-32 letters, numbers, hyphen, or underscore";
-  }
-
-  return errors;
-};
-
-const validateGrowthPartnerField = (name, value, form = {}) =>
-  validateGrowthPartnerForm({ ...form, [name]: value })[name] || "";
-
 const emptyCodeForm = {
   influencerId: "",
   code: "",
   status: "active",
   usageLimit: "",
+};
+
+const emptyChildForm = {
+  ...emptyInfluencerForm,
+  canCreateChildren: false,
+  parentId: "",
 };
 
 const emptyRulesForm = {
@@ -1614,10 +1580,78 @@ const ReferralCommerce = () => {
     transactionReference: "",
     paymentProofUrl: "",
   });
-  const [parentId, setParentId] = useState("");
-  const [influencerForm, setInfluencerForm] = useState(emptyInfluencerForm);
-  const [influencerErrors, setInfluencerErrors] = useState({});
-  const [codeForm, setCodeForm] = useState(emptyCodeForm);
+  const parentFormik = useFormik({
+    initialValues: emptyInfluencerForm,
+    validationSchema: parentInfluencerValidationSchema,
+    validateOnMount: true,
+    onSubmit: async (values, { resetForm, setSubmitting }) => {
+      setParentSubmitting(true);
+      try {
+        await dispatch(createReferralParent(compactPayload(values))).unwrap();
+        toast.success("Parent Influencer created");
+        setParentModalOpen(false);
+        resetForm({ values: emptyInfluencerForm });
+        await refreshAll();
+      } catch (error) {
+        toast.error(error || "Unable to create Parent Influencer");
+      } finally {
+        setParentSubmitting(false);
+        setSubmitting(false);
+      }
+    },
+  });
+  const childFormik = useFormik({
+    initialValues: emptyChildForm,
+    validationSchema: brandAssociateValidationSchema,
+    onSubmit: async (values, { resetForm, setSubmitting }) => {
+      try {
+        await dispatch(
+          createReferralChild({
+            ...compactPayload(values),
+            parentId: values.parentId,
+          }),
+        ).unwrap();
+        toast.success("Brand Associate created");
+        setChildModalOpen(false);
+        resetForm({ values: emptyChildForm });
+        await refreshAll();
+      } catch (error) {
+        toast.error(error || "Unable to create Brand Associate");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
+  const codeFormik = useFormik({
+    initialValues: emptyCodeForm,
+    validationSchema: () =>
+      editingCode
+        ? referralCodeValidationSchema.omit(["influencerId"])
+        : referralCodeValidationSchema,
+    onSubmit: async (values, { resetForm, setSubmitting }) => {
+      const payload = compactPayload(numberize(values, ["usageLimit"]));
+      try {
+        if (editingCode) {
+          const { influencerId: _influencerId, ...codePayload } = payload;
+          await dispatch(
+            updateReferralCode({ ...codePayload, codeId: getId(editingCode) }),
+          ).unwrap();
+          toast.success("Referral code updated");
+        } else {
+          await dispatch(createReferralCode(payload)).unwrap();
+          toast.success("Referral code created");
+        }
+        setCodeModalOpen(false);
+        setEditingCode(null);
+        resetForm({ values: emptyCodeForm });
+        await refreshAll();
+      } catch (error) {
+        toast.error(error || "Unable to save referral code");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
   const [rulesForm, setRulesForm] = useState(emptyRulesForm);
   const [rulesErrors, setRulesErrors] = useState({});
   const [rulesSubmitting, setRulesSubmitting] = useState(false);
@@ -1970,38 +2004,13 @@ const ReferralCommerce = () => {
   };
 
   const resetInfluencerForm = () => {
-    setInfluencerForm(emptyInfluencerForm);
-    setInfluencerErrors({});
-    setParentId("");
+    parentFormik.resetForm({ values: emptyInfluencerForm });
+    childFormik.resetForm({ values: emptyChildForm });
   };
 
   const closeParentModal = () => {
-    setInfluencerErrors({});
+    parentFormik.resetForm({ values: emptyInfluencerForm });
     setParentModalOpen(false);
-  };
-
-  const handleInfluencerField = (event) => {
-    const { name, value, type, checked } = event.target;
-    const nextValue = type === "checkbox" ? checked : value;
-    setInfluencerForm((prev) => ({
-      ...prev,
-      [name]: nextValue,
-    }));
-    setInfluencerErrors((prev) => {
-      const message = validateGrowthPartnerField(
-        name,
-        nextValue,
-        influencerForm,
-      );
-      const next = { ...prev, [name]: message };
-      if (!message) delete next[name];
-      return next;
-    });
-  };
-
-  const handleCodeField = (event) => {
-    const { name, value } = event.target;
-    setCodeForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleRulesField = (event) => {
@@ -2054,68 +2063,20 @@ const ReferralCommerce = () => {
 
   const submitParent = async (event) => {
     event.preventDefault();
-    const errors = validateGrowthPartnerForm(influencerForm);
-    setInfluencerErrors(errors);
+    const errors = await parentFormik.validateForm();
+    parentFormik.setTouched({
+      firstName: true,
+      lastName: true,
+      email: true,
+      password: true,
+      phone: true,
+      code: true,
+    });
     if (Object.keys(errors).length > 0) {
       toast.error("Please fix the highlighted fields");
       return;
     }
-
-    setParentSubmitting(true);
-    try {
-      await dispatch(
-        createReferralParent(compactPayload(influencerForm)),
-      ).unwrap();
-      toast.success("Parent Influencer created");
-      setParentModalOpen(false);
-      resetInfluencerForm();
-      await refreshAll();
-    } catch (error) {
-      toast.error(error || "Unable to create Parent Influencer");
-    } finally {
-      setParentSubmitting(false);
-    }
-  };
-
-  const submitChild = async (event) => {
-    event.preventDefault();
-    try {
-      await dispatch(
-        createReferralChild({
-          ...compactPayload(influencerForm),
-          parentId,
-        }),
-      ).unwrap();
-      toast.success("Brand Associate created");
-      setChildModalOpen(false);
-      resetInfluencerForm();
-      await refreshAll();
-    } catch (error) {
-      toast.error(error || "Unable to create Brand Associate");
-    }
-  };
-
-  const submitCode = async (event) => {
-    event.preventDefault();
-    const payload = compactPayload(numberize(codeForm, ["usageLimit"]));
-    try {
-      if (editingCode) {
-        const { influencerId: _influencerId, ...codePayload } = payload;
-        await dispatch(
-          updateReferralCode({ ...codePayload, codeId: getId(editingCode) }),
-        ).unwrap();
-        toast.success("Referral code updated");
-      } else {
-        await dispatch(createReferralCode(payload)).unwrap();
-        toast.success("Referral code created");
-      }
-      setCodeModalOpen(false);
-      setEditingCode(null);
-      setCodeForm(emptyCodeForm);
-      await refreshAll();
-    } catch (error) {
-      toast.error(error || "Unable to save referral code");
-    }
+    await parentFormik.submitForm();
   };
 
   const submitRules = async (event) => {
@@ -2380,12 +2341,13 @@ const ReferralCommerce = () => {
 
   const openEditCode = (code) => {
     setEditingCode(code);
-    setCodeForm({
+    codeFormik.setValues({
       influencerId: code.influencerId || "",
       code: code.code || "",
       status: code.status || "active",
       usageLimit: code.usageLimit || "",
     });
+    codeFormik.setTouched({});
     setCodeModalOpen(true);
   };
   const bonusTabs = [
@@ -3339,7 +3301,6 @@ const ReferralCommerce = () => {
           <p className="mt-1.5 text-[10px] text-[var(--admin-muted)]">
             Shares should total exactly 100%
           </p>
-
           {rulesErrors.shareTotal ? (
             <p className="admin-field-error" role="alert">
               {rulesErrors.shareTotal}
@@ -3480,9 +3441,8 @@ const ReferralCommerce = () => {
               );
             })}
           </div>
-
           {rulesErrors.withdrawalMethods ? (
-            <p className="admin-field-error mt-1" role="alert">
+            <p className="admin-field-error" role="alert">
               {rulesErrors.withdrawalMethods}
             </p>
           ) : null}
@@ -3584,23 +3544,21 @@ const ReferralCommerce = () => {
             </p>
           </div>
         </div>
-        <TextInput
-          label="Effective From"
-          name="effectiveFrom"
-          type="date"
-          value={rulesForm.effectiveFrom}
-          onChange={handleRulesField}
-          error={rulesErrors.effectiveFrom}
-          hint="Leave blank to let the backend use its default start date."
-        />
-        <TextInput
-          label="Effective To"
-          name="effectiveTo"
-          type="date"
-          value={rulesForm.effectiveTo}
-          onChange={handleRulesField}
-          error={rulesErrors.effectiveTo}
-          hint="Leave blank for no expiry."
+        <DateRangeFilter
+          field={{
+            key: "effectiveRange",
+            type: "daterange",
+            label: "Effective Period",
+            startKey: "effectiveFrom",
+            endKey: "effectiveTo",
+            disableFuture: true,
+            width: "w-full",
+            placeholder: "Select effective period",
+          }}
+          values={rulesForm}
+          onChange={(key, value) =>
+            handleRulesField({ target: { name: key, value } })
+          }
         />
         <label className="admin-switch mt-6 h-10 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3">
           <input
@@ -3806,10 +3764,7 @@ const ReferralCommerce = () => {
                 type="button"
                 onClick={() => {
                   resetInfluencerForm();
-                  setInfluencerForm({
-                    ...emptyInfluencerForm,
-                    canCreateChildren: false,
-                  });
+                  childFormik.resetForm({ values: emptyChildForm });
                   setChildModalOpen(true);
                 }}
               >
@@ -3820,7 +3775,7 @@ const ReferralCommerce = () => {
                 type="button"
                 onClick={() => {
                   setEditingCode(null);
-                  setCodeForm(emptyCodeForm);
+                  codeFormik.resetForm({ values: emptyCodeForm });
                   setCodeModalOpen(true);
                 }}
               >
@@ -3955,7 +3910,7 @@ const ReferralCommerce = () => {
             />
           }
           emptyText="No referral partners found."
-          cardClassName="overflow-hidden"
+          cardClassName="admin-card overflow-hidden border border-[var(--admin-line)] bg-white shadow-sm"
         />
       )}
 
@@ -4039,99 +3994,100 @@ const ReferralCommerce = () => {
         onSubmit={submitParent}
         title="Create Growth Partner"
         submitButtonText="Create Growth Partner"
-        closeButtonText="Reset"
+        closeButtonText="Cancel"
         isButtonView={true}
         width="600px"
         loading={parentSubmitting}
       >
-        <div className="space-y-5">
-          {/* ==================== Basic Information ==================== */}
+        <form onSubmit={parentFormik.handleSubmit} className="space-y-5">
           <FormSection
             title="Basic Information"
             description="Enter the basic details of the growth partner."
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-              {/* First Name */}
               <FormInput
                 label="First Name"
                 name="firstName"
                 required
-                value={influencerForm.firstName}
-                onChange={handleInfluencerField}
+                value={parentFormik.values.firstName}
+                onChange={parentFormik.handleChange}
+                onBlur={parentFormik.handleBlur}
                 placeholder="Enter first name"
-                error={influencerErrors.firstName}
-                maxLength={50}
+                error={
+                  parentFormik.touched.firstName &&
+                  parentFormik.errors.firstName
+                }
                 className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
               />
 
-              {/* Last Name */}
               <FormInput
                 label="Last Name"
                 name="lastName"
                 required
-                value={influencerForm.lastName}
-                onChange={handleInfluencerField}
+                value={parentFormik.values.lastName}
+                onChange={parentFormik.handleChange}
+                onBlur={parentFormik.handleBlur}
                 placeholder="Enter last name"
-                error={influencerErrors.lastName}
-                maxLength={50}
+                error={
+                  parentFormik.touched.lastName && parentFormik.errors.lastName
+                }
                 className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
               />
 
-              {/* Email */}
               <FormInput
                 label="Email"
                 name="email"
                 type="email"
                 required
-                value={influencerForm.email}
-                onChange={handleInfluencerField}
+                value={parentFormik.values.email}
+                onChange={parentFormik.handleChange}
+                onBlur={parentFormik.handleBlur}
                 placeholder="Enter email address"
-                error={influencerErrors.email}
+                error={parentFormik.touched.email && parentFormik.errors.email}
                 className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
               />
 
-              {/* Phone */}
               <FormInput
                 label="Phone"
                 name="phone"
                 type="phone"
-                value={influencerForm.phone}
-                onChange={handleInfluencerField}
+                value={parentFormik.values.phone}
+                onChange={parentFormik.handleChange}
+                onBlur={parentFormik.handleBlur}
                 placeholder="Enter phone number"
-                error={influencerErrors.phone}
-                maxLength={10}
+                error={parentFormik.touched.phone && parentFormik.errors.phone}
                 className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
               />
 
-              {/* Temporary Password */}
               <FormInput
                 label="Temporary Password"
                 name="password"
                 type="password"
                 required
-                value={influencerForm.password}
-                onChange={handleInfluencerField}
+                value={parentFormik.values.password}
+                onChange={parentFormik.handleChange}
+                onBlur={parentFormik.handleBlur}
                 placeholder="Enter temporary password"
                 hint="At least 8 characters. The influencer uses this for the first login."
-                error={influencerErrors.password}
+                error={
+                  parentFormik.touched.password && parentFormik.errors.password
+                }
                 className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
               />
 
-              {/* Referral Code */}
               <FormInput
                 label="Referral Code"
                 name="code"
-                value={influencerForm.code}
-                onChange={handleInfluencerField}
+                value={parentFormik.values.code}
+                onChange={parentFormik.handleChange}
+                onBlur={parentFormik.handleBlur}
                 placeholder="Enter referral code"
-                error={influencerErrors.code}
-                maxLength={32}
+                error={parentFormik.touched.code && parentFormik.errors.code}
                 className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
               />
             </div>
           </FormSection>
 
-          {/* ==================== Permissions ==================== */}
           <FormSection
             title="Permissions"
             description="Manage what this parent influencer can do."
@@ -4139,31 +4095,31 @@ const ReferralCommerce = () => {
             <FormToggleRow
               title="Can Create Brand Associates"
               description="Allow this influencer to create and manage Brand Associates."
-              isToggle={Boolean(influencerForm.canCreateChildren)}
+              isToggle={Boolean(parentFormik.values.canCreateChildren)}
               handleClick={() =>
-                handleInfluencerField({
-                  target: {
-                    name: "canCreateChildren",
-                    type: "checkbox",
-                    checked: !influencerForm.canCreateChildren,
-                  },
-                })
+                parentFormik.setFieldValue(
+                  "canCreateChildren",
+                  !parentFormik.values.canCreateChildren,
+                )
               }
             />
           </FormSection>
-        </div>
+        </form>
       </DefaultModal>
 
       <DefaultModal
         isOpen={childModalOpen}
-        onClose={() => setChildModalOpen(false)}
-        onSubmit={submitChild}
+        onClose={() => {
+          childFormik.resetForm({ values: emptyChildForm });
+          setChildModalOpen(false);
+        }}
+        onSubmit={childFormik.handleSubmit}
         title="Create Brand Associate"
         submitButtonText="Create Brand Associate"
         closeButtonText="Reset"
         isButtonView={true}
         width="600px"
-        loading={loading}
+        loading={loading || childFormik.isSubmitting}
       >
         <div className="space-y-5">
           <FormSection
@@ -4181,10 +4137,17 @@ const ReferralCommerce = () => {
                     }`,
                     value: getId(parent),
                   }))}
-                  value={parentId}
+                  value={childFormik.values.parentId}
                   onChange={(selectedOption) =>
-                    setParentId(selectedOption?.value || selectedOption || "")
+                    childFormik.setFieldValue(
+                      "parentId",
+                      selectedOption?.value || selectedOption || "",
+                    )
                   }
+                  error={
+                    childFormik.touched.parentId && childFormik.errors.parentId
+                  }
+                  required
                   placeholder="Select Growth Partner"
                 />
               </div>
@@ -4193,8 +4156,11 @@ const ReferralCommerce = () => {
               <FormInput
                 label="First Name"
                 name="firstName"
-                value={influencerForm.firstName}
-                onChange={handleInfluencerField}
+                value={childFormik.values.firstName}
+                onChange={childFormik.handleChange}
+                onBlur={childFormik.handleBlur}
+                error={childFormik.touched.firstName && childFormik.errors.firstName}
+                required
                 placeholder="Enter first name"
               />
 
@@ -4202,8 +4168,11 @@ const ReferralCommerce = () => {
               <FormInput
                 label="Last Name"
                 name="lastName"
-                value={influencerForm.lastName}
-                onChange={handleInfluencerField}
+                value={childFormik.values.lastName}
+                onChange={childFormik.handleChange}
+                onBlur={childFormik.handleBlur}
+                error={childFormik.touched.lastName && childFormik.errors.lastName}
+                required
                 placeholder="Enter last name"
               />
 
@@ -4212,8 +4181,11 @@ const ReferralCommerce = () => {
                 label="Email"
                 name="email"
                 type="email"
-                value={influencerForm.email}
-                onChange={handleInfluencerField}
+                value={childFormik.values.email}
+                onChange={childFormik.handleChange}
+                onBlur={childFormik.handleBlur}
+                error={childFormik.touched.email && childFormik.errors.email}
+                required
                 placeholder="Enter email address"
               />
 
@@ -4221,8 +4193,10 @@ const ReferralCommerce = () => {
               <FormInput
                 label="Phone"
                 name="phone"
-                value={influencerForm.phone}
-                onChange={handleInfluencerField}
+                value={childFormik.values.phone}
+                onChange={childFormik.handleChange}
+                onBlur={childFormik.handleBlur}
+                error={childFormik.touched.phone && childFormik.errors.phone}
                 placeholder="Enter phone number"
               />
 
@@ -4231,8 +4205,11 @@ const ReferralCommerce = () => {
                 label="Password"
                 name="password"
                 type="password"
-                value={influencerForm.password}
-                onChange={handleInfluencerField}
+                value={childFormik.values.password}
+                onChange={childFormik.handleChange}
+                onBlur={childFormik.handleBlur}
+                error={childFormik.touched.password && childFormik.errors.password}
+                required
                 placeholder="Enter password"
               />
 
@@ -4240,8 +4217,10 @@ const ReferralCommerce = () => {
               <FormInput
                 label="Referral Code"
                 name="code"
-                value={influencerForm.code}
-                onChange={handleInfluencerField}
+                value={childFormik.values.code}
+                onChange={childFormik.handleChange}
+                onBlur={childFormik.handleBlur}
+                error={childFormik.touched.code && childFormik.errors.code}
                 placeholder="Enter referral code"
               />
             </div>
@@ -4254,14 +4233,15 @@ const ReferralCommerce = () => {
         onClose={() => {
           setCodeModalOpen(false);
           setEditingCode(null);
+          codeFormik.resetForm({ values: emptyCodeForm });
         }}
-        onSubmit={submitCode}
+        onSubmit={codeFormik.handleSubmit}
         title={editingCode ? "Edit Referral Code" : "Create Referral Code"}
         submitButtonText="Save Referral Code"
         closeButtonText="Reset"
         isButtonView={true}
         width="600px"
-        loading={loading}
+        loading={loading || codeFormik.isSubmitting}
       >
         <div className="space-y-5">
           {/* ==================== Referral Code Information ==================== */}
@@ -4283,15 +4263,18 @@ const ReferralCommerce = () => {
                       label: `${fullName(item.user)} - ${getId(item)}`,
                       value: getId(item),
                     }))}
-                    value={codeForm.influencerId}
+                    value={codeFormik.values.influencerId}
                     onChange={(selectedOption) =>
-                      handleCodeField({
-                        target: {
-                          name: "influencerId",
-                          value: selectedOption?.value || selectedOption || "",
-                        },
-                      })
+                      codeFormik.setFieldValue(
+                        "influencerId",
+                        selectedOption?.value || selectedOption || "",
+                      )
                     }
+                    error={
+                      codeFormik.touched.influencerId &&
+                      codeFormik.errors.influencerId
+                    }
+                    required
                     placeholder="Select Referral Partner"
                   />
                 </div>
@@ -4301,8 +4284,11 @@ const ReferralCommerce = () => {
               <FormInput
                 label="Referral Code"
                 name="code"
-                value={codeForm.code}
-                onChange={handleCodeField}
+                value={codeFormik.values.code}
+                onChange={codeFormik.handleChange}
+                onBlur={codeFormik.handleBlur}
+                error={codeFormik.touched.code && codeFormik.errors.code}
+                required
                 placeholder="Enter referral code"
               />
 
@@ -4311,8 +4297,12 @@ const ReferralCommerce = () => {
                 label="Usage Limit"
                 name="usageLimit"
                 type="number"
-                value={codeForm.usageLimit}
-                onChange={handleCodeField}
+                value={codeFormik.values.usageLimit}
+                onChange={codeFormik.handleChange}
+                onBlur={codeFormik.handleBlur}
+                error={
+                  codeFormik.touched.usageLimit && codeFormik.errors.usageLimit
+                }
                 placeholder="Enter usage limit"
               />
 
@@ -4321,15 +4311,15 @@ const ReferralCommerce = () => {
                 <FormSelectGroup
                   label="Status"
                   options={referralCodeStatuses.options}
-                  value={codeForm.status}
+                    value={codeFormik.values.status}
                   onChange={(selectedOption) =>
-                    handleCodeField({
-                      target: {
-                        name: "status",
-                        value: selectedOption?.value || selectedOption || "",
-                      },
-                    })
+                      codeFormik.setFieldValue(
+                        "status",
+                        selectedOption?.value || selectedOption || "",
+                      )
                   }
+                    error={codeFormik.touched.status && codeFormik.errors.status}
+                    required
                   placeholder="Select status"
                 />
               </div>

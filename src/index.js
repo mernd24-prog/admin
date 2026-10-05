@@ -7,8 +7,31 @@ import { BrowserRouter } from "react-router-dom";
 import { store } from "./Redux/Store";
 import { Provider } from "react-redux";
 import { LoaderProvider } from "./context/LoaderContext";
-import { Toaster } from "sonner";
+import { Toaster, toast as sonnerToast } from "sonner";
 import { KYCProvider } from "./context/KycContext";
+
+const withSingleToast = (method) => (...args) => {
+  sonnerToast.dismiss();
+  return method(...args);
+};
+
+Object.assign(sonnerToast, {
+  success: withSingleToast(sonnerToast.success),
+  error: withSingleToast(sonnerToast.error),
+  info: withSingleToast(sonnerToast.info),
+  warning: withSingleToast(sonnerToast.warning),
+  message: withSingleToast(sonnerToast.message),
+  loading: withSingleToast(sonnerToast.loading),
+  promise: (...args) => {
+    sonnerToast.dismiss();
+    return sonnerToast.promise(...args);
+  },
+  custom: (...args) => {
+    sonnerToast.dismiss();
+    return sonnerToast.custom(...args);
+  },
+});
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>

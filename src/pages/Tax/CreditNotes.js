@@ -685,6 +685,11 @@ const CreditNotes = () => {
                     taxableAmount: e.target.value,
                   }))
                 }
+                onKeyDown={(e) => {
+                  if (["-", "+", "e", "E"].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
                 placeholder="0.00"
                 required
               />
@@ -701,6 +706,11 @@ const CreditNotes = () => {
                     taxAmount: e.target.value,
                   }))
                 }
+                onKeyDown={(e) => {
+                  if (["-", "+", "e", "E"].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
                 placeholder="0.00"
               />
 

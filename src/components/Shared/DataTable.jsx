@@ -286,7 +286,7 @@ const DataTable = ({
   listPage,
   tableContainerClassName = "",
   tableClassName = "",
-  cardClassName = "admin-card overflow-visible",
+  cardClassName = "admin-card overflow-hidden border border-[var(--admin-line)] bg-white shadow-sm",
   exportConfig,
   importConfig,
   requiredModule,

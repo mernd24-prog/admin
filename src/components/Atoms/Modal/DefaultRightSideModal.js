@@ -76,7 +76,11 @@ const DefaultModal = ({
         </div>
 
         {(isButtonView || showCloseButton) && (
-          <div className="shrink-0 bg-[var(--admin-surface-soft)] py-3 px-6 flex justify-between items-center border-t border-[var(--admin-line)] gap-2">
+          <div
+            className={`shrink-0 bg-[var(--admin-surface-soft)] py-3 px-6 flex ${
+              isButtonView ? "justify-between" : "justify-end"
+            } items-center border-t border-[var(--admin-line)] gap-2`}
+          >
             <TransparentButton
               onClick={onClose}
               label={closeButtonText}

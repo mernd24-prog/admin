@@ -299,30 +299,10 @@ const ContentPageSetup = ({
     );
   }, [initialData, isControlled, isOpen, pageType]);
 
-  /*
-   * Open existing sections when modal opens.
-   */
   useEffect(() => {
     if (!isOpen) return;
 
-    const currentSections = isControlled
-      ? normalizeContentFormData(
-          formData || {},
-          pageType
-            ? {
-                pageType: formData?.pageType || pageType,
-              }
-            : {},
-        ).sections
-      : internalFormData.sections;
-
-    const sectionState = {};
-
-    currentSections.forEach((_, index) => {
-      sectionState[index] = true;
-    });
-
-    setOpenSections(sectionState);
+    setOpenSections({});
     setOpenPoints({});
   }, [isOpen]);
 
@@ -445,10 +425,9 @@ const ContentPageSetup = ({
       },
     ]);
 
-    // New section should be open
     setOpenSections((prev) => ({
       ...prev,
-      [newIndex]: true,
+      [newIndex]: false,
     }));
   };
 
@@ -521,12 +500,11 @@ const ContentPageSetup = ({
       ],
     }));
 
-    // New point should be open
     const pointKey = `${sectionIndex}-${newPointIndex}`;
 
     setOpenPoints((prev) => ({
       ...prev,
-      [pointKey]: true,
+      [pointKey]: false,
     }));
   };
 
@@ -846,7 +824,7 @@ const ContentPageSetup = ({
             {sections.length > 0 ? (
               <div className="space-y-5">
                 {sections.map((section, sectionIndex) => {
-                  const isSectionOpen = openSections[sectionIndex] !== false;
+                  const isSectionOpen = openSections[sectionIndex] === true;
 
                   return (
                     <div

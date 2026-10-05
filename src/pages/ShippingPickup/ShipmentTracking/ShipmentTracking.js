@@ -775,6 +775,8 @@ const ShipmentTracking = () => {
         onClose={() => setDetailModal(false)}
         title="Shipment Detail"
         isButtonView={false}
+        showCloseButton={true}
+        closeButtonText="Close"
       >
         <div className="space-y-4 text-sm">
           <section className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50/70">

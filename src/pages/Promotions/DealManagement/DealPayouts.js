@@ -17,6 +17,7 @@ import {
   SellerLink,
   StatusBadge,
 } from "../../../components/Shared";
+import { DateRangeFilter } from "../../../components/Shared/FilterBar";
 import {
   getDealPayouts,
   generateDealPayout,
@@ -61,8 +62,16 @@ const FILTER_FIELDS = [
     label: "Status",
     options: PAYOUT_STATUSES.map((v) => ({ value: v, label: formatLabel(v) })),
   },
-  { key: "fromDate", type: "date", label: "From" },
-  { key: "toDate", type: "date", label: "To" },
+  {
+    key: "dateRange",
+    type: "daterange",
+    label: "Date Range",
+    startKey: "fromDate",
+    endKey: "toDate",
+    disableFuture: true,
+    placeholder: "All date ranges",
+    width: "w-full",
+  },
 ];
 
 const unwrapList = (payload = {}) => {
@@ -357,74 +366,62 @@ const DealPayouts = () => {
       </DefaultModal>
 
       {/* Generate payouts modal */}
-      <DefaultModal
-        isOpen={showGenerate}
-        onClose={() => setShowGenerate(false)}
-        onSubmit={handleGenerate}
-        loading={generating}
-        title="Generate Deal Payouts"
-        submitButtonText="Generate Payouts"
-        closeButtonText="Cancel"
-      >
-        <div className="space-y-5">
-          {/* Payout Period */}
-          <FormSection
-            title="Payout Period"
-            subtitle="Select the date range for which you want to generate seller payouts."
-          >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormInput
-                label="From Date"
-                type="date"
-                value={generateForm.fromDate}
-                onChange={(e) =>
-                  setGenerateForm((prev) => ({
-                    ...prev,
-                    fromDate: e.target.value,
-                  }))
-                }
-              />
+<DefaultModal
+  isOpen={showGenerate}
+  onClose={() => setShowGenerate(false)}
+  onSubmit={handleGenerate}
+  loading={generating}
+  title="Generate Deal Payouts"
+  submitButtonText="Generate Payouts"
+  closeButtonText="Cancel"
+>
+  <div className="space-y-5">
+    <FormSection
+      title="Payout Details"
+      subtitle="Select the payout period and seller for which you want to generate payouts."
+    >
+      <div className="space-y-5">
+        {/* Payout Period */}
+        <DateRangeFilter
+          field={{
+            key: "dateRange",
+            type: "daterange",
+            label: "Date Range",
+            startKey: "fromDate",
+            endKey: "toDate",
+            disableFuture: true,
+            width: "w-full",
+            placeholder: "Select date range",
+          }}
+          values={generateForm}
+          onChange={(key, value) =>
+            setGenerateForm((prev) => ({ ...prev, [key]: value }))
+          }
+        />
 
-              <FormInput
-                label="To Date"
-                type="date"
-                value={generateForm.toDate}
-                onChange={(e) =>
-                  setGenerateForm((prev) => ({
-                    ...prev,
-                    toDate: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </FormSection>
-
-          {/* Seller Selection */}
-          <FormSection
-            title="Seller Selection"
-            subtitle="Choose a specific seller or leave it blank to generate payouts for all sellers."
-          >
-            <FilterSelect
-              label="Seller"
-              options={sellerOptions}
-              value={
-                sellerOptions.find(
-                  (option) => option.value === generateForm.sellerId,
-                ) || null
-              }
-              onChange={(option) =>
-                setGenerateForm((prev) => ({
-                  ...prev,
-                  sellerId: option?.value || "",
-                }))
-              }
-              placeholder="All Sellers"
-              isClearable
-              isSearchable
-            />
-          </FormSection>
-        </div>
-      </DefaultModal>
+        {/* Seller Selection */}
+        <FilterSelect
+          label="Seller"
+          options={sellerOptions}
+          value={
+            sellerOptions.find(
+              (option) => option.value === generateForm.sellerId,
+            ) || null
+          }
+          onChange={(option) =>
+            setGenerateForm((prev) => ({
+              ...prev,
+              sellerId: option?.value || "",
+            }))
+          }
+          placeholder="All Sellers"
+          isClearable
+          isSearchable
+        />
+      </div>
+    </FormSection>
+  </div>
+</DefaultModal>
       {/* Process payout */}
       <ConfirmModal
         isOpen={processConfirm.open}

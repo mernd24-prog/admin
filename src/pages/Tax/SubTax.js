@@ -155,13 +155,16 @@ const SubTax = () => {
     const errs = {};
     if (!formData.name?.trim()) errs.name = "Name is required";
     else if (formData.name.trim().length < 3) errs.name = "Min 3 characters";
-    if (!formData.percentage) errs.percentage = "Percentage is required";
-    else if (
-      isNaN(formData.percentage) ||
+    if (formData.percentage === "" || formData.percentage == null) {
+      errs.percentage = "Percentage is required";
+    } else if (!/^\d+(\.\d+)?$/.test(String(formData.percentage))) {
+      errs.percentage = "Only numbers are allowed";
+    } else if (
       Number(formData.percentage) < 0 ||
       Number(formData.percentage) > 100
-    )
-      errs.percentage = "Must be 0-100";
+    ) {
+      errs.percentage = "Must be between 0 and 100";
+    }
     if (!id && !formData.taxId) errs.taxId = "Parent tax is required";
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -377,6 +380,16 @@ const SubTax = () => {
                 type="number"
                 value={formData.percentage}
                 onChange={handleInputChange}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === "-" ||
+                    e.key === "e" ||
+                    e.key === "E" ||
+                    e.key === "+"
+                  ) {
+                    e.preventDefault();
+                  }
+                }}
                 error={errors.percentage}
                 placeholder="0-100"
                 min="0"
