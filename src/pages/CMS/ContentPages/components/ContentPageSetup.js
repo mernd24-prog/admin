@@ -785,589 +785,512 @@ const ContentPageSetup = ({
           </FormSection>
 
           {/* =========================================================
-              SECTIONS
-          ========================================================= */}
+                SECTIONS
+            ========================================================= */}
 
-          <div className="space-y-5">
-            {/* Section Toolbar */}
+          <FormSection
+            title="Content Sections"
+            subtitle="Add, edit, reorder, or remove sections from your page."
+          >
+            <div className="space-y-5">
+              {/* Section Toolbar */}
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-gray-800">
+                      Sections
+                    </p>
 
-            <div className="flex items-start justify-between gap-4 ">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-gray-800">
-                    Content Sections
+                    {sections.length > 0 && (
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">
+                        {sections.length}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-1 max-w-lg text-xs leading-5 text-gray-500">
+                    Add, edit, reorder, or remove sections from your page.
                   </p>
-
-                  {sections.length > 0 && (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">
-                      {sections.length}
-                    </span>
-                  )}
                 </div>
 
-                <p className="mt-1 max-w-lg text-xs leading-5 text-gray-500">
-                  Add, edit, reorder, or remove sections from your page.
-                </p>
+                <NewButton
+                  type="button"
+                  onClick={addSection}
+                  className="!w-auto whitespace-nowrap px-5"
+                >
+                  Add Section
+                </NewButton>
               </div>
 
-              <NewButton
-                type="button"
-                onClick={addSection}
-                className="!w-auto whitespace-nowrap px-5"
-              >
-                Add Section
-              </NewButton>
-            </div>
+              {/* Sections */}
+              {sections.length > 0 ? (
+                <div className="space-y-5">
+                  {sections.map((section, sectionIndex) => {
+                    const isSectionOpen = openSections[sectionIndex] === true;
 
-            {/* Sections */}
-
-            {sections.length > 0 ? (
-              <div className="space-y-5">
-                {sections.map((section, sectionIndex) => {
-                  const isSectionOpen = openSections[sectionIndex] === true;
-
-                  return (
-                    <div
-                      key={`section-${sectionIndex}`}
-                      className="overflow-hidden rounded-xl bg-white shadow-[0_4px_14px_rgba(0,0,0,0.07)]"
-                    >
-                      {/* =================================================
-                              SECTION HEADER
-                          ================================================= */}
-
+                    return (
                       <div
-                        className="flex cursor-pointer items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-gray-50"
-                        onClick={() => toggleSection(sectionIndex)}
+                        key={`section-${sectionIndex}`}
+                        className="overflow-hidden rounded-xl bg-white shadow-[0_4px_14px_rgba(0,0,0,0.07)]"
                       >
-                        <div className="flex min-w-0 items-center gap-3">
-                          {/* Arrow */}
-
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-
-                              toggleSection(sectionIndex);
-                            }}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
-                            aria-label={
-                              isSectionOpen
-                                ? "Collapse section"
-                                : "Expand section"
-                            }
-                          >
-                            {isSectionOpen ? (
-                              <FiChevronDown size={18} />
-                            ) : (
-                              <FiChevronRight size={18} />
-                            )}
-                          </button>
-
-                          {/* Section Number */}
-
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--admin-blue)]/10 text-xs font-bold text-[var(--admin-blue)]">
-                            {String(sectionIndex + 1).padStart(2, "0")}
-                          </div>
-
-                          {/* Section Info */}
-
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold leading-5 text-gray-800">
-                              Section {sectionIndex + 1}
-                            </p>
-
-                            <p className="mt-0.5 truncate text-xs leading-4 text-gray-500">
-                              {section.title ||
-                                section.type ||
-                                "Content section"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Right Side */}
-
+                        {/* Section Header */}
                         <div
-                          className="flex shrink-0 items-center gap-2"
-                          onClick={(e) => e.stopPropagation()}
+                          className="flex cursor-pointer items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-gray-50"
+                          onClick={() => toggleSection(sectionIndex)}
                         >
-                          <button
-                            type="button"
-                            onClick={() => removeSection(sectionIndex)}
-                            className="rounded-md px-2.5 py-1 text-xs font-medium leading-5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                          <div className="flex min-w-0 items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSection(sectionIndex);
+                              }}
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                              aria-label={
+                                isSectionOpen
+                                  ? "Collapse section"
+                                  : "Expand section"
+                              }
+                            >
+                              {isSectionOpen ? (
+                                <FiChevronDown size={18} />
+                              ) : (
+                                <FiChevronRight size={18} />
+                              )}
+                            </button>
+
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--admin-blue)]/10 text-xs font-bold text-[var(--admin-blue)]">
+                              {String(sectionIndex + 1).padStart(2, "0")}
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold leading-5 text-gray-800">
+                                Section {sectionIndex + 1}
+                              </p>
+
+                              <p className="mt-0.5 truncate text-xs leading-4 text-gray-500">
+                                {section.title ||
+                                  section.type ||
+                                  "Content section"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div
+                            className="flex shrink-0 items-center gap-2"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            Remove
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => removeSection(sectionIndex)}
+                              className="rounded-md px-2.5 py-1 text-xs font-medium leading-5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* =================================================
-                              SECTION BODY
-                          ================================================= */}
+                        {/* Section Body */}
+                        {isSectionOpen && (
+                          <div className="border-t border-gray-200 p-4">
+                            {/* Section Details */}
+                            <div>
+                              <div className="mb-4">
+                                <p className="text-sm font-semibold text-gray-800">
+                                  Section Details
+                                </p>
 
-                      {isSectionOpen && (
-                        <div className="border-t border-gray-200 p-4">
-                          {/* Section Details */}
+                                <p className="mt-0.5 text-xs leading-5 text-gray-500">
+                                  Configure the section type, title, order, and
+                                  image information.
+                                </p>
+                              </div>
 
-                          <div>
-                            <div className="mb-4">
-                              <p className="text-sm font-semibold text-gray-800">
-                                Section Details
-                              </p>
+                              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <FormInput
+                                  label="Section Type"
+                                  value={section.type || ""}
+                                  onChange={(e) =>
+                                    updateSection(sectionIndex, (item) => ({
+                                      ...item,
+                                      type: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="hero / feature_grid / faq"
+                                />
 
-                              <p className="mt-0.5 text-xs leading-5 text-gray-500">
-                                Configure the section type, title, order, and
-                                image information.
-                              </p>
+                                <FormInput
+                                  label="Sort Order"
+                                  type="number"
+                                  value={section.sortOrder || 0}
+                                  onChange={(e) =>
+                                    updateSection(sectionIndex, (item) => ({
+                                      ...item,
+                                      sortOrder: Number(e.target.value || 0),
+                                    }))
+                                  }
+                                  placeholder="0"
+                                />
+
+                                <FormInput
+                                  label="Section Title"
+                                  value={section.title || ""}
+                                  onChange={(e) =>
+                                    updateSection(sectionIndex, (item) => ({
+                                      ...item,
+                                      title: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="Our Story"
+                                />
+
+                                <FormInput
+                                  label="Section Image URL"
+                                  value={section.image?.url || ""}
+                                  onChange={(e) =>
+                                    updateSection(sectionIndex, (item) => ({
+                                      ...item,
+                                      image: {
+                                        ...(item.image || emptyImage),
+                                        url: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                  placeholder="https://example.com/section.jpg"
+                                />
+
+                                <FormInput
+                                  label="Section Image Alt"
+                                  value={section.image?.alt || ""}
+                                  onChange={(e) =>
+                                    updateSection(sectionIndex, (item) => ({
+                                      ...item,
+                                      image: {
+                                        ...(item.image || emptyImage),
+                                        alt: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                  placeholder="Section image alt"
+                                />
+
+                                <FormInput
+                                  label="Section Gallery URLs"
+                                  value={(section.gallery || [])
+                                    .map((item) => item.url)
+                                    .join(", ")}
+                                  onChange={(e) =>
+                                    updateSection(sectionIndex, (item) => ({
+                                      ...item,
+                                      gallery: fromCsv(e.target.value).map(
+                                        (url) => ({
+                                          url,
+                                          alt: item.title || "",
+                                        }),
+                                      ),
+                                    }))
+                                  }
+                                  placeholder="url1, url2"
+                                />
+                              </div>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                              <FormInput
-                                label="Section Type"
-                                value={section.type || ""}
-                                onChange={(e) =>
-                                  updateSection(sectionIndex, (item) => ({
-                                    ...item,
-                                    type: e.target.value,
-                                  }))
-                                }
-                                placeholder="hero / feature_grid / faq"
-                              />
+                            {/* Section Image */}
+                            <div className="mt-5 border-t border-gray-200 pt-5">
+                              <div className="mb-4">
+                                <p className="text-sm font-semibold text-gray-800">
+                                  Section Image
+                                </p>
 
-                              <FormInput
-                                label="Sort Order"
-                                type="number"
-                                value={section.sortOrder || 0}
-                                onChange={(e) =>
-                                  updateSection(sectionIndex, (item) => ({
-                                    ...item,
-                                    sortOrder: Number(e.target.value || 0),
-                                  }))
-                                }
-                                placeholder="0"
-                              />
+                                <p className="mt-0.5 text-xs leading-5 text-gray-500">
+                                  Upload an image to visually support this
+                                  section.
+                                </p>
+                              </div>
 
-                              <FormInput
-                                label="Section Title"
-                                value={section.title || ""}
-                                onChange={(e) =>
-                                  updateSection(sectionIndex, (item) => ({
-                                    ...item,
-                                    title: e.target.value,
-                                  }))
-                                }
-                                placeholder="Our Story"
-                              />
-
-                              <FormInput
-                                label="Section Image URL"
-                                value={section.image?.url || ""}
-                                onChange={(e) =>
-                                  updateSection(sectionIndex, (item) => ({
-                                    ...item,
-                                    image: {
-                                      ...(item.image || emptyImage),
-                                      url: e.target.value,
-                                    },
-                                  }))
-                                }
-                                placeholder="https://example.com/section.jpg"
-                              />
-
-                              <FormInput
-                                label="Section Image Alt"
-                                value={section.image?.alt || ""}
-                                onChange={(e) =>
-                                  updateSection(sectionIndex, (item) => ({
-                                    ...item,
-                                    image: {
-                                      ...(item.image || emptyImage),
-                                      alt: e.target.value,
-                                    },
-                                  }))
-                                }
-                                placeholder="Section image alt"
-                              />
-
-                              <FormInput
-                                label="Section Gallery URLs"
-                                value={(section.gallery || [])
-                                  .map((item) => item.url)
-                                  .join(", ")}
-                                onChange={(e) =>
-                                  updateSection(sectionIndex, (item) => ({
-                                    ...item,
-                                    gallery: fromCsv(e.target.value).map(
-                                      (url) => ({
+                              <ImageUpload
+                                id={`cms-section-image-${sectionIndex}`}
+                                label=""
+                                file={section.image?.url || ""}
+                                onChange={(file) =>
+                                  uploadCmsImage(file, (url) =>
+                                    updateSection(sectionIndex, (item) => ({
+                                      ...item,
+                                      image: {
+                                        ...(item.image || emptyImage),
                                         url,
-                                        alt: item.title || "",
-                                      }),
-                                    ),
-                                  }))
+                                      },
+                                    })),
+                                  )
                                 }
-                                placeholder="url1, url2"
                               />
                             </div>
-                          </div>
 
-                          {/* Section Image */}
+                            {/* Section Content */}
+                            <div className="mt-5 border-t border-gray-200 pt-5">
+                              <div className="mb-4">
+                                <p className="text-sm font-semibold text-gray-800">
+                                  Section Description
+                                </p>
 
-                          <div className="mt-5 border-t border-gray-200 pt-5">
-                            <div className="mb-4">
-                              <p className="text-sm font-semibold text-gray-800">
-                                Section Image
-                              </p>
-
-                              <p className="mt-0.5 text-xs leading-5 text-gray-500">
-                                Upload an image to visually support this
-                                section.
-                              </p>
-                            </div>
-
-                            <ImageUpload
-                              id={`cms-section-image-${sectionIndex}`}
-                              label=""
-                              file={section.image?.url || ""}
-                              onChange={(file) =>
-                                uploadCmsImage(file, (url) =>
-                                  updateSection(sectionIndex, (item) => ({
-                                    ...item,
-                                    image: {
-                                      ...(item.image || emptyImage),
-                                      url,
-                                    },
-                                  })),
-                                )
-                              }
-                            />
-                          </div>
-
-                          {/* Section Content */}
-
-                          <div className="mt-5 border-t border-gray-200 pt-5">
-                            <div className="mb-4">
-                              <p className="text-sm font-semibold text-gray-800">
-                                Section Description{" "}
-                              </p>
-
-                              <p className="mt-0.5 text-xs leading-5 text-gray-500">
-                                Add the main description or supporting content
-                                for this section.
-                              </p>
-                            </div>
-
-                            <FormInput
-                              value={section.description || ""}
-                              onChange={(e) =>
-                                updateSection(sectionIndex, (item) => ({
-                                  ...item,
-                                  description: e.target.value,
-                                }))
-                              }
-                              placeholder="Write a short description for this section..."
-                              type="textarea"
-                            />
-                          </div>
-
-                          {/* Section CTA */}
-
-                          <div className="mt-5 border-t border-gray-200 pt-5">
-                            <div className="mb-4">
-                              <p className="text-sm font-semibold text-gray-800">
-                                Section CTA
-                              </p>
-
-                              <p className="mt-0.5 text-xs leading-5 text-gray-500">
-                                Add an optional call-to-action for this section.
-                              </p>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                              <FormInput
-                                label="CTA Label"
-                                value={section.cta?.label || ""}
-                                onChange={(e) =>
-                                  updateSection(sectionIndex, (item) => ({
-                                    ...item,
-                                    cta: {
-                                      ...(item.cta || emptyCta),
-                                      label: e.target.value,
-                                    },
-                                  }))
-                                }
-                                placeholder="Shop Now"
-                              />
-
-                              <FormInput
-                                label="CTA URL"
-                                value={section.cta?.url || ""}
-                                onChange={(e) =>
-                                  updateSection(sectionIndex, (item) => ({
-                                    ...item,
-                                    cta: {
-                                      ...(item.cta || emptyCta),
-                                      url: e.target.value,
-                                    },
-                                  }))
-                                }
-                                placeholder="/products"
-                              />
-
-                              <FormInput
-                                label="CTA Target"
-                                value={section.cta?.target || "_self"}
-                                onChange={(e) =>
-                                  updateSection(sectionIndex, (item) => ({
-                                    ...item,
-                                    cta: {
-                                      ...(item.cta || emptyCta),
-                                      target: e.target.value,
-                                    },
-                                  }))
-                                }
-                                placeholder="_self"
-                              />
-                            </div>
-                          </div>
-
-                          {/* =================================================
-                                  CONTENT POINTS
-                              ================================================= */}
-
-                          <div className="mt-5 border-t border-gray-200 pt-5">
-                            {/* Points Header */}
-
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-semibold text-gray-800">
-                                    Content Points
-                                  </p>
-
-                                  {(section.points || []).length > 0 && (
-                                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">
-                                      {section.points.length}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <p className="mt-1 max-w-lg text-xs leading-5 text-gray-500">
-                                  Add individual features or supporting content
+                                <p className="mt-0.5 text-xs leading-5 text-gray-500">
+                                  Add the main description or supporting content
                                   for this section.
                                 </p>
                               </div>
 
-                              <button
-                                type="button"
-                                onClick={() => addPoint(sectionIndex)}
-                                className="shrink-0 rounded-md px-3 py-1.5 text-xs font-medium text-[var(--admin-blue)] transition-colors hover:bg-[var(--admin-blue)]/10"
-                              >
-                                Add Point
-                              </button>
+                              <FormInput
+                                value={section.description || ""}
+                                onChange={(e) =>
+                                  updateSection(sectionIndex, (item) => ({
+                                    ...item,
+                                    description: e.target.value,
+                                  }))
+                                }
+                                placeholder="Write a short description for this section..."
+                                type="textarea"
+                              />
                             </div>
 
-                            {/* Points List */}
+                            {/* Section CTA */}
+                            <div className="mt-5 border-t border-gray-200 pt-5">
+                              <div className="mb-4">
+                                <p className="text-sm font-semibold text-gray-800">
+                                  Section CTA
+                                </p>
 
-                            <div className="mt-5">
-                              {(section.points || []).length > 0 ? (
-                                <div className="space-y-4">
-                                  {section.points.map((point, pointIndex) => {
-                                    const pointKey = `${sectionIndex}-${pointIndex}`;
+                                <p className="mt-0.5 text-xs leading-5 text-gray-500">
+                                  Add an optional call-to-action for this
+                                  section.
+                                </p>
+                              </div>
 
-                                    const isPointOpen =
-                                      openPoints[pointKey] !== false;
+                              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                <FormInput
+                                  label="CTA Label"
+                                  value={section.cta?.label || ""}
+                                  onChange={(e) =>
+                                    updateSection(sectionIndex, (item) => ({
+                                      ...item,
+                                      cta: {
+                                        ...(item.cta || emptyCta),
+                                        label: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                  placeholder="Shop Now"
+                                />
 
-                                    return (
-                                      <div
-                                        key={`point-${sectionIndex}-${pointIndex}`}
-                                        className="overflow-hidden rounded-xl bg-white shadow-[0_3px_12px_rgba(0,0,0,0.06)]"
-                                      >
-                                        {/* =================================================
+                                <FormInput
+                                  label="CTA URL"
+                                  value={section.cta?.url || ""}
+                                  onChange={(e) =>
+                                    updateSection(sectionIndex, (item) => ({
+                                      ...item,
+                                      cta: {
+                                        ...(item.cta || emptyCta),
+                                        url: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                  placeholder="/products"
+                                />
+
+                                <FormInput
+                                  label="CTA Target"
+                                  value={section.cta?.target || "_self"}
+                                  onChange={(e) =>
+                                    updateSection(sectionIndex, (item) => ({
+                                      ...item,
+                                      cta: {
+                                        ...(item.cta || emptyCta),
+                                        target: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                  placeholder="_self"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Content Points */}
+                            <div className="mt-5 border-t border-gray-200 pt-5">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-semibold text-gray-800">
+                                      Content Points
+                                    </p>
+
+                                    {(section.points || []).length > 0 && (
+                                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">
+                                        {section.points.length}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <p className="mt-1 max-w-lg text-xs leading-5 text-gray-500">
+                                    Add individual features or supporting
+                                    content for this section.
+                                  </p>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => addPoint(sectionIndex)}
+                                  className="shrink-0 rounded-md px-3 py-1.5 text-xs font-medium text-[var(--admin-blue)] transition-colors hover:bg-[var(--admin-blue)]/10"
+                                >
+                                  Add Point
+                                </button>
+                              </div>
+
+                              {/* Points List */}
+
+                              <div className="mt-5">
+                                {(section.points || []).length > 0 ? (
+                                  <div className="space-y-4">
+                                    {section.points.map((point, pointIndex) => {
+                                      const pointKey = `${sectionIndex}-${pointIndex}`;
+
+                                      const isPointOpen =
+                                        openPoints[pointKey] === true;
+
+                                      return (
+                                        <div
+                                          key={`point-${sectionIndex}-${pointIndex}`}
+                                          className="overflow-hidden rounded-xl bg-white shadow-[0_3px_12px_rgba(0,0,0,0.06)]"
+                                        >
+                                          {/* =================================================
                                                   POINT HEADER
                                               ================================================= */}
 
-                                        <div
-                                          className="flex cursor-pointer items-center justify-between gap-3 bg-gray-50/80 px-4 py-3 transition-colors hover:bg-gray-100"
-                                          onClick={() =>
-                                            togglePoint(
-                                              sectionIndex,
-                                              pointIndex,
-                                            )
-                                          }
-                                        >
-                                          <div className="flex min-w-0 items-center gap-3">
-                                            {/* Point Arrow */}
-
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-
-                                                togglePoint(
-                                                  sectionIndex,
-                                                  pointIndex,
-                                                );
-                                              }}
-                                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-200 hover:text-gray-700"
-                                              aria-label={
-                                                isPointOpen
-                                                  ? "Collapse point"
-                                                  : "Expand point"
-                                              }
-                                            >
-                                              {isPointOpen ? (
-                                                <FiChevronDown size={17} />
-                                              ) : (
-                                                <FiChevronRight size={17} />
-                                              )}
-                                            </button>
-
-                                            {/* Number */}
-
-                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--admin-blue)]/10 text-xs font-bold leading-none text-[var(--admin-blue)]">
-                                              {String(pointIndex + 1).padStart(
-                                                2,
-                                                "0",
-                                              )}
-                                            </div>
-
-                                            {/* Info */}
-
-                                            <div className="min-w-0">
-                                              <p className="text-sm font-semibold leading-5 text-gray-800">
-                                                Point {pointIndex + 1}
-                                              </p>
-
-                                              <p className="truncate text-xs leading-4 text-gray-500">
-                                                {point.title ||
-                                                  "Supporting content"}
-                                              </p>
-                                            </div>
-                                          </div>
-
                                           <div
-                                            className="flex shrink-0 items-center gap-2"
-                                            onClick={(e) => e.stopPropagation()}
+                                            className="flex cursor-pointer items-center justify-between gap-3 bg-gray-50/80 px-4 py-3 transition-colors hover:bg-gray-100"
+                                            onClick={() =>
+                                              togglePoint(
+                                                sectionIndex,
+                                                pointIndex,
+                                              )
+                                            }
                                           >
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                removePoint(
-                                                  sectionIndex,
-                                                  pointIndex,
-                                                )
-                                              }
-                                              className="px-2 py-1 text-xs font-medium leading-5 text-red-500 transition-colors hover:text-red-600"
-                                            >
-                                              Remove
-                                            </button>
-                                          </div>
-                                        </div>
+                                            <div className="flex min-w-0 items-center gap-3">
+                                              {/* Point Arrow */}
 
-                                        {/* =================================================
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+
+                                                  togglePoint(
+                                                    sectionIndex,
+                                                    pointIndex,
+                                                  );
+                                                }}
+                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+                                                aria-label={
+                                                  isPointOpen
+                                                    ? "Collapse point"
+                                                    : "Expand point"
+                                                }
+                                              >
+                                                {isPointOpen ? (
+                                                  <FiChevronDown size={17} />
+                                                ) : (
+                                                  <FiChevronRight size={17} />
+                                                )}
+                                              </button>
+
+                                              {/* Number */}
+
+                                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--admin-blue)]/10 text-xs font-bold leading-none text-[var(--admin-blue)]">
+                                                {String(
+                                                  pointIndex + 1,
+                                                ).padStart(2, "0")}
+                                              </div>
+
+                                              {/* Info */}
+
+                                              <div className="min-w-0">
+                                                <p className="text-sm font-semibold leading-5 text-gray-800">
+                                                  Point {pointIndex + 1}
+                                                </p>
+
+                                                <p className="truncate text-xs leading-4 text-gray-500">
+                                                  {point.title ||
+                                                    "Supporting content"}
+                                                </p>
+                                              </div>
+                                            </div>
+
+                                            <div
+                                              className="flex shrink-0 items-center gap-2"
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                            >
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  removePoint(
+                                                    sectionIndex,
+                                                    pointIndex,
+                                                  )
+                                                }
+                                                className="px-2 py-1 text-xs font-medium leading-5 text-red-500 transition-colors hover:text-red-600"
+                                              >
+                                                Remove
+                                              </button>
+                                            </div>
+                                          </div>
+
+                                          {/* =================================================
                                                   POINT CONTENT
                                               ================================================= */}
 
-                                        {isPointOpen && (
-                                          <div className="space-y-4 border-t border-gray-200 p-4">
-                                            {/* Point Fields */}
+                                          {isPointOpen && (
+                                            <div className="space-y-4 border-t border-gray-200 p-4">
+                                              {/* Point Fields */}
 
-                                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                              <FormInput
-                                                label="Point Title"
-                                                value={point.title || ""}
-                                                onChange={(e) =>
-                                                  updatePoint(
-                                                    sectionIndex,
-                                                    pointIndex,
-                                                    (item) => ({
-                                                      ...item,
-                                                      title: e.target.value,
-                                                    }),
-                                                  )
-                                                }
-                                                placeholder="Fast Delivery"
-                                              />
+                                              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                <FormInput
+                                                  label="Point Title"
+                                                  value={point.title || ""}
+                                                  onChange={(e) =>
+                                                    updatePoint(
+                                                      sectionIndex,
+                                                      pointIndex,
+                                                      (item) => ({
+                                                        ...item,
+                                                        title: e.target.value,
+                                                      }),
+                                                    )
+                                                  }
+                                                  placeholder="Fast Delivery"
+                                                />
 
-                                              <FormInput
-                                                label="Point Sort Order"
-                                                type="number"
-                                                value={point.sortOrder ?? 0}
-                                                onChange={(e) =>
-                                                  updatePoint(
-                                                    sectionIndex,
-                                                    pointIndex,
-                                                    (item) => ({
-                                                      ...item,
-                                                      sortOrder: Number(
-                                                        e.target.value || 0,
-                                                      ),
-                                                    }),
-                                                  )
-                                                }
-                                                placeholder="0"
-                                              />
+                                                <FormInput
+                                                  label="Point Sort Order"
+                                                  type="number"
+                                                  value={point.sortOrder ?? 0}
+                                                  onChange={(e) =>
+                                                    updatePoint(
+                                                      sectionIndex,
+                                                      pointIndex,
+                                                      (item) => ({
+                                                        ...item,
+                                                        sortOrder: Number(
+                                                          e.target.value || 0,
+                                                        ),
+                                                      }),
+                                                    )
+                                                  }
+                                                  placeholder="0"
+                                                />
 
-                                              <FormInput
-                                                label="Point Image URL"
-                                                value={point.image?.url || ""}
-                                                onChange={(e) =>
-                                                  updatePoint(
-                                                    sectionIndex,
-                                                    pointIndex,
-                                                    (item) => ({
-                                                      ...item,
-                                                      image: {
-                                                        ...(item.image ||
-                                                          emptyImage),
-                                                        url: e.target.value,
-                                                      },
-                                                    }),
-                                                  )
-                                                }
-                                                placeholder="https://example.com/icon.png"
-                                              />
-
-                                              <FormInput
-                                                label="Point Image Alt"
-                                                value={point.image?.alt || ""}
-                                                onChange={(e) =>
-                                                  updatePoint(
-                                                    sectionIndex,
-                                                    pointIndex,
-                                                    (item) => ({
-                                                      ...item,
-                                                      image: {
-                                                        ...(item.image ||
-                                                          emptyImage),
-                                                        alt: e.target.value,
-                                                      },
-                                                    }),
-                                                  )
-                                                }
-                                                placeholder="Fast delivery icon"
-                                              />
-                                            </div>
-
-                                            {/* Point Image */}
-
-                                            <div className="pt-2">
-                                              <div className="mb-3">
-                                                <p className="text-xs font-semibold text-gray-700">
-                                                  Point Image
-                                                </p>
-
-                                                <p className="mt-0.5 text-xs text-gray-500">
-                                                  Upload an image to represent
-                                                  this point.
-                                                </p>
-                                              </div>
-
-                                              <ImageUpload
-                                                id={`cms-point-image-${sectionIndex}-${pointIndex}`}
-                                                label="Point Image"
-                                                file={point.image?.url || ""}
-                                                onChange={(file) =>
-                                                  uploadCmsImage(file, (url) =>
+                                                <FormInput
+                                                  label="Point Image URL"
+                                                  value={point.image?.url || ""}
+                                                  onChange={(e) =>
                                                     updatePoint(
                                                       sectionIndex,
                                                       pointIndex,
@@ -1376,111 +1299,95 @@ const ContentPageSetup = ({
                                                         image: {
                                                           ...(item.image ||
                                                             emptyImage),
-                                                          url,
-                                                        },
-                                                      }),
-                                                    ),
-                                                  )
-                                                }
-                                                onRemove={() =>
-                                                  updatePoint(
-                                                    sectionIndex,
-                                                    pointIndex,
-                                                    (item) => ({
-                                                      ...item,
-                                                      image: {
-                                                        ...(item.image ||
-                                                          emptyImage),
-                                                        url: "",
-                                                      },
-                                                    }),
-                                                  )
-                                                }
-                                              />
-                                            </div>
-
-                                            {/* Point Description */}
-
-                                            <div className="pt-2">
-                                              <FormInput
-                                                label="Point Description"
-                                                value={point.description || ""}
-                                                onChange={(e) =>
-                                                  updatePoint(
-                                                    sectionIndex,
-                                                    pointIndex,
-                                                    (item) => ({
-                                                      ...item,
-                                                      description:
-                                                        e.target.value,
-                                                    }),
-                                                  )
-                                                }
-                                                placeholder="Describe this point..."
-                                                type="textarea"
-                                              />
-                                            </div>
-
-                                            {/* Point CTA */}
-
-                                            <div className="mt-5 border-t border-gray-200 pt-5">
-                                              <div className="mb-4">
-                                                <p className="text-sm font-semibold text-gray-800">
-                                                  Point CTA
-                                                </p>
-
-                                                <p className="mt-1 text-xs leading-5 text-gray-500">
-                                                  Configure the optional
-                                                  call-to-action for this
-                                                  content point.
-                                                </p>
-                                              </div>
-
-                                              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                                <FormInput
-                                                  label="CTA Label"
-                                                  value={point.cta?.label || ""}
-                                                  onChange={(e) =>
-                                                    updatePoint(
-                                                      sectionIndex,
-                                                      pointIndex,
-                                                      (item) => ({
-                                                        ...item,
-                                                        cta: {
-                                                          ...(item.cta ||
-                                                            emptyCta),
-                                                          label: e.target.value,
-                                                        },
-                                                      }),
-                                                    )
-                                                  }
-                                                  placeholder="Shop Now"
-                                                />
-
-                                                <FormInput
-                                                  label="CTA URL"
-                                                  value={point.cta?.url || ""}
-                                                  onChange={(e) =>
-                                                    updatePoint(
-                                                      sectionIndex,
-                                                      pointIndex,
-                                                      (item) => ({
-                                                        ...item,
-                                                        cta: {
-                                                          ...(item.cta ||
-                                                            emptyCta),
                                                           url: e.target.value,
                                                         },
                                                       }),
                                                     )
                                                   }
-                                                  placeholder="/products"
+                                                  placeholder="https://example.com/icon.png"
                                                 />
 
                                                 <FormInput
-                                                  label="CTA Target"
+                                                  label="Point Image Alt"
+                                                  value={point.image?.alt || ""}
+                                                  onChange={(e) =>
+                                                    updatePoint(
+                                                      sectionIndex,
+                                                      pointIndex,
+                                                      (item) => ({
+                                                        ...item,
+                                                        image: {
+                                                          ...(item.image ||
+                                                            emptyImage),
+                                                          alt: e.target.value,
+                                                        },
+                                                      }),
+                                                    )
+                                                  }
+                                                  placeholder="Fast delivery icon"
+                                                />
+                                              </div>
+
+                                              {/* Point Image */}
+
+                                              <div className="pt-2">
+                                                <div className="mb-3">
+                                                  <p className="text-xs font-semibold text-gray-700">
+                                                    Point Image
+                                                  </p>
+
+                                                  <p className="mt-0.5 text-xs text-gray-500">
+                                                    Upload an image to represent
+                                                    this point.
+                                                  </p>
+                                                </div>
+
+                                                <ImageUpload
+                                                  id={`cms-point-image-${sectionIndex}-${pointIndex}`}
+                                                  label="Point Image"
+                                                  file={point.image?.url || ""}
+                                                  onChange={(file) =>
+                                                    uploadCmsImage(
+                                                      file,
+                                                      (url) =>
+                                                        updatePoint(
+                                                          sectionIndex,
+                                                          pointIndex,
+                                                          (item) => ({
+                                                            ...item,
+                                                            image: {
+                                                              ...(item.image ||
+                                                                emptyImage),
+                                                              url,
+                                                            },
+                                                          }),
+                                                        ),
+                                                    )
+                                                  }
+                                                  onRemove={() =>
+                                                    updatePoint(
+                                                      sectionIndex,
+                                                      pointIndex,
+                                                      (item) => ({
+                                                        ...item,
+                                                        image: {
+                                                          ...(item.image ||
+                                                            emptyImage),
+                                                          url: "",
+                                                        },
+                                                      }),
+                                                    )
+                                                  }
+                                                />
+                                              </div>
+
+                                              {/* Point Description */}
+
+                                              <div className="pt-2">
+                                                <FormInput
+                                                  label="Point Description"
                                                   value={
-                                                    point.cta?.target || "_self"
+                                                    point.description || ""
                                                   }
                                                   onChange={(e) =>
                                                     updatePoint(
@@ -1488,79 +1395,160 @@ const ContentPageSetup = ({
                                                       pointIndex,
                                                       (item) => ({
                                                         ...item,
-                                                        cta: {
-                                                          ...(item.cta ||
-                                                            emptyCta),
-                                                          target:
-                                                            e.target.value,
-                                                        },
+                                                        description:
+                                                          e.target.value,
                                                       }),
                                                     )
                                                   }
-                                                  placeholder="_self"
+                                                  placeholder="Describe this point..."
+                                                  type="textarea"
                                                 />
                                               </div>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              ) : (
-                                <div className="rounded-xl bg-gray-50/70 px-5 py-6 text-center">
-                                  <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100">
-                                    <span className="text-sm font-semibold text-gray-400">
-                                      +
-                                    </span>
-                                  </div>
 
-                                  <p className="mt-3 text-sm font-medium text-gray-700">
-                                    No points added yet
-                                  </p>
-                                </div>
-                              )}
+                                              {/* Point CTA */}
+
+                                              <div className="mt-5 border-t border-gray-200 pt-5">
+                                                <div className="mb-4">
+                                                  <p className="text-sm font-semibold text-gray-800">
+                                                    Point CTA
+                                                  </p>
+
+                                                  <p className="mt-1 text-xs leading-5 text-gray-500">
+                                                    Configure the optional
+                                                    call-to-action for this
+                                                    content point.
+                                                  </p>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                                  <FormInput
+                                                    label="CTA Label"
+                                                    value={
+                                                      point.cta?.label || ""
+                                                    }
+                                                    onChange={(e) =>
+                                                      updatePoint(
+                                                        sectionIndex,
+                                                        pointIndex,
+                                                        (item) => ({
+                                                          ...item,
+                                                          cta: {
+                                                            ...(item.cta ||
+                                                              emptyCta),
+                                                            label:
+                                                              e.target.value,
+                                                          },
+                                                        }),
+                                                      )
+                                                    }
+                                                    placeholder="Shop Now"
+                                                  />
+
+                                                  <FormInput
+                                                    label="CTA URL"
+                                                    value={point.cta?.url || ""}
+                                                    onChange={(e) =>
+                                                      updatePoint(
+                                                        sectionIndex,
+                                                        pointIndex,
+                                                        (item) => ({
+                                                          ...item,
+                                                          cta: {
+                                                            ...(item.cta ||
+                                                              emptyCta),
+                                                            url: e.target.value,
+                                                          },
+                                                        }),
+                                                      )
+                                                    }
+                                                    placeholder="/products"
+                                                  />
+
+                                                  <FormInput
+                                                    label="CTA Target"
+                                                    value={
+                                                      point.cta?.target ||
+                                                      "_self"
+                                                    }
+                                                    onChange={(e) =>
+                                                      updatePoint(
+                                                        sectionIndex,
+                                                        pointIndex,
+                                                        (item) => ({
+                                                          ...item,
+                                                          cta: {
+                                                            ...(item.cta ||
+                                                              emptyCta),
+                                                            target:
+                                                              e.target.value,
+                                                          },
+                                                        }),
+                                                      )
+                                                    }
+                                                    placeholder="_self"
+                                                  />
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <div className="rounded-xl bg-gray-50/70 px-5 py-6 text-center">
+                                    <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100">
+                                      <span className="text-sm font-semibold text-gray-400">
+                                        +
+                                      </span>
+                                    </div>
+
+                                    <p className="mt-3 text-sm font-medium text-gray-700">
+                                      No points added yet
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-xl bg-gray-50/70 px-6 py-10 text-center">
-                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--admin-blue)]/10">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-[var(--admin-blue)]"
-                  >
-                    <path d="M12 5v14" />
-                    <path d="M5 12h14" />
-                  </svg>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+              ) : (
+                <div className="rounded-xl bg-gray-50/70 px-6 py-10 text-center">
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--admin-blue)]/10">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-[var(--admin-blue)]"
+                    >
+                      <path d="M12 5v14" />
+                      <path d="M5 12h14" />
+                    </svg>
+                  </div>
 
-                <p className="mt-4 text-sm font-semibold text-gray-800">
-                  No sections added yet
-                </p>
+                  <p className="mt-4 text-sm font-semibold text-gray-800">
+                    No sections added yet
+                  </p>
 
-                <p className="mx-auto mt-1.5 max-w-md text-xs leading-5 text-gray-500">
-                  Use the <span className="font-medium">Add Section</span>{" "}
-                  button above to start building your page with content, images,
-                  CTAs, and supporting points.
-                </p>
-              </div>
-            )}
-          </div>
-
+                  <p className="mx-auto mt-1.5 max-w-md text-xs leading-5 text-gray-500">
+                    Use the <span className="font-medium">Add Section</span>{" "}
+                    button above to start building your page with content,
+                    images, CTAs, and supporting points.
+                  </p>
+                </div>
+              )}
+            </div>
+          </FormSection>
           {/* =========================================================
               BODY CONTENT
           ========================================================= */}
@@ -2018,4 +2006,3 @@ const ContentPageSetup = ({
 };
 
 export default ContentPageSetup;
-  
