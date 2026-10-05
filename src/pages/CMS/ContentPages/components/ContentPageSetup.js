@@ -736,6 +736,7 @@ const ContentPageSetup = ({
               <ImageUpload
                 id="cms-main-image"
                 label="Main Image"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/svg+xml,.svg"
                 file={form.image?.url || ""}
                 onChange={(file) =>
                   uploadCmsImage(file, (url) => setNested("image", "url", url))
