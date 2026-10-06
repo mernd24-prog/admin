@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormik } from "formik";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -20,7 +21,6 @@ import {
 } from "../../components/Shared";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../_helpers/usePermission";
-import ToggleButton from "../../components/Atoms/ToggleButton/ToggleButton";
 import { useListPage } from "../../hooks/useListPage";
 import {
   createSubTax,
@@ -35,6 +35,7 @@ import FormSection from "../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
 import FormToggleRow from "../../components/Atoms/FormToggleRow/FormToggleRow";
+import { subTaxValidationSchema } from "../../_helpers/validationSchemas";
 
 const FILTER_FIELDS = [
   {
@@ -98,13 +99,56 @@ const SubTax = () => {
 
   const [isRefresh, setIsRefresh] = useState(false);
   const [modalMode, setModalMode] = useState(null);
-  const [formData, setFormData] = useState({ ...EMPTY_FORM, taxId: id || "" });
-  const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [toggleTarget, setToggleTarget] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const initialFormValues = useMemo(
+    () => ({ ...EMPTY_FORM, taxId: id || "" }),
+    [id],
+  );
+
+  const formik = useFormik({
+    initialValues: initialFormValues,
+    validationSchema: subTaxValidationSchema,
+    onSubmit: async (values) => {
+      setSaving(true);
+      const payload = {
+        name: values.name.trim(),
+        percentage: values.percentage,
+        taxId: id || values.taxId,
+        isDisable: values.isDisable,
+      };
+      try {
+        const res =
+          modalMode === "edit"
+            ? await dispatch(
+                updateSubTax({ ...payload, _id: values._id }),
+              ).unwrap()
+            : await dispatch(createSubTax(payload)).unwrap();
+        if (res?.error) {
+          toast.error(res.error);
+          return;
+        }
+        toast.success(
+          res?.message ||
+            `Sub-tax ${modalMode === "edit" ? "updated" : "created"}`,
+        );
+        closeModal();
+        setIsRefresh((r) => !r);
+      } catch (err) {
+        toast.error(err?.message || "Save failed");
+      } finally {
+        setSaving(false);
+      }
+    },
+  });
+
+  useEffect(() => {
+    formik.resetForm({ values: initialFormValues });
+  }, [formik.resetForm, initialFormValues]);
 
   const selector = useSelector((state) => state.cms);
   const taxList = selector?.getTaxListData?.data?.data?.list || [];
@@ -145,71 +189,9 @@ const SubTax = () => {
     );
   }, [list.page, list.pageSize, list.search, list.filters, isRefresh, id]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
-  };
-
-  const validateForm = () => {
-    const errs = {};
-    if (!formData.name?.trim()) errs.name = "Name is required";
-    else if (formData.name.trim().length < 3) errs.name = "Min 3 characters";
-    if (formData.percentage === "" || formData.percentage == null) {
-      errs.percentage = "Percentage is required";
-    } else if (!/^\d+(\.\d+)?$/.test(String(formData.percentage))) {
-      errs.percentage = "Only numbers are allowed";
-    } else if (
-      Number(formData.percentage) < 0 ||
-      Number(formData.percentage) > 100
-    ) {
-      errs.percentage = "Must be between 0 and 100";
-    }
-    if (!id && !formData.taxId) errs.taxId = "Parent tax is required";
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
   const closeModal = () => {
     setModalMode(null);
-    setFormData({ ...EMPTY_FORM, taxId: id || "" });
-    setErrors({});
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    setSaving(true);
-    const payload = {
-      name: formData.name.trim(),
-      percentage: formData.percentage,
-      taxId: id || formData.taxId,
-      isDisable: formData.isDisable,
-    };
-    try {
-      let res;
-      if (modalMode === "edit") {
-        res = await dispatch(
-          updateSubTax({ ...payload, _id: formData._id }),
-        ).unwrap();
-      } else {
-        res = await dispatch(createSubTax(payload)).unwrap();
-      }
-      if (res?.error) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success(
-        res?.message ||
-          `Sub-tax ${modalMode === "edit" ? "updated" : "created"}`,
-      );
-      closeModal();
-      setIsRefresh((r) => !r);
-    } catch (err) {
-      toast.error(err?.message || "Save failed");
-    } finally {
-      setSaving(false);
-    }
+    formik.resetForm({ values: { ...EMPTY_FORM, taxId: id || "" } });
   };
 
   const handleDeleteConfirm = async () => {
@@ -251,7 +233,7 @@ const SubTax = () => {
         label: "Edit",
         icon: <MdEdit size={16} className="text-blue-600" />,
         onClick: () => {
-          setFormData({
+          formik.resetForm({ values: {
             _id: row._id,
             name: row.name || "",
             percentage: row.percentage ?? "",
@@ -260,7 +242,7 @@ const SubTax = () => {
                 ? row.taxId?._id
                 : row.taxId || id || "",
             isDisable: row.isDisable || false,
-          });
+          } });
           setModalMode("edit");
         },
       },
@@ -304,7 +286,9 @@ const SubTax = () => {
           <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
             <button
               onClick={() => {
-                setFormData({ ...EMPTY_FORM, taxId: id || "" });
+                formik.resetForm({
+                  values: { ...EMPTY_FORM, taxId: id || "" },
+                });
                 setModalMode("add");
               }}
             >
@@ -352,7 +336,7 @@ const SubTax = () => {
           saving ? "Saving…" : modalMode === "add" ? "Create" : "Save Changes"
         }
         closeButtonText="Cancel"
-        onSubmit={handleSubmit}
+        onSubmit={formik.handleSubmit}
         isButtonView={true}
       >
         <div className="space-y-5">
@@ -366,9 +350,10 @@ const SubTax = () => {
               <FormInput
                 label="Name"
                 name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                error={errors.name}
+                value={formik.values.name}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.name && formik.errors.name}
                 placeholder="e.g. IGST, CGST, SGST"
                 required
               />
@@ -378,8 +363,9 @@ const SubTax = () => {
                 label="Percentage (%)"
                 name="percentage"
                 type="number"
-                value={formData.percentage}
-                onChange={handleInputChange}
+                value={formik.values.percentage}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
                 onKeyDown={(e) => {
                   if (
                     e.key === "-" ||
@@ -390,7 +376,7 @@ const SubTax = () => {
                     e.preventDefault();
                   }
                 }}
-                error={errors.percentage}
+                error={formik.touched.percentage && formik.errors.percentage}
                 placeholder="0-100"
                 min="0"
                 max="100"
@@ -412,16 +398,15 @@ const SubTax = () => {
                 options={taxOptions}
                 value={
                   taxOptions.find(
-                    (option) => String(option.value) === String(formData.taxId),
+                    (option) =>
+                      String(option.value) === String(formik.values.taxId),
                   ) || null
                 }
-                onChange={(selectedOption) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    taxId: selectedOption?.value || "",
-                  }))
-                }
-                error={errors.taxId}
+                onChange={(selectedOption) => {
+                  formik.setFieldValue("taxId", selectedOption?.value || "");
+                  formik.setFieldTouched("taxId", true, false);
+                }}
+                error={formik.touched.taxId && formik.errors.taxId}
                 placeholder="Select parent tax"
                 required
               />
@@ -436,12 +421,12 @@ const SubTax = () => {
             <FormToggleRow
               title="Active"
               description="Enable this sub-tax for applicable tax calculations."
-              isToggle={!formData.isDisable}
+              isToggle={!formik.values.isDisable}
               handleClick={() =>
-                setFormData((prev) => ({
-                  ...prev,
-                  isDisable: !prev.isDisable,
-                }))
+                formik.setFieldValue(
+                  "isDisable",
+                  !formik.values.isDisable,
+                )
               }
             />
           </FormSection>

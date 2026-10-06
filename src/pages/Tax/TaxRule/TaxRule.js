@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormik } from "formik";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal"
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
+import { taxRuleValidationSchema } from "../../../_helpers/validationSchemas";
 
 const FILTER_FIELDS = [
   {
@@ -112,17 +114,52 @@ const TaxRule = () => {
 
   const [isRefresh, setIsRefresh] = useState(false);
   const [modalMode, setModalMode] = useState(null);
-  const [formData, setFormData] = useState(EMPTY_FORM);
   const [selectedTax, setSelectedTax] = useState(null);
   const [selectedSubTax, setSelectedSubTax] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [filteredSubTaxOptions, setFilteredSubTaxOptions] = useState([]);
-  const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [toggleTarget, setToggleTarget] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const formik = useFormik({
+    initialValues: EMPTY_FORM,
+    validationSchema: taxRuleValidationSchema,
+    onSubmit: async (values) => {
+      setSaving(true);
+      const payload = {
+        description: values.description.trim(),
+        tax_id: values.tax_id,
+        subTaxes_id: values.subTaxes_id,
+        category_id: values.category_id,
+        isDisable: values.isDisable,
+      };
+      try {
+        const res =
+          modalMode === "edit"
+            ? await dispatch(
+                updateTaxRule({ ...payload, _id: values._id }),
+              ).unwrap()
+            : await dispatch(createTaxRule(payload)).unwrap();
+        if (res?.error) {
+          toast.error(res.error);
+          return;
+        }
+        toast.success(
+          res?.message ||
+            `Tax rule ${modalMode === "edit" ? "updated" : "created"}`,
+        );
+        closeModal();
+        setIsRefresh((r) => !r);
+      } catch (err) {
+        toast.error(err?.message || "Save failed");
+      } finally {
+        setSaving(false);
+      }
+    },
+  });
 
   const cmsSelector = useSelector((state) => state.cms);
   const userSelector = useSelector((state) => state.user);
@@ -175,7 +212,7 @@ const TaxRule = () => {
         const cur = subTaxList.find((s) => s._id === selectedSubTax[0]?.value);
         if ((cur?.tax_id?._id || cur?.tax_id) !== selectedTax.value) {
           setSelectedSubTax([]);
-          setFormData((prev) => ({ ...prev, subTaxes_id: [] }));
+          formik.setFieldValue("subTaxes_id", []);
         }
       }
     } else {
@@ -229,90 +266,36 @@ const TaxRule = () => {
     return options;
   }, [userSelector.getListCategoryData]);
 
-  const validate = () => {
-    const errs = {};
-    if (!formData.description?.trim())
-      errs.description = "Description is required";
-    else if (formData.description.trim().length < 3)
-      errs.description = "Min 3 characters";
-    if (!formData.tax_id) errs.tax_id = "Tax is required";
-    if (!formData.subTaxes_id?.length) errs.subTaxes_id = "Sub Tax is required";
-    if (!formData.category_id) errs.category_id = "Category is required";
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
   const closeModal = () => {
     setModalMode(null);
-    setFormData(EMPTY_FORM);
+    formik.resetForm({ values: EMPTY_FORM });
     setSelectedTax(null);
     setSelectedSubTax([]);
     setSelectedCategory(null);
-    setErrors({});
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const handleTaxChange = (opt) => {
     setSelectedTax(opt);
-    setFormData((prev) => ({ ...prev, tax_id: opt.value, subTaxes_id: [] }));
+    formik.setFieldValue("tax_id", opt?.value || "");
+    formik.setFieldValue("subTaxes_id", []);
+    formik.setFieldTouched("tax_id", true, false);
     setSelectedSubTax([]);
-    if (errors.tax_id) setErrors((prev) => ({ ...prev, tax_id: undefined }));
   };
 
   const handleSubTaxChange = (opts) => {
-    setSelectedSubTax(opts);
-    setFormData((prev) => ({ ...prev, subTaxes_id: opts.map((o) => o.value) }));
-    if (errors.subTaxes_id)
-      setErrors((prev) => ({ ...prev, subTaxes_id: undefined }));
+    const selected = opts || [];
+    setSelectedSubTax(selected);
+    formik.setFieldValue(
+      "subTaxes_id",
+      selected.map((option) => option.value),
+    );
+    formik.setFieldTouched("subTaxes_id", true, false);
   };
 
   const handleCategoryChange = (opt) => {
     setSelectedCategory(opt);
-    setFormData((prev) => ({ ...prev, category_id: opt.value }));
-    if (errors.category_id)
-      setErrors((prev) => ({ ...prev, category_id: undefined }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setSaving(true);
-    const payload = {
-      description: formData.description.trim(),
-      tax_id: formData.tax_id,
-      subTaxes_id: formData.subTaxes_id,
-      category_id: formData.category_id,
-      isDisable: formData.isDisable,
-    };
-    try {
-      let res;
-      if (modalMode === "edit") {
-        res = await dispatch(
-          updateTaxRule({ ...payload, _id: formData._id }),
-        ).unwrap();
-      } else {
-        res = await dispatch(createTaxRule(payload)).unwrap();
-      }
-      if (res?.error) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success(
-        res?.message ||
-          `Tax rule ${modalMode === "edit" ? "updated" : "created"}`,
-      );
-      closeModal();
-      setIsRefresh((r) => !r);
-    } catch (err) {
-      toast.error(err?.message || "Save failed");
-    } finally {
-      setSaving(false);
-    }
+    formik.setFieldValue("category_id", opt?.value || "");
+    formik.setFieldTouched("category_id", true, false);
   };
 
   const handleDeleteConfirm = async () => {
@@ -366,7 +349,7 @@ const TaxRule = () => {
               )
               .map((st) => ({ value: st._id, label: st.name }));
 
-            setFormData({
+            formik.resetForm({ values: {
               _id: row._id,
               description: row.description || "",
               tax_id:
@@ -383,7 +366,7 @@ const TaxRule = () => {
               category_id:
                 row.category_id?._id || row.category_id || row.category || "",
               isDisable: !active,
-            });
+            } });
 
             const taxVal = row.taxId || row.tax_id;
             setSelectedTax(
@@ -443,7 +426,15 @@ const TaxRule = () => {
         ]}
         actions={
           <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
-            <button onClick={() => setModalMode("add")}>
+            <button
+              onClick={() => {
+                formik.resetForm({ values: EMPTY_FORM });
+                setSelectedTax(null);
+                setSelectedSubTax([]);
+                setSelectedCategory(null);
+                setModalMode("add");
+              }}
+            >
               <MdAdd size={16} /> Add Tax Rule
             </button>
           </PermissionGuard>
@@ -484,7 +475,7 @@ const TaxRule = () => {
         <DefaultModal
           isOpen={Boolean(modalMode)}
           onClose={closeModal}
-          onSubmit={handleSubmit}
+          onSubmit={formik.handleSubmit}
           title={modalMode === "add" ? "Add Tax Rule" : "Edit Tax Rule"}
           submitButtonText={
             saving
@@ -509,9 +500,12 @@ const TaxRule = () => {
                   label="Description"
                   name="description"
                   type="textarea"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  error={errors.description}
+                  value={formik.values.description}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={
+                    formik.touched.description && formik.errors.description
+                  }
                   placeholder="Describe this tax rule"
                   rows={3}
                   required
@@ -525,7 +519,7 @@ const TaxRule = () => {
                     label="Select Tax"
                     value={selectedTax}
                     onChange={handleTaxChange}
-                    error={errors.tax_id}
+                    error={formik.touched.tax_id && formik.errors.tax_id}
                     required
                     placeholder="Select tax"
                   />
@@ -536,7 +530,9 @@ const TaxRule = () => {
                       label="Select Sub Tax"
                       value={selectedSubTax}
                       onChange={handleSubTaxChange}
-                      error={errors.subTaxes_id}
+                      error={
+                        formik.touched.subTaxes_id && formik.errors.subTaxes_id
+                      }
                       required
                       isMulti
                       isDisabled={!selectedTax}
@@ -552,7 +548,9 @@ const TaxRule = () => {
                   label="Select Category"
                   value={selectedCategory}
                   onChange={handleCategoryChange}
-                  error={errors.category_id}
+                  error={
+                    formik.touched.category_id && formik.errors.category_id
+                  }
                   required
                   placeholder="Select category"
                 />
@@ -564,12 +562,12 @@ const TaxRule = () => {
             <FormToggleRow
               title="Active"
               description="Enable this tax rule for applicable products and categories."
-              isToggle={!formData.isDisable}
+              isToggle={!formik.values.isDisable}
               handleClick={() =>
-                setFormData((prev) => ({
-                  ...prev,
-                  isDisable: !prev.isDisable,
-                }))
+                formik.setFieldValue(
+                  "isDisable",
+                  !formik.values.isDisable,
+                )
               }
             />
           </div>

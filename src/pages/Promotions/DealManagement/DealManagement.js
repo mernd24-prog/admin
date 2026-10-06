@@ -59,6 +59,7 @@ import { formatDateTime12Hour } from "../../../utils/formatters";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import Tabs from "../../../components/Shared/Tabs";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
+import { DateRangeFilter } from "../../../components/Shared/FilterBar";
 
 const DEAL_TYPES = [
   { value: "fixed_price", label: "Fixed Deal Price" },
@@ -1391,22 +1392,20 @@ const DealManagement = () => {
                 />
               </div>
 
-              {/* Dates */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Deal Start"
-                  type="datetime-local"
-                  value={form.startAt}
-                  onChange={(event) => setField("startAt", event.target.value)}
-                  required
-                />
-
-                <Input
-                  label="Deal End"
-                  type="datetime-local"
-                  value={form.endAt}
-                  onChange={(event) => setField("endAt", event.target.value)}
-                  required
+              {/* Deal Period */}
+              <div className="space-y-5">
+                <DateRangeFilter
+                  field={{
+                    key: "dateRange",
+                    type: "daterange",
+                    label: "Deal Period",
+                    startKey: "startAt",
+                    endKey: "endAt",
+                    width: "w-full",
+                    placeholder: "Select deal period",
+                  }}
+                  values={form}
+                  onChange={(key, value) => setField(key, value)}
                 />
               </div>
             </div>

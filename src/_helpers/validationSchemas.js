@@ -66,3 +66,62 @@ export const referralCodeValidationSchema = Yup.object({
     .integer("Usage limit must be a whole number")
     .min(1, "Usage limit must be greater than 0"),
 });
+
+const taxRateSchema = (label) =>
+  Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" ? undefined : value,
+    )
+    .typeError(`${label} must be a number`)
+    .required(`${label} is required`)
+    .min(0, `${label} must be between 0 and 100`)
+    .max(100, `${label} must be between 0 and 100`);
+
+export const hsnValidationSchema = Yup.object({
+  code: Yup.string().trim().required("HSN Code is required"),
+  description: Yup.string()
+    .trim()
+    .required("Description is required")
+    .min(3, "Description must be at least 3 characters")
+    .max(100, "Description must be no more than 100 characters"),
+  IGST: taxRateSchema("IGST"),
+  CGST: taxRateSchema("CGST"),
+  SGST: taxRateSchema("SGST"),
+  additionalTax: taxRateSchema("Additional Tax"),
+});
+
+export const taxValidationSchema = Yup.object({
+  name: Yup.string()
+    .trim()
+    .required("Tax name is required")
+    .min(2, "Min 2 characters"),
+  country_code: Yup.string().required("Country is required"),
+});
+
+export const subTaxValidationSchema = Yup.object({
+  name: Yup.string()
+    .trim()
+    .required("Name is required")
+    .min(3, "Min 3 characters"),
+  percentage: Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" || originalValue === null ? undefined : value,
+    )
+    .typeError("Only numbers are allowed")
+    .required("Percentage is required")
+    .min(0, "Must be between 0 and 100")
+    .max(100, "Must be between 0 and 100"),
+  taxId: Yup.string().required("Parent tax is required"),
+});
+
+export const taxRuleValidationSchema = Yup.object({
+  description: Yup.string()
+    .trim()
+    .required("Description is required")
+    .min(3, "Min 3 characters"),
+  tax_id: Yup.string().required("Tax is required"),
+  subTaxes_id: Yup.array()
+    .of(Yup.string())
+    .min(1, "Sub Tax is required"),
+  category_id: Yup.string().required("Category is required"),
+});

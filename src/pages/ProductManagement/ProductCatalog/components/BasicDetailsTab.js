@@ -72,16 +72,6 @@ const INITIAL_FORM_CATEGORY = {
   priority: "0",
 };
 
-const INITIAL_FORM_HSN = {
-  code: "",
-  IGST: "",
-  CGST: "",
-  SGST: "",
-  additionalTax: "",
-  description: "",
-  isDisable: false,
-};
-
 const SELLER_PANEL_ROLES = new Set([
   "seller",
   "seller-admin",
@@ -911,7 +901,6 @@ export default function BasicDetailsTab({
 
   const [categoryForm, setCategoryForm] = useState(INITIAL_FORM_CATEGORY);
 
-  const [hsnFormValues, setIsHsnFormValue] = useState(INITIAL_FORM_HSN);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -1311,17 +1300,6 @@ export default function BasicDetailsTab({
     }));
   };
 
-  const handleHsnInputChange = (e) => {
-    const { name, value } = e.target;
-
-    setIsHsnFormValue((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    setFormErrors({});
-  };
-
   const handleFileUploadCategory = async (file, fieldName) => {
     if (!file) return;
 
@@ -1554,16 +1532,14 @@ export default function BasicDetailsTab({
    * ------------------------------------------------------------
    */
 
-  const handleHsnSubmit = async (e) => {
-    e?.preventDefault();
-
+  const handleHsnSubmit = async (values) => {
     const basePayload = {
-      code: hsnFormValues.code.trim(),
-      IGST: Number(hsnFormValues.IGST),
-      CGST: Number(hsnFormValues.CGST),
-      SGST: Number(hsnFormValues.SGST),
-      additionalTax: Number(hsnFormValues.additionalTax),
-      description: hsnFormValues.description?.trim() || "",
+      code: values.code.trim(),
+      IGST: Number(values.IGST),
+      CGST: Number(values.CGST),
+      SGST: Number(values.SGST),
+      additionalTax: Number(values.additionalTax),
+      description: values.description?.trim() || "",
       active: true,
     };
 
@@ -1594,11 +1570,8 @@ export default function BasicDetailsTab({
 
       setIsHsnAddModal(false);
 
-      setIsHsnFormValue(INITIAL_FORM_HSN);
-
-      setFormErrors({});
-
       fetchAllData([API_CALL_OBJECT["Hsn code list"]]);
+      return true;
     } catch (error) {
       console.error("HSN Create Error:", error);
 
@@ -1611,6 +1584,7 @@ export default function BasicDetailsTab({
             "Failed to save HSN Code";
 
       toast.error(errorMessage);
+      return false;
     }
   };
 
@@ -1625,57 +1599,6 @@ export default function BasicDetailsTab({
 
     if (!categoryForm.categoryName) {
       newErrors.categoryName = "Category name is required";
-    }
-
-    setFormErrors(newErrors);
-
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateHsnForm = () => {
-    const newErrors = {};
-
-    const hasRate = (value) =>
-      value !== "" && value !== null && value !== undefined;
-
-    if (!hsnFormValues.code) {
-      newErrors.code = "Code is required";
-    }
-
-    if (!hasRate(hsnFormValues.IGST)) {
-      newErrors.IGST = "IGST is required";
-    } else if (
-      Number(hsnFormValues.IGST) < 0 ||
-      Number(hsnFormValues.IGST) > 100
-    ) {
-      newErrors.IGST = "IGST must be between 0 and 100";
-    }
-
-    if (!hasRate(hsnFormValues.CGST)) {
-      newErrors.CGST = "CGST is required";
-    } else if (
-      Number(hsnFormValues.CGST) < 0 ||
-      Number(hsnFormValues.CGST) > 100
-    ) {
-      newErrors.CGST = "CGST must be between 0 and 100";
-    }
-
-    if (!hasRate(hsnFormValues.SGST)) {
-      newErrors.SGST = "SGST is required";
-    } else if (
-      Number(hsnFormValues.SGST) < 0 ||
-      Number(hsnFormValues.SGST) > 100
-    ) {
-      newErrors.SGST = "SGST must be between 0 and 100";
-    }
-
-    if (!hsnFormValues.description) {
-      newErrors.description = "Description is required";
-    } else if (hsnFormValues.description.length < 3) {
-      newErrors.description = "Description must be at least 3 characters";
-    } else if (hsnFormValues.description.length > 100) {
-      newErrors.description =
-        "Description must be less than or equal to 100 characters";
     }
 
     setFormErrors(newErrors);
@@ -2431,17 +2354,10 @@ export default function BasicDetailsTab({
 
       <AddHsnModal
         isOpen={isHsnAddModal}
-        formData={hsnFormValues}
         resetForm={() => {
           setIsHsnAddModal(false);
-
-          setIsHsnFormValue(INITIAL_FORM_HSN);
-
-          setFormErrors({});
         }}
-        handleInputChange={handleHsnInputChange}
-        handleSubmit={(e) => validateHsnForm() && handleHsnSubmit(e)}
-        errors={formErrors}
+        handleSubmit={handleHsnSubmit}
       />
 
       {/* ==========================================================

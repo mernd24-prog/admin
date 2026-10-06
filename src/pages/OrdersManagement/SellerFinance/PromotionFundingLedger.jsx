@@ -14,14 +14,13 @@ import PageHeader from "../../../components/Shared/PageHeader";
 import SummaryCard from "../../../components/Shared/SummaryCard";
 import DataTable from "../../../components/Shared/DataTable";
 import { OrderLink } from "../../../components/Shared/EntityLink";
-import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import { FilterBar, UserLink } from "../../../components/Shared";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import {
   getMyPromotionFundingLedger,
   getPromotionFundingLedger,
 } from "../../../Redux/sellerCommissionsSlice";
-import { UserLink } from "../../../components/Shared";
 
 const money = (value, currency = "INR") =>
   new Intl.NumberFormat("en-IN", {
@@ -426,11 +425,6 @@ const PromotionFundingLedger = () => {
             label: "Promotion Funding Ledger",
           },
         ]}
-        actions={
-          <button type="button" onClick={load}>
-            <MdRefresh size={17} /> Refresh
-          </button>
-        }
       />
 
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
@@ -464,41 +458,38 @@ const PromotionFundingLedger = () => {
         pageSize={Number(filters.limit || 50)}
         rowKey="id"
         emptyText="No funded discounts found."
+        onRefresh={load}
+        onSearch={(value) =>
+          setFilters((current) => ({
+            ...current,
+            search: value,
+            offset: 0,
+          }))
+        }
+        searchPlaceholder="Search order, product, or SKU"
         filterBar={
-          <div className="grid gap-3 border-b border-gray-100 p-4 md:grid-cols-[1fr_240px]">
-            <input
-              className="admin-input"
-              placeholder="Search order, product, or SKU"
-              value={filters.search}
-              onChange={(event) =>
-                setFilters((current) => ({
-                  ...current,
-                  search: event.target.value,
-                  offset: 0,
-                }))
-              }
-            />
-
-            <FilterSelect
-              options={FUNDING_OPTIONS}
-              value={
-                FUNDING_OPTIONS.find(
-                  (opt) => opt.value === filters.fundingType,
-                ) || null
-              }
-              onChange={(opt) =>
-                setFilters((current) => ({
-                  ...current,
-                  fundingType: opt ? opt.value : "",
-                  offset: 0,
-                }))
-              }
-              placeholder="All funding sources"
-              isSearchable={false}
-              isClearable={true}
-              className="!mb-0 w-full"
-            />
-          </div>
+          <FilterBar
+            filters={[
+              {
+                key: "fundingType",
+                label: "Funding Source",
+                type: "select",
+                options: FUNDING_OPTIONS,
+                placeholder: "All Funding Sources",
+                isSearchable: false,
+                isClearable: true,
+              },
+            ]}
+            values={{ fundingType: filters.fundingType }}
+            onChange={(key, value) =>
+              setFilters((current) => ({
+                ...current,
+                [key]: value,
+                offset: 0,
+              }))
+            }
+            loading={loading}
+          />
         }
       />
     </div>
