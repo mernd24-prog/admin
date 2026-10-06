@@ -345,7 +345,10 @@ const AuthTestimonials = () => {
       <PageHeader
         title="Onboarding Testimonials"
         subtitle="Manage testimonials shown on login and seller registration screens"
-        breadcrumbs={[{ label: "Settings" }, { label: "Onboarding Testimonials" }]}
+        breadcrumbs={[
+          { label: "Settings" },
+          { label: "Onboarding Testimonials" },
+        ]}
         actions={
           <button
             type="button"
@@ -369,6 +372,7 @@ const AuthTestimonials = () => {
           setSearch(value?.trim() || "");
           setPageNo(1);
         }}
+        onRefresh={fetchTestimonials}
         rowActions={rowActions}
         searchPlaceholder="Search auth testimonials..."
         emptyText="No auth testimonials found."

@@ -394,6 +394,8 @@ export default function ProductManagementUI() {
   const sellerPanelMode = isSellerPanel();
   const [shippingProfileOptions, setShippingProfileOptions] = useState([]);
   const [allowedPincodeInput, setAllowedPincodeInput] = useState("");
+  const [selectedShippingTemplate, setSelectedShippingTemplate] =
+    useState(null);
   const [collectionSearch, setCollectionSearch] = useState("");
 
   const calculatePriceWithTax = (product, basePrice) => {
@@ -3258,55 +3260,89 @@ export default function ProductManagementUI() {
                 <p className="text-sm font-semibold text-emerald-800">
                   Free shipping is enabled
                 </p>
-                <p className="text-xs text-emerald-700 mt-0.5">
+
+                <p className="mt-0.5 text-xs text-emerald-700">
                   Shipping charge is ₹0, but pincode deliverability still
                   applies.
                 </p>
               </div>
             )}
+
             <div className="space-y-3">
+              {/* Selected Profile Actions */}
               <div className="flex items-start justify-end gap-2">
                 {formData?.shipping?.shippingProfileId && (
                   <div className="flex items-center gap-3 whitespace-nowrap">
                     <a
-                      href={`/app/shipping-profiles?edit=${encodeURIComponent(formData.shipping.shippingProfileId)}`}
+                      href={`/app/shipping-profiles?edit=${encodeURIComponent(
+                        formData.shipping.shippingProfileId,
+                      )}`}
                       className="text-xs font-semibold text-[var(--admin-blue)] hover:underline"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
                       Edit profile
                     </a>
+
                     <button
                       type="button"
                       className="text-xs text-red-500 hover:underline"
-                      onClick={() => patchShipping({ shippingProfileId: null })}
+                      onClick={() => {
+                        patchShipping({
+                          shippingProfileId: null,
+                        });
+
+                        setSelectedShippingTemplate(null);
+                      }}
                     >
                       Remove profile
                     </button>
                   </div>
                 )}
               </div>
+
+              {/* Shipping Profile */}
               <FilterSelect
                 label="Shipping profile (optional)"
                 options={shippingProfileOptions
                   .filter((opt) => opt.type === "profile")
                   .map((opt) => ({
                     ...opt,
-                    label:
-                      opt.label + (opt.profile?.isDefault ? " (Default)" : ""),
+
+                    value: String(
+                      opt.value || opt.profile?._id || opt.profile?.id || "",
+                    ),
+
+                    label: `${
+                      opt.label || opt.profile?.name || "Shipping Profile"
+                    }${opt.profile?.isDefault ? " (Default)" : ""}`,
                   }))}
                 value={
                   shippingProfileOptions
                     .filter((opt) => opt.type === "profile")
+                    .map((opt) => ({
+                      ...opt,
+
+                      value: String(
+                        opt.value || opt.profile?._id || opt.profile?.id || "",
+                      ),
+
+                      label: `${
+                        opt.label || opt.profile?.name || "Shipping Profile"
+                      }${opt.profile?.isDefault ? " (Default)" : ""}`,
+                    }))
                     .find(
                       (opt) =>
-                        opt.value === formData?.shipping?.shippingProfileId,
+                        String(opt.value) ===
+                        String(formData?.shipping?.shippingProfileId || ""),
                     ) || null
                 }
                 onChange={(selected) => {
                   const profileId = selected?.value || null;
+
                   patchShipping({
                     shippingProfileId: profileId,
+
                     ...(profileId
                       ? {
                           serviceabilityMode: "all_pincodes",
@@ -3315,12 +3351,17 @@ export default function ProductManagementUI() {
                         }
                       : {}),
                   });
+
+                  if (profileId) {
+                    setSelectedShippingTemplate(null);
+                  }
                 }}
                 placeholder="Select a saved shipping profile"
                 isClearable
                 isSearchable
               />
 
+              {/* Shipping Templates */}
               {!formData?.shipping?.shippingProfileId &&
                 shippingProfileOptions.some(
                   (option) => option.type === "template",
@@ -3329,27 +3370,39 @@ export default function ProductManagementUI() {
                     <p className="mb-2 text-xs text-gray-500">
                       Or copy an admin template into editable product settings.
                     </p>
+
                     <FilterSelect
                       options={shippingProfileOptions.filter(
                         (option) => option.type === "template",
                       )}
-                      value={null}
-                      onChange={copyShippingTemplateToProduct}
-                      placeholder="Copy settings from a template"
+                      value={selectedShippingTemplate}
+                      onChange={(selected) => {
+                        setSelectedShippingTemplate(selected);
+
+                        if (selected) {
+                          copyShippingTemplateToProduct(selected);
+                        }
+                      }}
+                      placeholder="Copy Settings From A Template"
                       isSearchable
                       isClearable={false}
                     />
                   </div>
                 )}
 
+              {/* No Seller */}
               {shippingProfileOptions.filter(
                 (option) => option.type === "profile",
               ).length === 0 &&
-                !formData?.sellerId && (
+                !formData?.sellerId &&
+                !formData?.shipping?.shippingProfileId &&
+                !selectedShippingTemplate && (
                   <p className="text-xs text-[var(--admin-gold-dark)]">
                     Select a seller to view saved profiles.
                   </p>
                 )}
+
+              {/* No Profiles */}
               {shippingProfileOptions.filter(
                 (option) => option.type === "profile",
               ).length === 0 &&
@@ -3366,18 +3419,33 @@ export default function ProductManagementUI() {
                     </a>
                   </p>
                 )}
+
+              {/* Selected Shipping Profile Details */}
               {formData?.shipping?.shippingProfileId &&
                 (() => {
                   const selected = shippingProfileOptions.find(
-                    (o) => o.value === formData.shipping.shippingProfileId,
+                    (option) =>
+                      option.type === "profile" &&
+                      String(
+                        option.value ||
+                          option.profile?._id ||
+                          option.profile?.id ||
+                          "",
+                      ) === String(formData.shipping.shippingProfileId || ""),
                   );
+
                   const p = selected?.profile;
+
                   if (!p) return null;
+
                   return (
                     <div className="space-y-3 pt-1">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                         {[
-                          { label: "Method", value: p.shippingMethod },
+                          {
+                            label: "Method",
+                            value: p.shippingMethod,
+                          },
                           {
                             label: "Mode",
                             value: p.serviceabilityMode?.replace(/_/g, " "),
@@ -3403,21 +3471,25 @@ export default function ProductManagementUI() {
                         ].map(({ label, value }) => (
                           <div
                             key={label}
-                            className="rounded-lg bg-white border border-[var(--admin-blue)]/20 px-2 py-1.5"
+                            className="rounded-lg border border-[var(--admin-blue)]/20 bg-white px-2 py-1.5"
                           >
                             <p className="text-[10px] uppercase tracking-wide text-gray-400">
                               {label}
                             </p>
-                            <p className="text-xs font-semibold text-gray-700 mt-0.5">
+
+                            <p className="mt-0.5 text-xs font-semibold text-gray-700">
                               {value}
                             </p>
                           </div>
                         ))}
                       </div>
+
+                      {/* Delivery Coverage */}
                       <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                         <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
                           Delivery coverage
                         </p>
+
                         {p.serviceabilityMode === "all_india" ? (
                           <p className="text-xs font-semibold text-emerald-700">
                             All India pincodes
@@ -3442,6 +3514,8 @@ export default function ProductManagementUI() {
                     </div>
                   );
                 })()}
+
+              {/* Profile Active Message */}
               {formData?.shipping?.shippingProfileId && (
                 <p className="text-xs text-[var(--admin-blue)]">
                   Manual shipping fields are hidden while this profile is
@@ -3451,17 +3525,20 @@ export default function ProductManagementUI() {
               )}
             </div>
 
+            {/* Product Delivery Pincodes */}
             <div className="space-y-4 border-t border-[var(--admin-line)] pt-5">
               <div>
                 <p className="text-sm font-semibold text-gray-800">
                   Product delivery pincodes
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5">
+
+                <p className="mt-0.5 text-xs text-gray-500">
                   Choose where this product can be delivered. These rules also
                   apply when shipping is free.
                 </p>
               </div>
 
+              {/* Profile Active */}
               {formData?.shipping?.shippingProfileId && (
                 <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
                   Product-level serviceability is automatically All India and
@@ -3470,6 +3547,8 @@ export default function ProductManagementUI() {
                   product-specific allowed pincodes.
                 </p>
               )}
+
+              {/* Manual Product Pincodes */}
               {!formData?.shipping?.shippingProfileId && (
                 <>
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
@@ -3485,6 +3564,7 @@ export default function ProductManagementUI() {
                         (optional)
                       </span>
                     </label>
+
                     <div className="flex gap-2">
                       <input
                         className="admin-input flex-1"
@@ -3499,6 +3579,7 @@ export default function ProductManagementUI() {
                         }
                         onKeyDown={handleProductPincodeKeyDown}
                       />
+
                       <button
                         type="button"
                         className="admin-btn-primary whitespace-nowrap px-4"
@@ -3507,6 +3588,7 @@ export default function ProductManagementUI() {
                         Add
                       </button>
                     </div>
+
                     <div className="flex min-h-[44px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
                       {normalizePincodeList(
                         formData?.shipping?.allowPincodes ||
@@ -3521,6 +3603,7 @@ export default function ProductManagementUI() {
                             className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
                           >
                             {pincode}
+
                             <button
                               type="button"
                               onClick={() => removeProductPincode(pincode)}
@@ -3539,6 +3622,8 @@ export default function ProductManagementUI() {
                   </div>
                 </>
               )}
+
+              {/* Shipping Error */}
               {error?.shipping && (
                 <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
                   {error.shipping}
@@ -3548,6 +3633,8 @@ export default function ProductManagementUI() {
           </div>
         ),
       },
+      ,
+      ,
       {
         id: "seo",
         title: "SEO",

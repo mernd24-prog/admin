@@ -1501,19 +1501,18 @@ const DealManagement = () => {
             <Loader />
           </div>
         ) : detail ? (
-          <div className="space-y-5">
-            {/* Loading State */}
-            {/* {detailLoading && (
-              <div className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
-                Loading latest deal details...
-              </div>
-            )} */}
-
+          <div className="space-y-5 relative">
             {/* ==================== Deal Overview ==================== */}
             <FormSection
               title="Deal Overview"
               description="Basic information about this deal."
             >
+              <div className="absolute right-6 top-5">
+                <StatusBadge
+                  status={detail.status}
+                  color={STATUS_COLOR[detail.status] || "gray"}
+                />
+              </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormInput
                   label="Product"
@@ -1528,16 +1527,6 @@ const DealManagement = () => {
                   value={detail.dealNumber || getDealId(detail) || "—"}
                   disabled
                 />
-
-                <div>
-                  <label className="admin-label">Status</label>
-                  <div className="flex min-h-[42px] items-center">
-                    <StatusBadge
-                      status={detail.status}
-                      color={STATUS_COLOR[detail.status] || "gray"}
-                    />
-                  </div>
-                </div>
 
                 <FormInput
                   label="Deal Badge"
@@ -1674,50 +1663,43 @@ const DealManagement = () => {
             )}
 
             {/* ==================== History ==================== */}
-            <FormSection
-              title="History"
-              description="Activity and status changes recorded for this deal."
-            >
-              <div className="space-y-3">
-                {(detail.timeline || []).length ? (
-                  detail.timeline.map((event) => (
-                    <div
-                      key={
-                        event.id || `${event.event_type}-${event.created_at}`
-                      }
-                      className="rounded-lg border border-gray-200 bg-gray-50 p-3"
-                    >
-                      <p className="text-sm font-semibold text-[var(--admin-ink)]">
-                        {display(event.event_type)}
+
+            <div className="space-y-3">
+              {(detail.timeline || []).length ? (
+                detail.timeline.map((event) => (
+                  <div
+                    key={event.id || `${event.event_type}-${event.created_at}`}
+                    className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+                  >
+                    <p className="text-sm font-semibold text-[var(--admin-ink)]">
+                      {display(event.event_type)}
+                    </p>
+
+                    <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                      {fmtDateTime(event.created_at)} ·{" "}
+                      {event.actor_role || "system"}
+                    </p>
+
+                    {event.reason && (
+                      <p className="mt-2 text-xs text-gray-600">
+                        <span className="font-medium">Reason:</span>{" "}
+                        {event.reason}
                       </p>
+                    )}
 
-                      <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                        {fmtDateTime(event.created_at)} ·{" "}
-                        {event.actor_role || "system"}
+                    {event.note && (
+                      <p className="mt-1 text-xs text-gray-600">
+                        <span className="font-medium">Note:</span> {event.note}
                       </p>
-
-                      {event.reason && (
-                        <p className="mt-2 text-xs text-gray-600">
-                          <span className="font-medium">Reason:</span>{" "}
-                          {event.reason}
-                        </p>
-                      )}
-
-                      {event.note && (
-                        <p className="mt-1 text-xs text-gray-600">
-                          <span className="font-medium">Note:</span>{" "}
-                          {event.note}
-                        </p>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-[var(--admin-muted)]">
-                    No history recorded.
+                    )}
                   </div>
-                )}
-              </div>
-            </FormSection>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-[var(--admin-muted)]">
+                  No history recorded.
+                </div>
+              )}
+            </div>
           </div>
         ) : null}
       </DefaultModal>

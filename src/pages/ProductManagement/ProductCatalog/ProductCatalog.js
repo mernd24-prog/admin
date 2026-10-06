@@ -15,7 +15,7 @@ import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 import AddButton from "../../../components/Button/AddButton";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
 import { ACCESS_SCOPES, usePermission } from "../../../_helpers/usePermission";
-import { MdVisibility, MdEdit, MdDelete } from "react-icons/md";
+import { MdVisibility, MdRefresh, MdEdit, MdDelete } from "react-icons/md";
 
 // Redux
 import {
@@ -249,6 +249,7 @@ const ProductCatalog = () => {
 
     loadSellers();
   }, [canFilterBySeller]);
+
   useEffect(() => {
     const sellerId = filters?.sellerName?.value;
 
@@ -278,6 +279,7 @@ const ProductCatalog = () => {
 
     loadSellerStores();
   }, [filters?.sellerName?.value]);
+
   const revisionFilter = normalizeRevisionFilterValue(
     appliedFilters?.revisionStatus?.value,
   );
@@ -977,7 +979,7 @@ const ProductCatalog = () => {
       },
       {
         key: "active",
-        label: "Action",
+        label: "Active/Deactive",
         render: (_, product) => {
           if (canSubmitForApproval(product)) {
             return (
@@ -1039,6 +1041,9 @@ const ProductCatalog = () => {
         actions={
           <>
             <AddButton onClick={handleAddNavigate} requiredModule="products" />
+            <button type="button" onClick={fetchProductsList}>
+              <MdRefresh size={17} /> Refresh
+            </button>
           </>
         }
       />

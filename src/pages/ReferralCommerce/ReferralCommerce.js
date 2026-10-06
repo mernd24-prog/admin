@@ -2834,10 +2834,6 @@ const ReferralCommerce = () => {
               Current referral coin allocation by wallet state
             </p>
           </div>
-
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)]">
-            <BadgeIndianRupee size={19} />
-          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
@@ -4159,7 +4155,9 @@ const ReferralCommerce = () => {
                 value={childFormik.values.firstName}
                 onChange={childFormik.handleChange}
                 onBlur={childFormik.handleBlur}
-                error={childFormik.touched.firstName && childFormik.errors.firstName}
+                error={
+                  childFormik.touched.firstName && childFormik.errors.firstName
+                }
                 required
                 placeholder="Enter first name"
               />
@@ -4171,7 +4169,9 @@ const ReferralCommerce = () => {
                 value={childFormik.values.lastName}
                 onChange={childFormik.handleChange}
                 onBlur={childFormik.handleBlur}
-                error={childFormik.touched.lastName && childFormik.errors.lastName}
+                error={
+                  childFormik.touched.lastName && childFormik.errors.lastName
+                }
                 required
                 placeholder="Enter last name"
               />
@@ -4208,7 +4208,9 @@ const ReferralCommerce = () => {
                 value={childFormik.values.password}
                 onChange={childFormik.handleChange}
                 onBlur={childFormik.handleBlur}
-                error={childFormik.touched.password && childFormik.errors.password}
+                error={
+                  childFormik.touched.password && childFormik.errors.password
+                }
                 required
                 placeholder="Enter password"
               />
@@ -4311,15 +4313,15 @@ const ReferralCommerce = () => {
                 <FormSelectGroup
                   label="Status"
                   options={referralCodeStatuses.options}
-                    value={codeFormik.values.status}
+                  value={codeFormik.values.status}
                   onChange={(selectedOption) =>
-                      codeFormik.setFieldValue(
-                        "status",
-                        selectedOption?.value || selectedOption || "",
-                      )
+                    codeFormik.setFieldValue(
+                      "status",
+                      selectedOption?.value || selectedOption || "",
+                    )
                   }
-                    error={codeFormik.touched.status && codeFormik.errors.status}
-                    required
+                  error={codeFormik.touched.status && codeFormik.errors.status}
+                  required
                   placeholder="Select status"
                 />
               </div>

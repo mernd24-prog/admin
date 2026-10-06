@@ -1,5 +1,10 @@
 import React, { useRef } from "react";
-import { FaCloudUploadAlt, FaImage, FaExchangeAlt, FaTrash } from "react-icons/fa";
+import {
+  FaCloudUploadAlt,
+  FaImage,
+  FaExchangeAlt,
+  FaTrash,
+} from "react-icons/fa";
 import { ButtonLoader } from "../../Loader/Loader";
 
 const ImageUpload = ({
@@ -25,8 +30,7 @@ const ImageUpload = ({
 }) => {
   const fileInputRef = useRef();
   const displayError =
-    errorMessage ||
-    (typeof error === "string" ? error : error?.message || "");
+    errorMessage || (typeof error === "string" ? error : error?.message || "");
   const supportedFormats =
     helperText ||
     `Supports: ${
@@ -66,11 +70,15 @@ const ImageUpload = ({
   };
 
   return (
-    <div className={`rounded-lg border border-dashed border-gray-300 p-3 bg-white ${containerClassName}`}>
+    <div
+      className={`rounded-lg border border-dashed border-gray-300 p-3 bg-white ${containerClassName}`}
+    >
       {/* Label and Subtext */}
       {label && (
         <div className="mb-2">
-          <label className={`block text-sm font-medium text-gray-700 ${labelClassName}`}>
+          <label
+            className={`block text-sm font-medium text-gray-700 ${labelClassName}`}
+          >
             {label}
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
@@ -93,7 +101,9 @@ const ImageUpload = ({
       {isLoading ? (
         <div className="flex h-[155px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50">
           <ButtonLoader />
-          <span className="text-xs font-medium text-gray-500">{loadingText}</span>
+          <span className="text-xs font-medium text-gray-500">
+            {loadingText}
+          </span>
         </div>
       ) : file ? (
         <div className="relative group flex h-[155px] items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 bg-gray-50 p-2">
@@ -142,7 +152,9 @@ const ImageUpload = ({
       ) : (
         <div
           className={`relative border-2 border-dashed rounded-lg transition-all duration-200 h-[155px] flex flex-col items-center justify-center p-4 text-center ${
-            displayError ? "border-red-500" : "border-gray-200 hover:border-blue-400"
+            displayError
+              ? "border-red-500"
+              : "border-gray-200 hover:border-blue-400"
           } ${
             isDisabled
               ? "opacity-70 cursor-not-allowed bg-gray-100"
@@ -154,14 +166,20 @@ const ImageUpload = ({
             handleDrop(e);
             handleDragLeave(e);
           }}
-          onClick={() => !isDisabled && !isLoading && fileInputRef.current?.click()}
+          onClick={() =>
+            !isDisabled && !isLoading && fileInputRef.current?.click()
+          }
         >
           <div className="flex flex-col items-center justify-center space-y-2">
-            <div className={`p-2.5 rounded-full bg-blue-50 text-blue-500 ${iconClassName}`}>
+            <div
+              className={`p-2.5 rounded-full bg-blue-50 text-blue-500 ${iconClassName}`}
+            >
               <FaCloudUploadAlt size={22} />
             </div>
             <div className="space-y-0.5">
-              <p className="text-xs font-medium text-gray-700">Click to browse or drop file</p>
+              <p className="text-xs font-medium text-gray-700">
+                Click to browse or drop file
+              </p>
               <div className="flex items-center justify-center text-[11px] text-gray-400">
                 <FaImage className="mr-1" />
                 <span>{supportedFormats}</span>
@@ -172,7 +190,9 @@ const ImageUpload = ({
       )}
 
       {/* Error Message */}
-      {displayError && <p className="mt-1.5 text-xs text-red-500">{displayError}</p>}
+      {displayError && (
+        <p className="mt-1.5 text-xs text-red-500">{displayError}</p>
+      )}
     </div>
   );
 };
