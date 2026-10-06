@@ -4116,7 +4116,7 @@ const ReferralCommerce = () => {
         onSubmit={childFormik.handleSubmit}
         title="Create Brand Associate"
         submitButtonText="Create Brand Associate"
-        closeButtonText="Reset"
+        closeButtonText="Cancel"
         isButtonView={true}
         width="600px"
         loading={loading || childFormik.isSubmitting}
@@ -4238,7 +4238,7 @@ const ReferralCommerce = () => {
         onSubmit={codeFormik.handleSubmit}
         title={editingCode ? "Edit Referral Code" : "Create Referral Code"}
         submitButtonText="Save Referral Code"
-        closeButtonText="Reset"
+        closeButtonText="Cancel"
         isButtonView={true}
         width="600px"
         loading={loading || codeFormik.isSubmitting}

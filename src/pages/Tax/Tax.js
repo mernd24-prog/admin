@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useState } from "react";
+import { useFormik } from "formik";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ import FormInput from "../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
 import FormToggleRow from "../../components/Atoms/FormToggleRow/FormToggleRow";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
+import { taxValidationSchema } from "../../_helpers/validationSchemas";
 
 const FILTER_FIELDS = [
   {
@@ -91,8 +93,6 @@ const Tax = () => {
 
   const [isRefresh, setIsRefresh] = useState(false);
   const [modalMode, setModalMode] = useState(null);
-  const [formData, setFormData] = useState(EMPTY_FORM);
-  const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -114,6 +114,41 @@ const Tax = () => {
     })) || []),
   ];
 
+  const formik = useFormik({
+    initialValues: EMPTY_FORM,
+    validationSchema: taxValidationSchema,
+    onSubmit: async (values) => {
+      setSaving(true);
+      const payload = {
+        name: values.name.trim(),
+        country_code: values.country_code,
+        isDisable: values.isDisable,
+      };
+      try {
+        const res =
+          modalMode === "edit"
+            ? await dispatch(
+                updateTaxList({ ...payload, _id: values._id }),
+              ).unwrap()
+            : await dispatch(createTaxList(payload)).unwrap();
+        if (res?.error) {
+          toast.error(res.error);
+          return;
+        }
+        toast.success(
+          res?.message ||
+            `Tax ${modalMode === "edit" ? "updated" : "created"}`,
+        );
+        closeModal();
+        setIsRefresh((r) => !r);
+      } catch (err) {
+        toast.error(err?.message || "Save failed");
+      } finally {
+        setSaving(false);
+      }
+    },
+  });
+
   useEffect(() => {
     const params = list.toQueryParams();
     dispatch(
@@ -132,59 +167,9 @@ const Tax = () => {
     dispatch(getAllCountryList({ page: 1, size: 200, select: "name" }));
   }, []);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
-  };
-
-  const validateForm = () => {
-    const errs = {};
-    if (!formData.name?.trim()) errs.name = "Tax name is required";
-    else if (formData.name.trim().length < 2) errs.name = "Min 2 characters";
-    if (!formData.country_code) errs.country_code = "Country is required";
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
   const closeModal = () => {
     setModalMode(null);
-    setFormData(EMPTY_FORM);
-    setErrors({});
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    setSaving(true);
-    const payload = {
-      name: formData.name.trim(),
-      country_code: formData.country_code,
-      isDisable: formData.isDisable,
-    };
-    try {
-      let res;
-      if (modalMode === "edit") {
-        res = await dispatch(
-          updateTaxList({ ...payload, _id: formData._id }),
-        ).unwrap();
-      } else {
-        res = await dispatch(createTaxList(payload)).unwrap();
-      }
-      if (res?.error) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success(
-        res?.message || `Tax ${modalMode === "edit" ? "updated" : "created"}`,
-      );
-      closeModal();
-      setIsRefresh((r) => !r);
-    } catch (err) {
-      toast.error(err?.message || "Save failed");
-    } finally {
-      setSaving(false);
-    }
+    formik.resetForm({ values: EMPTY_FORM });
   };
 
   const handleDeleteConfirm = async () => {
@@ -232,7 +217,7 @@ const Tax = () => {
           label: "Edit",
           icon: <MdEdit size={16} className="text-blue-600" />,
           onClick: () => {
-            setFormData({
+            formik.resetForm({ values: {
               _id: row._id,
               name: row.name
                 ? row.name.charAt(0).toUpperCase() +
@@ -240,7 +225,7 @@ const Tax = () => {
                 : "",
               country_code: row.countryId?._id || row.country_code?._id || "",
               isDisable: !active,
-            });
+            } });
             setModalMode("edit");
           },
         },
@@ -279,7 +264,12 @@ const Tax = () => {
         breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Taxes" }]}
         actions={
           <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
-            <button onClick={() => setModalMode("add")}>
+            <button
+              onClick={() => {
+                formik.resetForm({ values: EMPTY_FORM });
+                setModalMode("add");
+              }}
+            >
               <MdAdd size={16} /> Add Tax
             </button>
           </PermissionGuard>
@@ -328,7 +318,7 @@ const Tax = () => {
               : "Save Changes"
         }
         closeButtonText="Cancel"
-        onSubmit={handleSubmit}
+        onSubmit={formik.handleSubmit}
         isButtonView={true}
       >
         <div className="space-y-5">
@@ -342,9 +332,10 @@ const Tax = () => {
               <FormInput
                 label="Tax Name"
                 name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                error={errors.name}
+                value={formik.values.name}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.name && formik.errors.name}
                 placeholder="e.g. GST, VAT"
                 required
               />
@@ -357,16 +348,20 @@ const Tax = () => {
                 value={
                   countryOptions.find(
                     (option) =>
-                      String(option.value) === String(formData.country_code),
+                      String(option.value) ===
+                      String(formik.values.country_code),
                   ) || null
                 }
-                onChange={(selectedOption) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    country_code: selectedOption?.value || "",
-                  }))
+                onChange={(selectedOption) => {
+                  formik.setFieldValue(
+                    "country_code",
+                    selectedOption?.value || "",
+                  );
+                  formik.setFieldTouched("country_code", true, false);
+                }}
+                error={
+                  formik.touched.country_code && formik.errors.country_code
                 }
-                error={errors.country_code}
                 placeholder="Select country"
                 required
               />
@@ -381,12 +376,12 @@ const Tax = () => {
             <FormToggleRow
               title="Active"
               description="Enable this tax for applicable tax calculations."
-              isToggle={!formData.isDisable}
+              isToggle={!formik.values.isDisable}
               handleClick={() =>
-                setFormData((prev) => ({
-                  ...prev,
-                  isDisable: !prev.isDisable,
-                }))
+                formik.setFieldValue(
+                  "isDisable",
+                  !formik.values.isDisable,
+                )
               }
             />
           </FormSection>

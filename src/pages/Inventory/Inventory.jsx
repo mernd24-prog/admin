@@ -19,6 +19,7 @@ import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   DataTable,
+  FilterBar,
   FormSection,
   ImageThumbnail,
   PageHeader,
@@ -44,7 +45,6 @@ import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import FormInput from "../../components/Atoms/FormInput/FormInput";
 
 import Tabs from "../../components/Shared/Tabs";
-import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
 
 const STOCK_FILTER_OPTIONS = [
   { value: "", label: "All Stock" },
@@ -867,7 +867,8 @@ const Inventory = () => {
     setSaving(true);
 
     try {
-      await persistDetailRows(detailRows);
+      const updatedCount = await persistDetailRows(detailRows);
+      if (updatedCount > 0) await refresh();
     } finally {
       setSaving(false);
     }
@@ -1763,7 +1764,6 @@ const Inventory = () => {
           },
           { label: "Inventory" },
         ]}
-        actions={importExportActions}
       />
 
       {importHelp}
@@ -1794,30 +1794,22 @@ const Inventory = () => {
         listPage={list}
         rowKey="id"
         onRefresh={refresh}
+        actions={importExportActions}
         searchPlaceholder="Search product or SKU"
-        searchWrapperClassName="w-full min-w-0 sm:w-72 sm:flex-none"
-        toolbarLeft={
-          <div className="w-full sm:w-48 sm:flex-none">
-            <FilterSelect
-              options={STOCK_FILTER_OPTIONS}
-              value={
-                STOCK_FILTER_OPTIONS.find(
-                  (opt) => opt.value === (list.filters?.stockStatus || ""),
-                ) || STOCK_FILTER_OPTIONS[0]
-              }
-              onChange={(option) =>
-                list.setFilter("stockStatus", option?.value || "")
-              }
-              isClearable={false}
-              isSearchable={false}
-              placeholder="Stock Status"
-              controlHeight={36}
-            />
-          </div>
+        filterBar={
+          <FilterBar
+            filters={[
+              {
+                key: "stockStatus",
+                label: "Stock Status",
+                type: "select",
+                options: STOCK_FILTER_OPTIONS,
+              },
+            ]}
+            listPage={list}
+            loading={loading}
+          />
         }
-        // filterBar={
-        //   <FilterBar filters={filterFields} listPage={list} loading={false} />
-        // }
         emptyText="No inventory products found"
         onRowClick={(row) => navigate(`/app/inventory/${row.productId}`)}
         rowActions={(row) => {

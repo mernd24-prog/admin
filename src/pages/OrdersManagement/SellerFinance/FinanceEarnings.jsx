@@ -35,6 +35,7 @@ import {
   sellerFinanceStatus,
   useFinanceDateRange,
 } from "./financeUi";
+import Tabs from "../../../components/Shared/Tabs";
 
 const FILTERS = [
   ["", "All"],
@@ -471,40 +472,36 @@ export default function FinanceEarnings() {
       </div>
 
       {/* STATUS FILTERS */}
-      <FinanceChoiceFilters
-        label="Filter earnings"
-        value={status}
-        onChange={(key) =>
-          setParams((previous) => {
-            const next = new URLSearchParams(previous);
+  <Tabs
+  tabs={FILTERS.map(([key, label]) => {
+    const summary =
+      key === ""
+        ? statusSummary.all
+        : statusSummary[key] || {
+            count: 0,
+          };
 
-            if (key) {
-              next.set("status", key);
-            } else {
-              next.delete("status");
-            }
+    return {
+      value: key,
+      label,
+      count: summary.count,
+    };
+  })}
+  activeTab={status}
+  onChange={(key) =>
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
 
-            return next;
-          })
-        }
-        options={FILTERS.map(([key, label]) => {
-          const summary =
-            key === ""
-              ? statusSummary.all
-              : statusSummary[key] || {
-                  count: 0,
-                  amount: 0,
-                };
+      if (key) {
+        next.set("status", key);
+      } else {
+        next.delete("status");
+      }
 
-          return [
-            key,
-            label,
-            summary.count,
-            financeMoney(summary.amount, rows[0]?.currency),
-          ];
-        })}
-      />
-
+      return next;
+    })
+  }
+/>
       {/* SEARCH + TABLE */}
       <DataTable
         columns={columns}
