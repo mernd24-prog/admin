@@ -151,7 +151,7 @@ const authSlice = createSlice({
       .addCase(adminLogin.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload;
-        localStorage.setItem('accessToken', action.payload.data.token);
+        sessionStorage.setItem('accessToken', action.payload.data.token);
       })
       .addCase(adminLogin.rejected, (state, action) => {
         state.loading = false;

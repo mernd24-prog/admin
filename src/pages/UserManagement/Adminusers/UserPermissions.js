@@ -46,6 +46,7 @@ const BACKEND_PERMISSION_ACTIONS = [
     'status_change',
     'restore',
     'bulk_action',
+    'adjust',
 ];
 const SEARCH_ACCENT = 'var(--admin-navy)';
 const PRIMARY_BUTTON_CLASS = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--admin-navy)] rounded-lg hover:bg-[#06256f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors';

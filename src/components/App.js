@@ -41,7 +41,7 @@ const App = () => {
   const hasAnyToken = useMemo(
     () =>
       !!localStorage.getItem("sellerOnboardingToken") ||
-      !!localStorage.getItem("accessToken"),
+      !!sessionStorage.getItem("accessToken"),
     [],
   );
 
@@ -50,7 +50,7 @@ const App = () => {
       if (hasAnyToken) {
         const result = await dispatch(fetchAuthStatus());
         if (fetchAuthStatus.rejected.match(result)) {
-          const hasAccessToken = !!localStorage.getItem("accessToken");
+          const hasAccessToken = !!sessionStorage.getItem("accessToken");
           const errorCode = result.payload?.code;
           // Only force logout for definitive auth rejections (not network errors).
           // Network errors have no code; token/session errors always carry a code.
@@ -246,7 +246,7 @@ const App = () => {
 };
 
 const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
-  const isAuthenticated = localStorage.getItem("accessToken");
+  const isAuthenticated = sessionStorage.getItem("accessToken");
   const role = getStoredRole() || flowState?.role;
 
   if (isAuthenticated && role && !isAllowedRoleForCurrentPanel(role)) {
@@ -274,7 +274,7 @@ const PrivateRoute = ({ component: Component, flowState, ...rest }) => {
 };
 
 const SellerStatusRoute = ({ component: Component, flowState, ...rest }) => {
-  const hasAccessToken = !!localStorage.getItem("accessToken");
+  const hasAccessToken = !!sessionStorage.getItem("accessToken");
   const hasOnboardingToken = !!localStorage.getItem("sellerOnboardingToken");
   const hasStoredStatus = !!flowState;
 
@@ -311,7 +311,7 @@ const PublicAuthRoute = ({
   allowOnboardingToken = false,
   ...rest
 }) => {
-  const isAuthenticated = localStorage.getItem("accessToken");
+  const isAuthenticated = sessionStorage.getItem("accessToken");
   const hasOnboardingToken = !!localStorage.getItem("sellerOnboardingToken");
   const role = getStoredRole() || flowState?.role;
   const sellerPanel = isSellerPanel();

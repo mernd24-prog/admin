@@ -14,6 +14,7 @@ const ACTION_ORDER = [
   "status_change",
   "restore",
   "bulk_action",
+  "adjust",
 ];
 
 const ACTION_ALIASES = {
@@ -40,6 +41,7 @@ const ACTION_LABELS = {
   status_change: "Status Change",
   restore: "Restore",
   bulk_action: "Bulk Action",
+  adjust: "Adjust",
 };
 
 const normalizeAction = (value = "") => {

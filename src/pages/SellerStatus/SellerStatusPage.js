@@ -107,7 +107,7 @@ const SellerStatusPage = ({ statusOverride, flowState: routeFlowState }) => {
   const statusKey = statusOverride || status || "pending";
   const hasAnyToken =
     !!localStorage.getItem("sellerOnboardingToken") ||
-    !!localStorage.getItem("accessToken") ||
+    !!sessionStorage.getItem("accessToken") ||
     !!flowState;
 
   const verificationCase = useMemo(
@@ -119,7 +119,7 @@ const SellerStatusPage = ({ statusOverride, flowState: routeFlowState }) => {
     async ({ notify = false } = {}) => {
       if (
         !localStorage.getItem("sellerOnboardingToken") &&
-        !localStorage.getItem("accessToken")
+        !sessionStorage.getItem("accessToken")
       ) {
         return;
       }

@@ -1045,7 +1045,7 @@ const SellerOnboarding = () => {
   const loading = Boolean(seller?.loading);
   const flowState = seller?.flowState;
   const accessToken =
-    typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+    typeof window !== "undefined" ? sessionStorage.getItem("accessToken") : null;
 
   const [pageLoading, setPageLoading] = useState(false);
   const [kycSubmittedApi, setKycSubmittedApi] = useState(false);

@@ -584,6 +584,60 @@ const warrantyTypes = {
     [hsnCodeList, localHsnOptions, mergeCatalogOptions],
   );
 
+  const loadCategoryOptions = useCallback(
+    async (inputValue) => {
+      const search = String(inputValue || "").trim();
+      if (!search) return categoryOptions;
+
+      const options = await dropdownApi.getCategories({ search, limit: 100 });
+      return mergeCatalogOptions(
+        categoryOptions,
+        options.map((option) => ({
+          ...option,
+          categoryKey: option.value,
+          resourceType: "category",
+          resourceId: option.id || option.value,
+        })),
+      ).filter((option) =>
+        String(option.label || "").toLowerCase().includes(search.toLowerCase()),
+      );
+    },
+    [categoryOptions, mergeCatalogOptions],
+  );
+
+  const loadHsnOptions = useCallback(
+    async (inputValue) => {
+      const search = String(inputValue || "").trim();
+      if (!search) return hsnOptions;
+
+      const options = await dropdownApi.getHsnCodes({ search, limit: 100 });
+      return mergeCatalogOptions(
+        hsnOptions,
+        options.map((option) => ({
+          ...option,
+          code: option.value,
+          description: option.meta?.description || "",
+          hsnCategory: option.meta?.category || "",
+          gstRate: Number(option.meta?.gstRate || 0),
+          resourceType: "hsn",
+          resourceId: option.id || option.value,
+        })),
+      ).filter((option) => {
+        const searchable = [
+          option.label,
+          option.code,
+          option.description,
+          option.hsnCategory,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return searchable.includes(search.toLowerCase());
+      });
+    },
+    [hsnOptions, mergeCatalogOptions],
+  );
+
   /*
    * ------------------------------------------------------------
    * Approval
@@ -1137,6 +1191,26 @@ const warrantyTypes = {
     formattedBrandList,
     myBrandSubmissions,
   ]);
+
+  const loadBrandOptions = useCallback(
+    async (inputValue) => {
+      const search = String(inputValue || "").trim();
+      if (!search) return brandOptions;
+
+      const options = await dropdownApi.getBrands({ search, limit: 100 });
+      return mergeCatalogOptions(
+        brandOptions,
+        options.map((option) => ({
+          ...option,
+          resourceType: "brand",
+          resourceId: option.id,
+        })),
+      ).filter((option) =>
+        String(option.label || "").toLowerCase().includes(search.toLowerCase()),
+      );
+    },
+    [brandOptions, mergeCatalogOptions],
+  );
 
   const selectedBrandOption = useMemo(() => {
     const rawBrand =
@@ -1812,6 +1886,8 @@ const warrantyTypes = {
                   value={selectedBrandOption}
                   onChange={handleBrandSelect}
                   options={brandOptions}
+                  loadOptions={loadBrandOptions}
+                  defaultOptions={brandOptions}
                   placeholder="Select Brand"
                   error={errors?.brand}
                   formatOptionLabel={formatCatalogOption}
@@ -1859,6 +1935,8 @@ const warrantyTypes = {
                     value={selectedCategoryOption}
                     onChange={handleCategoryChange}
                     options={categoryOptions}
+                    loadOptions={loadCategoryOptions}
+                    defaultOptions={categoryOptions}
                     error={errors?.category_id}
                     placeholder="Select Category"
                     helperText="Attributes are controlled by the selected category schema."
@@ -1917,6 +1995,8 @@ const warrantyTypes = {
                       handleSelectChange(option, "hsn_code");
                     }}
                     options={hsnOptions}
+                    loadOptions={loadHsnOptions}
+                    defaultOptions={hsnOptions}
                     error={errors?.hsn_code}
                     placeholder="Search by code or description…"
                     formatOptionLabel={formatCatalogOption}

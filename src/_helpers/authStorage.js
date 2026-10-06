@@ -117,18 +117,14 @@ export const isAllowedRoleForCurrentPanel = (role) =>
 export const isRestrictedRoleForPanel = (role, panelMode = getPanelMode()) =>
   normalizeRole(role) === getPanelRoleRules(panelMode).restrictedRole;
 
-export const getAccessToken = () => localStorage.getItem(ACCESS_TOKEN_KEY);
-export const getRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_KEY);
+export const getAccessToken = () => sessionStorage.getItem(ACCESS_TOKEN_KEY);
+export const getRefreshToken = () => sessionStorage.getItem(REFRESH_TOKEN_KEY);
 export const getStoredUser = () =>
-  safeParse(localStorage.getItem(USER_KEY), null);
-export const getStoredRole = () => localStorage.getItem(ROLE_KEY) || "";
+  safeParse(sessionStorage.getItem(USER_KEY), null);
+export const getStoredRole = () => sessionStorage.getItem(ROLE_KEY) || "";
 export const getAllowedModules = () =>
-  safeParse(localStorage.getItem(ALLOWED_MODULES_KEY), []);
+  safeParse(sessionStorage.getItem(ALLOWED_MODULES_KEY), []);
 export const getStoredSidebarModules = () => {
-  const localModules =
-    safeParse(localStorage.getItem(SIDEBAR_MODULES_KEY), []) ||
-    safeParse(localStorage.getItem(RBAC_SIDEBAR_MODULES_KEY), []);
-  if (Array.isArray(localModules) && localModules.length) return localModules;
   return (
     safeParse(sessionStorage.getItem(SIDEBAR_MODULES_KEY), []) ||
     safeParse(sessionStorage.getItem(RBAC_SIDEBAR_MODULES_KEY), []) ||
@@ -136,15 +132,7 @@ export const getStoredSidebarModules = () => {
   );
 };
 export const getStoredModulePermissions = () =>
-  (() => {
-    const localPermissions = safeParse(
-      localStorage.getItem(MODULE_PERMISSIONS_KEY),
-      [],
-    );
-    if (Array.isArray(localPermissions) && localPermissions.length)
-      return localPermissions;
-    return safeParse(sessionStorage.getItem(MODULE_PERMISSIONS_KEY), []) || [];
-  })();
+  safeParse(sessionStorage.getItem(MODULE_PERMISSIONS_KEY), []) || [];
 
 export const getStoredAuth = () => ({
   accessToken: getAccessToken(),
@@ -165,26 +153,23 @@ export const setStoredAuth = ({
   sidebarModules,
   modulePermissions,
 }) => {
-  if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-  if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
-  if (role) localStorage.setItem(ROLE_KEY, normalizeRole(role));
+  if (accessToken) sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  if (refreshToken) sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  if (user) sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (role) sessionStorage.setItem(ROLE_KEY, normalizeRole(role));
   if (Array.isArray(allowedModules)) {
-    localStorage.setItem(
+    sessionStorage.setItem(
       ALLOWED_MODULES_KEY,
       JSON.stringify(allowedModules.map(String)),
     );
   }
   if (Array.isArray(sidebarModules)) {
     const serialized = JSON.stringify(sidebarModules);
-    localStorage.setItem(SIDEBAR_MODULES_KEY, serialized);
-    localStorage.setItem(RBAC_SIDEBAR_MODULES_KEY, serialized);
     sessionStorage.setItem(SIDEBAR_MODULES_KEY, serialized);
     sessionStorage.setItem(RBAC_SIDEBAR_MODULES_KEY, serialized);
   }
   if (Array.isArray(modulePermissions)) {
     const serialized = JSON.stringify(modulePermissions);
-    localStorage.setItem(MODULE_PERMISSIONS_KEY, serialized);
     sessionStorage.setItem(MODULE_PERMISSIONS_KEY, serialized);
   }
 };
@@ -208,6 +193,11 @@ export const clearStoredAuth = () => {
     "modulePermissions",
   ].forEach((key) => localStorage.removeItem(key));
   [
+    ACCESS_TOKEN_KEY,
+    REFRESH_TOKEN_KEY,
+    USER_KEY,
+    ROLE_KEY,
+    ALLOWED_MODULES_KEY,
     "EcomAdmin",
     "adminuser",
     "sidebarModules",

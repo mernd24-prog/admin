@@ -360,7 +360,7 @@ const authSlice = createSlice({
   initialState: {
     loading: false,
     user: null,
-    token: localStorage.getItem("accessToken") || null,
+    token: sessionStorage.getItem("accessToken") || null,
     error: null,
     success: null,
     profileData: [],

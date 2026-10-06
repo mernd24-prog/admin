@@ -62,10 +62,10 @@ export const getSessionUser = () =>
   safeParse(sessionStorage.getItem(SESSION_USER_KEY), null);
 
 export const getStoredAccessToken = () =>
-  localStorage.getItem(ACCESS_TOKEN_KEY) || getSessionUser()?.token || null;
+  sessionStorage.getItem(ACCESS_TOKEN_KEY) || getSessionUser()?.token || null;
 
 export const getStoredRefreshToken = () =>
-  localStorage.getItem(REFRESH_TOKEN_KEY) ||
+  sessionStorage.getItem(REFRESH_TOKEN_KEY) ||
   getSessionUser()?.refreshToken ||
   null;
 
@@ -142,8 +142,8 @@ export const shouldForceLogoutForResponse = (errorOrResponse = {}) => {
 };
 
 export const persistAuthTokens = ({ accessToken, refreshToken } = {}) => {
-  if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  if (accessToken) sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  if (refreshToken) sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
 
   const sessionUser = getSessionUser();
   if (sessionUser && (accessToken || refreshToken)) {

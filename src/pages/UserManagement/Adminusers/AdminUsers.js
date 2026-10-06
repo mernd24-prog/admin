@@ -336,6 +336,34 @@ const ModuleSelector = ({
               {tabModules.length !== 1 ? "s" : ""} included
             </span>
           </button>
+          <div className="grid grid-cols-1 gap-1 pl-2 sm:grid-cols-2">
+            {tabModules.map((module) => (
+              <label
+                key={module.slug}
+                className={`flex items-center gap-2 rounded-md border px-2.5 py-2 text-xs ${
+                  module.selected
+                    ? "border-[var(--admin-blue)]/40 bg-[var(--admin-blue)]/5 text-gray-800"
+                    : "border-gray-100 bg-white text-gray-600"
+                } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={module.selected}
+                  disabled={disabled}
+                  onChange={() => {
+                    if (disabled) return;
+                    const next = module.selected
+                      ? selected.filter((slug) => slug !== module.slug)
+                      : Array.from(new Set([...selected, module.slug]));
+                    if (next.length === 0) return;
+                    onChange(next);
+                  }}
+                  className="h-3.5 w-3.5 accent-[var(--admin-blue)]"
+                />
+                <span className="min-w-0 truncate">{module.name}</span>
+              </label>
+            ))}
+          </div>
         </div>
       ))}
     </div>

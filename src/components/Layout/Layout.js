@@ -859,6 +859,23 @@ function Layout() {
         );
       }
 
+      // Restricted admins are commonly sent to /app/home after login even
+      // when Dashboard was not assigned. Land them on their first permitted
+      // page instead of rendering an avoidable 403 as the initial screen.
+      if (path === "/home") {
+        const firstAllowedRoute = routeRegistry.find(
+          (route) =>
+            route.path &&
+            route.path !== "/home" &&
+            !route.path.includes(":") &&
+            !route.redirectTo &&
+            hasPermission(route.permissionPath || route.path),
+        );
+        if (firstAllowedRoute) {
+          return <Navigate to={`/app${firstAllowedRoute.path}`} replace />;
+        }
+      }
+
       return <PermissionNotAllowed loading />;
     }
 

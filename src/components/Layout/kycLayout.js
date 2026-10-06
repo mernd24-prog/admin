@@ -248,7 +248,7 @@ const KYCStatusLayout = ({
     }
 
     const token =
-      localStorage.getItem("accessToken") ||
+      sessionStorage.getItem("accessToken") ||
       localStorage.getItem("sellerOnboardingToken");
     if (!token) {
       toast.error("Please login again to submit support request.");
