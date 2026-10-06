@@ -264,34 +264,6 @@ const CategorySetup = ({
             </div>
           </FormSection>
 
-          {/* ==================== Visibility Settings ==================== */}
-          <FormSection
-            title={showPublish ? "Visibility Settings" : "Display Settings"}
-            description={
-              showPublish
-                ? "Control where this category will be visible."
-                : "Control whether this category appears on the dashboard."
-            }
-          >
-            <div className="space-y-3">
-              {showPublish && (
-                <FormToggleRow
-                  title="Publish"
-                  description="Make this category available to customers."
-                  isToggle={isPublish}
-                  handleClick={handleIsPublish}
-                />
-              )}
-
-              <FormToggleRow
-                title="Dashboard Visible"
-                description="Show this category on the dashboard."
-                isToggle={formData?.isDashboardVisible}
-                handleClick={handleDashboardVisible}
-              />
-            </div>
-          </FormSection>
-
           {/* ==================== Priority ==================== */}
           {formData?.isDashboardVisible && (
             <FormSection
@@ -307,6 +279,26 @@ const CategorySetup = ({
               />
             </FormSection>
           )}
+
+          {/* ==================== Visibility Settings ==================== */}
+
+          <div className="space-y-3">
+            {showPublish && (
+              <FormToggleRow
+                title="Publish"
+                description="Make this category available to customers."
+                isToggle={isPublish}
+                handleClick={handleIsPublish}
+              />
+            )}
+
+            <FormToggleRow
+              title="Dashboard Visible"
+              description="Show this category on the dashboard."
+              isToggle={formData?.isDashboardVisible}
+              handleClick={handleDashboardVisible}
+            />
+          </div>
         </div>
       </DefaultModal>
     </>

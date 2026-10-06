@@ -397,21 +397,15 @@ const DataTable = ({
     const serialNumber =
       (resolvedPage - 1) * resolvedPageSize + Number(index) + 1;
 
-    return Number.isFinite(serialNumber)
-      ? serialNumber
-      : Number(index) + 1;
+    return Number.isFinite(serialNumber) ? serialNumber : Number(index) + 1;
   };
 
   const toggleAll = (checked) => {
     if (!onSelectionChange) return;
 
-    const remaining = selectedKeys.filter(
-      (key) => !pageKeys.includes(key),
-    );
+    const remaining = selectedKeys.filter((key) => !pageKeys.includes(key));
 
-    onSelectionChange(
-      checked ? [...remaining, ...pageKeys] : remaining,
-    );
+    onSelectionChange(checked ? [...remaining, ...pageKeys] : remaining);
   };
 
   const toggleRow = (key, checked) => {
@@ -435,11 +429,7 @@ const DataTable = ({
       {exportConfig && (
         <ExportButton
           {...exportConfig}
-          data={
-            Array.isArray(exportConfig.data)
-              ? exportConfig.data
-              : safeData
-          }
+          data={Array.isArray(exportConfig.data) ? exportConfig.data : safeData}
           selectedData={selectedData}
           columns={
             Array.isArray(exportConfig.columns)
@@ -451,10 +441,7 @@ const DataTable = ({
       )}
 
       {importConfig && (
-        <ImportButton
-          {...importConfig}
-          requiredModule={requiredModule}
-        />
+        <ImportButton {...importConfig} requiredModule={requiredModule} />
       )}
 
       {onRefresh && (
@@ -464,9 +451,7 @@ const DataTable = ({
           disabled={showRefreshLoading}
           className="admin-btn-secondary"
           aria-label={
-            showRefreshLoading
-              ? "Refreshing records"
-              : "Refresh records"
+            showRefreshLoading ? "Refreshing records" : "Refresh records"
           }
           aria-busy={showRefreshLoading}
         >
@@ -523,17 +508,12 @@ const DataTable = ({
       {filterBar}
 
       {/* Bulk action bar slot */}
-      {bulkActionBar && (
-        <div className="px-4 pt-3">
-          {bulkActionBar}
-        </div>
-      )}
+      {bulkActionBar && <div className="px-4 pt-3">{bulkActionBar}</div>}
 
       {/* Table */}
       <div
         className={`admin-table-scroll ${
-          tableContainerClassName ||
-          "overflow-x-auto overscroll-x-contain"
+          tableContainerClassName || "overflow-x-auto overscroll-x-contain"
         }`}
       >
         <table
@@ -548,9 +528,7 @@ const DataTable = ({
                 >
                   <CustomCheckbox
                     checked={allSelected}
-                    onChange={(event) =>
-                      toggleAll(event.target.checked)
-                    }
+                    onChange={(event) => toggleAll(event.target.checked)}
                   />
                 </th>
               )}
@@ -622,9 +600,7 @@ const DataTable = ({
                       Unable to load records
                     </span>
 
-                    <span className="text-xs text-red-500">
-                      {error}
-                    </span>
+                    <span className="text-xs text-red-500">{error}</span>
 
                     {onRefresh && (
                       <button
@@ -666,10 +642,7 @@ const DataTable = ({
                   onKeyDown={(event) => {
                     if (!onRowClick) return;
 
-                    if (
-                      event.key === "Enter" ||
-                      event.key === " "
-                    ) {
+                    if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
                       onRowClick(row);
                     }
@@ -690,19 +663,12 @@ const DataTable = ({
                   {selectable && (
                     <td
                       className="px-4 py-3 !align-middle"
-                      onClick={(event) =>
-                        event.stopPropagation()
-                      }
+                      onClick={(event) => event.stopPropagation()}
                     >
                       <CustomCheckbox
-                        checked={selectedKeys.includes(
-                          getKey(row, index),
-                        )}
+                        checked={selectedKeys.includes(getKey(row, index))}
                         onChange={(event) =>
-                          toggleRow(
-                            getKey(row, index),
-                            event.target.checked,
-                          )
+                          toggleRow(getKey(row, index), event.target.checked)
                         }
                       />
                     </td>
@@ -726,11 +692,7 @@ const DataTable = ({
                       <div className="flex min-h-[32px] items-center">
                         {renderCellValue(
                           col.render
-                            ? col.render(
-                                row[col.key],
-                                row,
-                                index,
-                              )
+                            ? col.render(row[col.key], row, index)
                             : row[col.key],
                         )}
                       </div>
@@ -770,11 +732,8 @@ const DataTable = ({
                   resolvedTotalCount,
                 )
               : 0}
-            –{Math.min(
-              resolvedPage * resolvedPageSize,
-              resolvedTotalCount,
-            )}{" "}
-            of {resolvedTotalCount}
+            –{Math.min(resolvedPage * resolvedPageSize, resolvedTotalCount)} of{" "}
+            {resolvedTotalCount}
           </span>
 
           <Pagination

@@ -1556,7 +1556,7 @@ const SellerFinance = () => {
           pageSize={Math.max(actionableCommissions.length, 1)}
           rowKey={(row) => row.id}
           emptyText="No order payout records found for this seller"
-          cardClassName="overflow-hidden"
+          cardClassName="overflow-x-auto"
           filterBar={
             isSeller || isSellerDetail ? (
               <FilterBar

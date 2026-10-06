@@ -172,23 +172,23 @@ export default function BasicDetailsTab({
   const [organizationLoading, setOrganizationLoading] = useState(false);
 
   const warrantyProviders = {
-  loading: false,
-  options: [
-    { value: "seller", label: "Seller" },
-    { value: "manufacturer", label: "Manufacturer" },
-    { value: "service_partner", label: "Service Partner" },
-  ],
-};
+    loading: false,
+    options: [
+      { value: "seller", label: "Seller" },
+      { value: "manufacturer", label: "Manufacturer" },
+      { value: "service_partner", label: "Service Partner" },
+    ],
+  };
 
-const warrantyTypes = {
-  loading: false,
-  options: [
-    { value: "manufacturer_warranty", label: "Manufacturer Warranty" },
-    { value: "seller_warranty", label: "Seller Warranty" },
-    { value: "service_warranty", label: "Service Warranty" },
-    { value: "extended_warranty", label: "Extended Warranty" },
-  ],
-};
+  const warrantyTypes = {
+    loading: false,
+    options: [
+      { value: "manufacturer_warranty", label: "Manufacturer Warranty" },
+      { value: "seller_warranty", label: "Seller Warranty" },
+      { value: "service_warranty", label: "Service Warranty" },
+      { value: "extended_warranty", label: "Extended Warranty" },
+    ],
+  };
 
   /*
    * ------------------------------------------------------------
@@ -921,18 +921,16 @@ const warrantyTypes = {
    * ------------------------------------------------------------
    */
 
-  const loadMyBrandSubmissions =
-    useCallback(async () => {
-      try {
-        const response =
-          await dispatch(
-            isSellerPanelUser
-              ? getMyBrandSubmissions()
-              : getBrandList({
-                  page: 1,
-                  limit: 500,
-                }),
-          ).unwrap();
+  const loadMyBrandSubmissions = useCallback(async () => {
+    try {
+      const response = await dispatch(
+        isSellerPanelUser
+          ? getMyBrandSubmissions()
+          : getBrandList({
+              page: 1,
+              limit: 500,
+            }),
+      ).unwrap();
 
       const data = response?.data;
 
@@ -1136,16 +1134,12 @@ const warrantyTypes = {
       .filter(
         (brand) =>
           (brand.approvalStatus || "pending") === "pending" &&
-          !approvedNames.has(
-            String(brand.name || "").toLowerCase(),
-          ),
+          !approvedNames.has(String(brand.name || "").toLowerCase()),
       )
       .map((brand) => {
         const approvalStatus = brand.approvalStatus || "pending";
         const statusLabel =
-          approvalStatus === "rejected"
-            ? "Rejected"
-            : "Pending approval";
+          approvalStatus === "rejected" ? "Rejected" : "Pending approval";
 
         return {
           value: brand.name,
@@ -1159,10 +1153,7 @@ const warrantyTypes = {
         };
       });
 
-    return [
-      ...submissionBrands,
-      ...(formattedBrandList || []),
-    ].map((brand) => {
+    return [...submissionBrands, ...(formattedBrandList || [])].map((brand) => {
       const approvalStatus =
         brandStatusOverrides[String(brand.resourceId || "")] ||
         brandStatusOverrides[String(brand.value || "")] ||
@@ -1186,11 +1177,7 @@ const warrantyTypes = {
             : baseName,
       };
     });
-  }, [
-    brandStatusOverrides,
-    formattedBrandList,
-    myBrandSubmissions,
-  ]);
+  }, [brandStatusOverrides, formattedBrandList, myBrandSubmissions]);
 
   const loadBrandOptions = useCallback(
     async (inputValue) => {
@@ -1223,63 +1210,32 @@ const warrantyTypes = {
 
     if (!currentBrand) return null;
 
-      return (
-        brandOptions.find(
-          (option) =>
-            String(
-              option.value,
-            ) ===
-              String(
-                currentBrand,
-              ) ||
-            String(
-              option.label,
-            ) ===
-              String(
-                currentBrand,
-              ) ||
-            String(
-              option.brandName ||
-                "",
-            ) ===
-              String(
-                currentBrand,
-              ) ||
-            String(
-              option.brandId ||
-                option.resourceId ||
-                option._id ||
-                option.id ||
-                "",
-            ) ===
-              String(
-                currentBrand,
-              ),
-        ) ||
-        (typeof rawBrand ===
-        "object"
-          ? {
-              ...rawBrand,
-              value:
-                currentBrand,
-              label:
-                rawBrand.label ||
-                rawBrand.name ||
-                currentBrand,
-            }
-          : {
-              value:
-                currentBrand,
-              label:
-                currentBrand,
-            })
-      );
-    }, [
-      brandOptions,
-      formData.brand,
-      formData.brandId,
-      formData.brand_id,
-    ]);
+    return (
+      brandOptions.find(
+        (option) =>
+          String(option.value) === String(currentBrand) ||
+          String(option.label) === String(currentBrand) ||
+          String(option.brandName || "") === String(currentBrand) ||
+          String(
+            option.brandId ||
+              option.resourceId ||
+              option._id ||
+              option.id ||
+              "",
+          ) === String(currentBrand),
+      ) ||
+      (typeof rawBrand === "object"
+        ? {
+            ...rawBrand,
+            value: currentBrand,
+            label: rawBrand.label || rawBrand.name || currentBrand,
+          }
+        : {
+            value: currentBrand,
+            label: currentBrand,
+          })
+    );
+  }, [brandOptions, formData.brand, formData.brandId, formData.brand_id]);
 
   const handleBrandSelect = (option) => {
     if (!option) {
@@ -2190,45 +2146,37 @@ const warrantyTypes = {
                   isLoading={warrantyUnits.loading}
                   isClearable
                 />
-<FilterSelect
-  label="Warranty Provider"
-  value={
-    warrantyProviders.options.find(
-      (option) =>
-        option.value === formData.warranty?.provider
-    ) || null
-  }
-  onChange={(option) =>
-    handleNestedChange(
-      "warranty.provider",
-      option?.value || ""
-    )
-  }
-  options={warrantyProviders.options}
-  placeholder="Select warranty provider"
-  isLoading={warrantyProviders.loading}
-  isClearable
-/>
+                <FilterSelect
+                  label="Warranty Provider"
+                  value={
+                    warrantyProviders.options.find(
+                      (option) => option.value === formData.warranty?.provider,
+                    ) || null
+                  }
+                  onChange={(option) =>
+                    handleNestedChange("warranty.provider", option?.value || "")
+                  }
+                  options={warrantyProviders.options}
+                  placeholder="Select warranty provider"
+                  isLoading={warrantyProviders.loading}
+                  isClearable
+                />
 
-<FilterSelect
-  label="Warranty Type"
-  value={
-    warrantyTypes.options.find(
-      (option) =>
-        option.value === formData.warranty?.type
-    ) || null
-  }
-  onChange={(option) =>
-    handleNestedChange(
-      "warranty.type",
-      option?.value || ""
-    )
-  }
-  options={warrantyTypes.options}
-  placeholder="Select warranty type"
-  isLoading={warrantyTypes.loading}
-  isClearable
-/>
+                <FilterSelect
+                  label="Warranty Type"
+                  value={
+                    warrantyTypes.options.find(
+                      (option) => option.value === formData.warranty?.type,
+                    ) || null
+                  }
+                  onChange={(option) =>
+                    handleNestedChange("warranty.type", option?.value || "")
+                  }
+                  options={warrantyTypes.options}
+                  placeholder="Select warranty type"
+                  isLoading={warrantyTypes.loading}
+                  isClearable
+                />
               </div>
 
               <TextEditor
@@ -2253,14 +2201,9 @@ const warrantyTypes = {
                   <h3>Product Return Policy</h3>
 
                   <p className="max-w-2xl">
-                    Set the return window, available resolution, shipping
-                    responsibility, and verification requirements for this
-                    product.
-                  </p>
-
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    The policy is saved with each order and will not change for
-                    existing orders.
+                    Set return window, resolution, shipping responsibility, and
+                    verification requirements. Saved policy applies to new
+                    orders and remains unchanged for existing orders.
                   </p>
                 </div>
 
