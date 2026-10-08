@@ -596,6 +596,10 @@ const Inventory = () => {
   const [adjusting, setAdjusting] = useState(false);
 
   const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(STOCK_HISTORY_PAGE_SIZE);
+  const [inventoryPage, setInventoryPage] = useState(1);
+  const [inventoryPageSize, setInventoryPageSize] = useState(20);
+  const [tableTransitionLoading, setTableTransitionLoading] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -691,16 +695,23 @@ const Inventory = () => {
     [fetchDetail, fetchList, productId],
   );
 
+  useEffect(() => {
+    if (!tableTransitionLoading) return undefined;
+
+    const timer = window.setTimeout(() => setTableTransitionLoading(false), 220);
+    return () => window.clearTimeout(timer);
+  }, [tableTransitionLoading]);
+
   const transactions = useMemo(
     () => detail?.transactions?.items || [],
     [detail?.transactions?.items],
   );
 
   const pagedTransactions = useMemo(() => {
-    const offset = (historyPage - 1) * STOCK_HISTORY_PAGE_SIZE;
+    const offset = (historyPage - 1) * historyPageSize;
 
-    return transactions.slice(offset, offset + STOCK_HISTORY_PAGE_SIZE);
-  }, [historyPage, transactions]);
+    return transactions.slice(offset, offset + historyPageSize);
+  }, [historyPage, historyPageSize, transactions]);
 
   const productRows = useMemo(() => {
     const grouped = groupInventoryByProduct(rows);
@@ -737,6 +748,12 @@ const Inventory = () => {
         .some((value) => String(value).toLowerCase().includes(searchValue)),
     );
   }, [detailRows, variantSearch]);
+
+  const pagedDetailRows = useMemo(() => {
+    const offset = (inventoryPage - 1) * inventoryPageSize;
+
+    return filteredDetailRows.slice(offset, offset + inventoryPageSize);
+  }, [filteredDetailRows, inventoryPage, inventoryPageSize]);
 
   const listTableLoading = loading && productRows.length === 0;
 
@@ -1694,14 +1711,26 @@ const Inventory = () => {
         {activeTab === "inventory" && (
           <DataTable
             columns={detailColumns}
-            data={filteredDetailRows}
-            loading={loading}
+            data={pagedDetailRows}
+            loading={loading || tableTransitionLoading}
             error={error}
-            // totalCount={filteredDetailRows.length}
-            // listPage={detailList}
+            totalCount={filteredDetailRows.length}
+            page={inventoryPage}
+            pageSize={inventoryPageSize}
+            onPageChange={(page) => {
+              setTableTransitionLoading(true);
+              setInventoryPage(page);
+            }}
+            onPageSizeChange={(size) => {
+              setTableTransitionLoading(true);
+              setInventoryPageSize(size);
+              setInventoryPage(1);
+            }}
+            pageSizeOptions={[10, 20, 50, 100]}
             rowKey="id"
             onSearch={(value) => {
               setVariantSearch(value);
+              setInventoryPage(1);
               detailList.setPage(1);
             }}
             searchPlaceholder="Search variant name or SKU"
@@ -1735,11 +1764,20 @@ const Inventory = () => {
             <DataTable
               columns={transactionColumns}
               data={pagedTransactions}
-              loading={loading}
+              loading={loading || tableTransitionLoading}
               totalCount={transactions.length}
               page={historyPage}
-              pageSize={STOCK_HISTORY_PAGE_SIZE}
-              onPageChange={setHistoryPage}
+              pageSize={historyPageSize}
+              onPageChange={(page) => {
+                setTableTransitionLoading(true);
+                setHistoryPage(page);
+              }}
+              onPageSizeChange={(size) => {
+                setTableTransitionLoading(true);
+                setHistoryPageSize(size);
+                setHistoryPage(1);
+              }}
+              pageSizeOptions={[10, 20, 50, 100]}
               rowKey={(row, index) => row._id || row.id || index}
               emptyText="No stock history found"
               cardClassName="admin-card overflow-hidden"

@@ -38,7 +38,6 @@ import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGr
 import Tabs from "../../components/Shared/Tabs";
 
 const FILTER_FIELDS = [
-  { key: "orderId", type: "text", label: "Order #", width: "w-56" },
   {
     key: "sellerId",
     type: "asyncDropdown",

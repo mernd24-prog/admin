@@ -25,6 +25,8 @@ export default function FinanceStatements() {
   );
   const rows = financeList(state);
   const [downloading, setDownloading] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const load = useCallback(async () => {
     try {
       await dispatch(
@@ -52,6 +54,15 @@ export default function FinanceStatements() {
       setDownloading("");
     }
   }, []);
+
+  const pagedRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }, [rows, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [rows.length]);
   const columns = useMemo(
     () => [
       {
@@ -160,10 +171,17 @@ export default function FinanceStatements() {
       />
       <DataTable
         columns={columns}
-        data={rows}
+        data={pagedRows}
         loading={Boolean(state.loading)}
         totalCount={rows.length}
-        pageSize={20}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+        pageSizeOptions={[10, 20, 50, 100]}
         rowKey="id"
         emptyText="No statements yet. Statements appear after a payout or settlement is completed."
       />

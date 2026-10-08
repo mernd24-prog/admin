@@ -65,7 +65,6 @@ const FILTER_FIELDS = [
       label: formatLabel(s),
     })),
   },
-  { key: "search", type: "text", label: "Search", width: "w-52" },
 ];
 
 const EMPTY_ACTION = {

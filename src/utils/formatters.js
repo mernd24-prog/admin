@@ -116,6 +116,27 @@ export function formatLabel(value, fallback = "Not available") {
     .replace(/\s+/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
+
+/**
+ * Truncate a string to a friendly word boundary instead of cutting through a word.
+ * Example: "Titan Raga Moments Of Joy" → "Titan Raga Moments..."
+ */
+export function truncateToWordBoundary(value = "", maxLength = 36, suffix = "...") {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+
+  if (!text) return "N/A";
+  if (text.length <= maxLength) return text;
+
+  const candidate = text.slice(0, maxLength).trimEnd();
+  const lastSpaceIndex = candidate.lastIndexOf(" ");
+
+  if (lastSpaceIndex > Math.max(8, Math.floor(maxLength * 0.6))) {
+    return `${candidate.slice(0, lastSpaceIndex).trim()}${suffix}`;
+  }
+
+  return `${candidate.trim()}${suffix}`;
+}
+
 /**
  * Convert an array of raw status strings into select option objects
  * with properly formatted labels.

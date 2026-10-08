@@ -976,7 +976,7 @@ const SellerPayouts = () => {
 
   return (
     <div className="space-y-6">
-      <Loader loading={Boolean(loading)} label="Refreshing payouts..." />
+      <Loader loading={Boolean(loading)}/>
       <PageHeader
         title={isSeller ? "Payouts" : "Seller Payouts"}
         subtitle={

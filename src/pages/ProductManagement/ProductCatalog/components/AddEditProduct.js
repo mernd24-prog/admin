@@ -37,8 +37,9 @@ import {
   FiX,
 } from "react-icons/fi";
 import { toast } from "sonner";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import TabNavigation from "./TabNavigation";
+import ConfirmModal from "../../../../components/Shared/ConfirmModal";
 import Breadcrumb from "./Breadcrumb";
 import selectJson from "../../../../_helpers/SelectJson.json";
 import { BsMenuApp } from "react-icons/bs";
@@ -345,6 +346,7 @@ export const CollectionCardThumbnail = ({ image, name }) => {
 export default function ProductManagementUI() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const selector = useSelector((state) => state.product);
   const adminCoreSelector = useSelector((state) => state.adminCore);
   const mainContainerRef = useRef(null);
@@ -391,12 +393,114 @@ export default function ProductManagementUI() {
   const initialPrefillStartedRef = useRef(false);
   const requestedProductIdRef = useRef(null);
   const [saving, setSaving] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const initialFormSnapshotRef = useRef(null);
+  const pendingNavigationRef = useRef(null);
+  const currentPathRef = useRef(location.pathname);
+  const leaveGuardDisabledRef = useRef(false);
   const sellerPanelMode = isSellerPanel();
   const [shippingProfileOptions, setShippingProfileOptions] = useState([]);
   const [allowedPincodeInput, setAllowedPincodeInput] = useState("");
   const [selectedShippingTemplate, setSelectedShippingTemplate] =
     useState(null);
   const [collectionSearch, setCollectionSearch] = useState("");
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!initialFormSnapshotRef.current || leaveGuardDisabledRef.current) {
+      return false;
+    }
+    return JSON.stringify(formData) !== initialFormSnapshotRef.current;
+  }, [formData]);
+
+  useEffect(() => {
+    currentPathRef.current = location.pathname;
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (loading) return undefined;
+
+    if (initialFormSnapshotRef.current === null) {
+      initialFormSnapshotRef.current = JSON.stringify(formData);
+    }
+
+    return undefined;
+  }, [formData, loading]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      pendingNavigationRef.current = null;
+      setLeaveConfirmOpen(false);
+      return undefined;
+    }
+
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+
+    const interceptHistoryCall = (originalMethod) =>
+      function guardedHistoryCall(...args) {
+        if (leaveGuardDisabledRef.current) {
+          return originalMethod.apply(window.history, args);
+        }
+
+        const nextUrl = typeof args[2] === "string" ? args[2] : null;
+        if (!nextUrl) {
+          return originalMethod.apply(window.history, args);
+        }
+
+        const nextPath = new URL(nextUrl, window.location.origin).pathname;
+        if (nextPath !== currentPathRef.current) {
+          pendingNavigationRef.current = { path: nextPath };
+          setLeaveConfirmOpen(true);
+          return;
+        }
+
+        return originalMethod.apply(window.history, args);
+      };
+
+    window.history.pushState = interceptHistoryCall(originalPushState);
+    window.history.replaceState = interceptHistoryCall(originalReplaceState);
+
+    return () => {
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (!hasUnsavedChanges) return;
+
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  const handleLeaveCancel = () => {
+    pendingNavigationRef.current = null;
+    setLeaveConfirmOpen(false);
+  };
+
+  const handleLeaveConfirm = () => {
+    const pendingTarget = pendingNavigationRef.current?.path;
+    pendingNavigationRef.current = null;
+    leaveGuardDisabledRef.current = true;
+    initialFormSnapshotRef.current = JSON.stringify(formData);
+    setLeaveConfirmOpen(false);
+
+    if (pendingTarget) {
+      navigate(pendingTarget);
+    }
+  };
+
+  const disableLeaveGuard = useCallback(() => {
+    leaveGuardDisabledRef.current = true;
+    pendingNavigationRef.current = null;
+    setLeaveConfirmOpen(false);
+    initialFormSnapshotRef.current = JSON.stringify(formData);
+  }, [formData]);
 
   const calculatePriceWithTax = (product, basePrice) => {
     const igst = product?.IGST ?? 0;
@@ -2506,6 +2610,7 @@ export default function ProductManagementUI() {
           setVariantsData([DEFAULT_PRODUCT_VARIANT]);
           setVariantAxes([]);
         }
+        disableLeaveGuard();
         toast.success(response?.message || "Product saved successfully!");
         navigate(`/app/product-catalog`);
       }
@@ -4195,6 +4300,17 @@ export default function ProductManagementUI() {
           />
         </div>
       </div>
+
+      <ConfirmModal
+        open={leaveConfirmOpen}
+        onClose={handleLeaveCancel}
+        onConfirm={handleLeaveConfirm}
+        title="Leave this page?"
+        message="You have unsaved changes in this product form. If you leave now, your changes will be lost."
+        variant="warning"
+        confirmLabel="Leave"
+        cancelLabel="Stay"
+      />
     </div>
   );
 }

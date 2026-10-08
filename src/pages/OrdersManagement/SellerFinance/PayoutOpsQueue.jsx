@@ -95,7 +95,6 @@ const FILTER_FIELDS = [
       label: formatLabel(s),
     })),
   },
-  { key: "search", type: "text", label: "Search", width: "w-52" },
   { key: "fromDate", type: "date", label: "From" },
   { key: "toDate", type: "date", label: "To" },
 ];

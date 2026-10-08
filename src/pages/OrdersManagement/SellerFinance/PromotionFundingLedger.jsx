@@ -64,7 +64,7 @@ const PromotionFundingLedger = () => {
   const [filters, setFilters] = useState({
     search: "",
     fundingType: "",
-    limit: 50,
+    limit: 20,
     offset: 0,
   });
 
@@ -449,13 +449,26 @@ const PromotionFundingLedger = () => {
         columns={columns}
         data={rows}
         loading={loading}
-        totalCount={rows.length}
+        totalCount={payload?.totalCount || payload?.total || payload?.count || rows.length}
         page={
           Math.floor(
             Number(filters.offset || 0) / Number(filters.limit || 50),
           ) + 1
         }
         pageSize={Number(filters.limit || 50)}
+        onPageChange={(page) =>
+          setFilters((current) => ({
+            ...current,
+            offset: (page - 1) * Number(current.limit || 20),
+          }))
+        }
+        onPageSizeChange={(limit) =>
+          setFilters((current) => ({
+            ...current,
+            limit,
+            offset: 0,
+          }))
+        }
         rowKey="id"
         emptyText="No funded discounts found."
         onRefresh={load}
