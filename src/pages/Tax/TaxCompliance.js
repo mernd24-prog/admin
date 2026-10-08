@@ -27,7 +27,10 @@ import { ACTIONS } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
 import useStoreNames from "../../hooks/useStoreNames";
 
-import { formatDateTime12Hour } from "../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatIndianNumber,
+} from "../../utils/formatters";
 import { resolveStoreName } from "../../utils/storeNameUtils";
 
 import { dropdownApi } from "../../_helpers/dropdownApi";
@@ -328,28 +331,40 @@ const TaxCompliance = () => {
         label: "Taxable",
         sortable: true,
         render: (value) => (
-          <span className="font-mono text-xs">₹ {money(value)}</span>
+          <span className="font-mono text-xs">
+            {" "}
+            {formatIndianNumber(value)}
+          </span>
         ),
       },
       {
         key: "cgst_amount",
         label: "CGST",
         render: (value) => (
-          <span className="font-mono text-xs">₹ {money(value)}</span>
+          <span className="font-mono text-xs">
+            {" "}
+            {formatIndianNumber(value)}
+          </span>
         ),
       },
       {
         key: "sgst_amount",
         label: "SGST",
         render: (value) => (
-          <span className="font-mono text-xs">₹ {money(value)}</span>
+          <span className="font-mono text-xs">
+            {" "}
+            {formatIndianNumber(value)}
+          </span>
         ),
       },
       {
         key: "igst_amount",
         label: "IGST",
         render: (value) => (
-          <span className="font-mono text-xs">₹ {money(value)}</span>
+          <span className="font-mono text-xs">
+            {" "}
+            {formatIndianNumber(value)}
+          </span>
         ),
       },
       {
@@ -358,7 +373,7 @@ const TaxCompliance = () => {
         sortable: true,
         render: (value) => (
           <span className="font-mono text-sm font-medium">
-            ₹ {money(value)}
+            {formatIndianNumber(value)}
           </span>
         ),
       },
@@ -430,7 +445,10 @@ const TaxCompliance = () => {
         label: "Taxable",
         sortable: true,
         render: (value) => (
-          <span className="font-mono text-xs">₹ {money(value)}</span>
+          <span className="font-mono text-xs">
+            {" "}
+            {formatIndianNumber(value)}
+          </span>
         ),
       },
       {
@@ -438,7 +456,7 @@ const TaxCompliance = () => {
         label: "Tax",
         sortable: true,
         render: (value) => (
-          <span className="font-mono text-xs">₹ {money(value)}</span>
+          <span className="font-mono text-xs">{formatIndianNumber(value)}</span>
         ),
       },
       {
@@ -447,7 +465,7 @@ const TaxCompliance = () => {
         sortable: true,
         render: (value) => (
           <span className="font-mono text-sm font-medium">
-            ₹ {money(value)}
+            {formatIndianNumber(value)}
           </span>
         ),
       },
@@ -510,7 +528,7 @@ const TaxCompliance = () => {
         label: "Amount",
         render: (value) => (
           <span className="font-mono text-sm font-medium">
-            ₹ {money(value)}
+            {formatIndianNumber(value)}
           </span>
         ),
       },

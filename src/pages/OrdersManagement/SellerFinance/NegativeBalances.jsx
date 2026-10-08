@@ -20,7 +20,11 @@ import {
 } from "../../../Redux/sellerCommissionsSlice";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
-import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatIndianNumber,
+  formatLabel,
+} from "../../../utils/formatters";
 
 const NEGATIVE_BALANCE_STATUSES = [
   "pending",
@@ -95,7 +99,6 @@ const valueOf = (row = {}, ...keys) => {
   return 0;
 };
 
-const money = (value) => `INR ${Math.abs(Number(value || 0)).toFixed(2)}`;
 const settlementId = (row) => row?._id || row?.id || row?.settlementId;
 
 const NegativeBalances = () => {
@@ -108,7 +111,7 @@ const NegativeBalances = () => {
     defaultSortDir: "desc",
   });
   const { toQueryParams } = list;
-
+  const [sellerMap, setSellerMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [action, setAction] = useState(EMPTY_ACTION);
@@ -136,6 +139,30 @@ const NegativeBalances = () => {
       setLoading(false);
     }
   }, [dispatch, toQueryParams]);
+
+  useEffect(() => {
+    const loadSellers = async () => {
+      try {
+        const sellers = await dropdownApi.getSellers({
+          limit: 100,
+        });
+
+        const map = {};
+
+        (sellers || []).forEach((seller) => {
+          if (seller?.value) {
+            map[seller.value] = seller.label;
+          }
+        });
+
+        setSellerMap(map);
+      } catch (error) {
+        console.error("Failed to load sellers", error);
+      }
+    };
+
+    loadSellers();
+  }, []);
 
   useEffect(() => {
     fetchBalances();
@@ -174,8 +201,8 @@ const NegativeBalances = () => {
         ? "Confirm external payment?"
         : "Confirm write-off?",
       message: isExternalPayment
-        ? `Confirm that ${money(action.settlement?.remainingAmount ?? action.settlement?.net_amount)} was received outside the payout system. This closes the amount owed.`
-        : `This permanently stops recovery of ${money(action.settlement?.remainingAmount ?? action.settlement?.net_amount)}. The amount will not be collected from this seller.`,
+        ? `Confirm that ${formatIndianNumber(action.settlement?.remainingAmount ?? action.settlement?.net_amount)} was received outside the payout system. This closes the amount owed.`
+        : `This permanently stops recovery of ${formatIndianNumber(action.settlement?.remainingAmount ?? action.settlement?.net_amount)}. The amount will not be collected from this seller.`,
     });
   };
 
@@ -234,27 +261,30 @@ const NegativeBalances = () => {
         label: "Seller",
         sortable: true,
         render: (_, row) => {
+          const sellerId = row.sellerId || row.seller_id;
+
           const name =
-            row.sellerName || row.seller?.name || row.seller?.businessName;
+            row.sellerName ||
+            row.seller?.name ||
+            row.seller?.businessName ||
+            sellerMap[sellerId];
+
           const email = row.sellerEmail || row.seller?.email;
-          const value = row.sellerId || row.seller_id;
+
           return (
             <div>
               {name && (
                 <div className="text-sm font-medium text-gray-800">{name}</div>
               )}
+
               {email && <div className="text-xs text-gray-400">{email}</div>}
-              {!name && !email && value && (
-                <span className="font-mono text-xs text-gray-500">
-                  {String(value).slice(0, 16)}
-                  {String(value).length > 16 ? "…" : ""}
-                </span>
-              )}
-              {!name && !email && !value && "—"}
+
+              {!name && !email && "—"}
             </div>
           );
         },
       },
+      ,
       {
         key: "liabilityType",
         label: "Type / Order",
@@ -276,7 +306,7 @@ const NegativeBalances = () => {
         label: "Amount originally owed",
         sortable: true,
         render: (value, row) =>
-          money(
+          formatIndianNumber(
             valueOf(
               { value, ...row },
               "value",
@@ -295,7 +325,7 @@ const NegativeBalances = () => {
         render: (value, row) => (
           <div>
             <div className="font-semibold text-red-600">
-              {money(
+              {formatIndianNumber(
                 value ??
                   row.remainingAmount ??
                   row.net_amount ??
@@ -305,7 +335,7 @@ const NegativeBalances = () => {
             </div>
             {Number(row.recoveredAmount || 0) > 0 && (
               <div className="mt-1 text-xs text-emerald-600">
-                {money(row.recoveredAmount)} already recovered
+                {formatIndianNumber(row.recoveredAmount)} already recovered
               </div>
             )}
           </div>
@@ -362,7 +392,7 @@ const NegativeBalances = () => {
         },
       },
     ],
-    [],
+    [sellerMap],
   );
 
   return (
@@ -374,11 +404,6 @@ const NegativeBalances = () => {
           { label: "Seller Finance & Payouts" },
           { label: "Seller Amounts Owed" },
         ]}
-        // actions={
-        //   <button type="button" onClick={fetchBalances}>
-        //     <MdRefresh size={17} /> Refresh
-        //   </button>
-        // }
       />
 
       <div className="admin-card mb-4 border-l-4 border-l-blue-500 bg-blue-50/40 p-4 text-sm text-[var(--admin-ink)]">

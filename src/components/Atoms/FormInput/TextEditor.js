@@ -58,10 +58,7 @@ export const TextEditor = React.memo(
               const input = document.createElement("input");
 
               input.setAttribute("type", "file");
-              input.setAttribute(
-                "accept",
-                "image/jpeg,image/png,image/webp"
-              );
+              input.setAttribute("accept", "image/jpeg,image/png,image/webp");
 
               input.click();
 
@@ -78,11 +75,7 @@ export const TextEditor = React.memo(
                   if (quill) {
                     const range = quill.getSelection(true);
 
-                    quill.insertEmbed(
-                      range.index,
-                      "image",
-                      url
-                    );
+                    quill.insertEmbed(range.index, "image", url);
 
                     quill.setSelection(range.index + 1);
                   }
@@ -98,7 +91,7 @@ export const TextEditor = React.memo(
           matchVisual: false,
         },
       }),
-      []
+      [],
     );
 
     const handleChange = useCallback(
@@ -113,7 +106,7 @@ export const TextEditor = React.memo(
           onChange(content);
         }
       },
-      [onChange, maxLength]
+      [onChange, maxLength],
     );
 
     const characterCount = useMemo(() => {
@@ -129,12 +122,10 @@ export const TextEditor = React.memo(
       <div className={`text-editor-wrapper w-full ${className}`}>
         {/* Label */}
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-xs font-medium text-gray-700 mb-2">
             {label}
 
-            {required && (
-              <span className="text-red-500 ml-1">*</span>
-            )}
+            {required && <span className="text-red-500 ml-1">*</span>}
           </label>
         )}
 
@@ -149,7 +140,7 @@ export const TextEditor = React.memo(
               ${
                 error && showErrorBorder
                   ? "border-red-500"
-                  :  "border-[var(--admin-field-line)]"
+                  : "border-[var(--admin-field-line)]"
               }
               ${readOnly ? "bg-gray-50" : "bg-white"}
             `}
@@ -185,11 +176,7 @@ export const TextEditor = React.memo(
         </div>
 
         {/* Error Message */}
-        {error && (
-          <p className="text-red-500 text-xs mt-1">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
 
         {/* Quill Custom Styles */}
         <style>{`
@@ -314,7 +301,7 @@ export const TextEditor = React.memo(
         `}</style>
       </div>
     );
-  }
+  },
 );
 
 TextEditor.displayName = "TextEditor";

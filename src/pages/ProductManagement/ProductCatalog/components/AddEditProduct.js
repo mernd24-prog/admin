@@ -3267,7 +3267,7 @@ export default function ProductManagementUI() {
                     <span className="font-semibold">
                       {productVideoUploading
                         ? "Uploading video…"
-                        : "Add product video"}
+                        : "Add Product Video"}
                     </span>
                     <span className="mt-1 text-[10px] leading-tight text-gray-400">
                       Upload only MP4, WebM, MOV or OGG and limit upto 50MB
@@ -3352,7 +3352,7 @@ export default function ProductManagementUI() {
 
               {/* Shipping Profile */}
               <FilterSelect
-                label="Shipping profile (optional)"
+                label="Shipping Profile (Optional)"
                 options={shippingProfileOptions
                   .filter((opt) => opt.type === "profile")
                   .map((opt) => ({

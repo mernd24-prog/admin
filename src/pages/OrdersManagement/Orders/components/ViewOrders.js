@@ -35,6 +35,7 @@ import { usePermission } from "../../../../_helpers/usePermission";
 import useRealtimeRefresh from "../../../../hooks/useRealtimeRefresh";
 import {
   formatDateTime12Hour,
+  formatIndianNumber,
   formatLabel,
 } from "../../../../utils/formatters";
 import { FormSection } from "../../../../components/Shared";
@@ -180,8 +181,6 @@ const normalizeJson = (value, fallback) => {
 
 const getOrderId = (order = {}) =>
   firstDefined(order.id, order._id, order.orderId, order.order_no);
-
-const formatMoney = (value) => `₹ ${money(value).toFixed(2)}`;
 
 const formatDate = (value) => formatDateTime12Hour(value, "N/A");
 
@@ -1155,7 +1154,7 @@ const commissionBaseNote = (seller = {}, commissionAmount = 0) => {
   const derivedBase =
     rate > 0 && commissionAmount > 0 ? money(commissionAmount) : 0;
   const base = derivedBase || explicitBase;
-  const baseText = base > 0 ? `Base: ${formatMoney(base)}` : "";
+  const baseText = base > 0 ? `Base: ${formatIndianNumber(base)}` : "";
   const rateText = seller.commissionRates.length
     ? `Rate: ${seller.commissionRates.map(percent).join(", ")}`
     : "";
@@ -1176,7 +1175,7 @@ const commissionGstBaseNote = (
         ? money((commissionTaxAmount * 100) / base)
         : 0;
   const rateText = derivedRate > 0 ? `Rate: ${percent(derivedRate)}` : "";
-  return [`GST base: ${formatMoney(base)}`, rateText]
+  return [`GST base: ${formatIndianNumber(base)}`, rateText]
     .filter(Boolean)
     .join(" · ");
 };
@@ -1923,7 +1922,7 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
               <div className="text-right">
                 <div className="text-xs text-[#65718b]">Item payout</div>
                 <div className="text-base font-bold text-[#21812C]">
-                  {formatMoney(row.finalPayout)}
+                  {formatIndianNumber(row.finalPayout)}
                 </div>
               </div>
             </div>
@@ -1934,7 +1933,7 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
                     Original payout
                   </div>
                   <div className="mt-1 text-sm font-bold text-[#202337]">
-                    {formatMoney(row.beforeReturn)}
+                    {formatIndianNumber(row.beforeReturn)}
                   </div>
                   <div className="mt-1 text-[11px] leading-4 text-[#65718b]">
                     Before return or cancellation adjustment.
@@ -1945,7 +1944,9 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
                     Reversed
                   </div>
                   <div className="mt-1 text-sm font-bold text-[#9a3412]">
-                    {returned ? `-${formatMoney(row.refundRecovery)}` : "—"}
+                    {returned
+                      ? `-${formatIndianNumber(row.refundRecovery)}`
+                      : "—"}
                   </div>
                   <div className="mt-1 text-[11px] leading-4 text-[#8a5a00]">
                     {returned
@@ -1958,18 +1959,20 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
                     Final payable
                   </div>
                   <div className="mt-1 text-sm font-bold text-[#21812C]">
-                    {formatMoney(row.finalPayout)}
+                    {formatIndianNumber(row.finalPayout)}
                   </div>
                   <div className="mt-1 text-[11px] leading-4 text-[#2f6f3f]">
                     Commission/GST{" "}
-                    {formatMoney(row.netCommission + row.netCommissionGst)}
+                    {formatIndianNumber(
+                      row.netCommission + row.netCommissionGst,
+                    )}
                     {row.netShipping > 0
-                      ? ` · shipping kept ${formatMoney(row.netShipping)}`
+                      ? ` · shipping kept ${formatIndianNumber(row.netShipping)}`
                       : ""}
                     {row.netShippingDeduction > 0
-                      ? ` · shipping deducted ${formatMoney(row.netShippingDeduction)}`
+                      ? ` · shipping deducted ${formatIndianNumber(row.netShippingDeduction)}`
                       : ""}
-                    {` · TCS/TDS ${formatMoney(finalTaxWithheld)}`}
+                    {` · TCS/TDS ${formatIndianNumber(finalTaxWithheld)}`}
                   </div>
                 </div>
               </div>
@@ -1986,7 +1989,7 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
                           ? "Returned/cancelled quantity reduced the seller shipping payout."
                           : "Shipping is still payable to seller as per policy."
                       }
-                      value={`${row.shippingReversal > 0 ? `${formatMoney(row.shipping)} − ${formatMoney(row.shippingReversal)} = ` : ""}${formatMoney(row.netShipping || row.shipping)}`}
+                      value={`${row.shippingReversal > 0 ? `${formatIndianNumber(row.shipping)} − ${formatIndianNumber(row.shippingReversal)} = ` : ""}${formatIndianNumber(row.netShipping || row.shipping)}`}
                       tone="credit"
                       small
                     />
@@ -1999,7 +2002,7 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
                           ? "Deduction is reduced for the returned/cancelled quantity."
                           : "Deduction remains as configured for this seller/order."
                       }
-                      value={`-${formatMoney(row.netShippingDeduction || row.shippingDeduction)}`}
+                      value={`-${formatIndianNumber(row.netShippingDeduction || row.shippingDeduction)}`}
                       tone="warning"
                       small
                       className="mt-1"
@@ -2011,14 +2014,14 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
                 <PayoutRow
                   label="Customer refund for returned quantity"
                   note="Shown for reference; seller payout reversal is calculated separately."
-                  value={formatMoney(row.customerRefundAmount)}
+                  value={formatIndianNumber(row.customerRefundAmount)}
                   tone="muted"
                   small
                 />
               )}
               <PayoutRow
                 label="Final payable for this product"
-                value={formatMoney(row.finalPayout)}
+                value={formatIndianNumber(row.finalPayout)}
                 tone="credit"
                 small
                 className="border-t border-[#f1e7cd] pt-2 font-bold"
@@ -2030,7 +2033,7 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
     </div>
     <div className="flex items-center justify-between bg-[#fff9ea] px-4 py-3 text-base font-bold text-[#202337]">
       <span>Total seller payout</span>
-      <span>{formatMoney(finalTotal)}</span>
+      <span>{formatIndianNumber(finalTotal)}</span>
     </div>
   </div>
 );
@@ -2060,7 +2063,7 @@ const ItemWisePayoutCalculation = ({ rows = [], totals = {} }) => (
               Final item payout
             </div>
             <div className="text-base font-bold text-[#21812C]">
-              {formatMoney(row.finalPayout)}
+              {formatIndianNumber(row.finalPayout)}
             </div>
           </div>
         </div>
@@ -2083,15 +2086,15 @@ const ItemWisePayoutCalculation = ({ rows = [], totals = {} }) => (
                   </div>
                 </td>
                 <td className="px-3 py-2 text-right font-semibold">
-                  {formatMoney(row.beforeReturn)}
+                  {formatIndianNumber(row.beforeReturn)}
                 </td>
                 <td className="px-3 py-2 text-right font-semibold text-[#b45309]">
                   {row.refundRecovery > 0
-                    ? `-${formatMoney(row.refundRecovery)}`
+                    ? `-${formatIndianNumber(row.refundRecovery)}`
                     : "—"}
                 </td>
                 <td className="px-3 py-2 text-right font-bold text-[#21812C]">
-                  {formatMoney(row.finalPayout)}
+                  {formatIndianNumber(row.finalPayout)}
                 </td>
               </tr>
               {row.shipping > 0 && (
@@ -2107,15 +2110,15 @@ const ItemWisePayoutCalculation = ({ rows = [], totals = {} }) => (
                     </div>
                   </td>
                   <td className="px-3 py-2 text-right font-semibold text-[#21812C]">
-                    {formatMoney(row.shipping)}
+                    {formatIndianNumber(row.shipping)}
                   </td>
                   <td className="px-3 py-2 text-right font-semibold text-[#b45309]">
                     {row.shippingReversal > 0
-                      ? `-${formatMoney(row.shippingReversal)}`
+                      ? `-${formatIndianNumber(row.shippingReversal)}`
                       : "—"}
                   </td>
                   <td className="px-3 py-2 text-right font-bold text-[#21812C]">
-                    {formatMoney(row.netShipping)}
+                    {formatIndianNumber(row.netShipping)}
                   </td>
                 </tr>
               )}
@@ -2130,15 +2133,15 @@ const ItemWisePayoutCalculation = ({ rows = [], totals = {} }) => (
                     </div>
                   </td>
                   <td className="px-3 py-2 text-right font-semibold">
-                    {formatMoney(row.shippingDeduction)}
+                    {formatIndianNumber(row.shippingDeduction)}
                   </td>
                   <td className="px-3 py-2 text-right font-semibold text-[#21812C]">
                     {row.shippingDeductionReversal > 0
-                      ? formatMoney(row.shippingDeductionReversal)
+                      ? formatIndianNumber(row.shippingDeductionReversal)
                       : "—"}
                   </td>
                   <td className="px-3 py-2 text-right font-bold">
-                    {formatMoney(row.netShippingDeduction)}
+                    {formatIndianNumber(row.netShippingDeduction)}
                   </td>
                 </tr>
               )}
@@ -2146,82 +2149,83 @@ const ItemWisePayoutCalculation = ({ rows = [], totals = {} }) => (
                 <td className="px-3 py-2">
                   <div className="font-semibold">Platform commission</div>
                   <div className="text-[#65718b]">
-                    Base {formatMoney(row.commissionBase)} → final base{" "}
-                    {formatMoney(row.netCommissionBase)} · Rate{" "}
+                    Base {formatIndianNumber(row.commissionBase)} → final base{" "}
+                    {formatIndianNumber(row.netCommissionBase)} · Rate{" "}
                     {percent(row.commissionRate)}
                   </div>
                 </td>
                 <td className="px-3 py-2 text-right font-semibold">
-                  {formatMoney(row.commission)}
+                  {formatIndianNumber(row.commission)}
                 </td>
                 <td className="px-3 py-2 text-right font-semibold text-[#b45309]">
                   {row.returnRatio > 0
-                    ? `-${formatMoney(row.commission - row.netCommission)}`
+                    ? `-${formatIndianNumber(row.commission - row.netCommission)}`
                     : "—"}
                 </td>
                 <td className="px-3 py-2 text-right font-bold">
-                  {formatMoney(row.netCommission)}
+                  {formatIndianNumber(row.netCommission)}
                 </td>
               </tr>
               <tr>
                 <td className="px-3 py-2">
                   <div className="font-semibold">GST on commission</div>
                   <div className="text-[#65718b]">
-                    GST base {formatMoney(row.commission)} → final base{" "}
-                    {formatMoney(row.netCommission)} · Rate{" "}
+                    GST base {formatIndianNumber(row.commission)} → final base{" "}
+                    {formatIndianNumber(row.netCommission)} · Rate{" "}
                     {percent(row.commissionGstRate)}
                   </div>
                 </td>
                 <td className="px-3 py-2 text-right font-semibold">
-                  {formatMoney(row.commissionGst)}
+                  {formatIndianNumber(row.commissionGst)}
                 </td>
                 <td className="px-3 py-2 text-right font-semibold text-[#b45309]">
                   {row.returnRatio > 0
-                    ? `-${formatMoney(row.commissionGst - row.netCommissionGst)}`
+                    ? `-${formatIndianNumber(row.commissionGst - row.netCommissionGst)}`
                     : "—"}
                 </td>
                 <td className="px-3 py-2 text-right font-bold">
-                  {formatMoney(row.netCommissionGst)}
+                  {formatIndianNumber(row.netCommissionGst)}
                 </td>
               </tr>
               <tr>
                 <td className="px-3 py-2">
                   <div className="font-semibold">GST TCS</div>
                   <div className="text-[#65718b]">
-                    Base {formatMoney(row.gstTcsTaxableBase)} → final base{" "}
-                    {formatMoney(row.netGstTcsTaxableBase)}
+                    Base {formatIndianNumber(row.gstTcsTaxableBase)} → final
+                    base {formatIndianNumber(row.netGstTcsTaxableBase)}
                   </div>
                 </td>
                 <td className="px-3 py-2 text-right font-semibold">
-                  {formatMoney(row.gstTcs)}
+                  {formatIndianNumber(row.gstTcs)}
                 </td>
                 <td className="px-3 py-2 text-right font-semibold text-[#b45309]">
                   {row.returnRatio > 0
-                    ? `-${formatMoney(row.gstTcs - row.netGstTcs)}`
+                    ? `-${formatIndianNumber(row.gstTcs - row.netGstTcs)}`
                     : "—"}
                 </td>
                 <td className="px-3 py-2 text-right font-bold">
-                  {formatMoney(row.netGstTcs)}
+                  {formatIndianNumber(row.netGstTcs)}
                 </td>
               </tr>
               <tr>
                 <td className="px-3 py-2">
                   <div className="font-semibold">Income-tax TDS</div>
                   <div className="text-[#65718b]">
-                    Base {formatMoney(row.incomeTaxTdsTaxableBase)} → final base{" "}
-                    {formatMoney(row.netIncomeTaxTdsTaxableBase)}
+                    Base {formatIndianNumber(row.incomeTaxTdsTaxableBase)} →
+                    final base{" "}
+                    {formatIndianNumber(row.netIncomeTaxTdsTaxableBase)}
                   </div>
                 </td>
                 <td className="px-3 py-2 text-right font-semibold">
-                  {formatMoney(row.incomeTaxTds)}
+                  {formatIndianNumber(row.incomeTaxTds)}
                 </td>
                 <td className="px-3 py-2 text-right font-semibold text-[#b45309]">
                   {row.returnRatio > 0
-                    ? `-${formatMoney(row.incomeTaxTds - row.netIncomeTaxTds)}`
+                    ? `-${formatIndianNumber(row.incomeTaxTds - row.netIncomeTaxTds)}`
                     : "—"}
                 </td>
                 <td className="px-3 py-2 text-right font-bold">
-                  {formatMoney(row.netIncomeTaxTds)}
+                  {formatIndianNumber(row.netIncomeTaxTds)}
                 </td>
               </tr>
             </tbody>
@@ -2240,7 +2244,7 @@ const ItemWisePayoutCalculation = ({ rows = [], totals = {} }) => (
             Original payout
           </div>
           <div className="font-bold text-[#202337]">
-            {formatMoney(totals.beforeReturn)}
+            {formatIndianNumber(totals.beforeReturn)}
           </div>
         </div>
         <div>
@@ -2248,7 +2252,7 @@ const ItemWisePayoutCalculation = ({ rows = [], totals = {} }) => (
             Return removed
           </div>
           <div className="font-bold text-[#b45309]">
-            {formatMoney(totals.refundRecovery)}
+            {formatIndianNumber(totals.refundRecovery)}
           </div>
         </div>
         <div>
@@ -2256,7 +2260,7 @@ const ItemWisePayoutCalculation = ({ rows = [], totals = {} }) => (
             Final payout
           </div>
           <div className="font-bold text-[#21812C]">
-            {formatMoney(totals.finalPayout)}
+            {formatIndianNumber(totals.finalPayout)}
           </div>
         </div>
       </div>
@@ -2528,7 +2532,7 @@ const DocumentCard = ({ document = {}, onOpen }) => {
       "tax invoice",
     ),
   );
-  const total = formatMoney(
+  const total = formatIndianNumber(
     firstDefined(document.total_amount, document.totalAmount, 0),
   );
 
@@ -3161,6 +3165,9 @@ const OrderSummary = () => {
                 </PermissionGuard>
               )}
               {isSeller &&
+                !["shipped", "delivered", "fulfilled"].includes(
+                  String(order.status || "").toLowerCase(),
+                ) &&
                 items.some(
                   (item) =>
                     Number(item.quantity || 0) >
@@ -3179,7 +3186,7 @@ const OrderSummary = () => {
             <>
               <MetricCard
                 label="Product Total"
-                value={formatMoney(subtotalAmount)}
+                value={formatIndianNumber(subtotalAmount)}
               />
               <MetricCard
                 label="Payment Collection"
@@ -3200,7 +3207,7 @@ const OrderSummary = () => {
             <>
               <MetricCard
                 label="Customer Paid / Payable"
-                value={formatMoney(customerPayableAmount)}
+                value={formatIndianNumber(customerPayableAmount)}
                 tone="dark"
               />
             </>
@@ -3469,19 +3476,19 @@ const OrderSummary = () => {
                               />
                             </div>
                             <div className="font-medium text-[#202337] md:col-span-2 md:text-right">
-                              {formatMoney(
+                              {formatIndianNumber(
                                 firstDefined(item.unit_price, item.unitPrice),
                               )}
                             </div>
                             <div className="md:col-span-2 md:text-right">
                               <div className="font-semibold text-[#202337]">
-                                {formatMoney(
+                                {formatIndianNumber(
                                   firstDefined(item.line_total, item.lineTotal),
                                 )}
                               </div>
                               <div className="text-xs text-[#65718b]">
                                 GST included:{" "}
-                                {formatMoney(
+                                {formatIndianNumber(
                                   firstDefined(
                                     itemTax.taxAmount,
                                     itemTax.tax_amount,
@@ -3553,10 +3560,10 @@ const OrderSummary = () => {
                 label="Product Total"
                 value={
                   <span>
-                    {formatMoney(subtotalAmount)}
+                    {formatIndianNumber(subtotalAmount)}
                     {taxIncludedAmount > 0 && (
                       <span className="block text-xs font-normal text-[#65718b]">
-                        Includes GST {formatMoney(taxIncludedAmount)}
+                        Includes GST {formatIndianNumber(taxIncludedAmount)}
                       </span>
                     )}
                   </span>
@@ -3565,31 +3572,31 @@ const OrderSummary = () => {
               {!isSeller && deliveryChargeAmount > 0 && (
                 <InfoRow
                   label="Shipping Charge"
-                  value={formatMoney(deliveryChargeAmount)}
+                  value={formatIndianNumber(deliveryChargeAmount)}
                 />
               )}
               {!isSeller && customerPlatformFeeAmount > 0 && (
                 <InfoRow
                   label="Platform Fee"
-                  value={formatMoney(customerPlatformFeeAmount)}
+                  value={formatIndianNumber(customerPlatformFeeAmount)}
                 />
               )}
               {!isSeller && customerPlatformFeeTaxAmount > 0 && (
                 <InfoRow
                   label="GST on Platform Fee"
-                  value={formatMoney(customerPlatformFeeTaxAmount)}
+                  value={formatIndianNumber(customerPlatformFeeTaxAmount)}
                 />
               )}
               {!isSeller && taxPayableAmount > 0 && (
                 <InfoRow
                   label="GST Added at Checkout"
-                  value={formatMoney(taxPayableAmount)}
+                  value={formatIndianNumber(taxPayableAmount)}
                 />
               )}
               {!isSeller && codChargeAmount > 0 && (
                 <InfoRow
                   label="COD Charge"
-                  value={formatMoney(codChargeAmount)}
+                  value={formatIndianNumber(codChargeAmount)}
                 />
               )}
               {!isSeller && discountAmount > 0 && (
@@ -3597,7 +3604,7 @@ const OrderSummary = () => {
                   label={discountLabel}
                   value={
                     <span className="text-[#2ea84a]">
-                      -{formatMoney(discountAmount)}
+                      -{formatIndianNumber(discountAmount)}
                     </span>
                   }
                 />
@@ -3607,7 +3614,7 @@ const OrderSummary = () => {
                   label="Wallet Deduction"
                   value={
                     <span className="text-[#2ea84a]">
-                      -{formatMoney(walletDiscountAmount)}
+                      -{formatIndianNumber(walletDiscountAmount)}
                     </span>
                   }
                 />
@@ -3616,7 +3623,7 @@ const OrderSummary = () => {
                 <div className="mt-2 border-t border-[#efe6cd] pt-2">
                   <InfoRow
                     label="Customer Payable"
-                    value={formatMoney(customerPayableAmount)}
+                    value={formatIndianNumber(customerPayableAmount)}
                     strong
                   />
                 </div>
@@ -3641,13 +3648,13 @@ const OrderSummary = () => {
                       ? orderTaxRates.map(percent).join(", ")
                       : "N/A"}
                     {money(taxBreakup.taxableAmount) > 0
-                      ? ` · Taxable value: ${formatMoney(taxBreakup.taxableAmount)}`
+                      ? ` · Taxable value: ${formatIndianNumber(taxBreakup.taxableAmount)}`
                       : ""}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-semibold text-[#202337]">
-                    {formatMoney(
+                    {formatIndianNumber(
                       firstDefined(
                         order.tax_amount,
                         order.taxAmount,
@@ -3666,22 +3673,22 @@ const OrderSummary = () => {
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#65718b]">
                   {money(taxBreakup.cgstAmount) > 0 && (
                     <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                      CGST: {formatMoney(taxBreakup.cgstAmount)}
+                      CGST: {formatIndianNumber(taxBreakup.cgstAmount)}
                     </span>
                   )}
                   {money(taxBreakup.sgstAmount) > 0 && (
                     <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                      SGST: {formatMoney(taxBreakup.sgstAmount)}
+                      SGST: {formatIndianNumber(taxBreakup.sgstAmount)}
                     </span>
                   )}
                   {money(taxBreakup.igstAmount) > 0 && (
                     <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                      IGST: {formatMoney(taxBreakup.igstAmount)}
+                      IGST: {formatIndianNumber(taxBreakup.igstAmount)}
                     </span>
                   )}
                   {money(taxBreakup.cessAmount) > 0 && (
                     <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                      Cess: {formatMoney(taxBreakup.cessAmount)}
+                      Cess: {formatIndianNumber(taxBreakup.cessAmount)}
                     </span>
                   )}
                 </div>
@@ -3767,11 +3774,11 @@ const OrderSummary = () => {
                             )}
                             <div className="mt-1 text-[#65718b]">
                               {getItemTaxLabel(taxItem, orderItem)} · Base{" "}
-                              {formatMoney(taxItem.taxableAmount)}
+                              {formatIndianNumber(taxItem.taxableAmount)}
                             </div>
                           </div>
                           <div className="shrink-0 text-right font-semibold text-[#202337]">
-                            {formatMoney(itemGstAmount)}
+                            {formatIndianNumber(itemGstAmount)}
                           </div>
                         </div>
                       </div>
@@ -3872,10 +3879,12 @@ const OrderSummary = () => {
           }
         >
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+            {/* Cancellations */}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">
                 Cancellations
               </h3>
+
               {cancellations.length ? (
                 <div className="space-y-3">
                   {cancellations.map((cancellation) => (
@@ -3887,7 +3896,7 @@ const OrderSummary = () => {
                       rows={[
                         {
                           label: "Refund",
-                          value: formatMoney(cancellation.refund_amount),
+                          value: formatIndianNumber(cancellation.refund_amount),
                         },
                         {
                           label: "Refund status",
@@ -3912,7 +3921,9 @@ const OrderSummary = () => {
                           className="text-xs font-medium text-[#2f6fed]"
                           onClick={() =>
                             navigate(
-                              `/app/cancellations?search=${encodeURIComponent(cancellation.cancellation_number)}`,
+                              `/app/cancellations?search=${encodeURIComponent(
+                                cancellation.cancellation_number,
+                              )}`,
                             )
                           }
                         >
@@ -3923,17 +3934,16 @@ const OrderSummary = () => {
                   ))}
                 </div>
               ) : (
-                <EmptyMiniCard
-                  title="No cancellations"
-                  note="This order has no cancellation record."
-                />
+                <EmptyState>No seller settlement data found</EmptyState>
               )}
             </div>
 
+            {/* Payments */}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">
                 Payments
               </h3>
+
               {payments.length ? (
                 <div className="space-y-3">
                   {payments.map((payment) => (
@@ -3951,17 +3961,16 @@ const OrderSummary = () => {
                   ))}
                 </div>
               ) : (
-                <EmptyMiniCard
-                  title="No payment record"
-                  note="Payment details will appear after collection/capture."
-                />
+                <EmptyState>No seller settlement data found</EmptyState>
               )}
             </div>
 
+            {/* Shipments */}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">
                 Shipments
               </h3>
+
               {shipments.length ? (
                 <div className="space-y-3">
                   {shipments.map((shipment) => {
@@ -3973,12 +3982,14 @@ const OrderSummary = () => {
                         shipment.seller?.name,
                         shipment.seller?.businessName,
                       );
+
                       const sellerId = firstDefined(
                         shipment.seller_id,
                         shipment.sellerId,
                         shipment.seller?.id,
                         shipment.seller?._id,
                       );
+
                       return sellerId && canOpenAdminProfiles ? (
                         <DetailLink
                           onClick={() =>
@@ -3992,6 +4003,7 @@ const OrderSummary = () => {
                         sellerName || "Seller"
                       );
                     })();
+
                     return (
                       <ShipmentCard
                         key={
@@ -4005,7 +4017,9 @@ const OrderSummary = () => {
                         onDownloadLabel={() => handleDownloadBoxLabel(shipment)}
                         onManage={() =>
                           navigate(
-                            `/app/shipment-tracking?orderId=${encodeURIComponent(orderId)}`,
+                            `/app/shipment-tracking?orderId=${encodeURIComponent(
+                              orderId,
+                            )}`,
                           )
                         }
                       />
@@ -4013,42 +4027,46 @@ const OrderSummary = () => {
                   })}
                 </div>
               ) : (
-                <EmptyMiniCard
-                  title="No shipment created"
-                  note="Shipment details will appear after dispatch is created."
-                />
+                <EmptyState>No seller settlement data found</EmptyState>
               )}
             </div>
 
+            {/* Invoices & Tax Documents */}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">
                 Invoices & Tax Documents
               </h3>
-              <div className="grid grid-cols-1 gap-3">
+
+              <div className="space-y-3">
                 {invoice ? (
                   <DocumentCard
                     document={invoice}
                     onOpen={() =>
                       navigate(
-                        `/app/tax-invoices?search=${encodeURIComponent(firstDefined(invoice.invoice_number, invoice.invoiceNumber, ""))}`,
+                        `/app/tax-invoices?search=${encodeURIComponent(
+                          firstDefined(
+                            invoice.invoice_number,
+                            invoice.invoiceNumber,
+                            "",
+                          ),
+                        )}`,
                       )
                     }
                   />
                 ) : (
-                  <EmptyMiniCard
-                    title="No invoice generated"
-                    note="Tax documents will appear here once generated."
-                  />
+                  <EmptyState>No seller settlement data found</EmptyState>
                 )}
               </div>
             </div>
 
+            {/* Returns & Wallet */}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">
                 Returns & Wallet
               </h3>
+
               {returns.length || walletTransactions.length ? (
-                <div className="grid grid-cols-1  gap-3 md:grid-cols-2 xl:grid-cols-1">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1">
                   {returns.length ? (
                     <div className="space-y-3">
                       {returns.map((returnRequest) =>
@@ -4059,6 +4077,7 @@ const OrderSummary = () => {
                             returnRequest.refund?.creditNoteId,
                             returnRequest.refund?.credit_note_id,
                           );
+
                           const returnedQuantity = (
                             Array.isArray(returnRequest.items)
                               ? returnRequest.items
@@ -4068,6 +4087,7 @@ const OrderSummary = () => {
                               total + getReturnItemQuantity(item),
                             0,
                           );
+
                           const refundStatus = String(
                             firstDefined(
                               returnRequest.refundStatus,
@@ -4076,11 +4096,13 @@ const OrderSummary = () => {
                               "",
                             ) || "",
                           ).toLowerCase();
+
                           const creditNoteLabel = creditNoteId
                             ? "Generated"
                             : refundStatus === "refunded"
                               ? "Pending generation"
                               : "Will generate after refund";
+
                           return (
                             <RelatedCard
                               key={returnRequest.id || returnRequest._id}
@@ -4092,7 +4114,7 @@ const OrderSummary = () => {
                               rows={[
                                 {
                                   label: "Refund",
-                                  value: formatMoney(
+                                  value: formatIndianNumber(
                                     firstDefined(
                                       returnRequest.refundAmount,
                                       returnRequest.refundBreakup
@@ -4129,7 +4151,9 @@ const OrderSummary = () => {
                                     className="text-xs font-medium text-[#2f6fed]"
                                     onClick={() =>
                                       navigate(
-                                        `/app/credit-notes?creditNoteId=${encodeURIComponent(creditNoteId)}`,
+                                        `/app/credit-notes?creditNoteId=${encodeURIComponent(
+                                          creditNoteId,
+                                        )}`,
                                       )
                                     }
                                   >
@@ -4140,10 +4164,11 @@ const OrderSummary = () => {
                             >
                               {Array.isArray(returnRequest.items) &&
                                 returnRequest.items.length > 0 && (
-                                  <div className="space-y-2 rounded-md  bg-[#fffaf0] p-2 text-xs">
+                                  <div className="space-y-2 rounded-md bg-[#fffaf0] p-2 text-xs">
                                     <div className="font-semibold uppercase text-[#65718b]">
                                       Returned item-wise impact
                                     </div>
+
                                     {returnRequest.items.map((item, index) => (
                                       <div
                                         key={firstDefined(
@@ -4159,19 +4184,25 @@ const OrderSummary = () => {
                                           <div className="font-medium text-[#202337]">
                                             {getReturnItemTitle(item)}
                                           </div>
+
                                           <div className="text-[#65718b]">
                                             Returned Qty{" "}
                                             {getReturnItemQuantity(item)}
                                             {getReturnItemVariantText(item)
-                                              ? ` · ${getReturnItemVariantText(item)}`
+                                              ? ` · ${getReturnItemVariantText(
+                                                  item,
+                                                )}`
                                               : ""}
                                             {getReturnItemOrderItemId(item)
-                                              ? ` · Item ${getReturnItemOrderItemId(item).slice(0, 8)}`
+                                              ? ` · Item ${getReturnItemOrderItemId(
+                                                  item,
+                                                ).slice(0, 8)}`
                                               : ""}
                                           </div>
                                         </div>
+
                                         <div className="shrink-0 text-right font-semibold text-[#202337]">
-                                          {formatMoney(
+                                          {formatIndianNumber(
                                             firstDefined(
                                               item.refundAmount,
                                               item.refund_amount,
@@ -4191,6 +4222,7 @@ const OrderSummary = () => {
                       )}
                     </div>
                   ) : null}
+
                   {walletTransactions.length ? (
                     <div className="space-y-3">
                       {walletTransactions.map((walletTx) => (
@@ -4200,7 +4232,13 @@ const OrderSummary = () => {
                             walletTx._id ||
                             walletTx.transaction_id
                           }
-                          title={`${displayStatus(firstDefined(walletTx.type, walletTx.transaction_type, "wallet"))} wallet entry`}
+                          title={`${displayStatus(
+                            firstDefined(
+                              walletTx.type,
+                              walletTx.transaction_type,
+                              "wallet",
+                            ),
+                          )} wallet entry`}
                           subtitle={displayStatus(
                             firstDefined(
                               walletTx.type,
@@ -4212,7 +4250,7 @@ const OrderSummary = () => {
                           rows={[
                             {
                               label: "Amount",
-                              value: formatMoney(
+                              value: formatIndianNumber(
                                 firstDefined(walletTx.amount, walletTx.value),
                               ),
                             },
@@ -4241,10 +4279,7 @@ const OrderSummary = () => {
                   ) : null}
                 </div>
               ) : (
-                <EmptyMiniCard
-                  title="No returns or wallet activity"
-                  note="Return requests, refund impact, credit notes, and wallet entries will appear here when created."
-                />
+                <EmptyState>No seller settlement data found</EmptyState>
               )}
             </div>
           </div>
@@ -4425,7 +4460,7 @@ const OrderSummary = () => {
                           Amount payable to seller
                         </div>
                         <div className="text-lg font-bold text-[#1f4fc9]">
-                          {formatMoney(displaySellerPayout)}
+                          {formatIndianNumber(displaySellerPayout)}
                         </div>
                         {payoutMismatch && hasItemLevelAdjustment && (
                           <div className="mt-1 text-[11px] font-semibold text-[#8A5A00]">
@@ -4475,16 +4510,16 @@ const OrderSummary = () => {
                               (hasProductRows
                                 ? itemTaxCollected
                                 : seller.taxCollected) > 0
-                                ? `Product GST included: ${formatMoney(hasProductRows ? itemTaxCollected : seller.taxCollected)}`
+                                ? `Product GST included: ${formatIndianNumber(hasProductRows ? itemTaxCollected : seller.taxCollected)}`
                                 : ""
                             }
-                            value={formatMoney(productPayable)}
+                            value={formatIndianNumber(productPayable)}
                           />
                           {displayShipping > 0 && (
                             <PayoutRow
                               label="Shipping collected for seller"
                               note="Platform collected this online and adds it to seller payout."
-                              value={formatMoney(displayShipping)}
+                              value={formatIndianNumber(displayShipping)}
                               tone="credit"
                             />
                           )}
@@ -4492,7 +4527,9 @@ const OrderSummary = () => {
                             <PayoutRow
                               label="Marketplace-funded discount reimbursement"
                               note="Shown separately only when not already included in product amount."
-                              value={formatMoney(displayMarketplaceDiscount)}
+                              value={formatIndianNumber(
+                                displayMarketplaceDiscount,
+                              )}
                               tone="credit"
                             />
                           )}
@@ -4513,7 +4550,7 @@ const OrderSummary = () => {
                             {seller.sellerFundedDiscount > 0 && (
                               <PayoutRow
                                 label="Seller-funded discount"
-                                value={`-${formatMoney(seller.sellerFundedDiscount)}`}
+                                value={`-${formatIndianNumber(seller.sellerFundedDiscount)}`}
                                 tone="warning"
                               />
                             )}
@@ -4521,7 +4558,7 @@ const OrderSummary = () => {
                               seller.marketplaceFundedDiscount <= 0 && (
                                 <PayoutRow
                                   label="Customer discount"
-                                  value={`-${formatMoney(seller.discountAmount)}`}
+                                  value={`-${formatIndianNumber(seller.discountAmount)}`}
                                   tone="muted"
                                 />
                               )}
@@ -4532,7 +4569,7 @@ const OrderSummary = () => {
                                   seller,
                                   displayGstTcsBase,
                                 )}
-                                value={`-${formatMoney(displayCommission)}`}
+                                value={`-${formatIndianNumber(displayCommission)}`}
                               />
                             )}
                             {displayCommissionTax > 0 && (
@@ -4543,14 +4580,14 @@ const OrderSummary = () => {
                                   displayCommission,
                                   displayCommissionTax,
                                 )}
-                                value={`-${formatMoney(displayCommissionTax)}`}
+                                value={`-${formatIndianNumber(displayCommissionTax)}`}
                               />
                             )}
                             {displayShippingDeduction > 0 && (
                               <PayoutRow
                                 label="Shipping deduction"
                                 note="Configured seller-side shipping deduction."
-                                value={`-${formatMoney(displayShippingDeduction)}`}
+                                value={`-${formatIndianNumber(displayShippingDeduction)}`}
                               />
                             )}
                           </PayoutSection>
@@ -4565,14 +4602,14 @@ const OrderSummary = () => {
                           {itemRefundRecovery > 0 && (
                             <PayoutRow
                               label="Returned item payout removed"
-                              value={`-${formatMoney(itemRefundRecovery)}`}
+                              value={`-${formatIndianNumber(itemRefundRecovery)}`}
                             />
                           )}
                           {!itemRefundRecovery &&
                             seller.sellerPayoutBaseReversal > 0 && (
                               <PayoutRow
                                 label="Returned item value removed"
-                                value={`-${formatMoney(seller.sellerPayoutBaseReversal)}`}
+                                value={`-${formatIndianNumber(seller.sellerPayoutBaseReversal)}`}
                               />
                             )}
                         </PayoutSection>
@@ -4588,21 +4625,21 @@ const OrderSummary = () => {
                             {displayGstTcs > 0 && (
                               <PayoutRow
                                 label={`GST TCS (${percent(seller.gstTcsRate)})`}
-                                note={`Final base: ${formatMoney(displayGstTcsBase)}`}
-                                value={`-${formatMoney(displayGstTcs)}`}
+                                note={`Final base: ${formatIndianNumber(displayGstTcsBase)}`}
+                                value={`-${formatIndianNumber(displayGstTcs)}`}
                               />
                             )}
                             {displayIncomeTaxTds > 0 && (
                               <PayoutRow
                                 label={`Income-tax TDS (${percent(seller.incomeTaxTdsRate)})`}
-                                note={`Final base: ${formatMoney(displayIncomeTaxTdsBase)}`}
-                                value={`-${formatMoney(displayIncomeTaxTds)}`}
+                                note={`Final base: ${formatIndianNumber(displayIncomeTaxTdsBase)}`}
+                                value={`-${formatIndianNumber(displayIncomeTaxTds)}`}
                               />
                             )}
                             {seller.adjustmentAmount !== 0 && (
                               <PayoutRow
                                 label="Other payout adjustment"
-                                value={`${seller.adjustmentAmount > 0 ? "+" : "-"}${formatMoney(Math.abs(seller.adjustmentAmount))}`}
+                                value={`${seller.adjustmentAmount > 0 ? "+" : "-"}${formatIndianNumber(Math.abs(seller.adjustmentAmount))}`}
                                 tone={
                                   seller.adjustmentAmount > 0
                                     ? "credit"
@@ -4615,7 +4652,7 @@ const OrderSummary = () => {
 
                       <div className="flex items-center justify-between rounded-lg bg-[#fff9ea] px-3 py-3 text-base font-bold text-[#202337]">
                         <span>Final seller payout</span>
-                        <span>{formatMoney(displaySellerPayout)}</span>
+                        <span>{formatIndianNumber(displaySellerPayout)}</span>
                       </div>
                       {(seller.commissionStatus || seller.payoutStatus) && (
                         <div className="flex flex-wrap gap-x-3 gap-y-1 rounded-md bg-[#f8faff] px-3 py-2 text-xs text-[#65718b]">

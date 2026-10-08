@@ -25,7 +25,11 @@ import { useListPage } from "../../../hooks/useListPage";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
-import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatIndianNumber,
+  formatLabel,
+} from "../../../utils/formatters";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import { MdCheckCircle, MdVisibility, MdCancel } from "react-icons/md";
 const PROVIDERS = [
@@ -56,7 +60,7 @@ const unwrapList = (payload = {}) => {
 };
 
 const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
-const money = (value) => Number(value || 0).toFixed(2);
+
 const FILTER_FIELDS = [
   { key: "orderId", type: "text", label: "Order #", width: "w-48" },
   // {
@@ -292,7 +296,8 @@ const Payments = () => {
         key: "amount",
         label: "Amount",
         sortable: true,
-        render: (value, row) => `${row.currency || "INR"} ${money(value)}`,
+        render: (value, row) =>
+          `${row.currency || "INR"} ${formatIndianNumber(value)}`,
       },
       {
         key: "created_at",
@@ -501,7 +506,7 @@ const Payments = () => {
 
               <p className="mt-1 text-2xl font-bold text-[var(--admin-gold-dark)]">
                 {detailPayment?.currency || "INR"}{" "}
-                {money(detailPayment?.amount)}
+                {formatIndianNumber(detailPayment?.amount)}
               </p>
             </div>
 

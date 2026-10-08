@@ -35,7 +35,11 @@ import {
 } from "../../../Redux/sellerCommissionsSlice";
 import { usePermission, ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
-import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatIndianNumber,
+  formatLabel,
+} from "../../../utils/formatters";
 import { apiRequest } from "../../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 
@@ -164,7 +168,7 @@ const valueOf = (row = {}, ...keys) => {
   }
   return 0;
 };
-const money = (value) => `INR ${Number(value || 0).toFixed(2)}`;
+
 const payoutId = (row) => row?._id || row?.id || row?.payoutId;
 const metadataOf = (row = {}) => {
   const metadata = row.metadata || row.meta || {};
@@ -513,7 +517,7 @@ const PayoutOpsQueue = () => {
         label: "Amount",
         sortable: true,
         render: (_, row) =>
-          money(valueOf(row, "net_amount", "netAmount", "amount")),
+          formatIndianNumber(valueOf(row, "net_amount", "netAmount", "amount")),
       },
       {
         key: "status",
@@ -771,7 +775,7 @@ const PayoutOpsQueue = () => {
               </div>
               <div>
                 <strong>Net amount:</strong>{" "}
-                {money(
+                {formatIndianNumber(
                   valueOf(action.payout, "net_amount", "netAmount", "amount"),
                 )}
               </div>

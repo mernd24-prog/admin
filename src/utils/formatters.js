@@ -8,7 +8,24 @@
 /**
  * Format a date value to "DD MMM YYYY" (e.g. "23 Jun 2026").
  * Returns "Not available" when the value is falsy or invalid.
+ *
+ *
+ *
  */
+
+export const formatIndianNumber = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return "0";
+  }
+
+  const number = Number(value);
+
+  if (Number.isNaN(number)) {
+    return "0";
+  }
+
+  return `₹${number.toLocaleString("en-IN")}`;
+};
 export function formatDate(value, fallback = "Not available") {
   if (!value) return fallback;
   const d = new Date(value);
@@ -161,7 +178,8 @@ export function formatNumber(value, fallback = "0") {
 export function formatPhone(value, fallback = "Not available") {
   if (!value) return fallback;
   const digits = String(value).replace(/\D/g, "");
-  if (digits.length === 10) return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+  if (digits.length === 10)
+    return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
   if (digits.length === 12 && digits.startsWith("91"))
     return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
   return value;
@@ -198,7 +216,15 @@ export function formatName(user, fallback = "Not available") {
   const first = user.profile?.firstName || user.firstName || "";
   const last = user.profile?.lastName || user.lastName || "";
   const full = [first, last].filter(Boolean).join(" ").trim();
-  return full || user.full_name || user.fullName || user.name || user.email || user.userName || fallback;
+  return (
+    full ||
+    user.full_name ||
+    user.fullName ||
+    user.name ||
+    user.email ||
+    user.userName ||
+    fallback
+  );
 }
 
 // ── File size ─────────────────────────────────────────────────────────────────
@@ -208,6 +234,9 @@ export function formatFileSize(bytes, fallback = "Unknown size") {
   const units = ["B", "KB", "MB", "GB"];
   let size = Number(bytes);
   let i = 0;
-  while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
+  while (size >= 1024 && i < units.length - 1) {
+    size /= 1024;
+    i++;
+  }
   return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }

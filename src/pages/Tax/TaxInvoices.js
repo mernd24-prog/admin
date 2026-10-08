@@ -20,7 +20,11 @@ import { dropdownApi } from "../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
-import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatIndianNumber,
+  formatLabel,
+} from "../../utils/formatters";
 import { resolveStoreName } from "../../utils/storeNameUtils";
 
 const STATES = ["draft", "issued", "cancelled", "amended"];
@@ -88,8 +92,6 @@ const unwrapList = (payload = {}) => {
     ),
   };
 };
-
-const money = (value) => `₹${Number(value || 0).toFixed(2)}`;
 
 const pick = (row = {}, ...keys) => {
   for (const key of keys) {
@@ -393,7 +395,7 @@ const TaxInvoices = () => {
           sortable: true,
           render: (value, row) => (
             <span className="text-sm">
-              {money(value ?? row.taxable_amount)}
+              {formatIndianNumber(value ?? row.taxable_amount)}
             </span>
           ),
         },
@@ -404,7 +406,7 @@ const TaxInvoices = () => {
           sortable: true,
           render: (value, row) => (
             <span className="text-sm font-medium">
-              {money(value ?? row.totalTax ?? row.tax_amount)}
+              {formatIndianNumber(value ?? row.totalTax ?? row.tax_amount)}
             </span>
           ),
         },
@@ -415,7 +417,7 @@ const TaxInvoices = () => {
           sortable: true,
           render: (value, row) => (
             <span className="text-sm font-semibold">
-              {money(value ?? row.total_amount)}
+              {formatIndianNumber(value ?? row.total_amount)}
             </span>
           ),
         },
