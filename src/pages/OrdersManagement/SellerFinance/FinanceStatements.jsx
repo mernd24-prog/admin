@@ -117,7 +117,8 @@ export default function FinanceStatements() {
             className="admin-btn-secondary !px-2 !py-1"
             onClick={() => download(row)}
           >
-            <MdDownload /> {downloading === row.id ? "Preparing…" : "PDF"}
+            <MdDownload aria-hidden="true" />{" "}
+            {downloading === row.id ? "Preparing…" : "PDF"}
           </button>
         ),
       },
@@ -141,7 +142,7 @@ export default function FinanceStatements() {
             disabled={Boolean(state.loading)}
             aria-busy={Boolean(state.loading)}
           >
-            <MdRefresh className={state.loading ? "animate-spin" : ""} />
+            <MdRefresh aria-hidden="true" className={state.loading ? "animate-spin" : ""} />
             {state.loading ? "Refreshing..." : "Refresh"}
           </button>
         }

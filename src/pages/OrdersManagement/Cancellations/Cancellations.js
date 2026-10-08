@@ -8,9 +8,7 @@ import {
   MdVisibility,
   MdPayment,
 } from "react-icons/md";
-import { dropdownApi } from "../../../_helpers/dropdownApi";
-// import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import Loader from "../../../components/Loader/Loader";
+
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
 import {
@@ -546,7 +544,11 @@ const Cancellations = () => {
             {
               label: "View Details",
               icon: (
-                <MdVisibility size={16} className={CLASS_ACTION_ICON_BLUE} />
+                <MdVisibility
+                  aria-hidden="true"
+                  size={16}
+                  className={CLASS_ACTION_ICON_BLUE}
+                />
               ),
               onClick: () => setDetail(row),
             },
@@ -559,7 +561,11 @@ const Cancellations = () => {
             actions.push({
               label: "Approve Cancellation",
               icon: (
-                <MdCheckCircle size={16} className={CLASS_ACTION_ICON_BLUE} />
+                <MdCheckCircle
+                  aria-hidden="true"
+                  size={16}
+                  className={CLASS_ACTION_ICON_BLUE}
+                />
               ),
               requiredModule: "orders",
               requiredAction: ACTIONS.UPDATE,
@@ -568,7 +574,13 @@ const Cancellations = () => {
             });
             actions.push({
               label: "Reject Cancellation",
-              icon: <MdCancel size={16} className={CLASS_ACTION_ICON_RED} />,
+              icon: (
+                <MdCancel
+                  aria-hidden="true"
+                  size={16}
+                  className={CLASS_ACTION_ICON_RED}
+                />
+              ),
               requiredModule: "orders",
               requiredAction: ACTIONS.UPDATE,
               onClick: () =>
@@ -579,7 +591,13 @@ const Cancellations = () => {
           if (!isSeller && ["refund_pending", "failed"].includes(row.status)) {
             actions.push({
               label: "Retry Refund",
-              icon: <MdReplay size={16} className={CLASS_ACTION_ICON_ORANGE} />,
+              icon: (
+                <MdReplay
+                  aria-hidden="true"
+                  size={16}
+                  className={CLASS_ACTION_ICON_ORANGE}
+                />
+              ),
               requiredModule: "orders",
               requiredAction: ACTIONS.UPDATE,
               onClick: () =>
@@ -599,7 +617,11 @@ const Cancellations = () => {
               actions.push({
                 label: "Approve Refund",
                 icon: (
-                  <MdCheckCircle size={16} className={CLASS_ACTION_ICON_BLUE} />
+                  <MdCheckCircle
+                    aria-hidden="true"
+                    size={16}
+                    className={CLASS_ACTION_ICON_BLUE}
+                  />
                 ),
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,
@@ -616,7 +638,11 @@ const Cancellations = () => {
               actions.push({
                 label: "Complete Manual Refund",
                 icon: (
-                  <MdPayment size={16} className={CLASS_ACTION_ICON_GREEN} />
+                  <MdPayment
+                    aria-hidden="true"
+                    size={16}
+                    className={CLASS_ACTION_ICON_GREEN}
+                  />
                 ),
                 requiredModule: "orders",
                 requiredAction: ACTIONS.UPDATE,

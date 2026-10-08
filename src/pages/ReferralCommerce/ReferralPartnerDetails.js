@@ -207,9 +207,13 @@ const CopyableValue = ({ value }) => {
           className="rounded p-0.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
         >
           {copied ? (
-            <CheckCheck size={14} className="text-emerald-500" />
+            <CheckCheck
+              aria-hidden="true"
+              size={14}
+              className="text-emerald-500"
+            />
           ) : (
-            <Copy size={14} />
+            <Copy aria-hidden="true" size={14} />
           )}
         </button>
       )}
@@ -639,7 +643,7 @@ const ReferralPartnerDetails = () => {
               );
             }}
           >
-            <Eye size={14} /> View
+            <Eye aria-hidden="true" size={14} /> View
           </button>
         ),
       })),
@@ -650,14 +654,14 @@ const ReferralPartnerDetails = () => {
     {
       label: "Status",
       value: influencer?.status ? formatLabel(influencer.status) : "-",
-      icon: <ShieldCheck size={18} />,
+      icon: <ShieldCheck aria-hidden="true" size={18} />,
       accent: "#e0f2fe",
       color: "#0284c7",
     },
     {
       label: "Wallet balance",
       value: formatCoins(influencer?.wallet?.availableBalance),
-      icon: <Coins size={18} />,
+      icon: <Coins aria-hidden="true" size={18} />,
       accent: "#dcfce7",
       color: "#15803d",
     },
@@ -673,9 +677,9 @@ const ReferralPartnerDetails = () => {
       ),
       icon:
         influencer?.influencerType === "parent" ? (
-          <GitBranch size={18} />
+          <GitBranch aria-hidden="true" size={18} />
         ) : (
-          <Gift size={18} />
+          <Gift aria-hidden="true" size={18} />
         ),
       accent: "#ede9fe",
       color: "#7c3aed",
@@ -683,7 +687,7 @@ const ReferralPartnerDetails = () => {
     {
       label: "Total orders",
       value: String(orders.length),
-      icon: <BadgeIndianRupee size={18} />,
+      icon: <BadgeIndianRupee aria-hidden="true" size={18} />,
       accent: "#fef3c7",
       color: "#b45309",
     },
@@ -710,7 +714,7 @@ const ReferralPartnerDetails = () => {
               className="admin-btn-secondary !border-[var(--admin-navy)] !bg-[var(--admin-navy)] !text-white hover:!bg-[var(--admin-navy-dark)]"
               onClick={handleBack}
             >
-              <ArrowLeft size={16} />
+              <ArrowLeft aria-hidden="true" size={16} />
               Back
             </button>
           }
@@ -796,7 +800,7 @@ const ReferralPartnerDetails = () => {
               <FormSection
                 title="Partner profile"
                 subtitle="Basic identity and referral account information"
-                icon={<UserRound size={18} />}
+                icon={<UserRound aria-hidden="true" size={18} />}
                 className="border-0 shadow-none"
               >
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -823,7 +827,7 @@ const ReferralPartnerDetails = () => {
               <FormSection
                 title="Brand Associate"
                 subtitle="Brand Associates registered under this Growth Partner"
-                icon={<GitBranch size={18} />}
+                icon={<GitBranch aria-hidden="true" size={18} />}
                 className="border-0 shadow-none"
               >
                 <SharedDataTable
@@ -868,7 +872,7 @@ const ReferralPartnerDetails = () => {
             <FormSection
               title="Partner activity"
               subtitle="Review this partner's referrals, earnings, payouts, and bonuses."
-              icon={<Activity size={18} />}
+              icon={<Activity aria-hidden="true" size={18} />}
               className="border-0 shadow-none"
             >
               <Tabs
@@ -1073,13 +1077,17 @@ const ReferralPartnerDetails = () => {
             <FormSection
               title="Documents, KYC & bank details"
               subtitle="Verification records and payout information"
-              icon={<BadgeCheck size={18} />}
+              icon={<BadgeCheck aria-hidden="true" size={18} />}
               className="border-0 shadow-none"
             >
               <div className="grid gap-5 lg:grid-cols-3">
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                   <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                    <FileText size={16} className="text-indigo-600" />
+                    <FileText
+                      aria-hidden="true"
+                      size={16}
+                      className="text-indigo-600"
+                    />
                     Documents
                   </div>
                   <div className="space-y-2 text-sm">
@@ -1124,7 +1132,11 @@ const ReferralPartnerDetails = () => {
 
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                   <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                    <BadgeCheck size={16} className="text-indigo-600" />
+                    <BadgeCheck
+                      aria-hidden="true"
+                      size={16}
+                      className="text-indigo-600"
+                    />
                     KYC
                   </div>
                   <div className="space-y-3 text-sm">
@@ -1146,7 +1158,11 @@ const ReferralPartnerDetails = () => {
 
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                   <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                    <Landmark size={16} className="text-indigo-600" />
+                    <Landmark
+                      aria-hidden="true"
+                      size={16}
+                      className="text-indigo-600"
+                    />
                     Bank details
                   </div>
                   <div className="space-y-3 text-sm">
@@ -1197,7 +1213,7 @@ const ReferralPartnerDetails = () => {
             <FormSection
               title="Partner actions"
               subtitle="Review access, verification, and partner status"
-              icon={<ShieldCheck size={18} />}
+              icon={<ShieldCheck aria-hidden="true" size={18} />}
               className="border-0 shadow-none"
             >
               <div className="mb-3 flex justify-end">
@@ -1213,9 +1229,13 @@ const ReferralPartnerDetails = () => {
                     onClick={() => reviewVerification("kyc", "verified")}
                   >
                     {loadingAction === "kyc_verified" ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2
+                        aria-hidden="true"
+                        size={14}
+                        className="animate-spin"
+                      />
                     ) : (
-                      <Check size={14} />
+                      <Check aria-hidden="true" size={14} />
                     )}{" "}
                     Approve KYC
                   </button>
@@ -1229,9 +1249,13 @@ const ReferralPartnerDetails = () => {
                     onClick={() => reviewVerification("kyc", "rejected")}
                   >
                     {loadingAction === "kyc_rejected" ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2
+                        aria-hidden="true"
+                        size={14}
+                        className="animate-spin"
+                      />
                     ) : (
-                      <X size={14} />
+                      <X aria-hidden="true" size={14} />
                     )}{" "}
                     Reject KYC
                   </button>
@@ -1245,9 +1269,13 @@ const ReferralPartnerDetails = () => {
                     onClick={() => reviewVerification("bank", "verified")}
                   >
                     {loadingAction === "bank_verified" ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2
+                        aria-hidden="true"
+                        size={14}
+                        className="animate-spin"
+                      />
                     ) : (
-                      <Check size={14} />
+                      <Check aria-hidden="true" size={14} />
                     )}{" "}
                     Verify Bank
                   </button>
@@ -1261,9 +1289,13 @@ const ReferralPartnerDetails = () => {
                     onClick={() => reviewVerification("bank", "rejected")}
                   >
                     {loadingAction === "bank_rejected" ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2
+                        aria-hidden="true"
+                        size={14}
+                        className="animate-spin"
+                      />
                     ) : (
-                      <X size={14} />
+                      <X aria-hidden="true" size={14} />
                     )}{" "}
                     Reject Bank
                   </button>
@@ -1275,11 +1307,15 @@ const ReferralPartnerDetails = () => {
                   onClick={updatePartnerStatus}
                 >
                   {loadingAction === "status" ? (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Loader2
+                      aria-hidden="true"
+                      size={14}
+                      className="animate-spin"
+                    />
                   ) : influencer?.status === "active" ? (
-                    <X size={14} />
+                    <X aria-hidden="true" size={14} />
                   ) : (
-                    <Check size={14} />
+                    <Check aria-hidden="true" size={14} />
                   )}
                   {influencer?.status === "pending"
                     ? "Approve account"
@@ -1294,11 +1330,15 @@ const ReferralPartnerDetails = () => {
                   onClick={togglePermission}
                 >
                   {loadingAction === "permission" ? (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Loader2
+                      aria-hidden="true"
+                      size={14}
+                      className="animate-spin"
+                    />
                   ) : influencer?.canCreateChildren ? (
-                    <X size={14} />
+                    <X aria-hidden="true" size={14} />
                   ) : (
-                    <UserPlus size={14} />
+                    <UserPlus aria-hidden="true" size={14} />
                   )}
                   {influencer?.canCreateChildren
                     ? "Revoke child creation"
@@ -1310,7 +1350,7 @@ const ReferralPartnerDetails = () => {
                     className="inline-flex items-center gap-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
                     onClick={copyRegistrationLink}
                   >
-                    <Link size={14} /> Copy registration link
+                    <Link aria-hidden="true" size={14} /> Copy registration link
                   </button>
                 )}
                 {!(
@@ -1324,9 +1364,13 @@ const ReferralPartnerDetails = () => {
                     onClick={promotePartner}
                   >
                     {loadingAction === "promote" ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2
+                        aria-hidden="true"
+                        size={14}
+                        className="animate-spin"
+                      />
                     ) : (
-                      <GitBranch size={14} />
+                      <GitBranch aria-hidden="true" size={14} />
                     )}{" "}
                     Promote to Growth Partner
                   </button>

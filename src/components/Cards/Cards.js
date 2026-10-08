@@ -41,36 +41,34 @@ export default function Cards({
         }}
       />
     ) : (
-      <img className="h-5 w-5 object-contain" src={icon} alt="" />
+      <img className="h-5 w-5 object-contain" src={icon} alt={label} />
     )
   ) : null;
 
   const descNode =
-    description !== undefined
-      ? description
-      : trend || helper
-        ? (
-          <p className="text-[9px] font-medium text-[#36363f]">
-            {trend && (
-              <span
-                className={`inline-flex items-center gap-1 font-bold ${trendColor}`}
-              >
-                {trendNegative ? (
-                  <IoMdTrendingDown className="h-3 w-3" />
-                ) : (
-                  <IoTrendingUp className="h-3 w-3" />
-                )}
-                {trend}
-              </span>
-            )}{" "}
-            {helper && (
-              <span>
-                {formatLabel(String(helper).replace("last month", "Last month"))}
-              </span>
+    description !== undefined ? (
+      description
+    ) : trend || helper ? (
+      <p className="text-[9px] font-medium text-[#36363f]">
+        {trend && (
+          <span
+            className={`inline-flex items-center gap-1 font-bold ${trendColor}`}
+          >
+            {trendNegative ? (
+              <IoMdTrendingDown aria-hidden="true" className="h-3 w-3" />
+            ) : (
+              <IoTrendingUp aria-hidden="true" className="h-3 w-3" />
             )}
-          </p>
-        )
-        : null;
+            {trend}
+          </span>
+        )}{" "}
+        {helper && (
+          <span>
+            {formatLabel(String(helper).replace("last month", "Last month"))}
+          </span>
+        )}
+      </p>
+    ) : null;
 
   return (
     <SummaryCard

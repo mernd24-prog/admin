@@ -1447,7 +1447,7 @@ export default function ShippingProfiles() {
             <span
               className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md ${row.active !== false ? "bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]" : "bg-gray-100 text-gray-400"}`}
             >
-              <MdLocalShipping size={18} />
+              <MdLocalShipping aria-hidden="true" size={18} />
             </span>
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1456,7 +1456,7 @@ export default function ShippingProfiles() {
                 </span>
                 {row.isDefault && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-blue-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--admin-blue)]">
-                    <MdStar size={12} /> Default
+                    <MdStar aria-hidden="true" size={12} /> Default
                   </span>
                 )}
                 {row.sourceTemplateId && (
@@ -1581,17 +1581,18 @@ export default function ShippingProfiles() {
           <div className="flex flex-wrap items-center gap-2">
             {canCreateProfile && (
               <button onClick={() => openClone()}>
-                <MdLocalShipping size={17} /> Use Admin Template
+                <MdLocalShipping aria-hidden="true" size={17} /> Use Admin
+                Template
               </button>
             )}
             {!isSeller && canCreateProfile && (
               <button onClick={openTemplateCreate}>
-                <MdAdd size={17} /> New Template
+                <MdAdd aria-hidden="true" size={17} /> New Template
               </button>
             )}
             {canCreateProfile && (
               <button onClick={openCreate}>
-                <MdAdd size={17} /> New Profile
+                <MdAdd aria-hidden="true" size={17} /> New Profile
               </button>
             )}
           </div>
@@ -1681,7 +1682,13 @@ export default function ShippingProfiles() {
         sortDir={sortDir}
         searchPlaceholder="Search shipping profile name…"
         emptyText="No shipping profiles found."
-        emptyIcon={<MdLocalShipping size={42} className="text-gray-200" />}
+        emptyIcon={
+          <MdLocalShipping
+            aria-hidden="true"
+            size={42}
+            className="text-gray-200"
+          />
+        }
         onRefresh={fetchProfiles}
         error={error}
         requiredModule="delivery"
@@ -1719,7 +1726,7 @@ export default function ShippingProfiles() {
                   className="inline-flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50"
                   onClick={() => setBulkDeleteOpen(true)}
                 >
-                  <MdDeleteSweep size={17} /> Delete Selected
+                  <MdDeleteSweep aria-hidden="true" size={17} /> Delete Selected
                 </button>
               </div>
             </div>
@@ -1729,18 +1736,18 @@ export default function ShippingProfiles() {
           [
             canUpdateProfile && {
               label: "Edit",
-              icon: <MdEdit size={16} />,
+              icon: <MdEdit aria-hidden="true" size={16} />,
               onClick: () => openEdit(row),
             },
             canUpdateProfile && {
               label: "Set Default",
-              icon: <MdStarBorder size={16} />,
+              icon: <MdStarBorder aria-hidden="true" size={16} />,
               hidden: row.isDefault,
               onClick: () => handleSetDefault(row),
             },
             canDeleteProfile && {
               label: "Delete",
-              icon: <MdDelete size={16} />,
+              icon: <MdDelete aria-hidden="true" size={16} />,
               danger: true,
               onClick: () => setDeleteTarget(row),
             },

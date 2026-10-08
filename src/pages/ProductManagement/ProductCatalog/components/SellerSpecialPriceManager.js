@@ -217,7 +217,7 @@ const ImportExportGuide = () => {
         onClick={() => setOpen((prev) => !prev)}
         className="flex w-full items-center gap-2.5 text-left focus:outline-none"
       >
-        <Info size={16} className="shrink-0 text-blue-600" />
+        <Info aria-hidden="true" size={16} className="shrink-0 text-blue-600" />
         <h3 className="flex-1 text-xs font-semibold text-gray-900">
           Import & Export Guide
         </h3>
@@ -912,7 +912,7 @@ const SellerSpecialPriceManager = () => {
             className="inline-flex items-center gap-1.5 rounded-md border border-[var(--admin-gold)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--admin-gold)] transition-colors hover:bg-[var(--admin-gold)] hover:text-white focus:border-[var(--admin-gold)] focus:outline-none focus:ring-0"
           >
             Manage Special Prices
-            <ArrowRight size={14} />
+            <ArrowRight aria-hidden="true" size={14} />
           </button>
         ),
       },
@@ -1061,7 +1061,7 @@ const SellerSpecialPriceManager = () => {
                 type="button"
                 onClick={() => navigate("/app/seller-special-price-manager")}
               >
-                <ArrowLeft size={16} />
+                <ArrowLeft aria-hidden="true" size={16} />
                 Back to Products
               </button>
 
@@ -1186,7 +1186,11 @@ const SellerSpecialPriceManager = () => {
         {/* Special Price Suggestion */}
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
           <div className="flex items-start gap-2.5">
-            <Info size={16} className="mt-0.5 shrink-0 text-blue-600" />
+            <Info
+              aria-hidden="true"
+              size={16}
+              className="mt-0.5 shrink-0 text-blue-600"
+            />
 
             <div>
               <h3 className="text-xs font-semibold text-gray-900">

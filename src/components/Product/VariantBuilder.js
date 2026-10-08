@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { uploadFileMulti } from "../../_helpers/globalFunctions";
+import { validateImage } from "../../utils/imageValidation";
 import { toast } from "sonner";
 import useDropdownOptions from "../../hooks/useDropdownOptions";
 import { MdDragIndicator, MdAdd } from "react-icons/md";
@@ -80,7 +81,9 @@ const getVariantAttributeValue = (variant = {}, option = {}) => {
   const canonicalKey = getAxisKey(option);
   const legacyKeys = [
     canonicalKey,
-    String(option.name || "").trim().toLowerCase(),
+    String(option.name || "")
+      .trim()
+      .toLowerCase(),
     canonicalKey.replace(/-/g, "_"),
   ].filter(Boolean);
 
@@ -90,8 +93,9 @@ const getVariantAttributeValue = (variant = {}, option = {}) => {
 
 const getCombinationKey = (variant = {}, optionAxes = []) =>
   optionAxes
-    .map((option) =>
-      `${getAxisKey(option)}=${String(getVariantAttributeValue(variant, option)).trim().toLowerCase()}`,
+    .map(
+      (option) =>
+        `${getAxisKey(option)}=${String(getVariantAttributeValue(variant, option)).trim().toLowerCase()}`,
     )
     .join("|");
 
@@ -188,7 +192,9 @@ const VariantBuilder = ({
       ),
     );
     if (!optionSubmission.name.trim() || !values.length) {
-      toast.error("Enter an option name and at least one comma-separated value");
+      toast.error(
+        "Enter an option name and at least one comma-separated value",
+      );
       return;
     }
     setSubmittingOption(true);
@@ -308,7 +314,9 @@ const VariantBuilder = ({
   const updateVariantAttribute = (idx, option, value) => {
     const canonicalKey = getAxisKey(option);
     const legacyKeys = [
-      String(option.name || "").trim().toLowerCase(),
+      String(option.name || "")
+        .trim()
+        .toLowerCase(),
       canonicalKey.replace(/-/g, "_"),
     ].filter((key) => key && key !== canonicalKey);
     const nextAttributes = { ...(variants[idx]?.attributes || {}) };
@@ -347,17 +355,34 @@ const VariantBuilder = ({
 
   const uploadVariantImages = async (idx, files) => {
     if (!files || !files.length) return;
+
     const current = variants[idx]?.images || [];
     const remaining = MAX_VARIANT_IMAGES - current.length;
+
     if (remaining <= 0) {
       toast.error(`Maximum ${MAX_VARIANT_IMAGES} images per variant`);
       return;
     }
+
+    // Keep existing maximum-image behavior
     const filesArray = Array.from(files).slice(0, remaining);
-    setUploadingVariants((prev) => new Set([...prev, idx]));
+
     try {
+      for (const file of filesArray) {
+        const validationResult = await validateImage(file);
+
+        if (!validationResult.valid) {
+          toast.error(`${file.name}: ${validationResult.message}`);
+          return;
+        }
+      }
+
+      setUploadingVariants((prev) => new Set([...prev, idx]));
+
       const urls = await uploadFileMulti(filesArray, "PRODUCT");
+
       updateVariant(idx, "images", [...current, ...urls]);
+
       toast.success(
         `${urls.length} image${urls.length > 1 ? "s" : ""} uploaded`,
       );
@@ -365,9 +390,9 @@ const VariantBuilder = ({
       toast.error(err?.message || "Upload failed");
     } finally {
       setUploadingVariants((prev) => {
-        const n = new Set(prev);
-        n.delete(idx);
-        return n;
+        const next = new Set(prev);
+        next.delete(idx);
+        return next;
       });
     }
   };
@@ -669,7 +694,9 @@ const VariantBuilder = ({
                 ))}
                 {optionSearch.trim() && !filteredPlatformOptions.length && (
                   <div className="px-4 py-3 text-center">
-                    <p className="text-sm text-gray-400">No matching option found</p>
+                    <p className="text-sm text-gray-400">
+                      No matching option found
+                    </p>
                     {canSubmitOption && (
                       <button
                         type="button"
@@ -701,9 +728,12 @@ const VariantBuilder = ({
         {showOptionSubmission && (
           <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
             <div>
-              <p className="text-sm font-semibold text-gray-800">Submit new Option Master</p>
+              <p className="text-sm font-semibold text-gray-800">
+                Submit new Option Master
+              </p>
               <p className="text-xs text-gray-500">
-                Only your seller account can use it while Admin approval is pending.
+                Only your seller account can use it while Admin approval is
+                pending.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -712,7 +742,10 @@ const VariantBuilder = ({
                 <SmallInput
                   value={optionSubmission.name}
                   onChange={(event) =>
-                    setOptionSubmission((previous) => ({ ...previous, name: event.target.value }))
+                    setOptionSubmission((previous) => ({
+                      ...previous,
+                      name: event.target.value,
+                    }))
                   }
                   placeholder="e.g. Sleeve Length"
                 />
@@ -723,11 +756,16 @@ const VariantBuilder = ({
                   className="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs"
                   value={optionSubmission.displayType}
                   onChange={(event) =>
-                    setOptionSubmission((previous) => ({ ...previous, displayType: event.target.value }))
+                    setOptionSubmission((previous) => ({
+                      ...previous,
+                      displayType: event.target.value,
+                    }))
                   }
                 >
                   {DISPLAY_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -737,17 +775,31 @@ const VariantBuilder = ({
               <SmallInput
                 value={optionSubmission.values}
                 onChange={(event) =>
-                  setOptionSubmission((previous) => ({ ...previous, values: event.target.value }))
+                  setOptionSubmission((previous) => ({
+                    ...previous,
+                    values: event.target.value,
+                  }))
                 }
                 placeholder="Short, Long, Three Quarter"
               />
-              <p className="mt-1 text-[10px] text-gray-500">Separate values with commas.</p>
+              <p className="mt-1 text-[10px] text-gray-500">
+                Separate values with commas.
+              </p>
             </div>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowOptionSubmission(false)} className="rounded-md border bg-white px-3 py-1.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setShowOptionSubmission(false)}
+                className="rounded-md border bg-white px-3 py-1.5 text-xs"
+              >
                 Cancel
               </button>
-              <button type="button" disabled={submittingOption} onClick={submitNewOption} className="rounded-md bg-[var(--admin-blue)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+              <button
+                type="button"
+                disabled={submittingOption}
+                onClick={submitNewOption}
+                className="rounded-md bg-[var(--admin-blue)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+              >
                 {submittingOption ? "Submitting…" : "Submit and use"}
               </button>
             </div>
@@ -1016,7 +1068,8 @@ const VariantBuilder = ({
                             Variant combination
                           </p>
                           <p className="text-[10px] text-gray-400">
-                            Choose the option values that uniquely identify this SKU.
+                            Choose the option values that uniquely identify this
+                            SKU.
                           </p>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -1031,11 +1084,14 @@ const VariantBuilder = ({
                             return (
                               <div className="space-y-1" key={axisKey}>
                                 <FieldLabel>
-                                  {option.name}{option.required ? " *" : ""}
+                                  {option.name}
+                                  {option.required ? " *" : ""}
                                 </FieldLabel>
                                 <select
                                   name={`variants.${idx}.attributes.${axisKey}`}
-                                  data-error-field={attributeError ? "variants" : undefined}
+                                  data-error-field={
+                                    attributeError ? "variants" : undefined
+                                  }
                                   aria-invalid={Boolean(attributeError)}
                                   className={`w-full rounded-md border bg-white px-2 py-1.5 text-xs text-gray-800 focus:outline-none focus:ring-1 ${attributeError ? "border-red-400 focus:ring-red-200" : "border-gray-200 focus:border-[var(--admin-blue)] focus:ring-[var(--admin-blue)]/20"}`}
                                   value={selectedValue}
@@ -1048,7 +1104,9 @@ const VariantBuilder = ({
                                   }
                                 >
                                   <option value="">
-                                    {option.required ? "Select value" : "Not applicable"}
+                                    {option.required
+                                      ? "Select value"
+                                      : "Not applicable"}
                                   </option>
                                   {(option.values || []).map((value) => (
                                     <option key={value} value={value}>
@@ -1057,7 +1115,10 @@ const VariantBuilder = ({
                                   ))}
                                 </select>
                                 {attributeError && (
-                                  <p className="text-[10px] text-red-600" role="alert">
+                                  <p
+                                    className="text-[10px] text-red-600"
+                                    role="alert"
+                                  >
                                     {attributeError}
                                   </p>
                                 )}
@@ -1314,18 +1375,22 @@ const VariantBuilder = ({
 
                     {/* Images section */}
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs font-semibold text-gray-700">
-                          Variant Images
-                        </p>
-                        <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-full">
-                          {imageCount}/{MAX_VARIANT_IMAGES}
-                        </span>
-                        {!hasImages && (
-                          <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full font-semibold">
-                            No images
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-semibold text-gray-700">
+                            Variant Images
+                          </p>
+
+                          <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-full">
+                            {imageCount}/{MAX_VARIANT_IMAGES}
                           </span>
-                        )}
+                        </div>
+
+                        {/* Image upload instructions */}
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          Upload JPG, JPEG, PNG or WEBP images · Max 5 MB per
+                          image
+                        </p>
                       </div>
 
                       {hasImages && (
@@ -1334,6 +1399,7 @@ const VariantBuilder = ({
                             className="text-blue-400 flex-shrink-0"
                             size={11}
                           />
+
                           <p className="text-xs text-blue-700">
                             These images replace the product gallery for{" "}
                             <strong>{variantLabel}</strong>.
@@ -1356,15 +1422,18 @@ const VariantBuilder = ({
                                   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTIxIDNIM0MyIDMgMSA0IDEgNXYxNGMwIDEgMSAyIDIgMmgxOGMxIDAgMi0xIDItMlY1YzAtMS0xLTItMi0yem0tMSAxNUg0di0ybDMtMyAzLjUgMy41IDQuNS01LjUgNSA3LjV6bTAtOS42YzAgLjgtLjcgMS41LTEuNSAxLjVTNS40IDkuMiA1LjQgOC40IDYuMSA2LjkgNi45IDYuOXMxLjUuNyAxLjUgMS41eiIvPjwvc3ZnPg==";
                               }}
                             />
+
                             {imgIdx === 0 && (
                               <div className="absolute bottom-0.5 left-0.5 bg-black/60 text-white text-[8px] font-bold px-1 rounded">
                                 Cover
                               </div>
                             )}
+
                             <button
                               type="button"
                               onClick={() => removeVariantImage(idx, imgIdx)}
                               className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label={`Remove variant image ${imgIdx + 1}`}
                             >
                               ✕
                             </button>
@@ -1373,41 +1442,44 @@ const VariantBuilder = ({
 
                         {imageCount < MAX_VARIANT_IMAGES && (
                           <label
-                            className={`w-16 h-16 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-0.5 cursor-pointer flex-shrink-0 transition-colors
-                            ${isUploading ? "border-gray-200 opacity-50 pointer-events-none" : "border-gray-200 hover:border-[var(--admin-blue)] text-gray-300 hover:text-[var(--admin-blue)]"}`}
+                            className={`w-16 h-16 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-0.5 flex-shrink-0 transition-colors ${
+                              isUploading
+                                ? "border-[var(--admin-blue)] bg-blue-50 cursor-wait"
+                                : "border-gray-200 hover:border-[var(--admin-blue)] text-gray-300 hover:text-[var(--admin-blue)] cursor-pointer"
+                            }`}
                           >
                             {isUploading ? (
-                              <span className="text-[10px] text-gray-400">
-                                ⏳
-                              </span>
+                              <>
+                                <div className="w-4 h-4 border-2 border-blue-200 border-t-[var(--admin-blue)] rounded-full animate-spin" />
+
+                                <span className="text-[8px] font-medium text-[var(--admin-blue)]">
+                                  Checking...
+                                </span>
+                              </>
                             ) : (
                               <>
                                 <MdAdd size={20} />
+
                                 <span className="text-[9px]">Upload</span>
                               </>
                             )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              className="hidden"
-                              onChange={(e) =>
-                                uploadVariantImages(idx, e.target.files)
-                              }
-                            />
+
+                            {!isUploading && (
+                              <input
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                multiple
+                                className="hidden"
+                                onChange={(event) => {
+                                  uploadVariantImages(idx, event.target.files);
+
+                                  event.target.value = "";
+                                }}
+                              />
+                            )}
                           </label>
                         )}
                       </div>
-
-                      {/* {imageCount < MAX_VARIANT_IMAGES && (
-                        <div className="flex gap-2">
-                          <SmallInput
-                            type="text"
-                            placeholder="Or paste image URL and press Enter…"
-                            onKeyDown={(e) => { if (e.key === 'Enter' && e.target.value.trim()) { e.preventDefault(); addVariantImageUrl(idx, e.target.value); e.target.value = ''; } }}
-                          />
-                        </div>
-                      )} */}
                     </div>
                   </div>
                 )}
@@ -1420,7 +1492,10 @@ const VariantBuilder = ({
       {/* Add manually */}
       <button
         type="button"
-        disabled={!options.length || options.some((option) => !(option.values || []).length)}
+        disabled={
+          !options.length ||
+          options.some((option) => !(option.values || []).length)
+        }
         onClick={() =>
           onChange([
             ...variants,
@@ -1436,9 +1511,11 @@ const VariantBuilder = ({
       >
         + Add Variant Manually
       </button>
-      {(!options.length || options.some((option) => !(option.values || []).length)) && (
+      {(!options.length ||
+        options.some((option) => !(option.values || []).length)) && (
         <p className="-mt-4 text-center text-[11px] text-amber-700">
-          Add at least one variant option and select its values before adding a manual variant.
+          Add at least one variant option and select its values before adding a
+          manual variant.
         </p>
       )}
 

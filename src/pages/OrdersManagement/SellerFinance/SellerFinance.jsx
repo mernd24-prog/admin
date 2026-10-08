@@ -312,36 +312,8 @@ const MetricCard = ({ label, value, hint }) => {
       title={label}
       value={value}
       description={hint ? formatLabel(hint) : null}
-      icon={<Icon size={18} />}
+      icon={<Icon aria-hidden="true" size={18} />}
     />
-  );
-};
-
-const IconButton = ({
-  title,
-  icon,
-  onClick,
-  disabled = false,
-  tone = "blue",
-}) => {
-  const toneClass =
-    {
-      blue: "text-[#2f6fed] hover:bg-[#f3f6ff]",
-      green: "text-[#208a3c] hover:bg-[#effbf4]",
-      red: "text-[#d92d20] hover:bg-[#fff1f0]",
-    }[tone] || "text-[#2f6fed] hover:bg-[#f3f6ff]";
-
-  return (
-    <button
-      type="button"
-      title={title}
-      aria-label={title}
-      className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition ${toneClass} disabled:cursor-not-allowed disabled:opacity-40`}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {icon}
-    </button>
   );
 };
 
@@ -364,7 +336,7 @@ const ModalOverlay = ({
             onClick={onClose}
             className="rounded p-1 text-[#65718b] hover:bg-[#f3f6ff]"
           >
-            <MdClose size={18} />
+            <MdClose aria-hidden="true" size={18} />
           </button>
         </div>
         <div className="px-5 py-4">{children}</div>

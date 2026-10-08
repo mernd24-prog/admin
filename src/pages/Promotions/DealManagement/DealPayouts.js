@@ -258,7 +258,7 @@ const DealPayouts = () => {
             className="p-1 text-blue-600 hover:bg-blue-50 rounded"
             title="View"
           >
-            <MdVisibility size={18} />
+            <MdVisibility aria-hidden="true" size={18} />
           </button>
           <PermissionGuard module="deals" action={ACTIONS.APPROVE} hide>
             {row.status === "generated" && (
@@ -275,7 +275,7 @@ const DealPayouts = () => {
                 className="p-1 text-green-600 hover:bg-green-50 rounded"
                 title="Process"
               >
-                <MdCheckCircle size={18} />
+                <MdCheckCircle aria-hidden="true" size={18} />
               </button>
             )}
           </PermissionGuard>
@@ -294,7 +294,7 @@ const DealPayouts = () => {
           <div className="flex gap-2">
             <PermissionGuard module="deals" action={ACTIONS.APPROVE} hide>
               <button onClick={() => setShowGenerate(true)}>
-                <MdAdd size={16} /> Generate Payouts
+                <MdAdd aria-hidden="true" size={16} /> Generate Payouts
               </button>
             </PermissionGuard>
           </div>
@@ -366,62 +366,62 @@ const DealPayouts = () => {
       </DefaultModal>
 
       {/* Generate payouts modal */}
-<DefaultModal
-  isOpen={showGenerate}
-  onClose={() => setShowGenerate(false)}
-  onSubmit={handleGenerate}
-  loading={generating}
-  title="Generate Deal Payouts"
-  submitButtonText="Generate Payouts"
-  closeButtonText="Cancel"
->
-  <div className="space-y-5">
-    <FormSection
-      title="Payout Details"
-      subtitle="Select the payout period and seller for which you want to generate payouts."
-    >
-      <div className="space-y-5">
-        {/* Payout Period */}
-        <DateRangeFilter
-          field={{
-            key: "dateRange",
-            type: "daterange",
-            label: "Date Range",
-            startKey: "fromDate",
-            endKey: "toDate",
-            disableFuture: true,
-            width: "w-full",
-            placeholder: "Select date range",
-          }}
-          values={generateForm}
-          onChange={(key, value) =>
-            setGenerateForm((prev) => ({ ...prev, [key]: value }))
-          }
-        />
+      <DefaultModal
+        isOpen={showGenerate}
+        onClose={() => setShowGenerate(false)}
+        onSubmit={handleGenerate}
+        loading={generating}
+        title="Generate Deal Payouts"
+        submitButtonText="Generate Payouts"
+        closeButtonText="Cancel"
+      >
+        <div className="space-y-5">
+          <FormSection
+            title="Payout Details"
+            subtitle="Select the payout period and seller for which you want to generate payouts."
+          >
+            <div className="space-y-5">
+              {/* Payout Period */}
+              <DateRangeFilter
+                field={{
+                  key: "dateRange",
+                  type: "daterange",
+                  label: "Date Range",
+                  startKey: "fromDate",
+                  endKey: "toDate",
+                  disableFuture: true,
+                  width: "w-full",
+                  placeholder: "Select date range",
+                }}
+                values={generateForm}
+                onChange={(key, value) =>
+                  setGenerateForm((prev) => ({ ...prev, [key]: value }))
+                }
+              />
 
-        {/* Seller Selection */}
-        <FilterSelect
-          label="Seller"
-          options={sellerOptions}
-          value={
-            sellerOptions.find(
-              (option) => option.value === generateForm.sellerId,
-            ) || null
-          }
-          onChange={(option) =>
-            setGenerateForm((prev) => ({
-              ...prev,
-              sellerId: option?.value || "",
-            }))
-          }
-          placeholder="All Sellers"
-          isClearable
-          isSearchable
-        />
-      </div>
-    </FormSection>
-  </div>
-</DefaultModal>
+              {/* Seller Selection */}
+              <FilterSelect
+                label="Seller"
+                options={sellerOptions}
+                value={
+                  sellerOptions.find(
+                    (option) => option.value === generateForm.sellerId,
+                  ) || null
+                }
+                onChange={(option) =>
+                  setGenerateForm((prev) => ({
+                    ...prev,
+                    sellerId: option?.value || "",
+                  }))
+                }
+                placeholder="All Sellers"
+                isClearable
+                isSearchable
+              />
+            </div>
+          </FormSection>
+        </div>
+      </DefaultModal>
       {/* Process payout */}
       <ConfirmModal
         isOpen={processConfirm.open}

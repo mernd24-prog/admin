@@ -185,9 +185,19 @@ const RatingStars = ({ value = 0, showValue = true }) => {
       <div className="flex items-center">
         {[1, 2, 3, 4, 5].map((star) =>
           star <= Math.round(rating) ? (
-            <MdStar key={star} className="text-orange-500" size={17} />
+            <MdStar
+              aria-hidden="true"
+              key={star}
+              className="text-orange-500"
+              size={17}
+            />
           ) : (
-            <MdStarBorder key={star} className="text-gray-300" size={17} />
+            <MdStarBorder
+              aria-hidden="true"
+              key={star}
+              className="text-gray-300"
+              size={17}
+            />
           ),
         )}
       </div>
@@ -873,7 +883,7 @@ const ProductReviews = () => {
           !sellerScoped ? (
             <PermissionGuard module="reviews" action={ACTIONS.CREATE} hide>
               <button onClick={() => setAddOpen(true)}>
-                <MdAdd size={18} />
+                <MdAdd aria-hidden="true" size={18} />
                 Add Review
               </button>
             </PermissionGuard>
@@ -974,7 +984,13 @@ const ProductReviews = () => {
             ? "No reviews found for this product."
             : "No product review summaries found."
         }
-        emptyIcon={<MdRateReview size={40} className="text-gray-200" />}
+        emptyIcon={
+          <MdRateReview
+            aria-hidden="true"
+            size={40}
+            className="text-gray-200"
+          />
+        }
         requiredModule="reviews"
         exportConfig={{
           filename: isDetailMode
@@ -1018,19 +1034,19 @@ const ProductReviews = () => {
                   ? [
                       {
                         label: "Approve",
-                        icon: <MdCheckCircle />,
+                        icon: <MdCheckCircle aria-hidden="true" />,
                         variant: "primary",
                         onClick: () => handleBulkStatus("published"),
                       },
                       {
                         label: "Hide",
-                        icon: <MdVisibilityOff />,
+                        icon: <MdVisibilityOff aria-hidden="true" />,
                         variant: "warning",
                         onClick: () => handleBulkStatus("hidden"),
                       },
                       {
                         label: "Reject",
-                        icon: <MdClose />,
+                        icon: <MdClose aria-hidden="true" />,
                         variant: "danger",
                         onClick: () => handleBulkStatus("rejected"),
                       },
@@ -1038,28 +1054,28 @@ const ProductReviews = () => {
                   : [
                       {
                         label: "Approve",
-                        icon: <MdCheckCircle />,
+                        icon: <MdCheckCircle aria-hidden="true" />,
                         action: ACTIONS.EDIT,
                         variant: "primary",
                         onClick: () => handleBulkStatus("published"),
                       },
                       {
                         label: "Reject",
-                        icon: <MdClose />,
+                        icon: <MdClose aria-hidden="true" />,
                         action: ACTIONS.EDIT,
                         variant: "danger",
                         onClick: () => handleBulkStatus("rejected"),
                       },
                       {
                         label: "Hide",
-                        icon: <MdVisibilityOff />,
+                        icon: <MdVisibilityOff aria-hidden="true" />,
                         action: ACTIONS.EDIT,
                         variant: "warning",
                         onClick: () => handleBulkStatus("hidden"),
                       },
                       {
                         label: "Delete",
-                        icon: <MdDelete />,
+                        icon: <MdDelete aria-hidden="true" />,
                         action: ACTIONS.DELETE,
                         variant: "danger",
                         onClick: () => setBulkDeleteConfirm(true),
@@ -1128,7 +1144,13 @@ const ProductReviews = () => {
             actions.push(
               {
                 label: "Edit Review",
-                icon: <MdEdit size={16} className="text-green-600" />,
+                icon: (
+                  <MdEdit
+                    aria-hidden="true"
+                    size={16}
+                    className="text-green-600"
+                  />
+                ),
                 requiredModule: "reviews",
                 requiredAction: ACTIONS.EDIT,
                 onClick: () => setEditTarget(row),
@@ -1136,7 +1158,13 @@ const ProductReviews = () => {
 
               {
                 label: "Delete Review",
-                icon: <MdDelete size={16} className="text-red-600" />,
+                icon: (
+                  <MdDelete
+                    aria-hidden="true"
+                    size={16}
+                    className="text-red-600"
+                  />
+                ),
                 requiredModule: "reviews",
                 requiredAction: ACTIONS.DELETE,
                 onClick: () =>

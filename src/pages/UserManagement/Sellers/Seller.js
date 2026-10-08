@@ -131,7 +131,11 @@ const Sellers = () => {
           >
             <img
               src={row?.profile?.avatarUrl || "/Img/noData.png"}
-              alt={v || "Seller"}
+              alt={
+                `${row?.profile?.firstName || ""} ${
+                  row?.profile?.lastName || ""
+                }`.trim() || "N/A"
+              }
               className="h-8 w-8 shrink-0 rounded-full border border-gray-200 bg-gray-50 object-cover transition group-hover:border-[var(--admin-blue)]"
             />
 
@@ -343,7 +347,13 @@ const Sellers = () => {
     (row) => [
       {
         label: "View Seller",
-        icon: <MdVisibility size={16} className="text-blue-600" />,
+        icon: (
+          <MdVisibility
+            aria-hidden="true"
+            size={16}
+            className="text-blue-600"
+          />
+        ),
         requiredModule: "sellers",
         requiredAction: ACTIONS.VIEW,
         onClick: () => navigate(`/app/seller/view/${row._id}`),
@@ -380,7 +390,13 @@ const Sellers = () => {
         rowActions={rowActions}
         searchPlaceholder="Search by name, username or email…"
         emptyText="No sellers found."
-        emptyIcon={<MdStorefront size={40} className="text-gray-200" />}
+        emptyIcon={
+          <MdStorefront
+            aria-hidden="true"
+            size={40}
+            className="text-gray-200"
+          />
+        }
         requiredModule="sellers"
       />
 

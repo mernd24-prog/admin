@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   FaCloudUploadAlt,
   FaImage,
@@ -29,36 +29,64 @@ const ImageUpload = ({
   required,
 }) => {
   const fileInputRef = useRef();
+  const [fileSizeError, setFileSizeError] = useState("");
+
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+
   const displayError =
-    errorMessage || (typeof error === "string" ? error : error?.message || "");
+    fileSizeError ||
+    errorMessage ||
+    (typeof error === "string" ? error : error?.message || "");
+
   const supportedFormats =
     helperText ||
-    `Supports: ${
+    ` ${
       String(accept).includes("image/svg+xml")
-        ? "JPEG, PNG, WEBP, SVG"
+        ? "JPEG, PNG, WEBP, SVG, JPG"
         : "JPEG, PNG, WEBP"
     }`;
 
+  const validateFileSize = (selectedFile) => {
+    if (selectedFile.size > MAX_IMAGE_SIZE) {
+      setFileSizeError("Image size must be 5 MB or less");
+      return false;
+    }
+
+    setFileSizeError("");
+    return true;
+  };
+
   const handleFileChange = (e) => {
     if (isDisabled || isLoading) return;
+
     const selectedFile = e.target.files?.[0];
+
     if (selectedFile) {
-      onChange?.(selectedFile);
+      if (validateFileSize(selectedFile)) {
+        onChange?.(selectedFile);
+      }
+
       e.target.value = "";
     }
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
+
     if (isDisabled || isLoading) return;
+
     const droppedFile = e.dataTransfer.files?.[0];
+
     if (droppedFile) {
-      onChange?.(droppedFile);
+      if (validateFileSize(droppedFile)) {
+        onChange?.(droppedFile);
+      }
     }
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
+
     if (!isDisabled && !isLoading) {
       e.currentTarget.classList.add("ring-2", "ring-blue-400");
     }
@@ -82,6 +110,7 @@ const ImageUpload = ({
             {label}
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
+
           {subtext && <p className="mt-0.5 text-xs text-gray-500">{subtext}</p>}
         </div>
       )}
@@ -101,6 +130,7 @@ const ImageUpload = ({
       {isLoading ? (
         <div className="flex h-[155px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50">
           <ButtonLoader />
+
           <span className="text-xs font-medium text-gray-500">
             {loadingText}
           </span>
@@ -176,13 +206,14 @@ const ImageUpload = ({
             >
               <FaCloudUploadAlt size={22} />
             </div>
+
             <div className="space-y-0.5">
               <p className="text-xs font-medium text-gray-700">
                 Click to browse or drop file
               </p>
-              <div className="flex items-center justify-center text-[11px] text-gray-400">
-                <FaImage className="mr-1" />
-                <span>{supportedFormats}</span>
+
+              <div className="flex items-center justify-center text-[10px] text-gray-400">
+                <span>Use {supportedFormats} and Upload upto 5 MB</span>
               </div>
             </div>
           </div>

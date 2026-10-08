@@ -415,15 +415,15 @@ const Profile = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const allowedTypes = ["image/png", "image/jpg", "image/jpeg"];
+    const allowedTypes = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
-      toast.error("Only JPG/PNG files are allowed");
+      toast.error("Only JPG/PNG/JPEG/WEBP files are allowed");
       return;
     }
 
-    const maxSize = 2 * 1024 * 1024;
+    const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error("File size should not exceed 2MB");
+      toast.error("File size should not exceed 5MB");
       return;
     }
 
@@ -623,7 +623,8 @@ const Profile = () => {
           <div className="mb-8 flex flex-wrap items-center justify-between gap-5">
             <div className="flex items-center gap-5">
               <div className="relative">
-                <label className="group  relative block h-20 w-20 cursor-pointer overflow-hidden rounded-full border-2 border-white bg-[var(--admin-surface-soft)] shadow-md">
+                {/* Profile image */}
+                <label className="group relative block h-20 w-20 cursor-pointer overflow-hidden rounded-full border-2 border-white bg-[var(--admin-surface-soft)] shadow-md">
                   {formData.user_image ? (
                     <img
                       src={formData.user_image}
@@ -637,29 +638,46 @@ const Profile = () => {
                       </span>
                     </span>
                   )}
+
                   <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition group-hover:opacity-100">
                     <BsCamera className="h-5 w-5 text-white" />
                   </span>
+
                   <input
                     type="file"
-                    accept="image/*"
+                    accept=".png,.jpg,.jpeg,.webp"
                     onChange={handleImageChange}
                     className="hidden"
                     disabled={loading}
                   />
                 </label>
+
+                {/* Remove image */}
                 {formData.user_image && (
                   <button
                     type="button"
                     onClick={handleImageRemove}
                     disabled={loading}
-                    className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full border border-red-100 bg-white text-red-500 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="absolute -right-1 -top-1 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-red-100 bg-white text-red-500 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                     aria-label="Remove profile picture"
                     title="Remove profile picture"
                   >
                     <PiX className="h-4 w-4" />
                   </button>
                 )}
+
+                {/* Upload instruction */}
+                <div className="group absolute top-0 left-0 z-30">
+                  <span className="flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-[var(--admin-navy)] text-[9px] font-bold text-white shadow-sm">
+                    i
+                  </span>
+
+                  <div className="pointer-events-none absolute bottom-6 left-1/2 w-56 -translate-x-1/2 rounded-md bg-slate-900 px-3 py-2 text-center text-[10px] leading-4 text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100">
+                    Supported formats: PNG, JPG, JPEG, WEBP
+                    <br />
+                    Maximum file size: 5 MB
+                  </div>
+                </div>
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900">

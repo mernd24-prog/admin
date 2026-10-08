@@ -17,6 +17,7 @@ const CustomCheckbox = ({ id, name, checked, onChange, className = "" }) => {
       <span className="h-[18px] w-[18px] rounded-[5px] border border-[var(--admin-field-line)] bg-white shadow-sm transition-all duration-200 peer-checked:border-[var(--admin-navy)] peer-checked:bg-[var(--admin-navy)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--admin-blue)]/20 peer-focus-visible:ring-offset-1" />
 
       <svg
+        aria-label="custom-checkbox"
         className="pointer-events-none absolute left-[3px] top-[3px] h-3 w-3 text-white opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
         viewBox="0 0 24 24"
         fill="none"

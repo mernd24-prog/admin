@@ -26,8 +26,7 @@ import {
   MdSwapHoriz,
   MdUploadFile,
 } from "react-icons/md";
-// import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import Loader from "../../../components/Loader/Loader";
+
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
@@ -1288,7 +1287,13 @@ const Returns = () => {
           const actions = [
             {
               label: "View Details",
-              icon: <MdVisibility size={16} className="text-blue-600" />,
+              icon: (
+                <MdVisibility
+                  aria-hidden="true"
+                  size={16}
+                  className="text-blue-600"
+                />
+              ),
               onClick: () => openDetail(row),
             },
           ];
@@ -1296,7 +1301,13 @@ const Returns = () => {
           if (row.status === "requested") {
             actions.push({
               label: isSeller ? "Accept Return" : "Approve Return",
-              icon: <MdCheckCircle size={16} className="text-green-600" />,
+              icon: (
+                <MdCheckCircle
+                  aria-hidden="true"
+                  size={16}
+                  className="text-green-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("approve", row),
@@ -1305,7 +1316,13 @@ const Returns = () => {
             if (!isSeller) {
               actions.push({
                 label: "Reject Return",
-                icon: <MdClose size={16} className="text-red-600" />,
+                icon: (
+                  <MdClose
+                    aria-hidden="true"
+                    size={16}
+                    className="text-red-600"
+                  />
+                ),
                 requiredModule: "returns",
                 requiredAction: "update",
                 onClick: () => openAction("reject", row),
@@ -1316,7 +1333,13 @@ const Returns = () => {
           if (["approved", "pickup_failed"].includes(row.status)) {
             actions.push({
               label: "Arrange Pickup",
-              icon: <MdLocalShipping size={16} className="text-indigo-600" />,
+              icon: (
+                <MdLocalShipping
+                  aria-hidden="true"
+                  size={16}
+                  className="text-indigo-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("schedule", row),
@@ -1333,7 +1356,13 @@ const Returns = () => {
           ) {
             actions.push({
               label: "Update Tracking",
-              icon: <MdLocalShipping size={16} className="text-blue-600" />,
+              icon: (
+                <MdLocalShipping
+                  aria-hidden="true"
+                  size={16}
+                  className="text-blue-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("tracking", row),
@@ -1343,7 +1372,13 @@ const Returns = () => {
           if (row.status === "shipped_back") {
             actions.push({
               label: "Confirm Receipt",
-              icon: <MdAssignmentReturn size={16} className="text-green-600" />,
+              icon: (
+                <MdAssignmentReturn
+                  aria-hidden="true"
+                  size={16}
+                  className="text-green-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("receive", row),
@@ -1353,7 +1388,13 @@ const Returns = () => {
           if (row.status === "received") {
             actions.push({
               label: "Record QC",
-              icon: <MdFactCheck size={16} className="text-amber-600" />,
+              icon: (
+                <MdFactCheck
+                  aria-hidden="true"
+                  size={16}
+                  className="text-amber-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("qc", row),
@@ -1366,7 +1407,13 @@ const Returns = () => {
           ) {
             actions.push({
               label: "Submit QC Evidence",
-              icon: <MdUploadFile size={16} className="text-violet-600" />,
+              icon: (
+                <MdUploadFile
+                  aria-hidden="true"
+                  size={16}
+                  className="text-violet-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("qc_evidence", row),
@@ -1376,7 +1423,13 @@ const Returns = () => {
           if (!isSeller && row.status === "qc_failed") {
             actions.push({
               label: "Review QC Failure",
-              icon: <MdRateReview size={16} className="text-amber-600" />,
+              icon: (
+                <MdRateReview
+                  aria-hidden="true"
+                  size={16}
+                  className="text-amber-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("qc_decision", row),
@@ -1391,7 +1444,11 @@ const Returns = () => {
             actions.push({
               label: "Return to Customer",
               icon: (
-                <MdAssignmentReturn size={16} className="text-orange-600" />
+                <MdAssignmentReturn
+                  aria-hidden="true"
+                  size={16}
+                  className="text-orange-600"
+                />
               ),
               requiredModule: "returns",
               requiredAction: "update",
@@ -1405,7 +1462,13 @@ const Returns = () => {
           ) {
             actions.push({
               label: "Update Customer Shipment",
-              icon: <MdLocalShipping size={16} className="text-blue-600" />,
+              icon: (
+                <MdLocalShipping
+                  aria-hidden="true"
+                  size={16}
+                  className="text-blue-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("return_customer_tracking", row),
@@ -1416,7 +1479,13 @@ const Returns = () => {
             if (!isSeller) {
               actions.push({
                 label: "Process Refund",
-                icon: <MdReplay size={16} className="text-orange-600" />,
+                icon: (
+                  <MdReplay
+                    aria-hidden="true"
+                    size={16}
+                    className="text-orange-600"
+                  />
+                ),
                 requiredModule: "returns",
                 requiredAction: "update",
                 onClick: () => openAction("refund", row),
@@ -1429,7 +1498,13 @@ const Returns = () => {
             ) {
               actions.push({
                 label: "Request Replacement",
-                icon: <MdSwapHoriz size={16} className="text-violet-600" />,
+                icon: (
+                  <MdSwapHoriz
+                    aria-hidden="true"
+                    size={16}
+                    className="text-violet-600"
+                  />
+                ),
                 requiredModule: "returns",
                 requiredAction: "update",
                 onClick: () => openAction("replacement_request", row),
@@ -1440,7 +1515,13 @@ const Returns = () => {
           if (!isSeller && row.status === "replacement_requested") {
             actions.push({
               label: "Approve Replacement",
-              icon: <MdCheckCircle size={16} className="text-green-600" />,
+              icon: (
+                <MdCheckCircle
+                  aria-hidden="true"
+                  size={16}
+                  className="text-green-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("replacement_approve", row),
@@ -1450,7 +1531,13 @@ const Returns = () => {
           if (row.status === "replacement_created") {
             actions.push({
               label: "Ship Replacement",
-              icon: <MdLocalShipping size={16} className="text-indigo-600" />,
+              icon: (
+                <MdLocalShipping
+                  aria-hidden="true"
+                  size={16}
+                  className="text-indigo-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("replacement_ship", row),
@@ -1460,7 +1547,13 @@ const Returns = () => {
           if (!isSeller && row.status === "replacement_shipped") {
             actions.push({
               label: "Confirm Replacement Delivery",
-              icon: <MdCheckCircle size={16} className="text-green-600" />,
+              icon: (
+                <MdCheckCircle
+                  aria-hidden="true"
+                  size={16}
+                  className="text-green-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("replacement_deliver", row),
@@ -1470,7 +1563,13 @@ const Returns = () => {
           if (!isSeller && row.status === "replacement_delivered") {
             actions.push({
               label: "Complete Replacement",
-              icon: <MdDoneAll size={16} className="text-green-600" />,
+              icon: (
+                <MdDoneAll
+                  aria-hidden="true"
+                  size={16}
+                  className="text-green-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("replacement_complete", row),
@@ -1480,7 +1579,13 @@ const Returns = () => {
           if (!isSeller && row.status === "refund_failed") {
             actions.push({
               label: "Retry Refund",
-              icon: <MdReplay size={16} className="text-orange-600" />,
+              icon: (
+                <MdReplay
+                  aria-hidden="true"
+                  size={16}
+                  className="text-orange-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("retry_refund", row),
@@ -1494,7 +1599,13 @@ const Returns = () => {
           ) {
             actions.push({
               label: "Sync Refund Status",
-              icon: <MdRefresh size={16} className="text-blue-600" />,
+              icon: (
+                <MdRefresh
+                  aria-hidden="true"
+                  size={16}
+                  className="text-blue-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("sync_refund", row),
@@ -1512,7 +1623,13 @@ const Returns = () => {
           ) {
             actions.push({
               label: "Close Return",
-              icon: <MdClose size={16} className="text-gray-600" />,
+              icon: (
+                <MdClose
+                  aria-hidden="true"
+                  size={16}
+                  className="text-gray-600"
+                />
+              ),
               requiredModule: "returns",
               requiredAction: "update",
               onClick: () => openAction("close", row),
@@ -2423,7 +2540,18 @@ const Returns = () => {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <FormSelectGroup
                     label="Return Mode"
-                    value={action.mode}
+                    value={
+                      [
+                        {
+                          value: "reverse_pickup",
+                          label: "Seller-arranged reverse courier",
+                        },
+                        {
+                          value: "manual_ship_back",
+                          label: "Customer self-ships",
+                        },
+                      ].find((option) => option.value === action.mode) || null
+                    }
                     options={[
                       {
                         value: "reverse_pickup",
@@ -2437,7 +2565,7 @@ const Returns = () => {
                     onChange={(selectedOption) =>
                       setAction((prev) => ({
                         ...prev,
-                        mode: selectedOption?.value || selectedOption || "",
+                        mode: selectedOption?.value || "",
                       }))
                     }
                     placeholder="Select return mode"
@@ -2555,13 +2683,16 @@ const Returns = () => {
             >
               <FormSelectGroup
                 label="Shipment Status"
-                value={action.shipmentStatus}
+                value={
+                  reverseTrackingOptions(action.returnRequest).find(
+                    (option) => option.value === action.shipmentStatus,
+                  ) || null
+                }
                 options={reverseTrackingOptions(action.returnRequest)}
                 onChange={(selectedOption) =>
                   setAction((prev) => ({
                     ...prev,
-                    shipmentStatus:
-                      selectedOption?.value || selectedOption || "",
+                    shipmentStatus: selectedOption?.value || "",
                   }))
                 }
                 placeholder="Select shipment status"
@@ -2603,7 +2734,7 @@ const Returns = () => {
                         </p>
                       )}
                     </div>
-
+                    {/* 
                     {action.type === "approve" && (
                       <FormInput
                         label={`Approved Quantity${
@@ -2634,7 +2765,7 @@ const Returns = () => {
                         }
                         required
                       />
-                    )}
+                    )} */}
 
                     {action.type === "receive" && (
                       <FormInput

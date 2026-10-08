@@ -553,7 +553,7 @@ const RowActions = ({ actions = [] }) => {
         }}
         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-indigo-50 hover:text-indigo-700"
       >
-        <MoreVertical size={18} />
+        <MoreVertical aria-hidden="true" size={18} />
       </button>
       {open &&
         createPortal(
@@ -1406,7 +1406,7 @@ const ProductReferralAmounts = () => {
                       </>
                     ) : (
                       <>
-                        <Check size={16} />
+                        <Check aria-hidden="true" size={16} />
                         {isEditMode
                           ? "Update Product Amount"
                           : "Save Product Amount"}
@@ -1525,12 +1525,12 @@ const ProductReferralAmounts = () => {
             rowActions={(row) => [
               {
                 label: "Edit",
-                icon: <Pencil size={15} />,
+                icon: <Pencil aria-hidden="true" size={15} />,
                 onClick: () => handleEdit(row),
               },
               {
                 label: "Remove override",
-                icon: <X size={15} />,
+                icon: <X aria-hidden="true" size={15} />,
                 danger: true,
                 onClick: () => remove(row),
               },
@@ -2426,7 +2426,7 @@ const ReferralCommerce = () => {
       label: "Referral Partners",
       value: summary?.influencers?.total || 0,
       sub: `${summary?.influencers?.active || 0} active`,
-      icon: <UserPlus size={18} />,
+      icon: <UserPlus aria-hidden="true" size={18} />,
       iconBg: "#dce5fb",
       iconColor: "#2457d6",
     },
@@ -2434,7 +2434,7 @@ const ReferralCommerce = () => {
       label: "Active Codes",
       value: summary?.codes?.active || 0,
       sub: `${summary?.codes?.total || 0} total`,
-      icon: <Share2 size={18} />,
+      icon: <Share2 aria-hidden="true" size={18} />,
       iconBg: "#e7dcff",
       iconColor: "#8156e8",
     },
@@ -2442,7 +2442,7 @@ const ReferralCommerce = () => {
       label: "Referral Sales",
       value: formatAmount(summary?.orders?.eligibleAmount),
       sub: `${summary?.orders?.total || 0} orders`,
-      icon: <BadgeIndianRupee size={18} />,
+      icon: <BadgeIndianRupee aria-hidden="true" size={18} />,
       iconBg: "#ffe7b8",
       iconColor: "#e79a00",
     },
@@ -2450,7 +2450,7 @@ const ReferralCommerce = () => {
       label: "Referral Coins",
       value: formatCoins(summary?.commissions?.amount),
       sub: `${summary?.commissions?.totalEntries || 0} ledger entries`,
-      icon: <GitBranch size={18} />,
+      icon: <GitBranch aria-hidden="true" size={18} />,
       iconBg: "#cfeee0",
       iconColor: "#23965b",
     },
@@ -2458,7 +2458,7 @@ const ReferralCommerce = () => {
       label: "Bonus Coins",
       value: formatCoins(summary?.bonuses?.totalCoins),
       sub: `${summary?.bonuses?.achievements || 0} achievements`,
-      icon: <Check size={18} />,
+      icon: <Check aria-hidden="true" size={18} />,
       iconBg: "#ffd7d4",
       iconColor: "#ef5057",
     },
@@ -2599,13 +2599,13 @@ const ReferralCommerce = () => {
         actions={[
           {
             label: "Approve request",
-            icon: <Check size={14} />,
+            icon: <Check aria-hidden="true" size={14} />,
             hidden: payout.status !== "pending",
             onClick: () => openPayoutAction(payout, "approve"),
           },
           {
             label: "Reject request",
-            icon: <X size={14} />,
+            icon: <X aria-hidden="true" size={14} />,
             danger: true,
             hidden: !["pending", "approved", "processing", "failed"].includes(
               payout.status,
@@ -2614,7 +2614,7 @@ const ReferralCommerce = () => {
           },
           {
             label: "Mark as paid",
-            icon: <BadgeIndianRupee size={14} />,
+            icon: <BadgeIndianRupee aria-hidden="true" size={14} />,
             hidden: !["approved", "processing"].includes(payout.status),
             onClick: () => openPayoutAction(payout, "paid"),
           },
@@ -2650,7 +2650,7 @@ const ReferralCommerce = () => {
         actions={[
           {
             label: "Edit rule",
-            icon: <Pencil size={14} />,
+            icon: <Pencil aria-hidden="true" size={14} />,
             onClick: () => openBonusRuleModal(rule),
           },
           {
@@ -2922,19 +2922,19 @@ const ReferralCommerce = () => {
                     summary?.wallets?.lockedBalance ??
                     summary?.wallets?.pendingBalance,
                   helper: "Awaiting release",
-                  icon: <ShieldAlert size={18} />,
+                  icon: <ShieldAlert aria-hidden="true" size={18} />,
                 },
                 {
                   label: "Available",
                   value: summary?.wallets?.availableBalance,
                   helper: "Ready for payout",
-                  icon: <Check size={18} />,
+                  icon: <Check aria-hidden="true" size={18} />,
                 },
                 {
                   label: "Reserved",
                   value: summary?.wallets?.reservedBalance,
                   helper: "Held for requests",
-                  icon: <GitBranch size={18} />,
+                  icon: <GitBranch aria-hidden="true" size={18} />,
                 },
                 {
                   label: "Withdrawn",
@@ -2942,13 +2942,13 @@ const ReferralCommerce = () => {
                     summary?.wallets?.withdrawnBalance ??
                     summary?.wallets?.paidBalance,
                   helper: "Successfully paid",
-                  icon: <ExternalLink size={18} />,
+                  icon: <ExternalLink aria-hidden="true" size={18} />,
                 },
                 {
                   label: "Reversed",
                   value: summary?.wallets?.reversedBalance,
                   helper: "Returned to wallet",
-                  icon: <RefreshCw size={18} />,
+                  icon: <RefreshCw aria-hidden="true" size={18} />,
                 },
               ].map((item) => (
                 <Cards
@@ -3113,6 +3113,7 @@ const ReferralCommerce = () => {
         <div>
           <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[var(--admin-navy)]">
             <BadgeIndianRupee
+              aria-hidden="true"
               size={18}
               className="text-[var(--admin-gold-dark)]"
             />
@@ -3723,7 +3724,7 @@ const ReferralCommerce = () => {
             onClick={evaluateBonuses}
             className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
           >
-            <Check size={16} />
+            <Check aria-hidden="true" size={16} />
             Evaluate Bonuses
           </button>
           <button
@@ -3731,7 +3732,7 @@ const ReferralCommerce = () => {
             onClick={() => openBonusRuleModal()}
             className="inline-flex items-center gap-2 rounded border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
           >
-            <Plus size={16} />
+            <Plus aria-hidden="true" size={16} />
             Bonus Rule
           </button>
         </div>
@@ -3834,7 +3835,7 @@ const ReferralCommerce = () => {
                   setParentModalOpen(true);
                 }}
               >
-                <UserPlus size={16} />
+                <UserPlus aria-hidden="true" size={16} />
                 Growth Partner
               </button>
 
@@ -3846,7 +3847,7 @@ const ReferralCommerce = () => {
                   setChildModalOpen(true);
                 }}
               >
-                <GitBranch size={16} />
+                <GitBranch aria-hidden="true" size={16} />
                 Brand Associate
               </button>
               <button
@@ -3857,7 +3858,7 @@ const ReferralCommerce = () => {
                   setCodeModalOpen(true);
                 }}
               >
-                <Plus size={16} />
+                <Plus aria-hidden="true" size={16} />
                 Referral Code
               </button>
               <a
@@ -3866,7 +3867,7 @@ const ReferralCommerce = () => {
                 rel="noreferrer"
                 title="Open the Referral Partner sign-in portal"
               >
-                <ExternalLink size={16} />
+                <ExternalLink aria-hidden="true" size={16} />
                 Partner Login
               </a>
             </div>
@@ -3937,7 +3938,11 @@ const ReferralCommerce = () => {
               onClick={() => refreshActive()}
               className="admin-btn-secondary inline-flex h-10 items-center gap-2 px-3"
             >
-              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />{" "}
+              <RefreshCw
+                aria-hidden="true"
+                size={16}
+                className={loading ? "animate-spin" : ""}
+              />{" "}
               Refresh
             </button>
           </form>
@@ -4079,7 +4084,11 @@ const ReferralCommerce = () => {
           filterBar={renderActiveFilterBar()}
           actions={
             <span title="Fraud review">
-              <ShieldAlert size={18} className="text-amber-600" />
+              <ShieldAlert
+                aria-hidden="true"
+                size={18}
+                className="text-amber-600"
+              />
             </span>
           }
           emptyText="No fraud reviews found."
@@ -4550,7 +4559,7 @@ const ReferralCommerce = () => {
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 font-semibold text-blue-700 hover:underline"
                 >
-                  <ExternalLink size={13} />
+                  <ExternalLink aria-hidden="true" size={13} />
                   Review QR
                 </a>
               </div>
@@ -4595,7 +4604,7 @@ const ReferralCommerce = () => {
                   <label
                     className={`admin-btn-secondary inline-flex cursor-pointer items-center gap-2 ${uploadingPaymentProof ? "pointer-events-none opacity-60" : ""}`}
                   >
-                    <UploadCloud size={15} />
+                    <UploadCloud aria-hidden="true" size={15} />
                     {uploadingPaymentProof
                       ? "Uploading…"
                       : payoutActionForm.paymentProofUrl
@@ -4618,7 +4627,8 @@ const ReferralCommerce = () => {
                       rel="noreferrer"
                       className="inline-flex min-w-0 items-center gap-1 font-semibold text-green-700 hover:underline"
                     >
-                      <ExternalLink size={13} /> View uploaded payment proof
+                      <ExternalLink aria-hidden="true" size={13} /> View
+                      uploaded payment proof
                     </a>
                     <button
                       type="button"

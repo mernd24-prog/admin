@@ -879,7 +879,7 @@ const ProductCategories = () => {
           className="rounded-lg p-2 text-[var(--admin-blue)] transition-colors hover:bg-[var(--admin-blue-soft)]"
           title="Manage category attributes"
         >
-          <MdTune size={17} />
+          <MdTune aria-hidden="true" size={17} />
         </button>
       </PermissionGuard>
     </div>
@@ -1010,7 +1010,7 @@ const ProductCategories = () => {
               }}
               className="inline-flex items-center gap-2 rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--admin-gold-dark)] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]/30"
             >
-              <MdAdd size={18} />
+              <MdAdd aria-hidden="true" size={18} />
               Add Category
             </button>
           </PermissionGuard>
@@ -1025,6 +1025,7 @@ const ProductCategories = () => {
             <div className="w-full lg:max-w-2xl">
               <div className="relative">
                 <MdSearch
+                  aria-hidden="true"
                   size={18}
                   className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[var(--admin-muted)]"
                 />
@@ -1297,7 +1298,7 @@ const ProductCategories = () => {
             /* Empty State */
             <div className="flex min-h-[280px] flex-col items-center justify-center px-5 text-center">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-surface-soft)] text-[var(--admin-muted)]">
-                <MdFolder size={27} />
+                <MdFolder aria-hidden="true" size={27} />
               </div>
 
               <h3 className="text-sm font-semibold text-[var(--admin-ink)]">

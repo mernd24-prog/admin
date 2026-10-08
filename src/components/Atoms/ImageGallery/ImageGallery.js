@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  IoArrowForwardOutline,
-  IoArrowBack,
-} from "react-icons/io5";
+import { IoArrowForwardOutline, IoArrowBack } from "react-icons/io5";
 import { normalizeImageList } from "../../../_helpers/productMedia";
 
 const ImageGallery = ({ images, isOpen, onClose }) => {
@@ -22,9 +19,7 @@ const ImageGallery = ({ images, isOpen, onClose }) => {
   const handleNext = useCallback(() => {
     if (!imageArray.length) return;
 
-    setCurrentIndex((prev) =>
-      prev < imageArray.length - 1 ? prev + 1 : prev,
-    );
+    setCurrentIndex((prev) => (prev < imageArray.length - 1 ? prev + 1 : prev));
   }, [imageArray.length]);
 
   // Handle keyboard navigation
@@ -133,7 +128,7 @@ const ImageGallery = ({ images, isOpen, onClose }) => {
                   }`}
                   aria-label="Next image"
                 >
-                  <IoArrowForwardOutline />
+                  <IoArrowForwardOutline aria-hidden="true" />
                 </button>
               )}
             </div>

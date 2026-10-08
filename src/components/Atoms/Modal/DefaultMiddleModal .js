@@ -63,7 +63,7 @@ const DefaultMiddleModal = ({
             className="text-gray-500 hover:text-gray-700 transition-colors duration-150"
             aria-label="Close modal"
           >
-            <RxCross2 size={20} className="md:size-[22px]" />
+            <RxCross2 aria-hidden="true" size={20} className="md:size-[22px]" />
           </button>
         </div>
 

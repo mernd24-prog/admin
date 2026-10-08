@@ -2709,24 +2709,60 @@ export default function ProductManagementUI() {
     const current = Array.isArray(formData.commonImages)
       ? formData.commonImages
       : [];
+
     const remaining = MAX_COMMON_PRODUCT_IMAGES - current.length;
+
     if (!files?.length || remaining <= 0) {
-      if (remaining <= 0)
+      if (remaining <= 0) {
         toast.error(`Maximum ${MAX_COMMON_PRODUCT_IMAGES} common images`);
+      }
       return;
     }
-    setCommonImagesUploading(true);
-    try {
-      const urls = await uploadFileMulti(
-        Array.from(files).slice(0, remaining),
-        "PRODUCT",
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const maxFileSize = 5 * 1024 * 1024; // 5 MB
+
+    const selectedFiles = Array.from(files).slice(0, remaining);
+
+    // Validate file type and size
+    const invalidFiles = selectedFiles.filter(
+      (file) => !allowedTypes.includes(file.type) || file.size > maxFileSize,
+    );
+
+    if (invalidFiles.length > 0) {
+      const invalidTypeFiles = invalidFiles.filter(
+        (file) => !allowedTypes.includes(file.type),
       );
+
+      const oversizedFiles = invalidFiles.filter(
+        (file) => file.size > maxFileSize,
+      );
+
+      if (invalidTypeFiles.length > 0) {
+        toast.error("Only JPG, JPEG, PNG, and WEBP images are allowed.");
+        return;
+      }
+
+      if (oversizedFiles.length > 0) {
+        toast.error("Image size must not exceed 5 MB.");
+        return;
+      }
+    }
+
+    setCommonImagesUploading(true);
+
+    try {
+      const urls = await uploadFileMulti(selectedFiles, "PRODUCT");
+
       setFormData((previous) => ({
         ...previous,
         commonImages: [...(previous.commonImages || []), ...urls],
       }));
+
       toast.success(
-        `${urls.length} common product image${urls.length === 1 ? "" : "s"} uploaded`,
+        `${urls.length} common product image${
+          urls.length === 1 ? "" : "s"
+        } uploaded`,
       );
     } catch (uploadError) {
       toast.error(uploadError?.message || "Common image upload failed");
@@ -2761,17 +2797,30 @@ export default function ProductManagementUI() {
 
   const uploadProductVideo = async (file) => {
     if (!file) return;
+
     if (!file.type?.startsWith("video/")) {
       toast.error("Please upload a valid video file");
       return;
     }
+
+    // Maximum video size: 50 MB
+    const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
+
+    if (file.size > MAX_VIDEO_SIZE) {
+      toast.error("Video size must be 50 MB or less");
+      return;
+    }
+
     setProductVideoUploading(true);
+
     try {
       const url = await uploadVideoFile(file, "PRODUCT");
+
       setFormData((previous) => ({
         ...previous,
         videos: [url],
       }));
+
       toast.success("Product video uploaded");
     } catch (uploadError) {
       toast.error(uploadError?.message || uploadError || "Video upload failed");
@@ -3147,7 +3196,7 @@ export default function ProductManagementUI() {
                         {commonImagesUploading ? "Uploading…" : "Add images"}
                       </span>
                       <span className="mt-1 text-[10px] text-gray-400">
-                        PNG, JPG or WebP
+                        Use JPG, JPEG, PNG or WEBP and upto 5 MB
                       </span>
                       <input
                         type="file"
@@ -3221,7 +3270,7 @@ export default function ProductManagementUI() {
                         : "Add product video"}
                     </span>
                     <span className="mt-1 text-[10px] leading-tight text-gray-400">
-                      MP4, WebM, MOV or OGG
+                      Upload only MP4, WebM, MOV or OGG and limit upto 50MB
                     </span>
                     <input
                       type="file"

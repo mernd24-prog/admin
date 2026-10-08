@@ -1658,16 +1658,33 @@ const UserDetails = () => {
   const handleSellerAvatarUpload = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = "";
+
     if (!file) return;
 
-    if (!file.type?.startsWith("image/")) {
-      toast.error("Please upload a valid image");
+    // Allowed image types
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only PNG, JPG, JPEG, and WEBP images are supported");
+      return;
+    }
+
+    // Maximum file size: 5 MB
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Image size must not exceed 5 MB");
       return;
     }
 
     try {
       const imageUrl = await uploadFile(file, "PROFILES");
-      setEditSeller((prev) => ({ ...prev, avatarUrl: imageUrl }));
+
+      setEditSeller((prev) => ({
+        ...prev,
+        avatarUrl: imageUrl,
+      }));
+
       toast.success("Seller image uploaded");
     } catch (error) {
       toast.error(error?.message || "Failed to upload seller image");
@@ -1813,46 +1830,6 @@ const UserDetails = () => {
           {/* Seller Account & Profile Edit */}
           {activeTab === "profile" && (
             <section className="bg-white border border-gray-200 rounded-lg p-5">
-              {/* <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold text-gray-800">
-                  Seller Account Profile
-                </h2>
-                <p className="mt-1 text-xs text-gray-500">
-                  Seller login identity and storefront branding.
-                </p>
-              </div>
-              <StatusBadge
-                value={
-                  onboarding.status ||
-                  sellerProfile.onboardingStatus ||
-                  accountStatus
-                }
-              />
-            </div> */}
-
-              {/* <div className="mb-4">
-              <div className="grid grid-cols-1 gap-x-6 md:grid-cols-3">
-                <Row
-                  label="Full Name"
-                  value={
-                    [profile.firstName, profile.lastName]
-                      .filter(Boolean)
-                      .join(" ") || "-"
-                  }
-                />
-                <Row label="STORE Name" value={sellerProfile.displayName} />
-                <Row
-                  label="Legal Business"
-                  value={sellerProfile.legalBusinessName}
-                />
-                <Row
-                  label="Business Type"
-                  value={formatLabel(sellerProfile.businessType)}
-                />
-              </div>
-            </div> */}
-
               {/* Editable Fields */}
               <form className="" onSubmit={handleSaveSellerProfile}>
                 <div className="my-6">
@@ -1914,18 +1891,25 @@ const UserDetails = () => {
                       </p>
                     </div>
 
-                    <div className="mt-4 flex items-center gap-2">
-                      <label className="inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-[var(--admin-gold)] px-2.5 py-2 text-center text-xs font-semibold text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-gold-dark)]">
-                        <MdCloudUpload size={16} />
-                        <span>Upload</span>
+                    <div className="mt-4">
+                      <div className="flex items-center gap-2">
+                        <label className="inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-[var(--admin-gold)] px-2.5 py-2 text-center text-xs font-semibold text-[var(--admin-navy)] transition-colors hover:bg-[var(--admin-gold-dark)]">
+                          <MdCloudUpload size={16} />
+                          <span>Upload</span>
 
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleSellerAvatarUpload}
-                        />
-                      </label>
+                          <input
+                            type="file"
+                            accept=".png,.jpg,.jpeg,.webp"
+                            className="hidden"
+                            onChange={handleSellerAvatarUpload}
+                          />
+                        </label>
+                      </div>
+
+                      <p className="mt-1.5 text-center text-[10px] leading-4 text-gray-500">
+                        Supported formats: PNG, JPG, JPEG, WEBP • Maximum size:
+                        5 MB
+                      </p>
                     </div>
                   </div>
 

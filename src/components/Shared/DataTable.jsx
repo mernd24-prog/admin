@@ -172,7 +172,7 @@ const RowActionsMenu = ({ actions = [], rowLabel = "record" }) => {
           setOpen((value) => !value);
         }}
       >
-        <MdMoreVert size={19} />
+        <MdMoreVert aria-hidden="true" size={19} />
       </button>
 
       {open &&
@@ -456,6 +456,7 @@ const DataTable = ({
           aria-busy={showRefreshLoading}
         >
           <MdRefresh
+            aria-hidden="true"
             size={17}
             className={showRefreshLoading ? "animate-spin" : ""}
           />
@@ -564,6 +565,7 @@ const DataTable = ({
 
                     {col.sortable && (
                       <MdUnfoldMore
+                        aria-hidden="true"
                         size={14}
                         className={
                           resolvedSortKey === col.key

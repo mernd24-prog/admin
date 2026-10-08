@@ -376,9 +376,9 @@ export default function Header({
               onClick={handleNavbar}
             >
               {isSidebarExpanded ? (
-                <MdOutlineMenu className="h-5 w-5" />
+                <MdOutlineMenu aria-hidden="true" className="h-5 w-5" />
               ) : (
-                <FcNext className="h-5 w-5" />
+                <FcNext aria-hidden="true" className="h-5 w-5" />
               )}
             </button>
 
@@ -388,21 +388,6 @@ export default function Header({
               </h1>
             </div>
           </div>
-
-          {/* Center: search bar */}
-          {/* <div className="hidden md:flex flex-1 max-w-[325px]">
-            <div className="header-search-pill group relative w-full">
-              <MdSearch
-                size={14}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-ink)] transition-colors group-hover:text-[var(--admin-blue)] group-focus-within:text-[var(--admin-blue)]"
-              />
-              <input
-                type="text"
-                placeholder="Search"
-                className="admin-input admin-header-search-input"
-              />
-            </div>
-          </div> */}
 
           {/* Right: user profile */}
           <div className="flex items-center gap-3 flex-shrink-0">
@@ -417,7 +402,7 @@ export default function Header({
                 }}
                 className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
               >
-                <MdOutlineNotificationsNone size={18} />
+                <MdOutlineNotificationsNone aria-hidden="true" size={18} />
                 {!isNotificationsPage &&
                   !suppressNotificationBadge &&
                   unreadCount > 0 && (
@@ -427,29 +412,7 @@ export default function Header({
                   )}
               </button>
             </Tooltip>
-            {/* {SELLER_ROLES.has(userData?.role) && (organizations.length > 0 || incompleteOrgs.length > 0) && (
-              <select
-                className="hidden min-h-[36px] max-w-[220px] rounded-md border border-[var(--admin-line)] bg-white px-3 text-xs font-medium text-[var(--admin-ink)] outline-none focus:border-[var(--admin-blue)] md:block"
-                value={selectedOrganizationId}
-                onChange={handleOrganizationChange}
-                title="Organization"
-              >
-                {organizations.map((organization) => (
-                  <option key={organization.id || organization.organizationId} value={organization.id || organization.organizationId}>
-                    {organization.storeDisplayName || organization.legalBusinessName || organization.id || organization.organizationId}
-                  </option>
-                ))}
-                {incompleteOrgs.length > 0 && (
-                  <optgroup label="── Incomplete Setup ──">
-                    {incompleteOrgs.map((organization) => (
-                      <option key={organization.id || organization.organizationId} value={organization.id || organization.organizationId}>
-                        {organization.storeDisplayName || organization.legalBusinessName || organization.id || organization.organizationId} [Setup Pending]
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            )} */}
+
             <div className="relative">
               <div className="flex items-center gap-2.5">
                 <div className="hidden md:block text-right leading-tight">
@@ -517,7 +480,7 @@ export default function Header({
                         to="/app/profile"
                         className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-semibold hover:bg-gray-50 hover:text-[var(--admin-gold)]"
                       >
-                        <FiUser className="mr-3" />
+                        <FiUser className="mr-3" aria-hidden="true" />
                         Profile
                       </Link>
                     )}
@@ -526,7 +489,7 @@ export default function Header({
                         to="/app/changePassword"
                         className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-medium hover:bg-gray-50 hover:text-[var(--admin-gold)]"
                       >
-                        <FiKey className="mr-3" />
+                        <FiKey className="mr-3" aria-hidden="true" />
                         Change Password
                       </Link>
                     )}
@@ -538,7 +501,7 @@ export default function Header({
                     className="flex items-center flex-wrap px-3.5 py-2 no-underline text-gray-700 rounded font-medium hover:bg-gray-50 hover:text-red-500 cursor-pointer"
                     onClick={handleLogout}
                   >
-                    <IoLogOutOutline className="mr-3" />
+                    <IoLogOutOutline className="mr-3" aria-hidden="true" />
                     Logout
                   </p>
                 </div>
@@ -559,7 +522,7 @@ export default function Header({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-1 flex items-center gap-2 text-amber-500">
-              <MdInfoOutline className="text-xl" />
+              <MdInfoOutline className="text-xl" aria-hidden="true" />
               <h3 className="text-sm font-bold text-[var(--admin-ink)]">
                 Setup Incomplete
               </h3>

@@ -291,7 +291,7 @@ export default function Collections() {
               disabled={loading}
               aria-busy={loading}
             >
-              <MdRefresh size={17} className={loading ? "animate-spin" : ""} />
+              <MdRefresh size={17} aria-hidden="true"  className={loading ? "animate-spin" : ""} />
               {loading ? "Refreshing..." : "Refresh"}
             </button>
 
@@ -300,7 +300,7 @@ export default function Collections() {
               onClick={beginCreate}
               className="admin-button-primary"
             >
-              <MdAdd /> New Collection
+              <MdAdd aria-hidden="true" /> New Collection
             </button>
           </div>
         }

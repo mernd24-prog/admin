@@ -586,13 +586,21 @@ const PayoutOpsQueue = () => {
       if (status === "pending") {
         items.push({
           label: pendingActionLabel,
-          icon: <MdPlayArrow size={16} className="text-emerald-600" />,
+          icon: (
+            <MdPlayArrow
+              aria-hidden="true"
+              size={16}
+              className="text-emerald-600"
+            />
+          ),
           disabled: loading,
           onClick: () => openAction("approve", row),
         });
         items.push({
           label: "Hold",
-          icon: <MdPause size={16} className="text-yellow-600" />,
+          icon: (
+            <MdPause aria-hidden="true" size={16} className="text-yellow-600" />
+          ),
           disabled: loading,
           onClick: () => openAction("hold", row),
         });
@@ -601,7 +609,13 @@ const PayoutOpsQueue = () => {
       if (status === "on_hold") {
         items.push({
           label: "Release Hold",
-          icon: <MdPlayArrow size={16} className="text-emerald-600" />,
+          icon: (
+            <MdPlayArrow
+              aria-hidden="true"
+              size={16}
+              className="text-emerald-600"
+            />
+          ),
           disabled: loading,
           onClick: () => openAction("release", row),
         });
@@ -610,7 +624,9 @@ const PayoutOpsQueue = () => {
       if (status === "failed") {
         items.push({
           label: "Retry",
-          icon: <MdReplay size={16} className="text-blue-600" />,
+          icon: (
+            <MdReplay aria-hidden="true" size={16} className="text-blue-600" />
+          ),
           disabled: loading,
           onClick: () => openAction("retry", row),
         });
@@ -620,21 +636,35 @@ const PayoutOpsQueue = () => {
         if (isRazorpayX && providerPayoutExists) {
           items.push({
             label: "Sync Status",
-            icon: <MdSync size={16} className="text-blue-600" />,
+            icon: (
+              <MdSync aria-hidden="true" size={16} className="text-blue-600" />
+            ),
             disabled: loading,
             onClick: () => handleSyncRazorpayX(row),
           });
         } else if (isRazorpayX) {
           items.push({
             label: "Retry RazorpayX",
-            icon: <MdReplay size={16} className="text-blue-600" />,
+            icon: (
+              <MdReplay
+                aria-hidden="true"
+                size={16}
+                className="text-blue-600"
+              />
+            ),
             disabled: loading,
             onClick: () => openAction("approve", row),
           });
         } else {
           items.push({
             label: "Complete",
-            icon: <MdCheckCircle size={16} className="text-emerald-600" />,
+            icon: (
+              <MdCheckCircle
+                aria-hidden="true"
+                size={16}
+                className="text-emerald-600"
+              />
+            ),
             disabled: loading,
             onClick: () => openAction("complete", row),
           });
@@ -642,7 +672,9 @@ const PayoutOpsQueue = () => {
 
         items.push({
           label: "Fail",
-          icon: <MdBlock size={16} className="text-red-600" />,
+          icon: (
+            <MdBlock aria-hidden="true" size={16} className="text-red-600" />
+          ),
           danger: true,
           disabled: loading,
           onClick: () => openAction("fail", row),
@@ -652,7 +684,9 @@ const PayoutOpsQueue = () => {
       if (!["completed", "cancelled"].includes(status)) {
         items.push({
           label: "Cancel",
-          icon: <MdClose size={16} className="text-red-600" />,
+          icon: (
+            <MdClose aria-hidden="true" size={16} className="text-red-600" />
+          ),
           danger: true,
           disabled: loading,
           onClick: () => openAction("cancel", row),

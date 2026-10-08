@@ -10,7 +10,6 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  MdInventory2,
   MdLocalShipping,
   MdLocationOn,
   MdOpenInNew,
@@ -628,7 +627,7 @@ const ShipmentTracking = () => {
         render: (_, row) => (
           <div className="flex items-center gap-3">
             <span className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-              <MdLocalShipping size={18} />
+              <MdLocalShipping aria-hidden="true" size={18} />
             </span>
             <div>
               <div className="font-semibold text-gray-800">
@@ -764,7 +763,13 @@ const ShipmentTracking = () => {
         rowActions={(row) => [
           {
             label: "View Shipment Details",
-            icon: <MdVisibility size={16} className="text-blue-600" />,
+            icon: (
+              <MdVisibility
+                aria-hidden="true"
+                size={16}
+                className="text-blue-600"
+              />
+            ),
             onClick: () => openDetail(row),
           },
         ]}
@@ -783,7 +788,7 @@ const ShipmentTracking = () => {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white p-4 sm:p-5">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
-                  <MdLocalShipping size={23} />
+                  <MdLocalShipping aria-hidden="true" size={23} />
                 </span>
                 <div className="min-w-0">
                   <div className="text-xs font-medium text-gray-500">
@@ -811,20 +816,26 @@ const ShipmentTracking = () => {
               />
             </div>
             <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2">
-              <ShipmentFact icon={<MdStorefront size={17} />} label="Seller">
+              <ShipmentFact
+                icon={<MdStorefront aria-hidden="true" size={17} />}
+                label="Seller"
+              >
                 {selectedShipment?.sellerName ||
                   selectedShipment?.seller?.displayName ||
                   selectedShipment?.seller?.businessName ||
                   "Seller"}
               </ShipmentFact>
-              <ShipmentFact icon={<MdPerson size={17} />} label="Customer">
+              <ShipmentFact
+                icon={<MdPerson aria-hidden="true" size={17} />}
+                label="Customer"
+              >
                 {selectedShipment?.buyerName ||
                   selectedShipment?.buyer?.displayName ||
                   selectedShipment?.buyer?.email ||
                   "Customer"}
               </ShipmentFact>
               <ShipmentFact
-                icon={<MdLocalShipping size={17} />}
+                icon={<MdLocalShipping aria-hidden="true" size={17} />}
                 label="Delivery"
               >
                 <div>{selectedShipment?.courier_name || "Seller delivery"}</div>
@@ -834,7 +845,10 @@ const ShipmentTracking = () => {
                     "Tracking number not added"}
                 </div>
               </ShipmentFact>
-              <ShipmentFact icon={<MdPayments size={17} />} label="Shipment">
+              <ShipmentFact
+                icon={<MdPayments aria-hidden="true" size={17} />}
+                label="Shipment"
+              >
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span>
                     {selectedShipment?.cod ? "Cash on delivery" : "Prepaid"}
@@ -885,7 +899,8 @@ const ShipmentTracking = () => {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Open Live Tracking <MdOpenInNew size={14} />
+                    Open Live Tracking{" "}
+                    <MdOpenInNew aria-hidden="true" size={14} />
                   </a>
                 ) : (
                   <strong className="font-medium text-gray-700">
@@ -1242,7 +1257,7 @@ const ShipmentTracking = () => {
             <section className="rounded-2xl border border-gray-200 bg-white p-4">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                  <MdLocationOn size={18} />
+                  <MdLocationOn aria-hidden="true" size={18} />
                 </span>
                 <div className="font-semibold text-gray-900">
                   Delivery address
@@ -1306,7 +1321,7 @@ const ShipmentTracking = () => {
           <section className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 text-green-600">
-                <MdTimeline size={18} />
+                <MdTimeline aria-hidden="true" size={18} />
               </span>
               <div>
                 <div className="font-semibold text-gray-900">

@@ -440,7 +440,7 @@ const PromotionFundingLedger = () => {
             title={label}
             value={money(value)}
             description={hint}
-            icon={<Icon size={18} />}
+            icon={<Icon aria-hidden="true" size={18} />}
           />
         ))}
       </section>

@@ -182,7 +182,13 @@ export default function CodCollections() {
           if (["pending", "submitted"].includes(row.status)) {
             actions.push({
               label: "Verify",
-              icon: <MdCheckCircle size={16} className="text-blue-600" />,
+              icon: (
+                <MdCheckCircle
+                  aria-hidden="true"
+                  size={16}
+                  className="text-blue-600"
+                />
+              ),
               requiredModule: "payments",
               requiredAction: ACTIONS.UPDATE,
               onClick: () =>

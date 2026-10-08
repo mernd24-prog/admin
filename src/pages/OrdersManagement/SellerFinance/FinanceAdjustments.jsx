@@ -169,7 +169,9 @@ export default function FinanceAdjustments() {
         cellClassName: "whitespace-normal align-top",
         render: (value, row) => (
           <div className="min-w-[240px] max-w-sm whitespace-normal">
-            <strong className="block text-sm font-semibold text-[var(--admin-ink)]">{value}</strong>
+            <strong className="block text-sm font-semibold text-[var(--admin-ink)]">
+              {value}
+            </strong>
             <p className="mt-1 whitespace-normal break-words text-xs leading-5 text-[var(--admin-muted)]">
               {row.description}
             </p>
@@ -233,7 +235,7 @@ export default function FinanceAdjustments() {
             className="admin-btn-secondary !px-2 !py-1"
             onClick={() => setDetail(row)}
           >
-            <MdVisibility /> View details
+            <MdVisibility aria-hidden="true" /> View details
           </button>
         ),
       },
@@ -257,7 +259,7 @@ export default function FinanceAdjustments() {
             disabled={Boolean(loading)}
             aria-busy={Boolean(loading)}
           >
-            <MdRefresh size={17} className={loading ? "animate-spin" : ""} />
+            <MdRefresh size={17}  aria-hidden="true" className={loading ? "animate-spin" : ""} />
             {loading ? "Refreshing..." : "Refresh"}
           </button>
         }
@@ -278,7 +280,7 @@ export default function FinanceAdjustments() {
           label="Returns & refunds"
           value={financeMoney(wallet.refundAdjustmentTotal || 0)}
           description="Earnings reversed because of returns or refunds."
-          icon={<MdAssignmentReturn size={18} />}
+          icon={<MdAssignmentReturn aria-hidden="true" size={18} />}
           iconBg="#ffd4d2"
           iconColor="#ff4b55"
           onClick={() => setParams({ type: "returns" })}
@@ -287,7 +289,7 @@ export default function FinanceAdjustments() {
           label="Promotion contribution"
           value={financeMoney(totals.netPlatformContributionAmount)}
           description="Marketplace contribution remaining after reversals."
-          icon={<MdLocalOffer size={18} />}
+          icon={<MdLocalOffer aria-hidden="true" size={18} />}
           iconBg="#cce8c9"
           iconColor="#1d9b50"
           onClick={() => setParams({ type: "promotions" })}
@@ -296,7 +298,7 @@ export default function FinanceAdjustments() {
           label="COD amount owed"
           value={financeMoney(owed)}
           description="Seller-collected customer cash still owed to the platform."
-          icon={<MdAccountBalanceWallet size={18} />}
+          icon={<MdAccountBalanceWallet aria-hidden="true" size={18} />}
           iconBg="#ffd4d2"
           iconColor="#ff4b55"
           onClick={() => setParams({ type: "cod" })}
@@ -305,7 +307,7 @@ export default function FinanceAdjustments() {
           label="Temporary holds"
           value={financeMoney(balances.blockedBalance)}
           description="Unavailable while an issue is active."
-          icon={<MdPauseCircle size={18} />}
+          icon={<MdPauseCircle aria-hidden="true" size={18} />}
           iconBg="#ffe5b5"
           iconColor="#f5a300"
           onClick={() => setParams({ type: "holds" })}
@@ -318,10 +320,10 @@ export default function FinanceAdjustments() {
         options={CATEGORIES}
       /> */}
       <Tabs
-  tabs={CATEGORIES}
-  activeTab={category}
-  onChange={(key) => setParams(key ? { type: key } : {})}
-/>
+        tabs={CATEGORIES}
+        activeTab={category}
+        onChange={(key) => setParams(key ? { type: key } : {})}
+      />
       {category === "cod" && (
         <button
           type="button"
@@ -334,7 +336,7 @@ export default function FinanceAdjustments() {
               Upload collection proof and send it for Admin verification.
             </p>
           </div>
-          <MdArrowForward />
+          <MdArrowForward aria-hidden="true" />
         </button>
       )}
       {rows.length || loading ? (

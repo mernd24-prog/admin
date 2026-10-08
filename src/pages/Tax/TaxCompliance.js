@@ -545,7 +545,13 @@ const TaxCompliance = () => {
         return [
           {
             label: "View",
-            icon: <MdVisibility size={16} className="text-blue-600" />,
+            icon: (
+              <MdVisibility
+                aria-hidden="true"
+                size={16}
+                className="text-blue-600"
+              />
+            ),
             onClick: () => setSelectedDoc({ type: "invoice", row }),
           },
         ];
@@ -555,7 +561,13 @@ const TaxCompliance = () => {
         return [
           {
             label: "View",
-            icon: <MdVisibility size={16} className="text-blue-600" />,
+            icon: (
+              <MdVisibility
+                aria-hidden="true"
+                size={16}
+                className="text-blue-600"
+              />
+            ),
             onClick: () => setSelectedDoc({ type: "credit note", row }),
           },
         ];
@@ -579,11 +591,11 @@ const TaxCompliance = () => {
           <div className="flex flex-wrap gap-2">
             <PermissionGuard module="tax" action={ACTIONS.UPDATE} hide>
               <button type="button" onClick={() => setInvoiceModal(true)}>
-                <MdReceiptLong size={16} /> Generate Invoice
+                <MdReceiptLong aria-hidden="true" size={16} /> Generate Invoice
               </button>
 
               <button type="button" onClick={() => setCreditModal(true)}>
-                <MdAdd size={16} /> Credit Note
+                <MdAdd aria-hidden="true" size={16} /> Credit Note
               </button>
             </PermissionGuard>
           </div>

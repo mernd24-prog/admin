@@ -477,11 +477,7 @@ const UserMessages = () => {
   };
 
   const hasUnread = notifications.some((n) =>
-    isNotificationUnread(
-      n,
-      readNotificationIds,
-      notificationReadBaselineAt,
-    ),
+    isNotificationUnread(n, readNotificationIds, notificationReadBaselineAt),
   );
 
   return (
@@ -505,7 +501,7 @@ const UserMessages = () => {
                 className="admin-btn-secondary text-xs flex items-center gap-1.5"
                 onClick={handleMarkAllAsSeen}
               >
-                <MdDoneAll size={16} /> Mark All as Seen
+                <MdDoneAll aria-hidden="true" size={16} /> Mark All as Seen
               </button>
             )}
             {!isSeller && (
@@ -515,7 +511,7 @@ const UserMessages = () => {
                 hide
               >
                 <button onClick={() => setModalOpen(true)}>
-                  <MdSend size={16} /> Send Notification
+                  <MdSend aria-hidden="true" size={16} /> Send Notification
                 </button>
               </PermissionGuard>
             )}
@@ -539,7 +535,13 @@ const UserMessages = () => {
         sortDir={list.sortDir}
         searchPlaceholder="Search notifications…"
         emptyText="No notifications sent yet."
-        emptyIcon={<MdNotifications size={40} className="text-gray-200" />}
+        emptyIcon={
+          <MdNotifications
+            aria-hidden="true"
+            size={40}
+            className="text-gray-200"
+          />
+        }
         requiredModule="notifications"
         onRowClick={(row) => {
           markAsSeen(row);
@@ -578,7 +580,13 @@ const UserMessages = () => {
           if (detailRoute) {
             actions.push({
               label: "View Detail",
-              icon: <MdVisibility size={16} className="text-blue-600" />,
+              icon: (
+                <MdVisibility
+                  aria-hidden="true"
+                  size={16}
+                  className="text-blue-600"
+                />
+              ),
               onClick: () => {
                 markAsSeen(row);
                 navigate(detailRoute);
@@ -589,7 +597,13 @@ const UserMessages = () => {
           if (unread) {
             actions.push({
               label: "Mark as Seen",
-              icon: <MdMarkEmailRead size={16} className="text-emerald-600" />,
+              icon: (
+                <MdMarkEmailRead
+                  aria-hidden="true"
+                  size={16}
+                  className="text-emerald-600"
+                />
+              ),
               onClick: () => markAsSeen(row),
             });
           }
