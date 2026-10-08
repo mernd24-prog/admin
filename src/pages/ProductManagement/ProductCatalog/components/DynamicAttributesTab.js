@@ -52,6 +52,7 @@ const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, err
             return (
               <FilterSelect
                 key={field.key}
+                name={`attribute_${field.key}`}
                 label={label}
                 required={field.required}
                 options={options}
@@ -68,6 +69,7 @@ const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, err
             return (
               <FilterSelect
                 key={field.key}
+                name={`attribute_${field.key}`}
                 label={label}
                 required={field.required}
                 isMulti
@@ -81,16 +83,25 @@ const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, err
 
           if (field.type === 'boolean') {
             return (
-              <label key={field.key} className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm cursor-pointer hover:bg-gray-100 transition-colors">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 accent-[var(--admin-blue)] flex-shrink-0"
-                  checked={Boolean(value)}
-                  onChange={(event) => updateAttribute(field.key, event.target.checked)}
-                />
-                <span className="text-gray-700 font-medium">{label}</span>
-                {field.required && <span className="text-red-500 ml-0.5">*</span>}
-              </label>
+              <div key={field.key}>
+                <label className={`flex items-center gap-3 rounded-lg border bg-gray-50 p-3 text-sm cursor-pointer hover:bg-gray-100 transition-colors ${errors?.attributes?.[field.key] ? 'border-red-400' : 'border-gray-200'}`}>
+                  <input
+                    name={`attribute_${field.key}`}
+                    type="checkbox"
+                    className="w-4 h-4 accent-[var(--admin-blue)] flex-shrink-0"
+                    checked={Boolean(value)}
+                    onChange={(event) => updateAttribute(field.key, event.target.checked)}
+                    aria-invalid={Boolean(errors?.attributes?.[field.key])}
+                  />
+                  <span className="text-gray-700 font-medium">{label}</span>
+                  {field.required && <span className="text-red-500 ml-0.5">*</span>}
+                </label>
+                {errors?.attributes?.[field.key] && (
+                  <p className="mt-1 text-xs text-red-600" role="alert">
+                    {errors.attributes[field.key]}
+                  </p>
+                )}
+              </div>
             );
           }
 

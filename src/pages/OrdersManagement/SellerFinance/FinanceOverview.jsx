@@ -17,7 +17,6 @@ import Loader from "../../../components/Loader/Loader";
 import { getMySellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
 import {
   FinanceDateRangeFilter,
-  FinanceNav,
   FinancePageGuide,
   FinanceStatusBadge,
   MoneyEquation,
@@ -40,6 +39,7 @@ export default function FinanceOverview() {
   const currency = wallet.currency || "INR";
   const items = Array.isArray(wallet.items) ? wallet.items : [];
   const payouts = wallet.payouts || {};
+  const codReconciliation = wallet.codReconciliation || {};
   const dateRange = useFinanceDateRange();
   const { dateFilters } = dateRange;
   const owed =
@@ -234,6 +234,46 @@ export default function FinanceOverview() {
           onClick={() => navigate("/app/seller-payouts?status=paid")}
         />
       </div>
+      {Number(codReconciliation.totalOrders || 0) > 0 && (
+        <section className="admin-card p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-xl">
+              <h2 className="font-semibold text-lg">Why COD totals differ</h2>
+              <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                Orders become earnings only after delivery. Seller-collected
+                customer cash is recorded separately as an amount owed and is
+                deducted before payout.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="admin-btn-secondary"
+              onClick={() => navigate("/app/seller-cod-collections")}
+            >
+              Review COD collections <MdArrowForward aria-hidden="true" />
+            </button>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-4">
+            {[
+              ["COD orders", codReconciliation.totalOrders],
+              ["Delivered", codReconciliation.deliveredOrders],
+              ["Awaiting delivery", codReconciliation.awaitingDeliveryOrders],
+              ["Cash liabilities", codReconciliation.ordersWithLiability],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg bg-[var(--admin-soft)] p-3">
+                <strong className="block text-lg">{value || 0}</strong>
+                <span className="text-xs text-[var(--admin-muted)]">{label}</span>
+              </div>
+            ))}
+          </div>
+          {Number(codReconciliation.missingCollectionOrders || 0) > 0 && (
+            <p className="mt-3 rounded-md bg-red-50 p-3 text-xs text-red-700">
+              {codReconciliation.missingCollectionOrders} delivered COD order(s)
+              have no collection record and require administrator review.
+            </p>
+          )}
+        </section>
+      )}
       <section className="admin-card p-5">
         <div className="mb-4 border-b border-[var(--admin-line)] pb-3">
           <h2 className="font-semibold text-xl">Earnings Summary</h2>
@@ -324,7 +364,7 @@ export default function FinanceOverview() {
           {owed > 0 && (
             <button
               type="button"
-              onClick={() => navigate("/app/finance-adjustments?type=cod")}
+              onClick={() => navigate("/app/seller-cod-collections")}
               className="admin-card flex w-full items-center gap-3 p-4 text-left"
             >
               <MdWarningAmber
@@ -338,8 +378,10 @@ export default function FinanceOverview() {
                   recovered
                 </strong>
                 <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                  You collected this from customers. It will be deducted from
-                  available or future earnings.
+                  This was recorded automatically from delivered COD orders.
+                  Confirm retained cash, report remittance, or dispute an
+                  incorrect entry. It reduces available or future earnings
+                  until resolved.
                 </p>
               </div>
               <MdArrowForward aria-hidden="true" />

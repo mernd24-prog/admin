@@ -608,7 +608,25 @@ export default function ProductManagementUI() {
         ? Object.keys(errors.variants[firstVariantIndex] || {})[0]
         : null;
       if (firstVariantIndex !== undefined && firstVariantField) {
-        nestedFieldSelector = `[name="variants.${firstVariantIndex}.${firstVariantField}"]`;
+        if (firstVariantField === "attributes") {
+          const firstAttributeField = Object.keys(
+            errors.variants[firstVariantIndex]?.attributes || {},
+          ).find((key) => key !== "_combination");
+          nestedFieldSelector = firstAttributeField
+            ? `[name="variants.${firstVariantIndex}.attributes.${firstAttributeField}"]`
+            : `[data-variant-error-index="${firstVariantIndex}"]`;
+        } else {
+          nestedFieldSelector = `[name="variants.${firstVariantIndex}.${firstVariantField}"]`;
+        }
+      }
+    } else if (
+      firstField === "attributes" &&
+      errors?.attributes &&
+      typeof errors.attributes === "object"
+    ) {
+      const firstAttributeKey = Object.keys(errors.attributes)[0];
+      if (firstAttributeKey) {
+        nestedFieldSelector = `[name="attribute_${firstAttributeKey}"]`;
       }
     }
 
@@ -641,8 +659,13 @@ export default function ProductManagementUI() {
             break;
           }
         }
+        // Never jump to an entire section without showing why. If the exact
+        // field cannot be found, target that section's visible error summary.
+        const validationSummary = refs[sectionId]?.current?.querySelector?.(
+          "[data-validation-summary]",
+        );
         const target =
-          field?.closest?.(".admin-field") || field || refs[sectionId]?.current;
+          field?.closest?.(".admin-field") || field || validationSummary;
         if (target?.scrollIntoView) {
           target.scrollIntoView({ behavior: "smooth", block: "center" });
         }
@@ -656,7 +679,7 @@ export default function ProductManagementUI() {
           focusTarget.focus({ preventScroll: true });
         }
 
-        if (!field && attempt < 5) {
+        if (!field && !validationSummary && attempt < 5) {
           setTimeout(
             () => scrollToFirstValidationError(errors, attempt + 1),
             150,
@@ -687,7 +710,19 @@ export default function ProductManagementUI() {
       return dispatch(getProductById({ _id: productId }))
         .unwrap()
         .then((res) => {
-          const productData = res?.data;
+          const savedProductData = res?.data || {};
+          const pendingChanges =
+            savedProductData?.pendingRevision?.draftChanges || {};
+
+          // Approved seller products keep their live values unchanged while
+          // edits wait for review. Reopening the edit form must therefore use
+          // the pending draft, otherwise fields (notably a newly submitted
+          // brand) appear to revert to their previous live value.
+          const productData = {
+            ...savedProductData,
+            ...pendingChanges,
+            pendingRevision: savedProductData.pendingRevision || null,
+          };
           const resolvedCategoryId =
             productData?.categoryId ||
             productData?.category_id ||
@@ -1233,6 +1268,7 @@ export default function ProductManagementUI() {
         }${item?.approvalStatus === "pending" ? " (Pending approval)" : ""}`,
         resourceType: "brand",
         resourceId: item?._id || item?.id,
+        brandName: item?.name || item?.title || "",
         approvalStatus: item?.approvalStatus,
       })),
       warrantyTemplateList: prefillList(
@@ -1635,12 +1671,11 @@ export default function ProductManagementUI() {
           fieldErrors.salePrice = "Sale price cannot be greater than price.";
         }
 
-        // GST validation
-        if (!hasGstRate) {
-          fieldErrors.gstRate = "GST rate is required.";
-        } else if (Number.isNaN(gstRate)) {
+        // Variant GST is optional. Older products and products whose tax is
+        // driven by the selected HSN code do not store it per variant.
+        if (hasGstRate && Number.isNaN(gstRate)) {
           fieldErrors.gstRate = "Enter a valid GST rate.";
-        } else if (gstRate < 0 || gstRate > 100) {
+        } else if (hasGstRate && (gstRate < 0 || gstRate > 100)) {
           fieldErrors.gstRate = "GST rate must be between 0 and 100.";
         }
 
@@ -1669,11 +1704,6 @@ export default function ProductManagementUI() {
           value === null ||
           value === "" ||
           (Array.isArray(value) && value.length === 0);
-        if (Object.keys(newErrors).length > 0) {
-          pendingValidationScrollRef.current = true;
-        }
-        setError(newErrors);
-
         if (field.required && isEmpty) {
           newErrors.attributes = {
             ...(newErrors.attributes || {}),
@@ -1686,7 +1716,8 @@ export default function ProductManagementUI() {
     setError(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
-      scrollToFirstValidationError(newErrors);
+      pendingValidationScrollRef.current = true;
+      toast.error("Please correct the highlighted fields before saving.");
     }
 
     return Object.keys(newErrors).length === 0;
@@ -2479,7 +2510,14 @@ export default function ProductManagementUI() {
         navigate(`/app/product-catalog`);
       }
     } catch (err) {
-      toast.error(err || "Failed to save product.");
+      const message =
+        typeof err === "string"
+          ? err
+          : err?.message ||
+            err?.error?.message ||
+            err?.data?.message ||
+            "Failed to save product.";
+      toast.error(message);
     } finally {
       setSaving(false);
     }

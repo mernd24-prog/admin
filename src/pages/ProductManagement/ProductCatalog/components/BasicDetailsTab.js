@@ -638,6 +638,16 @@ export default function BasicDetailsTab({
     event.preventDefault();
     event.stopPropagation();
 
+    if (
+      option.resourceType === "brand" &&
+      !/^[a-f\d]{24}$/i.test(String(option.resourceId || ""))
+    ) {
+      toast.error(
+        "This brand is missing a valid approval ID. Refresh the brand list and try again.",
+      );
+      return;
+    }
+
     const reviewAction =
       option.resourceType === "brand"
         ? reviewBrandSubmission
@@ -1173,17 +1183,36 @@ export default function BasicDetailsTab({
       const search = String(inputValue || "").trim();
       if (!search) return brandOptions;
 
+      const normalizedSearch = search.toLowerCase();
+      const matchesSearch = (option) =>
+        [
+          option.label,
+          option.value,
+          option.brandName,
+          option.resourceId,
+          option.id,
+          option.meta?.slug,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch);
+
+      // Keep locally submitted pending brands searchable, but always query
+      // the server as well. The initial dropdown list is only a prefill and
+      // must not become the source of truth for search results.
+      const localMatches = brandOptions.filter(matchesSearch);
+
       const options = await dropdownApi.getBrands({ search, limit: 100 });
       return mergeCatalogOptions(
-        brandOptions,
+        localMatches,
         options.map((option) => ({
           ...option,
+          brandName: option.label || option.value || "",
           resourceType: "brand",
-          resourceId: option.id,
+          resourceId: option.id || option._id || option.value,
         })),
-      ).filter((option) =>
-        String(option.label || "").toLowerCase().includes(search.toLowerCase()),
-      );
+      ).filter(matchesSearch);
     },
     [brandOptions, mergeCatalogOptions],
   );
@@ -1191,6 +1220,11 @@ export default function BasicDetailsTab({
   const selectedBrandOption = useMemo(() => {
     const rawBrand =
       formData.brand || formData.brandId || formData.brand_id || "";
+    const savedBrandName =
+      formData.brandName ||
+      (typeof rawBrand === "object"
+        ? rawBrand.brandName || rawBrand.label || rawBrand.name
+        : "");
 
     const currentBrand =
       typeof rawBrand === "object"
@@ -1205,6 +1239,9 @@ export default function BasicDetailsTab({
           String(option.value) === String(currentBrand) ||
           String(option.label) === String(currentBrand) ||
           String(option.brandName || "") === String(currentBrand) ||
+          (savedBrandName &&
+            String(option.brandName || option.label || option.value) ===
+              String(savedBrandName)) ||
           String(
             option.brandId ||
               option.resourceId ||
@@ -1217,14 +1254,26 @@ export default function BasicDetailsTab({
         ? {
             ...rawBrand,
             value: currentBrand,
-            label: rawBrand.label || rawBrand.name || currentBrand,
+            label:
+              rawBrand.label ||
+              rawBrand.brandName ||
+              rawBrand.name ||
+              savedBrandName ||
+              currentBrand,
           }
         : {
             value: currentBrand,
-            label: currentBrand,
+            label: savedBrandName || currentBrand,
+            brandName: savedBrandName || undefined,
           })
     );
-  }, [brandOptions, formData.brand, formData.brandId, formData.brand_id]);
+  }, [
+    brandOptions,
+    formData.brand,
+    formData.brandId,
+    formData.brandName,
+    formData.brand_id,
+  ]);
 
   const handleBrandSelect = (option) => {
     if (!option) {
@@ -1767,6 +1816,7 @@ export default function BasicDetailsTab({
                   options={brandOptions}
                   loadOptions={loadBrandOptions}
                   defaultOptions={brandOptions}
+                  cacheOptions={false}
                   placeholder="Select Brand"
                   error={errors?.brand}
                   formatOptionLabel={formatCatalogOption}

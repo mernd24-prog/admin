@@ -19,23 +19,31 @@ import { ENDPOINTS } from "../../../_helpers/endpoints";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { uploadDocumentFile } from "../../../_helpers/globalFunctions";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 
 const money = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 const label = (value) => String(value || "-").replace(/_/g, " ");
+const RESPONSE_OPTIONS = [
+  { value: "retained", label: "Cash collected and retained" },
+  { value: "remittance", label: "Cash remitted to platform" },
+  { value: "dispute", label: "Dispute this COD liability" },
+];
+const emptyForm = {
+  open: false,
+  row: null,
+  responseType: "retained",
+  amount: "",
+  referenceId: "",
+  proofUrl: "",
+  notes: "",
+};
 
 export default function SellerCodCollections() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploadingProof, setUploadingProof] = useState(false);
-  const [form, setForm] = useState({
-    open: false,
-    row: null,
-    amount: "",
-    referenceId: "",
-    proofUrl: "",
-    notes: "",
-  });
+  const [form, setForm] = useState(emptyForm);
 
   const load = useCallback(async () => {
     try {
@@ -88,11 +96,13 @@ export default function SellerCodCollections() {
       toast.error("Please wait for the proof upload to finish");
       return;
     }
-    if (
-      !form.row?.shipment_id ||
-      Number(form.amount) <= 0 ||
-      form.referenceId.trim().length < 3
-    ) {
+    const isDispute = form.responseType === "dispute";
+    if (!form.row?.shipment_id) return;
+    if (isDispute && form.notes.trim().length < 5) {
+      toast.error("Explain why this COD liability is disputed");
+      return;
+    }
+    if (!isDispute && (Number(form.amount) <= 0 || form.referenceId.trim().length < 3)) {
       toast.error("Collected amount and reference are required");
       return;
     }
@@ -101,6 +111,7 @@ export default function SellerCodCollections() {
       await axiosProvider.post(
         ENDPOINTS.payments.submitCodCollection(form.row.shipment_id),
         {
+          submissionType: form.responseType,
           collectedAmount: Number(form.amount),
           referenceId: form.referenceId,
           proofUrl: form.proofUrl || null,
@@ -108,14 +119,7 @@ export default function SellerCodCollections() {
         },
       );
       toast.success("COD collection submitted to Admin for verification");
-      setForm({
-        open: false,
-        row: null,
-        amount: "",
-        referenceId: "",
-        proofUrl: "",
-        notes: "",
-      });
+      setForm(emptyForm);
       await load();
     } catch (error) {
       toast.error(
@@ -175,10 +179,23 @@ export default function SellerCodCollections() {
         render: (value) => <StatusBadge status={value} label={label(value)} />,
       },
       {
+        key: "due_at",
+        label: "Action due",
+        render: (value, row) =>
+          row.seller_action_required ? (
+            <div className={row.is_overdue ? "font-semibold text-red-600" : "text-xs"}>
+              {value ? new Date(value).toLocaleString("en-IN") : "Action required"}
+              {row.is_overdue && <div className="text-[10px] uppercase">Overdue</div>}
+            </div>
+          ) : (
+            "—"
+          ),
+      },
+      {
         key: "actions",
         label: "Action",
         render: (_, row) =>
-          row.status === "pending" ? (
+          ["pending", "disputed"].includes(row.status) ? (
             <PermissionGuard
               module="sellers/commissions"
               action={ACTIONS.UPDATE}
@@ -191,6 +208,7 @@ export default function SellerCodCollections() {
                   setForm({
                     open: true,
                     row,
+                    responseType: "retained",
                     amount: row.expected_amount || "",
                     referenceId: "",
                     proofUrl: "",
@@ -198,7 +216,7 @@ export default function SellerCodCollections() {
                   })
                 }
               >
-                <MdUpload aria-hidden="true" size={14} /> Submit collection
+                <MdUpload aria-hidden="true" size={14} /> Respond now
               </button>
             </PermissionGuard>
           ) : row.status === "submitted" ? (
@@ -228,6 +246,14 @@ export default function SellerCodCollections() {
           </button>
         }
       />
+      {items.some((row) => row.seller_action_required) && (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>COD action required</strong>
+          <p className="mt-1 text-xs leading-5">
+            These amounts were recorded as liabilities when delivery was confirmed and reduce current or future payouts. Confirm retained cash, report a remittance, or dispute an incorrect entry.
+          </p>
+        </div>
+      )}
       <DataTable
         columns={columns}
         data={items}
@@ -244,32 +270,43 @@ export default function SellerCodCollections() {
       />
       <DefaultModal
         isOpen={form.open}
-        onClose={() =>
-          setForm({
-            open: false,
-            row: null,
-            amount: "",
-            referenceId: "",
-            proofUrl: "",
-            notes: "",
-          })
-        }
-        title="Submit COD Collection"
+        onClose={() => setForm(emptyForm)}
+        title="Respond to COD Liability"
         onSubmit={submit}
       >
         <div className="space-y-3">
           <p className="text-sm text-gray-600">
             Expected COD: {money(form.row?.expected_amount)}
           </p>
-          <Input
-            labelName="Collected amount"
-            type="number"
-            value={form.amount}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, amount: event.target.value }))
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs leading-5 text-red-700">
+            This liability was recorded automatically when delivery was confirmed. Ignoring it does not remove it from your finance balance.
+          </div>
+          <FilterSelect
+            label="Your response"
+            options={RESPONSE_OPTIONS}
+            value={RESPONSE_OPTIONS.find(
+              (option) => option.value === form.responseType,
+            )}
+            onChange={(option) =>
+              setForm((prev) => ({
+                ...prev,
+                responseType: option?.value || "retained",
+              }))
             }
+            isSearchable={false}
             required
           />
+          {form.responseType !== "dispute" && (
+            <Input
+              labelName="Collected amount"
+              type="number"
+              value={form.amount}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, amount: event.target.value }))
+              }
+              required
+            />
+          )}
           <div>
             <Input
               labelName="Collection reference"
@@ -281,11 +318,14 @@ export default function SellerCodCollections() {
                 }))
               }
               placeholder="Cash receipt / courier / deposit reference"
-              required
+              required={form.responseType !== "dispute"}
             />
             <p className="mt-1 text-xs text-gray-500">
-              Enter the unique receipt, courier collection, bank deposit, or
-              internal cash collection number.
+              {form.responseType === "remittance"
+                ? "Enter the bank deposit or platform remittance reference."
+                : form.responseType === "dispute"
+                  ? "Optional reference supporting the dispute."
+                  : "Enter the cash receipt or internal collection number."}
             </p>
           </div>
           <div className="rounded-lg border border-dashed border-[#d8caa6] bg-[#fffaf0] p-3">
@@ -346,6 +386,12 @@ export default function SellerCodCollections() {
             onChange={(event) =>
               setForm((prev) => ({ ...prev, notes: event.target.value }))
             }
+            placeholder={
+              form.responseType === "dispute"
+                ? "Explain why this liability is incorrect"
+                : "Add notes (optional)"
+            }
+            required={form.responseType === "dispute"}
           />
         </div>
       </DefaultModal>

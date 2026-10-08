@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { MdCheckCircle, MdRefresh } from "react-icons/md";
+import { MdCheckCircle } from "react-icons/md";
 import { toast } from "sonner";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import Input from "../../../components/Atoms/Input/Input";
 import {
   DataTable,
   OrderLink,
@@ -145,7 +144,19 @@ export default function CodCollections() {
       {
         key: "status",
         label: "Status",
-        render: (value) => <StatusBadge status={value} label={label(value)} />,
+        render: (value, row) => (
+          <div>
+            <StatusBadge status={value} label={label(value)} />
+            <div className="mt-1 text-[10px] text-gray-500">
+              Liability: {label(row.liability_status)}
+            </div>
+            {row.is_overdue && (
+              <div className="mt-1 text-[10px] font-semibold uppercase text-red-600">
+                Seller response overdue
+              </div>
+            )}
+          </div>
+        ),
       },
       {
         key: "reference_id",
@@ -160,7 +171,7 @@ export default function CodCollections() {
     <div>
       <PageHeader
         title="COD Collections"
-        subtitle="Verify seller-collected COD payments before settlement"
+        subtitle="COD liabilities are booked automatically at delivery. Review seller responses, disputes, and remittances."
         breadcrumbs={[
           { label: "Payments & Finance" },
           { label: "COD Collections" },
@@ -171,6 +182,14 @@ export default function CodCollections() {
         //   </button>
         // }
       />
+      {items.some((row) => row.is_overdue || row.status === "disputed") && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <strong>COD reconciliation needs attention</strong>
+          <p className="mt-1 text-xs leading-5">
+            Overdue and disputed entries remain in the seller liability balance until an admin verifies or records remittance.
+          </p>
+        </div>
+      )}
       <DataTable
         columns={columns}
         data={items}
@@ -179,7 +198,7 @@ export default function CodCollections() {
         rowActions={(row) => {
           const actions = [];
 
-          if (["pending", "submitted"].includes(row.status)) {
+          if (["pending", "submitted", "disputed"].includes(row.status)) {
             actions.push({
               label: "Verify",
               icon: (

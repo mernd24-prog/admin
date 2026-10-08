@@ -928,6 +928,42 @@ const VariantBuilder = ({
             </p>
           </div>
 
+          {errors &&
+            typeof errors === "object" &&
+            Object.keys(errors).some((key) => key !== "_form") && (
+              <div
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+                role="alert"
+                data-validation-summary="variants"
+                tabIndex={-1}
+              >
+                <p className="font-semibold">
+                  Fix the following variant details before saving:
+                </p>
+                <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                  {Object.entries(errors)
+                    .filter(([key]) => key !== "_form")
+                    .flatMap(([variantIndex, fields]) =>
+                      Object.entries(fields || {}).flatMap(([field, message]) =>
+                        field === "attributes" &&
+                        message &&
+                        typeof message === "object"
+                          ? Object.values(message).map((attributeMessage) => (
+                              <li key={`${variantIndex}-${field}-${attributeMessage}`}>
+                                Variant {Number(variantIndex) + 1}: {attributeMessage}
+                              </li>
+                            ))
+                          : [
+                              <li key={`${variantIndex}-${field}`}>
+                                Variant {Number(variantIndex) + 1}: {message}
+                              </li>,
+                            ],
+                      ),
+                    )}
+                </ul>
+              </div>
+            )}
+
           {variants.map((variant, idx) => {
             const imageCount = (variant.images || []).length;
             const hasImages = imageCount > 0;
@@ -1127,7 +1163,12 @@ const VariantBuilder = ({
                           })}
                         </div>
                         {variantErrors.attributes?._combination && (
-                          <p className="text-[10px] text-red-600" role="alert">
+                          <p
+                            className="text-[10px] text-red-600"
+                            role="alert"
+                            data-variant-error-index={idx}
+                            tabIndex={-1}
+                          >
                             {variantErrors.attributes._combination}
                           </p>
                         )}
@@ -1254,6 +1295,37 @@ const VariantBuilder = ({
                         {variantErrors.salePrice && (
                           <p className="text-[10px] text-red-600" role="alert">
                             {variantErrors.salePrice}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>GST Rate (%) — Optional</FieldLabel>
+                        <SmallInput
+                          name={`variants.${idx}.gstRate`}
+                          data-error-field={
+                            variantErrors.gstRate ? "variants" : undefined
+                          }
+                          error={variantErrors.gstRate}
+                          type="text"
+                          inputMode="decimal"
+                          value={variant.gstRate ?? ""}
+                          onKeyDown={blockInvalidNumberKeys}
+                          onChange={(e) => {
+                            const nextValue = sanitizeDecimalInput(
+                              e.target.value,
+                              { max: 100, decimals: 2 },
+                            );
+                            updateVariant(
+                              idx,
+                              "gstRate",
+                              nextValue === "" ? "" : Number(nextValue),
+                            );
+                          }}
+                          placeholder="18"
+                        />
+                        {variantErrors.gstRate && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.gstRate}
                           </p>
                         )}
                       </div>
