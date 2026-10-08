@@ -50,7 +50,10 @@ const emptyForm = {
     schemaJson: {},
     breadcrumbs: [],
   },
-  visibility: { channels: ["web", "app"], roles: ["public"] },
+  visibility: {
+    channels: ["web", "app"],
+    roles: ["public"],
+  },
   sortOrder: 0,
   coverImage: "",
   thumbnailUrl: "",
@@ -76,11 +79,15 @@ const pageSlug = (page = {}) => page?.slug || page?.id || page?._id || "";
 const ContentPages = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.adminCore);
+
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [isRefresh, setIsRefresh] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // This now controls whether the full-page setup screen is shown.
+  const [isSetupOpen, setIsSetupOpen] = useState(false);
+
   const [formData, setFormData] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -102,6 +109,7 @@ const ContentPages = () => {
 
   const onChange = (event) => {
     const { name, value } = event.target;
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -109,15 +117,28 @@ const ContentPages = () => {
         ? { slug: slugify(value) }
         : {}),
     }));
-    setErrors((prev) => ({ ...prev, [name]: undefined }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: undefined,
+    }));
   };
 
   const validate = () => {
     const nextErrors = {};
-    if (!formData.title.trim()) nextErrors.title = "Title is required";
-    if (!formData.slug.trim()) nextErrors.slug = "Slug is required";
-    if (!formData.pageType.trim())
+
+    if (!formData.title.trim()) {
+      nextErrors.title = "Title is required";
+    }
+
+    if (!formData.slug.trim()) {
+      nextErrors.slug = "Slug is required";
+    }
+
+    if (!formData.pageType.trim()) {
       nextErrors.pageType = "Page type is required";
+    }
+
     const hasSectionContent = (formData.sections || []).some(
       (section) =>
         String(section?.title || "").trim() ||
@@ -128,6 +149,7 @@ const ContentPages = () => {
             String(point?.description || "").trim(),
         ),
     );
+
     if (
       !formData.description.trim() &&
       !formData.body.trim() &&
@@ -136,28 +158,46 @@ const ContentPages = () => {
       nextErrors.description =
         "Description, body, or at least one section is required";
     }
+
     setErrors(nextErrors);
+
     return Object.keys(nextErrors).length === 0;
   };
 
-  const closeModal = (force = false) => {
+  const closeSetup = (force = false) => {
     if (submitting && !force) return;
-    setIsModalOpen(false);
+
+    setIsSetupOpen(false);
     setFormData(emptyForm);
     setErrors({});
   };
 
+  const handleAddPage = () => {
+    if (submitting || deleting || statusLoadingSlug) return;
+
+    setFormData(emptyForm);
+    setErrors({});
+    setIsSetupOpen(true);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+
     if (submitting) return;
+
     if (!validate()) return;
 
     const body = {
       ...formData,
+
       published: formData.status === "published" || Boolean(formData.published),
+
       heroImage: formData.heroImage || formData.image?.url || "",
+
       coverImage: formData.coverImage || formData.image?.url || "",
+
       thumbnailUrl: formData.thumbnailUrl || formData.image?.url || "",
+
       galleryImages: Array.isArray(formData.gallery)
         ? formData.gallery.map((item) => item?.url).filter(Boolean)
         : formData.galleryImages || [],
@@ -165,16 +205,23 @@ const ContentPages = () => {
 
     try {
       setSubmitting(true);
+
       if (formData.recordSlug) {
         await dispatch(
-          updateContentPage({ ...body, slug: formData.recordSlug }),
+          updateContentPage({
+            ...body,
+            slug: formData.recordSlug,
+          }),
         ).unwrap();
+
         toast.success("Content page updated successfully");
       } else {
         await dispatch(createContentPage(body)).unwrap();
+
         toast.success("Content page created successfully");
       }
-      closeModal(true);
+
+      closeSetup(true);
       setIsRefresh((v) => !v);
     } catch (error) {
       toast.error(error?.message || "Failed to save content page");
@@ -185,56 +232,99 @@ const ContentPages = () => {
 
   const openEdit = (page) => {
     if (submitting || deleting || statusLoadingSlug) return;
+
     setFormData({
       ...emptyForm,
       ...page,
+
       recordSlug: pageSlug(page),
+
       slug: page.slug || pageSlug(page),
+
       title: page.title || "",
+
       pageType: page.pageType || "content",
+
       status: page.status || (page.published ? "published" : "draft"),
+
       description: page.description || page.excerpt || "",
+
       excerpt: page.excerpt || page.description || "",
+
       category: page.category || "",
+
       tags: page.tags || [],
+
       image: page.image || {
         url: page.heroImage || page.coverImage || "",
+
         alt: page.title || "",
+
         title: "",
+
         caption: "",
+
         type: "hero",
       },
+
       gallery:
         page.gallery ||
         (page.galleryImages || []).map((url) => ({
           url,
           alt: page.title || "",
         })),
+
       sections: page.sections || [],
+
       cta: page.cta || emptyForm.cta,
-      seo: { ...emptyForm.seo, ...(page.seo || {}) },
-      visibility: { ...emptyForm.visibility, ...(page.visibility || {}) },
+
+      seo: {
+        ...emptyForm.seo,
+        ...(page.seo || {}),
+      },
+
+      visibility: {
+        ...emptyForm.visibility,
+        ...(page.visibility || {}),
+      },
+
       sortOrder: page.sortOrder || 0,
+
       coverImage: page.coverImage || page.image?.url || "",
+
       thumbnailUrl: page.thumbnailUrl || page.image?.url || "",
+
       heroImage: page.heroImage || page.image?.url || "",
+
       galleryImages: page.galleryImages || [],
+
       author: page.author || emptyForm.author,
+
       readTime: page.readTime || 0,
+
       language: page.language || "en",
+
       body: page.body || "",
+
       published: Boolean(page.published),
     });
-    setIsModalOpen(true);
+
+    setErrors({});
+    setIsSetupOpen(true);
   };
 
   const confirmDelete = async () => {
     const slug = pageSlug(deleteTarget);
+
     if (!slug || deleting) return;
+
     try {
       setDeleting(true);
+
       await dispatch(deleteContentPage({ slug })).unwrap();
+
       toast.success("Content page deleted successfully");
+
       setDeleteTarget(null);
       setIsRefresh((v) => !v);
     } catch (error) {
@@ -246,9 +336,12 @@ const ContentPages = () => {
 
   const togglePublished = async (page) => {
     const slug = pageSlug(page);
+
     if (!slug || statusLoadingSlug) return;
+
     try {
       setStatusLoadingSlug(slug);
+
       await dispatch(
         updateContentPage({
           slug,
@@ -256,7 +349,9 @@ const ContentPages = () => {
           status: !page.published ? "published" : "draft",
         }),
       ).unwrap();
+
       toast.success("Status updated successfully");
+
       setIsRefresh((v) => !v);
     } catch (error) {
       toast.error(error?.message || "Failed to update status");
@@ -271,6 +366,7 @@ const ContentPages = () => {
       label: "Title",
       render: (v) => <span className="font-medium text-gray-800">{v}</span>,
     },
+
     {
       key: "slug",
       label: "Slug",
@@ -278,16 +374,19 @@ const ContentPages = () => {
         <span className="font-mono text-xs text-gray-500">{v}</span>
       ),
     },
+
     {
       key: "pageType",
       label: "Type",
       render: (v) => <span className="capitalize text-sm">{v}</span>,
     },
+
     {
       key: "language",
       label: "Language",
       render: (v) => <span className="text-sm">{v || "en"}</span>,
     },
+
     {
       key: "published",
       label: "Published",
@@ -309,6 +408,7 @@ const ContentPages = () => {
       onClick: () => openEdit(row),
       disabled: submitting || deleting || Boolean(statusLoadingSlug),
     },
+
     {
       label: "Delete",
       icon: <MdDelete aria-hidden="true" size={16} />,
@@ -318,6 +418,34 @@ const ContentPages = () => {
     },
   ];
 
+  /*
+   * =========================================================
+   * FULL PAGE CREATE / EDIT SCREEN
+   * =========================================================
+   *
+   * Same route.
+   * No modal.
+   * No drawer.
+   * No overlay.
+   *
+   * When Add/Edit is clicked, ContentPageSetup replaces
+   * the list in the same page area.
+   */
+
+  if (isSetupOpen) {
+    return (
+      <ContentPageSetup
+        errors={errors}
+        formData={formData}
+        isOpen={true}
+        onChange={onChange}
+        onClose={closeSetup}
+        onSubmit={handleSubmit}
+        loading={submitting}
+      />
+    );
+  }
+
   return (
     <div>
       <PageHeader
@@ -326,7 +454,7 @@ const ContentPages = () => {
         breadcrumbs={[{ label: "Settings" }, { label: "CMS Pages" }]}
         actions={
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleAddPage}
             disabled={submitting || deleting || Boolean(statusLoadingSlug)}
             className="flex items-center gap-1"
           >
@@ -369,16 +497,6 @@ const ContentPages = () => {
         title="Delete Content Page?"
         message={`Delete "${deleteTarget?.title}"? This action cannot be undone.`}
         confirmLabel="Delete"
-      />
-
-      <ContentPageSetup
-        errors={errors}
-        formData={formData}
-        isOpen={isModalOpen}
-        onChange={onChange}
-        onClose={closeModal}
-        onSubmit={handleSubmit}
-        loading={submitting}
       />
     </div>
   );

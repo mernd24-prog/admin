@@ -2079,14 +2079,46 @@ const ReferralCommerce = () => {
     setParentModalOpen(false);
   };
 
-  const handleRulesField = (event) => {
-    const { name, value, type, checked } = event.target;
-    setRulesForm((prev) => {
-      const next = { ...prev, [name]: type === "checkbox" ? checked : value };
-      if (Object.keys(rulesErrors).length)
-        setRulesErrors(validateRulesForm(next));
-      return next;
-    });
+  const handleRulesField = (e) => {
+    const { name, value } = e.target;
+
+    const shareFields = [
+      "customerSharePercent",
+      "childSharePercent",
+      "parentSharePercent",
+    ];
+
+    if (shareFields.includes(name)) {
+      const newValue = Number(value || 0);
+
+      const otherTotal = shareFields
+        .filter((field) => field !== name)
+        .reduce((total, field) => total + Number(rulesForm[field] || 0), 0);
+
+      const newTotal = otherTotal + newValue;
+
+      // Don't allow total allocation to exceed 100%
+      if (newTotal > 100) {
+        setRulesErrors((prev) => ({
+          ...prev,
+          [name]: `Share cannot exceed ${100 - otherTotal}%`,
+          shareTotal: "Shares should total exactly 100%",
+        }));
+        return;
+      }
+
+      // Clear field error when valid
+      setRulesErrors((prev) => ({
+        ...prev,
+        [name]: "",
+        shareTotal: "",
+      }));
+    }
+
+    setRulesForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const toggleWithdrawalMethod = (method) => {
@@ -3362,9 +3394,7 @@ const ReferralCommerce = () => {
           </div>
 
           {/* Helper text outside */}
-          <p className="mt-1.5 text-[10px] text-[var(--admin-muted)]">
-            Shares should total exactly 100%
-          </p>
+
           {rulesErrors.shareTotal ? (
             <p className="admin-field-error" role="alert">
               {rulesErrors.shareTotal}

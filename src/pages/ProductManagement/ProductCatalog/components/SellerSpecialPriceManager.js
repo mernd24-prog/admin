@@ -1093,7 +1093,9 @@ const SellerSpecialPriceManager = () => {
                 type="button"
                 onClick={handleSave}
                 disabled={!canSave}
-                // className="inline-flex items-center gap-1 rounded-lg bg-[var(--admin-blue)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
+                className={`${
+                  canSave ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+                }`}
               >
                 {saving
                   ? "Saving..."

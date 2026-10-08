@@ -274,7 +274,9 @@ const TaxInvoiceDetail = () => {
             <p className="font-mono text-sm font-semibold text-gray-950">
               {pick(invoice, "invoiceNumber", "invoice_number") || "—"}
             </p>
-            <p className="mt-1 text-sm text-gray-500">{label(invoiceType)}</p>
+            <p className="mt-1 text-sm text-gray-500 capitalize">
+              {label(invoiceType)}
+            </p>
           </div>
           <StatusBadge
             status={

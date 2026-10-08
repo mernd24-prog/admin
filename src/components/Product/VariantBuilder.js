@@ -6,6 +6,7 @@ import useDropdownOptions from "../../hooks/useDropdownOptions";
 import { MdDragIndicator, MdAdd } from "react-icons/md";
 import { FaInfoCircle } from "react-icons/fa";
 import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
+import { Circle, Copy, GripVertical, X } from "lucide-react";
 
 const MAX_VARIANT_IMAGES = 5;
 
@@ -1592,10 +1593,33 @@ const VariantBuilder = ({
       )}
 
       {variants.length > 0 && (
-        <p className="text-[11px] text-gray-400 text-center">
-          ● = default &nbsp;·&nbsp; ⠿ drag to reorder &nbsp;·&nbsp; ⧉ duplicate
-          &nbsp;·&nbsp; ✕ remove
-        </p>
+        <div className="flex items-center justify-center gap-2 text-[11px] text-[var(--admin-muted)]">
+          <span className="inline-flex items-center gap-1">
+            <Circle className="h-3 w-3 fill-current" />
+            Default
+          </span>
+
+          <span>·</span>
+
+          <span className="inline-flex items-center gap-1">
+            <GripVertical className="h-3.5 w-3.5" />
+            Drag to reorder
+          </span>
+
+          <span>·</span>
+
+          <span className="inline-flex items-center gap-1">
+            <Copy className="h-3 w-3" />
+            Duplicate
+          </span>
+
+          <span>·</span>
+
+          <span className="inline-flex items-center gap-1">
+            <X className="h-3 w-3" />
+            Remove
+          </span>
+        </div>
       )}
     </div>
   );

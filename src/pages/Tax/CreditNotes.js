@@ -31,7 +31,11 @@ import { dropdownApi } from "../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 
-import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatIndianNumber,
+  formatLabel,
+} from "../../utils/formatters";
 import { resolveStoreName } from "../../utils/storeNameUtils";
 
 const REF_TYPES = ["return", "cancellation", "refund", "manual"];
@@ -87,7 +91,6 @@ const unwrapList = (payload = {}) => {
 };
 
 const fmt = (value) => formatDateTime12Hour(value, "—");
-const money = (v) => `₹${Number(v || 0).toFixed(2)}`;
 
 const pick = (row = {}, ...keys) => {
   for (const key of keys) {
@@ -315,7 +318,7 @@ const CreditNotes = () => {
           sortable: true,
           render: (v, row) => (
             <span className="text-sm font-semibold">
-              {money(v ?? row.total_amount ?? row.taxable_amount)}
+              {formatIndianNumber(v ?? row.total_amount ?? row.taxable_amount)}
             </span>
           ),
         },
@@ -323,7 +326,9 @@ const CreditNotes = () => {
           key: "taxAmount",
           label: "Tax",
           render: (v, row) => (
-            <span className="text-sm">{money(v ?? row.tax_amount)}</span>
+            <span className="text-sm">
+              {formatIndianNumber(v ?? row.tax_amount)}
+            </span>
           ),
         },
         {
@@ -537,7 +542,9 @@ const CreditNotes = () => {
                   <p className={CLASS_TEXT_XS_MUTED}>Taxable Amount</p>
 
                   <p className={CLASS_AMOUNT_VALUE}>
-                    {money(pick(detail, "taxableAmount", "taxable_amount"))}
+                    {formatIndianNumber(
+                      pick(detail, "taxableAmount", "taxable_amount"),
+                    )}
                   </p>
                 </div>
 
@@ -545,7 +552,9 @@ const CreditNotes = () => {
                   <p className={CLASS_TEXT_XS_MUTED}>Tax Amount</p>
 
                   <p className={CLASS_AMOUNT_VALUE}>
-                    {money(pick(detail, "taxAmount", "tax_amount"))}
+                    {formatIndianNumber(
+                      pick(detail, "taxAmount", "tax_amount"),
+                    )}
                   </p>
                 </div>
 
@@ -555,7 +564,9 @@ const CreditNotes = () => {
                   </p>
 
                   <p className="mt-1 text-lg font-bold text-gray-900">
-                    {money(pick(detail, "totalAmount", "total_amount"))}
+                    {formatIndianNumber(
+                      pick(detail, "totalAmount", "total_amount"),
+                    )}
                   </p>
                 </div>
               </div>

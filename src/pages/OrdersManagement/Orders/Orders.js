@@ -1862,8 +1862,9 @@ const Orders = () => {
             </div>
 
             {payout.latestDeadline && (
-              <div className="text-[11px] text-gray-400">
-                Until {formatDateTime12Hour(payout.latestDeadline)}
+              <div className="flex gap-1 text-[11px] text-gray-400">
+                <span>Until</span>
+                <span>{formatDateTime12Hour(payout.latestDeadline)}</span>
               </div>
             )}
           </div>

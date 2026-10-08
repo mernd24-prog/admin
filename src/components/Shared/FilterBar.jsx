@@ -12,6 +12,7 @@ import {
   MdSearch,
   MdArrowDropDown,
   MdClear,
+  MdKeyboardArrowDown,
 } from "react-icons/md";
 import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
 import DateRangePickerModal from "./DateRangePickerModal";
@@ -138,10 +139,12 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
               aria-label={`Clear ${field.label || field.key}`}
             />
           )}
-          <MdArrowDropDown
+          <MdKeyboardArrowDown
             aria-hidden="true"
-            size={16}
-            className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+            size={18}
+            className={`shrink-0 text-gray-400 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
           />
         </span>
       </button>
@@ -703,7 +706,11 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
         }`}
       >
         <span className="whitespace-nowrap">{displayLabel}</span>
-        <MdArrowDropDown size={16} className="shrink-0 text-gray-400" />
+        <MdKeyboardArrowDown
+          aria-hidden="true"
+          size={18}
+          className="shrink-0 text-gray-400"
+        />
       </button>
 
       <DateRangePickerModal

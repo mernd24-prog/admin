@@ -98,9 +98,7 @@ const ImageUpload = ({
   };
 
   return (
-    <div
-      className={`rounded-lg border border-dashed border-gray-300 p-3 bg-white ${containerClassName}`}
-    >
+    <div className={`rounded-lg  bg-white ${containerClassName}`}>
       {/* Label and Subtext */}
       {label && (
         <div className="mb-2">

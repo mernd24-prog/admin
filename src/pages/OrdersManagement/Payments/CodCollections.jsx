@@ -14,6 +14,7 @@ import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import { ACTIONS } from "../../../_helpers/usePermission";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const money = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -26,6 +27,7 @@ export default function CodCollections() {
     page: 1,
     pageSize: 100,
   });
+  const [sellerMap, setSellerMap] = useState({});
   const [decision, setDecision] = useState({
     open: false,
     row: null,
@@ -50,6 +52,30 @@ export default function CodCollections() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const loadSellerNames = async () => {
+      try {
+        const sellers = await dropdownApi.getSellers({
+          limit: 100,
+        });
+
+        const map = {};
+
+        (sellers || []).forEach((seller) => {
+          if (seller?.value) {
+            map[seller.value] = seller.label;
+          }
+        });
+
+        setSellerMap(map);
+      } catch (error) {
+        console.error("Unable to load seller names", error);
+      }
+    };
+
+    loadSellerNames();
   }, []);
 
   useEffect(() => {
@@ -119,7 +145,11 @@ export default function CodCollections() {
       {
         key: "seller_id",
         label: "Seller",
-        render: (value) => <span className="text-xs">{value}</span>,
+        render: (value) => (
+          <span className="text-sm font-medium text-gray-800">
+            {sellerMap[value] || "-"}
+          </span>
+        ),
       },
       {
         key: "collection_mode",
@@ -168,7 +198,7 @@ export default function CodCollections() {
         render: (value) => value || "-",
       },
     ],
-    [],
+    [sellerMap],
   );
 
   return (
