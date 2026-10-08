@@ -92,9 +92,9 @@ const CLASS_MT_2 = "mt-2";
 const CLASS_FONT_MEDIUM_GRAY = "font-medium text-gray-700";
 
 const FILTER_FIELDS = [
-  { key: "search", type: "text", label: "Search", width: "w-56" },
-  { key: "orderId", type: "text", label: "Order #", width: "w-48" },
-  // {
+  // { key: "search", type: "text", label: "Search", width: "w-56" },
+  // { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+  // // {
   //   key: "buyerId",
   //   type: "asyncDropdown",
   //   label: "Buyer",

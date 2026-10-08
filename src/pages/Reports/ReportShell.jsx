@@ -51,6 +51,7 @@ import { isSellerPanel } from "../../_helpers/panelConfig";
 import { GoldDateRangeCalendar } from "../../components/Shared/FilterBar";
 import { formatDateTime } from "../../utils/formatters";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
+import Pagination from "../../components/Pagination/Pagination";
 import { FaChartLine } from "react-icons/fa";
 
 const CHART_GRID_COLOR = "#e9dfc9";
@@ -314,9 +315,24 @@ const ReportTable = ({
   getRowLink,
   emptyTitle,
   emptyText,
+  enablePagination = false,
+  pageSize = 10,
+  pageSizeOptions = [10, 20, 50, 100],
 }) => {
   const loading = useContext(ReportLoadingContext);
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [rows.length, rowsPerPage]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safePage - 1) * rowsPerPage;
+  const pagedRows = enablePagination ? rows.slice(startIndex, startIndex + rowsPerPage) : rows;
+
   return (
     <div className="admin-card overflow-hidden border-[var(--admin-line)] shadow-[0_10px_28px_rgba(31,27,95,0.06)]">
       <div className="flex items-center gap-3 border-b border-[var(--admin-line)] bg-white px-4 py-3.5">
@@ -330,55 +346,80 @@ const ReportTable = ({
           <PanelSkeleton />
         </div>
       ) : rows.length ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="admin-table-head">
-              <tr>
-                <th className="w-16  px-4 py-2.5 text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]">
-                  S.No
-                </th>
-                {columns.map((column) => (
-                  <th
-                    key={column.key}
-                    className="px-4 py-2.5  text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]"
-                  >
-                    {column.label}
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="admin-table-head">
+                <tr>
+                  <th className="w-16  px-4 py-2.5 text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]">
+                    S.No
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y  divide-[var(--admin-line)]">
-              {rows.map((row, index) => (
-                <tr
-                  key={row.id || row.sellerId || row.sku || index}
-                  onClick={() => {
-                    const link = getRowLink?.(row);
-                    if (link) navigate(link);
-                  }}
-                  className={
-                    getRowLink?.(row)
-                      ? "cursor-pointer transition hover:bg-[var(--admin-surface-soft)]"
-                      : ""
-                  }
-                >
-                  <td className="w-16 px-4 py-2.5 text-xs font-medium text-[var(--admin-muted)]">
-                    {index + 1}.
-                  </td>
                   {columns.map((column) => (
-                    <td
+                    <th
                       key={column.key}
-                      className="px-4 py-2.5 text-xs font-medium text-[var(--admin-ink)]"
+                      className="px-4 py-2.5  text-left text-[11px] font-bold uppercase text-[var(--admin-navy)]"
                     >
-                      {column.render
-                        ? column.render(row[column.key], row)
-                        : row[column.key]}
-                    </td>
+                      {column.label}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y  divide-[var(--admin-line)]">
+                {pagedRows.map((row, index) => (
+                  <tr
+                    key={row.id || row.sellerId || row.sku || index}
+                    onClick={() => {
+                      const link = getRowLink?.(row);
+                      if (link) navigate(link);
+                    }}
+                    className={
+                      getRowLink?.(row)
+                        ? "cursor-pointer transition hover:bg-[var(--admin-surface-soft)]"
+                        : ""
+                    }
+                  >
+                    <td className="w-16 px-4 py-2.5 text-xs font-medium text-[var(--admin-muted)]">
+                      {enablePagination
+                        ? (safePage - 1) * rowsPerPage + index + 1
+                        : index + 1}
+                      .
+                    </td>
+                    {columns.map((column) => (
+                      <td
+                        key={column.key}
+                        className="px-4 py-2.5 text-xs font-medium text-[var(--admin-ink)]"
+                      >
+                        {column.render
+                          ? column.render(row[column.key], row)
+                          : row[column.key]}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {enablePagination && (
+            <div className="flex flex-col gap-3 border-t border-[var(--admin-line)] bg-white px-3 py-3 text-sm text-[var(--admin-muted)] sm:flex-row sm:items-center sm:justify-between sm:px-4">
+              <span className="text-xs font-medium">
+                Showing {rows.length ? (safePage - 1) * rowsPerPage + 1 : 0}–{Math.min(safePage * rowsPerPage, rows.length)} of {rows.length}
+              </span>
+              <Pagination
+                totalPages={totalPages}
+                currentPage={safePage}
+                onPageChange={setCurrentPage}
+                totalRecords={rows.length}
+                pageSize={rowsPerPage}
+                pageSizeOptions={pageSizeOptions}
+                onPageSizeChange={(value) => {
+                  setRowsPerPage(value);
+                  setCurrentPage(1);
+                }}
+                compact
+              />
+            </div>
+          )}
+        </>
       ) : (
         <div className="p-4">
           <EmptyPanel
@@ -2946,6 +2987,9 @@ export const InventoryAnalytics = () => {
               ? "No products are available in your inventory yet."
               : `Your inventory is healthy for the selected range. Products will appear here when available stock falls below ${LOW_STOCK_THRESHOLD} units.`
           }
+          enablePagination
+          pageSize={10}
+          pageSizeOptions={[10, 20, 50, 100]}
           columns={[
             {
               key: "productTitle",

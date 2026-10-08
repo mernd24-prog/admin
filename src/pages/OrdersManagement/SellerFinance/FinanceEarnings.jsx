@@ -72,6 +72,8 @@ export default function FinanceEarnings() {
 
   const [detail, setDetail] = useState(null);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const dateRange = useFinanceDateRange();
   const { dateFilters } = dateRange;
@@ -137,6 +139,15 @@ export default function FinanceEarnings() {
       return statusMatch && searchMatch;
     });
   }, [rows, search, status]);
+
+  const pagedFiltered = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, status]);
 
   /*
    * STATUS SUMMARY
@@ -513,13 +524,23 @@ export default function FinanceEarnings() {
       {/* SEARCH + TABLE */}
       <DataTable
         columns={columns}
-        data={filtered}
+        data={pagedFiltered}
         loading={Boolean(state.loading)}
         totalCount={filtered.length}
-        pageSize={20}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+        pageSizeOptions={[10, 20, 50, 100]}
         rowKey={(row) => row.id || row.commissionId}
         searchPlaceholder="Search order or product"
-        onSearch={setSearch}
+        onSearch={(value) => {
+          setSearch(value);
+          setPage(1);
+        }}
         emptyText={
           status === "waiting"
             ? "Nothing is waiting. All eligible earnings have moved out of the waiting period."

@@ -27,6 +27,10 @@ const label = (value) => String(value || "-").replace(/_/g, " ");
 export default function SellerCodCollections() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 100,
+  });
   const [uploadingProof, setUploadingProof] = useState(false);
   const [form, setForm] = useState({
     open: false,
@@ -233,10 +237,14 @@ export default function SellerCodCollections() {
         data={items}
         loading={loading}
         totalCount={items.length}
-        page={1}
-        pageSize={100}
-        onPageChange={() => {}}
-        onPageSizeChange={() => {}}
+        page={pagination.page}
+        pageSize={pagination.pageSize}
+        onPageChange={(page) =>
+          setPagination((current) => ({ ...current, page }))
+        }
+        onPageSizeChange={(pageSize) =>
+          setPagination({ page: 1, pageSize })
+        }
         onSearch={() => {}}
         onSort={() => {}}
         onRefresh={load}

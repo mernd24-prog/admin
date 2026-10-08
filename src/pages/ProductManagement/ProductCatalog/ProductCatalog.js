@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+
 // Components
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import ImageGallery from "../../../components/Atoms/ImageGallery/ImageGallery";
@@ -30,6 +31,7 @@ import {
   permanentlyDeleteProduct,
   reviewProductRevision,
 } from "../../../Redux/productSlice";
+
 import { toast } from "sonner";
 import { getAllSellerList } from "../../../Redux/StoreSlice";
 import ProductReviewModal from "../../../components/Product/ProductReviewModal";
@@ -43,33 +45,58 @@ import {
 } from "../../../_helpers/productMedia";
 import { useListPage } from "../../../hooks/useListPage";
 import { getSelectedSellerOrganizationId } from "../../../_helpers/sellerOrganizationContext";
-import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatLabel,
+  truncateToWordBoundary,
+} from "../../../utils/formatters";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 
 const INITIAL_FILTERS = {
   search: "",
-  product: { value: "All", label: "All" },
-  sellerName: { value: "", label: "All Seller" },
-  category: { value: "", label: "Search By Category" },
-  activationStatus: { value: "All", label: "All" },
-  approvalStatus: { value: "All", label: "All" },
-  revisionStatus: { value: "All", label: "All" },
+  product: {
+    value: "All",
+    label: "All",
+  },
+  sellerName: {
+    value: "",
+    label: "All Seller",
+  },
+  category: {
+    value: "",
+    label: "Search By Category",
+  },
+  activationStatus: {
+    value: "All",
+    label: "All",
+  },
+  approvalStatus: {
+    value: "All",
+    label: "All",
+  },
+  revisionStatus: {
+    value: "All",
+    label: "All",
+  },
   dateFrom: "",
   dateTo: "",
 };
 
 const DEFAULT_PAGE_SIZE = 10;
+
 const APPROVAL_STATUS_OPTIONS = [
   { value: "All", label: "All" },
   { value: "Pending", label: "Pending" },
   { value: "Approved", label: "Approved" },
   { value: "Rejected", label: "Rejected" },
 ];
+
 const REVISION_STATUS_OPTIONS = [
   { value: "All", label: "All" },
   { value: "none", label: "No Pending Change" },
   { value: "change_pending", label: "Change Pending" },
 ];
+
 const ACTIVATION_STATUS_OPTIONS = [
   { value: "All", label: "All" },
   { value: "Draft", label: "Draft" },
@@ -77,19 +104,26 @@ const ACTIVATION_STATUS_OPTIONS = [
   { value: "Inactive", label: "Inactive" },
   { value: "Scheduled", label: "Scheduled" },
 ];
+
 const SELLER_PANEL_ROLES = new Set([
   "seller",
   "seller-admin",
   "seller-sub-admin",
 ]);
+
 const STATUS_TOGGLEABLE = new Set(["active", "inactive", "draft"]);
+
 const REVIEWABLE_STATUSES = new Set(["pending_approval"]);
 
 const normalizeRevisionFilterValue = (value = "") => {
   const normalized = String(value ?? "")
     .trim()
     .toLowerCase();
-  if (!normalized || normalized === "all") return "";
+
+  if (!normalized || normalized === "all") {
+    return "";
+  }
+
   return normalized.startsWith("workflow:")
     ? normalized.replace(/^workflow:/, "")
     : normalized;
@@ -114,8 +148,12 @@ const getNextToggleStatus = (product = {}) =>
   isProductActive(product) ? "inactive" : "active";
 
 const toNumberOrNull = (value) => {
-  if (value === undefined || value === null || value === "") return null;
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
   const number = Number(value);
+
   return Number.isFinite(number) ? number : null;
 };
 
@@ -124,7 +162,11 @@ const hasVariants = (product = {}) =>
 
 const getDefaultVariant = (product = {}) => {
   const variants = Array.isArray(product?.variants) ? product.variants : [];
-  if (!variants.length) return null;
+
+  if (!variants.length) {
+    return null;
+  }
+
   return (
     variants.find((variant) => variant?.isDefault === true) ||
     variants.find((variant) => variant?.status !== "inactive") ||
@@ -135,13 +177,16 @@ const getDefaultVariant = (product = {}) => {
 
 const getEffectivePrice = (product = {}) => {
   const defaultVariant = getDefaultVariant(product);
+
   return hasVariants(product)
     ? toNumberOrNull(defaultVariant?.price ?? defaultVariant?.salePrice)
     : toNumberOrNull(product?.price ?? product?.salePrice);
 };
 
 const getEffectiveStock = (product = {}) => {
-  if (!hasVariants(product)) return toNumberOrNull(product?.stock);
+  if (!hasVariants(product)) {
+    return toNumberOrNull(product?.stock);
+  }
 
   const variantStocks = product.variants
     .map((variant) => toNumberOrNull(variant?.stock))
@@ -154,6 +199,7 @@ const getEffectiveStock = (product = {}) => {
 
 const formatMoney = (value) => {
   const amount = toNumberOrNull(value);
+
   return amount === null ? "N/A" : `₹${amount.toLocaleString("en-IN")}`;
 };
 
@@ -162,21 +208,30 @@ const getInitialFiltersForPath = () => INITIAL_FILTERS;
 const ProductCatalog = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state);
+
   const [sellerListData, setSellerListData] = useState([]);
   const [storeListData, setStoreListData] = useState([]);
+
   const navigate = useNavigate();
   const { canAccess } = usePermission();
   const location = useLocation();
-  const [apiRes, setApiRes] = useState({ list: [], total: 0 });
+
+  const [apiRes, setApiRes] = useState({
+    list: [],
+    total: 0,
+  });
+
   const [loading, setLoading] = useState(false);
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
   const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState(null);
   const [sellerLoading, setSellerLoading] = useState(false);
   const [storeLoading, setStoreLoading] = useState(false);
+
   const [duplicateConfirmation, setDuplicateConfirmation] = useState({
     open: false,
     product: null,
   });
+
   const [statusConfirmation, setStatusConfirmation] = useState({
     open: false,
     type: null,
@@ -188,31 +243,41 @@ const ProductCatalog = () => {
     confirmLabel: "Confirm",
     variant: "warning",
   });
+
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [selectedImages, setSelectedImages] = useState(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
+
   const [filters, setFilters] = useState(() =>
     getInitialFiltersForPath(location.pathname, location.search),
   );
+
   const [appliedFilters, setAppliedFilters] = useState(() =>
     getInitialFiltersForPath(location.pathname, location.search),
   );
+
   const didMountRouteRef = useRef(false);
   const productListRequestRef = useRef(0);
+
   const list = useListPage({
     defaultPageSize: DEFAULT_PAGE_SIZE,
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
   });
+
   const selectedRow = list.selectedKeys;
   const setSelectedRow = list.setSelectedKeys;
+
   const handleAddNavigate = () => navigate("/app/product-catalog/form");
+
   const [userData, setUserData] = useState(null);
+
   const [reviewModal, setReviewModal] = useState({
     open: false,
     product: null,
     revision: null,
   });
+
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
   const sellerView = isSellerPanel();
 
@@ -227,7 +292,9 @@ const ProductCatalog = () => {
   );
 
   useEffect(() => {
-    if (!canFilterBySeller) return;
+    if (!canFilterBySeller) {
+      return;
+    }
 
     const loadSellers = async () => {
       try {
@@ -253,7 +320,6 @@ const ProductCatalog = () => {
   useEffect(() => {
     const sellerId = filters?.sellerName?.value;
 
-    // Seller select nahi hai
     if (!sellerId) {
       setStoreListData([]);
       return;
@@ -283,16 +349,20 @@ const ProductCatalog = () => {
   const revisionFilter = normalizeRevisionFilterValue(
     appliedFilters?.revisionStatus?.value,
   );
+
   const isApprovedFilter = appliedFilters?.approvalStatus?.value === "Approved";
+
   const approvalStatusToApiStatus = {
     Pending: "pending",
     Approved: "approved",
     Rejected: "rejected",
   };
+
   const getSortByParam = (sortKey, sortDir) => {
     if (sortKey === "price") {
       return sortDir === "asc" ? "price_asc" : "price_desc";
     }
+
     return sortKey;
   };
 
@@ -304,26 +374,49 @@ const ProductCatalog = () => {
       includeAllStatuses: true,
       sortBy: getSortByParam(list.sortKey, list.sortDir),
       sortDir: list.sortDir,
-      // Seller panel users always filter by their active organization
+
       ...(isSellerPanelUser
-        ? { organizationId: getSelectedSellerOrganizationId() }
+        ? {
+            organizationId: getSelectedSellerOrganizationId(),
+          }
         : {}),
+
       ...(appliedFilters?.category?.value
-        ? { category: appliedFilters.category.value }
+        ? {
+            category: appliedFilters.category.value,
+          }
         : {}),
+
       ...(appliedFilters?.sellerName?.value
-        ? { sellerId: appliedFilters.sellerName.value }
+        ? {
+            sellerId: appliedFilters.sellerName.value,
+          }
         : {}),
+
       ...(appliedFilters?.dateFrom
-        ? { dateFrom: appliedFilters.dateFrom }
+        ? {
+            dateFrom: appliedFilters.dateFrom,
+          }
         : {}),
-      ...(appliedFilters?.dateTo ? { dateTo: appliedFilters.dateTo } : {}),
+
+      ...(appliedFilters?.dateTo
+        ? {
+            dateTo: appliedFilters.dateTo,
+          }
+        : {}),
+
       ...(appliedFilters?.activationStatus?.value === "Active"
-        ? { status: "active" }
+        ? {
+            status: "active",
+          }
         : {}),
+
       ...(appliedFilters?.activationStatus?.value === "Inactive"
-        ? { status: "inactive" }
+        ? {
+            status: "inactive",
+          }
         : {}),
+
       ...(["Draft", "Scheduled"].includes(
         appliedFilters?.activationStatus?.value,
       )
@@ -331,16 +424,22 @@ const ProductCatalog = () => {
             status: String(appliedFilters.activationStatus.value).toLowerCase(),
           }
         : {}),
+
       ...(approvalStatusToApiStatus[appliedFilters?.approvalStatus?.value]
         ? {
             approvalStatus:
               approvalStatusToApiStatus[appliedFilters.approvalStatus.value],
           }
         : {}),
+
       ...(revisionFilter
-        ? { revisionStatus: revisionFilter }
+        ? {
+            revisionStatus: revisionFilter,
+          }
         : isApprovedFilter
-          ? { revisionStatus: "none" }
+          ? {
+              revisionStatus: "none",
+            }
           : {}),
     }),
     [
@@ -355,6 +454,7 @@ const ProductCatalog = () => {
 
   const fetchProductsList = useCallback(async () => {
     const requestId = ++productListRequestRef.current;
+
     setLoading(true);
 
     try {
@@ -371,8 +471,12 @@ const ProductCatalog = () => {
         setApiRes(productData);
       }
     } catch (err) {
-      if (requestId !== productListRequestRef.current) return;
+      if (requestId !== productListRequestRef.current) {
+        return;
+      }
+
       console.error("Failed to fetch products:", err);
+
       toast.error(err?.message || err || "Failed to fetch products");
     } finally {
       if (requestId === productListRequestRef.current) {
@@ -387,11 +491,15 @@ const ProductCatalog = () => {
         .filter(Boolean)
         .map(String),
     );
+
     setApiRes((current) => ({
       ...current,
       list: (current?.list || []).map((product) =>
         ids.has(String(product?._id || product?.id))
-          ? { ...product, ...changes }
+          ? {
+              ...product,
+              ...changes,
+            }
           : product,
       ),
     }));
@@ -404,32 +512,51 @@ const ProductCatalog = () => {
   useEffect(() => {
     if (canFilterBySeller) {
       setSellerLoading(true);
+
       dispatch(getAllSellerList()).finally(() => {
         setSellerLoading(false);
       });
     }
 
-    dispatch(getCategoryList({ tree: true, limit: 100 }))
+    dispatch(
+      getCategoryList({
+        tree: true,
+        limit: 100,
+      }),
+    )
       .then((res) => {
         const raw = res?.payload?.data?.data || res?.payload?.data || [];
+
         const flattenTree = (nodes = [], out = [], prefix = "") => {
           nodes.forEach((node) => {
             const name = node?.title || node?.name || node?.categoryKey || "";
+
             const key = node?.categoryKey || String(node?._id || "");
-            if (name && key)
+
+            if (name && key) {
               out.push({
                 value: key,
                 label: prefix ? `${prefix} > ${name}` : name,
               });
+            }
+
             const children = node?.children || node?.subCategories || [];
-            if (children.length)
+
+            if (children.length) {
               flattenTree(children, out, prefix ? `${prefix} > ${name}` : name);
+            }
           });
+
           return out;
         };
+
         const source = Array.isArray(raw) ? raw : raw?.items || raw?.list || [];
+
         setCategoryOptions([
-          { value: "", label: "All Categories" },
+          {
+            value: "",
+            label: "All Categories",
+          },
           ...flattenTree(source),
         ]);
       })
@@ -441,12 +568,16 @@ const ProductCatalog = () => {
       location.pathname,
       location.search,
     );
+
     if (!didMountRouteRef.current) {
       didMountRouteRef.current = true;
+
       setFilters(nextFilters);
       setAppliedFilters(nextFilters);
+
       return;
     }
+
     setFilters(nextFilters);
     setAppliedFilters(nextFilters);
     list.setPage(1);
@@ -455,6 +586,7 @@ const ProductCatalog = () => {
 
   useEffect(() => {
     const userDataString = sessionStorage.getItem("EcomAdmin");
+
     if (userDataString) {
       try {
         const parsedData = JSON.parse(userDataString);
@@ -467,16 +599,21 @@ const ProductCatalog = () => {
 
   const handleImageClick = useCallback((data) => {
     const images = Array.isArray(data) ? data : getProductImages(data);
+
     if (!images.length) {
       toast.info("No product images available.");
       return;
     }
+
     setSelectedImages(images);
     setGalleryOpen(true);
   }, []);
 
   const closeStatusConfirmation = () => {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
+
     setStatusConfirmation({
       open: false,
       type: null,
@@ -497,18 +634,23 @@ const ProductCatalog = () => {
       isDisable: nextStatus !== "active",
       reason: "product_status_toggle",
     };
+
     const response = await dispatch(
       enableDisableProductCatalogs(apiPayload),
     ).unwrap();
+
     updateVisibleProducts(product?._id, {
       status: nextStatus,
       isDisable: nextStatus !== "active",
     });
+
     toast.success(
       response?.message ||
         (nextStatus === "pending_approval"
           ? "Product submitted for admin approval."
-          : `Product ${nextStatus === "active" ? "enabled" : "disabled"} successfully.`),
+          : `Product ${
+              nextStatus === "active" ? "enabled" : "disabled"
+            } successfully.`),
     );
   };
 
@@ -519,23 +661,30 @@ const ProductCatalog = () => {
       isDisable: nextStatus !== "active",
       reason: "product_bulk_status_toggle",
     };
+
     const response = await dispatch(
       enableDisableProductCatalogs(apiPayload),
     ).unwrap();
+
     updateVisibleProducts(productIds, {
       status: nextStatus,
       isDisable: nextStatus !== "active",
     });
+
     toast.success(response?.message || "Products updated successfully.");
+
     setSelectedRow([]);
   };
 
   const handleToggle = async (data) => {
     if (!canToggleProduct(data)) {
       toast.error("This product status cannot be toggled from here.");
+
       return;
     }
+
     const nextStatus = getNextToggleStatus(data);
+
     setStatusConfirmation({
       open: true,
       type: "toggle",
@@ -544,7 +693,9 @@ const ProductCatalog = () => {
       nextStatus,
       title:
         nextStatus === "active" ? "Activate product?" : "Deactivate product?",
-      message: `This will mark "${data?.title || data?.name || "this product"}" as ${nextStatus}.`,
+      message: `This will mark "${
+        data?.title || data?.name || "this product"
+      }" as ${nextStatus}.`,
       confirmLabel: nextStatus === "active" ? "Activate" : "Deactivate",
       variant: nextStatus === "active" ? "success" : "warning",
     });
@@ -558,7 +709,9 @@ const ProductCatalog = () => {
       productIds: [],
       nextStatus: "pending_approval",
       title: "Submit product for approval?",
-      message: `This will send "${product?.title || product?.name || "this product"}" to the admin for review. It will remain hidden from customers until approved.`,
+      message: `This will send "${
+        product?.title || product?.name || "this product"
+      }" to the admin for review. It will remain hidden from customers until approved.`,
       confirmLabel: "Submit for approval",
       variant: "info",
     });
@@ -568,24 +721,36 @@ const ProductCatalog = () => {
     product?.revisionStatus === "change_pending" ||
     Boolean(product?.pendingRevisionId) ||
     Boolean(product?.pendingRevision);
+
   const canReviewProduct = (product) =>
     !isSellerPanelUser &&
     (REVIEWABLE_STATUSES.has(product?.status) || hasPendingRevision(product));
+
   const canToggleProduct = (product) => {
     const status = getProductStatus(product);
-    if (!STATUS_TOGGLEABLE.has(status)) return false;
+
+    if (!STATUS_TOGGLEABLE.has(status)) {
+      return false;
+    }
+
     if (
       status !== "active" &&
       getProductApprovalStatus(product) !== "approved"
     ) {
       return false;
     }
+
     return true;
   };
+
   const canSubmitForApproval = (product) => {
-    if (!isSellerPanelUser) return false;
+    if (!isSellerPanelUser) {
+      return false;
+    }
+
     const status = getProductStatus(product);
     const approvalStatus = getProductApprovalStatus(product);
+
     return (
       ["draft", "rejected"].includes(status) &&
       ["pending", "rejected"].includes(approvalStatus)
@@ -594,7 +759,11 @@ const ProductCatalog = () => {
 
   const extractRevisionList = (response) => {
     const data = response?.data || response?.payload?.data || {};
-    if (Array.isArray(data)) return data;
+
+    if (Array.isArray(data)) {
+      return data;
+    }
+
     return (
       data?.list || data?.items || data?.data?.list || data?.data?.items || []
     );
@@ -605,19 +774,31 @@ const ProductCatalog = () => {
       toast.error(
         "Product approval and revision review are admin-only actions.",
       );
+
       return;
     }
+
     if (!hasPendingRevision(data)) {
-      setReviewModal({ open: true, product: data, revision: null });
+      setReviewModal({
+        open: true,
+        product: data,
+        revision: null,
+      });
+
       return;
     }
 
     setLoading(true);
+
     try {
       const detailResponse = await dispatch(
-        getProductById({ id: data?._id }),
+        getProductById({
+          id: data?._id,
+        }),
       ).unwrap();
+
       const product = detailResponse?.data || data;
+
       let revision = product?.pendingRevision || null;
 
       if (!revision) {
@@ -628,15 +809,21 @@ const ProductCatalog = () => {
             size: 1,
           }),
         ).unwrap();
+
         revision = extractRevisionList(revisionsResponse)[0] || null;
       }
 
       if (!revision) {
         toast.error("Pending product revision was not found.");
+
         return;
       }
 
-      setReviewModal({ open: true, product, revision });
+      setReviewModal({
+        open: true,
+        product,
+        revision,
+      });
     } catch (error) {
       toast.error(error?.message || error || "Failed to load product revision");
     } finally {
@@ -655,8 +842,11 @@ const ProductCatalog = () => {
         "Product approval and revision review are admin-only actions.",
       );
     }
+
     const product = reviewModal.product;
+
     setLoading(true);
+
     try {
       const response = reviewModal.revision
         ? await dispatch(
@@ -678,19 +868,25 @@ const ProductCatalog = () => {
               checklist,
             }),
           ).unwrap();
+
       const labels = {
         active: "approved",
         inactive: "deactivated",
         rejected: "rejected",
       };
+
       const subject = reviewModal.revision ? "Product revision" : "Product";
+
       toast.success(
         response?.message ||
           `${subject} ${labels[decision] || "updated"} successfully.`,
       );
+
       updateVisibleProducts(product?._id, {
         ...(reviewModal.revision
-          ? { revisionStatus: "none" }
+          ? {
+              revisionStatus: "none",
+            }
           : {
               status: decision,
               approvalStatus: decision === "active" ? "approved" : decision,
@@ -699,6 +895,7 @@ const ProductCatalog = () => {
         pendingRevision: null,
         pendingRevisionId: null,
       });
+
       await fetchProductsList();
     } catch (error) {
       throw new Error(error?.message || error || "Failed to update product");
@@ -708,14 +905,23 @@ const ProductCatalog = () => {
   };
 
   async function handlePermanentDeleteSubmit() {
-    if (!permanentDeleteTarget) return;
+    if (!permanentDeleteTarget) {
+      return;
+    }
+
     try {
       setLoading(true);
+
       const res = await dispatch(
-        permanentlyDeleteProduct({ _id: permanentDeleteTarget?._id }),
+        permanentlyDeleteProduct({
+          _id: permanentDeleteTarget?._id,
+        }),
       ).unwrap();
+
       toast.success(res?.message || "Product permanently deleted.");
+
       setPermanentDeleteTarget(null);
+
       await fetchProductsList();
     } catch (error) {
       toast.error(error?.message || error || "Permanent deletion failed.");
@@ -725,21 +931,38 @@ const ProductCatalog = () => {
   }
 
   const handleDuplicateProduct = (product) => {
-    setDuplicateConfirmation({ open: true, product });
+    setDuplicateConfirmation({
+      open: true,
+      product,
+    });
   };
 
   const handleDuplicateSubmit = async () => {
     const product = duplicateConfirmation.product;
+
     try {
       setLoading(true);
+
       const res = await dispatch(
-        duplicateProduct({ _id: product?._id }),
+        duplicateProduct({
+          _id: product?._id,
+        }),
       ).unwrap();
+
       const newId = res?.data?.data?._id || res?.data?._id;
+
       toast.success(res?.message || "Product duplicated successfully.");
-      setDuplicateConfirmation({ open: false, product: null });
+
+      setDuplicateConfirmation({
+        open: false,
+        product: null,
+      });
+
       await fetchProductsList();
-      if (newId) navigate(`/app/product-catalog/form/${newId}`);
+
+      if (newId) {
+        navigate(`/app/product-catalog/form/${newId}`);
+      }
     } catch (err) {
       toast.error(err?.message || "Failed to duplicate product.");
     } finally {
@@ -750,6 +973,7 @@ const ProductCatalog = () => {
   const handleStatusConfirm = async () => {
     try {
       setLoading(true);
+
       if (
         statusConfirmation.type === "toggle" ||
         statusConfirmation.type === "submit_approval"
@@ -764,11 +988,13 @@ const ProductCatalog = () => {
           statusConfirmation.nextStatus,
         );
       }
+
       await fetchProductsList();
     } catch (error) {
       toast.error(error?.message || error || "Action failed.");
     } finally {
       setLoading(false);
+
       setStatusConfirmation({
         open: false,
         type: null,
@@ -791,6 +1017,7 @@ const ProductCatalog = () => {
 
   useEffect(() => {
     const delay = filters.search !== appliedFilters.search ? 300 : 0;
+
     const timer = setTimeout(() => {
       list.clearSelection();
       setAppliedFilters(filters);
@@ -802,14 +1029,17 @@ const ProductCatalog = () => {
 
   const clearFilters = () => {
     const nextFilters = getInitialFiltersForPath(location.pathname);
+
     setFilters(nextFilters);
     setAppliedFilters(nextFilters);
     list.setPage(1);
     list.clearSelection();
   };
+
   const handleBulkAction = async (action) => {
     if (action === "Active" || action === "Inactive") {
       const nextStatus = action === "Active" ? "active" : "inactive";
+
       setStatusConfirmation({
         open: true,
         type: "bulk_status",
@@ -820,12 +1050,16 @@ const ProductCatalog = () => {
           nextStatus === "active"
             ? "Activate selected products?"
             : "Deactivate selected products?",
-        message: `This will mark ${selectedRow.length} selected product${selectedRow.length === 1 ? "" : "s"} as ${nextStatus}.`,
+        message: `This will mark ${selectedRow.length} selected product${
+          selectedRow.length === 1 ? "" : "s"
+        } as ${nextStatus}.`,
         confirmLabel: nextStatus === "active" ? "Activate" : "Deactivate",
         variant: nextStatus === "active" ? "success" : "warning",
       });
+
       return;
     }
+
     if (action === "PermanentDelete") {
       setBulkDeleteConfirmation({
         permanent: true,
@@ -835,19 +1069,27 @@ const ProductCatalog = () => {
   };
 
   const handleBulkDeleteConfirm = async () => {
-    if (!bulkDeleteConfirmation) return;
+    if (!bulkDeleteConfirmation) {
+      return;
+    }
+
     try {
       setLoading(true);
+
       const action = "permanent_delete";
+
       const res = await dispatch(
         bulkUpdateProducts({
           productIds: bulkDeleteConfirmation.productIds,
           action,
         }),
       ).unwrap();
+
       toast.success(res?.message || "Selected products permanently deleted.");
+
       setSelectedRow([]);
       setBulkDeleteConfirmation(null);
+
       await fetchProductsList();
     } catch (error) {
       toast.error(error?.message || error || "Bulk product action failed.");
@@ -867,6 +1109,7 @@ const ProductCatalog = () => {
         label: "Image",
         render: (_, product) => {
           const productImages = getProductImages(product);
+
           const primaryImage = getPrimaryProductImage(product);
 
           return (
@@ -883,7 +1126,10 @@ const ProductCatalog = () => {
                     aria-label={product?.title || product?.name || "Product"}
                     className="block h-full w-full bg-cover bg-center"
                     style={{
-                      backgroundImage: `url("${String(primaryImage).replace(/"/g, "%22")}")`,
+                      backgroundImage: `url("${String(primaryImage).replace(
+                        /"/g,
+                        "%22",
+                      )}")`,
                     }}
                   />
                 </button>
@@ -892,9 +1138,14 @@ const ProductCatalog = () => {
                   No
                 </span>
               )}
+
               <button
                 type="button"
-                className={`text-xs ${productImages.length ? "text-blue-500 hover:underline" : "cursor-not-allowed text-gray-400"}`}
+                className={`text-xs ${
+                  productImages.length
+                    ? "text-blue-500 hover:underline"
+                    : "cursor-not-allowed text-gray-400"
+                }`}
                 onClick={() => handleImageClick(productImages)}
                 disabled={!productImages.length}
               >
@@ -909,8 +1160,8 @@ const ProductCatalog = () => {
         label: "Product",
         sortable: true,
         render: (_, product) => (
-          <span className="block max-w-[260px] overflow-hidden text-ellipsis whitespace-nowrap capitalize">
-            {product?.title || product?.name || "N/A"}
+          <span className="block max-w-[260px] capitalize">
+            {truncateToWordBoundary(product?.title || product?.name || "N/A")}
           </span>
         ),
       },
@@ -935,10 +1186,10 @@ const ProductCatalog = () => {
         sortable: true,
         render: (_, product) => {
           const stock = getEffectiveStock(product);
+
           return stock === null ? "N/A" : stock;
         },
       },
-
       {
         key: "status",
         label: "Status",
@@ -1025,6 +1276,7 @@ const ProductCatalog = () => {
       navigate,
     ],
   );
+
   return (
     <div className="overflow-x-auto overflow-y-auto">
       <PageHeader
@@ -1035,27 +1287,37 @@ const ProductCatalog = () => {
             : "Manage all products in the catalog"
         }
         breadcrumbs={[
-          { label: sellerView ? "Catalog" : "Catalog Management" },
-          { label: "Products" },
+          {
+            label: sellerView ? "Catalog" : "Catalog Management",
+          },
+          {
+            label: "Products",
+          },
         ]}
         actions={
           <>
             <AddButton onClick={handleAddNavigate} requiredModule="products" />
+
             <button
               type="button"
               onClick={fetchProductsList}
               disabled={loading}
               aria-busy={loading}
-              
-              // className="inline-flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <MdRefresh aria-hidden="true" size={17} className={loading ? "animate-spin" : ""} />
+              <MdRefresh
+                aria-hidden="true"
+                size={17}
+                className={loading ? "animate-spin" : ""}
+              />
+
               {loading ? "Refreshing..." : "Refresh"}
             </button>
           </>
         }
       />
-      <div className="overflow-hidden rounded-xl border  border-[var(--admin-line)] bg-white shadow-sm">
+
+      <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
         <section className="border-b border-[var(--admin-line)]">
           <SearchComponent
             selectedRow={selectedRow}
@@ -1092,6 +1354,32 @@ const ProductCatalog = () => {
             largeSearchInput={true}
           />
         </section>
+
+   {/* Selected Product Indication */}
+{selectedRow.length > 0 && (
+  <div className="mx-4 my-3 flex items-center justify-between rounded-lg  bg-[var(--admin-gold-soft)] border border-[var(--admin-line)] px-4 py-2.5 shadow-sm">
+    <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--admin-gold)] text-xs font-bold text-white">
+        {selectedRow.length}
+      </span>
+
+      <span className="text-sm font-semibold text-[var(--admin-navy)]">
+        {selectedRow.length === 1
+          ? "1 product selected"
+          : `${selectedRow.length } Products Selected`}
+      </span>
+    </div>
+
+    <button
+      type="button"
+      onClick={() => setSelectedRow([])}
+      className="rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 transition hover:bg-white hover:text-[var(--admin-navy)]"
+    >
+      Clear selection
+    </button>
+  </div>
+)}
+
         <section>
           <DataTable
             columns={productColumns}
@@ -1174,7 +1462,11 @@ const ProductCatalog = () => {
         open={Boolean(permanentDeleteTarget)}
         onClose={() => setPermanentDeleteTarget(null)}
         title="Delete product permanently?"
-        message={`This will permanently delete "${permanentDeleteTarget?.title || permanentDeleteTarget?.name || "this product"}" and its revisions. This cannot be undone. Products with order history cannot be deleted.`}
+        message={`This will permanently delete "${
+          permanentDeleteTarget?.title ||
+          permanentDeleteTarget?.name ||
+          "this product"
+        }" and its revisions. This cannot be undone. Products with order history cannot be deleted.`}
         variant="danger"
         confirmLabel="Delete Permanently"
         loading={loading && Boolean(permanentDeleteTarget)}
@@ -1185,7 +1477,9 @@ const ProductCatalog = () => {
         open={Boolean(bulkDeleteConfirmation)}
         onClose={() => setBulkDeleteConfirmation(null)}
         title="Delete selected products permanently?"
-        message={`This permanently deletes ${bulkDeleteConfirmation?.productIds?.length || 0} selected product(s). Products with order history will be blocked. This cannot be undone.`}
+        message={`This permanently deletes ${
+          bulkDeleteConfirmation?.productIds?.length || 0
+        } selected product(s). Products with order history will be blocked. This cannot be undone.`}
         variant="danger"
         confirmLabel="Delete Permanently"
         loading={loading && Boolean(bulkDeleteConfirmation)}
@@ -1205,9 +1499,16 @@ const ProductCatalog = () => {
 
       <ConfirmModal
         open={duplicateConfirmation.open}
-        onClose={() => setDuplicateConfirmation({ open: false, product: null })}
+        onClose={() =>
+          setDuplicateConfirmation({
+            open: false,
+            product: null,
+          })
+        }
         title="Duplicate product?"
-        message={`This will create a draft copy of "${duplicateConfirmation.product?.title || "this product"}". You can edit it before publishing.`}
+        message={`This will create a draft copy of "${
+          duplicateConfirmation.product?.title || "this product"
+        }". You can edit it before publishing.`}
         variant="info"
         confirmLabel="Duplicate"
         loading={loading && duplicateConfirmation.open}
@@ -1225,7 +1526,11 @@ const ProductCatalog = () => {
         product={reviewModal.product}
         revision={reviewModal.revision}
         onClose={() =>
-          setReviewModal({ open: false, product: null, revision: null })
+          setReviewModal({
+            open: false,
+            product: null,
+            revision: null,
+          })
         }
         onSubmit={handleReviewSubmit}
       />
