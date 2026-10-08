@@ -317,7 +317,7 @@ const Payments = () => {
               type="button"
               onClick={() => navigate("/app/cod-collections")}
             >
-              <MdCheckCircle size={17} /> COD Collections
+              <MdCheckCircle aria-hidden="true" size={17} /> COD Collections
             </button>
           </div>
         }
@@ -353,7 +353,13 @@ const Payments = () => {
           const actions = [
             {
               label: "View Details",
-              icon: <MdVisibility size={16} className="text-blue-600" />,
+              icon: (
+                <MdVisibility
+                  aria-hidden="true"
+                  size={16}
+                  className="text-blue-600"
+                />
+              ),
               onClick: () => openDetail(row),
             },
           ];
@@ -361,7 +367,13 @@ const Payments = () => {
           if (canManualDecision(row)) {
             actions.push({
               label: "Approve Payment",
-              icon: <MdCheckCircle size={16} className="text-blue-600" />,
+              icon: (
+                <MdCheckCircle
+                  aria-hidden="true"
+                  size={16}
+                  className="text-blue-600"
+                />
+              ),
               requiredModule: "payments",
               requiredAction: ACTIONS.APPROVE,
               onClick: () =>
@@ -377,7 +389,13 @@ const Payments = () => {
 
             actions.push({
               label: "Reject Payment",
-              icon: <MdCancel size={16} className="text-red-600" />,
+              icon: (
+                <MdCancel
+                  aria-hidden="true"
+                  size={16}
+                  className="text-red-600"
+                />
+              ),
               requiredModule: "payments",
               requiredAction: ACTIONS.APPROVE,
               onClick: () =>

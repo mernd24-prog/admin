@@ -331,7 +331,7 @@ export default function FinanceEarnings() {
               });
             }}
           >
-            <MdVisibility />
+            <MdVisibility aria-hidden="true" />
             View details
           </button>
         ),
@@ -367,7 +367,7 @@ export default function FinanceEarnings() {
               onClick={load}
               disabled={Boolean(state.loading)}
             >
-              <MdRefresh />
+              <MdRefresh aria-hidden="true" />
               Refresh
             </button>
           </div>
@@ -394,7 +394,7 @@ export default function FinanceEarnings() {
           label="Total earnings"
           value={financeMoney(filteredSummary.total, rows[0]?.currency)}
           helper={`${filtered.length} earning${filtered.length !== 1 ? "s" : ""}`}
-          icon={<MdAccountBalanceWallet size={18} />}
+          icon={<MdAccountBalanceWallet aria-hidden="true" size={18} />}
           iconBg="#e3d4ff"
           iconColor="#8d5cf6"
           onClick={() => {
@@ -408,9 +408,12 @@ export default function FinanceEarnings() {
 
         <Cards
           label="Waiting"
-          value={financeMoney(filteredSummary.waiting.amount, rows[0]?.currency)}
+          value={financeMoney(
+            filteredSummary.waiting.amount,
+            rows[0]?.currency,
+          )}
           helper={`${filteredSummary.waiting.count} order${filteredSummary.waiting.count !== 1 ? "s" : ""}`}
-          icon={<MdHourglassEmpty size={18} />}
+          icon={<MdHourglassEmpty aria-hidden="true" size={18} />}
           iconBg="#ffe5b5"
           iconColor="#f5a300"
           onClick={() => {
@@ -424,9 +427,12 @@ export default function FinanceEarnings() {
 
         <Cards
           label="Available"
-          value={financeMoney(filteredSummary.available.amount, rows[0]?.currency)}
+          value={financeMoney(
+            filteredSummary.available.amount,
+            rows[0]?.currency,
+          )}
           helper={`${filteredSummary.available.count} earning${filteredSummary.available.count !== 1 ? "s" : ""}`}
-          icon={<MdCheckCircle size={18} />}
+          icon={<MdCheckCircle aria-hidden="true" size={18} />}
           iconBg="#cce8c9"
           iconColor="#1d9b50"
           onClick={() => {
@@ -442,7 +448,7 @@ export default function FinanceEarnings() {
           label="On hold"
           value={financeMoney(filteredSummary.held.amount, rows[0]?.currency)}
           helper={`${filteredSummary.held.count} earning${filteredSummary.held.count !== 1 ? "s" : ""}`}
-          icon={<MdPauseCircle size={18} />}
+          icon={<MdPauseCircle aria-hidden="true" size={18} />}
           iconBg="#ffd4d2"
           iconColor="#ff4b55"
           onClick={() => {
@@ -458,7 +464,7 @@ export default function FinanceEarnings() {
           label="Paid"
           value={financeMoney(filteredSummary.paid.amount, rows[0]?.currency)}
           helper={`${filteredSummary.paid.count} earning${filteredSummary.paid.count !== 1 ? "s" : ""}`}
-          icon={<MdPayments size={18} />}
+          icon={<MdPayments aria-hidden="true" size={18} />}
           iconBg="#cce8c9"
           iconColor="#1d9b50"
           onClick={() => {
@@ -472,36 +478,36 @@ export default function FinanceEarnings() {
       </div>
 
       {/* STATUS FILTERS */}
-  <Tabs
-  tabs={FILTERS.map(([key, label]) => {
-    const summary =
-      key === ""
-        ? statusSummary.all
-        : statusSummary[key] || {
-            count: 0,
+      <Tabs
+        tabs={FILTERS.map(([key, label]) => {
+          const summary =
+            key === ""
+              ? statusSummary.all
+              : statusSummary[key] || {
+                  count: 0,
+                };
+
+          return {
+            value: key,
+            label,
+            count: summary.count,
           };
+        })}
+        activeTab={status}
+        onChange={(key) =>
+          setParams((previous) => {
+            const next = new URLSearchParams(previous);
 
-    return {
-      value: key,
-      label,
-      count: summary.count,
-    };
-  })}
-  activeTab={status}
-  onChange={(key) =>
-    setParams((previous) => {
-      const next = new URLSearchParams(previous);
+            if (key) {
+              next.set("status", key);
+            } else {
+              next.delete("status");
+            }
 
-      if (key) {
-        next.set("status", key);
-      } else {
-        next.delete("status");
-      }
-
-      return next;
-    })
-  }
-/>
+            return next;
+          })
+        }
+      />
       {/* SEARCH + TABLE */}
       <DataTable
         columns={columns}

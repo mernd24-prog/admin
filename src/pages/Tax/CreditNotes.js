@@ -359,12 +359,24 @@ const CreditNotes = () => {
       return [
         {
           label: "View",
-          icon: <MdVisibility size={16} className="text-blue-600" />,
+          icon: (
+            <MdVisibility
+              aria-hidden="true"
+              size={16}
+              className="text-blue-600"
+            />
+          ),
           onClick: () => setDetail(row),
         },
         {
           label: "Download PDF",
-          icon: <MdDownload size={16} className="text-gray-600" />,
+          icon: (
+            <MdDownload
+              aria-hidden="true"
+              size={16}
+              className="text-gray-600"
+            />
+          ),
           disabled: downloadingId === creditNoteId,
           onClick: () => downloadCreditNote(row),
         },
@@ -387,7 +399,7 @@ const CreditNotes = () => {
             {!isSeller && (
               <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
                 <button onClick={() => setShowCreate(true)}>
-                  <MdAdd size={16} /> New Credit Note
+                  <MdAdd aria-hidden="true" size={16} /> New Credit Note
                 </button>
               </PermissionGuard>
             )}

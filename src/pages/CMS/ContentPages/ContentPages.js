@@ -304,13 +304,13 @@ const ContentPages = () => {
   const rowActions = (row) => [
     {
       label: "Edit",
-      icon: <MdEdit size={16} />,
+      icon: <MdEdit aria-hidden="true" size={16} />,
       onClick: () => openEdit(row),
       disabled: submitting || deleting || Boolean(statusLoadingSlug),
     },
     {
       label: "Delete",
-      icon: <MdDelete size={16} />,
+      icon: <MdDelete aria-hidden="true" size={16} />,
       onClick: () => setDeleteTarget(row),
       danger: true,
       disabled: submitting || deleting || Boolean(statusLoadingSlug),
@@ -329,7 +329,7 @@ const ContentPages = () => {
             disabled={submitting || deleting || Boolean(statusLoadingSlug)}
             className="flex items-center gap-1"
           >
-            <MdAdd size={16} /> Add Page
+            <MdAdd aria-hidden="true" size={16} /> Add Page
           </button>
         }
       />
@@ -349,7 +349,9 @@ const ContentPages = () => {
         rowActions={rowActions}
         searchPlaceholder="Search content pages..."
         emptyText="No content pages found."
-        emptyIcon={<MdArticle size={40} className="text-gray-200" />}
+        emptyIcon={
+          <MdArticle aria-hidden="true" size={40} className="text-gray-200" />
+        }
         requiredModule="cms"
       />
 

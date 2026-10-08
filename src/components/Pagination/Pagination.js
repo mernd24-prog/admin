@@ -70,11 +70,7 @@ const Pagination = ({
       pageNumbers.push("...");
     }
 
-    for (
-      let i = Math.max(safeTotalPages - 1, 3);
-      i <= safeTotalPages;
-      i++
-    ) {
+    for (let i = Math.max(safeTotalPages - 1, 3); i <= safeTotalPages; i++) {
       if (i > 2) {
         pageNumbers.push(i);
       }
@@ -86,9 +82,7 @@ const Pagination = ({
   const pageNumbers = renderPageNumbers();
 
   const rangeStart =
-    totalRecords && pageSize
-      ? (safeCurrentPage - 1) * pageSize + 1
-      : 0;
+    totalRecords && pageSize ? (safeCurrentPage - 1) * pageSize + 1 : 0;
 
   const rangeEnd =
     totalRecords && pageSize
@@ -105,7 +99,7 @@ const Pagination = ({
       {!compact && totalRecords !== undefined && pageSize && (
         <div className="flex shrink-0 flex-col leading-tight">
           <span className="text-xs font-medium text-[var(--admin-muted)]">
-            Showing  {rangeStart}-{rangeEnd} of {totalRecords}
+            Showing {rangeStart}-{rangeEnd} of {totalRecords}
           </span>
         </div>
       )}
@@ -122,9 +116,7 @@ const Pagination = ({
               value={
                 options.find((option) => option.value === pageSize) || null
               }
-              onChange={(option) =>
-                onPageSizeChange(Number(option?.value))
-              }
+              onChange={(option) => onPageSizeChange(Number(option?.value))}
               isSearchable={false}
               placeholder={String(pageSize)}
               className="!mb-0 !min-w-0 w-[80px] [&>div]:!min-w-0"
@@ -156,7 +148,7 @@ const Pagination = ({
             disabled={safeCurrentPage === 1}
             aria-label="Previous page"
           >
-            <LuChevronLeft />
+            <LuChevronLeft aria-hidden="true" />
           </button>
 
           {/* Page Numbers */}
@@ -165,9 +157,7 @@ const Pagination = ({
               type="button"
               key={`${page}-${index}`}
               className={`${pageButtonBase} ${
-                safeCurrentPage === page
-                  ? pageButtonActive
-                  : pageButtonIdle
+                safeCurrentPage === page ? pageButtonActive : pageButtonIdle
               } ${
                 page === "..."
                   ? "!min-w-7 !border-transparent !bg-transparent !px-1 !text-slate-400 !opacity-100"
@@ -175,12 +165,8 @@ const Pagination = ({
               }`}
               onClick={() => handlePageChange(page)}
               disabled={page === "..."}
-              aria-current={
-                safeCurrentPage === page ? "page" : undefined
-              }
-              aria-label={
-                page === "..." ? "More pages" : `Page ${page}`
-              }
+              aria-current={safeCurrentPage === page ? "page" : undefined}
+              aria-label={page === "..." ? "More pages" : `Page ${page}`}
             >
               {page}
             </button>
@@ -194,7 +180,7 @@ const Pagination = ({
             disabled={safeCurrentPage === safeTotalPages}
             aria-label="Next page"
           >
-            <LuChevronRight />
+            <LuChevronRight aria-hidden="true" />
           </button>
 
           {/* Last */}

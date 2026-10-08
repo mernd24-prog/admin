@@ -19,8 +19,6 @@ import {
   MdLocalOffer,
   MdPause,
   MdPlayArrow,
-  MdRefresh,
-  MdSearch,
   MdVisibility,
 } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
@@ -1053,7 +1051,13 @@ const DealManagement = () => {
         return [
           {
             label: "Create Deal",
-            icon: <MdAdd size={16} className="text-emerald-600" />,
+            icon: (
+              <MdAdd
+                aria-hidden="true"
+                size={16}
+                className="text-emerald-600"
+              />
+            ),
             hidden: !can("deals", ACTIONS.CREATE),
             onClick: () => openFormFromProduct(row),
           },
@@ -1063,18 +1067,32 @@ const DealManagement = () => {
       return [
         {
           label: "View",
-          icon: <MdVisibility size={16} className="text-blue-600" />,
+          icon: (
+            <MdVisibility
+              aria-hidden="true"
+              size={16}
+              className="text-blue-600"
+            />
+          ),
           onClick: () => openDetail(row),
         },
         {
           label: "Edit",
-          icon: <MdEdit size={16} className="text-amber-600" />,
+          icon: (
+            <MdEdit aria-hidden="true" size={16} className="text-amber-600" />
+          ),
           hidden: !can("deals", ACTIONS.UPDATE),
           onClick: () => openEditDeal(row),
         },
         {
           label: "Approve",
-          icon: <MdCheckCircle size={16} className="text-green-600" />,
+          icon: (
+            <MdCheckCircle
+              aria-hidden="true"
+              size={16}
+              className="text-green-600"
+            />
+          ),
           hidden: !(
             can("deals", ACTIONS.APPROVE) &&
             ["pending_approval", "draft"].includes(status) &&
@@ -1091,7 +1109,9 @@ const DealManagement = () => {
         // },
         {
           label: "Pause",
-          icon: <MdPause size={16} className="text-yellow-600" />,
+          icon: (
+            <MdPause aria-hidden="true" size={16} className="text-yellow-600" />
+          ),
           hidden: !(
             can("deals", ACTIONS.STATUS_CHANGE) &&
             status === "active" &&
@@ -1101,7 +1121,13 @@ const DealManagement = () => {
         },
         {
           label: "Resume",
-          icon: <MdPlayArrow size={16} className="text-green-600" />,
+          icon: (
+            <MdPlayArrow
+              aria-hidden="true"
+              size={16}
+              className="text-green-600"
+            />
+          ),
           hidden: !(
             can("deals", ACTIONS.STATUS_CHANGE) &&
             status === "paused" &&
@@ -1111,7 +1137,9 @@ const DealManagement = () => {
         },
         {
           label: "Cancel",
-          icon: <MdClose size={16} className="text-red-600" />,
+          icon: (
+            <MdClose aria-hidden="true" size={16} className="text-red-600" />
+          ),
           danger: true,
           hidden: !(
             can("deals", ACTIONS.STATUS_CHANGE) &&
@@ -1144,7 +1172,7 @@ const DealManagement = () => {
                   openForm(isSellerPanel() ? "seller_request" : "admin_direct")
                 }
               >
-                <MdAdd size={17} />{" "}
+                <MdAdd aria-hidden="true" size={17} />{" "}
                 {isSellerPanel() ? "Request Deal" : "Create Deal"}
               </button>
             </PermissionGuard>
@@ -1154,42 +1182,42 @@ const DealManagement = () => {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <Cards
-          icon={<MdLocalOffer size={18} />}
+          icon={<MdLocalOffer aria-hidden="true" size={18} />}
           label="Deal Products"
           value={metrics.total}
           iconBg="#e3d4ff"
           iconColor="#8d5cf6"
         />
         <Cards
-          icon={<MdCheckCircle size={18} />}
+          icon={<MdCheckCircle aria-hidden="true" size={18} />}
           label="Active"
           value={metrics.active}
           iconBg="#cce8c9"
           iconColor="#1d9b50"
         />
         <Cards
-          icon={<MdHistory size={18} />}
+          icon={<MdHistory aria-hidden="true" size={18} />}
           label="Scheduled"
           value={metrics.scheduled}
           iconBg="#ffe5b5"
           iconColor="#f5a300"
         />
         <Cards
-          icon={<MdClose size={18} />}
+          icon={<MdClose aria-hidden="true" size={18} />}
           label="Expired"
           value={metrics.expired}
           iconBg="#ffd4d2"
           iconColor="#ff4b55"
         />
         <Cards
-          icon={<MdBarChart size={18} />}
+          icon={<MdBarChart aria-hidden="true" size={18} />}
           label="Units Sold"
           value={metrics.units}
           iconBg="#04258633"
           iconColor="#0f4bb3"
         />
         <Cards
-          icon={<MdBarChart size={18} />}
+          icon={<MdBarChart aria-hidden="true" size={18} />}
           label="Deal Revenue"
           value={money(metrics.revenue)}
           iconBg="#cce8c9"

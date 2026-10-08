@@ -139,6 +139,7 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
             />
           )}
           <MdArrowDropDown
+            aria-hidden="true"
             size={16}
             className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
           />
@@ -150,6 +151,7 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
               <MdSearch
+                aria-hidden="true"
                 size={14}
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
               />
@@ -1086,7 +1088,7 @@ const FilterBar = ({
     <div className="relative z-20 border-b border-[var(--admin-line)] bg-[#FFFDF8] px-3 py-3 sm:px-4">
       <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-          <MdFilterList size={16} />
+          <MdFilterList aria-hidden="true" size={16} />
           Filters
           <span
             className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--admin-gold)] px-1.5 text-[10px] font-bold text-[var(--admin-navy)] transition-opacity ${
@@ -1109,7 +1111,7 @@ const FilterBar = ({
             }`}
             aria-hidden={resolvedActiveCount === 0}
           >
-            <MdClose size={13} />
+            <MdClose aria-hidden="true" size={13} />
             Reset
           </button>
         )}

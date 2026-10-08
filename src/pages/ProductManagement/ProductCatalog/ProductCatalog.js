@@ -1042,7 +1042,7 @@ const ProductCatalog = () => {
           <>
             <AddButton onClick={handleAddNavigate} requiredModule="products" />
             <button type="button" onClick={fetchProductsList}>
-              <MdRefresh size={17} /> Refresh
+              <MdRefresh aria-hidden="true" size={17} /> Refresh
             </button>
           </>
         }
@@ -1110,25 +1110,49 @@ const ProductCatalog = () => {
             rowActions={(product) => [
               {
                 label: "Review Revision",
-                icon: <MdVisibility size={16} className="text-violet-600" />,
+                icon: (
+                  <MdVisibility
+                    aria-hidden="true"
+                    size={16}
+                    className="text-violet-600"
+                  />
+                ),
                 hidden: sellerView || !hasPendingRevision(product),
                 className: "font-semibold text-violet-700",
                 onClick: () => handleApproveToggle(product),
               },
               {
                 label: "View Product",
-                icon: <MdVisibility size={16} className="text-blue-600" />,
+                icon: (
+                  <MdVisibility
+                    aria-hidden="true"
+                    size={16}
+                    className="text-blue-600"
+                  />
+                ),
                 onClick: () =>
                   navigate(`/app/product-catalog/view/${product?._id}`),
               },
               {
                 label: "Edit Product",
-                icon: <MdEdit size={16} className="text-emerald-600" />,
+                icon: (
+                  <MdEdit
+                    aria-hidden="true"
+                    size={16}
+                    className="text-emerald-600"
+                  />
+                ),
                 onClick: () => handleEditProduct(product?._id),
               },
               {
                 label: "Delete Permanently",
-                icon: <MdDelete size={16} className="text-red-700" />,
+                icon: (
+                  <MdDelete
+                    aria-hidden="true"
+                    size={16}
+                    className="text-red-700"
+                  />
+                ),
                 hidden: sellerView,
                 className: "text-red-700",
                 onClick: () => setPermanentDeleteTarget(product),

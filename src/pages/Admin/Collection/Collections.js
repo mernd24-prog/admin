@@ -294,14 +294,14 @@ export default function Collections() {
               onClick={load}
               className="admin-button-secondary"
             >
-              <MdRefresh /> Refresh
+              <MdRefresh aria-hidden="true" /> Refresh
             </button>
             <button
               type="button"
               onClick={beginCreate}
               className="admin-button-primary"
             >
-              <MdAdd /> New Collection
+              <MdAdd aria-hidden="true" /> New Collection
             </button>
           </div>
         }
@@ -321,186 +321,184 @@ export default function Collections() {
         rowKey={(row) => row?._id || row?.id || row?.slug}
         emptyText="No collections found"
       />
-     {open && (
-  <DefaultModal
-    isOpen={open}
-    onClose={() => {
-      setOpen(false);
-      setUploadingField(null);
-    }}
-    onSubmit={save}
-    title={editing ? "Edit Collection" : "New Collection"}
-    submitButtonText={saving ? "Saving..." : "Save Collection"}
-    closeButtonText="Cancel"
-    isButtonView={true}
-    width="650px"
-    loading={saving || Boolean(uploadingField)}
-  >
-    <div className="space-y-5">
-      {/* ==================== Basic Information ==================== */}
-      <FormSection
-        title="Basic Information"
-        description="Enter the basic details for this collection."
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Name */}
-          <FormInput
-            label="Name"
-            name="name"
-            value={form.name}
-            onChange={set("name")}
-            placeholder="Enter collection name"
-            required
-          />
+      {open && (
+        <DefaultModal
+          isOpen={open}
+          onClose={() => {
+            setOpen(false);
+            setUploadingField(null);
+          }}
+          onSubmit={save}
+          title={editing ? "Edit Collection" : "New Collection"}
+          submitButtonText={saving ? "Saving..." : "Save Collection"}
+          closeButtonText="Cancel"
+          isButtonView={true}
+          width="650px"
+          loading={saving || Boolean(uploadingField)}
+        >
+          <div className="space-y-5">
+            {/* ==================== Basic Information ==================== */}
+            <FormSection
+              title="Basic Information"
+              description="Enter the basic details for this collection."
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Name */}
+                <FormInput
+                  label="Name"
+                  name="name"
+                  value={form.name}
+                  onChange={set("name")}
+                  placeholder="Enter collection name"
+                  required
+                />
 
-          {/* Slug */}
-          <FormInput
-            label="Slug"
-            name="slug"
-            value={form.slug}
-            onChange={set("slug")}
-            placeholder="generated-from-name"
-          />
+                {/* Slug */}
+                <FormInput
+                  label="Slug"
+                  name="slug"
+                  value={form.slug}
+                  onChange={set("slug")}
+                  placeholder="generated-from-name"
+                />
 
-          {/* Type */}
-          <FormInput
-            label="Type"
-            name="type"
-            value={form.type}
-            onChange={set("type")}
-            placeholder="seasonal, sale, custom"
-          />
+                {/* Type */}
+                <FormInput
+                  label="Type"
+                  name="type"
+                  value={form.type}
+                  onChange={set("type")}
+                  placeholder="seasonal, sale, custom"
+                />
 
-          {/* Sort Order */}
-          <FormInput
-            label="Sort Order"
-            name="sortOrder"
-            type="number"
-            min={0}
-            value={form.sortOrder}
-            onChange={set("sortOrder")}
-            placeholder="0"
-          />
+                {/* Sort Order */}
+                <FormInput
+                  label="Sort Order"
+                  name="sortOrder"
+                  type="number"
+                  min={0}
+                  value={form.sortOrder}
+                  onChange={set("sortOrder")}
+                  placeholder="0"
+                />
 
-          {/* Description */}
-          <div className="sm:col-span-2">
-            <FormInput
-              label="Description"
-              name="description"
-              type="textarea"
-              rows={4}
-              value={form.description}
-              onChange={set("description")}
-              placeholder="Enter collection description"
-            />
+                {/* Description */}
+                <div className="sm:col-span-2">
+                  <FormInput
+                    label="Description"
+                    name="description"
+                    type="textarea"
+                    rows={4}
+                    value={form.description}
+                    onChange={set("description")}
+                    placeholder="Enter collection description"
+                  />
+                </div>
+              </div>
+            </FormSection>
+
+            {/* ==================== Collection Image ==================== */}
+            <FormSection
+              title="Collection Image"
+              description="Upload an image to represent this collection."
+            >
+              <ImageUpload
+                id="collection-thumbnail-upload"
+                label=""
+                subtext="JPG, PNG, WEBP, or SVG up to 5MB"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/svg+xml"
+                file={form.thumbnailImage}
+                onChange={(file) => handleImageUpload(file, "thumbnailImage")}
+                onRemove={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    thumbnailImage: "",
+                  }))
+                }
+                isLoading={uploadingField === "thumbnailImage"}
+                loadingText="Uploading thumbnail..."
+                isDisabled={Boolean(uploadingField)}
+              />
+            </FormSection>
+
+            {/* ==================== Collection Configuration ==================== */}
+            <FormSection
+              title="Collection Configuration"
+              description="Configure categories, tags, and collection timing."
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Categories */}
+                <FormInput
+                  label="Category Keys"
+                  name="categoriesText"
+                  value={form.categoriesText}
+                  onChange={set("categoriesText")}
+                  placeholder="electronics, fashion"
+                />
+
+                {/* Tags */}
+                <FormInput
+                  label="Tags"
+                  name="tagsText"
+                  value={form.tagsText}
+                  onChange={set("tagsText")}
+                  placeholder="Summer, Trending"
+                />
+
+                {/* Start Date */}
+                <FormInput
+                  label="Starts At"
+                  name="startsAt"
+                  type="date"
+                  value={form.startsAt}
+                  onChange={set("startsAt")}
+                />
+
+                {/* End Date */}
+                <FormInput
+                  label="Ends At"
+                  name="endsAt"
+                  type="date"
+                  value={form.endsAt}
+                  onChange={set("endsAt")}
+                />
+              </div>
+            </FormSection>
+
+            {/* ==================== Visibility Settings ==================== */}
+            <FormSection
+              title="Visibility Settings"
+              description="Control how this collection appears to customers."
+            >
+              <div className="space-y-3">
+                <FormToggleRow
+                  title="Featured on Customer Home"
+                  description="Show this collection on the customer home page."
+                  isToggle={form.featured}
+                  handleClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      featured: !prev.featured,
+                    }))
+                  }
+                />
+
+                <FormToggleRow
+                  title="Active"
+                  description="Make this collection available to customers."
+                  isToggle={form.active}
+                  handleClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      active: !prev.active,
+                    }))
+                  }
+                />
+              </div>
+            </FormSection>
           </div>
-        </div>
-      </FormSection>
-
-      {/* ==================== Collection Image ==================== */}
-      <FormSection
-        title="Collection Image"
-        description="Upload an image to represent this collection."
-      >
-        <ImageUpload
-          id="collection-thumbnail-upload"
-          label="Thumbnail Image"
-          subtext="JPG, PNG, WEBP, or SVG up to 5MB"
-          accept="image/jpeg,image/jpg,image/png,image/webp,image/svg+xml"
-          file={form.thumbnailImage}
-          onChange={(file) =>
-            handleImageUpload(file, "thumbnailImage")
-          }
-          onRemove={() =>
-            setForm((prev) => ({
-              ...prev,
-              thumbnailImage: "",
-            }))
-          }
-          isLoading={uploadingField === "thumbnailImage"}
-          loadingText="Uploading thumbnail..."
-          isDisabled={Boolean(uploadingField)}
-        />
-      </FormSection>
-
-      {/* ==================== Collection Configuration ==================== */}
-      <FormSection
-        title="Collection Configuration"
-        description="Configure categories, tags, and collection timing."
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Categories */}
-          <FormInput
-            label="Category Keys"
-            name="categoriesText"
-            value={form.categoriesText}
-            onChange={set("categoriesText")}
-            placeholder="electronics, fashion"
-          />
-
-          {/* Tags */}
-          <FormInput
-            label="Tags"
-            name="tagsText"
-            value={form.tagsText}
-            onChange={set("tagsText")}
-            placeholder="Summer, Trending"
-          />
-
-          {/* Start Date */}
-          <FormInput
-            label="Starts At"
-            name="startsAt"
-            type="date"
-            value={form.startsAt}
-            onChange={set("startsAt")}
-          />
-
-          {/* End Date */}
-          <FormInput
-            label="Ends At"
-            name="endsAt"
-            type="date"
-            value={form.endsAt}
-            onChange={set("endsAt")}
-          />
-        </div>
-      </FormSection>
-
-      {/* ==================== Visibility Settings ==================== */}
-      <FormSection
-        title="Visibility Settings"
-        description="Control how this collection appears to customers."
-      >
-        <div className="space-y-3">
-          <FormToggleRow
-            title="Featured on Customer Home"
-            description="Show this collection on the customer home page."
-            isToggle={form.featured}
-            handleClick={() =>
-              setForm((prev) => ({
-                ...prev,
-                featured: !prev.featured,
-              }))
-            }
-          />
-
-          <FormToggleRow
-            title="Active"
-            description="Make this collection available to customers."
-            isToggle={form.active}
-            handleClick={() =>
-              setForm((prev) => ({
-                ...prev,
-                active: !prev.active,
-              }))
-            }
-          />
-        </div>
-      </FormSection>
-    </div>
-  </DefaultModal>
-)}
+        </DefaultModal>
+      )}
       <ConfirmModal
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}

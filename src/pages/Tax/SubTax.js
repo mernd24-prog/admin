@@ -231,27 +231,33 @@ const SubTax = () => {
     (row) => [
       {
         label: "Edit",
-        icon: <MdEdit size={16} className="text-blue-600" />,
+        icon: <MdEdit aria-hidden="true" size={16} className="text-blue-600" />,
         onClick: () => {
-          formik.resetForm({ values: {
-            _id: row._id,
-            name: row.name || "",
-            percentage: row.percentage ?? "",
-            taxId:
-              typeof row.taxId === "object"
-                ? row.taxId?._id
-                : row.taxId || id || "",
-            isDisable: row.isDisable || false,
-          } });
+          formik.resetForm({
+            values: {
+              _id: row._id,
+              name: row.name || "",
+              percentage: row.percentage ?? "",
+              taxId:
+                typeof row.taxId === "object"
+                  ? row.taxId?._id
+                  : row.taxId || id || "",
+              isDisable: row.isDisable || false,
+            },
+          });
           setModalMode("edit");
         },
       },
       {
         label: row.isDisable ? "Enable" : "Disable",
         icon: row.isDisable ? (
-          <MdCheckCircle size={16} className="text-green-600" />
+          <MdCheckCircle
+            aria-hidden="true"
+            size={16}
+            className="text-green-600"
+          />
         ) : (
-          <MdBlock size={16} className="text-amber-600" />
+          <MdBlock aria-hidden="true" size={16} className="text-amber-600" />
         ),
         onClick: () => {
           setToggleTarget(row);
@@ -261,7 +267,9 @@ const SubTax = () => {
       },
       {
         label: "Delete",
-        icon: <MdDelete size={16} className="text-red-600" />,
+        icon: (
+          <MdDelete aria-hidden="true" size={16} className="text-red-600" />
+        ),
         onClick: () => {
           setDeleteTarget(row);
           setDeleteOpen(true);
@@ -292,7 +300,7 @@ const SubTax = () => {
                 setModalMode("add");
               }}
             >
-              <MdAdd size={16} /> Add Sub-Tax
+              <MdAdd aria-hidden="true" size={16} /> Add Sub-Tax
             </button>
           </PermissionGuard>
         }
@@ -314,7 +322,9 @@ const SubTax = () => {
         rowActions={rowActions}
         searchPlaceholder="Search sub-taxes…"
         emptyText="No sub-taxes found."
-        emptyIcon={<MdPercent size={40} className="text-gray-200" />}
+        emptyIcon={
+          <MdPercent aria-hidden="true" size={40} className="text-gray-200" />
+        }
         requiredModule="tax"
         filterBar={
           <FilterBar
@@ -423,10 +433,7 @@ const SubTax = () => {
               description="Enable this sub-tax for applicable tax calculations."
               isToggle={!formik.values.isDisable}
               handleClick={() =>
-                formik.setFieldValue(
-                  "isDisable",
-                  !formik.values.isDisable,
-                )
+                formik.setFieldValue("isDisable", !formik.values.isDisable)
               }
             />
           </FormSection>

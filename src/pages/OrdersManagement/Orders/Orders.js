@@ -1912,7 +1912,7 @@ const Orders = () => {
             disabled={loading || !displayItems.length}
             className="inline-flex items-center gap-2 rounded-md bg-[#CE9F2D] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#b88d25] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <MdFileDownload size={17} />
+            <MdFileDownload aria-hidden="true" size={17} />
             Export Report
           </button>
         }
@@ -1938,7 +1938,13 @@ const Orders = () => {
             : "Search by order number…"
         }
         emptyText="No orders found."
-        emptyIcon={<MdShoppingCart size={40} className="text-gray-200" />}
+        emptyIcon={
+          <MdShoppingCart
+            aria-hidden="true"
+            size={40}
+            className="text-gray-200"
+          />
+        }
         requiredModule="orders"
         filterBar={
           <FilterBar
@@ -1959,7 +1965,13 @@ const Orders = () => {
             {
               label: "View Details",
 
-              icon: <MdVisibility size={16} className="text-blue-600" />,
+              icon: (
+                <MdVisibility
+                  aria-hidden="true"
+                  size={16}
+                  className="text-blue-600"
+                />
+              ),
 
               requiredModule: "orders",
 
@@ -1973,7 +1985,13 @@ const Orders = () => {
             actions.push({
               label: "Manage Payout",
 
-              icon: <MdPayments size={16} className="text-green-600" />,
+              icon: (
+                <MdPayments
+                  aria-hidden="true"
+                  size={16}
+                  className="text-green-600"
+                />
+              ),
 
               requiredModule: "sellers/commissions",
 

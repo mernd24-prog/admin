@@ -472,7 +472,13 @@ const TaxInvoices = () => {
           return [
             {
               label: "View",
-              icon: <MdVisibility size={16} className="text-blue-600" />,
+              icon: (
+                <MdVisibility
+                  aria-hidden="true"
+                  size={16}
+                  className="text-blue-600"
+                />
+              ),
               onClick: () => {
                 if (!invoiceId) {
                   toast.error("Invoice ID is missing");
@@ -487,7 +493,13 @@ const TaxInvoices = () => {
 
             {
               label: "Download PDF",
-              icon: <MdDownload size={16} className="text-gray-600" />,
+              icon: (
+                <MdDownload
+                  aria-hidden="true"
+                  size={16}
+                  className="text-gray-600"
+                />
+              ),
               disabled: downloadingId === invoiceId,
               onClick: () => downloadInvoice(row),
             },

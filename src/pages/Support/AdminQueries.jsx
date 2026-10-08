@@ -436,21 +436,26 @@ const AdminQueries = () => {
         rowActions={(row) => [
           {
             label: "View",
-            icon: <MdVisibility />,
+            icon: <MdVisibility aria-hidden="true" />,
             onClick: () => openQuery(row),
           },
           ...(row.status !== "resolved"
             ? [
                 {
                   label: "Mark as Resolved",
-                  icon: <MdCheckCircle className="text-green-600" />,
+                  icon: (
+                    <MdCheckCircle
+                      aria-hidden="true"
+                      className="text-green-600"
+                    />
+                  ),
                   onClick: () => markResolved(row),
                 },
               ]
             : []),
           {
             label: "Delete Query",
-            icon: <MdDelete className="text-red-600" />,
+            icon: <MdDelete aria-hidden="true" className="text-red-600" />,
             danger: true,
             onClick: () => setDeleteTarget(row),
           },

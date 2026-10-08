@@ -18,7 +18,7 @@ import FormSelectGroup from "../../../../components/Atoms/FormSelectGroup/FormSe
 
 const CATEGORY_IMAGE_ACCEPT =
   "image/jpeg,image/jpg,image/png,image/webp,image/svg+xml";
-const CATEGORY_IMAGE_HELPER_TEXT = "Supports: JPEG, PNG, WEBP, SVG";
+const CATEGORY_IMAGE_HELPER_TEXT = "JPG, JPEG, PNG, WEBP, SVG";
 
 const CategorySetup = ({
   isOpen,
@@ -227,7 +227,7 @@ const CategorySetup = ({
                   <ImageUpload
                     id="category-icon"
                     label="Icon"
-                    subtext="Recommended: PNG or WEBP"
+                    subtext=""
                     file={formData?.iconUrl}
                     onChange={(file) => handleImageChange(file, "iconUrl")}
                     accept={CATEGORY_IMAGE_ACCEPT}
@@ -247,7 +247,7 @@ const CategorySetup = ({
                   <ImageUpload
                     id="category-banner"
                     label="Banner Image"
-                    subtext="Recommended: JPG, PNG or WEBP"
+                    subtext=""
                     file={formData?.bannerUrl}
                     onChange={(file) => handleImageChange(file, "bannerUrl")}
                     accept={CATEGORY_IMAGE_ACCEPT}

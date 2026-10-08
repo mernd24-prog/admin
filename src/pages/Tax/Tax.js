@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import {
   MdAccountBalance,
   MdAdd,
-  MdList,
   MdEdit,
   MdDelete,
   MdCheckCircle,
@@ -136,8 +135,7 @@ const Tax = () => {
           return;
         }
         toast.success(
-          res?.message ||
-            `Tax ${modalMode === "edit" ? "updated" : "created"}`,
+          res?.message || `Tax ${modalMode === "edit" ? "updated" : "created"}`,
         );
         closeModal();
         setIsRefresh((r) => !r);
@@ -215,26 +213,34 @@ const Tax = () => {
       return [
         {
           label: "Edit",
-          icon: <MdEdit size={16} className="text-blue-600" />,
+          icon: (
+            <MdEdit aria-hidden="true" size={16} className="text-blue-600" />
+          ),
           onClick: () => {
-            formik.resetForm({ values: {
-              _id: row._id,
-              name: row.name
-                ? row.name.charAt(0).toUpperCase() +
-                  row.name.slice(1).toLowerCase()
-                : "",
-              country_code: row.countryId?._id || row.country_code?._id || "",
-              isDisable: !active,
-            } });
+            formik.resetForm({
+              values: {
+                _id: row._id,
+                name: row.name
+                  ? row.name.charAt(0).toUpperCase() +
+                    row.name.slice(1).toLowerCase()
+                  : "",
+                country_code: row.countryId?._id || row.country_code?._id || "",
+                isDisable: !active,
+              },
+            });
             setModalMode("edit");
           },
         },
         {
           label: active ? "Disable" : "Enable",
           icon: active ? (
-            <MdBlock size={16} className="text-amber-600" />
+            <MdBlock aria-hidden="true" size={16} className="text-amber-600" />
           ) : (
-            <MdCheckCircle size={16} className="text-green-600" />
+            <MdCheckCircle
+              aria-hidden="true"
+              size={16}
+              className="text-green-600"
+            />
           ),
           onClick: () => {
             setToggleTarget(row);
@@ -244,7 +250,9 @@ const Tax = () => {
         },
         {
           label: "Delete",
-          icon: <MdDelete size={16} className="text-red-600" />,
+          icon: (
+            <MdDelete aria-hidden="true" size={16} className="text-red-600" />
+          ),
           onClick: () => {
             setDeleteTarget(row);
             setDeleteOpen(true);
@@ -270,7 +278,7 @@ const Tax = () => {
                 setModalMode("add");
               }}
             >
-              <MdAdd size={16} /> Add Tax
+              <MdAdd aria-hidden="true" size={16} /> Add Tax
             </button>
           </PermissionGuard>
         }
@@ -292,7 +300,13 @@ const Tax = () => {
         rowActions={rowActions}
         searchPlaceholder="Search taxes…"
         emptyText="No tax records found."
-        emptyIcon={<MdAccountBalance size={40} className="text-gray-200" />}
+        emptyIcon={
+          <MdAccountBalance
+            aria-hidden="true"
+            size={40}
+            className="text-gray-200"
+          />
+        }
         requiredModule="tax"
         filterBar={
           <FilterBar
@@ -378,10 +392,7 @@ const Tax = () => {
               description="Enable this tax for applicable tax calculations."
               isToggle={!formik.values.isDisable}
               handleClick={() =>
-                formik.setFieldValue(
-                  "isDisable",
-                  !formik.values.isDisable,
-                )
+                formik.setFieldValue("isDisable", !formik.values.isDisable)
               }
             />
           </FormSection>

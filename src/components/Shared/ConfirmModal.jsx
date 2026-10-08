@@ -147,7 +147,7 @@ const ConfirmModal = ({
             disabled:opacity-50
           "
         >
-          <RxCross2 size={18} />
+          <RxCross2 aria-hidden="true" size={18} />
         </button>
 
         {/* Content */}
@@ -168,7 +168,7 @@ const ConfirmModal = ({
                 ${ring}
               `}
             >
-              <Icon size={24} className={color} />
+              <Icon aria-hidden="true" size={24} className={color} />
             </div>
 
             <div className="min-w-0 pt-0.5">

@@ -23,7 +23,6 @@ import {
   MdCurrencyRupee,
   MdFileDownload,
   MdFilterList,
-  MdInbox,
   MdInventory,
   MdLocalShipping,
   MdPayments,
@@ -32,9 +31,6 @@ import {
   MdStorefront,
   MdTrendingUp,
   MdWarehouse,
-  MdClose,
-  MdChevronLeft,
-  MdChevronRight,
 } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -680,7 +676,7 @@ export const ReportShell = ({
               title={stat.label}
               value={stat.value}
               description={stat.sub}
-              icon={<Icon size={18} />}
+              icon={<Icon aria-hidden="true" size={18} />}
               loading={loading}
             />
           );

@@ -361,13 +361,9 @@ function GoldDropdown({
 export default function Dashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [range, setRange] = useState("last_week");
-  const [dateFilters, setDateFilters] = useState(() =>
-    getRangeDates("last_week"),
-  );
-  const [customDates, setCustomDates] = useState(() =>
-    getRangeDates("last_week"),
-  );
+  const [range, setRange] = useState("year");
+  const [dateFilters, setDateFilters] = useState(() => getRangeDates("year"));
+  const [customDates, setCustomDates] = useState(() => getRangeDates("year"));
   const [customCalendarViewDate, setCustomCalendarViewDate] = useState(
     () => new Date(),
   );
@@ -1382,7 +1378,7 @@ export default function Dashboard() {
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-slate-400">
                 <img
                   src="/Img/noData.png"
-                  alt=""
+                  alt="No Data Found"
                   className="h-28 w-28 object-contain"
                 />
 

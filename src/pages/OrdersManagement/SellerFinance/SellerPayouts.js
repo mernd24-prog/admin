@@ -428,7 +428,7 @@ const SellerPayouts = () => {
             title="Actions"
             aria-label="Actions"
           >
-            <MdMoreVert size={20} />
+            <MdMoreVert aria-hidden="true" size={20} />
           </button>
 
           {openActionId === rowId && (
@@ -441,7 +441,11 @@ const SellerPayouts = () => {
                 onClick={() => handleView(row)}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-gray-50"
               >
-                <MdVisibility size={17} className="text-blue-600" />
+                <MdVisibility
+                  aria-hidden="true"
+                  size={17}
+                  className="text-blue-600"
+                />
                 <span>View</span>
               </button>
             </div>
@@ -993,7 +997,7 @@ const SellerPayouts = () => {
               disabled={!payload.list?.length}
               className="disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <MdDownload size={16} />
+              <MdDownload aria-hidden="true" size={16} />
               Export
             </button>
           </div>
@@ -1030,7 +1034,7 @@ const SellerPayouts = () => {
                   ),
             )}
             description="Successfully transferred."
-            icon={<MdCheckCircle size={18} />}
+            icon={<MdCheckCircle aria-hidden="true" size={18} />}
             iconBg="#cce8c9"
             iconColor="#1d9b50"
           />
@@ -1050,7 +1054,7 @@ const SellerPayouts = () => {
                   ),
             )}
             description="Currently being transferred."
-            icon={<MdSync size={18} />}
+            icon={<MdSync aria-hidden="true" size={18} />}
             iconBg="#e0e7ff"
             iconColor="#4338ca"
           />
@@ -1068,7 +1072,7 @@ const SellerPayouts = () => {
                   ),
             )}
             description="Transfers that did not complete."
-            icon={<MdErrorOutline size={18} />}
+            icon={<MdErrorOutline aria-hidden="true" size={18} />}
             iconBg="#ffd4d2"
             iconColor="#ff4b55"
           />
@@ -1134,7 +1138,7 @@ const SellerPayouts = () => {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] px-5 py-4">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)]">
-                <MdReceiptLong size={18} />
+                <MdReceiptLong aria-hidden="true" size={18} />
               </span>
 
               <div>
@@ -1290,6 +1294,7 @@ const SellerPayouts = () => {
                     <td colSpan={8} className="px-5 py-10 text-center">
                       <div className="flex flex-col items-center gap-2 text-[var(--admin-muted)]">
                         <MdReceiptLong
+                          aria-hidden="true"
                           size={28}
                           className="text-[var(--admin-line-strong)]"
                         />

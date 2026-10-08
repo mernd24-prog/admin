@@ -116,7 +116,8 @@ export default function FinanceStatements() {
             className="admin-btn-secondary !px-2 !py-1"
             onClick={() => download(row)}
           >
-            <MdDownload /> {downloading === row.id ? "Preparing…" : "PDF"}
+            <MdDownload aria-hidden="true" />{" "}
+            {downloading === row.id ? "Preparing…" : "PDF"}
           </button>
         ),
       },
@@ -134,7 +135,7 @@ export default function FinanceStatements() {
         ]}
         actions={
           <button type="button" className="admin-btn-secondary" onClick={load}>
-            <MdRefresh /> Refresh
+            <MdRefresh aria-hidden="true" /> Refresh
           </button>
         }
       />

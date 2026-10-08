@@ -1,20 +1,8 @@
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  Link,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import {
-  useDispatch,
-  useSelector,
-} from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import {
   MdChevronRight,
@@ -43,13 +31,9 @@ import {
 import { CiSettings } from "react-icons/ci";
 import { RxCross2 } from "react-icons/rx";
 
-import {
-  getMyModulePermission,
-} from "../../Redux/userManagementSlice";
+import { getMyModulePermission } from "../../Redux/userManagementSlice";
 
-import {
-  getRbacSidebarModules,
-} from "../../Redux/adminCoreSlice";
+import { getRbacSidebarModules } from "../../Redux/adminCoreSlice";
 
 import {
   getAccessToken,
@@ -57,15 +41,11 @@ import {
   getStoredUser,
 } from "../../_helpers/authStorage";
 
-import {
-  isSellerPanel,
-} from "../../_helpers/panelConfig";
+import { isSellerPanel } from "../../_helpers/panelConfig";
 
 import BrandLogo from "../BrandLogo/BrandLogo";
 import NeedHelpCard from "../Shared/NeedHelpCard";
-import {
-  SidebarSkeletonLoader,
-} from "../Loader/SkeletonLoader";
+import { SidebarSkeletonLoader } from "../Loader/SkeletonLoader";
 
 // ─────────────────────────────────────────────────────────────
 // Section icon map
@@ -95,8 +75,7 @@ const SECTION_ICONS = {
 
 const getIconForTab = (tabName) => {
   return (
-    SECTION_ICONS[String(tabName || "").toLowerCase()] ||
-    MdOutlineDashboard
+    SECTION_ICONS[String(tabName || "").toLowerCase()] || MdOutlineDashboard
   );
 };
 
@@ -130,8 +109,7 @@ const ICON_BY_NAME = {
 
 const getSidebarIcon = (iconName, fallbackLabel) => {
   return (
-    ICON_BY_NAME[String(iconName || "").trim()] ||
-    getIconForTab(fallbackLabel)
+    ICON_BY_NAME[String(iconName || "").trim()] || getIconForTab(fallbackLabel)
   );
 };
 
@@ -159,9 +137,7 @@ const flattenSidebarChildren = (
     const currentName = item.moduleName || item.name;
 
     const label =
-      includeParent && prefix
-        ? `${prefix} / ${currentName}`
-        : currentName;
+      includeParent && prefix ? `${prefix} / ${currentName}` : currentName;
 
     const route = toRouteCode(item.routePath);
 
@@ -178,9 +154,7 @@ const flattenSidebarChildren = (
             label,
             module_code: route,
             module:
-              item.metadata?.requiredModule ||
-              item.moduleKey ||
-              item.slug,
+              item.metadata?.requiredModule || item.moduleKey || item.slug,
           },
         ]
       : [];
@@ -219,30 +193,22 @@ const mergeSidebarModuleTrees = (...sources) => {
       byKey.set(key, {
         ...existing,
         ...item,
-        children: mergeChildren(
-          existing.children || [],
-          item.children || [],
-        ),
+        children: mergeChildren(existing.children || [], item.children || []),
       });
     });
 
-  return Array.from(byKey.values()).sort(
-    (left, right) => {
-      return (
-        Number(left.order ?? left.sortOrder ?? 0) -
-          Number(right.order ?? right.sortOrder ?? 0) ||
-        String(left.moduleName || left.name || "").localeCompare(
-          String(right.moduleName || right.name || ""),
-        )
-      );
-    },
-  );
+  return Array.from(byKey.values()).sort((left, right) => {
+    return (
+      Number(left.order ?? left.sortOrder ?? 0) -
+        Number(right.order ?? right.sortOrder ?? 0) ||
+      String(left.moduleName || left.name || "").localeCompare(
+        String(right.moduleName || right.name || ""),
+      )
+    );
+  });
 };
 
-const buildDynamicSidebarData = (
-  modules = [],
-  options = {},
-) => {
+const buildDynamicSidebarData = (modules = [], options = {}) => {
   return modules
     .map((item) => {
       const subItems = flattenSidebarChildren(
@@ -253,16 +219,12 @@ const buildDynamicSidebarData = (
 
       const route = toRouteCode(item.routePath);
 
-      const isSingleItem =
-        Boolean(route) && subItems.length === 0;
+      const isSingleItem = Boolean(route) && subItems.length === 0;
 
       return {
         label: item.moduleName || item.name,
 
-        icon: getSidebarIcon(
-          item.icon,
-          item.moduleName || item.name,
-        ),
+        icon: getSidebarIcon(item.icon, item.moduleName || item.name),
 
         subItems: isSingleItem
           ? [
@@ -286,19 +248,11 @@ const buildDynamicSidebarData = (
 
 const getStoredSidebarState = () => {
   try {
-    const expandedState = sessionStorage.getItem(
-      "sidebarExpandedState",
-    );
+    const expandedState = sessionStorage.getItem("sidebarExpandedState");
 
-    const permanentState = sessionStorage.getItem(
-      "sidebarPermanentState",
-    );
+    const permanentState = sessionStorage.getItem("sidebarPermanentState");
 
-    return Boolean(
-      JSON.parse(
-        expandedState ?? permanentState ?? "false",
-      ),
-    );
+    return Boolean(JSON.parse(expandedState ?? permanentState ?? "false"));
   } catch {
     return false;
   }
@@ -306,9 +260,7 @@ const getStoredSidebarState = () => {
 
 const getSessionUser = () => {
   try {
-    return JSON.parse(
-      sessionStorage.getItem("EcomAdmin") || "null",
-    );
+    return JSON.parse(sessionStorage.getItem("EcomAdmin") || "null");
   } catch {
     return null;
   }
@@ -366,19 +318,16 @@ const Sidebar = ({
   const location = useLocation();
   const sidebarRef = useRef(null);
 
-  const adminCoreSelector = useSelector(
-    (state) => state.adminCore,
-  );
+  const adminCoreSelector = useSelector((state) => state.adminCore);
 
   const [userData, setUserData] = useState(null);
   const [activeTab, setActiveTab] = useState(null);
 
-  const [isPermanentlyOpen, setIsPermanentlyOpen] =
-    useState(getStoredSidebarState);
-
-  const [windowWidth, setWindowWidth] = useState(
-    window.innerWidth,
+  const [isPermanentlyOpen, setIsPermanentlyOpen] = useState(
+    getStoredSidebarState,
   );
+
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   const [heights, setHeights] = useState({});
   const [visibleSubItems, setVisibleSubItems] = useState({});
@@ -389,8 +338,7 @@ const Sidebar = ({
   // Sidebar API data
   // ───────────────────────────────────────────────────────────
 
-  const sidebarModulesData =
-    adminCoreSelector?.rbacSidebarModulesData;
+  const sidebarModulesData = adminCoreSelector?.rbacSidebarModulesData;
 
   // Only use loading states related to sidebar API
   const isSidebarLoading =
@@ -403,8 +351,7 @@ const Sidebar = ({
   // ───────────────────────────────────────────────────────────
 
   const dynamicSidebarModules = useMemo(() => {
-    const sidebarResponse =
-      adminCoreSelector?.rbacSidebarModulesData;
+    const sidebarResponse = adminCoreSelector?.rbacSidebarModulesData;
 
     const backendModules = firstArray(
       sidebarResponse?.data?.normalized?.data,
@@ -417,9 +364,7 @@ const Sidebar = ({
     );
 
     return mergeSidebarModuleTrees(backendModules);
-  }, [
-    adminCoreSelector?.rbacSidebarModulesData,
-  ]);
+  }, [adminCoreSelector?.rbacSidebarModulesData]);
 
   // ───────────────────────────────────────────────────────────
   // Build sidebar data
@@ -430,16 +375,10 @@ const Sidebar = ({
       return [];
     }
 
-    return buildDynamicSidebarData(
-      dynamicSidebarModules,
-      {
-        sellerPanel,
-      },
-    );
-  }, [
-    dynamicSidebarModules,
-    sellerPanel,
-  ]);
+    return buildDynamicSidebarData(dynamicSidebarModules, {
+      sellerPanel,
+    });
+  }, [dynamicSidebarModules, sellerPanel]);
 
   // ───────────────────────────────────────────────────────────
   // Get current user
@@ -452,26 +391,14 @@ const Sidebar = ({
 
     syncUser();
 
-    window.addEventListener(
-      "auth:changed",
-      syncUser,
-    );
+    window.addEventListener("auth:changed", syncUser);
 
-    window.addEventListener(
-      "focus",
-      syncUser,
-    );
+    window.addEventListener("focus", syncUser);
 
     return () => {
-      window.removeEventListener(
-        "auth:changed",
-        syncUser,
-      );
+      window.removeEventListener("auth:changed", syncUser);
 
-      window.removeEventListener(
-        "focus",
-        syncUser,
-      );
+      window.removeEventListener("focus", syncUser);
     };
   }, []);
 
@@ -480,10 +407,7 @@ const Sidebar = ({
   // ───────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (
-      getAccessToken() &&
-      (userData?.userId || userData?.role)
-    ) {
+    if (getAccessToken() && (userData?.userId || userData?.role)) {
       dispatch(
         getMyModulePermission({
           _id: userData.userId,
@@ -495,12 +419,7 @@ const Sidebar = ({
     if (getAccessToken()) {
       dispatch(getRbacSidebarModules());
     }
-  }, [
-    userData,
-    dispatch,
-    isRefreshConfig,
-    sellerPanel,
-  ]);
+  }, [userData, dispatch, isRefreshConfig, sellerPanel]);
 
   // ───────────────────────────────────────────────────────────
   // Window resize
@@ -511,16 +430,10 @@ const Sidebar = ({
       setWindowWidth(window.innerWidth);
     };
 
-    window.addEventListener(
-      "resize",
-      handleResize,
-    );
+    window.addEventListener("resize", handleResize);
 
     return () => {
-      window.removeEventListener(
-        "resize",
-        handleResize,
-      );
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
 
@@ -529,50 +442,34 @@ const Sidebar = ({
   // ───────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (
-      windowWidth < 1300 &&
-      !isPermanentlyOpen
-    ) {
+    if (windowWidth < 1300 && !isPermanentlyOpen) {
       setNavbarOpen(false);
     }
-  }, [
-    isPermanentlyOpen,
-    windowWidth,
-    setNavbarOpen,
-  ]);
+  }, [isPermanentlyOpen, windowWidth, setNavbarOpen]);
 
   useEffect(() => {
     setIsPermanentlyOpen(Boolean(isExpanded));
-  }, [
-    isExpanded,
-  ]);
+  }, [isExpanded]);
 
   // ───────────────────────────────────────────────────────────
   // Set active sidebar tab
   // ───────────────────────────────────────────────────────────
 
   useEffect(() => {
-    const currentRoute =
-      location.pathname.split("/")[2];
+    const currentRoute = location.pathname.split("/")[2];
 
     if (!currentRoute) {
       return;
     }
 
     const match = sidebarData.find((tab) =>
-      tab.subItems.some(
-        (item) =>
-          item.module_code === currentRoute,
-      ),
+      tab.subItems.some((item) => item.module_code === currentRoute),
     );
 
     if (match) {
       setActiveTab(match.label);
     }
-  }, [
-    location.pathname,
-    sidebarData,
-  ]);
+  }, [location.pathname, sidebarData]);
 
   // ───────────────────────────────────────────────────────────
   // Calculate submenu heights
@@ -583,15 +480,12 @@ const Sidebar = ({
 
     sidebarData.forEach((item) => {
       if (!item.isSingleItem) {
-        nextHeights[item.label] =
-          item.subItems.length * 64;
+        nextHeights[item.label] = item.subItems.length * 64;
       }
     });
 
     setHeights(nextHeights);
-  }, [
-    sidebarData,
-  ]);
+  }, [sidebarData]);
 
   // ───────────────────────────────────────────────────────────
   // Animate submenu items
@@ -608,32 +502,22 @@ const Sidebar = ({
     }));
 
     const count =
-      sidebarData.find(
-        (item) => item.label === activeTab,
-      )?.subItems.length || 0;
+      sidebarData.find((item) => item.label === activeTab)?.subItems.length ||
+      0;
 
-    const timeoutIds = Array.from(
-      { length: count },
-      (_, index) =>
-        setTimeout(() => {
-          setVisibleSubItems((previous) => ({
-            ...previous,
-            [activeTab]: Math.max(
-              previous[activeTab] || 0,
-              index + 1,
-            ),
-          }));
-        }, index * 80),
+    const timeoutIds = Array.from({ length: count }, (_, index) =>
+      setTimeout(() => {
+        setVisibleSubItems((previous) => ({
+          ...previous,
+          [activeTab]: Math.max(previous[activeTab] || 0, index + 1),
+        }));
+      }, index * 80),
     );
 
     return () => {
       timeoutIds.forEach(clearTimeout);
     };
-  }, [
-    activeTab,
-    isExpanded,
-    sidebarData,
-  ]);
+  }, [activeTab, isExpanded, sidebarData]);
 
   // ───────────────────────────────────────────────────────────
   // Handlers
@@ -666,13 +550,9 @@ const Sidebar = ({
   };
 
   const handleNeedHelpClick = () => {
-    const supportRoute = sellerPanel
-      ? "/app/help-support"
-      : "/app/queries";
+    const supportRoute = sellerPanel ? "/app/help-support" : "/app/queries";
 
-    const supportKey = sellerPanel
-      ? "help-support"
-      : "queries";
+    const supportKey = sellerPanel ? "help-support" : "queries";
 
     navigate(supportRoute);
     handleNavClick(supportKey);
@@ -694,17 +574,13 @@ const Sidebar = ({
     <div
       ref={sidebarRef}
       className={`fixed lg:static inset-y-0 bg-[#FCF5E8] ${sidebarWidth} h-full z-[9999] xl:flex flex-col transition-[width,max-width,transform] duration-300 ease-in-out ${
-        navbarOpen
-          ? "flex"
-          : "hidden lg:flex"
+        navbarOpen ? "flex" : "hidden lg:flex"
       }`}
     >
       {/* Logo / toggle */}
       <div
         className={`sticky top-0 z-10 flex w-full items-start justify-center bg-[var(--admin-shell)] px-4 pt-3 ${
-          isExpanded
-            ? "h-[120px]"
-            : "h-[70px]"
+          isExpanded ? "h-[120px]" : "h-[70px]"
         } sm:pt-4`}
       >
         {isExpanded ? (
@@ -727,18 +603,12 @@ const Sidebar = ({
               setIsPermanentlyOpen(true);
               setHasPermanentOpen(true);
 
-              sessionStorage.setItem(
-                "sidebarExpandedState",
-                "true",
-              );
+              sessionStorage.setItem("sidebarExpandedState", "true");
 
-              sessionStorage.setItem(
-                "sidebarPermanentState",
-                "true",
-              );
+              sessionStorage.setItem("sidebarPermanentState", "true");
             }}
           >
-            <MdChevronRight size={20} />
+            <MdChevronRight size={20} aria-hidden="true" />
           </button>
         )}
 
@@ -753,95 +623,69 @@ const Sidebar = ({
               setHasPermanentOpen(false);
             }}
           >
-            <RxCross2 size={22} />
+            <RxCross2 size={22} aria-hidden="true" />
           </button>
         )}
       </div>
 
       {/* Navigation */}
       {isSidebarLoading ? (
-        <SidebarSkeletonLoader
-          isExpanded={isExpanded}
-        />
+        <SidebarSkeletonLoader isExpanded={isExpanded} />
       ) : (
         <div className="flex-1 overflow-y-auto sidebar-scrollbar">
           <nav
             className={`w-full bg-[var(--admin-shell)] ${
-              isExpanded
-                ? "px-3 pb-4"
-                : "p-2"
+              isExpanded ? "px-3 pb-4" : "p-2"
             } overflow-visible`}
           >
             <ul>
               {sidebarData.map((item, index) => {
                 const Icon = item.icon;
-                const isTabActive =
-                  activeTab === item.label;
+                const isTabActive = activeTab === item.label;
 
-                const hasActiveChild =
-                  item.subItems.some((subItem) => {
-                    const path =
-                      `/app/${subItem.module_code}`;
+                const hasActiveChild = item.subItems.some((subItem) => {
+                  const path = `/app/${subItem.module_code}`;
 
-                    return (
-                      location.pathname === path ||
-                      location.pathname.startsWith(
-                        `${path}/`,
-                      )
-                    );
-                  });
+                  return (
+                    location.pathname === path ||
+                    location.pathname.startsWith(`${path}/`)
+                  );
+                });
 
                 // Single menu item
                 if (item.isSingleItem) {
                   const sub = item.subItems[0];
-                  const path =
-                    `/app/${sub.module_code}`;
+                  const path = `/app/${sub.module_code}`;
 
                   const isActive =
                     location.pathname === path ||
-                    location.pathname.startsWith(
-                      `${path}/`,
-                    );
+                    location.pathname.startsWith(`${path}/`);
 
                   return (
                     <li
                       key={index}
                       className={`flex flex-col py-[4px] text-[13px] ${
-                        isExpanded
-                          ? ""
-                          : "items-center"
+                        isExpanded ? "" : "items-center"
                       }`}
                     >
                       <Link
                         className={`relative flex items-center ${
-                          isExpanded
-                            ? "gap-2.5"
-                            : "justify-center"
+                          isExpanded ? "gap-2.5" : "justify-center"
                         } overflow-hidden rounded-[6px] px-2.5 py-2 outline-none transition-colors duration-200 ${
                           isActive
                             ? "bg-[var(--admin-navy)] text-white shadow-[0_6px_14px_rgba(31,27,95,0.16)] before:absolute before:left-0 before:top-1/2 before:h-[22px] before:w-[4px] before:-translate-y-1/2 before:rounded-r before:bg-[var(--admin-gold)]"
                             : "text-[var(--admin-ink)] hover:bg-white hover:text-[var(--admin-navy)]"
                         }`}
                         to={`/app/${sub.module_code}`}
-                        onClick={() =>
-                          handleNavClick(
-                            sub.module_code,
-                          )
-                        }
-                        title={
-                          !isExpanded
-                            ? item.label
-                            : ""
-                        }
+                        onClick={() => handleNavClick(sub.module_code)}
+                        title={!isExpanded ? item.label : ""}
                       >
                         <span
                           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${
-                            isActive
-                              ? "text-white"
-                              : "text-[var(--admin-blue)]"
+                            isActive ? "text-white" : "text-[var(--admin-blue)]"
                           }`}
                         >
-                          <Icon size={15} />
+                          <Icon size={15} aria-hidden="true" />
                         </span>
 
                         {isExpanded && (
@@ -859,16 +703,12 @@ const Sidebar = ({
                   <li
                     key={index}
                     className={`flex flex-col py-[4px] text-[13px] ${
-                      isExpanded
-                        ? ""
-                        : "items-center"
+                      isExpanded ? "" : "items-center"
                     }`}
                   >
                     <div
                       className={`relative flex w-full min-w-0 items-center ${
-                        isExpanded
-                          ? "gap-2.5"
-                          : "justify-center"
+                        isExpanded ? "gap-2.5" : "justify-center"
                       } cursor-pointer overflow-hidden rounded-[6px] px-2.5 py-2 transition-colors duration-200 ${
                         hasActiveChild
                           ? "bg-[var(--admin-navy)] text-white shadow-[0_6px_14px_rgba(31,27,95,0.16)] before:absolute before:left-0 before:top-1/2 before:h-[22px] before:w-[4px] before:-translate-y-1/2 before:rounded-r before:bg-[var(--admin-gold)]"
@@ -894,11 +734,7 @@ const Sidebar = ({
 
                         toggleTab(item.label);
                       }}
-                      title={
-                        !isExpanded
-                          ? item.label
-                          : ""
-                      }
+                      title={!isExpanded ? item.label : ""}
                     >
                       <span
                         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${
@@ -907,7 +743,7 @@ const Sidebar = ({
                             : "text-[var(--admin-blue)]"
                         }`}
                       >
-                        <Icon size={18} />
+                        <Icon size={18} aria-hidden="true" />
                       </span>
 
                       {isExpanded && (
@@ -917,15 +753,12 @@ const Sidebar = ({
                           </span>
 
                           <MdChevronRight
+                            aria-hidden="true"
                             className={`ml-auto transition-transform duration-200 ${
                               hasActiveChild
                                 ? "text-white/80"
                                 : "text-[var(--admin-muted)]"
-                            } ${
-                              isTabActive
-                                ? "rotate-90"
-                                : ""
-                            }`}
+                            } ${isTabActive ? "rotate-90" : ""}`}
                           />
                         </>
                       )}
@@ -940,87 +773,69 @@ const Sidebar = ({
                             ? `${heights[item.label] || 0}px`
                             : "0px",
 
-                        opacity:
-                          isTabActive && isExpanded
-                            ? 1
-                            : 0,
+                        opacity: isTabActive && isExpanded ? 1 : 0,
 
                         transform: `translateY(${
-                          isTabActive && isExpanded
-                            ? "0"
-                            : "-10px"
+                          isTabActive && isExpanded ? "0" : "-10px"
                         })`,
                       }}
                     >
                       {isExpanded && (
                         <ul className="mt-1 ml-7 space-y-1.5 pr-1">
-                          {item.subItems.map(
-                            (sub, subIndex) => {
-                              const path =
-                                `/app/${sub.module_code}`;
+                          {item.subItems.map((sub, subIndex) => {
+                            const path = `/app/${sub.module_code}`;
 
-                              const isSubActive =
-                                location.pathname === path ||
-                                location.pathname.startsWith(
-                                  `${path}/`,
-                                );
+                            const isSubActive =
+                              location.pathname === path ||
+                              location.pathname.startsWith(`${path}/`);
 
-                              const isVisible =
-                                (visibleSubItems[
-                                  item.label
-                                ] || 0) > subIndex;
+                            const isVisible =
+                              (visibleSubItems[item.label] || 0) > subIndex;
 
-                              return (
-                                <li
-                                  key={subIndex}
-                                  className="flex items-start gap-2"
-                                  style={{
-                                    opacity: isVisible
-                                      ? 1
-                                      : 0,
+                            return (
+                              <li
+                                key={subIndex}
+                                className="flex items-start gap-2"
+                                style={{
+                                  opacity: isVisible ? 1 : 0,
 
-                                    transform: `translateY(${
-                                      isVisible
-                                        ? "0"
-                                        : "-10px"
-                                    })`,
+                                  transform: `translateY(${
+                                    isVisible ? "0" : "-10px"
+                                  })`,
 
-                                    transition: `opacity 200ms ease-out ${
-                                      subIndex * 80
-                                    }ms, transform 200ms ease-out ${
-                                      subIndex * 80
-                                    }ms`,
-                                  }}
+                                  transition: `opacity 200ms ease-out ${
+                                    subIndex * 80
+                                  }ms, transform 200ms ease-out ${
+                                    subIndex * 80
+                                  }ms`,
+                                }}
+                              >
+                                <Link
+                                  className={`flex w-full items-start gap-2 rounded-[6px] px-2.5 py-2 text-sm leading-5 outline-none transition-all duration-200 ${
+                                    isSubActive
+                                      ? "bg-white font-semibold text-[var(--admin-navy)] shadow-[0_1px_6px_rgba(31,27,95,0.07)]"
+                                      : "text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-navy)]"
+                                  }`}
+                                  to={`/app/${sub.module_code}`}
+                                  onClick={() =>
+                                    handleNavClick(sub.module_code)
+                                  }
                                 >
-                                  <Link
-                                    className={`flex w-full items-start gap-2 rounded-[6px] px-2.5 py-2 text-sm leading-5 outline-none transition-all duration-200 ${
+                                  <span
+                                    className={`mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full ${
                                       isSubActive
-                                        ? "bg-white font-semibold text-[var(--admin-navy)] shadow-[0_1px_6px_rgba(31,27,95,0.07)]"
-                                        : "text-[var(--admin-muted)] hover:bg-white hover:text-[var(--admin-navy)]"
+                                        ? "bg-[var(--admin-gold)]"
+                                        : "bg-[var(--admin-line-strong)]"
                                     }`}
-                                    to={`/app/${sub.module_code}`}
-                                    onClick={() =>
-                                      handleNavClick(
-                                        sub.module_code,
-                                      )
-                                    }
-                                  >
-                                    <span
-                                      className={`mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full ${
-                                        isSubActive
-                                          ? "bg-[var(--admin-gold)]"
-                                          : "bg-[var(--admin-line-strong)]"
-                                      }`}
-                                    />
+                                  />
 
-                                    <span className="min-w-0 whitespace-normal break-words text-[13px] capitalize leading-5">
-                                      {sub.label}
-                                    </span>
-                                  </Link>
-                                </li>
-                              );
-                            },
-                          )}
+                                  <span className="min-w-0 whitespace-normal break-words text-[13px] capitalize leading-5">
+                                    {sub.label}
+                                  </span>
+                                </Link>
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                     </div>
@@ -1053,7 +868,7 @@ const Sidebar = ({
             aria-label="Need Help?"
             className="flex h-10 w-10 items-center justify-center rounded-[6px] text-[var(--admin-blue)] transition-colors duration-200 hover:bg-white hover:text-[var(--admin-navy)]"
           >
-            <MdSupportAgent size={19} />
+            <MdSupportAgent aria-hidden="true" size={19} />
           </button>
         </div>
       )}

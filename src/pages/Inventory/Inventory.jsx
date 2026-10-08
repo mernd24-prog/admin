@@ -500,7 +500,7 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
                       : "bg-[var(--admin-soft)] text-[var(--admin-muted)] hover:bg-[var(--admin-blue)]/10 hover:text-[var(--admin-blue)]"
                   }`}
                 >
-                  <Icon size={15} />
+                  <Icon aria-hidden="true" size={15} />
                   <span>{label}</span>
                 </button>
               );
@@ -1570,7 +1570,7 @@ const Inventory = () => {
         onClick={handleExport}
         disabled={loading || importing}
       >
-        <MdFileDownload size={17} /> Export Excel
+        <MdFileDownload aria-hidden="true" size={17} /> Export Excel
       </button>
       <button
         type="button"
@@ -1578,7 +1578,8 @@ const Inventory = () => {
         onClick={() => fileInputRef.current?.click()}
         disabled={loading || importing}
       >
-        <MdFileUpload size={17} /> {importing ? "Processing…" : "Import Excel"}
+        <MdFileUpload aria-hidden="true" size={17} />{" "}
+        {importing ? "Processing…" : "Import Excel"}
       </button>
       <input
         ref={fileInputRef}
@@ -1636,6 +1637,7 @@ const Inventory = () => {
                 disabled={loading}
               >
                 <MdRefresh
+                  aria-hidden="true"
                   size={17}
                   className={loading ? "animate-spin" : ""}
                 />
@@ -1695,8 +1697,8 @@ const Inventory = () => {
             data={filteredDetailRows}
             loading={loading}
             error={error}
-            totalCount={filteredDetailRows.length}
-            listPage={detailList}
+            // totalCount={filteredDetailRows.length}
+            // listPage={detailList}
             rowKey="id"
             onSearch={(value) => {
               setVariantSearch(value);
@@ -1720,7 +1722,7 @@ const Inventory = () => {
             rowActions={(row) => [
               {
                 label: "Adjust Inventory",
-                icon: <MdInventory2 />,
+                icon: <MdInventory2 aria-hidden="true" />,
                 onClick: () => setAdjustTarget(row),
               },
             ]}
@@ -1825,7 +1827,7 @@ const Inventory = () => {
           return [
             {
               label: "View Product Inventory",
-              icon: <MdOpenInNew />,
+              icon: <MdOpenInNew aria-hidden="true" />,
               onClick: () => navigate(`/app/inventory/${row.productId}`),
             },
             // {

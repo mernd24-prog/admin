@@ -172,7 +172,10 @@ export default function FinanceOverview() {
               onClick={load}
               disabled={Boolean(state.loading)}
             >
-              <MdRefresh className={state.loading ? "animate-spin" : ""} />
+              <MdRefresh
+                aria-hidden="true"
+                className={state.loading ? "animate-spin" : ""}
+              />
               {state.loading ? "Refreshing" : "Refresh"}
             </button>
           </div>
@@ -193,7 +196,7 @@ export default function FinanceOverview() {
           label="Payable now"
           value={financeMoney(balances.effectiveAvailablePayout, currency)}
           description="Available to be transferred to your selected payout account."
-          icon={<MdAccountBalanceWallet size={18} />}
+          icon={<MdAccountBalanceWallet aria-hidden="true" size={18} />}
           iconBg="#cce8c9"
           iconColor="#1d9b50"
           onClick={() => navigate("/app/seller-payouts")}
@@ -210,7 +213,7 @@ export default function FinanceOverview() {
           label="Waiting"
           value={financeMoney(balances.pendingBalance, currency)}
           description="Earnings still inside the return or release period."
-          icon={<MdHourglassEmpty size={18} />}
+          icon={<MdHourglassEmpty aria-hidden="true" size={18} />}
           iconBg="#ffe5b5"
           iconColor="#f5a300"
           onClick={() => navigate("/app/finance-earnings?status=waiting")}
@@ -219,7 +222,7 @@ export default function FinanceOverview() {
           label="On hold"
           value={financeMoney(balances.blockedBalance, currency)}
           description="Temporarily unavailable because of a return, refund, dispute, or another hold."
-          icon={<MdPauseCircle size={18} />}
+          icon={<MdPauseCircle aria-hidden="true" size={18} />}
           iconBg="#ffd4d2"
           iconColor="#ff4b55"
           onClick={() => navigate("/app/finance-earnings?status=held")}
@@ -228,7 +231,7 @@ export default function FinanceOverview() {
           label="Paid"
           value={financeMoney(balances.paidBalance, currency)}
           description="Successfully transferred to your payout destination."
-          icon={<MdPayments size={18} />}
+          icon={<MdPayments aria-hidden="true" size={18} />}
           iconBg="#cce8c9"
           iconColor="#1d9b50"
           onClick={() => navigate("/app/seller-payouts?status=paid")}
@@ -327,7 +330,11 @@ export default function FinanceOverview() {
               onClick={() => navigate("/app/finance-adjustments?type=cod")}
               className="admin-card flex w-full items-center gap-3 p-4 text-left"
             >
-              <MdWarningAmber className="text-red-600" size={22} />
+              <MdWarningAmber
+                aria-hidden="true"
+                className="text-red-600"
+                size={22}
+              />
               <div className="flex-1">
                 <strong>
                   {financeMoney(owed, currency)} COD amount needs to be
@@ -338,7 +345,7 @@ export default function FinanceOverview() {
                   available or future earnings.
                 </p>
               </div>
-              <MdArrowForward />
+              <MdArrowForward aria-hidden="true" />
             </button>
           )}
           {Number(balances.blockedBalance || 0) > 0 && (
@@ -347,7 +354,11 @@ export default function FinanceOverview() {
               onClick={() => navigate("/app/finance-earnings?status=held")}
               className="admin-card flex w-full items-center gap-3 p-4 text-left"
             >
-              <MdWarningAmber className="text-amber-600" size={22} />
+              <MdWarningAmber
+                aria-hidden="true"
+                className="text-amber-600"
+                size={22}
+              />
               <div className="flex-1">
                 <strong>
                   {financeMoney(balances.blockedBalance, currency)} temporarily
@@ -358,7 +369,7 @@ export default function FinanceOverview() {
                   hold.
                 </p>
               </div>
-              <MdArrowForward />
+              <MdArrowForward aria-hidden="true" />
             </button>
           )}
         </section>

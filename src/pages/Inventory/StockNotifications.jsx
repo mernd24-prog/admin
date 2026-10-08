@@ -41,7 +41,11 @@ const productCell = (row = {}) => (
           className="h-full w-full object-contain p-1"
         />
       ) : (
-        <MdInventory2 size={20} className="text-[var(--admin-muted)]" />
+        <MdInventory2
+          aria-hidden="true"
+          size={20}
+          className="text-[var(--admin-muted)]"
+        />
       )}
     </div>
     <div className="min-w-0">
@@ -247,105 +251,103 @@ const StockNotifications = () => {
     ],
     [],
   );
-  
+
   const FILTER_FIELDS = [
-  {
-    key: "status",
-    label: "Status",
-    type: "select",
-    options: STATUS_OPTIONS,
-  },
-];
-return (
-  <div className="space-y-6">
-    <PageHeader
-      title="Stock Notifications"
-      subtitle={
-        sellerView
-          ? "Customers waiting for your products to return to stock."
-          : "All customer back-in-stock requests across products and sellers."
-      }
-      breadcrumbs={[
-        { label: sellerView ? "Seller" : "Admin", to: "/app/home" },
-        { label: "Inventory", to: "/app/inventory" },
-        { label: "Stock Notifications" },
-      ]}
-    />
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      options: STATUS_OPTIONS,
+    },
+  ];
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Stock Notifications"
+        subtitle={
+          sellerView
+            ? "Customers waiting for your products to return to stock."
+            : "All customer back-in-stock requests across products and sellers."
+        }
+        breadcrumbs={[
+          { label: sellerView ? "Seller" : "Admin", to: "/app/home" },
+          { label: "Inventory", to: "/app/inventory" },
+          { label: "Stock Notifications" },
+        ]}
+      />
 
-    <DataTable
-      columns={columns}
-      data={rows}
-      rowKey="id"
-      loading={loading}
-      totalCount={total}
-      page={page}
-      pageSize={pageSize}
-      onPageChange={setPage}
-      onPageSizeChange={(size) => {
-        setPageSize(size);
-        setPage(1);
-      }}
-      onSearch={(value) => {
-        setSearch(value);
-        setPage(1);
-      }}
-      searchPlaceholder="Search name, email, product, SKU..."
-      
-      filterBar={
-        <FilterBar
-          filters={FILTER_FIELDS}
-          listPage={{
-            page,
-            pageSize,
-            search,
-            setPage,
-            setPageSize,
-            setSearch,
-          }}
-          loading={loading}
-        />
-      }
-
-      selectable
-      selectedKeys={selectedKeys}
-      onSelectionChange={setSelectedKeys}
-      bulkActionBar={
-        <BulkActionBar
-          selectedCount={selectedKeys.length}
-          totalCount={rows.length}
-          onClear={() => setSelectedKeys([])}
-          module="inventory"
-          loading={bulkSending}
-          actions={[
-            {
-              label: "Queue emails",
-              icon: <MdSend size={15} />,
-              action: "adjust",
-              variant: "primary",
-              onClick: notifySelected,
-              disabled: !selectedRows.length,
-            },
-          ]}
-        />
-      }
-      onRefresh={fetchRows}
-      emptyText="No stock notification requests found."
-      exportConfig={{
-        filename: "stock-notifications",
-        columns: exportColumns,
-        data: rows,
-      }}
-      rowActions={(row) => [
-        {
-          label: row.status === "pending" ? "Send Email" : "Send Again",
-          icon: <MdEmail size={17} />,
-          onClick: () => notifyUser(row),
-          disabled: sendingId === row.id,
-        },
-      ]}
-    />
-  </div>
-);
+      <DataTable
+        columns={columns}
+        data={rows}
+        rowKey="id"
+        loading={loading}
+        totalCount={total}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+        onSearch={(value) => {
+          setSearch(value);
+          setPage(1);
+        }}
+        searchPlaceholder="Search name, email, product, SKU..."
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            listPage={{
+              page,
+              pageSize,
+              search,
+              setPage,
+              setPageSize,
+              setSearch,
+            }}
+            loading={loading}
+          />
+        }
+        selectable
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        bulkActionBar={
+          <BulkActionBar
+            selectedCount={selectedKeys.length}
+            totalCount={rows.length}
+            onClear={() => setSelectedKeys([])}
+            module="inventory"
+            loading={bulkSending}
+            actions={[
+              {
+                label: "Queue emails",
+                icon: <MdSend aria-hidden="true" size={15} />,
+                action: "adjust",
+                variant: "primary",
+                onClick: notifySelected,
+                disabled: !selectedRows.length,
+              },
+            ]}
+          />
+        }
+        onRefresh={fetchRows}
+        emptyText="No stock notification requests found."
+        exportConfig={{
+          filename: "stock-notifications",
+          columns: exportColumns,
+          data: rows,
+        }}
+        rowActions={(row) => [
+          {
+            label: row.status === "pending" ? "Send Email" : "Send Again",
+            icon: <MdEmail aria-hidden="true" size={17} />,
+            onClick: () => notifyUser(row),
+            disabled: sendingId === row.id,
+          },
+        ]}
+      />
+    </div>
+  );
 };
 
 export default StockNotifications;
