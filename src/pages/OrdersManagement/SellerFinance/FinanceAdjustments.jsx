@@ -13,6 +13,7 @@ import {
   MdVisibility,
 } from "react-icons/md";
 import Cards from "../../../components/Cards/Cards";
+import Loader from "../../../components/Loader/Loader";
 import PageHeader from "../../../components/Shared/PageHeader";
 import DataTable from "../../../components/Shared/DataTable";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
@@ -241,6 +242,7 @@ export default function FinanceAdjustments() {
   );
   return (
     <div className="space-y-5">
+      <Loader loading={Boolean(loading)} />
       <PageHeader
         title="Adjustments"
         subtitle="Understand why your earnings changed."
@@ -249,8 +251,14 @@ export default function FinanceAdjustments() {
           { label: "Adjustments" },
         ]}
         actions={
-          <button type="button" className="admin-btn-secondary" onClick={load}>
-            <MdRefresh /> Refresh
+          <button
+            type="button"
+            onClick={load}
+            disabled={Boolean(loading)}
+            aria-busy={Boolean(loading)}
+          >
+            <MdRefresh size={17} className={loading ? "animate-spin" : ""} />
+            {loading ? "Refreshing..." : "Refresh"}
           </button>
         }
       />

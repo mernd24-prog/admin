@@ -990,9 +990,9 @@ const ProductCategories = () => {
         showBack={currentPath.length > 0}
         onBack={currentPath.length > 0 ? handleGoBack : undefined}
         breadcrumbs={[
-          { label: "Catalog" },
+          { label: "Catalog Management" },
           {
-            label: "Categories",
+            label: "Category Tree",
             onClick: () => handleNavigate([]),
           },
           ...currentPath.map((category, index) => ({

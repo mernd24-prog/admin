@@ -168,12 +168,12 @@ export default function FinanceOverview() {
             />
             <button
               type="button"
-              className="admin-btn-secondary"
               onClick={load}
               disabled={Boolean(state.loading)}
+              area-busy={Boolean(state.loading)}
             >
               <MdRefresh className={state.loading ? "animate-spin" : ""} />
-              {state.loading ? "Refreshing" : "Refresh"}
+              {state.loading ? "Refreshing..." : "Refresh"}
             </button>
           </div>
         }

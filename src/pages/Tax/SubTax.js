@@ -279,8 +279,8 @@ const SubTax = () => {
         subtitle="Manage sub-tax rates and percentages"
         breadcrumbs={[
           { label: "Invoices & Taxation" },
-          { label: "Taxes", href: "/app/tax" },
-          { label: parentTaxName || "Sub-Taxes" },
+          // { label: "Taxes", href: "/app/tax" },
+          { label: parentTaxName || "Sub Taxes" },
         ]}
         actions={
           <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>

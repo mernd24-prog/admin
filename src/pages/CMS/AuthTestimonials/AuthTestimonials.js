@@ -22,7 +22,7 @@ import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
 const PAGE_TYPE = "auth_testimonial";
 
 const emptyForm = {
@@ -126,6 +126,7 @@ const AuthTestimonials = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.adminCore);
   const [pageNo, setPageNo] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [isRefresh, setIsRefresh] = useState(false);
   const [formData, setFormData] = useState(emptyForm);
@@ -148,12 +149,12 @@ const AuthTestimonials = () => {
     dispatch(
       getContentPages({
         page: pageNo,
-        limit: PAGE_SIZE,
+        limit: pageSize,
         q: search,
         pageType: PAGE_TYPE,
       }),
     );
-  }, [dispatch, pageNo, search]);
+  }, [dispatch, pageNo, pageSize, search]);
 
   useEffect(() => {
     fetchTestimonials();
@@ -366,8 +367,12 @@ const AuthTestimonials = () => {
         loading={selector.loading}
         totalCount={total}
         page={pageNo}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         onPageChange={setPageNo}
+        onPageSizeChange={(limit) => {
+          setPageSize(limit);
+          setPageNo(1);
+        }}
         onSearch={(value) => {
           setSearch(value?.trim() || "");
           setPageNo(1);

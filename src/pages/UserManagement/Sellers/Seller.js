@@ -357,7 +357,7 @@ const Sellers = () => {
       <PageHeader
         title="Sellers"
         subtitle="Manage seller accounts and onboarding"
-        breadcrumbs={[{ label: "User Management" }, { label: "Sellers" }]}
+        breadcrumbs={[{ label: "User Control & Access" }, { label: "Sellers" }]}
       />
 
       <DataTable

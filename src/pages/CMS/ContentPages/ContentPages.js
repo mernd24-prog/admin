@@ -17,7 +17,7 @@ import {
   updateContentPage,
 } from "../../../Redux/adminCoreSlice";
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
 
 const emptyForm = {
   slug: "",
@@ -77,6 +77,7 @@ const ContentPages = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.adminCore);
   const [pageNo, setPageNo] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [isRefresh, setIsRefresh] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -92,8 +93,8 @@ const ContentPages = () => {
   const total = payload?.total || 0;
 
   const fetchPages = useCallback(() => {
-    dispatch(getContentPages({ page: pageNo, limit: PAGE_SIZE, q: search }));
-  }, [dispatch, pageNo, search]);
+    dispatch(getContentPages({ page: pageNo, limit: pageSize, q: search }));
+  }, [dispatch, pageNo, pageSize, search]);
 
   useEffect(() => {
     fetchPages();
@@ -322,7 +323,7 @@ const ContentPages = () => {
       <PageHeader
         title="Content Pages"
         subtitle="Manage static pages, blog posts, and CMS content"
-        breadcrumbs={[{ label: "CMS" }, { label: "Content Pages" }]}
+        breadcrumbs={[{ label: "Settings" }, { label: "CMS Pages" }]}
         actions={
           <button
             onClick={() => setIsModalOpen(true)}
@@ -340,8 +341,12 @@ const ContentPages = () => {
         loading={selector.loading}
         totalCount={total}
         page={pageNo}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         onPageChange={setPageNo}
+        onPageSizeChange={(limit) => {
+          setPageSize(limit);
+          setPageNo(1);
+        }}
         onSearch={(v) => {
           setSearch(v?.trim() || "");
           setPageNo(1);

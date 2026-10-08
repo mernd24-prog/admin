@@ -368,11 +368,11 @@ const NegativeBalances = () => {
   return (
     <div>
       <PageHeader
-        title="Seller Amounts Owed"
+        title="Negative Balances"
         subtitle="Money sellers owe the platform from collected COD, refunds, or other adjustments. These amounts reduce future payouts until recovered."
         breadcrumbs={[
           { label: "Seller Finance & Payouts" },
-          { label: "Seller Amounts Owed" },
+          { label: "Negative Balances" },
         ]}
         // actions={
         //   <button type="button" onClick={fetchBalances}>

@@ -371,9 +371,9 @@ const AdminQueries = () => {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Queries"
+        title="Customer & Seller Queries"
         subtitle="Customer and seller support queries are listed separately."
-        breadcrumbs={[{ label: "Support" }, { label: "Queries" }]}
+        breadcrumbs={[ { label: "Queries" }]}
       />
 
       <Tabs

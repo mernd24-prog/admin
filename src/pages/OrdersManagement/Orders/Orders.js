@@ -1902,7 +1902,7 @@ const Orders = () => {
             label: isSeller ? "Orders" : "Orders Management",
           },
           {
-            label: "Orders List",
+            label: "Orders",
           },
         ]}
         actions={

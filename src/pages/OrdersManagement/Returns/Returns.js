@@ -1250,7 +1250,7 @@ const Returns = () => {
         subtitle="Review RMA requests, QC, refunds, and replacement lifecycle."
         breadcrumbs={[
           { label: isSeller ? "Orders" : "Returns & Cancellations" },
-          { label: "Returns & Refunds" },
+          {label : isSeller ? "Returns" : "Returns & Refunds" },
         ]}
       />
 

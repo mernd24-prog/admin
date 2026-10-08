@@ -3379,7 +3379,7 @@ export const AnalyticsDashboard = () => {
       }
       breadcrumbs={[
         { label: sellerView ? SELLER_REPORT_CRUMB : "Reports & Analytics" },
-        { label: "Analytics Dashboard" },
+        { label: isSellerPanel ? "Analytics" : "Analytics Dashboard" },
       ]}
       stats={stats}
       loading={loading}

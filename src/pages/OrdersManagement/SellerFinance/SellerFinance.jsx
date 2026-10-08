@@ -451,6 +451,39 @@ const SellerFinance = () => {
     status: "",
     search: initialParams.get("orderId") || "",
   });
+  
+  const [overviewPage, setOverviewPage] = useState(1);
+  const [overviewPageSize, setOverviewPageSize] = useState(20);
+  const [commissionsPage, setCommissionsPage] = useState(1);
+  const [commissionsPageSize, setCommissionsPageSize] = useState(20);
+  const [overviewPaginationLoading, setOverviewPaginationLoading] = useState(false);
+  const [commissionsPaginationLoading, setCommissionsPaginationLoading] = useState(false);
+
+  const handleOverviewPageChange = (page) => {
+    setOverviewPaginationLoading(true);
+    setOverviewPage(page);
+    setTimeout(() => setOverviewPaginationLoading(false), 300);
+  };
+
+  const handleOverviewPageSizeChange = (size) => {
+    setOverviewPaginationLoading(true);
+    setOverviewPageSize(size);
+    setOverviewPage(1);
+    setTimeout(() => setOverviewPaginationLoading(false), 300);
+  };
+
+  const handleCommissionsPageChange = (page) => {
+    setCommissionsPaginationLoading(true);
+    setCommissionsPage(page);
+    setTimeout(() => setCommissionsPaginationLoading(false), 300);
+  };
+
+  const handleCommissionsPageSizeChange = (size) => {
+    setCommissionsPaginationLoading(true);
+    setCommissionsPageSize(size);
+    setCommissionsPage(1);
+    setTimeout(() => setCommissionsPaginationLoading(false), 300);
+  };
   const isSellerDetail = Boolean(detailSellerId);
   useEffect(() => {
     if (!detailSellerId) return;
@@ -797,6 +830,16 @@ const SellerFinance = () => {
         right.eligible - left.eligible || right.pending - left.pending,
     );
   }, [commissions, sellerOptions]);
+
+  const paginatedOverview = useMemo(() => {
+    const start = (overviewPage - 1) * overviewPageSize;
+    return sellerOverview.slice(start, start + overviewPageSize);
+  }, [sellerOverview, overviewPage, overviewPageSize]);
+
+  const paginatedCommissions = useMemo(() => {
+    const start = (commissionsPage - 1) * commissionsPageSize;
+    return actionableCommissions.slice(start, start + commissionsPageSize);
+  }, [actionableCommissions, commissionsPage, commissionsPageSize]);
 
   const financeBuckets = useMemo(
     () =>
@@ -1384,10 +1427,13 @@ const SellerFinance = () => {
                   value ? formatDateTime12Hour(value, "—") : "—",
               },
             ]}
-            data={sellerOverview}
-            loading={financeLoading}
+            data={paginatedOverview}
+            loading={financeLoading || overviewPaginationLoading}
             totalCount={sellerOverview.length}
-            pageSize={Math.max(sellerOverview.length, 1)}
+            pageSize={overviewPageSize}
+            page={overviewPage}
+            onPageChange={handleOverviewPageChange}
+            onPageSizeChange={handleOverviewPageSizeChange}
             rowKey="sellerId"
             emptyText="No seller commission records found"
             cardClassName="overflow-hidden"
@@ -1550,10 +1596,13 @@ const SellerFinance = () => {
               },
             },
           ]}
-          data={actionableCommissions}
-          loading={financeLoading}
+          data={paginatedCommissions}
+          loading={financeLoading || commissionsPaginationLoading}
           totalCount={actionableCommissions.length}
-          pageSize={Math.max(actionableCommissions.length, 1)}
+          pageSize={commissionsPageSize}
+          page={commissionsPage}
+          onPageChange={handleCommissionsPageChange}
+          onPageSizeChange={handleCommissionsPageSizeChange}
           rowKey={(row) => row.id}
           emptyText="No order payout records found for this seller"
           cardClassName="overflow-x-auto"

@@ -13,6 +13,7 @@ import {
   MdVisibility,
 } from "react-icons/md";
 import Cards from "../../../components/Cards/Cards";
+import Loader from "../../../components/Loader/Loader";
 
 import PageHeader from "../../../components/Shared/PageHeader";
 import DataTable from "../../../components/Shared/DataTable";
@@ -342,6 +343,7 @@ export default function FinanceEarnings() {
 
   return (
     <div className="space-y-5">
+      <Loader loading={Boolean(state.loading)} />
       {/* HEADER */}
       <PageHeader
         title="Earnings"
@@ -363,12 +365,12 @@ export default function FinanceEarnings() {
 
             <button
               type="button"
-              className="admin-btn-secondary"
               onClick={load}
               disabled={Boolean(state.loading)}
+              aria-busy={Boolean(state.loading)}
             >
-              <MdRefresh />
-              Refresh
+              <MdRefresh size={17} className={state.loading ? "animate-spin" : ""} />
+              {state.loading ? "Refreshing..." : "Refresh"}
             </button>
           </div>
         }

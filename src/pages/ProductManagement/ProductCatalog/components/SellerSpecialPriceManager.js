@@ -1054,6 +1054,7 @@ const SellerSpecialPriceManager = () => {
         <PageHeader
           title="Special Price Management"
           subtitle="Set and update special promotional prices for product variants"
+         
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -1234,6 +1235,10 @@ const SellerSpecialPriceManager = () => {
       <PageHeader
         title="Special Price Management"
         subtitle="Manage promotional special prices for seller products and variants"
+          breadcrumbs={[
+          { label: sellerView ? "Catalog" : "Catalog Management" },
+          { label: "Special Price Management" },
+        ]}
       />
 
       {/* Products DataTable with embedded Search and FilterBar */}

@@ -289,7 +289,7 @@ const DealPayouts = () => {
       <PageHeader
         title="Deal Payouts"
         subtitle="Generate and process deal seller payouts"
-        breadcrumbs={[{ label: "Marketing" }, { label: "Deal Payouts" }]}
+        breadcrumbs={[{ label: "Deals Management" }, { label: "Deal Payouts" }]}
         actions={
           <div className="flex gap-2">
             <PermissionGuard module="deals" action={ACTIONS.APPROVE} hide>

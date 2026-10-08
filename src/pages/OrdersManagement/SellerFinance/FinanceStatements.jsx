@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { MdDownload, MdReceiptLong, MdRefresh } from "react-icons/md";
+import Loader from "../../../components/Loader/Loader";
 import PageHeader from "../../../components/Shared/PageHeader";
 import DataTable from "../../../components/Shared/DataTable";
 import { getMySellerSettlements } from "../../../Redux/sellerCommissionsSlice";
@@ -125,6 +126,7 @@ export default function FinanceStatements() {
   );
   return (
     <div className="space-y-5">
+      <Loader loading={Boolean(state.loading)} />
       <PageHeader
         title="Statements"
         subtitle="Download records of your completed payouts and financial adjustments."
@@ -133,8 +135,14 @@ export default function FinanceStatements() {
           { label: "Statements" },
         ]}
         actions={
-          <button type="button" className="admin-btn-secondary" onClick={load}>
-            <MdRefresh /> Refresh
+          <button
+            type="button"
+            onClick={load}
+            disabled={Boolean(state.loading)}
+            aria-busy={Boolean(state.loading)}
+          >
+            <MdRefresh className={state.loading ? "animate-spin" : ""} />
+            {state.loading ? "Refreshing..." : "Refresh"}
           </button>
         }
       />

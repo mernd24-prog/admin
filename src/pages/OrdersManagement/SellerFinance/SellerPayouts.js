@@ -9,11 +9,13 @@ import {
   MdPayments,
   MdReceiptLong,
   MdSync,
+  MdRefresh,
   MdVisibility,
 } from "react-icons/md";
 
 import Cards from "../../../components/Cards/Cards";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
+import Loader from "../../../components/Loader/Loader";
 import {
   DataTable,
   FilterBar,
@@ -970,6 +972,7 @@ const SellerPayouts = () => {
 
   return (
     <div className="space-y-6">
+      <Loader loading={Boolean(loading)} label="Refreshing payouts..." />
       <PageHeader
         title={isSeller ? "Payouts" : "Seller Payouts"}
         subtitle={
@@ -979,14 +982,23 @@ const SellerPayouts = () => {
         }
         breadcrumbs={[
           {
-            label: "My Finance & Payouts",
+            label: "Finance & Payouts",
           },
           {
-            label: "Payouts",
+            label: isSeller ? "Payouts" : "Seller Payouts",
           },
         ]}
         actions={
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={fetchPayouts}
+              disabled={Boolean(loading)}
+              aria-busy={Boolean(loading)}
+            >
+              <MdRefresh size={17} className={loading ? "animate-spin" : ""} />
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
             <button
               type="button"
               onClick={exportPayoutTable}

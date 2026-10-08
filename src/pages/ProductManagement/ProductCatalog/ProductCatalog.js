@@ -1041,8 +1041,15 @@ const ProductCatalog = () => {
         actions={
           <>
             <AddButton onClick={handleAddNavigate} requiredModule="products" />
-            <button type="button" onClick={fetchProductsList}>
-              <MdRefresh size={17} /> Refresh
+            <button
+              type="button"
+              onClick={fetchProductsList}
+              disabled={loading}
+              aria-busy={loading}
+              // className="inline-flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <MdRefresh size={17} className={loading ? "animate-spin" : ""} />
+              {loading ? "Refreshing..." : "Refresh"}
             </button>
           </>
         }

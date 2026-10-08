@@ -573,7 +573,7 @@ const TaxCompliance = () => {
         subtitle="Manage tax compliance invoices, credit notes, and tax summaries"
         breadcrumbs={[
           { label: "Invoices & Taxation" },
-          { label: "Tax Compliance" },
+          { label: "Tax Documents" },
         ]}
         actions={
           <div className="flex flex-wrap gap-2">

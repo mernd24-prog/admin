@@ -1133,9 +1133,9 @@ const DealManagement = () => {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Deal Product Management"
+        title="Deal Management"
         subtitle="Convert existing products into temporary deals without changing Product Master pricing"
-        breadcrumbs={[{ label: "Marketing" }, { label: "Deal Management" }]}
+        breadcrumbs={[{ label: "Deals Management" }, { label: "Deals" }]}
         actions={
           <>
             <PermissionGuard module="deals" action={ACTIONS.CREATE} hide>

@@ -227,15 +227,17 @@ export default function SellerWallet() {
       <PageHeader
         title={isSeller ? "Earnings & payouts" : "Seller earnings & payouts"}
         subtitle={isSeller ? "Track earnings from order delivery through the return window to your final payout." : "Select a seller to see what is waiting, what is owed, and what can be paid."}
-        breadcrumbs={[{ label: isSeller ? "My Finance & Payouts" : "Seller Finance & Payouts" }, { label: "Wallet" }]}
+        breadcrumbs={[{ label: isSeller ? "My Finance & Payouts" : "Seller Finance & Payouts" }, { label: "Seller Wallet" }]}
         actions={
-          <button
-            type="button"
-            className="admin-btn-secondary inline-flex items-center gap-2"
-            onClick={load}
-          >
-            <MdRefresh /> Refresh
-          </button>
+           <button
+              type="button"
+              onClick={load}
+              disabled={loading}
+              aria-busy={loading}
+            >
+              <MdRefresh size={17} className={loading ? "animate-spin" : ""} />
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
         }
       />
 

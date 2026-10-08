@@ -786,6 +786,8 @@ const ProductReferralAmounts = () => {
   const [products, setProducts] = useState([]);
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, limit: 20 });
+  const [totalCount, setTotalCount] = useState(0);
 
   const isEditMode = Boolean(form.productId);
 
@@ -816,8 +818,8 @@ const ProductReferralAmounts = () => {
       const [configResponse, productResponse] = await Promise.all([
         axiosPrivate.get(ENDPOINTS.referral.productAmounts, {
           params: {
-            page: 1,
-            limit: 100,
+            page: pagination.page,
+            limit: pagination.limit,
           },
         }),
 
@@ -831,6 +833,11 @@ const ProductReferralAmounts = () => {
       ]);
 
       setConfigs(unwrapList(configResponse));
+      setTotalCount(
+        configResponse?.data?.data?.total ||
+        configResponse?.data?.total ||
+        unwrapList(configResponse).length
+      );
       setProducts(unwrapList(productResponse));
     } catch (error) {
       toast.error(
@@ -840,7 +847,7 @@ const ProductReferralAmounts = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagination.page, pagination.limit]);
 
   useEffect(() => {
     load();
@@ -1508,6 +1515,13 @@ const ProductReferralAmounts = () => {
             ]}
             data={configs}
             loading={loading}
+            page={pagination.page}
+            pageSize={pagination.limit}
+            totalCount={totalCount}
+            onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+            onPageSizeChange={(limit) =>
+              setPagination((prev) => ({ ...prev, limit, page: 1 }))
+            }
             rowActions={(row) => [
               {
                 label: "Edit",
@@ -1565,6 +1579,46 @@ const ReferralCommerce = () => {
   const [expandedHierarchyIds, setExpandedHierarchyIds] = useState(
     () => new Set(),
   );
+
+  const [paginations, setPaginations] = useState({
+    influencers: { page: 1, limit: 20 },
+    orders: { page: 1, limit: 20 },
+    payouts: { page: 1, limit: 20 },
+    fraud: { page: 1, limit: 20 },
+    bonusRules: { page: 1, limit: 20 },
+    bonusProgress: { page: 1, limit: 20 },
+    bonusHistory: { page: 1, limit: 20 },
+  });
+
+  const [paginationsLoading, setPaginationsLoading] = useState({});
+
+  const getPageData = (key, rows) => {
+    const { page, limit } = paginations[key];
+    const start = (page - 1) * limit;
+    return rows.slice(start, start + limit);
+  };
+
+  const handlePageChange = (key, page) => {
+    setPaginationsLoading((prev) => ({ ...prev, [key]: true }));
+    setPaginations((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], page },
+    }));
+    setTimeout(() => {
+      setPaginationsLoading((prev) => ({ ...prev, [key]: false }));
+    }, 300);
+  };
+
+  const handlePageSizeChange = (key, limit) => {
+    setPaginationsLoading((prev) => ({ ...prev, [key]: true }));
+    setPaginations((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], limit, page: 1 },
+    }));
+    setTimeout(() => {
+      setPaginationsLoading((prev) => ({ ...prev, [key]: false }));
+    }, 300);
+  };
   const [parentModalOpen, setParentModalOpen] = useState(false);
   const [childModalOpen, setChildModalOpen] = useState(false);
   const [codeModalOpen, setCodeModalOpen] = useState(false);
@@ -1732,6 +1786,8 @@ const ReferralCommerce = () => {
 
   const renderInfluencerRef = (influencerId) => {
     const influencer = influencerById.get(String(influencerId));
+    const viewerId = influencer ? getId(influencer) : influencerId;
+
     if (!influencer) {
       return (
         <span className="font-mono text-xs text-gray-500">
@@ -1739,15 +1795,25 @@ const ReferralCommerce = () => {
         </span>
       );
     }
+
     return (
-      <div className="min-w-0">
+      <button
+        type="button"
+        className="block min-w-0 text-left transition hover:text-indigo-700"
+        onClick={(event) => {
+          event.stopPropagation();
+          navigate(`/app/referral-commerce/influencers/view/${viewerId}`, {
+            state: { influencer },
+          });
+        }}
+      >
         <div className="truncate text-sm font-medium text-gray-800">
           {fullName(influencer.user)}
         </div>
         <div className="truncate font-mono text-xs text-gray-500">
           Profile {shortId(getId(influencer))}
         </div>
-      </div>
+      </button>
     );
   };
 
@@ -2508,6 +2574,7 @@ const ReferralCommerce = () => {
 
   const payoutRows = payouts.map((payout) => ({
     key: getId(payout),
+    influencerId: payout.influencerId,
     influencer: renderInfluencerRef(payout.influencerId),
     coins: formatCoins(payout.coinAmount ?? payout.amount),
     payable: formatAmount(
@@ -3632,8 +3699,13 @@ const ReferralCommerce = () => {
         { key: "status", label: "Status" },
         { key: "actions", label: "Actions" },
       ]}
-      data={bonusRuleRows}
-      loading={loading}
+      data={getPageData("bonusRules", bonusRuleRows)}
+      page={paginations.bonusRules.page}
+      pageSize={paginations.bonusRules.limit}
+      totalCount={bonusRuleRows.length}
+      onPageChange={(page) => handlePageChange("bonusRules", page)}
+      onPageSizeChange={(limit) => handlePageSizeChange("bonusRules", limit)}
+      loading={loading || paginationsLoading["bonusRules"]}
       rowKey="key"
       onSearch={setSearch}
       searchPlaceholder="Search bonus rules..."
@@ -3678,8 +3750,13 @@ const ReferralCommerce = () => {
         { key: "progress", label: "Progress" },
         { key: "status", label: "Status" },
       ]}
-      data={bonusProgressRows}
-      loading={loading}
+      data={getPageData("bonusProgress", bonusProgressRows)}
+      page={paginations.bonusProgress.page}
+      pageSize={paginations.bonusProgress.limit}
+      totalCount={bonusProgressRows.length}
+      onPageChange={(page) => handlePageChange("bonusProgress", page)}
+      onPageSizeChange={(limit) => handlePageSizeChange("bonusProgress", limit)}
+      loading={loading || paginationsLoading["bonusProgress"]}
       rowKey="key"
       onSearch={setSearch}
       searchPlaceholder="Search bonus progress..."
@@ -3704,8 +3781,13 @@ const ReferralCommerce = () => {
         { key: "status", label: "Status" },
         { key: "achievedAt", label: "Achieved At" },
       ]}
-      data={bonusAchievementRows}
-      loading={loading}
+      data={getPageData("bonusHistory", bonusAchievementRows)}
+      page={paginations.bonusHistory.page}
+      pageSize={paginations.bonusHistory.limit}
+      totalCount={bonusAchievementRows.length}
+      onPageChange={(page) => handlePageChange("bonusHistory", page)}
+      onPageSizeChange={(limit) => handlePageSizeChange("bonusHistory", limit)}
+      loading={loading || paginationsLoading["bonusHistory"]}
       rowKey="key"
       onSearch={setSearch}
       searchPlaceholder="Search bonus achievements..."
@@ -3874,8 +3956,13 @@ const ReferralCommerce = () => {
             { key: "status", label: "Status" },
             { key: "actions", label: "Actions" },
           ]}
-          data={influencerRows}
-          loading={loading}
+          data={getPageData("influencers", influencerRows)}
+          page={paginations.influencers.page}
+          pageSize={paginations.influencers.limit}
+          totalCount={influencerRows.length}
+          onPageChange={(page) => handlePageChange("influencers", page)}
+          onPageSizeChange={(limit) => handlePageSizeChange("influencers", limit)}
+          loading={loading || paginationsLoading["influencers"]}
           rowKey="key"
           onRowClick={(row) =>
             navigate(`/app/referral-commerce/influencers/view/${row.key}`, {
@@ -3924,8 +4011,13 @@ const ReferralCommerce = () => {
             { key: "status", label: "Status" },
             { key: "created", label: "Created" },
           ]}
-          data={orderRows}
-          loading={loading}
+          data={getPageData("orders", orderRows)}
+          page={paginations.orders.page}
+          pageSize={paginations.orders.limit}
+          totalCount={orderRows.length}
+          onPageChange={(page) => handlePageChange("orders", page)}
+          onPageSizeChange={(limit) => handlePageSizeChange("orders", limit)}
+          loading={loading || paginationsLoading["orders"]}
           rowKey="key"
           onSearch={setSearch}
           searchPlaceholder="Search referral orders..."
@@ -3949,8 +4041,13 @@ const ReferralCommerce = () => {
               : []),
             ...(payoutHasActions ? [{ key: "actions", label: "Actions" }] : []),
           ]}
-          data={payoutRows}
-          loading={loading}
+          data={getPageData("payouts", payoutRows)}
+          page={paginations.payouts.page}
+          pageSize={paginations.payouts.limit}
+          totalCount={payoutRows.length}
+          onPageChange={(page) => handlePageChange("payouts", page)}
+          onPageSizeChange={(limit) => handlePageSizeChange("payouts", limit)}
+          loading={loading || paginationsLoading["payouts"]}
           rowKey="key"
           onSearch={setSearch}
           searchPlaceholder="Search payout requests..."
@@ -3969,8 +4066,13 @@ const ReferralCommerce = () => {
             { key: "status", label: "Status" },
             { key: "created", label: "Created" },
           ]}
-          data={fraudRows}
-          loading={loading}
+          data={getPageData("fraud", fraudRows)}
+          page={paginations.fraud.page}
+          pageSize={paginations.fraud.limit}
+          totalCount={fraudRows.length}
+          onPageChange={(page) => handlePageChange("fraud", page)}
+          onPageSizeChange={(limit) => handlePageSizeChange("fraud", limit)}
+          loading={loading || paginationsLoading["fraud"]}
           rowKey="key"
           onSearch={setSearch}
           searchPlaceholder="Search fraud reviews..."

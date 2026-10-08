@@ -266,7 +266,7 @@ return (
           : "All customer back-in-stock requests across products and sellers."
       }
       breadcrumbs={[
-        { label: sellerView ? "Seller" : "Admin", to: "/app/home" },
+      
         { label: "Inventory", to: "/app/inventory" },
         { label: "Stock Notifications" },
       ]}

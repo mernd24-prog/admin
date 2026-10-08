@@ -527,7 +527,7 @@ const Cancellations = () => {
             : "Manage full-order and product-line cancellations and customer refunds"
         }
         breadcrumbs={[
-          { label: isSeller ? "Seller Orders" : "Returns & Cancellations" },
+          { label: isSeller ? "Orders" : "Returns & Cancellations" },
           { label: "Cancellations" },
         ]}
       />
