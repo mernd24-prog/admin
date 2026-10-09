@@ -773,13 +773,7 @@ const createColumns = (
 
                 {sellerName && organizationName && (
                   <div className="text-xs text-gray-400">{sellerName}</div>
-                )}
-
-                {canLinkSeller && (
-                  <div className="text-[11px] font-medium text-[#2f6fed]">
-                    View seller
-                  </div>
-                )}
+                )}  
 
                 {sellerGroups.length > 1 && (
                   <div className="text-xs text-gray-400">

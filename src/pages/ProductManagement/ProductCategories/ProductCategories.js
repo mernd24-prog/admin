@@ -13,6 +13,7 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import SearchInput from "../../../components/Atoms/SearchInput/SearchInput";
 import { SkeletonLoader } from "../../../components/Loader/SkeletonLoader";
 import { ACTIONS } from "../../../_helpers/usePermission";
+import { categoryValidationSchema } from "../../../_helpers/validationSchemas";
 import CategorySetup from "./components/CategorySetup";
 import { CategoryAttributesPanel } from "./CategoryAttributes";
 import Pagination from "../../../components/Pagination/Pagination";
@@ -90,35 +91,20 @@ const ProductCategories = () => {
   // Validation
   // ---------------------------------------------------------------------------
 
-  const validateField = (name, value) => {
-    let error = "";
-
-    switch (name) {
-      case "categoryName":
-        if (!value.trim()) {
-          error = "Category name is required";
-        } else if (value.length < 3) {
-          error = "Category name must be at least 3 characters";
-        } else if (value.length > 50) {
-          error = "Category name must be less than 50 characters";
-        }
-        break;
-
-      default:
-        break;
-    }
-
-    return error;
-  };
-
   const validateForm = () => {
-    const newErrors = {
-      categoryName: validateField("categoryName", formData.categoryName),
-    };
-
+    const newErrors = {};
+    try {
+      categoryValidationSchema.validateSync(formData, { abortEarly: false });
+    } catch (error) {
+      error.inner?.forEach((validationError) => {
+        if (validationError.path) {
+          newErrors[validationError.path] = validationError.message;
+        }
+      });
+    }
+    newErrors.categoryName = newErrors.categoryName || "";
     setErrors(newErrors);
-
-    return !Object.values(newErrors).some((error) => error !== "");
+    return !newErrors.categoryName;
   };
 
   const handleInputChange = (name, value) => {

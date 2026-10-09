@@ -425,8 +425,6 @@ const Payments = () => {
         onClose={() => setDetailPayment(null)}
         title="Payment Detail"
         isButtonView={false}
-        showCloseButton
-        closeButtonText="Close"
       >
         <div className="space-y-5" aria-busy={detailLoading}>
           <FormSection

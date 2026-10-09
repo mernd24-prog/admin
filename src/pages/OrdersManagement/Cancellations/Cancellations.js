@@ -667,6 +667,7 @@ const Cancellations = () => {
         isOpen={Boolean(detail)}
         onClose={() => setDetail(null)}
         title="Cancellation Details"
+        isButtonView={false}
       >
         {detail && (
           <div className="space-y-5">
