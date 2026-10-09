@@ -835,8 +835,8 @@ const ProductReferralAmounts = () => {
       setConfigs(unwrapList(configResponse));
       setTotalCount(
         configResponse?.data?.data?.total ||
-        configResponse?.data?.total ||
-        unwrapList(configResponse).length
+          configResponse?.data?.total ||
+          unwrapList(configResponse).length,
       );
       setProducts(unwrapList(productResponse));
     } catch (error) {
@@ -1518,7 +1518,9 @@ const ProductReferralAmounts = () => {
             page={pagination.page}
             pageSize={pagination.limit}
             totalCount={totalCount}
-            onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+            onPageChange={(page) =>
+              setPagination((prev) => ({ ...prev, page }))
+            }
             onPageSizeChange={(limit) =>
               setPagination((prev) => ({ ...prev, limit, page: 1 }))
             }
@@ -3666,7 +3668,7 @@ const ReferralCommerce = () => {
           <span className="font-semibold">Rule active</span>
         </label>
         <div />
-        <label className="block md:col-span-4">
+        {/* <label className="block md:col-span-4">
           <span className="mb-1 block text-xs font-medium uppercase text-gray-500">
             Metadata (JSON object)
           </span>
@@ -3688,7 +3690,7 @@ const ReferralCommerce = () => {
               Optional backend metadata. Enter an object or keep {"{}"}.
             </span>
           )}
-        </label>
+        </label> */}
 
         <div className="flex justify-end border-t border-[var(--admin-line)] pt-4 md:col-span-4">
           <OrangeButton type="submit" disabled={rulesSubmitting || loading}>
@@ -3996,7 +3998,9 @@ const ReferralCommerce = () => {
           pageSize={paginations.influencers.limit}
           totalCount={influencerRows.length}
           onPageChange={(page) => handlePageChange("influencers", page)}
-          onPageSizeChange={(limit) => handlePageSizeChange("influencers", limit)}
+          onPageSizeChange={(limit) =>
+            handlePageSizeChange("influencers", limit)
+          }
           loading={loading || paginationsLoading["influencers"]}
           rowKey="key"
           onRowClick={(row) =>

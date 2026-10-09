@@ -3561,7 +3561,7 @@ export default function ProductManagementUI() {
                 ) && (
                   <div className="pt-1">
                     <p className="mb-2 text-xs text-gray-500">
-                      Or copy an admin template into editable product settings.
+                      Copy an admin template to editable product settings.
                     </p>
 
                     <FilterSelect

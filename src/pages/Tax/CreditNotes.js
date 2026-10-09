@@ -53,7 +53,7 @@ const FILTER_FIELDS = [
   {
     key: "sellerId",
     type: "asyncDropdown",
-    label: "Seller STORE NAME",
+    label: "Seller Store Name",
     width: "w-52",
     load: (search) =>
       dropdownApi.getStoreName({
@@ -125,7 +125,8 @@ const CreditNotes = () => {
     () =>
       isSeller || isSellerPanel()
         ? FILTER_FIELDS.filter(
-            (field) => !["sellerId", "organizationId", "buyerId"].includes(field.key),
+            (field) =>
+              !["sellerId", "organizationId", "buyerId"].includes(field.key),
           )
         : FILTER_FIELDS,
     [isSeller],

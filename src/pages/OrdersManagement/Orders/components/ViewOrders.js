@@ -2411,7 +2411,7 @@ const ShipmentCard = ({ shipment = {}, seller, onManage, onDownloadLabel }) => {
           <div className="flex flex-wrap items-center gap-2">
             <MdLocalShipping className="text-[#D8A21D]" size={18} />
             <div className="font-bold text-[#202337]">
-              {trackingNumber || "Shipment not dispatched yet"}
+              {trackingNumber || "Shipment has not been dispatched yet"}
             </div>
           </div>
           {seller && (
@@ -2593,6 +2593,10 @@ const OrderSummary = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
+  const [validationErrors, setValidationErrors] = useState({
+    reason: "",
+    note: "",
+  });
   const realtimeRevision = useRealtimeRefresh(
     [
       "order",
@@ -3029,6 +3033,26 @@ const OrderSummary = () => {
   }, [items]);
 
   const handleStatusSubmit = useCallback(async () => {
+    const reason = String(formData.reason || "").trim();
+
+    if (
+      formData.status === "cancelled" &&
+      reason.length < MINIMUM_CANCEL_REASON_LENGTH
+    ) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        reason: reason
+          ? `Reason must be at least ${MINIMUM_CANCEL_REASON_LENGTH} characters.`
+          : "Please enter a cancellation reason.",
+      }));
+
+      return;
+    }
+
+    setValidationErrors((prev) => ({
+      ...prev,
+      reason: "",
+    }));
     if (!formData.status) {
       toast.error("Status is required");
       return;
@@ -3095,6 +3119,22 @@ const OrderSummary = () => {
   }, [dispatch, fetchOrderInfo, formData, handleError, orderId, setLoading]);
 
   const handleNoteSubmit = useCallback(async () => {
+    const note = String(noteData.note || "").trim();
+
+    if (!note) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        note: "Please enter a note.",
+      }));
+
+      return;
+    }
+
+    setValidationErrors((prev) => ({
+      ...prev,
+      note: "",
+    }));
+
     if (!noteData.note.trim()) {
       toast.error("Note is required");
       return;
@@ -3169,7 +3209,7 @@ const OrderSummary = () => {
                 </PermissionGuard>
               )}
               {isSeller &&
-                !["shipped", "delivered", "fulfilled"].includes(
+                !["shipped", "delivered", "fulfilled", "cancelled"].includes(
                   String(order.status || "").toLowerCase(),
                 ) &&
                 items.some(
@@ -5073,30 +5113,61 @@ const OrderSummary = () => {
                 type="textarea"
                 labelName="Reason"
                 value={formData.reason}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const value = event.target.value;
+
                   setFormData((prev) => ({
                     ...prev,
-                    reason: event.target.value,
-                  }))
-                }
+                    reason: value,
+                  }));
+
+                  if (validationErrors.reason) {
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      reason:
+                        value.trim().length === 0
+                          ? "Please enter a cancellation reason."
+                          : value.trim().length < MINIMUM_CANCEL_REASON_LENGTH
+                            ? `Reason must be at least ${MINIMUM_CANCEL_REASON_LENGTH} characters.`
+                            : "",
+                    }));
+                  }
+                }}
                 name="reason"
                 placeholder="Reason or operational note"
-                maxLength={1000}
               />
+
+              {formData.status === "cancelled" && validationErrors.reason && (
+                <p
+                  className="mt-0 text-xs leading-none text-red-600"
+                  role="alert"
+                >
+                  {validationErrors.reason}
+                </p>
+              )}
 
               <Input
                 type="textarea"
-                labelName="Internal Note"
-                value={formData.note}
-                onChange={(event) =>
-                  setFormData((prev) => ({
+                labelName="Note"
+                value={noteData.note}
+                onChange={(event) => {
+                  const value = event.target.value;
+
+                  setNoteData((prev) => ({
                     ...prev,
-                    note: event.target.value,
-                  }))
-                }
+                    note: value,
+                  }));
+
+                  if (validationErrors.note) {
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      note: value.trim() ? "" : "Please enter a note.",
+                    }));
+                  }
+                }}
                 name="note"
-                placeholder="Optional internal note"
-                maxLength={1000}
+                placeholder="Enter order note"
+                maxLength={2000}
               />
             </div>
           </FormSection>

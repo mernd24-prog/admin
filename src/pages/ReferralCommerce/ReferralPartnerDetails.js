@@ -161,6 +161,7 @@ const getVerificationData = (influencer = {}) => {
 
 const documentLabel = (key) =>
   String(key || "")
+    .replace(/Url$/i, "")
     .replace(/([A-Z])/g, " $1")
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
@@ -176,13 +177,6 @@ const documentEntries = (documents = {}) =>
         : value,
     ])
     .filter(([, value]) => value);
-
-const maskAccountNumber = (value) => {
-  const accountNumber = String(value || "");
-  return accountNumber.length > 4
-    ? `****${accountNumber.slice(-4)}`
-    : accountNumber || "-";
-};
 
 const CopyableValue = ({ value }) => {
   const [copied, setCopied] = useState(false);
@@ -434,7 +428,7 @@ const ReferralPartnerDetails = () => {
       { label: "Email", value: profileUser.email || "-" },
       { label: "Phone", value: profile.phone || profileUser.phone || "-" },
       { label: "Profile ID", value: shortId(getId(influencer)) },
-      { label: "User ID", value: shortId(influencer.userId) },
+      // { label: "User ID", value: shortId(influencer.userId) },
       {
         label: "Role type",
         value: partnerTypeLabel(influencer.influencerType),
