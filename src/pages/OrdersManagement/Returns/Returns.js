@@ -38,6 +38,7 @@ import {
   PageHeader,
   StatusBadge,
   UserLink,
+  CustomerIdentity,
 } from "../../../components/Shared";
 import {
   approveReturn,
@@ -1187,29 +1188,12 @@ const Returns = () => {
           const email =
             row.buyerEmail || row.buyer?.email || row.buyerSnapshot?.email;
           return (
-            <div>
-              {name && (
-                <UserLink
-                  userId={
-                    value || row.buyer_id || row.buyer?.id || row.buyer?._id
-                  }
-                  userName={name}
-                />
-              )}
-              {email && !name && (
-                <div className="text-sm text-gray-700">{email}</div>
-              )}
-              {email && name && (
-                <div className="text-xs text-gray-400">{email}</div>
-              )}
-              {!name && !email && value && (
-                <span className="font-mono text-xs text-gray-500">
-                  {String(value).slice(0, 16)}
-                  {String(value).length > 16 ? "…" : ""}
-                </span>
-              )}
-              {!name && !email && !value && "—"}
-            </div>
+            <CustomerIdentity
+              row={row}
+              userId={value}
+              name={name}
+              loginName={email}
+            />
           );
         },
       },
@@ -1249,7 +1233,7 @@ const Returns = () => {
         subtitle="Review RMA requests, QC, refunds, and replacement lifecycle."
         breadcrumbs={[
           { label: isSeller ? "Orders" : "Returns & Cancellations" },
-          {label : isSeller ? "Returns" : "Returns & Refunds" },
+          { label: isSeller ? "Returns" : "Returns & Refunds" },
         ]}
       />
 

@@ -12,7 +12,11 @@ import {
   MdSearch,
   MdVisibility,
 } from "react-icons/md";
-import { PageHeader, StatusBadge } from "../../components/Shared";
+import {
+  PageHeader,
+  SellerIdentity,
+  StatusBadge,
+} from "../../components/Shared";
 import { apiRequest } from "../../_helpers/apiConfig";
 import { dropdownApi } from "../../_helpers/dropdownApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
@@ -1371,15 +1375,16 @@ const SellerOrganizations = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="max-w-[220px]">
-                      <div className="truncate font-medium" title={getOrganizationSellerLabel(organization, sellerOptions)}>
-                        {getOrganizationSellerLabel(organization, sellerOptions)}
-                      </div>
-                      <div className="mt-1 truncate text-xs text-[#65718b]" title={organization.seller?.email || organization.supportEmail || ""}>
-                        {organization.seller?.email || organization.supportEmail || "-"}
-                      </div>
-                      <div className="mt-1 font-mono text-[11px] text-[#8a93a5]">{shortId(organization.sellerId)}</div>
-                    </div>
+                    <SellerIdentity
+                      row={organization}
+                      sellerId={organization.sellerId}
+                      storeName={organizationLabel(organization)}
+                      loginName={
+                        getOrganizationSellerLabel(organization, sellerOptions) ||
+                        organization.seller?.email ||
+                        organization.supportEmail
+                      }
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <div className="font-mono text-xs font-medium">{organization.gstin || "-"}</div>

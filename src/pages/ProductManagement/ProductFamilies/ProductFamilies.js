@@ -18,6 +18,7 @@ import {
   DataTable,
   ConfirmModal,
   ExportButton,
+  SellerIdentity,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -332,9 +333,12 @@ const ProductFamilies = () => {
         key: "sellerId",
         label: "Seller",
         render: (v, row) => (
-          <span className="text-sm text-gray-600">
-            {row.sellerName || v || "—"}
-          </span>
+          <SellerIdentity
+            row={row}
+            sellerId={v}
+            storeName={row.storeName || row.organizationName}
+            loginName={row.sellerName}
+          />
         ),
       },
       {

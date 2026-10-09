@@ -24,7 +24,7 @@ import {
   DataTable,
   FilterBar,
   PageHeader,
-  SellerLink,
+  SellerIdentity,
   StatusBadge,
   SummaryCard,
 } from "../../../components/Shared";
@@ -1478,33 +1478,16 @@ export default function ShippingProfiles() {
         render: (_, row) => {
           const seller = sellerDetails(row);
           return (
-            <SellerLink
+            <SellerIdentity
+              row={row}
               sellerId={seller.id}
-              sellerName={seller.name}
-              className="group flex min-w-[160px] items-center gap-2 text-left"
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--admin-line)] bg-[var(--admin-gold)]/10 text-xs font-bold text-[var(--admin-gold)]">
-                {seller.avatarUrl ? (
-                  <img
-                    src={seller.avatarUrl}
-                    alt={seller.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  initialLetter(seller.name)
-                )}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-[var(--admin-ink)] group-hover:text-[var(--admin-gold)]">
-                  {seller.name}
-                </span>
-                {row.organizationId && (
-                  <span className="block truncate text-xs text-[var(--admin-muted)]">
-                    {organizationLabel(row.organizationId)}
-                  </span>
-                )}
-              </span>
-            </SellerLink>
+              storeName={
+                row.organizationId
+                  ? organizationLabel(row.organizationId)
+                  : row.storeName || row.organizationName
+              }
+              loginName={seller.name}
+            />
           );
         },
       },

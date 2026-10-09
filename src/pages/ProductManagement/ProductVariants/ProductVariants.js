@@ -18,6 +18,7 @@ import {
   FilterBar,
   PageHeader,
   StatusBadge,
+  SellerIdentity,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -563,9 +564,12 @@ const ProductVariants = () => {
       key: "sellerId",
       label: "Seller",
       render: (v, row) => (
-        <span>
-          {sellerLabelMap[String(v || "")] || row?.sellerName || v || "—"}
-        </span>
+        <SellerIdentity
+          row={row}
+          sellerId={v}
+          storeName={row.storeName || row.organizationName}
+          loginName={row.sellerName || sellerLabelMap[String(v || "")]}
+        />
       ),
     },
     {

@@ -14,7 +14,7 @@ import {
   FilterBar,
   FormSection,
   PageHeader,
-  SellerLink,
+  SellerIdentity,
   StatusBadge,
 } from "../../../components/Shared";
 import { DateRangeFilter } from "../../../components/Shared/FilterBar";
@@ -210,15 +210,13 @@ const DealPayouts = () => {
           row.seller?.name ||
           row.seller?.companyName ||
           sellerOptions.find((o) => o.value === v)?.label;
-        return name ? (
-          <SellerLink
+        return (
+          <SellerIdentity
+            row={row}
             sellerId={v || row.seller_id || row.seller?.id || row.seller?._id}
-            sellerName={name}
+            storeName={row.storeName || row.organizationName}
+            loginName={name}
           />
-        ) : (
-          <span className="font-mono text-xs text-gray-400">
-            {String(v || "—").slice(-8)}
-          </span>
         );
       },
     },

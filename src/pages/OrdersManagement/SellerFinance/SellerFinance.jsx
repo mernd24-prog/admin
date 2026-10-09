@@ -25,6 +25,7 @@ import {
   DataTable,
   FilterBar,
   OrderLink,
+  SellerIdentity,
 } from "../../../components/Shared";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
@@ -746,6 +747,12 @@ const SellerFinance = () => {
       const sellerId = String(row.seller_id || row.sellerId || "unknown");
       const current = grouped.get(sellerId) || {
         sellerId,
+        storeName:
+          row.storeName ||
+          row.organizationName ||
+          row.organization?.name ||
+          row.organizationSnapshot?.name ||
+          row.organization_snapshot?.name,
         sellerName:
           row.sellerName ||
           row.seller?.displayName ||
@@ -1290,14 +1297,12 @@ const SellerFinance = () => {
                 key: "sellerName",
                 label: "Seller",
                 render: (_, seller) => (
-                  <div className="min-w-0">
-                    <div className="font-semibold text-[#202337]">
-                      {seller.sellerName}
-                    </div>
-                    <div className="font-mono text-[11px] text-[#65718b]">
-                      {seller.sellerId}
-                    </div>
-                  </div>
+                  <SellerIdentity
+                    row={seller}
+                    sellerId={seller.sellerId}
+                    storeName={seller.storeName || seller.sellerName}
+                    loginName={seller.storeName ? seller.sellerName : undefined}
+                  />
                 ),
               },
               {
@@ -1645,11 +1650,18 @@ const SellerFinance = () => {
                     {
                       key: "sellerName",
                       label: "Seller",
-                      render: (_, row) =>
-                        row.sellerName ||
-                        row.seller?.displayName ||
-                        row.seller?.businessName ||
-                        sellerLabel(row.seller_id, sellerOptions),
+                      render: (_, row) => (
+                        <SellerIdentity
+                          row={row}
+                          sellerId={row.seller_id || row.sellerId}
+                          storeName={organizationName(row)}
+                          loginName={
+                            row.sellerName ||
+                            row.seller?.displayName ||
+                            sellerLabel(row.seller_id, sellerOptions)
+                          }
+                        />
+                      ),
                     },
                   ]
                 : []),

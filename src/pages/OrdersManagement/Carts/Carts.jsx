@@ -6,6 +6,7 @@ import {
   FilterBar,
   PageHeader,
   StatusBadge,
+  CustomerIdentity,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
@@ -180,11 +181,7 @@ const Carts = () => {
         key: "userId",
         label: "Customer",
         sortable: true,
-        render: (value) => (
-          <span className="block max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">
-            {value || "-"}
-          </span>
-        ),
+        render: (value, row) => <CustomerIdentity row={row} userId={value} />,
       },
       {
         key: "lineCount",

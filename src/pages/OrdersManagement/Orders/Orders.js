@@ -21,8 +21,8 @@ import {
   StatusBadge,
   FilterBar,
   OrderLink,
-  SellerLink,
-  UserLink,
+  SellerIdentity,
+  CustomerIdentity,
 } from "../../../components/Shared";
 
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
@@ -663,40 +663,14 @@ const createColumns = (
               row.buyerId,
             );
 
-            const buyerContent = (
-              <>
-                {name && (
-                  <div className="text-sm font-medium text-gray-800">
-                    {name}
-                  </div>
-                )}
-
-                {email && !name && (
-                  <div className="text-sm text-gray-700">{email}</div>
-                )}
-
-                {email && name && (
-                  <div className="text-xs text-gray-400">{email}</div>
-                )}
-
-                {!name && !email && (
-                  <span className="text-gray-400">
-                    Customer details unavailable
-                  </span>
-                )}
-              </>
-            );
-
-            return canOpenBuyerDetails && buyerId ? (
-              <UserLink
-                userId={buyerId}
-                userName={name || email}
-                className="block text-left"
-              >
-                {buyerContent}
-              </UserLink>
-            ) : (
-              <div className="text-left">{buyerContent}</div>
+            return (
+              <CustomerIdentity
+                row={{ ...row, shippingAddress }}
+                userId={canOpenBuyerDetails ? buyerId : undefined}
+                name={name}
+                loginName={email}
+                link={canOpenBuyerDetails}
+              />
             );
           },
         },
@@ -763,48 +737,21 @@ const createColumns = (
               return <span className="text-gray-400">—</span>;
             }
 
-            const canLinkSeller = Boolean(sellerId && canOpenSellerDetails);
-
-            const content = (
-              <>
-                <div className="text-sm font-medium text-gray-800">
-                  {organizationName || sellerName || "Seller"}
-                </div>
-
-                {sellerName && organizationName && (
-                  <div className="text-xs text-gray-400">{sellerName}</div>
-                )}
-
-                {canLinkSeller && (
-                  <div className="text-[11px] font-medium text-[#2f6fed]">
-                    View seller
-                  </div>
-                )}
-
+            return (
+              <div>
+                <SellerIdentity
+                  row={row}
+                  sellerId={canOpenSellerDetails ? sellerId : undefined}
+                  storeName={organizationName}
+                  loginName={sellerName}
+                  link={canOpenSellerDetails}
+                />
                 {sellerGroups.length > 1 && (
                   <div className="text-xs text-gray-400">
                     +{sellerGroups.length - 1} more seller
                   </div>
                 )}
-
-                {!sellerName && sellerId && (
-                  <div className="text-xs text-gray-400">
-                    Seller details unavailable
-                  </div>
-                )}
-              </>
-            );
-
-            return canLinkSeller ? (
-              <SellerLink
-                sellerId={sellerId}
-                sellerName={sellerName}
-                className="block text-left"
-              >
-                {content}
-              </SellerLink>
-            ) : (
-              <div className="text-left">{content}</div>
+              </div>
             );
           },
         },

@@ -28,6 +28,7 @@ import {
   DataTable,
   PageHeader,
   FilterBar,
+  SellerIdentity,
 } from "../../../../components/Shared";
 import ProductStatusBadge from "../../../../components/Product/ProductStatusBadge";
 import Loader from "../../../../components/Loader/Loader";
@@ -831,14 +832,7 @@ const SellerSpecialPriceManager = () => {
             {
               key: "seller",
               label: "Seller",
-              render: (_, row) => (
-                <span className="block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-xs font-medium text-gray-700">
-                  {row.sellerName ||
-                    row.seller?.name ||
-                    row.organizationName ||
-                    "-"}
-                </span>
-              ),
+              render: (_, row) => <SellerIdentity row={row} />,
             },
           ]
         : []),

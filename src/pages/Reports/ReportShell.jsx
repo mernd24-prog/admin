@@ -38,6 +38,7 @@ import {
   DateRangePickerModal,
   PageHeader,
   SummaryCard,
+  SellerIdentity,
 } from "../../components/Shared";
 import { axiosPrivate } from "../../_helpers/axiosProvider";
 import { downloadApiFile } from "../../_helpers/downloadApi";
@@ -3248,6 +3249,14 @@ export const SellerAnalytics = () => {
             {
               key: "sellerName",
               label: "Seller",
+              render: (_, row) => (
+                <SellerIdentity
+                  row={row}
+                  sellerId={row.sellerId || row.seller_id}
+                  storeName={row.storeName || row.organizationName}
+                  loginName={row.sellerName}
+                />
+              ),
             },
             {
               key: "orderCount",

@@ -7,6 +7,8 @@ import {
   FilterBar,
   PageHeader,
   StatusBadge,
+  CustomerIdentity,
+  SellerIdentity,
 } from "../../components/Shared";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
@@ -63,10 +65,7 @@ const productCell = (row = {}) => (
 );
 
 const userCell = (row = {}) => (
-  <div className="min-w-[210px]">
-    <p className="font-semibold text-[var(--admin-ink)]">{row.name || "N/A"}</p>
-    <p className="text-xs text-[var(--admin-muted)]">{row.email || "N/A"}</p>
-  </div>
+  <CustomerIdentity row={row} name={row.name} loginName={row.email} />
 );
 
 const StockNotifications = () => {
@@ -229,7 +228,17 @@ const StockNotifications = () => {
         label: "Notified",
         render: (value) => formatDateTime12Hour(value),
       },
-      ...(!sellerView ? [{ key: "sellerId", label: "Seller ID" }] : []),
+      ...(!sellerView
+        ? [
+            {
+              key: "sellerId",
+              label: "Seller",
+              render: (value, row) => (
+                <SellerIdentity row={row} sellerId={value} />
+              ),
+            },
+          ]
+        : []),
     ],
     [sellerView],
   );
@@ -253,28 +262,27 @@ const StockNotifications = () => {
   );
 
   const FILTER_FIELDS = [
-  {
-    key: "status",
-    label: "Status",
-    type: "select",
-    options: STATUS_OPTIONS,
-  },
-];
-return (
-  <div className="space-y-6">
-    <PageHeader
-      title="Stock Notifications"
-      subtitle={
-        sellerView
-          ? "Customers waiting for your products to return to stock."
-          : "All customer back-in-stock requests across products and sellers."
-      }
-      breadcrumbs={[
-      
-        { label: "Inventory", to: "/app/inventory" },
-        { label: "Stock Notifications" },
-      ]}
-    />
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      options: STATUS_OPTIONS,
+    },
+  ];
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Stock Notifications"
+        subtitle={
+          sellerView
+            ? "Customers waiting for your products to return to stock."
+            : "All customer back-in-stock requests across products and sellers."
+        }
+        breadcrumbs={[
+          { label: "Inventory", to: "/app/inventory" },
+          { label: "Stock Notifications" },
+        ]}
+      />
 
       <DataTable
         columns={columns}

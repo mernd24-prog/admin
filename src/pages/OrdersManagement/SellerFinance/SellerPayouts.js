@@ -21,6 +21,7 @@ import {
   FilterBar,
   PageHeader,
   StatusBadge,
+  SellerIdentity,
 } from "../../../components/Shared";
 
 import {
@@ -551,13 +552,11 @@ const SellerPayouts = () => {
         key: "seller_id",
         label: "Seller",
         render: (_, row) => (
-          <div>
-            <div className="font-medium text-gray-800">{sellerName(row)}</div>
-
-            {row.seller?.email && (
-              <div className="text-xs text-gray-400">{row.seller.email}</div>
-            )}
-          </div>
+          <SellerIdentity
+            row={row}
+            storeName={row.storeName || row.organizationName || sellerName(row)}
+            loginName={row.seller?.name || row.seller?.email}
+          />
         ),
       },
 
@@ -976,7 +975,7 @@ const SellerPayouts = () => {
 
   return (
     <div className="space-y-6">
-      <Loader loading={Boolean(loading)}/>
+      <Loader loading={Boolean(loading)} />
       <PageHeader
         title={isSeller ? "Payouts" : "Seller Payouts"}
         subtitle={

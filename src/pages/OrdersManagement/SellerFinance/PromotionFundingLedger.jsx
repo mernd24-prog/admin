@@ -14,7 +14,7 @@ import PageHeader from "../../../components/Shared/PageHeader";
 import SummaryCard from "../../../components/Shared/SummaryCard";
 import DataTable from "../../../components/Shared/DataTable";
 import { OrderLink } from "../../../components/Shared/EntityLink";
-import { FilterBar, UserLink } from "../../../components/Shared";
+import { FilterBar, SellerIdentity } from "../../../components/Shared";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import {
@@ -257,22 +257,12 @@ const PromotionFundingLedger = () => {
                 const storeName = sellerId ? storeMap[String(sellerId)] : null;
 
                 return (
-                  <div className="flex flex-col gap-1">
-                    <UserLink
-                      userId={sellerId}
-                      userName={
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium">
-                            {sellerName || "N/A"}
-                          </span>
-
-                          <span className="text-xs text-gray-500">
-                            Store: {storeName || "N/A"}
-                          </span>
-                        </div>
-                      }
-                    />
-                  </div>
+                  <SellerIdentity
+                    row={row}
+                    sellerId={sellerId}
+                    storeName={storeName}
+                    loginName={sellerName}
+                  />
                 );
               },
             },

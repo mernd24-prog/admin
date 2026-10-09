@@ -1,7 +1,15 @@
 export { default as PageHeader } from "./PageHeader";
 export { default as StatusBadge } from "./StatusBadge";
 export { default as DataTable } from "./DataTable";
-export { OrderLink, UserLink, SellerLink } from "./EntityLink";
+export {
+  OrderLink,
+  UserLink,
+  SellerLink,
+  SellerIdentity,
+  CustomerIdentity,
+  sellerIdentityFrom,
+  customerIdentityFrom,
+} from "./EntityLink";
 export { default as FormSection } from "./FormSection";
 export { default as ConfirmModal } from "./ConfirmModal";
 export { default as StepperForm } from "./StepperForm";
@@ -15,4 +23,3 @@ export { default as DocumentPreviewModal } from "./DocumentPreviewModal";
 export { default as ShowMoreText } from "./ShowMoreText";
 export { default as ImageViewer } from "../ImageViewer/ImageViewer";
 export { default as ImageThumbnail } from "../ImageViewer/ImageThumbnail";
-

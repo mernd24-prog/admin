@@ -13,6 +13,7 @@ import {
   FilterBar,
   PageHeader,
   StatusBadge,
+  SellerIdentity,
 } from "../../../components/Shared";
 import {
   getNegativeBalances,
@@ -271,15 +272,12 @@ const NegativeBalances = () => {
           const email = row.sellerEmail || row.seller?.email;
 
           return (
-            <div>
-              {name && (
-                <div className="text-sm font-medium text-gray-800">{name}</div>
-              )}
-
-              {email && <div className="text-xs text-gray-400">{email}</div>}
-
-              {!name && !email && "—"}
-            </div>
+            <SellerIdentity
+              row={row}
+              sellerId={sellerId}
+              storeName={name}
+              loginName={email}
+            />
           );
         },
       },

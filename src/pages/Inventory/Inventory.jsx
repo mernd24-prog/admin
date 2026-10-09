@@ -23,7 +23,7 @@ import {
   FormSection,
   ImageThumbnail,
   PageHeader,
-  SellerLink,
+  SellerIdentity,
   StatusBadge,
 } from "../../components/Shared";
 import OrangeButton from "../../components/Atoms/buttons/OrangeButton";
@@ -1407,14 +1407,10 @@ const Inventory = () => {
             key: "seller",
             label: "Seller",
             render: (_, row) => (
-              <SellerLink
-                sellerId={
-                  row.sellerId ||
-                  row.seller_id ||
-                  row.seller?.id ||
-                  row.seller?._id
-                }
-                sellerName={sellerLabel(row)}
+              <SellerIdentity
+                row={row}
+                storeName={row.storeName || row.organizationName}
+                loginName={sellerLabel(row)}
               />
             ),
           },

@@ -5,6 +5,7 @@ import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal"
 import {
   DataTable,
   OrderLink,
+  SellerIdentity,
   PageHeader,
   StatusBadge,
 } from "../../../components/Shared";
@@ -145,10 +146,15 @@ export default function CodCollections() {
       {
         key: "seller_id",
         label: "Seller",
-        render: (value) => (
-          <span className="text-sm font-medium text-gray-800">
-            {sellerMap[value] || "-"}
-          </span>
+        render: (value, row) => (
+          <SellerIdentity
+            row={row}
+            sellerId={value}
+            storeName={
+              row.storeName || row.organizationName || sellerMap[value]
+            }
+            loginName={row.sellerName || row.seller?.name || row.seller?.email}
+          />
         ),
       },
       {
@@ -220,7 +226,8 @@ export default function CodCollections() {
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <strong>COD reconciliation needs attention</strong>
           <p className="mt-1 text-xs leading-5">
-            Overdue and disputed entries remain in the seller liability balance until an admin verifies or records remittance.
+            Overdue and disputed entries remain in the seller liability balance
+            until an admin verifies or records remittance.
           </p>
         </div>
       )}
@@ -263,9 +270,7 @@ export default function CodCollections() {
         onPageChange={(page) =>
           setPagination((current) => ({ ...current, page }))
         }
-        onPageSizeChange={(pageSize) =>
-          setPagination({ page: 1, pageSize })
-        }
+        onPageSizeChange={(pageSize) => setPagination({ page: 1, pageSize })}
         onSearch={() => {}}
         onSort={() => {}}
         onRefresh={load}

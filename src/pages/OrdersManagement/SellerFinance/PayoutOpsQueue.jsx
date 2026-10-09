@@ -21,6 +21,7 @@ import {
   FilterBar,
   PageHeader,
   StatusBadge,
+  SellerIdentity,
 } from "../../../components/Shared";
 import {
   getPayoutOperationsQueue,
@@ -497,17 +498,7 @@ const PayoutOpsQueue = () => {
             row.seller?.businessName;
           const email = row.sellerEmail || row.seller?.email;
           return (
-            <div>
-              {name && (
-                <div className="text-sm font-medium text-gray-800">{name}</div>
-              )}
-              {email && <div className="text-xs text-gray-400">{email}</div>}
-              {!name && !email && (
-                <span className="text-xs text-gray-500">
-                  Seller details unavailable
-                </span>
-              )}
-            </div>
+            <SellerIdentity row={row} storeName={name} loginName={email} />
           );
         },
       },

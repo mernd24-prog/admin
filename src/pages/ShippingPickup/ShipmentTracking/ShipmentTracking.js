@@ -25,6 +25,7 @@ import {
   DataTable,
   FilterBar,
   OrderLink,
+  SellerIdentity,
   PageHeader,
   StatusBadge,
 } from "../../../components/Shared";
@@ -662,13 +663,7 @@ const ShipmentTracking = () => {
             row.seller?.name ||
             row.seller?.companyName ||
             sellerOptions.find((o) => o.value === value)?.label;
-          return name ? (
-            <span className="text-sm font-medium text-gray-700">{name}</span>
-          ) : (
-            <span className="font-mono text-xs text-gray-400">
-              {value ? String(value).slice(0, 10) + "…" : "—"}
-            </span>
-          );
+          return <SellerIdentity row={row} sellerId={value} storeName={name} />;
         },
       },
       {
