@@ -1069,7 +1069,7 @@ const Returns = () => {
     setConfirmAction({
       open: true,
       title: `${ACTION_TITLES[action.type] || "Update Return"}?`,
-      message: `This will update return ${returnId(action.returnRequest)} to the next lifecycle state.`,
+      message: `Are you sure you want to move this return request to the next stage of its lifecycle?`,
     });
   };
 
@@ -2328,7 +2328,7 @@ const Returns = () => {
                   {item.reason && (
                     <div className="mt-2 rounded-md capitalize border border-gray-200 bg-white p-2 text-xs text-gray-600">
                       <span className="font-medium text-gray-700">Reason:</span>{" "}
-                      {item.reason}
+                      {formatLabel(item.reason)}
                     </div>
                   )}
 
@@ -2578,9 +2578,7 @@ const Returns = () => {
           {["reject", "close"].includes(action.type) && (
             <FormSection
               title={
-                action.type === "reject"
-                  ? "Rejection Details"
-                  : "Close Details"
+                action.type === "reject" ? "Rejection Details" : "Close Details"
               }
               description={
                 action.type === "reject"

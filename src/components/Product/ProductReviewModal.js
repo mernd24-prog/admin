@@ -137,12 +137,37 @@ const DECISIONS = {
 
 const formatReviewValue = (value) => {
   if (value === undefined || value === null || value === "") return "N/A";
-  if (Array.isArray(value))
+
+  if (
+    typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)
+  ) {
+    const date = new Date(value);
+
+    if (!Number.isNaN(date.getTime())) {
+      return new Intl.DateTimeFormat("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }).format(date);
+    }
+  }
+
+  if (Array.isArray(value)) {
     return value.length ? JSON.stringify(value, null, 2) : "(empty)";
-  if (typeof value === "object") return JSON.stringify(value, null, 2);
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value, null, 2);
+  }
+
   return String(value);
 };
-
 const normalizeReviewValue = (value) => {
   if (value === undefined || value === null || value === "") return null;
   if (Array.isArray(value)) {
@@ -211,6 +236,25 @@ const buildRevisionDiffs = (currentProduct = {}, draftChanges = {}) => {
     visit(field, currentProduct?.[field], draftChanges[field]),
   );
   return diffs;
+};
+
+const formatIndianDateTime = (value) => {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "N/A";
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata",
+  }).format(date);
 };
 
 /**
@@ -378,8 +422,8 @@ const ProductReviewModal = ({
                 <span>Base v{revision.baseVersion}</span>
               )}
               {revision.submittedAt && (
-                <span>
-                  Submitted {new Date(revision.submittedAt).toLocaleString()}
+                <span className="">
+                  Submitted {formatIndianDateTime(revision.submittedAt)} IST
                 </span>
               )}
               {(revision.submittedByRole || revision.submittedBy) && (

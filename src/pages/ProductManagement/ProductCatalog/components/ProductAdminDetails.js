@@ -311,7 +311,6 @@ const ProductAdminDetails = () => {
     if (!id) return;
 
     dispatch(getProductById({ _id: id }));
-
     dispatch(
       getProductRevisions({
         productId: id,
@@ -320,6 +319,13 @@ const ProductAdminDetails = () => {
       }),
     );
   }, [dispatch, id]);
+
+  useEffect(() => {
+    console.log("Full Product API Response:", selector?.updateProductsData);
+    console.log("Product Object:", product);
+    console.log("Brand Value:", product?.brand);
+    console.log("Brand Name:", product?.brandName);
+  }, [selector?.updateProductsData, product]);
 
   const handleReviewSubmit = async (
     decision,
@@ -352,9 +358,7 @@ const ProductAdminDetails = () => {
         rejected: "rejected",
       };
 
-      toast.success(
-        `Product ${labels[decision] || "updated"} successfully.`,
-      );
+      toast.success(`Product ${labels[decision] || "updated"} successfully.`);
 
       await Promise.all([
         dispatch(getProductById({ _id: id })).unwrap(),
@@ -664,7 +668,7 @@ const ProductAdminDetails = () => {
                 }
               />
 
-              <Row label="Brand" value={refToLabel(product.brand)} />
+              <Row label="Brand" value={product.attributes?.brand} />
 
               <Row
                 label="GST Rate"

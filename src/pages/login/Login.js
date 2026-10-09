@@ -80,12 +80,6 @@ const Login = () => {
             />
           </div>
 
-          {auth.loginError && (
-            <div className="mb-[10px] animate-fade-in rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-[15px] text-red-700">
-              {auth.loginError}
-            </div>
-          )}
-
           {auth.sellerPanel && (
             <div
               className="mb-[24px] flex min-h-[13px] items-center justify-end"
@@ -101,10 +95,23 @@ const Login = () => {
             </div>
           )}
           {auth.sellerPanel && (
-            <AuthTermsCheckbox
-              checked={auth.termsAccepted}
-              onChange={(event) => auth.handleTermsChange(event.target.checked)}
-            />
+            <>
+              <AuthTermsCheckbox
+                checked={auth.termsAccepted}
+                onChange={(event) =>
+                  auth.handleTermsChange(event.target.checked)
+                }
+              />
+
+              {auth.loginError && (
+                <div
+                  role="alert"
+                  className="mt-2 mb-[12px] animate-fade-in rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-[15px] text-red-600"
+                >
+                  {auth.loginError}
+                </div>
+              )}
+            </>
           )}
           <FormSubmitButton
             buttonLabel={

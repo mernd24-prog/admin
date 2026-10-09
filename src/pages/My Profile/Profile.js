@@ -158,7 +158,7 @@ const DetailField = ({ label, value, className = "", isEditing = false }) => (
       {label}
     </label>
     <input
-      className={`admin-input ${
+      className={`admin-input capitalize ${
         isEditing
           ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
           : ""

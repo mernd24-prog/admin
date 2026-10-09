@@ -94,11 +94,11 @@ export const dropdownApi = {
           item.businessName ||
           item.sellerProfile?.businessName ||
           item.legalBusinessName ||
-          item.sellerName ||
-          item.full_name ||
-          item.name ||
-          item.email ||
-          item._id ||
+          // item.sellerName ||
+          // item.full_name ||
+          // item.name ||
+          // item.email ||
+          // item._id ||
           item.id;
 
         const organizationId =

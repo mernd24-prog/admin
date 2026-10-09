@@ -473,7 +473,7 @@ const Payments = () => {
 
               <div>
                 <p className="admin-label">Verification</p>
-                <p className="mt-1 text-sm font-medium capitalize text-gray-800">
+                <p className="mt-1 text-sm font-medium capitalize text-green">
                   {display(
                     detailPayment?.verification_method || "not verified",
                   )}
@@ -487,7 +487,7 @@ const Payments = () => {
                 Payment Amount
               </p>
 
-              <p className="mt-1 text-2xl font-bold text-[var(--admin-gold-dark)]">
+              <p className="mt-1 text-xl font-bold text-[var(--admin-gold-dark)]">
                 {detailPayment?.currency || "INR"}{" "}
                 {formatIndianNumber(detailPayment?.amount)}
               </p>

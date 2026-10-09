@@ -1217,9 +1217,11 @@ const CategoryAttributesPanel = ({
       </div>
 
       {/* Info banner */}
-      <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 flex items-start gap-2">
-        <span className="text-blue-500 mt-0.5">ℹ</span>
-        <p className="text-xs text-blue-800">
+      <div className="mb-4 flex items-start justify-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 py-3">
+        <span className=" shrink-0 text-sm font-semibold leading-5 text-blue-500">
+          ℹ
+        </span>
+        <p className="min-w-0 text-xs leading-5 text-blue-800">
           These attributes control which fields appear when adding/editing
           products under <strong>{categoryName}</strong>. You can choose from
           presets below or add custom attributes.

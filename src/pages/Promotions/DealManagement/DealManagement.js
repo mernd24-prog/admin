@@ -282,20 +282,34 @@ function ProductSearch({ sellerId, value, onSelect }) {
         }
         return products.flatMap((rawProduct) => {
           const product = normalizeProduct(rawProduct);
-          return (rawProduct.variants || []).filter((variant) => variant.status !== "inactive").map((variant) => {
-            const attributes = variant.attributes || {};
-            const description = variant.title || Object.entries(attributes)
-              .map(([key, value]) => `${key}: ${value}`).join(", ") || variant.sku;
-            const option = {
-              ...product,
-              variantId: String(variant._id || variant.id || ""),
-              variantSku: variant.sku,
-              label: `${product.label} – ${description} (${variant.sku})`,
-              price: variant.salePrice ?? variant.price ?? product.price,
-              stock: Math.max(0, Number(variant.stock || 0) - Number(variant.reservedStock || 0)),
-            };
-            return { value: `${product.id}:${option.variantId || option.variantSku}`, label: option.label, product: option };
-          });
+          return (rawProduct.variants || [])
+            .filter((variant) => variant.status !== "inactive")
+            .map((variant) => {
+              const attributes = variant.attributes || {};
+              const description =
+                variant.title ||
+                Object.entries(attributes)
+                  .map(([key, value]) => `${key}: ${value}`)
+                  .join(", ") ||
+                variant.sku;
+              const option = {
+                ...product,
+                variantId: String(variant._id || variant.id || ""),
+                variantSku: variant.sku,
+                label: `${product.label} – ${description} (${variant.sku})`,
+                price: variant.salePrice ?? variant.price ?? product.price,
+                stock: Math.max(
+                  0,
+                  Number(variant.stock || 0) -
+                    Number(variant.reservedStock || 0),
+                ),
+              };
+              return {
+                value: `${product.id}:${option.variantId || option.variantSku}`,
+                label: option.label,
+                product: option,
+              };
+            });
         });
       } catch (error) {
         toast.error(
@@ -336,7 +350,11 @@ function ProductSearch({ sellerId, value, onSelect }) {
       value={selectedValue}
       onChange={handleChange}
       loadOptions={loadProductOptions}
-      placeholder={isAdminPanel() && !sellerId ? "Select seller first" : "Search product, variant or SKU"}
+      placeholder={
+        isAdminPanel() && !sellerId
+          ? "Select seller first"
+          : "Search product, variant or SKU"
+      }
       isDisabled={isAdminPanel() && !sellerId}
       loadingMessage={() => "Loading seller product variants…"}
       defaultOptions
@@ -588,7 +606,13 @@ const DealManagement = () => {
   const onProductSelect = (product) => {
     setSelectedProduct(product);
     if (!product) {
-      setForm((current) => ({ ...current, productId: "", variantId: "", variantSku: "", productLabel: "" }));
+      setForm((current) => ({
+        ...current,
+        productId: "",
+        variantId: "",
+        variantSku: "",
+        productLabel: "",
+      }));
       return;
     }
     if (!selectedSeller && product.sellerId) {
@@ -989,7 +1013,11 @@ const DealManagement = () => {
         );
       },
     },
-    { key: "sellingPrice", label: "Selling Price", render: (value) => money(value) },
+    {
+      key: "sellingPrice",
+      label: "Selling Price",
+      render: (value) => money(value),
+    },
     {
       key: "allocatedQuantity",
       label: "Quantity",
@@ -1620,7 +1648,7 @@ const DealManagement = () => {
                       {display(event.event_type)}
                     </p>
 
-                    <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                    <p className="mt-1 text-xs capitalize text-[var(--admin-muted)]">
                       {fmtDateTime(event.created_at)} ·{" "}
                       {event.actor_role || "system"}
                     </p>
