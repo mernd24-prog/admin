@@ -27,6 +27,7 @@ import { ACTIONS, usePermission } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
 import useStoreNames from "../../hooks/useStoreNames";
 
+import { isSellerPanel } from "../../_helpers/panelConfig";
 import { dropdownApi } from "../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
@@ -47,9 +48,6 @@ const CLASS_AMOUNT_CARD = "rounded-xl border border-gray-200 p-4";
 const CLASS_AMOUNT_VALUE = "mt-1 text-base font-semibold text-gray-900";
 
 const FILTER_FIELDS = [
-  // { key: "search", type: "text", label: "Search", width: "w-56" },
-  { key: "orderId", type: "text", label: "Order #", width: "w-56" },
-
   {
     key: "sellerId",
     type: "asyncDropdown",
@@ -123,9 +121,9 @@ const CreditNotes = () => {
 
   const filterFields = useMemo(
     () =>
-      isSeller
+      isSeller || isSellerPanel()
         ? FILTER_FIELDS.filter(
-            (field) => !["organizationId", "buyerId"].includes(field.key),
+            (field) => !["sellerId", "organizationId", "buyerId"].includes(field.key),
           )
         : FILTER_FIELDS,
     [isSeller],
@@ -420,6 +418,7 @@ const CreditNotes = () => {
         onRefresh={fetchNotes}
         listPage={list}
         emptyMessage="No credit notes found"
+        searchPlaceholder="Search credit note, order ID or reference"
         rowActions={rowActions}
         filterBar={<FilterBar fields={filterFields} listPage={list} />}
       />

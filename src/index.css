@@ -1981,3 +1981,29 @@ label {
 .admin-filter-select__control--menu-is-open {
   border-color: var(--admin-gold) !important;
 }
+
+/* Keep product names and SKUs readable inside special-price table cells. */
+.admin-card tbody .special-price-product-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 280px;
+  max-width: 100%;
+}
+
+.admin-card tbody .special-price-product-name {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 0;
+  line-height: 20px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.admin-card tbody .special-price-product-sku {
+  display: block;
+  line-height: 16px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

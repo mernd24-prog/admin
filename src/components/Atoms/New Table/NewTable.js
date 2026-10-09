@@ -1,3 +1,4 @@
+import { isSellerPanel } from "../../../_helpers/panelConfig";
 import React, { useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import Button from "../buttons/button";
@@ -242,7 +243,7 @@ export default function SearchComponent({
         ? {
             category: {
               value: "",
-              label: "Search By Category",
+              label: isSellerPanel() ? "Select Category" : "Search By Category",
             },
           }
         : {}),
@@ -646,6 +647,7 @@ export default function SearchComponent({
                   <FilterSelect
                     label="Category"
                     value={filters.category}
+                    mutedValue={isSellerPanel() && (!filters.category?.value || filters.category?.value === "All")}
                     options={categoryOptions}
                     isSearchable
                     onChange={(option) =>
@@ -661,6 +663,7 @@ export default function SearchComponent({
                   <FilterSelect
                     label={activationStatus || "Activation status"}
                     value={filters.activationStatus}
+                    mutedValue={isSellerPanel() && (!filters.activationStatus?.value || filters.activationStatus?.value === "All")}
                     options={activationStatusOptions}
                     isSearchable={false}
                     onChange={(option) =>
@@ -676,6 +679,7 @@ export default function SearchComponent({
                   <FilterSelect
                     label={approvalStatus || "Approval Status"}
                     value={filters.approvalStatus}
+                    mutedValue={isSellerPanel() && (!filters.approvalStatus?.value || filters.approvalStatus?.value === "All")}
                     options={approvalOptions}
                     isSearchable={false}
                     onChange={(option) =>
@@ -691,6 +695,7 @@ export default function SearchComponent({
                   <FilterSelect
                     label={revisionStatus || "Revision Status"}
                     value={filters.revisionStatus}
+                    mutedValue={isSellerPanel() && (!filters.revisionStatus?.value || filters.revisionStatus?.value === "All")}
                     options={revisionOptions}
                     isSearchable={false}
                     onChange={(option) =>

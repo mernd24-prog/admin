@@ -3,7 +3,7 @@ import AsyncSelect from "react-select/async";
 import CreatableSelect from "react-select/creatable";
 import { ChevronDown } from "lucide-react";
 
-const customStyles = (error, controlHeight) => ({
+const customStyles = (error, controlHeight, mutedValue) => ({
   control: (provided, state) => ({
     ...provided,
 
@@ -61,7 +61,7 @@ const customStyles = (error, controlHeight) => ({
     ...provided,
     color: state.isDisabled
       ? "#9ca3af"
-      : "var(--admin-ink)",
+      : mutedValue ? "var(--admin-muted)" : "var(--admin-ink)",
     fontSize: "0.875rem",
     paddingLeft: "2px",
   }),
@@ -194,9 +194,11 @@ const FilterSelect = ({
   className = "",
   loadOptions,
   defaultOptions = true,
+  loadingMessage,
   cacheOptions = true,
   formatOptionLabel,
   controlHeight,
+  mutedValue = false,
   noOptionsMessage = isCreatable
     ? ({ inputValue }) =>
         inputValue
@@ -224,7 +226,7 @@ const FilterSelect = ({
 
       <div className="relative text-sm min-w-0">
         <SelectComponent
-          styles={customStyles(error, controlHeight)}
+          styles={customStyles(error, controlHeight, mutedValue)}
           className="capitalize"
           classNamePrefix="admin-filter-select"
           inputId={inputId}
@@ -252,6 +254,7 @@ const FilterSelect = ({
           menuPosition="fixed"
           aria-invalid={Boolean(error)}
           noOptionsMessage={noOptionsMessage}
+          loadingMessage={loadingMessage}
           components={{
             DropdownIndicator: CustomDropdownIndicator,
           }}

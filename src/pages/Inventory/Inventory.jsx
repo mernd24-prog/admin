@@ -1435,16 +1435,20 @@ const Inventory = () => {
         label: "Image",
         width: "150px",
         render: (_value, variant) => (
-          <ImageThumbnail
-            src={getVariantImage(variant)}
-            images={getVariantImagesList(variant)}
-            alt={variant?.sku || variant?.variantName || "Variant"}
-            size="md"
-            showZoomIcon
-            showViewButton
-            viewButtonText="View"
-            onClick={() => openImageGallery(variant)}
-          />
+          <div className="flex flex-col items-center gap-1">
+            <button
+              type="button"
+              className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
+              onClick={(event) => { event.stopPropagation(); openImageGallery(variant); }}
+              title="View product images"
+            >
+              <img src={getVariantImage(variant)} alt={variant?.sku || variant?.variantName || "Variant"} className="h-full w-full object-cover" />
+            </button>
+            <button type="button" className="text-xs text-blue-500 hover:underline"
+              onClick={(event) => { event.stopPropagation(); openImageGallery(variant); }}>
+              View
+            </button>
+          </div>
         ),
       },
       {
@@ -1453,9 +1457,10 @@ const Inventory = () => {
         sortable: true,
         width: "280px",
         render: (_, row) => (
+          <div className="special-price-product-cell">
           <button
             type="button"
-            className="block w-[280px] max-w-[280px] truncate text-left hover:underline"
+            className="special-price-product-name text-left font-semibold hover:underline"
             onClick={(event) => {
               event.stopPropagation();
 
@@ -1466,6 +1471,8 @@ const Inventory = () => {
           >
             {productTitle(row)}
           </button>
+          <span className="special-price-product-sku text-xs text-gray-500">{row.variantSku || row.sku || "N/A"}</span>
+          </div>
         ),
       },
 
@@ -1473,13 +1480,6 @@ const Inventory = () => {
         key: "variantName",
         label: "Variant",
         render: (_, row) => variantTitle(row),
-      },
-      {
-        key: "variantSku",
-        label: "SKU",
-        render: (value) => (
-          <span className="font-mono text-xs">{value || "N/A"}</span>
-        ),
       },
       {
         key: "originalStock",
@@ -1583,19 +1583,18 @@ const Inventory = () => {
     <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
-        className="admin-btn-secondary inline-flex items-center gap-1.5"
+        className={`${productId ? "" : "admin-btn-secondary"} inline-flex items-center gap-1.5`}
         onClick={handleExport}
         disabled={loading || importing}
       >
-        <MdFileDownload aria-hidden="true" size={17} /> Export Excel
+        Export Template
       </button>
       <button
         type="button"
-        className="admin-btn-secondary inline-flex items-center gap-1.5"
+        className={`${productId ? "" : "admin-btn-secondary"} inline-flex items-center gap-1.5`}
         onClick={() => fileInputRef.current?.click()}
         disabled={loading || importing}
       >
-        <MdFileUpload aria-hidden="true" size={17} />{" "}
         {importing ? "Processing…" : "Import Excel"}
       </button>
       <input
@@ -1609,9 +1608,10 @@ const Inventory = () => {
   );
 
   const importHelp = (
-    <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-      <p className="font-semibold">How stock import works</p>
-      <ol className="mt-1 list-decimal space-y-1 pl-5">
+    <details className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-[11px] text-gray-600">
+      <summary className="cursor-pointer text-xs font-semibold text-gray-900">Import &amp; Export Guide</summary>
+      <p className="mt-2.5 font-semibold text-gray-800">How stock import works</p>
+      <ol className="mt-1 list-decimal space-y-0.5 pl-5">
         <li>
           Export the latest Excel template. Every product variant is a separate
           row.
@@ -1629,7 +1629,7 @@ const Inventory = () => {
         Rows with unchanged stock are skipped. Stock cannot be lower than
         already reserved stock.
       </p>
-    </div>
+    </details>
   );
 
   if (productId) {
@@ -1649,7 +1649,7 @@ const Inventory = () => {
               {importExportActions}
               <button
                 type="button"
-                className="admin-btn-secondary inline-flex items-center gap-1.5"
+                className="inline-flex items-center gap-1.5"
                 onClick={refresh}
                 disabled={loading}
               >

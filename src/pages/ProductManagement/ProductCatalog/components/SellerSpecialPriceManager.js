@@ -808,7 +808,7 @@ const SellerSpecialPriceManager = () => {
         label: "Product",
         sortable: true,
         render: (_, row) => (
-          <div>
+          <div className="special-price-product-cell">
             <button
               type="button"
               onClick={() =>
@@ -816,11 +816,11 @@ const SellerSpecialPriceManager = () => {
                   `/app/seller-special-price-manager/${row._id || row.id}`,
                 )
               }
-              className="block max-w-[280px] overflow-hidden text-ellipsis whitespace-nowrap text-left font-semibold text-[var(--admin-ink)] hover:text-[var(--admin-blue)] hover:underline focus:outline-none"
+              className="special-price-product-name text-left font-semibold text-[var(--admin-ink)] hover:text-[var(--admin-blue)] hover:underline focus:outline-none"
             >
               {row.title || row.name || "Untitled Product"}
             </button>
-            <span className="block text-xs text-gray-500">
+            <span className="special-price-product-sku text-xs text-gray-500">
               {row.sku || "No SKU"}
             </span>
           </div>
@@ -953,14 +953,14 @@ const SellerSpecialPriceManager = () => {
         key: "mrp",
         label: "MRP",
         render: (value) => (
-          <span className="font-mono text-xs text-gray-500 line-through">
+          <span className="font-mono text-sm text-gray-500 line-through">
             {formatMoney(value)}
           </span>
         ),
       },
       {
         key: "sellingPrice",
-        label: "Selling Price",
+        label: "Price",
         render: (value) => (
           <span className="font-mono text-sm font-semibold text-gray-800">
             {formatMoney(value)}
@@ -969,10 +969,10 @@ const SellerSpecialPriceManager = () => {
       },
       {
         key: "originalSpecialPrice",
-        label: "Current Special Price",
+        label: "Special Price",
         render: (value) =>
           value !== "" && value !== null && value !== undefined ? (
-            <span className="font-mono text-xs font-semibold text-green-700">
+            <span className="font-mono text-sm font-semibold text-green-700">
               {formatMoney(value)}
             </span>
           ) : (
@@ -981,7 +981,7 @@ const SellerSpecialPriceManager = () => {
       },
       {
         key: "specialPrice",
-        label: "New Special Price",
+        label: "Update Special Price",
         render: (value, row) => {
           const { hasError, minimumSpecialPrice } = getRowFlags(row);
           return (
@@ -1062,7 +1062,7 @@ const SellerSpecialPriceManager = () => {
                 onClick={() => navigate("/app/seller-special-price-manager")}
               >
                 <ArrowLeft aria-hidden="true" size={16} />
-                Back to Products
+                Back
               </button>
 
               <button
@@ -1168,14 +1168,6 @@ const SellerSpecialPriceManager = () => {
                         </strong>
                       </span>
                     )}
-                  <span>
-                    Category:{" "}
-                    <strong className="text-gray-700">
-                      {detailProduct.category?.name ||
-                        detailProduct.categoryName ||
-                        "-"}
-                    </strong>
-                  </span>
                   <span>
                     Total Variants:{" "}
                     <strong className="text-gray-700">{rows.length}</strong>

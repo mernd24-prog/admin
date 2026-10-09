@@ -64,7 +64,7 @@ const INITIAL_FILTERS = {
   },
   category: {
     value: "",
-    label: "Search By Category",
+    label: isSellerPanel() ? "Select Category" : "Search By Category",
   },
   activationStatus: {
     value: "All",
