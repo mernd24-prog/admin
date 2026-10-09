@@ -37,11 +37,11 @@ export const PANEL_MODES = {
 const requestedMode = String(process.env.REACT_APP_PANEL_MODE || "")
   .trim()
   .toLowerCase();
-// const configuredMode = Object.values(PANEL_MODES).includes(requestedMode)
-//   ? requestedMode
-//   : PANEL_MODES.ADMIN;
+const configuredMode = Object.values(PANEL_MODES).includes(requestedMode)
+  ? requestedMode
+  : PANEL_MODES.ADMIN;
 
-const configuredMode =PANEL_MODES.SELLER;
+// const configuredMode =PANEL_MODES.SELLER;
 
 export const getPanelMode = () => configuredMode;
 
