@@ -2236,7 +2236,7 @@ const ItemWisePayoutCalculation = ({ rows = [], totals = {} }) => (
 
     <div className="overflow-hidden rounded-lg border border-[#cdebd6] bg-[#f7fff9]">
       <div className="bg-[#eefbf2] px-3 py-2 font-bold text-[#21812C]">
-        Final seller payout calculation
+        Final Seller Payout Calculation
       </div>
       <div className="grid gap-2 p-3 text-sm sm:grid-cols-3">
         <div>
@@ -2481,14 +2481,18 @@ const PaymentCard = ({
   const method = displayStatus(
     firstDefined(payment.method, payment.payment_method, payment.provider),
   );
-  const amount = `${payment.currency || currency} ${money(payment.amount).toFixed(2)}`;
+  const amount = `${payment.currency || currency} ${formatIndianNumber(payment.amount)}`;
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#eadfbd] bg-white shadow-[0_1px_4px_rgba(31,41,55,0.04)]">
       <div className="flex flex-wrap items-start justify-between gap-3 bg-[#fff9ea] px-4 py-3">
         <div>
-          <div className="flex items-center gap-2 font-bold text-[#202337]">
-            <MdPayments className="text-[#D8A21D]" size={18} />
+          <div className="flex items-center gap-2 font-bold capitalize text-[#202337]">
+            <MdPayments
+              aria-hidden="true"
+              className="text-[#D8A21D]"
+              size={18}
+            />
             {provider} payment
           </div>
           <OrderLink
@@ -2541,7 +2545,7 @@ const DocumentCard = ({ document = {}, onOpen }) => {
       <div className="flex flex-wrap items-start justify-between gap-3 bg-[#fff9ea] px-4 py-3">
         <div>
           <div className="font-bold text-[#202337]">{number}</div>
-          <div className="mt-1 text-xs text-[#65718b]">{type}</div>
+          <div className="mt-1 text-xs text-[#65718b] capitalize">{type}</div>
         </div>
         <StatusBadge
           status={firstDefined(document.status, "generated")}
@@ -4651,7 +4655,7 @@ const OrderSummary = () => {
                         )}
 
                       <div className="flex items-center justify-between rounded-lg bg-[#fff9ea] px-3 py-3 text-base font-bold text-[#202337]">
-                        <span>Final seller payout</span>
+                        <span>Final Seller Payout</span>
                         <span>{formatIndianNumber(displaySellerPayout)}</span>
                       </div>
                       {(seller.commissionStatus || seller.payoutStatus) && (

@@ -11,7 +11,7 @@ import { clearStoredAuth } from "../../_helpers/authStorage";
 import { AUTH_ROUTES } from "../../pages/auth/authRoutes";
 import { logout as logoutAuth } from "../../Redux/auth-Slice";
 import { clearSellerOnboarding } from "../../Redux/seller-slice";
-
+import LogoutConfirmModal from "../Atoms/logoutPopup/logoutPopup";
 const readStoredJson = (key) => {
   try {
     const value = localStorage.getItem(key);
@@ -34,6 +34,7 @@ const getSellerHeaderName = (...sources) => {
       profile.legalBusinessName ||
       profile.businessName ||
       profile.primaryContactName;
+
     const userName =
       source?.fullName ||
       source?.full_name ||
@@ -41,9 +42,12 @@ const getSellerHeaderName = (...sources) => {
       source?.userName ||
       source?.legalName ||
       source?.email?.split("@")?.[0];
+
     const name = profileName || userName;
+
     if (name) return name;
   }
+
   return "Seller Account";
 };
 
@@ -55,8 +59,10 @@ const getSellerHeaderSubtitle = (...sources) => {
       source?.role ||
       source?.roleName ||
       source?.onboardingStatus;
+
     if (subtitle) return formatLabel(subtitle);
   }
+
   return "Vendor Applicant";
 };
 
@@ -69,8 +75,10 @@ const getSellerHeaderEmail = (...sources) => {
       source?.sellerProfile?.email ||
       source?.sellerProfile?.primaryEmail ||
       source?.contactEmail;
+
     if (email) return email;
   }
+
   return "";
 };
 
@@ -79,7 +87,9 @@ const getInitials = (name = "") => {
     .trim()
     .split(/\s+/)
     .filter(Boolean);
+
   if (!words.length) return "SG";
+
   return words
     .slice(0, 2)
     .map((word) => word[0])
@@ -111,6 +121,7 @@ const OnboardingSupportModal = ({
               Onboarding Issue.
             </p>
           </div>
+
           <button
             type="button"
             onClick={onClose}
@@ -142,6 +153,7 @@ const OnboardingSupportModal = ({
           >
             Cancel
           </button>
+
           <button
             type="submit"
             className="admin-btn-primary min-w-[150px]"
@@ -162,19 +174,28 @@ const KYCStatusLayout = ({
 }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
   const stepsNavRef = useRef(null);
   const activeStepRef = useRef(null);
   const contentRef = useRef(null);
   const userMenuRef = useRef(null);
+
   const [supportOpen, setSupportOpen] = useState(false);
   const [supportMessage, setSupportMessage] = useState("");
   const [supportSubmitting, setSupportSubmitting] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Logout confirmation modal state
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
   const { seller, authSlice } = useSelector((state) => state || {});
+
   const storedUser = readStoredJson("currentUser");
   const storedOnboardingUser = readStoredJson("sellerOnboardingUser");
   const storedFlowState = readStoredJson("authFlowState");
+
   const flowState = seller?.flowState || storedFlowState || {};
+
   const headerName = getSellerHeaderName(
     authSlice?.user,
     seller?.onboardingUser,
@@ -182,6 +203,7 @@ const KYCStatusLayout = ({
     storedUser,
     storedOnboardingUser,
   );
+
   const headerSubtitle = getSellerHeaderSubtitle(
     authSlice?.user,
     seller?.onboardingUser,
@@ -189,6 +211,7 @@ const KYCStatusLayout = ({
     storedUser,
     storedOnboardingUser,
   );
+
   const headerEmail = getSellerHeaderEmail(
     authSlice?.user,
     seller?.onboardingUser,
@@ -196,6 +219,7 @@ const KYCStatusLayout = ({
     storedUser,
     storedOnboardingUser,
   );
+
   const headerInitials = getInitials(headerName);
 
   const menuItems = [
@@ -205,6 +229,7 @@ const KYCStatusLayout = ({
     { id: "review", label: "Review Details" },
     { id: "status", label: "Status" },
   ];
+
   const currentIndex = menuItems.findIndex(
     (item) => item.id === currentSection,
   );
@@ -219,6 +244,7 @@ const KYCStatusLayout = ({
     };
 
     document.addEventListener("mousedown", closeMenuOnOutsideClick);
+
     return () => {
       document.removeEventListener("mousedown", closeMenuOnOutsideClick);
     };
@@ -226,10 +252,12 @@ const KYCStatusLayout = ({
 
   const closeSupportModal = () => {
     if (supportSubmitting) return;
+
     setSupportOpen(false);
     setSupportMessage("");
   };
 
+  // Existing logout logic remains unchanged
   const handleLogout = () => {
     clearStoredAuth();
     dispatch(clearSellerOnboarding());
@@ -239,9 +267,26 @@ const KYCStatusLayout = ({
     navigate(AUTH_ROUTES.LOGIN, { replace: true });
   };
 
+  // Open confirmation instead of logging out immediately
+  const openLogoutConfirmation = () => {
+    setUserMenuOpen(false);
+    setShowLogoutConfirm(true);
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
+    handleLogout();
+  };
+
   const submitOnboardingSupport = async (event) => {
     event.preventDefault();
+
     const message = supportMessage.trim();
+
     if (message.length < 10) {
       toast.error("Message must be at least 10 characters.");
       return;
@@ -250,6 +295,7 @@ const KYCStatusLayout = ({
     const token =
       sessionStorage.getItem("accessToken") ||
       localStorage.getItem("sellerOnboardingToken");
+
     if (!token) {
       toast.error("Please login again to submit support request.");
       return;
@@ -257,6 +303,7 @@ const KYCStatusLayout = ({
 
     try {
       setSupportSubmitting(true);
+
       await axiosProvider.post(
         ENDPOINTS.support.create,
         {
@@ -274,6 +321,7 @@ const KYCStatusLayout = ({
           },
         },
       );
+
       toast.success("Support request submitted");
       setSupportOpen(false);
       setSupportMessage("");
@@ -286,9 +334,11 @@ const KYCStatusLayout = ({
 
   const scrollContentToTop = useCallback(() => {
     const content = contentRef.current;
+
     if (!content) return;
 
     const startTop = content.scrollTop;
+
     if (startTop <= 0) return;
 
     const duration = 280;
@@ -311,6 +361,7 @@ const KYCStatusLayout = ({
   useEffect(() => {
     const nav = stepsNavRef.current;
     const activeStep = activeStepRef.current;
+
     if (
       !nav ||
       !activeStep ||
@@ -337,7 +388,14 @@ const KYCStatusLayout = ({
   }, [currentSection, scrollContentToTop]);
 
   return (
-    <div className="min-h-screen  bg-[#f6f3ef]   font-inter text-[#17213a] lg:grid lg:grid-cols-[350px_minmax(0,1fr)]">
+    <div className="min-h-screen bg-[#f6f3ef] font-inter text-[#17213a] lg:grid lg:grid-cols-[350px_minmax(0,1fr)]">
+      {/* Shared logout confirmation modal */}
+      <LogoutConfirmModal
+        isOpen={showLogoutConfirm}
+        onCancel={cancelLogout}
+        onConfirm={confirmLogout}
+      />
+
       <OnboardingSupportModal
         open={supportOpen}
         message={supportMessage}
@@ -346,9 +404,10 @@ const KYCStatusLayout = ({
         onClose={closeSupportModal}
         onSubmit={submitOnboardingSupport}
       />
-      <aside className="sidebar-scrollbar w-full   lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
+
+      <aside className="sidebar-scrollbar w-full lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
         <div className="flex h-full flex-col">
-          <div className=" bg-[#FCF5E8]  pb-5  sm:pb-7 lg:pb-10">
+          <div className="bg-[#FCF5E8] pb-5 sm:pb-7 lg:pb-10">
             <div className="flex h-[118px] items-center justify-center px-4 sm:h-[140px] lg:h-[165px]">
               <BrandLogo
                 src={logo}
@@ -357,11 +416,13 @@ const KYCStatusLayout = ({
               />
             </div>
 
-            {/* <div className="flex min-h-[54px] w-full items-center justify-center border-y border-[#012B6B1F] bg-[#F3E9D9] px-4 py-3 sm:min-h-[60px] lg:h-[65px] lg:justify-start lg:px-7 lg:py-0">
+            {/*
+            <div className="flex min-h-[54px] w-full items-center justify-center border-y border-[#012B6B1F] bg-[#F3E9D9] px-4 py-3 sm:min-h-[60px] lg:h-[65px] lg:justify-start lg:px-7 lg:py-0">
               <h2 className="text-center text-[16px] font-bold capitalize leading-[18px] tracking-[1.4px] text-[#042586] sm:text-[18px] sm:tracking-[1.8px] lg:text-left lg:text-[20px] lg:leading-[15px] lg:tracking-[2.2px]">
                 Verification Steps
               </h2>
-            </div> */}
+            </div>
+            */}
 
             <div className="px-4 pt-4 sm:px-6 sm:pt-5 lg:px-[31px] lg:pt-[22px]">
               <nav
@@ -369,6 +430,7 @@ const KYCStatusLayout = ({
                 className="sidebar-scrollbar relative flex gap-3 overflow-x-auto pb-3 lg:flex lg:flex-col lg:gap-[34px] lg:overflow-visible lg:pb-0"
               >
                 <span className="absolute left-[25px] top-[20px] hidden h-[310px] w-[2.5px] rounded-full bg-[#E49E1C] lg:block" />
+
                 {menuItems.map((item, index) => (
                   <div
                     key={item.id}
@@ -397,6 +459,7 @@ const KYCStatusLayout = ({
                           String(index + 1).padStart(2, "0")
                         )}
                       </span>
+
                       <span className="flex min-w-0 flex-col justify-center">
                         <span
                           className={`block h-[17px] w-[78px] whitespace-nowrap font-[Inter] text-[13px] font-semibold uppercase leading-[16.5px] tracking-[0.28px] ${
@@ -407,6 +470,7 @@ const KYCStatusLayout = ({
                         >
                           Step {String(index + 1).padStart(2, "0")}
                         </span>
+
                         <span
                           className={`mt-[2px] block max-w-[170px] truncate text-[11px] font-semibold leading-[12px] ${
                             item.id === currentSection
@@ -456,8 +520,8 @@ const KYCStatusLayout = ({
                 {headerInitials}
               </span>
 
-              <span className="hidden text-left sm:block">
-                <span className="block max-w-[130px] truncate text-left text-[14px] font-bold leading-[20px] text-[#111827]">
+              <span className="hidden text-left  sm:block">
+                <span className="block max-w-[130px] capitalize truncate text-left text-[14px] font-bold leading-[20px] text-[#111827]">
                   {headerName}
                 </span>
 
@@ -482,7 +546,7 @@ const KYCStatusLayout = ({
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={handleLogout}
+                  onClick={openLogoutConfirmation}
                   className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-[#b42318] transition hover:bg-[#fff4f3]"
                 >
                   <LogOut size={16} />

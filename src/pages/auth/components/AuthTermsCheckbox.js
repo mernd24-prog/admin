@@ -15,7 +15,16 @@ const AuthTermsCheckbox = ({ checked, onChange, className = "" }) => (
     <span className="text-[13px] leading-5 font-inter text-[#667085]">
       I agree to all{" "}
       <span className="font-semibold text-[#031b52]">
-        Terms, Privacy, and Cancellation Policies.
+        <a
+          href="https://staging.samglobal1.com/terms-of-use"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          Terms
+        </a>
+        , Privacy, and Cancellation Policies.
       </span>
     </span>
   </label>
