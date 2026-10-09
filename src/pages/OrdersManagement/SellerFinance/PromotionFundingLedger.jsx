@@ -21,6 +21,7 @@ import {
   getMyPromotionFundingLedger,
   getPromotionFundingLedger,
 } from "../../../Redux/sellerCommissionsSlice";
+import { truncateToWordBoundary } from "../../../utils/formatters";
 
 const money = (value, currency = "INR") =>
   new Intl.NumberFormat("en-IN", {
@@ -211,39 +212,42 @@ const PromotionFundingLedger = () => {
   // Table columns
   const columns = useMemo(
     () => [
-      {
-        key: "orderId",
-        label: "Order / Item",
-        render: (value, row) => {
-          const orderId = row?.orderId || row?.order_id;
-          const orderDisplay = row?.orderNumber || value || "—";
+     {
+  key: "orderId",
+  label: "Order / Item",
+  render: (value, row) => {
+    const orderId = row?.orderId || row?.order_id;
+    const orderDisplay = row?.orderNumber || value || "—";
+    const productName = row?.productTitle || "Order item";
 
-          return (
-            <div className="flex flex-col">
-              <OrderLink
-                orderId={orderId}
-                orderNumber={row?.orderNumber || row?.order_number}
-              >
-                {orderDisplay}
-              </OrderLink>
+    return (
+      <div className="flex flex-col">
+        <OrderLink
+          orderId={orderId}
+          orderNumber={row?.orderNumber || row?.order_number}
+        >
+          {orderDisplay}
+        </OrderLink>
 
-              <div className="mt-1 font-medium text-gray-900">
-                {row?.productTitle || "Order item"}
-              </div>
+        <div
+          title={productName}
+        >
+          {truncateToWordBoundary(productName)}
+        </div>
 
-              <div className="text-xs text-gray-500">
-                {row?.productSku || "No SKU"} · Qty {row?.quantity ?? 0}
-              </div>
-            </div>
-          );
-        },
-      },
+        <div className="text-xs text-gray-500">
+          {row?.productSku || "No SKU"} · Qty {row?.quantity ?? 0}
+        </div>
+      </div>
+    );
+  },
+},
 
       ...(!sellerMode
         ? [
             {
               key: "sellerId",
-              label: "Seller",
+              label: "Seller / Org",
               render: (value, row) => {
                 const sellerId = value || row?.sellerId || row?.seller_id;
 

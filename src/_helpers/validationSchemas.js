@@ -78,16 +78,27 @@ const taxRateSchema = (label) =>
     .max(100, `${label} must be between 0 and 100`);
 
 export const hsnValidationSchema = Yup.object({
-  code: Yup.string().trim().required("HSN Code is required"),
+  code: Yup.string()
+    .trim()
+    .required("HSN Code is required")
+    .matches(/^\d{4,8}$/, "Must be 4-8 digits"),
   description: Yup.string()
     .trim()
-    .required("Description is required")
+    .transform((value) => (value === "" ? undefined : value))
+    .notRequired()
     .min(3, "Description must be at least 3 characters")
     .max(100, "Description must be no more than 100 characters"),
   IGST: taxRateSchema("IGST"),
   CGST: taxRateSchema("CGST"),
   SGST: taxRateSchema("SGST"),
-  additionalTax: taxRateSchema("Additional Tax"),
+  additionalTax: Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" ? undefined : value,
+    )
+    .typeError("Additional Tax must be a number")
+    .notRequired()
+    .min(0, "Additional Tax must be between 0 and 100")
+    .max(100, "Additional Tax must be between 0 and 100"),
 });
 
 export const taxValidationSchema = Yup.object({
@@ -96,6 +107,14 @@ export const taxValidationSchema = Yup.object({
     .required("Tax name is required")
     .min(2, "Min 2 characters"),
   country_code: Yup.string().required("Country is required"),
+});
+
+export const taxInvoiceValidationSchema = Yup.object({
+  orderId: Yup.string()
+    .trim()
+    .required("Order ID is required")
+    .min(3, "Order ID must be at least 3 characters")
+    .max(100, "Order ID must be at most 100 characters"),
 });
 
 export const subTaxValidationSchema = Yup.object({
@@ -118,12 +137,51 @@ export const taxRuleValidationSchema = Yup.object({
   description: Yup.string()
     .trim()
     .required("Description is required")
-    .min(3, "Min 3 characters"),
+    .min(3, "Min 3 characters")
+    .max(100, "Max 2500 characters"),
   tax_id: Yup.string().required("Tax is required"),
   subTaxes_id: Yup.array()
     .of(Yup.string())
     .min(1, "Sub Tax is required"),
   category_id: Yup.string().required("Category is required"),
+});
+
+const optionalCreditNoteText = (label, maxLength) =>
+  Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(3, `${label} must be at least 3 characters`)
+    .max(maxLength, `${label} must be at most ${maxLength} characters`);
+
+const optionalCreditNoteAmount = (label) =>
+  Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" || originalValue === null ? undefined : value,
+    )
+    .typeError(`${label} must be a number`)
+    .notRequired()
+    .min(0, `${label} cannot be negative`);
+
+export const creditNoteValidationSchema = Yup.object({
+  orderId: Yup.string()
+    .trim()
+    .required("Order ID is required")
+    .min(3, "Order ID must be at least 3 characters")
+    .max(100, "Order ID must be at most 100 characters"),
+  referenceId: optionalCreditNoteText("Reference ID", 100),
+  referenceType: Yup.string()
+    .required("Reference type is required")
+    .oneOf(["return", "cancellation", "refund", "manual"]),
+  taxableAmount: Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" || originalValue === null ? undefined : value,
+    )
+    .typeError("Taxable amount must be a number")
+    .required("Taxable amount is required")
+    .moreThan(0, "Taxable amount must be greater than zero"),
+  taxAmount: optionalCreditNoteAmount("Tax amount"),
+  totalAmount: optionalCreditNoteAmount("Total credit amount"),
+  reason: optionalCreditNoteText("Reason", 500),
 });
 
 export const categoryValidationSchema = Yup.object({

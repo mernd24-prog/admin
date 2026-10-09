@@ -36,7 +36,7 @@ import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
 import { exportToCsv } from "../../../_helpers/exportToCsv";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
-import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
+import { formatDateTime12Hour, formatLabel, truncateToWordBoundary } from "../../../utils/formatters";
 
 import {
   FinancePageGuide,
@@ -665,33 +665,37 @@ const SellerPayouts = () => {
         ),
       },
 
-      {
-        key: "outcome",
-        label: "Outcome / reason",
-        render: (_, row) => {
-          const explanation = payoutExplanation(row);
+     {
+  key: "outcome",
+  label: "Outcome / reason",
+  render: (_, row) => {
+    const explanation = payoutExplanation(row);
 
-          return (
-            <div>
-              <div
-                className={
-                  explanation.tone === "green"
-                    ? "font-semibold text-green-700"
-                    : explanation.tone === "amber"
-                      ? "font-semibold text-amber-700"
-                      : "font-semibold text-gray-700"
-                }
-              >
-                {explanation.title}
-              </div>
+    return (
+      <div className="max-w-[280px]">
+        <div
+          className={
+            explanation.tone === "green"
+              ? "font-semibold text-green-700"
+              : explanation.tone === "amber"
+                ? "font-semibold text-amber-700"
+                : "font-semibold text-gray-700"
+          }
+          title={explanation.title}
+        >
+          {truncateToWordBoundary(explanation.title, 40)}
+        </div>
 
-              <div className="mt-0.5 text-xs leading-5 text-gray-500">
-                {explanation.detail}
-              </div>
-            </div>
-          );
-        },
-      },
+        <div
+          className="mt-0.5 text-xs leading-5 text-gray-500"
+          title={explanation.detail}
+        >
+          {truncateToWordBoundary(explanation.detail, 50)}
+        </div>
+      </div>
+    );
+  },
+},
 
       {
         key: "period_start",

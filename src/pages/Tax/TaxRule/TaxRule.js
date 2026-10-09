@@ -349,24 +349,26 @@ const TaxRule = () => {
               )
               .map((st) => ({ value: st._id, label: st.name }));
 
-            formik.resetForm({ values: {
-              _id: row._id,
-              description: row.description || "",
-              tax_id:
-                row.taxId?._id ||
-                row.tax_id?._id ||
-                row.taxId ||
-                row.tax_id ||
-                "",
-              subTaxes_id: Array.isArray(row.subTaxIds)
-                ? row.subTaxIds.map((s) => s?._id || s)
-                : Array.isArray(row.subTaxes_id)
-                  ? row.subTaxes_id.map((s) => s?._id || s)
-                  : [row.subTaxes_id?._id || row.subTaxes_id].filter(Boolean),
-              category_id:
-                row.category_id?._id || row.category_id || row.category || "",
-              isDisable: !active,
-            } });
+            formik.resetForm({
+              values: {
+                _id: row._id,
+                description: row.description || "",
+                tax_id:
+                  row.taxId?._id ||
+                  row.tax_id?._id ||
+                  row.taxId ||
+                  row.tax_id ||
+                  "",
+                subTaxes_id: Array.isArray(row.subTaxIds)
+                  ? row.subTaxIds.map((s) => s?._id || s)
+                  : Array.isArray(row.subTaxes_id)
+                    ? row.subTaxes_id.map((s) => s?._id || s)
+                    : [row.subTaxes_id?._id || row.subTaxes_id].filter(Boolean),
+                category_id:
+                  row.category_id?._id || row.category_id || row.category || "",
+                isDisable: !active,
+              },
+            });
 
             const taxVal = row.taxId || row.tax_id;
             setSelectedTax(
@@ -419,10 +421,7 @@ const TaxRule = () => {
       <PageHeader
         title="Tax Rules"
         subtitle="Map tax structures to product categories"
-        breadcrumbs={[
-          { label: "Invoices & Taxation" },
-          { label: "Tax Rules" },
-        ]}
+        breadcrumbs={[{ label: "Invoices & Taxation" }, { label: "Tax Rules" }]}
         actions={
           <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
             <button
@@ -512,7 +511,7 @@ const TaxRule = () => {
 
                 {/* Tax + Sub Tax */}
 
-                <div className="">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FilterSelect
                     options={taxOptions}
                     label="Select Tax"
@@ -523,23 +522,21 @@ const TaxRule = () => {
                     placeholder="Select tax"
                   />
 
-                  <div className="min-w-0 my-4">
-                    <FilterSelect
-                      options={filteredSubTaxOptions}
-                      label="Select Sub Tax"
-                      value={selectedSubTax}
-                      onChange={handleSubTaxChange}
-                      error={
-                        formik.touched.subTaxes_id && formik.errors.subTaxes_id
-                      }
-                      required
-                      isMulti
-                      isDisabled={!selectedTax}
-                      placeholder={
-                        selectedTax ? "Select sub tax" : "Select tax first"
-                      }
-                    />
-                  </div>
+                  <FilterSelect
+                    options={filteredSubTaxOptions}
+                    label="Select Sub Tax"
+                    value={selectedSubTax}
+                    onChange={handleSubTaxChange}
+                    error={
+                      formik.touched.subTaxes_id && formik.errors.subTaxes_id
+                    }
+                    required
+                    isMulti
+                    isDisabled={!selectedTax}
+                    placeholder={
+                      selectedTax ? "Select sub tax" : "Select tax first"
+                    }
+                  />
                 </div>
                 {/* Category */}
                 <FilterSelect
@@ -563,10 +560,7 @@ const TaxRule = () => {
               description="Enable this tax rule for applicable products and categories."
               isToggle={!formik.values.isDisable}
               handleClick={() =>
-                formik.setFieldValue(
-                  "isDisable",
-                  !formik.values.isDisable,
-                )
+                formik.setFieldValue("isDisable", !formik.values.isDisable)
               }
             />
           </div>

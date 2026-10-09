@@ -106,7 +106,7 @@ export const customerIdentityFrom = (row = {}) => {
 
 const IdentityContent = ({ primary, secondary, fallback }) => (
   <div className="group min-w-0 text-left">
-    <div className="truncate text-sm font-semibold text-gray-800 transition-colors group-hover:text-[var(--admin-blue)]">
+    <div className=" text-sm font-semibold text-gray-800 transition-colors group-hover:text-[var(--admin-blue)]">
       {primary || fallback}
     </div>
     {secondary && secondary !== primary && (
