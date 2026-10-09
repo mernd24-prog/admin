@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 import {
@@ -181,12 +181,12 @@ const Brands = () => {
     defaultPageSize: 10,
   });
   const [uploadingType, setUploadingType] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [logoPreview, setLogoPreview] = useState("");
   const [logoError, setLogoError] = useState(false);
   const [brands, setBrands] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [imageLoading, setImageLoading] = useState(false);
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS);
 
@@ -194,6 +194,7 @@ const Brands = () => {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -202,35 +203,34 @@ const Brands = () => {
   const [reviewTarget, setReviewTarget] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  const handleBrandImageUpload = async (file, type) => {
-    if (!file) return;
+  useEffect(() => {
+    return () => {
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+    };
+  }, [logoPreview]);
 
+  const handleBrandImageUpload = async (file, type = "BRANDS") => {
+    if (!file || savingRef.current || uploadingType !== null) return;
+    const allowed = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
+    const ext = file.name?.split(".").pop()?.toLowerCase();
+    if (!allowed.includes(file.type) && !["png", "jpg", "jpeg", "webp"].includes(ext)) {
+      toast.error("Only JPG/PNG/WEBP images allowed");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Max file size is 5MB");
+      return;
+    }
+    setUploadingType(type);
     try {
-      setUploadingType(type);
-
-      if (type === "BRANDS") {
-        setLogoError(false);
-      }
-
-      await handleFileUpload(file, type);
-
-      const previewUrl = URL.createObjectURL(file);
-
-      if (type === "BRANDS") {
-        setLogoPreview((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return previewUrl;
-        });
-
-        if (errors.logo) {
-          setErrors((prev) => ({
-            ...prev,
-            logo: undefined,
-          }));
-        }
-      }
+      const url = await uploadFile(file, type);
+      setFormData((prev) => ({ ...prev, logo: url }));
+      setLogoPreview(URL.createObjectURL(file));
+      setLogoError(false);
+      setErrors((prev) => ({ ...prev, logo: undefined }));
+      toast.success("Image uploaded");
     } catch (error) {
-      console.error("Image upload failed:", error);
+      toast.error(error?.message || error || "Image upload failed");
     } finally {
       setUploadingType(null);
     }
@@ -319,7 +319,6 @@ const Brands = () => {
     if (!formData.name?.trim()) errs.name = "Brand name is required";
     else if (formData.name.trim().length < 2) errs.name = "Min 2 characters";
     if (!formData.logo) errs.logo = "Logo is required";
-    if (!formData.thumbnails) errs.thumbnails = "Thumbnail is required";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -327,47 +326,16 @@ const Brands = () => {
   const closeModal = () => {
     setModalMode(null);
     setFormData(EMPTY_FORM);
+    setLogoPreview("");
+    setLogoError(false);
     setErrors({});
   };
 
-  const handleFileUpload = async (file, type) => {
-    const allowed = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
-    const ext = file.name?.split(".").pop()?.toLowerCase();
-    if (
-      !allowed.includes(file.type) &&
-      !["png", "jpg", "jpeg", "webp"].includes(ext)
-    ) {
-      toast.error("Only JPG/PNG/WEBP images allowed");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Max file size is 5MB");
-      return;
-    }
-    setImageLoading(true);
-    try {
-      const url = await uploadFile(file, type);
-      setFormData((prev) => ({
-        ...prev,
-        logo: url,
-      }));
-      if (errors.logo) {
-        setErrors((prev) => ({
-          ...prev,
-          logo: undefined,
-        }));
-      }
-      toast.success("Image uploaded");
-    } catch (err) {
-      toast.error("Image upload failed");
-    } finally {
-      setImageLoading(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
+    if (savingRef.current || uploadingType !== null) return;
     if (!validateForm()) return;
+    savingRef.current = true;
     setSaving(true);
     const payload = {
       name: formData.name.trim(),
@@ -389,8 +357,10 @@ const Brands = () => {
       closeModal();
       await fetchList();
     } catch (err) {
-      toast.error(err?.message || "Save failed");
+      toast.error(err?.message || err || "Save failed");
     } finally {
+      savingRef.current = false;
+      setUploadingType(null);
       setSaving(false);
     }
   };
@@ -420,10 +390,15 @@ const Brands = () => {
   );
 
   const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
     try {
-      await dispatch(deleteBrand({ _id: [deleteTarget._id] })).unwrap();
-      toast.success("Brand deleted");
+      const result = await dispatch(deleteBrand({ _id: [deleteTarget._id] })).unwrap();
+      if (result?.data?.mediaCleanupPending) {
+        toast.warning("Brand deleted. Image cleanup is pending retry.");
+      } else {
+        toast.success("Brand deleted");
+      }
       setDeleteOpen(false);
       setDeleteTarget(null);
       setBrands((current) =>
@@ -432,7 +407,10 @@ const Brands = () => {
       setTotal((current) => Math.max(0, current - 1));
       await fetchList();
     } catch (err) {
-      toast.error(err?.message || "Delete failed");
+      toast.error(err?.message || err || "Delete failed");
+      await fetchList();
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -757,7 +735,9 @@ const Brands = () => {
         onSubmit={handleSubmit}
         title={modalMode === "add" ? "Add Brand" : "Edit Brand"}
         isButtonView={true}
-        submitButtonText={modalMode === "add" ? "Create Brand" : "Save Changes"}
+        submitButtonText={saving
+          ? (uploadingType !== null ? "Uploading logo…" : (modalMode === "add" ? "Creating…" : "Saving…"))
+          : (modalMode === "add" ? "Create Brand" : "Save Changes")}
         closeButtonText="Cancel"
         loading={saving || uploadingType !== null}
         width="600px"
@@ -817,10 +797,8 @@ const Brands = () => {
                 file={logoPreview || formData.logo}
                 onChange={(file) => handleBrandImageUpload(file, "BRANDS")}
                 onRemove={() => {
-                  if (logoPreview) {
-                    URL.revokeObjectURL(logoPreview);
-                  }
-                  setLogoPreview("");
+                  if (savingRef.current) return;
+                                setLogoPreview("");
                   setLogoError(false);
                   setFormData((prev) => ({
                     ...prev,
@@ -829,7 +807,7 @@ const Brands = () => {
                 }}
                 isLoading={uploadingType === "BRANDS"}
                 loadingText="Uploading logo..."
-                isDisabled={uploadingType !== null}
+                isDisabled={saving || uploadingType !== null}
                 errorMessage={errors.logo}
               />
             </div>
@@ -859,6 +837,7 @@ const Brands = () => {
           setDeleteTarget(null);
         }}
         onConfirm={handleDeleteConfirm}
+        loading={deleting}
         title="Delete Brand"
         message={`Delete brand "${deleteTarget?.name}"? This cannot be undone.`}
         variant="danger"

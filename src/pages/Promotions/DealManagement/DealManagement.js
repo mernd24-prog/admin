@@ -60,8 +60,8 @@ import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import { DateRangeFilter } from "../../../components/Shared/FilterBar";
 
 const DEAL_TYPES = [
-  { value: "fixed_price", label: "Fixed Deal Price" },
-  { value: "percentage_discount", label: "Percentage Discount" },
+  { value: "fixed_price", label: "Variant Promotion" },
+  { value: "percentage_discount", label: "Catalog Discount Promotion" },
   { value: "flash_sale", label: "Flash Sale" },
   { value: "limited_inventory", label: "Limited Inventory" },
   { value: "bulk_quantity", label: "Bulk Quantity" },
@@ -119,8 +119,6 @@ const initialForm = {
   variantSku: "",
   category: "",
   title: "",
-  originalPrice: "",
-  dealPrice: "",
   allocatedQuantity: "",
   maxQuantityPerOrder: "",
   startAt: "",
@@ -197,13 +195,6 @@ const remainingQty = (deal = {}) =>
       num(deal.soldQuantity) -
       num(deal.reservedQuantity),
   );
-const discountAmount = (deal = {}) =>
-  Math.max(0, num(deal.originalPrice) - num(deal.dealPrice));
-const discountPercent = (deal = {}) =>
-  num(deal.originalPrice) > 0
-    ? ((discountAmount(deal) / num(deal.originalPrice)) * 100).toFixed(1)
-    : "0.0";
-
 const normalizeProduct = (product = {}) => {
   const price =
     product.salePrice ??
@@ -262,37 +253,50 @@ function ProductSearch({ sellerId, value, onSelect }) {
   const loadProductOptions = useCallback(
     async (search = "") => {
       try {
+        if (isAdminPanel() && !sellerId) return [];
         const trimmed = search.trim();
 
-        const response = await axiosPrivate.get(
-          ENDPOINTS.products.listForPanel,
-          {
-            params: {
-              q: trimmed || undefined,
-              search: trimmed || undefined,
-              keyWord: trimmed || undefined,
-              sellerId: sellerId || undefined,
-              limit: 20,
-              includeVariants: true,
-              includeAllStatuses: true,
+        const products = [];
+        let page = 1;
+        while (true) {
+          const response = await axiosPrivate.get(
+            ENDPOINTS.products.listForPanel,
+            {
+              params: {
+                q: trimmed || undefined,
+                search: trimmed || undefined,
+                keyWord: trimmed || undefined,
+                sellerId: sellerId || undefined,
+                limit: 100,
+                page,
+                includeVariants: true,
+                includeAllStatuses: true,
+              },
             },
-          },
-        );
+          );
 
-        return unwrapApiItems(response)
-          .map(normalizeProduct)
-          .sort(
-            (left, right) =>
-              Number(right.isDealProduct) - Number(left.isDealProduct),
-          )
-          .map((product) => ({
-            value: product.id,
-            label: product.label,
-            sku: product.sku || "",
-            stock: product.stock || 0,
-            price: product.price || 0,
-            product,
-          }));
+          const batch = unwrapApiItems(response);
+          products.push(...batch);
+          if (batch.length < 100) break;
+          page += 1;
+        }
+        return products.flatMap((rawProduct) => {
+          const product = normalizeProduct(rawProduct);
+          return (rawProduct.variants || []).filter((variant) => variant.status !== "inactive").map((variant) => {
+            const attributes = variant.attributes || {};
+            const description = variant.title || Object.entries(attributes)
+              .map(([key, value]) => `${key}: ${value}`).join(", ") || variant.sku;
+            const option = {
+              ...product,
+              variantId: String(variant._id || variant.id || ""),
+              variantSku: variant.sku,
+              label: `${product.label} – ${description} (${variant.sku})`,
+              price: variant.salePrice ?? variant.price ?? product.price,
+              stock: Math.max(0, Number(variant.stock || 0) - Number(variant.reservedStock || 0)),
+            };
+            return { value: `${product.id}:${option.variantId || option.variantSku}`, label: option.label, product: option };
+          });
+        });
       } catch (error) {
         toast.error(
           error?.response?.data?.message || "Failed to search products",
@@ -314,7 +318,7 @@ function ProductSearch({ sellerId, value, onSelect }) {
 
   const selectedValue = value
     ? {
-        value: value.id,
+        value: `${value.id}:${value.variantId || value.variantSku}`,
         label: value.label,
         sku: value.sku || "",
         stock: value.stock || 0,
@@ -325,14 +329,16 @@ function ProductSearch({ sellerId, value, onSelect }) {
 
   return (
     <FilterSelect
-      label="Existing Product"
+      label="Product Variant"
       required
       name="productId"
       inputId="deal-product-id"
       value={selectedValue}
       onChange={handleChange}
       loadOptions={loadProductOptions}
-      placeholder="Search product name or SKU"
+      placeholder={isAdminPanel() && !sellerId ? "Select seller first" : "Search product, variant or SKU"}
+      isDisabled={isAdminPanel() && !sellerId}
+      loadingMessage={() => "Loading seller product variants…"}
       defaultOptions
     />
   );
@@ -341,10 +347,15 @@ function ProductSearch({ sellerId, value, onSelect }) {
 function SellerSearch({ value, onSelect }) {
   const loadSellerOptions = useCallback(async (search = "") => {
     try {
-      return await dropdownApi.getSellers({
+      const options = await dropdownApi.getStoreName({
         keyWord: search,
-        searchFields: "full_name,email,businessName",
+        searchFields: "organizationName,businessName,legalBusinessName",
       });
+      return options.map((option) => ({
+        ...option,
+        value: option.meta?.sellerId || option.value,
+        id: option.meta?.sellerId || option.id,
+      }));
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to search sellers");
       return [];
@@ -509,7 +520,9 @@ const DealManagement = () => {
     setSelectedProduct({
       id: deal.productId,
       label: productLabel,
-      price: deal.originalPrice,
+      price: deal.sellingPrice,
+      variantId: deal.variantId,
+      variantSku: deal.variantSku,
       stock: deal.allocatedQuantity,
       sku: metadata.productSku || deal.variantSku || "",
     });
@@ -523,8 +536,6 @@ const DealManagement = () => {
       variantSku: deal.variantSku || "",
       category: deal.category || "",
       title: deal.title || productLabel,
-      originalPrice: deal.originalPrice ?? "",
-      dealPrice: deal.dealPrice ?? "",
       allocatedQuantity: deal.allocatedQuantity ?? "",
       maxQuantityPerOrder: deal.maxQuantityPerOrder ?? "",
       startAt: deal.startAt
@@ -561,7 +572,8 @@ const DealManagement = () => {
       productId: product.id,
       productLabel: product.label,
       title: `${product.label} Deal`,
-      originalPrice: product.price || "",
+      variantId: product.variantId || "",
+      variantSku: product.variantSku || "",
       allocatedQuantity: product.stock || "",
       category: product.categoryLabel || "",
       dealBadge: product.dealBadge || current.dealBadge,
@@ -575,6 +587,10 @@ const DealManagement = () => {
 
   const onProductSelect = (product) => {
     setSelectedProduct(product);
+    if (!product) {
+      setForm((current) => ({ ...current, productId: "", variantId: "", variantSku: "", productLabel: "" }));
+      return;
+    }
     if (!selectedSeller && product.sellerId) {
       const sellerOption = {
         value: product.sellerId,
@@ -592,8 +608,8 @@ const DealManagement = () => {
       productId: product.id,
       productLabel: product.label,
       title: current.title || `${product.label} Deal`,
-      originalPrice:
-        product.price === "" ? current.originalPrice : product.price,
+      variantId: product.variantId || "",
+      variantSku: product.variantSku || "",
       allocatedQuantity: current.allocatedQuantity || product.stock || "",
       category: current.category || product.categoryLabel || "",
       dealBadge: product.dealBadge || current.dealBadge,
@@ -618,29 +634,18 @@ const DealManagement = () => {
       sellerId: seller?.value || "",
       productId: "",
       productLabel: "",
-      originalPrice: "",
+      variantId: "",
+      variantSku: "",
       allocatedQuantity: "",
       category: "",
     }));
   };
 
-  const formDeal = useMemo(
-    () => ({
-      originalPrice: form.originalPrice,
-      dealPrice: form.dealPrice,
-    }),
-    [form.originalPrice, form.dealPrice],
-  );
-
   const validateForm = () => {
     if (isAdminPanel() && !form.sellerId) return "Select seller.";
     if (!form.productId) return "Select an existing product.";
     if (!form.title.trim()) return "Enter deal title.";
-    if (!num(form.originalPrice)) return "Original price is required.";
-    if (!num(form.dealPrice)) return "Deal price is required.";
-    if (num(form.dealPrice) >= num(form.originalPrice)) {
-      return "Deal price must be lower than original price.";
-    }
+    if (!form.variantId && !form.variantSku) return "Select a product variant.";
     if (num(form.allocatedQuantity) < 0)
       return "Deal quantity cannot be negative.";
     if (
@@ -673,8 +678,6 @@ const DealManagement = () => {
       : form.mode === "admin_direct" && isAdminPanel()
         ? "active"
         : "draft",
-    originalPrice: num(form.originalPrice),
-    dealPrice: num(form.dealPrice),
     allocatedQuantity: Number(form.allocatedQuantity || 0),
     maxQuantityPerOrder: form.maxQuantityPerOrder
       ? Number(form.maxQuantityPerOrder)
@@ -689,7 +692,7 @@ const DealManagement = () => {
       sellerMessage: form.message || null,
       productLabel: form.productLabel || selectedProduct?.label || null,
       productSku: selectedProduct?.sku || null,
-      originalPriceLocked: true,
+      catalogPricing: true,
       productMasterUntouched: true,
     },
   });
@@ -884,8 +887,8 @@ const DealManagement = () => {
         title: product.label,
         productId: product.id,
         sellerId: product.sellerId,
-        originalPrice: product.price,
-        dealPrice: product.price,
+        variantId: product.variantId,
+        variantSku: product.variantSku,
         allocatedQuantity: product.stock || 0,
         soldQuantity: 0,
         reservedQuantity: 0,
@@ -986,25 +989,7 @@ const DealManagement = () => {
         );
       },
     },
-    {
-      key: "originalPrice",
-      label: "Original",
-      render: (value) => (
-        <span className="text-sm line-through decoration-red-400">
-          {money(value)}
-        </span>
-      ),
-    },
-    {
-      key: "dealPrice",
-      label: "Deal Price",
-      render: (value, row) => (
-        <div>
-          <p className="font-semibold text-emerald-700">{money(value)}</p>
-          <p className="text-xs text-gray-500">{discountPercent(row)}% off</p>
-        </div>
-      ),
-    },
+    { key: "sellingPrice", label: "Selling Price", render: (value) => money(value) },
     {
       key: "allocatedQuantity",
       label: "Quantity",
@@ -1353,41 +1338,9 @@ const DealManagement = () => {
                 />
               </div>
 
-              {/* Pricing */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Original Price"
-                  type="price"
-                  value={form.originalPrice}
-                  readOnly
-                  helperText="Copied for deal snapshot only."
-                />
-
-                <Input
-                  label="Deal Price"
-                  type="price"
-                  value={form.dealPrice}
-                  onChange={(event) =>
-                    setField("dealPrice", event.target.value)
-                  }
-                  required
-                />
-              </div>
-
-              {/* Calculated Values */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Discount Amount"
-                  value={money(discountAmount(formDeal))}
-                  readOnly
-                />
-
-                <Input
-                  label="Discount Percentage"
-                  value={`${discountPercent(formDeal)}%`}
-                  readOnly
-                />
-              </div>
+              <p className="text-sm text-gray-500">
+                Uses the selected variant’s existing discounted catalog price.
+              </p>
             </div>
           </FormSection>
 
@@ -1431,6 +1384,7 @@ const DealManagement = () => {
                     endKey: "endAt",
                     width: "w-full",
                     placeholder: "Select deal period",
+                    disableFuture: false,
                   }}
                   values={form}
                   onChange={(key, value) => setField(key, value)}
@@ -1573,42 +1527,6 @@ const DealManagement = () => {
                   label="Max Quantity / Customer"
                   name="maxQuantity"
                   value={detail.maxQuantityPerOrder || "—"}
-                  disabled
-                />
-              </div>
-            </FormSection>
-
-            {/* ==================== Pricing ==================== */}
-            <FormSection
-              title="Pricing & Discount"
-              description="Deal price and discount information."
-            >
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormInput
-                  label="Original Price"
-                  name="originalPrice"
-                  value={money(detail.originalPrice)}
-                  disabled
-                />
-
-                <FormInput
-                  label="Deal Price"
-                  name="dealPrice"
-                  value={money(detail.dealPrice)}
-                  disabled
-                />
-
-                <FormInput
-                  label="Discount Amount"
-                  name="discountAmount"
-                  value={money(discountAmount(detail))}
-                  disabled
-                />
-
-                <FormInput
-                  label="Discount Percentage"
-                  name="discountPercentage"
-                  value={`${discountPercent(detail)}%`}
                   disabled
                 />
               </div>

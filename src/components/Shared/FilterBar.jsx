@@ -359,6 +359,7 @@ export const GoldDateRangeCalendar = ({
   onToday,
   loading,
   maxDate,
+  disableFuture = true,
 }) => {
   const days = useMemo(() => buildCalendarDays(viewDate), [viewDate]);
   const hasCompleteRange = Boolean(dates.fromDate && dates.toDate);
@@ -501,7 +502,7 @@ export const GoldDateRangeCalendar = ({
           );
 
           const isDisabled =
-            isFutureDate || Boolean(maxDate && day.value > maxDate);
+            (disableFuture && isFutureDate) || Boolean(maxDate && day.value > maxDate);
 
           return (
             <button
@@ -729,6 +730,7 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
           onClear={clearRange}
           onToday={selectToday}
           maxDate={maxDate}
+          disableFuture={field.disableFuture ?? true}
         />
       </DateRangePickerModal>
     </div>
