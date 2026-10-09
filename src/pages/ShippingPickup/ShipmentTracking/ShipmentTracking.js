@@ -176,7 +176,7 @@ const ShipmentFact = ({ icon, label, children }) => (
       <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
         {label}
       </div>
-      <div className="mt-0.5 break-words text-sm font-medium text-gray-800">
+      <div className="mt-0.5 break-words  text-sm font-medium text-gray-800">
         {children || "—"}
       </div>
     </div>
@@ -833,7 +833,9 @@ const ShipmentTracking = () => {
                 icon={<MdLocalShipping aria-hidden="true" size={17} />}
                 label="Delivery"
               >
-                <div>{selectedShipment?.courier_name || "Seller delivery"}</div>
+                <div className="capitalize">
+                  {selectedShipment?.courier_name || "Seller delivery"}
+                </div>
                 <div className="mt-0.5 text-xs font-normal text-gray-500">
                   {selectedShipment?.tracking_number ||
                     selectedShipment?.awb_number ||
@@ -983,7 +985,7 @@ const ShipmentTracking = () => {
                             (optional)
                           </span>
                         </span>
-                        <input
+                        <textarea
                           className={`h-20 min-w-0 w-full rounded-lg border bg-white px-3 py-2.5 text-sm font-normal shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.location ? "border-red-400" : "border-gray-200"}`}
                           placeholder="Hub, city, or delivery area"
                           value={trackingAction.location}

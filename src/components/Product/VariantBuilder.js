@@ -6,7 +6,14 @@ import useDropdownOptions from "../../hooks/useDropdownOptions";
 import { MdDragIndicator, MdAdd } from "react-icons/md";
 import { FaInfoCircle } from "react-icons/fa";
 import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
-import { Circle, Copy, GripVertical, X } from "lucide-react";
+import {
+  Circle,
+  Copy,
+  GripVertical,
+  X,
+  ChevronDown,
+  Trash2,
+} from "lucide-react";
 
 const MAX_VARIANT_IMAGES = 5;
 
@@ -945,20 +952,24 @@ const VariantBuilder = ({
                   {Object.entries(errors)
                     .filter(([key]) => key !== "_form")
                     .flatMap(([variantIndex, fields]) =>
-                      Object.entries(fields || {}).flatMap(([field, message]) =>
-                        field === "attributes" &&
-                        message &&
-                        typeof message === "object"
-                          ? Object.values(message).map((attributeMessage) => (
-                              <li key={`${variantIndex}-${field}-${attributeMessage}`}>
-                                Variant {Number(variantIndex) + 1}: {attributeMessage}
-                              </li>
-                            ))
-                          : [
-                              <li key={`${variantIndex}-${field}`}>
-                                Variant {Number(variantIndex) + 1}: {message}
-                              </li>,
-                            ],
+                      Object.entries(fields || {}).flatMap(
+                        ([field, message]) =>
+                          field === "attributes" &&
+                          message &&
+                          typeof message === "object"
+                            ? Object.values(message).map((attributeMessage) => (
+                                <li
+                                  key={`${variantIndex}-${field}-${attributeMessage}`}
+                                >
+                                  Variant {Number(variantIndex) + 1}:{" "}
+                                  {attributeMessage}
+                                </li>
+                              ))
+                            : [
+                                <li key={`${variantIndex}-${field}`}>
+                                  Variant {Number(variantIndex) + 1}: {message}
+                                </li>,
+                              ],
                       ),
                     )}
                 </ul>
@@ -992,73 +1003,109 @@ const VariantBuilder = ({
               >
                 {/* Collapsed row */}
                 <div
-                  className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
+                  className="flex min-w-0 items-center gap-2.5 px-3 py-3 cursor-pointer select-none"
                   onClick={() => toggleExpand(idx)}
                 >
-                  <MdDragIndicator
-                    className="text-gray-300 flex-shrink-0 cursor-grab text-base"
+                  {/* Drag handle */}
+                  <span
+                    title="Drag to reorder"
+                    className="flex h-7 w-5 flex-shrink-0 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                     onClick={(e) => e.stopPropagation()}
-                  />
+                  >
+                    <MdDragIndicator className="text-lg cursor-grab" />
+                  </span>
 
-                  {/* Default radio */}
+                  {/* Default indicator */}
                   <button
                     type="button"
-                    title="Set as default"
+                    title={
+                      variant.isDefault ? "Default variant" : "Set as default"
+                    }
+                    aria-label={
+                      variant.isDefault
+                        ? "Default variant"
+                        : `Set variant ${idx + 1} as default`
+                    }
+                    aria-pressed={Boolean(variant.isDefault)}
                     onClick={(e) => {
                       e.stopPropagation();
                       setDefaultVariant(idx);
                     }}
-                    className={`h-4 w-4 flex-shrink-0 rounded-full border-2 transition-colors
-                      ${variant.isDefault ? "border-[var(--admin-gold)] bg-[var(--admin-gold)]" : "border-[var(--admin-line-strong)] hover:border-[var(--admin-gold)]"}`}
-                  />
+                    className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]/30 ${
+                      variant.isDefault
+                        ? "border-[var(--admin-gold)] bg-[var(--admin-gold)] text-white"
+                        : "border-gray-300 bg-white text-transparent hover:border-[var(--admin-gold)]"
+                    }`}
+                  >
+                    <Circle className="h-2.5 w-2.5 fill-current stroke-current" />
+                  </button>
 
                   {/* Variant label */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">
-                      {variantLabel}
-                    </p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-gray-800">
+                        {variantLabel}
+                      </p>
+
+                      {variant.isDefault && (
+                        <span className="flex-shrink-0 rounded-full border border-[var(--admin-gold)]/30 bg-[var(--admin-gold-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--admin-gold-dark)]">
+                          Default
+                        </span>
+                      )}
+                    </div>
+
                     {variant.sku && (
-                      <p className="text-xs text-gray-400 truncate">
+                      <p className="mt-0.5 truncate text-[11px] text-gray-500">
                         SKU: {variant.sku}
                       </p>
                     )}
                   </div>
 
                   {/* Quick stats */}
-                  <div className="hidden sm:flex items-center gap-4 flex-shrink-0">
-                    <div className="text-center">
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">
+                  <div className="hidden flex-shrink-0 items-center gap-3 sm:flex lg:gap-5">
+                    <div className="min-w-[48px] text-center">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400">
                         Price
                       </p>
                       <p className="text-xs font-semibold text-gray-700">
                         ₹{variant.price ?? "—"}
                       </p>
                     </div>
-                    <div className="text-center">
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">
+
+                    <div className="min-w-[38px] text-center">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400">
                         Stock
                       </p>
                       <p className="text-xs font-semibold text-gray-700">
                         {variant.stock ?? "—"}
                       </p>
                     </div>
-                    <div className="text-center">
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">
+
+                    <div className="min-w-[48px] text-center">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400">
                         Status
                       </p>
                       <span
-                        className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full
-                        ${variant.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}
+                        className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          variant.status === "active"
+                            ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+                            : "bg-gray-100 text-gray-600 ring-1 ring-inset ring-gray-200"
+                        }`}
                       >
                         {variant.status || "active"}
                       </span>
                     </div>
-                    <div className="text-center">
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">
+
+                    <div className="min-w-[45px] text-center">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400">
                         Images
                       </p>
                       <p
-                        className={`text-xs font-semibold ${hasImages ? "text-[var(--admin-blue)]" : "text-amber-500"}`}
+                        className={`text-xs font-semibold ${
+                          hasImages
+                            ? "text-[var(--admin-blue)]"
+                            : "text-amber-600"
+                        }`}
                       >
                         {hasImages
                           ? `${imageCount}/${MAX_VARIANT_IMAGES}`
@@ -1069,29 +1116,52 @@ const VariantBuilder = ({
 
                   {/* Actions */}
                   <div
-                    className="flex items-center gap-1 flex-shrink-0"
+                    className="ml-1 flex flex-shrink-0 items-center gap-1 border-l border-gray-200 pl-2"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       type="button"
-                      title="Duplicate"
+                      title="Duplicate variant"
+                      aria-label={`Duplicate variant ${idx + 1}`}
                       onClick={() => duplicateVariant(idx)}
-                      className="rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-gray-500 transition-colors hover:bg-blue-50 hover:text-[var(--admin-blue)] focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20"
                     >
-                      ⧉
+                      <Copy className="h-3.5 w-3.5" strokeWidth={1.8} />
                     </button>
+
                     <button
                       type="button"
+                      title="Remove variant"
+                      aria-label={`Remove variant ${idx + 1}`}
                       onClick={() => removeVariant(idx)}
-                      className="rounded border border-transparent px-1 py-0.5 text-sm text-red-400 hover:text-red-600 transition-colors"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent bg-white text-gray-400 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200"
                     >
-                      ✕
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
                     </button>
-                    <span
-                      className={`text-gray-300 text-xs transition-transform ${isExpanded ? "rotate-180" : ""}`}
+
+                    <button
+                      type="button"
+                      title={isExpanded ? "Collapse variant" : "Expand variant"}
+                      aria-label={
+                        isExpanded
+                          ? "Collapse variant details"
+                          : "Expand variant details"
+                      }
+                      aria-expanded={isExpanded}
+                      onClick={() => toggleExpand(idx)}
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20 ${
+                        isExpanded
+                          ? "border-[var(--admin-blue)]/20 bg-blue-50 text-[var(--admin-blue)]"
+                          : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
+                      }`}
                     >
-                      ▾
-                    </span>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform duration-200 ${
+                          isExpanded ? "rotate-180" : ""
+                        }`}
+                        strokeWidth={2}
+                      />
+                    </button>
                   </div>
                 </div>
 

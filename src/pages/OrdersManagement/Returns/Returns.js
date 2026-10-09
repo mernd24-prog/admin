@@ -2244,7 +2244,7 @@ const Returns = () => {
                   </p>
 
                   {item.reason && (
-                    <div className="mt-2 rounded-md border border-gray-200 bg-white p-2 text-xs text-gray-600">
+                    <div className="mt-2 rounded-md capitalize border border-gray-200 bg-white p-2 text-xs text-gray-600">
                       <span className="font-medium text-gray-700">Reason:</span>{" "}
                       {item.reason}
                     </div>

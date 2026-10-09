@@ -332,7 +332,9 @@ const ReportTable = ({
   const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
   const startIndex = (safePage - 1) * rowsPerPage;
-  const pagedRows = enablePagination ? rows.slice(startIndex, startIndex + rowsPerPage) : rows;
+  const pagedRows = enablePagination
+    ? rows.slice(startIndex, startIndex + rowsPerPage)
+    : rows;
 
   return (
     <div className="admin-card overflow-hidden border-[var(--admin-line)] shadow-[0_10px_28px_rgba(31,27,95,0.06)]">
@@ -403,7 +405,8 @@ const ReportTable = ({
           {enablePagination && (
             <div className="flex flex-col gap-3 border-t border-[var(--admin-line)] bg-white px-3 py-3 text-sm text-[var(--admin-muted)] sm:flex-row sm:items-center sm:justify-between sm:px-4">
               <span className="text-xs font-medium">
-                Showing {rows.length ? (safePage - 1) * rowsPerPage + 1 : 0}–{Math.min(safePage * rowsPerPage, rows.length)} of {rows.length}
+                Showing {rows.length ? (safePage - 1) * rowsPerPage + 1 : 0}–
+                {Math.min(safePage * rowsPerPage, rows.length)} of {rows.length}
               </span>
               <Pagination
                 totalPages={totalPages}
@@ -1162,7 +1165,7 @@ const PerformanceOverview = ({
           </div>
         ) : (
           <EmptyPanel
-            title="No chart data"
+            title="No inventory stock growth"
             text="There is no performance data for the selected date range."
           />
         )}

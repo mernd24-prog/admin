@@ -1775,13 +1775,13 @@ const Orders = () => {
 
         if (payout.held) {
           return (
-            <>
+            <div className="flex flex-col items-start">
               <StatusBadge status="held" dot />
 
-              <div className="mt-1 text-[11px] text-red-600">
-                Return or refund hold
+              <div className="mt-1 text-[11px] leading-4 text-red-600">
+                Return or Refund Hold
               </div>
-            </>
+            </div>
           );
         }
 
