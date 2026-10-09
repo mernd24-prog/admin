@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useFormik } from "formik";
 // import ReactSelect from 'react-select';
 import FormInput from "../../../../components/Atoms/FormInput/FormInput";
 import { RxCross2 } from "react-icons/rx";
@@ -15,6 +16,7 @@ import DefaultModal from "../../../../components/Atoms/Modal/DefaultRightSideMod
 import FormSection from "../../../../components/Atoms/FormSection/FormSection";
 import FormToggleRow from "../../../../components/Atoms/FormToggleRow/FormToggleRow";
 import FormSelectGroup from "../../../../components/Atoms/FormSelectGroup/FormSelectGroup";
+import { categoryValidationSchema } from "../../../../_helpers/validationSchemas";
 
 const CATEGORY_IMAGE_ACCEPT =
   "image/jpeg,image/jpg,image/png,image/webp,image/svg+xml";
@@ -30,85 +32,44 @@ const CategorySetup = ({
   handleSubmit,
   isPublish,
   handleIsPublish,
-  errors, // Added errors prop
-  setErrors, // Added setErrors prop
+  errors,
   isEditing, // Added isEditing prop
   handleDashboardVisible,
   title,
   submitButtonText,
-  closeButtonText = "Reset",
+  closeButtonText = "Close",
   showPublish = true,
   handleFileUpload,
   handleNameBlur,
+  handleInputChange,
 }) => {
-  const [localErrors, setLocalErrors] = useState({
-    categoryName: "",
+  const formik = useFormik({
+    initialValues: formData,
+    enableReinitialize: true,
+    validationSchema: categoryValidationSchema,
+    onSubmit: handleSubmit,
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  // Sync errors with parent component
-  useEffect(() => {
-    if (errors) {
-      setLocalErrors(errors);
-    }
-  }, [errors]);
-
-  const validateField = (name, value) => {
-    let error = "";
-
-    switch (name) {
-      case "categoryName":
-        if (!value.trim()) {
-          error = "Category name is required";
-        } else if (value.length > 50) {
-          error = "Category name must be less than 50 characters";
-        }
-        break;
-      default:
-        break;
-    }
-
-    return error;
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    // Validate the field
-    const error = validateField(name, value);
-
-    setLocalErrors((prev) => ({
-      ...prev,
-      [name]: error,
-    }));
-
-    setFormData((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
+    formik.handleChange(e);
+    if (handleInputChange) {
+      handleInputChange(name, value);
+    } else {
+      setFormData((prevState) => ({ ...prevState, [name]: value }));
+    }
   };
 
   const handleSelectChange = (selectedOption, name) => {
-    setFormData((prevState) => ({
-      ...prevState,
-      [name]: selectedOption,
-    }));
-  };
-
-  const validateForm = () => {
-    const newErrors = {
-      categoryName: validateField("categoryName", formData.categoryName),
-    };
-
-    setLocalErrors(newErrors);
-
-    // Return true if no errors
-    return !Object.values(newErrors).some((error) => error !== "");
-  };
-
-  const handleLocalSubmit = () => {
-    if (validateForm()) {
-      handleSubmit();
+    formik.setFieldValue(name, selectedOption);
+    if (handleInputChange) {
+      handleInputChange(name, selectedOption);
+    } else {
+      setFormData((prevState) => ({
+        ...prevState,
+        [name]: selectedOption,
+      }));
     }
   };
 
@@ -177,7 +138,7 @@ const CategorySetup = ({
       <DefaultModal
         isOpen={isOpen}
         onClose={handleClose}
-        onSubmit={handleLocalSubmit}
+        onSubmit={formik.handleSubmit}
         title={title || (isEditing ? "Edit Category" : "Add New Category")}
         submitButtonText={submitButtonText || (isEditing ? "Update" : "Submit")}
         closeButtonText={closeButtonText}
@@ -190,19 +151,7 @@ const CategorySetup = ({
             description="Enter the basic details for this category."
           >
             <div className="space-y-4">
-              {/* Category Name */}
-              <FormInput
-                label="Category Name"
-                name="categoryName"
-                value={formData?.categoryName}
-                onChange={handleChange}
-                onBlur={handleNameBlur}
-                error={localErrors.categoryName}
-                className={localErrors.categoryName ? "border-red-500" : ""}
-                required
-              />
-
-              {/* Parent Category */}
+                {/* Parent Category */}
               <FormSelectGroup
                 label="Parent Category"
                 options={parentCategories}
@@ -212,6 +161,30 @@ const CategorySetup = ({
                 }
                 placeholder="Select parent category"
               />
+              {/* Category Name */}
+              <FormInput
+                label="Category Name"
+                name="categoryName"
+                value={formik.values.categoryName || ""}
+                onChange={handleChange}
+                onBlur={(event) => {
+                  formik.handleBlur(event);
+                  handleNameBlur?.(event);
+                }}
+                error={
+                  formik.touched.categoryName
+                    ? formik.errors.categoryName
+                    : errors?.categoryName
+                }
+                className={
+                  formik.errors.categoryName || errors?.categoryName
+                    ? "border-red-500"
+                    : ""
+                }
+                required
+              />
+
+            
             </div>
           </FormSection>
 

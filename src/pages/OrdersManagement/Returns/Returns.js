@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormik } from "formik";
 import { toast } from "../../../utils/toast";
 import {
   formatLabel,
@@ -61,6 +62,12 @@ import {
 } from "../../../Redux/adminCoreSlice";
 
 import { usePermission } from "../../../_helpers/usePermission";
+import {
+  closeReturnValidationSchema,
+  rejectReturnValidationSchema,
+  replacementRequestValidationSchema,
+  scheduleReturnValidationSchema,
+} from "../../../_helpers/validationSchemas";
 import { useListPage } from "../../../hooks/useListPage";
 import { uploadFileMulti } from "../../../_helpers/globalFunctions";
 import { useNavigate } from "react-router";
@@ -805,6 +812,32 @@ const Returns = () => {
   const [error, setError] = useState("");
   const [detailReturn, setDetailReturn] = useState(null);
   const [action, setAction] = useState(EMPTY_ACTION);
+  const [closeFormVersion, setCloseFormVersion] = useState(0);
+  const closeReturnInitialValues = useMemo(
+    () => ({ reason: "", note: "" }),
+    [closeFormVersion],
+  );
+  const [rejectFormVersion, setRejectFormVersion] = useState(0);
+  const rejectReturnInitialValues = useMemo(
+    () => ({ reason: "", note: "" }),
+    [rejectFormVersion],
+  );
+  const [scheduleFormVersion, setScheduleFormVersion] = useState(0);
+  const scheduleReturnInitialValues = useMemo(
+    () => ({
+      mode: "reverse_pickup",
+      courierName: "",
+      trackingNumber: "",
+      note: "",
+    }),
+    [scheduleFormVersion],
+  );
+  const [replacementRequestFormVersion, setReplacementRequestFormVersion] =
+    useState(0);
+  const replacementRequestInitialValues = useMemo(
+    () => ({ note: "" }),
+    [replacementRequestFormVersion],
+  );
   const [confirmAction, setConfirmAction] = useState({ open: false });
   const visibleReturns = useMemo(
     () =>
@@ -875,6 +908,18 @@ const Returns = () => {
       }
       const trackingOptions =
         type === "tracking" ? reverseTrackingOptions(returnRequest) : [];
+      if (type === "close") {
+        setCloseFormVersion((version) => version + 1);
+      }
+      if (type === "reject") {
+        setRejectFormVersion((version) => version + 1);
+      }
+      if (type === "schedule") {
+        setScheduleFormVersion((version) => version + 1);
+      }
+      if (type === "replacement_request") {
+        setReplacementRequestFormVersion((version) => version + 1);
+      }
       setAction({
         ...EMPTY_ACTION,
         open: true,
@@ -1006,8 +1051,8 @@ const Returns = () => {
     ) {
       return "Courier and tracking/AWB are required";
     }
-    if (action.type === "close" && !action.reason.trim() && !action.note.trim())
-      return "Close reason or note is required";
+    if (action.type === "close" && !action.reason.trim())
+      return "Close reason is required";
     return "";
   };
 
@@ -1027,6 +1072,43 @@ const Returns = () => {
       message: `This will update return ${returnId(action.returnRequest)} to the next lifecycle state.`,
     });
   };
+
+  const closeReturnFormik = useFormik({
+    initialValues: closeReturnInitialValues,
+    enableReinitialize: true,
+    validationSchema: closeReturnValidationSchema,
+    onSubmit: prepareAction,
+  });
+  const rejectReturnFormik = useFormik({
+    initialValues: rejectReturnInitialValues,
+    enableReinitialize: true,
+    validationSchema: rejectReturnValidationSchema,
+    onSubmit: prepareAction,
+  });
+  const scheduleReturnFormik = useFormik({
+    initialValues: scheduleReturnInitialValues,
+    enableReinitialize: true,
+    validationSchema: scheduleReturnValidationSchema,
+    onSubmit: prepareAction,
+  });
+  const replacementRequestFormik = useFormik({
+    initialValues: replacementRequestInitialValues,
+    enableReinitialize: true,
+    validationSchema: replacementRequestValidationSchema,
+    onSubmit: prepareAction,
+  });
+  const closeActionModal = useCallback(() => {
+    closeReturnFormik.resetForm();
+    rejectReturnFormik.resetForm();
+    scheduleReturnFormik.resetForm();
+    replacementRequestFormik.resetForm();
+    setAction(EMPTY_ACTION);
+  }, [
+    closeReturnFormik.resetForm,
+    rejectReturnFormik.resetForm,
+    replacementRequestFormik.resetForm,
+    scheduleReturnFormik.resetForm,
+  ]);
 
   const executeAction = useCallback(async () => {
     if (isSeller && ADMIN_ONLY_RETURN_ACTIONS.has(action.type)) {
@@ -1148,7 +1230,7 @@ const Returns = () => {
       setLoading(true);
       await dispatch(actionCreator(base)).unwrap();
       toast.success("Return updated");
-      setAction(EMPTY_ACTION);
+      closeActionModal();
       setConfirmAction({ open: false });
       await fetchReturns();
     } catch (requestError) {
@@ -1158,7 +1240,7 @@ const Returns = () => {
     } finally {
       setLoading(false);
     }
-  }, [action, dispatch, fetchReturns, isSeller]);
+  }, [action, closeActionModal, dispatch, fetchReturns, isSeller]);
 
   const columns = useMemo(
     () => [
@@ -2270,9 +2352,19 @@ const Returns = () => {
       </DefaultModal>
       <DefaultModal
         isOpen={action.open}
-        onClose={() => setAction(EMPTY_ACTION)}
+        onClose={closeActionModal}
         title={action.title}
-        onSubmit={prepareAction}
+        onSubmit={
+          action.type === "schedule"
+            ? scheduleReturnFormik.handleSubmit
+            : action.type === "close"
+              ? closeReturnFormik.handleSubmit
+              : action.type === "reject"
+                ? rejectReturnFormik.handleSubmit
+                : action.type === "replacement_request"
+                  ? replacementRequestFormik.handleSubmit
+                  : prepareAction
+        }
         submitButtonText="Continue"
         closeButtonText="Cancel"
         loading={loading}
@@ -2488,7 +2580,7 @@ const Returns = () => {
               title={
                 action.type === "reject"
                   ? "Rejection Details"
-                  : "Closure Details"
+                  : "Close Details"
               }
               description={
                 action.type === "reject"
@@ -2500,14 +2592,35 @@ const Returns = () => {
                 label={action.type === "reject" ? "Reason" : "Close Reason"}
                 name="reason"
                 value={action.reason}
-                onChange={(event) =>
+                onChange={(event) => {
+                  if (action.type === "close") {
+                    closeReturnFormik.handleChange(event);
+                  }
+                  if (action.type === "reject") {
+                    rejectReturnFormik.handleChange(event);
+                  }
                   setAction((prev) => ({
                     ...prev,
                     reason: event.target.value,
-                  }))
+                  }));
+                }}
+                onBlur={
+                  action.type === "close"
+                    ? closeReturnFormik.handleBlur
+                    : action.type === "reject"
+                      ? rejectReturnFormik.handleBlur
+                      : undefined
+                }
+                error={
+                  action.type === "close" && closeReturnFormik.touched.reason
+                    ? closeReturnFormik.errors.reason
+                    : action.type === "reject" &&
+                        rejectReturnFormik.touched.reason
+                      ? rejectReturnFormik.errors.reason
+                      : ""
                 }
                 placeholder="Enter reason"
-                required={action.type === "reject"}
+                required={["reject", "close"].includes(action.type)}
               />
             </FormSection>
           )}
@@ -2546,12 +2659,14 @@ const Returns = () => {
                         label: "Customer self-ships",
                       },
                     ]}
-                    onChange={(selectedOption) =>
+                    onChange={(selectedOption) => {
+                      const mode = selectedOption?.value || "";
+                      scheduleReturnFormik.setFieldValue("mode", mode);
                       setAction((prev) => ({
                         ...prev,
-                        mode: selectedOption?.value || "",
-                      }))
-                    }
+                        mode,
+                      }));
+                    }}
                     placeholder="Select return mode"
                   />
 
@@ -2595,11 +2710,18 @@ const Returns = () => {
                       label="Courier"
                       name="courierName"
                       value={action.courierName}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        scheduleReturnFormik.handleChange(event);
                         setAction((prev) => ({
                           ...prev,
                           courierName: event.target.value,
-                        }))
+                        }));
+                      }}
+                      onBlur={scheduleReturnFormik.handleBlur}
+                      error={
+                        scheduleReturnFormik.touched.courierName
+                          ? scheduleReturnFormik.errors.courierName
+                          : ""
                       }
                       placeholder="Enter courier name"
                       required
@@ -2609,11 +2731,18 @@ const Returns = () => {
                       label="Tracking / AWB"
                       name="trackingNumber"
                       value={action.trackingNumber}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        scheduleReturnFormik.handleChange(event);
                         setAction((prev) => ({
                           ...prev,
                           trackingNumber: event.target.value,
-                        }))
+                        }));
+                      }}
+                      onBlur={scheduleReturnFormik.handleBlur}
+                      error={
+                        scheduleReturnFormik.touched.trackingNumber
+                          ? scheduleReturnFormik.errors.trackingNumber
+                          : ""
                       }
                       placeholder="Enter tracking number / AWB"
                       required
@@ -3135,11 +3264,47 @@ const Returns = () => {
               name="note"
               type="textarea"
               value={action.note}
-              onChange={(event) =>
+              onChange={(event) => {
+                if (action.type === "schedule") {
+                  scheduleReturnFormik.handleChange(event);
+                }
+                if (action.type === "close") {
+                  closeReturnFormik.handleChange(event);
+                }
+                if (action.type === "reject") {
+                  rejectReturnFormik.handleChange(event);
+                }
+                if (action.type === "replacement_request") {
+                  replacementRequestFormik.handleChange(event);
+                }
                 setAction((prev) => ({
                   ...prev,
                   note: event.target.value,
-                }))
+                }));
+              }}
+              onBlur={
+                action.type === "schedule"
+                  ? scheduleReturnFormik.handleBlur
+                  : action.type === "close"
+                    ? closeReturnFormik.handleBlur
+                    : action.type === "reject"
+                      ? rejectReturnFormik.handleBlur
+                      : action.type === "replacement_request"
+                        ? replacementRequestFormik.handleBlur
+                        : undefined
+              }
+              error={
+                action.type === "schedule" && scheduleReturnFormik.touched.note
+                  ? scheduleReturnFormik.errors.note
+                  : action.type === "close" && closeReturnFormik.touched.note
+                    ? closeReturnFormik.errors.note
+                    : action.type === "reject" &&
+                        rejectReturnFormik.touched.note
+                      ? rejectReturnFormik.errors.note
+                      : action.type === "replacement_request" &&
+                          replacementRequestFormik.touched.note
+                        ? replacementRequestFormik.errors.note
+                        : ""
               }
               placeholder="Add an optional note..."
             />

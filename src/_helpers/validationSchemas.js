@@ -125,3 +125,75 @@ export const taxRuleValidationSchema = Yup.object({
     .min(1, "Sub Tax is required"),
   category_id: Yup.string().required("Category is required"),
 });
+
+export const categoryValidationSchema = Yup.object({
+  categoryName: Yup.string()
+    .trim()
+    .required("Category name is required")
+    .min(3, "Category name must be at least 3 characters")
+    .max(50, "Category name must be less than 50 characters"),
+});
+
+export const closeReturnValidationSchema = Yup.object({
+  reason: Yup.string()
+    .trim()
+    .required("Close reason is required")
+    .min(3, "Close reason must be at least 3 characters")
+    .max(250, "Close reason must be at most 250 characters"),
+
+  note: Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(3, "Note must be at least 3 characters")
+    .max(500, "Note must be at most 500 characters"),
+});
+
+export const rejectReturnValidationSchema = Yup.object({
+  reason: Yup.string()
+    .trim()
+    .required("Rejection reason is required")
+    .min(3, "Rejection reason must be at least 3 characters")
+    .max(250, "Rejection reason must be at most 250 characters"),
+  note: Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(3, "Note must be at least 3 characters")
+    .max(500, "Note must be at most 500 characters"),
+});
+
+const optionalTextWithLength = (label, max) =>
+  Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(3, `${label} must be at least 3 characters`)
+    .max(max, `${label} must be at most ${max} characters`);
+
+export const replacementRequestValidationSchema = Yup.object({
+  note: optionalTextWithLength("Note", 500),
+});
+
+export const scheduleReturnValidationSchema = Yup.object({
+  mode: Yup.string().required("Return mode is required"),
+  courierName: Yup.string().when("mode", {
+    is: "reverse_pickup",
+    then: (schema) =>
+      schema
+        .trim()
+        .required("Courier is required")
+        .min(3, "Courier must be at least 3 characters")
+        .max(100, "Courier must be at most 100 characters"),
+    otherwise: () => optionalTextWithLength("Courier", 100),
+  }),
+  trackingNumber: Yup.string().when("mode", {
+    is: "reverse_pickup",
+    then: (schema) =>
+      schema
+        .trim()
+        .required("Tracking / AWB is required")
+        .min(3, "Tracking / AWB must be at least 3 characters")
+        .max(100, "Tracking / AWB must be at most 100 characters"),
+    otherwise: () => optionalTextWithLength("Tracking / AWB", 100),
+  }),
+  note: optionalTextWithLength("Note", 500),
+});
+

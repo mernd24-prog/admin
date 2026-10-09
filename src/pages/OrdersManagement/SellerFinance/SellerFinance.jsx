@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import {
@@ -817,8 +817,9 @@ const SellerFinance = () => {
 
   const paginatedCommissions = useMemo(() => {
     const start = (commissionsPage - 1) * commissionsPageSize;
-    return actionableCommissions.slice(start, start + commissionsPageSize);
-  }, [actionableCommissions, commissionsPage, commissionsPageSize]);
+    const rows = isSellerDetail ? visibleCommissions : actionableCommissions;
+    return rows.slice(start, start + commissionsPageSize);
+  }, [actionableCommissions, commissionsPage, commissionsPageSize, isSellerDetail, visibleCommissions]);
 
   const financeBuckets = useMemo(
     () =>
@@ -1213,6 +1214,208 @@ const SellerFinance = () => {
     }
   };
 
+  const financialBreakdownColumns = [
+    ...(!isSeller
+      ? [
+          {
+            key: "sellerName",
+            label: "Seller",
+            render: (_, row) =>
+              row.sellerName ||
+              row.seller?.displayName ||
+              row.seller?.businessName ||
+              sellerLabel(row.seller_id, sellerOptions),
+          },
+        ]
+      : []),
+    {
+      key: "organization",
+      label: "Organization",
+      render: (_, row) => organizationName(row),
+    },
+    {
+      key: "amount",
+      label: "Seller Receivable",
+      render: (_, row) =>
+        money(rowMoney(row, "amount", "gross_amount", "grossAmount")),
+    },
+    {
+      key: "commission",
+      label: "Platform Commission",
+      render: (_, row) => (
+        <span className="text-[#d92d20]">
+          −{money(deductionOf(row).commission)}
+        </span>
+      ),
+    },
+    {
+      key: "commissionGst",
+      label: "GST on Commission",
+      render: (_, row) => (
+        <span className="text-[#d92d20]">
+          −{money(deductionOf(row).commissionGst)}
+        </span>
+      ),
+    },
+    {
+      key: "gstTcs",
+      label: "GST TCS",
+      render: (_, row) => (
+        <span className="text-[#d92d20]">
+          −{money(deductionOf(row).gstTcs)}
+        </span>
+      ),
+    },
+    {
+      key: "incomeTaxTds",
+      label: "Income-tax TDS",
+      render: (_, row) => (
+        <span className="text-[#d92d20]">
+          −{money(deductionOf(row).incomeTaxTds)}
+        </span>
+      ),
+    },
+    {
+      key: "shipping",
+      label: "Shipping Net",
+      render: (_, row) => {
+        const deductions = deductionOf(row);
+        const isCredit = deductions.shippingCredit > deductions.shipping;
+
+        return (
+          <span className={isCredit ? "text-[#208a3c]" : "text-[#d92d20]"}>
+            {isCredit ? "+" : "−"}
+            {money(
+              Math.abs(deductions.shippingCredit - deductions.shipping),
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      key: "refund",
+      label: "Refund Adj.",
+      render: (_, row) => (
+        <span className="text-[#d92d20]">
+          −{money(deductionOf(row).refund)}
+        </span>
+      ),
+    },
+    {
+      key: "adjustment",
+      label: "Other Adj.",
+      render: (_, row) => {
+        const adjustment = deductionOf(row).adjustment;
+
+        return (
+          <span
+            className={adjustment < 0 ? "text-[#d92d20]" : "text-[#208a3c]"}
+          >
+            {signedMoney(adjustment)}
+          </span>
+        );
+      },
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (_, row) => {
+        const status = row.lifecycleStatus || row.releaseStatus || row.status;
+
+        return (
+          <div>
+            <StatusBadge status={status} dot />
+            {row.releaseReason === "waiting_for_item_return_window" && (
+              <div className="mt-1 text-[11px] font-semibold text-amber-700">
+                Return Window Open · {eligibilityCountdown(row.eligibleAt)}
+              </div>
+            )}
+            {row.eligibleAt && (
+              <div className="text-[11px] text-gray-500">
+                Eligible On {formatDateTime12Hour(row.eligibleAt, "—")}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "created_at",
+      label: "Created",
+      render: (_, row) =>
+        formatDateTime12Hour(valueOf(row, "created_at", "createdAt"), "-"),
+    },
+  ];
+  const sellerOrganizationColumns = [
+    {
+      key: "sellerOrganization",
+      label: "Seller / Org",
+      render: (_, row) => {
+        const sellerId =
+          row.seller_id ||
+          row.sellerId ||
+          row.seller?.id ||
+          row.seller?._id;
+        const organization = organizationName(row);
+        const sellerOptionName = sellerOptions.find(
+          (option) => String(option.value) === String(sellerId),
+        )?.label;
+        const sellerRecord = row.relations?.sellers?.[0] || row.seller || {};
+        const sellerCandidates = [
+          sellerOptionName,
+          row.sellerName,
+          row.seller_name,
+          sellerRecord.sellerName,
+          sellerRecord.seller_name,
+          sellerRecord.displayName,
+          sellerRecord.businessName,
+          sellerRecord.name,
+          sellerRecord.sellerProfile?.displayName,
+          sellerRecord.sellerProfile?.businessName,
+          sellerRecord.sellerProfile?.legalBusinessName,
+          sellerRecord.profile?.name,
+          sellerRecord.email,
+          row.sellerSnapshot?.name,
+          row.seller_snapshot?.name,
+        ];
+        const sellerName = sellerCandidates.find(
+          (name) => name && name !== organization,
+        );
+        const sellerProfileTo = `/app/users/view/${encodeURIComponent(
+          String(sellerId),
+        )}`;
+
+        return (
+          <div className="min-w-0 text-left">
+            {sellerId && sellerName && !isSeller ? (
+              <Link
+                to={sellerProfileTo}
+                className="block text-sm font-medium text-[#202337] hover:underline"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {sellerName}
+              </Link>
+            ) : (
+              <div className="text-sm font-medium text-[#202337]">
+                {sellerName || "Seller details unavailable"}
+              </div>
+            )}
+            {organization && organization !== sellerName && (
+              <div className="text-xs text-[#65718b]">{organization}</div>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+  const remainingFinancialColumns = financialBreakdownColumns.filter(
+    ({ key }) =>
+      !["sellerName", "organization", "status", "created_at"].includes(key),
+  );
+  const financialStatusColumns = financialBreakdownColumns.filter(
+    ({ key }) => key === "status" || key === "created_at",
+  );
+
   return (
     <div className="min-h-screen bg-[#f4f6fb]">
       <PageHeader
@@ -1483,6 +1686,7 @@ const SellerFinance = () => {
                 </span>
               ),
             },
+            ...(isSellerDetail ? sellerOrganizationColumns : []),
             {
               key: "deliveredAt",
               label: "Delivered",
@@ -1521,6 +1725,7 @@ const SellerFinance = () => {
                 </div>
               ),
             },
+            ...(isSellerDetail ? remainingFinancialColumns : []),
             {
               key: "net_amount",
               label: "Net Payable",
@@ -1572,10 +1777,15 @@ const SellerFinance = () => {
                 );
               },
             },
+            ...(isSellerDetail ? financialStatusColumns : []),
           ]}
           data={paginatedCommissions}
           loading={financeLoading || commissionsPaginationLoading}
-          totalCount={actionableCommissions.length}
+          totalCount={
+            isSellerDetail
+              ? visibleCommissions.length
+              : actionableCommissions.length
+          }
           pageSize={commissionsPageSize}
           page={commissionsPage}
           onPageChange={handleCommissionsPageChange}
@@ -1603,15 +1813,37 @@ const SellerFinance = () => {
           rowActions={
             !isSeller
               ? (row) => {
-                  const decision = payoutDecision(row);
+                  const status = String(
+                    row.lifecycleStatus || row.releaseStatus || "",
+                  ).toLowerCase();
+                  const hasPayout = Boolean(row.payout_id || row.payoutId);
+                  const canPayout =
+                    ["eligible", "available"].includes(status) && !hasPayout;
 
                   return [
                     {
                       label: "Payout This Order",
-                      hidden: !decision.allowed,
+                      hidden: !canPayout,
                       disabled: submitting,
                       onClick: () => openOrderPayoutModal(row),
                     },
+                    ...(hasPayout
+                      ? [
+                          {
+                            label: "Already in payout",
+                            disabled: true,
+                            onClick: () => {},
+                          },
+                        ]
+                      : !canPayout
+                        ? [
+                            {
+                              label: "Wait until eligible",
+                              disabled: true,
+                              onClick: () => {},
+                            },
+                          ]
+                        : []),
                   ];
                 }
               : undefined
@@ -1621,7 +1853,7 @@ const SellerFinance = () => {
 
       <details
         className={`${
-          !isSeller && !isSellerDetail
+          !isSeller
             ? "hidden"
             : "rounded-lg border border-[#E6E6E6] bg-white"
         }`}
