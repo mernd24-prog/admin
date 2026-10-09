@@ -84,6 +84,10 @@ const INITIAL_FILTERS = {
 
 const DEFAULT_PAGE_SIZE = 10;
 
+// Temporarily disabled while sellers are allowed to edit products directly.
+// Set to true to restore revision filters, status, and admin review actions.
+const PRODUCT_REVISIONS_ENABLED = false;
+
 const APPROVAL_STATUS_OPTIONS = [
   { value: "All", label: "All" },
   { value: "Pending", label: "Pending" },
@@ -432,11 +436,11 @@ const ProductCatalog = () => {
           }
         : {}),
 
-      ...(revisionFilter
+      ...(PRODUCT_REVISIONS_ENABLED && revisionFilter
         ? {
             revisionStatus: revisionFilter,
           }
-        : isApprovedFilter
+        : PRODUCT_REVISIONS_ENABLED && isApprovedFilter
           ? {
               revisionStatus: "none",
             }
@@ -718,9 +722,10 @@ const ProductCatalog = () => {
   };
 
   const hasPendingRevision = (product) =>
-    product?.revisionStatus === "change_pending" ||
-    Boolean(product?.pendingRevisionId) ||
-    Boolean(product?.pendingRevision);
+    PRODUCT_REVISIONS_ENABLED &&
+    (product?.revisionStatus === "change_pending" ||
+      Boolean(product?.pendingRevisionId) ||
+      Boolean(product?.pendingRevision));
 
   const canReviewProduct = (product) =>
     !isSellerPanelUser &&
@@ -1207,21 +1212,25 @@ const ProductCatalog = () => {
           />
         ),
       },
-      {
-        key: "revisionStatus",
-        label: "Revision Status",
-        render: (_, product) => (
-          <ProductStatusBadge
-            status={
-              product?.revisionStatus === "change_pending" ||
-              Boolean(product?.pendingRevisionId) ||
-              product?.latestRevisionStatus === "pending"
-                ? "change_pending"
-                : "none"
-            }
-          />
-        ),
-      },
+      ...(PRODUCT_REVISIONS_ENABLED
+        ? [
+            {
+              key: "revisionStatus",
+              label: "Revision Status",
+              render: (_, product) => (
+                <ProductStatusBadge
+                  status={
+                    product?.revisionStatus === "change_pending" ||
+                    Boolean(product?.pendingRevisionId) ||
+                    product?.latestRevisionStatus === "pending"
+                      ? "change_pending"
+                      : "none"
+                  }
+                />
+              ),
+            },
+          ]
+        : []),
       {
         key: "createdAt",
         label: "Created On",
@@ -1327,7 +1336,7 @@ const ProductCatalog = () => {
             isSearchShow={true}
             isActivationStatus={true}
             isApprovalOptions={true}
-            isRevisionOptions={true}
+            isRevisionOptions={PRODUCT_REVISIONS_ENABLED}
             isCategory={true}
             isSellerName={canFilterBySeller}
             storeOptions={storeListData}
@@ -1413,7 +1422,10 @@ const ProductCatalog = () => {
                     className="text-violet-600"
                   />
                 ),
-                hidden: sellerView || !hasPendingRevision(product),
+                hidden:
+                  !PRODUCT_REVISIONS_ENABLED ||
+                  sellerView ||
+                  !hasPendingRevision(product),
                 className: "font-semibold text-violet-700",
                 onClick: () => handleApproveToggle(product),
               },

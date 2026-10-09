@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { MdDownload, MdVisibility } from "react-icons/md";
+import { MdAdd, MdDownload, MdVisibility } from "react-icons/md";
 
 import {
   DataTable,
@@ -13,7 +13,12 @@ import {
   StatusBadge,
 } from "../../components/Shared";
 
-import { getTaxInvoices } from "../../Redux/adminCoreSlice";
+import { createTaxInvoice, getTaxInvoices } from "../../Redux/adminCoreSlice";
+import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
+import FormInput from "../../components/Atoms/FormInput/FormInput";
+import FormSection from "../../components/Atoms/FormSection/FormSection";
+import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
+import { ACTIONS } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
 import useStoreNames from "../../hooks/useStoreNames";
 import { dropdownApi } from "../../_helpers/dropdownApi";
@@ -166,6 +171,9 @@ const TaxInvoices = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [downloadingId, setDownloadingId] = useState(null);
+  const [invoiceModal, setInvoiceModal] = useState(false);
+  const [orderId, setOrderId] = useState("");
+  const [generating, setGenerating] = useState(false);
 
   const hideOrganizationColumn = isSellerPanel();
 
@@ -228,6 +236,26 @@ const TaxInvoices = () => {
   useEffect(() => {
     fetchInvoices();
   }, [fetchInvoices]);
+
+  const generateInvoice = useCallback(async () => {
+    const normalizedOrderId = orderId.trim();
+    if (!normalizedOrderId) {
+      toast.error("Order ID is required");
+      return;
+    }
+    try {
+      setGenerating(true);
+      await dispatch(createTaxInvoice({ orderId: normalizedOrderId })).unwrap();
+      toast.success("Invoice generated successfully");
+      setInvoiceModal(false);
+      setOrderId("");
+      await fetchInvoices();
+    } catch (error) {
+      toast.error(error?.message || "Failed to generate invoice");
+    } finally {
+      setGenerating(false);
+    }
+  }, [dispatch, fetchInvoices, orderId]);
 
   /**
    * Download invoice PDF.
@@ -454,6 +482,15 @@ const TaxInvoices = () => {
             label: isSellerPanel() ? "Invoice Documents" : "Tax Invoices",
           },
         ]}
+        actions={
+          !isSellerPanel() ? (
+            <PermissionGuard module="tax" action={ACTIONS.UPDATE} hide>
+              <button type="button" onClick={() => setInvoiceModal(true)}>
+                <MdAdd aria-hidden="true" size={16} /> Generate Invoice
+              </button>
+            </PermissionGuard>
+          ) : null
+        }
       />
 
       <DataTable
@@ -508,6 +545,36 @@ const TaxInvoices = () => {
           ];
         }}
       />
+
+      <DefaultModal
+        isOpen={invoiceModal}
+        onClose={() => {
+          setInvoiceModal(false);
+          setOrderId("");
+        }}
+        title="Generate Invoice"
+        submitButtonText={generating ? "Generating..." : "Generate Invoice"}
+        closeButtonText="Cancel"
+        onSubmit={(event) => {
+          event.preventDefault();
+          generateInvoice();
+        }}
+        isButtonView
+      >
+        <FormSection
+          title="Invoice Information"
+          description="Enter an order ID to generate its tax invoice."
+        >
+          <FormInput
+            label="Order ID"
+            name="orderId"
+            value={orderId}
+            onChange={(event) => setOrderId(event.target.value)}
+            placeholder="Enter order ID"
+            required
+          />
+        </FormSection>
+      </DefaultModal>
     </div>
   );
 };

@@ -815,8 +815,9 @@ export default function ProductManagementUI() {
         .unwrap()
         .then((res) => {
           const savedProductData = res?.data || {};
-          const pendingChanges =
-            savedProductData?.pendingRevision?.draftChanges || {};
+          // Product revisions are temporarily disabled so edit forms always
+          // use the current live product values.
+          const pendingChanges = {};
 
           // Approved seller products keep their live values unchanged while
           // edits wait for review. Reopening the edit form must therefore use

@@ -4035,10 +4035,10 @@ const OrderSummary = () => {
               )}
             </div>
 
-            {/* Invoices & Tax Documents */}
+            {/* Tax Invoices & Credit Notes */}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase text-[#65718b]">
-                Invoices & Tax Documents
+                Tax Invoices & Credit Notes
               </h3>
 
               <div className="space-y-3">

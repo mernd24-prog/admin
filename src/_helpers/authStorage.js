@@ -398,7 +398,7 @@ export const hasModuleAccess = (moduleCode) => {
       "subtax",
       "sub-tax",
       "tax-rule",
-      "tax-documents",
+      "tax-reports",
       "gst",
     ],
     "commerce-settings": [
@@ -537,7 +537,7 @@ export const hasModuleAccess = (moduleCode) => {
     .filter((permission) => permission.includes(":"))
     .filter((permission) => normalizeCode(permission.split(":")[1]) === "view")
     .map((permission) => normalizeCode(permission.split(":")[0]));
-    
+
   const legacyAllowedModules = [
     ...(Array.isArray(getStoredUser()?.allowedModules)
       ? getStoredUser().allowedModules

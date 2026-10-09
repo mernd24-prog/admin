@@ -241,12 +241,13 @@ const MODULE_LABELS = {
   "users-addresses": "User Addresses",
   preferences: "Preferences",
   collections: "Collections",
-  
+
   "wallet-management": "Wallet Management",
   "notification-templates": "Notification Templates",
   // Tax & Finance
   "tax-invoices": "Tax Invoice Management",
   "credit-notes": "Credit Note Management",
+  "tax-reports": "Tax Reports",
   // Subscription plans
   "subscription-plans": "Subscription Plan Management",
   // Payment config
@@ -349,6 +350,7 @@ const MODULE_TABS = {
   // Tax & Finance
   "tax-invoices": "Invoices & Taxation",
   "credit-notes": "Invoices & Taxation",
+  "tax-reports": "Invoices & Taxation",
   // Subscription plans
   "subscription-plans": "Commerce Settings",
   // Payouts
@@ -480,6 +482,7 @@ export const MODULE_DEFAULT_ROUTES = {
   // Tax & Finance
   "tax-invoices": "tax-invoices",
   "credit-notes": "credit-notes",
+  "tax-reports": "tax-reports",
   // Subscription plans
   "subscription-plans": "subscription-plans",
   // Payment config
@@ -624,7 +627,7 @@ const ROUTE_MODULES = [
   ],
 
   // Orders Management
-  [["/orders", "/orders/view", "/view-orders" ], ["orders"]],
+  [["/orders", "/orders/view", "/view-orders"], ["orders"]],
   [["/carts"], ["carts"]],
   [["/product-reviews"], ["reviews", "orders"]],
   [["/subscription-orders"], ["subscriptions", "orders"]],
@@ -722,7 +725,7 @@ const ROUTE_MODULES = [
       "/subTax",
       "/tax-rule",
       "/hsn-code",
-      "/tax-documents",
+      "/tax-reports",
       "/tax-invoices",
       "/credit-notes",
     ],

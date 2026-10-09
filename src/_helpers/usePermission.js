@@ -127,9 +127,10 @@ const MODULE_ALIASES = {
   inventory: ["stock"],
   delivery: ["shipping-fulfilment", "shipment-tracking"],
   "shipment-tracking": ["delivery"],
-  tax: ["tax-invoices", "credit-notes"],
+  tax: ["tax-invoices", "credit-notes", "tax-reports"],
   "tax-invoices": ["tax"],
   "credit-notes": ["tax"],
+  "tax-reports": ["tax"],
 };
 
 const expandModuleCandidates = (moduleSlug = "") => {

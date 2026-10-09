@@ -23,7 +23,6 @@ import { isSellerPanel } from "../../_helpers/panelConfig";
 import ProductOptionValue from "../../pages/ProductManagement/ProductOptions/ProductOptionValue";
 
 import Tax from "../../pages/Tax/Tax";
-import TaxCompliance from "../../pages/Tax/TaxCompliance";
 import SubTax from "../../pages/Tax/SubTax";
 import TaxRule from "../../pages/Tax/TaxRule/TaxRule";
 import BarcodePage from "../../pages/Admin/Barcode/Barcode";
@@ -251,6 +250,7 @@ const Cancellations = React.lazy(
   () => import("../../pages/OrdersManagement/Cancellations/Cancellations"),
 );
 const TaxInvoices = React.lazy(() => import("../../pages/Tax/TaxInvoices"));
+const TaxReports = React.lazy(() => import("../../pages/Tax/TaxReports"));
 const TaxInvoiceDetail = React.lazy(
   () => import("../../pages/Tax/TaxInvoiceDetail"),
 );
@@ -688,7 +688,7 @@ function Layout() {
         render: () => <ProductOptionValue setModuleName={setModuleName} />,
       },
       { path: "/tax", render: () => <Tax /> },
-      { path: "/tax-documents", render: () => <TaxCompliance /> },
+      { path: "/tax-reports", render: () => <TaxReports /> },
       {
         path: "/subTax",
         render: () => <SubTax setModuleName={setModuleName} />,
