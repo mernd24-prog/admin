@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormik } from "formik";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdAdd, MdDownload, MdVisibility } from "react-icons/md";
@@ -24,6 +25,7 @@ import {
 } from "../../Redux/adminCoreSlice";
 
 import { ACTIONS, usePermission } from "../../_helpers/usePermission";
+import { creditNoteValidationSchema } from "../../_helpers/validationSchemas";
 import { useListPage } from "../../hooks/useListPage";
 import useStoreNames from "../../hooks/useStoreNames";
 
@@ -141,7 +143,6 @@ const CreditNotes = () => {
   const [error, setError] = useState("");
   const [detail, setDetail] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
 
@@ -184,52 +185,48 @@ const CreditNotes = () => {
     fetchNotes();
   }, [fetchNotes]);
 
-  const handleCreate = useCallback(async () => {
+  const handleCreate = useCallback(async (values) => {
     if (isSeller) {
       toast.error("Credit note creation is admin-only");
-      return;
-    }
-
-    if (!form.orderId.trim()) {
-      toast.error("Order ID required");
-      return;
-    }
-
-    if (!form.taxableAmount || Number(form.taxableAmount) <= 0) {
-      toast.error("Taxable amount must be > 0");
       return;
     }
 
     try {
       setSaving(true);
 
-      const taxableAmount = Number(form.taxableAmount);
-      const taxAmount = form.taxAmount ? Number(form.taxAmount) : undefined;
+      const taxableAmount = Number(values.taxableAmount);
+      const taxAmount = values.taxAmount ? Number(values.taxAmount) : undefined;
 
       await dispatch(
         createTaxCreditNote({
-          orderId: form.orderId,
-          referenceId: form.referenceId || undefined,
-          referenceType: form.referenceType,
+          orderId: values.orderId.trim(),
+          referenceId: values.referenceId.trim() || undefined,
+          referenceType: values.referenceType,
           taxableAmount,
           taxAmount,
-          ...(form.totalAmount
-            ? { totalAmount: Number(form.totalAmount) }
+          ...(values.totalAmount
+            ? { totalAmount: Number(values.totalAmount) }
             : {}),
-          reason: form.reason || undefined,
+          reason: values.reason.trim() || undefined,
         }),
       ).unwrap();
 
       toast.success("Credit note created");
       setShowCreate(false);
-      setForm(EMPTY_FORM);
+      formik.resetForm();
       fetchNotes();
     } catch (err) {
       toast.error(err?.message || "Failed to create credit note");
     } finally {
       setSaving(false);
     }
-  }, [form, dispatch, fetchNotes, isSeller]);
+  }, [dispatch, fetchNotes, isSeller]);
+
+  const formik = useFormik({
+    initialValues: EMPTY_FORM,
+    validationSchema: creditNoteValidationSchema,
+    onSubmit: handleCreate,
+  });
 
   const downloadCreditNote = useCallback(async (row = {}) => {
     const creditNoteId = pick(row, "id", "creditNoteId", "credit_note_id");
@@ -620,13 +617,13 @@ const CreditNotes = () => {
         isOpen={showCreate}
         onClose={() => {
           setShowCreate(false);
-          setForm(EMPTY_FORM);
+          formik.resetForm();
         }}
         title="Create Credit Note"
         submitButtonText={saving ? "Creating..." : "Create Credit Note"}
         closeButtonText="Cancel"
         isButtonView={true}
-        onSubmit={handleCreate}
+        onSubmit={formik.handleSubmit}
         loading={saving}
       >
         <div className="space-y-5">
@@ -640,13 +637,10 @@ const CreditNotes = () => {
                 <FormInput
                   label="Order ID"
                   name="orderId"
-                  value={form.orderId}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      orderId: e.target.value,
-                    }))
-                  }
+                  value={formik.values.orderId}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.orderId ? formik.errors.orderId : ""}
                   placeholder="Enter order UUID"
                   required
                 />
@@ -655,12 +649,11 @@ const CreditNotes = () => {
               <FormInput
                 label="Reference ID"
                 name="referenceId"
-                value={form.referenceId}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    referenceId: e.target.value,
-                  }))
+                value={formik.values.referenceId}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.referenceId ? formik.errors.referenceId : ""
                 }
                 placeholder="Return / cancellation ID"
               />
@@ -671,18 +664,17 @@ const CreditNotes = () => {
                   label: type,
                   value: type,
                 }))}
-                value={
-                  REF_TYPES.map((type) => ({
-                    label: type,
-                    value: type,
-                  })).find((option) => option.value === form.referenceType) ||
-                  null
-                }
+                value={REF_TYPES.map((type) => ({
+                  label: type,
+                  value: type,
+                })).find(
+                  (option) => option.value === formik.values.referenceType,
+                ) || null}
                 onChange={(selectedOption) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    referenceType: selectedOption?.value || "",
-                  }))
+                  formik.setFieldValue(
+                    "referenceType",
+                    selectedOption?.value || "",
+                  )
                 }
                 placeholder="Select reference type"
               />
@@ -700,12 +692,13 @@ const CreditNotes = () => {
                 name="taxableAmount"
                 type="number"
                 min="0"
-                value={form.taxableAmount}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    taxableAmount: e.target.value,
-                  }))
+                value={formik.values.taxableAmount}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.taxableAmount
+                    ? formik.errors.taxableAmount
+                    : ""
                 }
                 onKeyDown={(e) => {
                   if (["-", "+", "e", "E"].includes(e.key)) {
@@ -721,12 +714,11 @@ const CreditNotes = () => {
                 name="taxAmount"
                 type="number"
                 min="0"
-                value={form.taxAmount}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    taxAmount: e.target.value,
-                  }))
+                value={formik.values.taxAmount}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.taxAmount ? formik.errors.taxAmount : ""
                 }
                 onKeyDown={(e) => {
                   if (["-", "+", "e", "E"].includes(e.key)) {
@@ -742,12 +734,13 @@ const CreditNotes = () => {
                   name="totalAmount"
                   type="number"
                   min="0"
-                  value={form.totalAmount}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      totalAmount: e.target.value,
-                    }))
+                  value={formik.values.totalAmount}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={
+                    formik.touched.totalAmount
+                      ? formik.errors.totalAmount
+                      : ""
                   }
                   placeholder="Taxable amount + tax"
                 />
@@ -763,13 +756,10 @@ const CreditNotes = () => {
             <FormInput
               label="Reason"
               name="reason"
-              value={form.reason}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  reason: e.target.value,
-                }))
-              }
+              value={formik.values.reason}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.reason ? formik.errors.reason : ""}
               placeholder="Enter reason for credit note"
             />
           </FormSection>

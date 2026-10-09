@@ -21,7 +21,6 @@ import {
 
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
-import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import { useListPage } from "../../../hooks/useListPage";
 
 import {
@@ -32,9 +31,7 @@ import {
   softDeleteHsn,
 } from "../../../Redux/productSlice";
 
-import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-import FormSection from "../../../components/Atoms/FormSection/FormSection";
-import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
+import AddHsnModal from "../../ProductManagement/ProductCatalog/components/Modals/AddHsnModal";
 
 /* ==================== FILTER CONFIGURATION ==================== */
 
@@ -101,18 +98,6 @@ const COLUMNS = [
   },
 ];
 
-/* ==================== EMPTY FORM ==================== */
-
-const EMPTY_FORM = {
-  code: "",
-  IGST: "",
-  CGST: "",
-  SGST: "",
-  additionalTax: "0",
-  description: "",
-  isDisable: false,
-};
-
 /* ==================== COMPONENT ==================== */
 
 const HsnCode = () => {
@@ -132,10 +117,9 @@ const HsnCode = () => {
   // Dedicated status filter state
   const [statusFilter, setStatusFilter] = useState("");
 
-  const [modalMode, setModalMode] = useState(null);
-  const [formData, setFormData] = useState(EMPTY_FORM);
-  const [errors, setErrors] = useState({});
-  const [saving, setSaving] = useState(false);
+  // Modal state
+  const [modalMode, setModalMode] = useState(null); // null | "add" | "edit"
+  const [editData, setEditData] = useState(null);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -220,83 +204,24 @@ const HsnCode = () => {
     fetchList();
   }, [fetchList]);
 
-  /* ==================== FORM HANDLING ==================== */
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: undefined,
-      }));
-    }
-  };
-
-  /* ==================== FORM VALIDATION ==================== */
-
-  const validateForm = () => {
-    const errs = {};
-
-    if (!formData.code?.trim()) {
-      errs.code = "HSN Code is required";
-    } else if (!/^\d{4,8}$/.test(formData.code.trim())) {
-      errs.code = "Must be 4-8 digits";
-    }
-
-    if (formData.IGST === "" || formData.IGST === null) {
-      errs.IGST = "IGST is required";
-    } else if (Number(formData.IGST) < 0 || Number(formData.IGST) > 100) {
-      errs.IGST = "0-100 only";
-    }
-
-    if (formData.CGST === "" || formData.CGST === null) {
-      errs.CGST = "CGST is required";
-    } else if (Number(formData.CGST) < 0 || Number(formData.CGST) > 100) {
-      errs.CGST = "0-100 only";
-    }
-
-    if (formData.SGST === "" || formData.SGST === null) {
-      errs.SGST = "SGST is required";
-    } else if (Number(formData.SGST) < 0 || Number(formData.SGST) > 100) {
-      errs.SGST = "0-100 only";
-    }
-
-    setErrors(errs);
-
-    return Object.keys(errs).length === 0;
-  };
-
   /* ==================== CLOSE MODAL ==================== */
 
   const closeModal = () => {
     setModalMode(null);
-    setFormData(EMPTY_FORM);
-    setErrors({});
+    setEditData(null);
   };
 
   /* ==================== CREATE / UPDATE ==================== */
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
-    setSaving(true);
-
+  const handleHsnSubmit = async (values) => {
     const payload = {
-      code: formData.code.trim(),
-      IGST: Number(formData.IGST),
-      CGST: Number(formData.CGST),
-      SGST: Number(formData.SGST),
-      additionalTax: Number(formData.additionalTax || 0),
-      description: formData.description?.trim() || "",
-      isDisable: formData.isDisable,
+      code: values.code.trim(),
+      IGST: Number(values.IGST),
+      CGST: Number(values.CGST),
+      SGST: Number(values.SGST),
+      additionalTax: Number(values.additionalTax || 0),
+      description: values.description?.trim() || "",
+      isDisable: values.isDisable,
     };
 
     try {
@@ -306,7 +231,7 @@ const HsnCode = () => {
         res = await dispatch(
           updateHsn({
             ...payload,
-            _id: formData._id,
+            _id: values._id,
           }),
         ).unwrap();
       } else {
@@ -315,7 +240,7 @@ const HsnCode = () => {
 
       if (res?.error) {
         toast.error(res.error);
-        return;
+        return false;
       }
 
       toast.success(
@@ -326,10 +251,10 @@ const HsnCode = () => {
       closeModal();
 
       setIsRefresh((r) => !r);
+      return true;
     } catch (err) {
       toast.error(err?.message || "Save failed");
-    } finally {
-      setSaving(false);
+      return false;
     }
   };
 
@@ -386,7 +311,7 @@ const HsnCode = () => {
         label: "Edit",
         icon: <MdEdit size={16} className="text-blue-600" />,
         onClick: () => {
-          setFormData({
+          setEditData({
             _id: row._id,
             code: row.code || "",
             IGST: row.IGST ?? "",
@@ -475,125 +400,16 @@ const HsnCode = () => {
         }
       />
 
-      {/* ==================== ADD / EDIT MODAL ==================== */}
+      {/* ==================== ADD / EDIT HSN MODAL (Shared) ==================== */}
 
-      {modalMode && (
-        <DefaultModal
-          isOpen={Boolean(modalMode)}
-          onClose={closeModal}
-          onSubmit={handleSubmit}
-          title={modalMode === "add" ? "Add HSN Code" : "Edit HSN Code"}
-          submitButtonText={
-            saving
-              ? "Saving..."
-              : modalMode === "add"
-                ? "Create HSN Code"
-                : "Save Changes"
-          }
-          closeButtonText="Cancel"
-          isButtonView={true}
-          loading={saving}
-        >
-          <div className="space-y-5">
-            <FormSection
-              title="HSN Information"
-              description="Enter the HSN code and tax details."
-            >
-              <div className="space-y-4">
-                <FormInput
-                  label="HSN Code"
-                  name="code"
-                  type="text"
-                  value={formData.code}
-                  onChange={handleInputChange}
-                  error={errors.code}
-                  placeholder="e.g. 84715000"
-                  required
-                  disabled={modalMode === "edit"}
-                />
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormInput
-                    label="IGST %"
-                    name="IGST"
-                    type="number"
-                    value={formData.IGST}
-                    onChange={handleInputChange}
-                    error={errors.IGST}
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    placeholder="0.00"
-                    required
-                  />
-
-                  <FormInput
-                    label="CGST %"
-                    name="CGST"
-                    type="number"
-                    value={formData.CGST}
-                    onChange={handleInputChange}
-                    error={errors.CGST}
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    placeholder="0.00"
-                    required
-                  />
-
-                  <FormInput
-                    label="SGST %"
-                    name="SGST"
-                    type="number"
-                    value={formData.SGST}
-                    onChange={handleInputChange}
-                    error={errors.SGST}
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    placeholder="0.00"
-                    required
-                  />
-
-                  <FormInput
-                    label="Additional Tax %"
-                    name="additionalTax"
-                    type="number"
-                    value={formData.additionalTax}
-                    onChange={handleInputChange}
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-            </FormSection>
-
-            <FormInput
-              label="Description"
-              name="description"
-              type="textarea"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Enter HSN code description"
-              rows={3}
-            />
-
-            <FormToggleRow
-              title="Active"
-              description="Allow this HSN code to be used for products and tax calculations."
-              isToggle={!formData.isDisable}
-              handleClick={() =>
-                setFormData((prev) => ({
-                  ...prev,
-                  isDisable: !prev.isDisable,
-                }))
-              }
-            />
-          </div>
-        </DefaultModal>
-      )}
+      <AddHsnModal
+        isOpen={Boolean(modalMode)}
+        resetForm={closeModal}
+        handleSubmit={handleHsnSubmit}
+        mode={modalMode || "add"}
+        initialData={editData}
+        showActive={true}
+      />
 
       {/* ==================== DELETE CONFIRMATION ==================== */}
 

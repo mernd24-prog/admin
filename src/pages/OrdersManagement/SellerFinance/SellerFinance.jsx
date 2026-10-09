@@ -47,7 +47,7 @@ import {
   getSellerSettlements,
   processSellerPayouts,
 } from "../../../Redux/sellerCommissionsSlice";
-import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
+import { formatDateTime12Hour, formatLabel, truncateToWordBoundary } from "../../../utils/formatters";
 
 const unwrap = (payload) => payload?.data?.data || payload?.data || {};
 const listOf = (payload) => {
@@ -1763,20 +1763,24 @@ const SellerFinance = () => {
                 );
               },
             },
-            {
-              key: "reason",
-              label: "Reason",
-              cellClassName: "min-w-[220px]",
-              render: (_, row) => {
-                const decision = payoutDecision(row);
+           {
+  key: "reason",
+  label: "Reason",
+  cellClassName: "min-w-[250px]",
+  render: (_, row) => {
+    const decision = payoutDecision(row);
+    const reason = formatLabel(decision.reason);
 
-                return (
-                  <span className="text-xs text-[#65718b]">
-                    {formatLabel(decision.reason)}
-                  </span>
-                );
-              },
-            },
+    return (
+      <span
+        className="block max-w-[220px] truncate text-xs text-[#65718b]"
+        title={reason}
+      >
+        {truncateToWordBoundary(reason, 50)}
+      </span>
+    );
+  },
+},
             ...(isSellerDetail ? financialStatusColumns : []),
           ]}
           data={paginatedCommissions}

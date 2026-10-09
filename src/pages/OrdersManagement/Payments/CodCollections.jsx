@@ -16,6 +16,7 @@ import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import { truncateToWordBoundary } from "../../../utils/formatters";
 
 const money = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -199,10 +200,18 @@ export default function CodCollections() {
         ),
       },
       {
-        key: "reference_id",
-        label: "Reference",
-        render: (value) => value || "-",
-      },
+  key: "reference_id",
+  label: "Reference",
+  render: (value) => {
+    const reference = value || "-";
+
+    return (
+      <span title={reference}>
+        {truncateToWordBoundary(reference, 30)}
+      </span>
+    );
+  },
+},
     ],
     [sellerMap],
   );
