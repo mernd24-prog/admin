@@ -738,7 +738,7 @@ const ShipmentTracking = () => {
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
         onSearch={list.setSearch}
-        searchPlaceholder="Search shipment, AWB, courier, or order"
+        searchPlaceholder="Search shipment, AWB, courier, or order..."
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
@@ -783,8 +783,6 @@ const ShipmentTracking = () => {
         onClose={() => setDetailModal(false)}
         title="Shipment Detail"
         isButtonView={false}
-        showCloseButton={true}
-        closeButtonText="Close"
       >
         <div className="space-y-4 text-sm">
           <section className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50/70">

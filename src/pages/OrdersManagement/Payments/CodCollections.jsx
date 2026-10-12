@@ -1,7 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import { useFormik } from "formik";
 import { MdCheckCircle } from "react-icons/md";
 import { toast } from "sonner";
+
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
+
 import {
   DataTable,
   OrderLink,
@@ -9,27 +18,46 @@ import {
   PageHeader,
   StatusBadge,
 } from "../../../components/Shared";
+
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
+import { ACTIONS } from "../../../_helpers/usePermission";
+import { dropdownApi } from "../../../_helpers/dropdownApi";
+
 import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
-import { ACTIONS } from "../../../_helpers/usePermission";
-import { dropdownApi } from "../../../_helpers/dropdownApi";
+
 import { truncateToWordBoundary } from "../../../utils/formatters";
+import { codCollectionValidationSchema } from "../../../_helpers/validationSchemas";
+
 
 const money = (value) =>
-  `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-const label = (value) => String(value || "-").replace(/_/g, " ");
+  `₹${Number(value || 0).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
+const label = (value) =>
+  String(value || "-").replace(/_/g, " ");
+
+const INITIAL_FORM_VALUES = {
+  collectedAmount: "",
+  referenceId: "",
+  notes: "",
+  markRemitted: false,
+};
 
 export default function CodCollections() {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 100,
   });
+
   const [sellerMap, setSellerMap] = useState({});
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase().replace(/^#/, "");
@@ -46,28 +74,32 @@ export default function CodCollections() {
   const [decision, setDecision] = useState({
     open: false,
     row: null,
-    amount: "",
-    referenceId: "",
-    notes: "",
-    markRemitted: false,
   });
+
+  /* ==================== Load COD Collections ==================== */
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
+
       const response = await axiosProvider.get(
         ENDPOINTS.payments.codCollections,
       );
+
       const data = response?.data?.data;
+
       setItems(data?.items || data?.list || data || []);
     } catch (error) {
       toast.error(
-        error?.response?.data?.message || "Unable to load COD collections",
+        error?.response?.data?.message ||
+          "Unable to load COD collections",
       );
     } finally {
       setLoading(false);
     }
   }, []);
+
+  /* ==================== Load Seller Names ==================== */
 
   useEffect(() => {
     const loadSellerNames = async () => {
@@ -97,48 +129,99 @@ export default function CodCollections() {
     load();
   }, [load]);
 
-  const verify = useCallback(async () => {
-    if (!decision.row?.id || String(decision.referenceId).trim().length < 3) {
-      toast.error("Collection reference is required");
-      return;
-    }
-    try {
-      setLoading(true);
-      await axiosProvider.post(
-        ENDPOINTS.payments.verifyCodCollection(decision.row.id),
-        {
-          collectedAmount: Number(
-            decision.amount ||
-              decision.row.collected_amount ||
-              decision.row.expected_amount,
+  /* ==================== Verify COD Collection ==================== */
+
+  const verify = useCallback(
+    async (values, { setSubmitting }) => {
+      if (!decision.row?.id) {
+        toast.error("COD collection record not found");
+        setSubmitting(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+
+        await axiosProvider.post(
+          ENDPOINTS.payments.verifyCodCollection(
+            decision.row.id,
           ),
-          referenceId: decision.referenceId,
-          notes: decision.notes,
-          markRemitted: decision.markRemitted,
-        },
-      );
-      toast.success(
-        decision.markRemitted
-          ? "COD remittance verified"
-          : "COD collection verified",
-      );
-      setDecision({
-        open: false,
-        row: null,
-        amount: "",
-        referenceId: "",
-        notes: "",
-        markRemitted: false,
-      });
-      await load();
-    } catch (error) {
-      toast.error(
-        error?.response?.data?.message || "Unable to verify COD collection",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [decision, load]);
+          {
+            collectedAmount: Number(values.collectedAmount),
+            referenceId: values.referenceId.trim(),
+            notes: values.notes.trim(),
+            markRemitted: values.markRemitted,
+          },
+        );
+
+        toast.success(
+          values.markRemitted
+            ? "COD remittance verified"
+            : "COD collection verified",
+        );
+
+        setDecision({
+          open: false,
+          row: null,
+        });
+
+        setPagination((current) => ({
+          ...current,
+          page: 1,
+        }));
+
+        await load();
+      } catch (error) {
+        toast.error(
+          error?.response?.data?.message ||
+            "Unable to verify COD collection",
+        );
+      } finally {
+        setLoading(false);
+        setSubmitting(false);
+      }
+    },
+    [decision.row, load],
+  );
+
+  /* ==================== Formik Configuration ==================== */
+
+  const formik = useFormik({
+    initialValues: {
+      collectedAmount:
+        decision.row?.collected_amount ??
+        decision.row?.expected_amount ??
+        "",
+      referenceId: decision.row?.reference_id || "",
+      notes: decision.row?.notes || "",
+      markRemitted: false,
+    },
+    enableReinitialize: true,
+    validationSchema: codCollectionValidationSchema,
+    onSubmit: verify,
+  });
+
+  /* ==================== Modal Handlers ==================== */
+
+  const openVerifyModal = (row) => {
+    setDecision({
+      open: true,
+      row,
+    });
+  };
+
+  const closeVerifyModal = () => {
+    if (formik.isSubmitting) return;
+
+    setDecision({
+      open: false,
+      row: null,
+    });
+
+    formik.resetForm();
+  };
+
+  /* ==================== Table Columns ==================== */
 
   const columns = useMemo(
     () => [
@@ -149,14 +232,18 @@ export default function CodCollections() {
           <div>
             <OrderLink
               orderId={row.order_id || row.orderId}
-              orderNumber={row.order_number || row.orderNumber}
+              orderNumber={
+                row.order_number || row.orderNumber
+              }
             />
+
             <div className="text-xs text-gray-500">
               {row.awb_number || "AWB not assigned"}
             </div>
           </div>
         ),
       },
+
       {
         key: "seller_id",
         label: "Seller",
@@ -165,45 +252,63 @@ export default function CodCollections() {
             row={row}
             sellerId={value}
             storeName={
-              row.storeName || row.organizationName || sellerMap[value]
+              row.storeName ||
+              row.organizationName ||
+              sellerMap[value]
             }
-            loginName={row.sellerName || row.seller?.name || row.seller?.email}
+            loginName={
+              row.sellerName ||
+              row.seller?.name ||
+              row.seller?.email
+            }
           />
         ),
       },
+
       {
         key: "collection_mode",
         label: "Collection",
         render: (value, row) => (
           <div>
-            <div className="capitalize">{label(value)}</div>
+            <div className="capitalize">
+              {label(value)}
+            </div>
+
             <div className="text-xs text-gray-500">
               By: {label(row.collected_by)}
             </div>
           </div>
         ),
       },
+
       {
         key: "expected_amount",
         label: "Expected / Collected",
         render: (value, row) => (
           <div>
             <div>{money(value)}</div>
+
             <div className="text-xs text-gray-500">
               {money(row.collected_amount)}
             </div>
           </div>
         ),
       },
+
       {
         key: "status",
         label: "Status",
         render: (value, row) => (
           <div>
-            <StatusBadge status={value} label={label(value)} />
+            <StatusBadge
+              status={value}
+              label={label(value)}
+            />
+
             <div className="mt-1 text-[10px] text-gray-500">
               Liability: {label(row.liability_status)}
             </div>
+
             {row.is_overdue && (
               <div className="mt-1 text-[10px] font-semibold uppercase text-red-600">
                 Seller response overdue
@@ -212,22 +317,25 @@ export default function CodCollections() {
           </div>
         ),
       },
-      {
-  key: "reference_id",
-  label: "Reference",
-  render: (value) => {
-    const reference = value || "-";
 
-    return (
-      <span title={reference}>
-        {truncateToWordBoundary(reference, 30)}
-      </span>
-    );
-  },
-},
+      {
+        key: "reference_id",
+        label: "Reference",
+        render: (value) => {
+          const reference = value || "-";
+
+          return (
+            <span title={reference}>
+              {truncateToWordBoundary(reference, 30)}
+            </span>
+          );
+        },
+      },
     ],
     [sellerMap],
   );
+
+  /* ==================== Render ==================== */
 
   return (
     <div>
@@ -238,30 +346,37 @@ export default function CodCollections() {
           { label: "Payments & Finance" },
           { label: "COD Collections" },
         ]}
-        // actions={
-        //   <button type="button" onClick={load}>
-        //     <MdRefresh size={17} /> Refresh
-        //   </button>
-        // }
       />
-      {items.some((row) => row.is_overdue || row.status === "disputed") && (
+
+      {items.some(
+        (row) =>
+          row.is_overdue || row.status === "disputed",
+      ) && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <strong>COD reconciliation needs attention</strong>
+
           <p className="mt-1 text-xs leading-5">
-            Overdue and disputed entries remain in the seller liability balance
-            until an admin verifies or records remittance.
+            Overdue and disputed entries remain in the seller
+            liability balance until an admin verifies or records
+            remittance.
           </p>
         </div>
       )}
+
       <DataTable
         columns={columns}
         data={filteredItems}
+          searchPlaceholder="Search Shipment..."
         loading={loading}
         totalCount={filteredItems.length}
         rowActions={(row) => {
           const actions = [];
 
-          if (["pending", "submitted", "disputed"].includes(row.status)) {
+          if (
+            ["pending", "submitted", "disputed"].includes(
+              row.status,
+            )
+          ) {
             actions.push({
               label: "Verify",
               icon: (
@@ -273,15 +388,7 @@ export default function CodCollections() {
               ),
               requiredModule: "payments",
               requiredAction: ACTIONS.UPDATE,
-              onClick: () =>
-                setDecision({
-                  open: true,
-                  row,
-                  amount: row.collected_amount || row.expected_amount || "",
-                  referenceId: row.reference_id || "",
-                  notes: row.notes || "",
-                  markRemitted: false,
-                }),
+              onClick: () => openVerifyModal(row),
             });
           }
 
@@ -290,7 +397,16 @@ export default function CodCollections() {
         page={pagination.page}
         pageSize={pagination.pageSize}
         onPageChange={(page) =>
-          setPagination((current) => ({ ...current, page }))
+          setPagination((current) => ({
+            ...current,
+            page,
+          }))
+        }
+        onPageSizeChange={(pageSize) =>
+          setPagination({
+            page: 1,
+            pageSize,
+          })
         }
         onPageSizeChange={(pageSize) => setPagination({ page: 1, pageSize })}
         onSearch={(value) => {
@@ -301,32 +417,32 @@ export default function CodCollections() {
         onRefresh={load}
         requiredModule="payments"
       />
+
+      {/* ==================== Verify COD Collection Modal ==================== */}
+
       <DefaultModal
         isOpen={decision.open}
-        onClose={() =>
-          setDecision({
-            open: false,
-            row: null,
-            amount: "",
-            referenceId: "",
-            notes: "",
-            markRemitted: false,
-          })
-        }
+        onClose={closeVerifyModal}
         title="Verify COD Collection"
-        onSubmit={verify}
-        submitButtonText="Verify Collection"
+        onSubmit={() => formik.submitForm()}
+        submitButtonText={
+          formik.isSubmitting
+            ? "Verifying..."
+            : "Verify Collection"
+        }
         closeButtonText="Cancel"
         isButtonView={true}
       >
         <div className="space-y-5">
           {/* ==================== Collection Information ==================== */}
+
           <FormSection
             title="Collection Information"
             description="Verify the cash collected for this COD order."
           >
             <div className="space-y-4">
-              {/* Expected COD */}
+              {/* Expected COD Amount */}
+
               <div className="rounded-lg border border-[var(--admin-line)] bg-gray-50 px-4 py-3">
                 <div className="text-xs font-medium uppercase tracking-wide text-gray-400">
                   Expected COD Amount
@@ -338,47 +454,67 @@ export default function CodCollections() {
               </div>
 
               {/* Collected Amount */}
-              <FormInput
-                label="Collected Amount"
-                name="collectedAmount"
-                type="number"
-                value={decision.amount}
-                onChange={(event) =>
-                  setDecision((prev) => ({
-                    ...prev,
-                    amount: event.target.value,
-                  }))
-                }
-                placeholder="Enter collected amount"
-                required
-              />
+
+             <FormInput
+  name="collectedAmount"
+  label="Collected Amount"
+  type="text"
+  required
+  value={formik.values.collectedAmount}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    if (/^\d*\.?\d{0,2}$/.test(value)) {
+      formik.setFieldValue("collectedAmount", value);
+    }
+  }}
+  onKeyDown={(e) => {
+    if (
+      ["e", "E", "+", "-", "@"].includes(e.key) ||
+      (!/[0-9.]/.test(e.key) &&
+        e.key.length === 1 &&
+        !e.ctrlKey &&
+        !e.metaKey)
+    ) {
+      e.preventDefault();
+    }
+  }}
+  onBlur={formik.handleBlur}
+  error={
+    formik.touched.collectedAmount &&
+    formik.errors.collectedAmount
+  }
+  placeholder="Enter collected amount"
+/>
 
               {/* Collection Reference */}
+
               <FormInput
                 label="Collection / Remittance Reference"
                 name="referenceId"
-                value={decision.referenceId}
-                onChange={(event) =>
-                  setDecision((prev) => ({
-                    ...prev,
-                    referenceId: event.target.value,
-                  }))
+                value={formik.values.referenceId}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.referenceId &&
+                  formik.errors.referenceId
                 }
                 placeholder="Enter collection or remittance reference"
                 required
               />
 
               {/* Notes */}
+
               <FormInput
                 label="Notes"
                 name="notes"
                 type="textarea"
-                value={decision.notes}
-                onChange={(event) =>
-                  setDecision((prev) => ({
-                    ...prev,
-                    notes: event.target.value,
-                  }))
+                value={formik.values.notes}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.notes &&
+                  formik.errors.notes
                 }
                 placeholder="Add any additional notes..."
               />
@@ -386,6 +522,7 @@ export default function CodCollections() {
           </FormSection>
 
           {/* ==================== Remittance Settings ==================== */}
+
           {decision.row?.collected_by === "seller" && (
             <FormSection
               title="Remittance Confirmation"
@@ -394,19 +531,19 @@ export default function CodCollections() {
               <FormToggleRow
                 title="Mark as Remitted"
                 description="Platform has actually received the full cash amount from the seller."
-                isToggle={decision.markRemitted}
+                isToggle={formik.values.markRemitted}
                 handleClick={() =>
-                  setDecision((prev) => ({
-                    ...prev,
-                    markRemitted: !prev.markRemitted,
-                  }))
+                  formik.setFieldValue(
+                    "markRemitted",
+                    !formik.values.markRemitted,
+                  )
                 }
               />
 
               <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
                 <p className="text-xs leading-5 text-amber-700">
-                  Leave this disabled when you are only verifying that the
-                  seller collected cash from the customer.
+                  Leave this disabled when you are only verifying
+                  that the seller collected cash from the customer.
                 </p>
               </div>
             </FormSection>

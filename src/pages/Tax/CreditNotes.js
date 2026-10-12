@@ -416,7 +416,7 @@ const CreditNotes = () => {
         onRefresh={fetchNotes}
         listPage={list}
         emptyMessage="No credit notes found"
-        searchPlaceholder="Search credit note, order ID or reference"
+        searchPlaceholder="Search credit note, order ID..."
         rowActions={rowActions}
         filterBar={<FilterBar fields={filterFields} listPage={list} />}
       />
@@ -426,6 +426,7 @@ const CreditNotes = () => {
         isOpen={!!detail}
         onClose={() => setDetail(null)}
         title="Credit Note Details"
+        isButtonView={false}
       >
         {detail && (
           <div className="space-y-5">

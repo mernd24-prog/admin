@@ -1840,7 +1840,7 @@ const Inventory = () => {
         rowKey="id"
         onRefresh={refresh}
         actions={importExportActions}
-        searchPlaceholder="Search product or SKU"
+        searchPlaceholder="Search product..."
         filterBar={
           <FilterBar
             filters={[

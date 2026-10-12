@@ -1027,7 +1027,7 @@ const ProductCategories = () => {
 
                 <div className="[&_input]:pl-10">
                   <SearchInput
-                    placeholder="Search..."
+                    placeholder="Search Category..."
                     searchTerm={filters.search}
                     handleChange={(e) =>
                       setFilters((f) => ({

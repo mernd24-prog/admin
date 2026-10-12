@@ -1882,8 +1882,8 @@ const Orders = () => {
         onRefresh={fetchOrders}
         searchPlaceholder={
           isAdmin
-            ? "Search by order number or buyer…"
-            : "Search by order number…"
+            ? "Search order number..."
+            : "Search order number…"
         }
         emptyText="No orders found."
         emptyIcon={

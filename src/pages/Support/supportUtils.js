@@ -56,3 +56,27 @@ export const getPaginationTotal = (payload, fallback = 0) =>
     payload?.data?.total ??
     fallback,
   );
+
+export const messagePreviewText = (value) => {
+  if (value == null) return "";
+
+  const source = String(value);
+  if (typeof DOMParser === "undefined") {
+    return source
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;|&apos;/gi, "'")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  const parser = new DOMParser();
+  const decoded = parser.parseFromString(source, "text/html").body.textContent;
+  const plainText = parser.parseFromString(decoded, "text/html").body.textContent;
+
+  return plainText.replace(/\s+/g, " ").trim();
+};

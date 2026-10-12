@@ -219,6 +219,80 @@ export const rejectReturnValidationSchema = Yup.object({
     .max(500, "Note must be at most 500 characters"),
 });
 
+export const approveReturnValidationSchema = Yup.object({
+  refundAmount: Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" || originalValue == null ? undefined : value,
+    )
+    .typeError("Refund amount must be a number")
+    .required("Refund amount is required")
+    .moreThan(0, "Refund amount must be greater than zero"),
+  itemActions: Yup.array()
+    .min(1, "At least one return item is required")
+    .required("Return items are required"),
+  note: Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(3, "Note must be at least 3 characters")
+    .max(500, "Note must be at most 500 characters"),
+});
+
+export const orderNoteValidationSchema = Yup.object({
+  note: Yup.string()
+    .trim()
+    .required("Note is required")
+    .min(3, "Note must be at least 3 characters")
+    .max(2000, "Note must be no more than 2000 characters"),
+  visibility: Yup.string()
+    .oneOf(["internal", "seller", "buyer"], "Select a valid visibility")
+    .required("Visibility is required"),
+});
+
+const optionalShippingNumber = (label) =>
+  Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" || originalValue == null ? undefined : value,
+    )
+    .typeError(`${label} must be a number`)
+    .notRequired()
+    .min(0, `${label} cannot be negative`);
+
+export const shippingProfileValidationSchema = Yup.object({
+  name: Yup.string()
+    .trim()
+    .required("Profile name is required")
+    .min(2, "Profile name must be at least 2 characters")
+    .max(100, "Profile name must be at most 100 characters"),
+  sellerId: Yup.string().required("Select a target seller"),
+  shippingMethod: Yup.string()
+    .oneOf(["standard", "express", "same_day", "hyperlocal"])
+    .required("Select a shipping method"),
+  serviceabilityMode: Yup.string()
+    .oneOf(["all_india", "selected_pincodes"])
+    .required("Select a serviceability mode"),
+  allowedPincodes: Yup.array().when("serviceabilityMode", {
+    is: "selected_pincodes",
+    then: (schema) =>
+      schema
+        .of(Yup.string().matches(/^\d{6}$/, "Enter valid 6-digit pincodes"))
+        .min(1, "Add at least one allowed pincode")
+        .required("Add at least one allowed pincode"),
+    otherwise: (schema) => schema,
+  }),
+  shippingCharge: optionalShippingNumber("Shipping charge"),
+  freeShippingThreshold: optionalShippingNumber("Free shipping threshold"),
+  etaMin: optionalShippingNumber("Minimum ETA").integer(
+    "Minimum ETA must be a whole number",
+  ),
+  etaMax: optionalShippingNumber("Maximum ETA")
+    .integer("Maximum ETA must be a whole number")
+    .when("etaMin", ([etaMin], schema) =>
+      etaMin === undefined
+        ? schema
+        : schema.min(etaMin, "Maximum ETA must be at least the minimum ETA"),
+    ),
+});
+
 const optionalTextWithLength = (label, max) =>
   Yup.string()
     .transform((value) => (value?.trim() ? value.trim() : undefined))
@@ -255,3 +329,137 @@ export const scheduleReturnValidationSchema = Yup.object({
   note: optionalTextWithLength("Note", 500),
 });
 
+export const codCollectionValidationSchema = Yup.object({
+ collectedAmount: Yup.number()
+  .transform((value, originalValue) =>
+    typeof originalValue === "string" &&
+    originalValue.trim() === ""
+      ? undefined
+      : value,
+  )
+  .typeError("Enter a valid collected amount")
+  .required("Collected amount is required")
+  .min(0, "Collected amount cannot be negative")
+  .test(
+    "valid-amount",
+    "Only numbers and up to 2 decimal places are allowed",
+    (_, context) => {
+      const value = context.originalValue;
+
+      if (value === "" || value === undefined || value === null) {
+        return true;
+      }
+
+      return /^\d+(\.\d{1,2})?$/.test(String(value).trim());
+    },
+  ),
+  referenceId: Yup.string()
+    .trim()
+    .required("Collection reference is required")
+    .min(3, "Collection reference must be at least 3 characters")
+    .max(
+      100,
+      "Collection reference must be no more than 100 characters",
+    ),
+
+  notes: Yup.string().max(
+    500,
+    "Notes must be no more than 500 characters",
+  )
+  .min(3, "Notes must be at least 3 characters"),
+
+  markRemitted: Yup.boolean().required(
+    "Remittance status is required",
+  ),
+});
+
+
+export const brandValidationSchema = Yup.object({
+  name: Yup.string()
+    .trim()
+    .required("Brand name is required")
+    .min(2, "Brand name must be at least 2 characters")
+    .max(200, "Brand name must be no more than 200 characters"),
+
+  logo: Yup.string()
+    .required("Please upload a brand logo"),
+
+  description: Yup.string()
+  .min(3, "Description must be at least 3 characters")
+    .max(1000, "Description must be no more than 1000 characters"),
+});
+export const bonusRuleValidationSchema = Yup.object({
+  ruleName: Yup.string()
+    .trim()
+    .required("Bonus rule name is required"),
+
+  period: Yup.string()
+    .required("Please select a bonus period"),
+
+  targetType: Yup.string()
+    .required("Please select a target type"),
+
+  customStartAt: Yup.string().when("period", {
+    is: "custom",
+    then: (schema) =>
+      schema.required("Custom start date is required"),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+
+  customEndAt: Yup.string().when("period", {
+    is: "custom",
+    then: (schema) =>
+      schema
+        .required("Custom end date is required")
+        .test(
+          "end-date-after-start",
+          "End date must be on or after the start date",
+          function (value) {
+            const { customStartAt } = this.parent;
+
+            if (!value || !customStartAt) {
+              return true;
+            }
+
+            return value >= customStartAt;
+          }
+        ),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+
+  targetValue: Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" || originalValue == null
+        ? undefined
+        : value
+    )
+    .typeError("Target value must be a valid number")
+    .required("Target value is required")
+    .moreThan(0, "Target value must be greater than 0"),
+
+  bonusType: Yup.string()
+    .required("Please select a bonus type"),
+
+  bonusValue: Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" || originalValue == null
+        ? undefined
+        : value
+    )
+    .typeError("Bonus value must be a valid number")
+    .required("Bonus value is required")
+    .moreThan(0, "Bonus value must be greater than 0"),
+
+  applyTo: Yup.string()
+    .required("Please select where the bonus applies"),
+
+  resetCycle: Yup.string()
+    .required("Please select a reset cycle"),
+
+  releaseRule: Yup.string()
+    .required("Please select a release rule"),
+
+  status: Yup.string()
+    .oneOf(["active", "inactive"], "Please select a valid status")
+    .required("Status is required"),
+});

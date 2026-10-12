@@ -388,7 +388,7 @@ const Sellers = () => {
         }}
         onRefresh={load}
         rowActions={rowActions}
-        searchPlaceholder="Search by name, username or email…"
+        searchPlaceholder="Search name, username or email…"
         emptyText="No sellers found."
         emptyIcon={
           <MdStorefront
