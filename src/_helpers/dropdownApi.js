@@ -82,6 +82,7 @@ export const dropdownApi = {
       ENDPOINTS.sellers.list,
       {
         ...params,
+        liveOnly: true,
         limit: Math.min(Math.max(Number(params.limit) || 20, 1), 100),
       },
       (item) => {
@@ -127,6 +128,7 @@ export const dropdownApi = {
       ENDPOINTS.sellers.list,
       {
         ...params,
+        liveOnly: true,
         // Seller directories are server-searched and paginated. Never request
         // an unbounded directory just to populate a dropdown.
         limit: Math.min(Math.max(Number(params.limit) || 20, 1), 100),
