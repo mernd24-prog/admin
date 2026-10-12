@@ -459,13 +459,11 @@ export const GoldDateRangeCalendar = ({
             })()}
           </div>
 
-          <p className="text-xs font-medium text-slate-500">
-            {!dates.fromDate
-              ? "Select start date"
-              : !dates.toDate
-                ? "Select end date"
-                : "Date range selected"}
-          </p>
+          {!dates.fromDate || !dates.toDate ? (
+            <p className="text-xs font-medium text-slate-500">
+              {!dates.fromDate ? "Select start date" : "Select end date"}
+            </p>
+          ) : null}
         </div>
 
         <button
@@ -477,6 +475,34 @@ export const GoldDateRangeCalendar = ({
         >
           ›
         </button>
+      </div>
+
+      {/* Selected Range Display Box - shown on top after selection */}
+      <div className="mb-3 w-full">
+        {!dates.fromDate ? (
+          <span className="text-sm text-slate-400"></span>
+        ) : !dates.toDate ? (
+          <div className="flex items-center justify-end gap-3">
+            <div className="rounded-md bg-[var(--admin-gold-soft)]/40 px-3 py-1 text-[11px] font-semibold text-[var(--admin-gold)]">
+              {formatDateLabel(dates.fromDate)}
+            </div>
+            <span className="text-[11px] text-[var(--admin-muted)]">
+              Select end date
+            </span>
+          </div>
+        ) : (
+          <div className="flex justify-end">
+            <div className="inline-flex items-center gap-3 rounded-lg bg-white/90 px-3 py-2 text-xs font-medium">
+              <span className="text-[var(--admin-ink)]">
+                {formatDateLabel(dates.fromDate)}
+              </span>
+              <span className="text-slate-400">→</span>
+              <span className="text-[var(--admin-ink)]">
+                {formatDateLabel(dates.toDate)}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -531,34 +557,6 @@ export const GoldDateRangeCalendar = ({
             </button>
           );
         })}
-      </div>
-
-      {/* Selected Range Display Box - simplified & styled */}
-      <div className="mt-4 w-full">
-        {!dates.fromDate ? (
-          <span className="text-slate-400 text-sm"></span>
-        ) : !dates.toDate ? (
-          <div className="flex justify-end items-center gap-3">
-            <div className="rounded-md bg-[var(--admin-gold-soft)]/40 px-3 py-1 text-[11px] font-semibold text-[var(--admin-gold)]">
-              {formatDateLabel(dates.fromDate)}
-            </div>
-            <span className="text-[11px] text-[var(--admin-muted)]">
-              Select end date
-            </span>
-          </div>
-        ) : (
-          <div className="flex justify-end">
-            <div className="inline-flex items-center gap-3 rounded-lg  bg-white/90 py-2 px-3  text-xs font-medium">
-              <span className="text-[var(--admin-ink)]">
-                {formatDateLabel(dates.fromDate)}
-              </span>
-              <span className="text-slate-400">→</span>
-              <span className="text-[var(--admin-ink)]">
-                {formatDateLabel(dates.toDate)}
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-2">

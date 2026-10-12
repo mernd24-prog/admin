@@ -625,10 +625,10 @@ export default function Header({
         </div>
       </div>
 
-      {/* Compact custom logout confirmation popup */}
+      {/* Customer-style logout confirmation popup */}
       {showLogoutConfirm && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 px-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#000000]/20 px-4 backdrop-blur-[1px]"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               cancelLogout();
@@ -639,40 +639,47 @@ export default function Header({
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="logout-confirm-title"
-            aria-describedby="logout-confirm-description"
-            className="w-full max-w-[420px] rounded-xl bg-white px-6 py-10 shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:px-8"
+            className="relative w-full max-w-[440px] rounded-[14px] bg-white p-5 shadow-[0_12px_30px_rgba(17,24,39,0.12)]"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <h2
-              id="logout-confirm-title"
-              className="text-center text-[15px] font-semibold text-[#1F1B5F]"
+            <button
+              type="button"
+              onClick={cancelLogout}
+              aria-label="Close"
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-[#1B1D60]/25 bg-white text-[20px] font-medium leading-none text-[#1B1D60] "
             >
-              Are you sure you want to logout
-            </h2>
+              ×
+            </button>
 
-            {/* <p
-              id="logout-confirm-description"
-              className="mt-2 text-center text-[12px] text-[#77758A]"
-            >
-              You will be signed out of your account.
-            </p> */}
-
-            <div className="mt-6 flex items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={cancelLogout}
-                className="min-w-[88px] rounded-xl border border-[#D6A323] bg-white px-5 py-1.5 text-[13px] font-medium text-[#1F1B5F] transition-colors hover:bg-[#FFF7EA] focus:outline-none focus:ring-2 focus:ring-[#D6A323]/30"
+            <div className="pr-10">
+              <h2
+                id="logout-confirm-title"
+                className="text-[22px] font-bold leading-[1.2] text-[#1B1D60]"
               >
-                Cancel
-              </button>
+                Sign Out
+              </h2>
 
-              <button
-                type="button"
-                onClick={confirmLogout}
-                className="min-w-[100px] rounded-xl bg-[#D6A323] px-5 py-1.5 text-[13px] font-medium text-[#1F1B5F] transition-colors hover:bg-[#C4971F] focus:outline-none focus:ring-2 focus:ring-[#D6A323]/40"
-              >
-                Confirm
-              </button>
+              <p className="mt-3 text-[15px] leading-[1.5] text-[#1B1D60]">
+                Are you sure you want to sign out of your account?
+              </p>
+
+              <div className="mt-5 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={cancelLogout}
+                  className="h-[40px] min-w-[96px] rounded-[10px] border-2 border-[#1B1D60] bg-white px-4 text-[15px] font-semibold text-[#1B1D60] transition-colors hover:bg-[#f4f6ff]"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmLogout}
+                  className="h-[40px] min-w-[96px] rounded-[10px] border-2 border-[#D93C3C] bg-[#D93C3C] px-4 text-[15px] font-semibold text-white transition-colors hover:bg-[#c52f2f]"
+                >
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </div>

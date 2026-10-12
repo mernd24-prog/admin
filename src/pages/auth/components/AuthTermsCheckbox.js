@@ -1,3 +1,4 @@
+
 import Checkbox from "../../../components/Atoms/Checkbox/Checkbox";
 
 const AuthTermsCheckbox = ({ checked, onChange, className = "" }) => (
@@ -24,7 +25,27 @@ const AuthTermsCheckbox = ({ checked, onChange, className = "" }) => (
         >
           Terms
         </a>
-        , Privacy, and Cancellation Policies.
+        {", "}
+        <a
+          href="https://staging.samglobal1.com/terms-of-use"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          Privacy
+        </a>
+        {" and "}
+        <a
+          href="https://staging.samglobal1.com/refund-policy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          Cancellation Policies
+        </a>
+        .
       </span>
     </span>
   </label>
