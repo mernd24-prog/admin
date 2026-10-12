@@ -1241,7 +1241,7 @@ const SellerSpecialPriceManager = () => {
         totalCount={totalProducts}
         listPage={list}
         rowKey="_id"
-        searchPlaceholder="Search product name or SKU"
+        searchPlaceholder="Search product name, SKU"
         filterBar={
           <FilterBar
             filters={filterFields}

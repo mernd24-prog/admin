@@ -718,7 +718,7 @@ const PayoutOpsQueue = () => {
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
         onSearch={list.setSearch}
-        searchPlaceholder="Search seller or payment reference"
+        searchPlaceholder="Search Seller, Payment Reference..."
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}

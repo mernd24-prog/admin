@@ -94,6 +94,7 @@ const TaxReports = () => {
         data={entries}
         loading={loading}
         total={entries.length}
+        searchPlaceholder="Search store name, component, or entry type..."
         listPage={list}
         emptyMessage={error || "No tax report entries found"}
         onRefresh={fetchReports}

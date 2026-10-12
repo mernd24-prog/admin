@@ -56,6 +56,7 @@ import {
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 import { uploadDocumentFile } from "../../_helpers/globalFunctions";
 import {
+  bonusRuleValidationSchema,
   brandAssociateValidationSchema,
   parentInfluencerValidationSchema,
   referralCodeValidationSchema,
@@ -2280,11 +2281,11 @@ const ReferralCommerce = () => {
     setBonusRuleModalOpen(true);
   };
 
-  const submitBonusRule = async (event) => {
-    event.preventDefault();
+  const submitBonusRule = async (values) => {
     const payload = compactPayload(
-      numberize(bonusRuleForm, ["targetValue", "bonusValue"]),
+      numberize(values, ["targetValue", "bonusValue"]),
     );
+
     try {
       if (editingBonusRule) {
         await dispatch(
@@ -2293,19 +2294,32 @@ const ReferralCommerce = () => {
             ruleId: getId(editingBonusRule),
           }),
         ).unwrap();
+
         toast.success("Bonus rule updated");
       } else {
         await dispatch(createReferralBonusRule(payload)).unwrap();
+
         toast.success("Bonus rule created");
       }
+
       setBonusRuleModalOpen(false);
       setEditingBonusRule(null);
       setBonusRuleForm(emptyBonusRuleForm);
+
       await refreshAll();
     } catch (error) {
       toast.error(error || "Unable to save bonus rule");
     }
   };
+
+  const formik = useFormik({
+    initialValues: emptyBonusRuleForm,
+    enableReinitialize: true,
+    validationSchema: bonusRuleValidationSchema,
+    validateOnChange: false,
+    validateOnBlur: true,
+    onSubmit: submitBonusRule,
+  });
 
   const toggleBonusRuleStatus = async (rule) => {
     try {
@@ -4708,220 +4722,309 @@ const ReferralCommerce = () => {
           setBonusRuleModalOpen(false);
           setEditingBonusRule(null);
           setBonusRuleForm(emptyBonusRuleForm);
+          formik.resetForm();
         }}
         title={editingBonusRule ? "Edit Bonus Rule" : "Create Bonus Rule"}
         submitButtonText="Save Bonus Rule"
         closeButtonText="Cancel"
         isButtonView={true}
-        onSubmit={submitBonusRule}
+        onSubmit={formik.handleSubmit}
       >
         <div className="space-y-5">
-          {/* ==================== Basic Information ==================== */}
           <FormSection
             title="Basic Information"
             description="Configure the bonus rule and its applicable period."
           >
             <div className="space-y-4">
-              {/* Full Width */}
-              <FormInput
-                label="Bonus Rule Name"
-                name="ruleName"
-                value={bonusRuleForm.ruleName}
-                onChange={handleBonusRuleField}
-                placeholder="Enter bonus rule name"
-                required
-              />
-
-              {/* 2 Fields */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormSelectGroup
-                  label="Bonus Period"
-                  options={referralBonusPeriods.options}
-                  value={
-                    referralBonusPeriods.options.find(
-                      (option) => option.value === bonusRuleForm.period,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    handleBonusRuleField({
-                      target: {
-                        name: "period",
-                        value: option?.value || "",
-                      },
-                    })
-                  }
+              <div>
+                <FormInput
+                  label="Bonus Rule Name"
+                  name="ruleName"
+                  value={formik.values.ruleName}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  placeholder="Enter bonus rule name"
+                  required
                 />
 
-                <FormSelectGroup
-                  label="Target Type"
-                  options={referralBonusTargetTypes.options}
-                  value={
-                    referralBonusTargetTypes.options.find(
-                      (option) => option.value === bonusRuleForm.targetType,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    handleBonusRuleField({
-                      target: {
-                        name: "targetType",
-                        value: option?.value || "",
-                      },
-                    })
-                  }
-                />
+                {formik.touched.ruleName && formik.errors.ruleName && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {formik.errors.ruleName}
+                  </p>
+                )}
               </div>
 
-              {/* Custom Dates - 2 fields logically belong together */}
-              {bonusRuleForm.period === "custom" && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormInput
-                    label="Custom Start"
-                    name="customStartAt"
-                    type="date"
-                    value={bonusRuleForm.customStartAt}
-                    onChange={handleBonusRuleField}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <FormSelectGroup
+                    label="Bonus Period"
+                    options={referralBonusPeriods.options}
+                    value={
+                      referralBonusPeriods.options.find(
+                        (option) => option.value === formik.values.period,
+                      ) || null
+                    }
+                    onChange={(option) => {
+                      const period = option?.value || "";
+
+                      formik.setFieldValue("period", period);
+                      formik.setFieldTouched("period", true, false);
+
+                      if (period !== "custom") {
+                        formik.setFieldValue("customStartAt", "");
+                        formik.setFieldValue("customEndAt", "");
+                        formik.setFieldTouched("customStartAt", false, false);
+                        formik.setFieldTouched("customEndAt", false, false);
+                      }
+                    }}
+                    required
                   />
 
-                  <FormInput
-                    label="Custom End"
-                    name="customEndAt"
-                    type="date"
-                    value={bonusRuleForm.customEndAt}
-                    onChange={handleBonusRuleField}
+                  {formik.touched.period && formik.errors.period && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {formik.errors.period}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <FormSelectGroup
+                    label="Target Type"
+                    options={referralBonusTargetTypes.options}
+                    value={
+                      referralBonusTargetTypes.options.find(
+                        (option) => option.value === formik.values.targetType,
+                      ) || null
+                    }
+                    onChange={(option) => {
+                      formik.setFieldValue("targetType", option?.value || "");
+                      formik.setFieldTouched("targetType", true, false);
+                    }}
+                    required
                   />
+
+                  {formik.touched.targetType && formik.errors.targetType && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {formik.errors.targetType}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {formik.values.period === "custom" && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <FormInput
+                      label="Custom Start Date"
+                      name="customStartAt"
+                      type="date"
+                      value={formik.values.customStartAt}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      required
+                    />
+
+                    {formik.touched.customStartAt &&
+                      formik.errors.customStartAt && (
+                        <p className="mt-1 text-xs text-red-500">
+                          {formik.errors.customStartAt}
+                        </p>
+                      )}
+                  </div>
+
+                  <div>
+                    <FormInput
+                      label="Custom End Date"
+                      name="customEndAt"
+                      type="date"
+                      value={formik.values.customEndAt}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      required
+                    />
+
+                    {formik.touched.customEndAt &&
+                      formik.errors.customEndAt && (
+                        <p className="mt-1 text-xs text-red-500">
+                          {formik.errors.customEndAt}
+                        </p>
+                      )}
+                  </div>
                 </div>
               )}
             </div>
           </FormSection>
 
-          {/* ==================== Target & Bonus ==================== */}
           <FormSection
             title="Target & Bonus"
             description="Define the target value and bonus that will be awarded."
           >
             <div className="space-y-4">
-              {/* Target Value + Bonus Type */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormInput
-                  label="Target Value"
-                  name="targetValue"
-                  type="number"
-                  step="0.01"
-                  value={bonusRuleForm.targetValue}
-                  onChange={handleBonusRuleField}
-                  placeholder="Enter target value"
-                />
+                <div>
+                  <FormInput
+                    label="Target Value"
+                    name="targetValue"
+                    type="number"
+                    step="0.01"
+                    value={formik.values.targetValue}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    placeholder="Enter target value"
+                    required
+                  />
 
-                <FormSelectGroup
-                  label="Bonus Type"
-                  options={referralBonusTypes.options}
-                  value={
-                    referralBonusTypes.options.find(
-                      (option) => option.value === bonusRuleForm.bonusType,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    handleBonusRuleField({
-                      target: {
-                        name: "bonusType",
-                        value: option?.value || "",
-                      },
-                    })
-                  }
-                />
+                  {formik.touched.targetValue && formik.errors.targetValue && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {formik.errors.targetValue}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <FormSelectGroup
+                    label="Bonus Type"
+                    options={referralBonusTypes.options}
+                    value={
+                      referralBonusTypes.options.find(
+                        (option) => option.value === formik.values.bonusType,
+                      ) || null
+                    }
+                    onChange={(option) => {
+                      formik.setFieldValue("bonusType", option?.value || "");
+                      formik.setFieldTouched("bonusType", true, false);
+                    }}
+                    required
+                  />
+
+                  {formik.touched.bonusType && formik.errors.bonusType && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {formik.errors.bonusType}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* Bonus Value + Apply To */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormInput
-                  label="Bonus Value"
-                  name="bonusValue"
-                  type="number"
-                  step="0.01"
-                  value={bonusRuleForm.bonusValue}
-                  onChange={handleBonusRuleField}
-                  placeholder="Enter bonus value"
-                />
+                <div>
+                  <FormInput
+                    label="Bonus Value"
+                    name="bonusValue"
+                    type="number"
+                    step="0.01"
+                    value={formik.values.bonusValue}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    placeholder="Enter bonus value"
+                    required
+                  />
 
-                <FormSelectGroup
-                  label="Apply To"
-                  options={referralBonusApplyTo.options}
-                  value={
-                    referralBonusApplyTo.options.find(
-                      (option) => option.value === bonusRuleForm.applyTo,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    handleBonusRuleField({
-                      target: {
-                        name: "applyTo",
-                        value: option?.value || "",
-                      },
-                    })
-                  }
-                />
+                  {formik.touched.bonusValue && formik.errors.bonusValue && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {formik.errors.bonusValue}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <FormSelectGroup
+                    label="Apply To"
+                    options={referralBonusApplyTo.options}
+                    value={
+                      referralBonusApplyTo.options.find(
+                        (option) => option.value === formik.values.applyTo,
+                      ) || null
+                    }
+                    onChange={(option) => {
+                      formik.setFieldValue("applyTo", option?.value || "");
+                      formik.setFieldTouched("applyTo", true, false);
+                    }}
+                    required
+                  />
+
+                  {formik.touched.applyTo && formik.errors.applyTo && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {formik.errors.applyTo}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </FormSection>
 
-          {/* ==================== Rule Settings ==================== */}
           <FormSection
             title="Rule Settings"
             description="Configure the reset cycle and bonus release conditions."
           >
             <div className="space-y-4">
-              {/* Reset Cycle + Release Rule */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormSelectGroup
-                  label="Reset Cycle"
-                  options={["monthly", "quarterly", "yearly"].map((value) => ({
-                    label: value.replace(/_/g, " "),
-                    value,
-                  }))}
-                  value={{
-                    label: bonusRuleForm.resetCycle?.replace(/_/g, " "),
-                    value: bonusRuleForm.resetCycle,
-                  }}
-                  onChange={(option) =>
-                    handleBonusRuleField({
-                      target: {
-                        name: "resetCycle",
-                        value: option?.value || "",
-                      },
-                    })
-                  }
-                />
+                <div>
+                  <FormSelectGroup
+                    label="Reset Cycle"
+                    options={["monthly", "quarterly", "yearly"].map(
+                      (value) => ({
+                        label: value.replace(/_/g, " "),
+                        value,
+                      }),
+                    )}
+                    value={
+                      ["monthly", "quarterly", "yearly"]
+                        .map((value) => ({
+                          label: value.replace(/_/g, " "),
+                          value,
+                        }))
+                        .find(
+                          (option) => option.value === formik.values.resetCycle,
+                        ) || null
+                    }
+                    onChange={(option) => {
+                      formik.setFieldValue("resetCycle", option?.value || "");
+                      formik.setFieldTouched("resetCycle", true, false);
+                    }}
+                    required
+                  />
 
-                <FormSelectGroup
-                  label="Release Rule"
-                  options={referralBonusReleaseRules.options}
-                  value={
-                    referralBonusReleaseRules.options.find(
-                      (option) => option.value === bonusRuleForm.releaseRule,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    handleBonusRuleField({
-                      target: {
-                        name: "releaseRule",
-                        value: option?.value || "",
-                      },
-                    })
-                  }
-                />
+                  {formik.touched.resetCycle && formik.errors.resetCycle && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {formik.errors.resetCycle}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <FormSelectGroup
+                    label="Release Rule"
+                    options={referralBonusReleaseRules.options}
+                    value={
+                      referralBonusReleaseRules.options.find(
+                        (option) => option.value === formik.values.releaseRule,
+                      ) || null
+                    }
+                    onChange={(option) => {
+                      formik.setFieldValue("releaseRule", option?.value || "");
+                      formik.setFieldTouched("releaseRule", true, false);
+                    }}
+                    required
+                  />
+
+                  {formik.touched.releaseRule && formik.errors.releaseRule && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {formik.errors.releaseRule}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* Status - Full Width because it is alone */}
               <FormToggleRow
                 title="Status"
                 description="Enable this bonus rule to make it active and available."
-                isToggle={bonusRuleForm.status === "active"}
-                handleClick={() =>
-                  setBonusRuleForm((prev) => ({
-                    ...prev,
-                    status: prev.status === "active" ? "inactive" : "active",
-                  }))
-                }
+                isToggle={formik.values.status === "active"}
+                handleClick={() => {
+                  formik.setFieldValue(
+                    "status",
+                    formik.values.status === "active" ? "inactive" : "active",
+                  );
+                }}
               />
             </div>
           </FormSection>

@@ -422,7 +422,7 @@ const NegativeBalances = () => {
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
         onSearch={list.setSearch}
-        searchPlaceholder="Search settlement ID or seller"
+        searchPlaceholder="Search settlement ID..."
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}

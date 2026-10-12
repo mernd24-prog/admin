@@ -1131,7 +1131,7 @@ const SellerPayouts = () => {
         sortKey={list.sortKey}
         sortDir={list.sortDir}
         onRefresh={fetchPayouts}
-        searchPlaceholder="Search seller or payment reference"
+        searchPlaceholder="Search Seller..."
         emptyText="No calculated payouts found"
         filterBar={
           <FilterBar

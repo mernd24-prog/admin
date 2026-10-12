@@ -58,6 +58,8 @@ import FormInput from "../../../../components/Atoms/FormInput/FormInput";
 
 import ImageUpload from "../../../../components/Atoms/ImageGallery/ImageUpload";
 import { dropdownApi } from "../../../../_helpers/dropdownApi";
+import { brandValidationSchema } from "../../../../_helpers/validationSchemas";
+import { useFormik } from "formik";
 
 // Same dropdown API used in Product Catalog
 // import dropdownApi from "../../../../services/dropdownApi";
@@ -974,6 +976,26 @@ export default function BasicDetailsTab({
    * ------------------------------------------------------------
    */
 
+
+const formik = useFormik({
+  initialValues: {
+    name: brandSubmission.name || "",
+    logo: brandSubmission.logo || "",
+    thumbnails: brandSubmission.thumbnails || "",
+    description: brandSubmission.description || "",
+  },
+  enableReinitialize: true,
+  validationSchema: brandValidationSchema,
+  validateOnBlur: true,
+  validateOnChange: false,
+
+  onSubmit: async (values) => {
+    setBrandSubmission(values);
+    await submitBrandRequest(values);
+  },
+});
+
+
   const handleBrandLogoUpload = async (file) => {
     if (!file) return;
 
@@ -1012,115 +1034,111 @@ export default function BasicDetailsTab({
     }
   };
 
-  const submitBrandRequest = async (event) => {
-    event.preventDefault();
+const submitBrandRequest = async (values) => {
+  if (brandLogoUploading) {
+    return toast.error("Please wait for logo upload to finish");
+  }
 
-    if (!brandSubmission.name.trim()) {
-      return toast.error("Brand name is required");
-    }
+  setBrandSubmitting(true);
 
-    if (!brandSubmission.logo) {
-      return toast.error("Please upload a brand logo");
-    }
+  try {
+    const submissionData = {
+      ...values,
+      name: values.name.trim(),
+    };
 
-    if (brandLogoUploading) {
-      return toast.error("Please wait for logo upload to finish");
-    }
+    if (isSellerPanelUser) {
+      const response = await dispatch(
+        submissionData._id
+          ? resubmitBrandForApproval({
+              ...submissionData,
+              _id: submissionData._id,
+            })
+          : submitBrandForApproval(submissionData),
+      ).unwrap();
 
-    setBrandSubmitting(true);
+      const createdBrand = response?.data || {};
 
-    try {
-      if (isSellerPanelUser) {
-        const response = await dispatch(
-          brandSubmission._id
-            ? resubmitBrandForApproval({
-                ...brandSubmission,
-                _id: brandSubmission._id,
-              })
-            : submitBrandForApproval(brandSubmission),
-        ).unwrap();
+      const brandName = createdBrand.name || submissionData.name;
 
-        const createdBrand = response?.data || {};
-
-        const brandName = createdBrand.name || brandSubmission.name.trim();
-
-        setMyBrandSubmissions((current) => [
-          {
-            ...brandSubmission,
-            ...createdBrand,
-            name: brandName,
-            approvalStatus: createdBrand.approvalStatus || "pending",
-          },
-          ...current.filter(
-            (brand) =>
-              String(brand._id || "") !==
-              String(createdBrand._id || brandSubmission._id || ""),
-          ),
-        ]);
-
-        handleSelectChange(
-          {
-            value: brandName,
-            label: `${brandName} (Pending approval)`,
-            brandName,
-            resourceId: createdBrand._id || createdBrand.id,
-            approvalStatus: createdBrand.approvalStatus || "pending",
-            isPendingBrand: true,
-            submittedBySellerId: createdBrand.submittedBySellerId,
-          },
-          "BRAND_ID",
-        );
-
-        toast.success(
-          brandSubmission._id
-            ? "Brand resubmitted for approval"
-            : "Brand submitted for approval",
-        );
-      } else {
-        const response = await dispatch(
-          createBrand({
-            ...brandSubmission,
-            active: true,
-          }),
-        ).unwrap();
-
-        const createdBrand = response?.data || {};
-
-        const brandName = createdBrand.name || brandSubmission.name.trim();
-
-        handleSelectChange(
-          {
-            value: brandName,
-            label: brandName,
-            brandName,
-            resourceId: createdBrand._id || createdBrand.id,
-            approvalStatus: createdBrand.approvalStatus || "approved",
-          },
-          "BRAND_ID",
-        );
-
-        toast.success("Brand created and selected");
-      }
-
-      setBrandSubmission({
-        name: "",
-        logo: "",
-        thumbnails: "",
-        description: "",
-      });
-
-      setIsBrandModal(false);
-
-      await Promise.allSettled([
-        loadMyBrandSubmissions(),
-        Promise.resolve(fetchAllData?.()),
+      setMyBrandSubmissions((current) => [
+        {
+          ...submissionData,
+          ...createdBrand,
+          name: brandName,
+          approvalStatus: createdBrand.approvalStatus || "pending",
+        },
+        ...current.filter(
+          (brand) =>
+            String(brand._id || "") !==
+            String(createdBrand._id || submissionData._id || ""),
+        ),
       ]);
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Could not submit brand"));
-    } finally {
-      setBrandSubmitting(false);
+
+      handleSelectChange(
+        {
+          value: brandName,
+          label: `${brandName} (Pending approval)`,
+          brandName,
+          resourceId: createdBrand._id || createdBrand.id,
+          approvalStatus: createdBrand.approvalStatus || "pending",
+          isPendingBrand: true,
+          submittedBySellerId: createdBrand.submittedBySellerId,
+        },
+        "BRAND_ID",
+      );
+
+      toast.success(
+        submissionData._id
+          ? "Brand resubmitted for approval"
+          : "Brand submitted for approval",
+      );
+    } else {
+      const response = await dispatch(
+        createBrand({
+          ...submissionData,
+          active: true,
+        }),
+      ).unwrap();
+
+      const createdBrand = response?.data || {};
+
+      const brandName = createdBrand.name || submissionData.name;
+
+      handleSelectChange(
+        {
+          value: brandName,
+          label: brandName,
+          brandName,
+          resourceId: createdBrand._id || createdBrand.id,
+          approvalStatus: createdBrand.approvalStatus || "approved",
+        },
+        "BRAND_ID",
+      );
+
+      toast.success("Brand created and selected");
     }
-  };
+
+    setBrandSubmission({
+      name: "",
+      logo: "",
+      thumbnails: "",
+      description: "",
+    });
+
+    setIsBrandModal(false);
+
+    await Promise.allSettled([
+      loadMyBrandSubmissions(),
+      Promise.resolve(fetchAllData?.()),
+    ]);
+  } catch (error) {
+    toast.error(getErrorMessage(error, "Could not submit brand"));
+  } finally {
+    setBrandSubmitting(false);
+  }
+};
+
 
   const brandOptions = useMemo(() => {
     const approvedNames = new Set(
@@ -2414,128 +2432,161 @@ export default function BasicDetailsTab({
           BRAND MODAL
           ========================================================== */}
 
-      <DefaultModal
-        title={brandSubmission._id ? "Resubmit Brand" : "Add New Brand"}
-        isOpen={isBrandModal}
-        onClose={() => setIsBrandModal(false)}
-        onSubmit={submitBrandRequest}
-        submitButtonText={
-          brandSubmitting
-            ? "Saving..."
-            : brandLogoUploading
-              ? "Uploading..."
-              : brandSubmission._id
-                ? "Resubmit"
-                : isSellerPanelUser
-                  ? "Submit for Approval"
-                  : "Create Brand"
-        }
-        closeButtonText="Cancel"
-        loading={brandSubmitting || brandLogoUploading}
-        isButtonView
-      >
-        <div className="space-y-5">
-          <FormSection
-            title="Brand Information"
-            description={
-              isSellerPanelUser
-                ? "New brands require admin approval before they can be used on products."
-                : "Create a new brand that will be available for this product."
-            }
-          >
-            <div className="space-y-4">
-              <FormInput
-                label="Brand Name"
-                name="name"
-                type="text"
-                value={brandSubmission.name}
-                onChange={(event) =>
-                  setBrandSubmission((current) => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
-                }
-                placeholder="Enter brand name"
-                maxLength={200}
-                required
-              />
-
-              <FormInput
-                label="Description"
-                name="description"
-                type="textarea"
-                value={brandSubmission.description}
-                onChange={(event) =>
-                  setBrandSubmission((current) => ({
-                    ...current,
-                    description: event.target.value,
-                  }))
-                }
-                placeholder="Enter brand details (optional)"
-                rows={4}
-                maxLength={1000}
-              />
-            </div>
-          </FormSection>
-
-          <ImageUpload
-            label="Brand Logo"
-            file={brandSubmission.logo}
-            onChange={handleBrandLogoUpload}
-            accept="image/png,image/jpeg,image/jpg,image/webp"
-            isDisabled={brandLogoUploading || brandSubmitting}
-            isLoading={brandLogoUploading}
-            onRemove={() =>
-              setBrandSubmission((current) => ({
-                ...current,
-                logo: "",
-              }))
-            }
+   
+<DefaultModal
+  title={brandSubmission._id ? "Resubmit Brand" : "Add New Brand"}
+  isOpen={isBrandModal}
+  onClose={() => {
+    setIsBrandModal(false);
+    formik.resetForm();
+  }}
+  onSubmit={formik.handleSubmit}
+  submitButtonText={
+    brandSubmitting
+      ? "Saving..."
+      : brandLogoUploading
+        ? "Uploading..."
+        : brandSubmission._id
+          ? "Resubmit"
+          : isSellerPanelUser
+            ? "Submit for Approval"
+            : "Create Brand"
+  }
+  closeButtonText="Cancel"
+  loading={brandSubmitting || brandLogoUploading}
+  isButtonView
+>
+  <div className="space-y-5">
+    <FormSection
+      title="Brand Information"
+      description={
+        isSellerPanelUser
+          ? "New brands require admin approval before they can be used on products."
+          : "Create a new brand that will be available for this product."
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <FormInput
+            label="Brand Name"
+            name="name"
+            type="text"
+            value={formik.values.name}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            placeholder="Enter brand name"
             required
           />
-          <p className="mt-1 text-[11px] text-gray-400">
-            {brandLogoUploading
-              ? "Uploading logo..."
-              : "JPG, PNG, or WEBP up to 5MB"}
-          </p>
 
-          {myBrandSubmissions.filter(
-            (brand) => brand.approvalStatus === "rejected",
-          ).length > 0 && (
-            <FormSection
-              title="Rejected Submissions"
-              description="Select a rejected brand to make changes and resubmit it."
-            >
-              <div className="space-y-2">
-                {myBrandSubmissions
-                  .filter((brand) => brand.approvalStatus === "rejected")
-                  .map((brand) => (
-                    <button
-                      key={brand._id}
-                      type="button"
-                      className="w-full rounded-md border border-red-200 bg-red-50 p-3 text-left text-xs text-red-700 transition-colors hover:bg-red-100"
-                      onClick={() =>
-                        setBrandSubmission({
-                          _id: brand._id,
-                          name: brand.name || "",
-                          logo: brand.logo || "",
-                          thumbnails: brand.thumbnails || "",
-                          description: brand.description || "",
-                        })
-                      }
-                    >
-                      <span className="font-semibold">{brand.name}</span>
-
-                      <span className="mt-1 block text-red-600">
-                        {brand.rejectionReason || "Needs changes"}
-                      </span>
-                    </button>
-                  ))}
-              </div>
-            </FormSection>
+          {formik.touched.name && formik.errors.name && (
+            <p className="mt-1 text-xs text-red-500">
+              {formik.errors.name}
+            </p>
           )}
         </div>
-      </DefaultModal>
+
+        <div>
+          <FormInput
+            label="Description"
+            name="description"
+            type="textarea"
+            value={formik.values.description}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            placeholder="Enter brand details (optional)"
+            rows={4}
+          />
+
+          {formik.touched.description &&
+            formik.errors.description && (
+              <p className="mt-1 text-xs text-red-500">
+                {formik.errors.description}
+              </p>
+            )}
+        </div>
+
+        <div>
+      <ImageUpload
+        label="Brand Logo"
+        file={formik.values.logo}
+        onChange={handleBrandLogoUpload}
+        accept="image/png,image/jpeg,image/jpg,image/webp"
+        isDisabled={brandLogoUploading || brandSubmitting}
+        isLoading={brandLogoUploading}
+        onRemove={() => {
+          formik.setFieldValue("logo", "");
+          formik.setFieldTouched("logo", true, false);
+
+          setBrandSubmission((current) => ({
+            ...current,
+            logo: "",
+          }));
+        }}
+        required
+      />
+
+      {formik.touched.logo && formik.errors.logo && (
+        <p className="mt-1 text-xs text-red-500">
+          {formik.errors.logo}
+        </p>
+      )}
+
+      <p className="mt-1 text-[11px] text-gray-400">
+        {brandLogoUploading
+          ? "Uploading logo..."
+          : "JPG, PNG, or WEBP up to 5MB"}
+      </p>
+    </div>
+      </div>
+    </FormSection>
+
+    
+
+    {myBrandSubmissions.filter(
+      (brand) => brand.approvalStatus === "rejected",
+    ).length > 0 && (
+      <FormSection
+        title="Rejected Submissions"
+        description="Select a rejected brand to make changes and resubmit it."
+      >
+        <div className="space-y-2">
+          {myBrandSubmissions
+            .filter((brand) => brand.approvalStatus === "rejected")
+            .map((brand) => (
+              <button
+                key={brand._id}
+                type="button"
+                className="w-full rounded-md border border-red-200 bg-red-50 p-3 text-left text-xs text-red-700 transition-colors hover:bg-red-100"
+                onClick={() => {
+                  const values = {
+                    _id: brand._id,
+                    name: brand.name || "",
+                    logo: brand.logo || "",
+                    thumbnails: brand.thumbnails || "",
+                    description: brand.description || "",
+                  };
+
+                  setBrandSubmission(values);
+                  formik.setValues(values);
+                  formik.setTouched({});
+                  formik.setErrors({});
+                }}
+              >
+                <span className="font-semibold">
+                  {brand.name}
+                </span>
+
+                <span className="mt-1 block text-red-600">
+                  {brand.rejectionReason || "Needs changes"}
+                </span>
+              </button>
+            ))}
+        </div>
+      </FormSection>
+    )}
+  </div>
+</DefaultModal>
+
     </>
   );
 }

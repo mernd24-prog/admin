@@ -7,7 +7,7 @@ import NewButton from "../../../../components/Button/NewButton";
 import { TextEditor } from "../../../../components/Atoms/FormInput/TextEditor";
 import ImageUpload from "../../../../components/Atoms/ImageGallery/ImageUpload";
 import { uploadFile } from "../../../../_helpers/globalFunctions";
-import { FormSection } from "../../../../components/Shared";
+import { FormSection, PageHeader } from "../../../../components/Shared";
 import { toast } from "sonner";
 import { MdArrowBack } from "react-icons/md";
 import OrangeButton from "../../../../components/Atoms/buttons/OrangeButton";
@@ -581,39 +581,47 @@ const ContentPageSetup = ({
       {/* =========================================================
           PAGE HEADER
       ========================================================= */}
+<div>
+  <PageHeader
+    title={
+      form?.recordSlug || initialData
+        ? "Edit Content Page"
+        : "Create Content Page"
+    }
+    subtitle={
+      form?.recordSlug || initialData
+        ? "Update content page details"
+        : "Create a new content page"
+    }
+    breadcrumbs={[
+      { label: "Settings" },
+      { label: "Content Pages" },
+      {
+        label:
+          form?.recordSlug || initialData
+            ? "Edit Content Page"
+            : "Create Content Page",
+      },
+    ]}
+    actions={
+      <div className="flex items-center gap-2">
+        <OrangeButton type="button" onClick={onClose} disabled={loading}>
+          <MdArrowBack size={18} aria-hidden="true" />
+          Back
+        </OrangeButton>
 
-      <div className="mb-5 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800">
-            {form?.recordSlug || initialData
-              ? "Edit Content Page"
-              : "Create Content Page"}
-          </h1>
-
-          <p className="mt-1 text-sm text-gray-500">
-            {form?.recordSlug || initialData
-              ? "Update content page details"
-              : "Create a new content page"}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <OrangeButton type="button" onClick={onClose} disabled={loading}>
-            <MdArrowBack size={18} aria-hidden="true" />
-            Back
-          </OrangeButton>
-
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={loading}
+          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Cancel
+        </button>
       </div>
-
+    }
+  />
+</div>
       {/* =========================================================
           FORM CONTENT
       ========================================================= */}

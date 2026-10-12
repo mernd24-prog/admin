@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useFormik } from "formik";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -48,6 +49,7 @@ import {
 import { MdKeyboardArrowDown } from "react-icons/md";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import { shippingProfileValidationSchema } from "../../../_helpers/validationSchemas";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -264,13 +266,17 @@ const optionParentId = (option = {}) =>
 function ProfileForm({
   form,
   setForm,
+  formik,
   isTemplate = false,
   isSeller = false,
   sellerOptions = [],
   organizationOptions = [],
   onSellerSearch,
 }) {
-  const patch = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
+  const patch = (key, val) => {
+    setForm((prev) => ({ ...prev, [key]: val }));
+    formik?.setFieldValue(key, val);
+  };
 
   const TOAST_ID = "shipping-profile-pincode";
 
@@ -343,12 +349,13 @@ function ProfileForm({
                     ) || null
                   }
                   onChange={(option) => {
-                    setForm((prev) => ({
-                      ...prev,
-                      sellerId: option?.value || "",
-                      organizationId: "",
-                    }));
+                    patch("sellerId", option?.value || "");
+                    patch("organizationId", "");
                   }}
+                  onBlur={() => formik?.setFieldTouched("sellerId", true)}
+                  error={
+                    formik?.touched.sellerId && formik.errors.sellerId
+                  }
                   isSearchable
                   placeholder="Select seller..."
                   isClearable
@@ -390,7 +397,12 @@ function ProfileForm({
                 placeholder="e.g. Standard Shipping, Express, Heavy Products"
                 value={form.name}
                 onChange={(e) => patch("name", e.target.value)}
+                onBlur={() => formik?.setFieldTouched("name", true)}
+                name="name"
               />
+              {formik?.touched.name && formik.errors.name && (
+                <p className="text-xs text-red-600">{formik.errors.name}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -406,6 +418,7 @@ function ProfileForm({
                 onChange={(option) =>
                   patch("shippingMethod", option?.value || "")
                 }
+                onBlur={() => formik?.setFieldTouched("shippingMethod", true)}
                 isSearchable={false}
                 placeholder="Select shipping method..."
               />
@@ -450,10 +463,7 @@ function ProfileForm({
                   value={mode.value}
                   checked={isSelected}
                   onChange={() => {
-                    setForm((prev) => ({
-                      ...prev,
-                      serviceabilityMode: mode.value,
-                    }));
+                    patch("serviceabilityMode", mode.value);
                   }}
                   className="sr-only"
                 />
@@ -549,6 +559,12 @@ function ProfileForm({
             <p className="mt-2 text-xs text-gray-400">
               {form.allowedPincodes.length} pincode(s) selected
             </p>
+            {formik?.touched.allowedPincodes &&
+              formik.errors.allowedPincodes && (
+                <p className="mt-1 text-xs text-red-600">
+                  {formik.errors.allowedPincodes}
+                </p>
+              )}
           </div>
         )}
       </FormSection>
@@ -572,6 +588,11 @@ function ProfileForm({
             />
 
             <p className="text-xs text-gray-400">Set 0 for free shipping</p>
+            {formik?.touched.shippingCharge && formik.errors.shippingCharge && (
+              <p className="text-xs text-red-600">
+                {formik.errors.shippingCharge}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -587,6 +608,12 @@ function ProfileForm({
             />
 
             <p className="text-xs text-gray-400">Order value threshold</p>
+            {formik?.touched.freeShippingThreshold &&
+              formik.errors.freeShippingThreshold && (
+                <p className="text-xs text-red-600">
+                  {formik.errors.freeShippingThreshold}
+                </p>
+              )}
           </div>
         </div>
       </FormSection>
@@ -607,7 +634,11 @@ function ProfileForm({
               placeholder="e.g. 2"
               value={form.etaMin}
               onChange={(e) => patch("etaMin", e.target.value)}
+              onBlur={() => formik?.setFieldTouched("etaMin", true)}
             />
+            {formik?.touched.etaMin && formik.errors.etaMin && (
+              <p className="text-xs text-red-600">{formik.errors.etaMin}</p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -620,7 +651,11 @@ function ProfileForm({
               placeholder="e.g. 5"
               value={form.etaMax}
               onChange={(e) => patch("etaMax", e.target.value)}
+              onBlur={() => formik?.setFieldTouched("etaMax", true)}
             />
+            {formik?.touched.etaMax && formik.errors.etaMax && (
+              <p className="text-xs text-red-600">{formik.errors.etaMax}</p>
+            )}
           </div>
         </div>
       </FormSection>
@@ -825,6 +860,11 @@ export default function ShippingProfiles() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const openedEditProfileRef = useRef("");
+  const profileFormik = useFormik({
+    initialValues: EMPTY_FORM,
+    validationSchema: shippingProfileValidationSchema,
+    onSubmit: (values) => handleSave(values),
+  });
 
   const { shippingProfilesData, shippingProfileTemplatesData } = useSelector(
     (state) => state.delivery,
@@ -1110,11 +1150,13 @@ export default function ShippingProfiles() {
       toast.error("Seller session not found. Please sign in again.");
       return;
     }
-    setForm({
+    const nextForm = {
       ...EMPTY_FORM,
       sellerId: sellerId || "",
       organizationId: activeOrganizationId || "",
-    });
+    };
+    setForm(nextForm);
+    profileFormik.resetForm({ values: nextForm });
     setModal({ open: true, mode: "create", profile: null });
   };
 
@@ -1174,7 +1216,7 @@ export default function ShippingProfiles() {
       toast.error("You do not have permission to edit shipping profiles");
       return;
     }
-    setForm({
+    const nextForm = {
       name: profile.name || "",
       description: profile.description || "",
       shippingMethod: profile.shippingMethod || "standard",
@@ -1191,7 +1233,9 @@ export default function ShippingProfiles() {
       active: profile.active !== false,
       sellerId: profile.sellerId || activeSellerId,
       organizationId: profile.organizationId || "",
-    });
+    };
+    setForm(nextForm);
+    profileFormik.resetForm({ values: nextForm });
     setModal({ open: true, mode: "edit", profile });
   };
 
@@ -1207,31 +1251,36 @@ export default function ShippingProfiles() {
     openEdit(requestedProfile);
   }, [profilesPayload.list]);
 
-  const closeModal = () =>
+  const closeModal = () => {
+    profileFormik.resetForm({ values: EMPTY_FORM });
+    setForm({ ...EMPTY_FORM });
     setModal({ open: false, mode: "create", profile: null });
+  };
   const closeTemplateModal = () =>
     setTemplateModal({ open: false, mode: "create", template: null });
   const closeCloneModal = () => setCloneModal({ open: false, template: null });
 
-  const buildPayload = () => {
+  const buildPayload = (source = form) => {
     const serviceabilityMode = normalizeServiceabilityMode(
-      form.serviceabilityMode,
+      source.serviceabilityMode,
     );
     return {
-      ...form,
+      ...source,
       serviceabilityMode,
       allowedPincodes:
-        serviceabilityMode === "selected_pincodes" ? form.allowedPincodes : [],
-      sellerId: form.sellerId || activeSellerId || undefined,
-      organizationId: form.organizationId || null,
+        serviceabilityMode === "selected_pincodes"
+          ? source.allowedPincodes
+          : [],
+      sellerId: source.sellerId || activeSellerId || undefined,
+      organizationId: source.organizationId || null,
       shippingCharge:
-        form.shippingCharge !== "" ? Number(form.shippingCharge) : 0,
+        source.shippingCharge !== "" ? Number(source.shippingCharge) : 0,
       freeShippingThreshold:
-        form.freeShippingThreshold !== ""
-          ? Number(form.freeShippingThreshold)
+        source.freeShippingThreshold !== ""
+          ? Number(source.freeShippingThreshold)
           : null,
-      etaMin: form.etaMin !== "" ? Number(form.etaMin) : null,
-      etaMax: form.etaMax !== "" ? Number(form.etaMax) : null,
+      etaMin: source.etaMin !== "" ? Number(source.etaMin) : null,
+      etaMax: source.etaMax !== "" ? Number(source.etaMax) : null,
     };
   };
 
@@ -1246,7 +1295,7 @@ export default function ShippingProfiles() {
     };
   };
 
-  const handleSave = async () => {
+  const handleSave = async (values) => {
     if (modal.mode === "create" && !canCreateProfile) {
       toast.error("You do not have permission to create shipping profiles");
       return;
@@ -1255,32 +1304,16 @@ export default function ShippingProfiles() {
       toast.error("You do not have permission to edit shipping profiles");
       return;
     }
-    if (!form.name?.trim()) {
-      toast.error("Profile name is required");
-      return;
-    }
-    if (!isSeller && !(form.sellerId || activeSellerId)) {
-      toast.error("Select a target seller");
-      return;
-    }
-    if (
-      normalizeServiceabilityMode(form.serviceabilityMode) ===
-        "selected_pincodes" &&
-      !form.allowedPincodes?.length
-    ) {
-      toast.error("Add at least one allowed pincode");
-      return;
-    }
     setSaving(true);
     try {
       if (modal.mode === "create") {
-        await dispatch(createShippingProfile(buildPayload())).unwrap();
+        await dispatch(createShippingProfile(buildPayload(values))).unwrap();
         toast.success("Shipping profile created");
       } else {
         await dispatch(
           updateShippingProfile({
             profileId: profileId(modal.profile),
-            ...buildPayload(),
+            ...buildPayload(values),
           }),
         ).unwrap();
         toast.success("Shipping profile updated");
@@ -1746,7 +1779,7 @@ export default function ShippingProfiles() {
             ? "Create Shipping Profile"
             : `Edit - ${modal.profile?.name}`
         }
-        onSubmit={handleSave}
+        onSubmit={profileFormik.handleSubmit}
         submitButtonText={
           modal.mode === "create" ? "Create Profile" : "Save Changes"
         }
@@ -1756,6 +1789,7 @@ export default function ShippingProfiles() {
         <ProfileForm
           form={form}
           setForm={setForm}
+          formik={profileFormik}
           isSeller={isSeller}
           sellerOptions={sellerOptions}
           organizationOptions={formOrganizationOptions}

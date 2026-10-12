@@ -19,6 +19,7 @@ import {
   getPaginationTotal,
   statusLabel,
   SUPPORT_STATUSES,
+  messagePreviewText,
 } from "./supportUtils";
 
 import { isSellerPanel } from "../../_helpers/panelConfig";
@@ -347,7 +348,7 @@ const AdminQueries = () => {
             </div>
 
             <div className="truncate text-xs text-[var(--admin-muted)]">
-              {value || row.message || "No message"}
+              {messagePreviewText(value || row.message) || "No message"}
             </div>
           </div>
         ),
@@ -598,7 +599,7 @@ const AdminQueries = () => {
                               : "text-[var(--admin-ink)]"
                           }`}
                         >
-                          {item.message || "No note added."}
+                          {messagePreviewText(item.message) || "No note added."}
                         </p>
 
                         {/* Timestamp */}

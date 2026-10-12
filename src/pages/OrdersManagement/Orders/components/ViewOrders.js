@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormik } from "formik";
 import { FaFile, FaRegNoteSticky } from "react-icons/fa6";
 import {
   MdCheckCircle,
@@ -40,6 +41,7 @@ import {
 } from "../../../../utils/formatters";
 import { FormSection } from "../../../../components/Shared";
 import FormSelectGroup from "../../../../components/Atoms/FormSelectGroup/FormSelectGroup";
+import { orderNoteValidationSchema } from "../../../../_helpers/validationSchemas";
 
 const MINIMUM_CANCEL_REASON_LENGTH = 10;
 
@@ -3118,41 +3120,33 @@ const OrderSummary = () => {
     }
   }, [dispatch, fetchOrderInfo, formData, handleError, orderId, setLoading]);
 
-  const handleNoteSubmit = useCallback(async () => {
-    const note = String(noteData.note || "").trim();
-
-    if (!note) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        note: "Please enter a note.",
-      }));
-
-      return;
-    }
-
-    setValidationErrors((prev) => ({
-      ...prev,
-      note: "",
-    }));
-
-    if (!noteData.note.trim()) {
-      toast.error("Note is required");
-      return;
-    }
-
+  const handleNoteSubmit = useCallback(async (values, { resetForm }) => {
     try {
       setLoading(true);
-      await dispatch(addOrderNote({ orderId, ...noteData })).unwrap();
+      await dispatch(
+        addOrderNote({ orderId, ...values, note: values.note.trim() }),
+      ).unwrap();
       toast.success("Note added successfully");
       setState((prev) => ({ ...prev, noteModal: false }));
-      setNoteData({ note: "", visibility: "internal" });
+      resetForm();
       await fetchOrderInfo();
     } catch (error) {
       handleError(error, "Failed to add order note");
     } finally {
       setLoading(false);
     }
-  }, [dispatch, fetchOrderInfo, handleError, noteData, orderId, setLoading]);
+  }, [dispatch, fetchOrderInfo, handleError, orderId, setLoading]);
+
+  const noteFormik = useFormik({
+    initialValues: { note: "", visibility: "internal" },
+    validationSchema: orderNoteValidationSchema,
+    onSubmit: handleNoteSubmit,
+  });
+
+  const closeNoteDrawer = () => {
+    noteFormik.resetForm();
+    setState((prev) => ({ ...prev, noteModal: false }));
+  };
 
   if (!id) {
     return (
@@ -3182,9 +3176,10 @@ const OrderSummary = () => {
               <PermissionGuard module="orders" action="update" hide>
                 <button
                   type="button"
-                  onClick={() =>
-                    setState((prev) => ({ ...prev, noteModal: true }))
-                  }
+                  onClick={() => {
+                    noteFormik.resetForm();
+                    setState((prev) => ({ ...prev, noteModal: true }));
+                  }}
                 >
                   <FaRegNoteSticky /> Add Note
                 </button>
@@ -5176,14 +5171,10 @@ const OrderSummary = () => {
 
       <DefaultModal
         isOpen={state.noteModal}
-        onClose={() =>
-          setState((prev) => ({
-            ...prev,
-            noteModal: false,
-          }))
-        }
+        onClose={closeNoteDrawer}
         title="Add Order Note"
-        onSubmit={handleNoteSubmit}
+        onSubmit={noteFormik.handleSubmit}
+        loading={state.isLoading}
       >
         <div className="space-y-5 py-2">
           <FormSection
@@ -5194,11 +5185,11 @@ const OrderSummary = () => {
               <FormSelectGroup
                 label="Visibility"
                 value={{
-                  value: noteData.visibility,
+                  value: noteFormik.values.visibility,
                   label:
-                    noteData.visibility === "internal"
+                    noteFormik.values.visibility === "internal"
                       ? "Internal"
-                      : noteData.visibility === "seller"
+                      : noteFormik.values.visibility === "seller"
                         ? "Seller visible"
                         : "Buyer visible",
                 }}
@@ -5208,10 +5199,13 @@ const OrderSummary = () => {
                   { value: "buyer", label: "Buyer visible" },
                 ]}
                 onChange={(option) =>
-                  setNoteData((prev) => ({
-                    ...prev,
-                    visibility: option?.value || "internal",
-                  }))
+                  noteFormik.setFieldValue(
+                    "visibility",
+                    option?.value || "internal",
+                  )
+                }
+                error={
+                  noteFormik.touched.visibility && noteFormik.errors.visibility
                 }
                 placeholder="Select visibility"
                 isSearchable={false}
@@ -5220,16 +5214,12 @@ const OrderSummary = () => {
               <Input
                 type="textarea"
                 labelName="Note"
-                value={noteData.note}
-                onChange={(event) =>
-                  setNoteData((prev) => ({
-                    ...prev,
-                    note: event.target.value,
-                  }))
-                }
+                value={noteFormik.values.note}
+                onChange={noteFormik.handleChange}
+                onBlur={noteFormik.handleBlur}
+                error={noteFormik.touched.note && noteFormik.errors.note}
                 name="note"
                 placeholder="Enter order note"
-                maxLength={2000}
                 required
               />
             </div>

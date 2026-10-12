@@ -64,6 +64,7 @@ import {
 import { usePermission } from "../../../_helpers/usePermission";
 import {
   closeReturnValidationSchema,
+  approveReturnValidationSchema,
   rejectReturnValidationSchema,
   replacementRequestValidationSchema,
   scheduleReturnValidationSchema,
@@ -985,6 +986,18 @@ const Returns = () => {
           photos: (item.qcPhotos || []).join("\n"),
         })),
       });
+      if (type === "approve") {
+        approveReturnFormik.resetForm({
+          values: {
+            refundAmount:
+              returnRequest?.refundAmount ||
+              returnRequest?.refundBreakup?.totalRefundAmount ||
+              "",
+            itemActions: returnRequest?.items || [],
+            note: "",
+          },
+        });
+      }
     },
     [isSeller],
   );
@@ -1097,17 +1110,24 @@ const Returns = () => {
     validationSchema: replacementRequestValidationSchema,
     onSubmit: prepareAction,
   });
+  const approveReturnFormik = useFormik({
+    initialValues: { refundAmount: "", itemActions: [], note: "" },
+    validationSchema: approveReturnValidationSchema,
+    onSubmit: prepareAction,
+  });
   const closeActionModal = useCallback(() => {
     closeReturnFormik.resetForm();
     rejectReturnFormik.resetForm();
     scheduleReturnFormik.resetForm();
     replacementRequestFormik.resetForm();
+    approveReturnFormik.resetForm();
     setAction(EMPTY_ACTION);
   }, [
     closeReturnFormik.resetForm,
     rejectReturnFormik.resetForm,
     replacementRequestFormik.resetForm,
     scheduleReturnFormik.resetForm,
+    approveReturnFormik.resetForm,
   ]);
 
   const executeAction = useCallback(async () => {
@@ -1333,7 +1353,7 @@ const Returns = () => {
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
         onSearch={list.setSearch}
-        searchPlaceholder="Search return, order, buyer, or tracking"
+        searchPlaceholder="Search return..."
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
@@ -2355,7 +2375,9 @@ const Returns = () => {
         onClose={closeActionModal}
         title={action.title}
         onSubmit={
-          action.type === "schedule"
+          action.type === "approve" && !isSeller
+            ? approveReturnFormik.handleSubmit
+            : action.type === "schedule"
             ? scheduleReturnFormik.handleSubmit
             : action.type === "close"
               ? closeReturnFormik.handleSubmit
@@ -2386,11 +2408,19 @@ const Returns = () => {
                   type="number"
                   min="0"
                   value={action.refundAmount}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    approveReturnFormik.handleChange(event);
                     setAction((prev) => ({
                       ...prev,
                       refundAmount: event.target.value,
-                    }))
+                    }));
+                  }}
+                  onBlur={approveReturnFormik.handleBlur}
+                  error={
+                    action.type === "approve" &&
+                    approveReturnFormik.touched.refundAmount
+                      ? approveReturnFormik.errors.refundAmount
+                      : ""
                   }
                   required
                 />
@@ -3101,6 +3131,13 @@ const Returns = () => {
                       )}
                   </div>
                 ))}
+                {action.type === "approve" &&
+                  approveReturnFormik.touched.itemActions &&
+                  approveReturnFormik.errors.itemActions && (
+                    <p className="text-xs text-red-600">
+                      {approveReturnFormik.errors.itemActions}
+                    </p>
+                  )}
               </div>
             </FormSection>
           )}
@@ -3263,6 +3300,9 @@ const Returns = () => {
               type="textarea"
               value={action.note}
               onChange={(event) => {
+                if (action.type === "approve") {
+                  approveReturnFormik.handleChange(event);
+                }
                 if (action.type === "schedule") {
                   scheduleReturnFormik.handleChange(event);
                 }
@@ -3281,7 +3321,9 @@ const Returns = () => {
                 }));
               }}
               onBlur={
-                action.type === "schedule"
+                action.type === "approve"
+                  ? approveReturnFormik.handleBlur
+                  : action.type === "schedule"
                   ? scheduleReturnFormik.handleBlur
                   : action.type === "close"
                     ? closeReturnFormik.handleBlur
@@ -3292,7 +3334,9 @@ const Returns = () => {
                         : undefined
               }
               error={
-                action.type === "schedule" && scheduleReturnFormik.touched.note
+                action.type === "approve" && approveReturnFormik.touched.note
+                  ? approveReturnFormik.errors.note
+                  : action.type === "schedule" && scheduleReturnFormik.touched.note
                   ? scheduleReturnFormik.errors.note
                   : action.type === "close" && closeReturnFormik.touched.note
                     ? closeReturnFormik.errors.note
