@@ -217,6 +217,8 @@ const EditableField = ({
   multiline = false,
   rows = 5,
   inputRef,
+  type = "text",
+  placeholder,
 }) => {
   const isEditableNow = isEditing && !disabled;
   const isDisabledInEditMode = isEditing && disabled;
@@ -255,6 +257,8 @@ const EditableField = ({
         />
       ) : (
         <input
+          type={type}
+          placeholder={placeholder}
           ref={inputRef}
           className={inputClass}
           name={name}
@@ -513,19 +517,29 @@ const Profile = () => {
   };
 
   const handleUpdate = async () => {
+    const businessWebsite = String(formData.sellerProfile?.businessWebsite || "").trim();
+    if (SELLER_ROLES.has(formData.role) && businessWebsite) {
+      try {
+        const url = new URL(businessWebsite);
+        if (!["http:", "https:"].includes(url.protocol)) throw new Error();
+      } catch {
+        toast.error("Business website must be a valid http:// or https:// URL");
+        return;
+      }
+    }
     setUpdating(true);
     try {
       const apiPayload = {
         user_image: formData?.user_image,
         full_name: formData?.full_name,
         description: formData?.sellerProfile?.description || "",
+        ...(SELLER_ROLES.has(formData.role) ? { businessWebsite: businessWebsite || null } : {}),
         profile: {
           ...(formData?.profile || {}),
           firstName: formData?.profile?.firstName || "",
           lastName: formData?.profile?.lastName || "",
         },
       };
-      console.log("FINAL PROFILE PAYLOAD:", apiPayload);
       const res = await dispatch(updateProfile(apiPayload)).unwrap();
       if (res?.data) {
         setFormData(profileToForm(res.data));
@@ -837,9 +851,14 @@ const Profile = () => {
                   className={FIELD_COL_SPAN_3}
                   isEditing={isEditing}
                 /> */}
-                <DetailField
+                <EditableField
                   label="Business Website"
+                  name="sellerProfile.businessWebsite"
                   value={sellerProfile.businessWebsite}
+                  type="url"
+                  placeholder="https://example.com"
+                  onChange={handleChange}
+                  disabled={!isEditing}
                   className={FIELD_COL_SPAN_6}
                   isEditing={isEditing}
                 />

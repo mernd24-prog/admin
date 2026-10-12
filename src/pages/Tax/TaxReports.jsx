@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 import { DataTable, FilterBar, PageHeader } from "../../components/Shared";
 import { getTaxReports } from "../../Redux/adminCoreSlice";
@@ -24,25 +24,41 @@ const FILTER_FIELDS = [
 
 const TaxReports = () => {
   const dispatch = useDispatch();
-  const reportData = useSelector((state) => state.adminCore.taxReportsData);
   const { storeNameMap } = useStoreNames();
   const list = useListPage({ defaultPageSize: 20 });
-  const { toQueryParams } = list;
+  const { filters: reportFilters } = list;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const entries = reportData?.data?.data?.entries || [];
+  const [entries, setEntries] = useState([]);
+  const visibleEntries = useMemo(() => {
+    const term = list.search.trim().toLowerCase();
+    if (!term) return entries;
+    return entries.filter((row) => [
+      resolveStoreName(row, storeNameMap).name,
+      row.tax_component,
+      String(row.entry_type || "").replace(/_/g, " "),
+      row.entry_count,
+      row.total_amount,
+    ].some((value) => String(value ?? "").toLowerCase().includes(term)));
+  }, [entries, list.search, storeNameMap]);
 
   const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
-      const params = toQueryParams();
-      await dispatch(
-        getTaxReports({
-          ...params,
-          offset: (params.page - 1) * params.limit,
-        }),
-      ).unwrap();
+      const params = { ...reportFilters };
+      // Search and pagination apply to the complete summarized report.
+      delete params.search;
+      const allEntries = [];
+      let offset = 0;
+      let batch;
+      do {
+        const result = await dispatch(getTaxReports({ ...params, limit: 1000, offset })).unwrap();
+        batch = result?.data?.data?.entries || result?.data?.entries || result?.entries || [];
+        allEntries.push(...batch);
+        offset += batch.length;
+      } while (batch.length === 1000);
+      setEntries(allEntries);
     } catch (requestError) {
       const message = requestError?.message || "Failed to load tax reports";
       setError(message);
@@ -50,7 +66,7 @@ const TaxReports = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, toQueryParams]);
+  }, [dispatch, reportFilters]);
 
   useEffect(() => {
     fetchReports();
@@ -91,9 +107,9 @@ const TaxReports = () => {
       />
       <DataTable
         columns={columns}
-        data={entries}
+        data={visibleEntries.slice((list.page - 1) * list.pageSize, list.page * list.pageSize)}
         loading={loading}
-        total={entries.length}
+        total={visibleEntries.length}
         listPage={list}
         emptyMessage={error || "No tax report entries found"}
         onRefresh={fetchReports}
@@ -104,7 +120,7 @@ const TaxReports = () => {
             loading={loading}
           />
         }
-        exportConfig={{ filename: "tax-report", columns, data: entries }}
+        exportConfig={{ filename: "tax-report", columns, data: visibleEntries }}
       />
     </div>
   );

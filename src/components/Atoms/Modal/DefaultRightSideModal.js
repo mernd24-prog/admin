@@ -16,6 +16,7 @@ const DefaultModal = ({
   titleClassName = "",
   width = "600px",
   loading = false,
+  submitDisabled = false,
   showCloseButton = false,
   closeOnOutsideClick = true,
 }) => {
@@ -92,7 +93,7 @@ const DefaultModal = ({
               <Button
                 onClick={onSubmit}
                 loading={loading}
-                isDisable={loading}
+                isDisable={loading || submitDisabled}
                 className="flex-1 sm:flex-none button-primary"
               >
                 {submitButtonText}

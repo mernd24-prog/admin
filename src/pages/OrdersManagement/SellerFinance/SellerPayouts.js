@@ -127,6 +127,14 @@ const valueOf = (row, ...keys) => {
 };
 
 const fmt = (value) => formatDateTime12Hour(value, "—");
+const formatPeriodDate = (value) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit", month: "short", year: "numeric", timeZone: "UTC",
+  });
+};
 
 const money = (value, currency = "INR") =>
   `${currency} ${Number(value || 0).toLocaleString("en-IN", {
@@ -552,11 +560,7 @@ const SellerPayouts = () => {
         key: "seller_id",
         label: "Seller",
         render: (_, row) => (
-          <SellerIdentity
-            row={row}
-            storeName={row.storeName || row.organizationName || sellerName(row)}
-            loginName={row.seller?.name || row.seller?.email}
-          />
+          <SellerIdentity row={row} />
         ),
       },
 
@@ -569,7 +573,7 @@ const SellerPayouts = () => {
 
       {
         key: "total_amount",
-        label: "Seller receivable",
+        label: "Item Amount",
         render: (value, row) => money(value ?? row.totalAmount, row.currency),
       },
 
@@ -657,7 +661,7 @@ const SellerPayouts = () => {
 
       {
         key: "net_amount",
-        label: "Amount to transfer",
+        label: "Seller Receivable",
         render: (value, row) => (
           <span className="font-semibold text-green-700">
             {money(value ?? row.netAmount, row.currency)}
@@ -702,8 +706,8 @@ const SellerPayouts = () => {
         label: "Period",
         render: (value, row) => (
           <span className="text-xs text-gray-500">
-            {fmt(value ?? row.periodStart)} –{" "}
-            {fmt(valueOf(row, "period_end", "periodEnd"))}
+            {formatPeriodDate(value ?? row.periodStart)} –{" "}
+            {formatPeriodDate(valueOf(row, "period_end", "periodEnd"))}
           </span>
         ),
       },
@@ -745,7 +749,7 @@ const SellerPayouts = () => {
       },
 
       {
-        label: "Seller receivable",
+        label: "Item Amount",
         value: (row) =>
           money(valueOf(row, "total_amount", "totalAmount"), row.currency),
       },
@@ -810,7 +814,7 @@ const SellerPayouts = () => {
       },
 
       {
-        label: "Amount to transfer",
+        label: "Seller Receivable",
         value: (row) =>
           money(valueOf(row, "net_amount", "netAmount"), row.currency),
       },
@@ -823,7 +827,7 @@ const SellerPayouts = () => {
       {
         label: "Period",
         value: (row) =>
-          `${fmt(valueOf(row, "period_start", "periodStart"))} – ${fmt(
+          `${formatPeriodDate(valueOf(row, "period_start", "periodStart"))} – ${formatPeriodDate(
             valueOf(row, "period_end", "periodEnd"),
           )}`,
       },
@@ -881,7 +885,7 @@ const SellerPayouts = () => {
       },
 
       {
-        label: "Seller receivable",
+        label: "Item Amount",
         value: (row) =>
           money(valueOf(row, "gross_amount", "grossAmount"), row.currency),
       },
@@ -1382,8 +1386,8 @@ const SellerPayouts = () => {
                         <span className="font-medium text-gray-700">
                           Earning Period:
                         </span>{" "}
-                        {fmt(valueOf(detail, "period_start", "periodStart"))} –{" "}
-                        {fmt(valueOf(detail, "period_end", "periodEnd"))}
+                        {formatPeriodDate(valueOf(detail, "period_start", "periodStart"))} –{" "}
+                        {formatPeriodDate(valueOf(detail, "period_end", "periodEnd"))}
                       </div>
                     </div>
                   </FormSection>
@@ -1394,9 +1398,9 @@ const SellerPayouts = () => {
                     description="Detailed breakdown of the seller payout calculation."
                   >
                     <div className="space-y-3">
-                      {/* Seller Receivable */}
+                      {/* Item Amount */}
                       <div className="flex items-center justify-between gap-4 text-sm">
-                        <span className="text-gray-600">Seller receivable</span>
+                        <span className="text-gray-600">Item Amount</span>
 
                         <span className="font-medium text-gray-800">
                           {money(
@@ -1498,7 +1502,7 @@ const SellerPayouts = () => {
                       {/* Net Amount */}
                       <div className="mt-2 flex items-center justify-between gap-4 border-t border-gray-200 pt-3">
                         <span className="text-base font-semibold text-gray-800">
-                          Amount to transfer
+                          Seller Receivable
                         </span>
 
                         <span className="text-base font-bold text-green-700">

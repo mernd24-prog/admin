@@ -424,9 +424,20 @@ const Cancellations = () => {
       key: "cancellationNumber",
       label: "Cancellation #",
       render: (v, row) => (
-        <span className={`font-mono ${CLASS_TEXT_XS_GRAY}`}>
-          {v || String(row.id || "—").slice(-8)}
-        </span>
+        <div className="flex flex-col gap-1">
+          <span className={`font-mono ${CLASS_TEXT_XS_GRAY}`}>
+            {v || String(row.id || "—").slice(-8)}
+          </span>
+          {isSeller && (
+            <div className={CLASS_TEXT_XS_MUTED}>
+              <span>Order </span>
+              <OrderLink
+                orderId={row.orderId || row.order_id}
+                orderNumber={row.orderNumber || row.order_number}
+              />
+            </div>
+          )}
+        </div>
       ),
     },
     {
@@ -531,7 +542,7 @@ const Cancellations = () => {
       />
 
       <DataTable
-        columns={COLUMNS}
+        columns={isSeller ? COLUMNS.filter((column) => column.key !== "orderId") : COLUMNS}
         data={cancellations}
         loading={loading}
         total={payload.total}

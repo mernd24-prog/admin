@@ -103,8 +103,8 @@ export default function FinanceAdjustments() {
       adjustmentType: "promotions",
       title:
         Number(row.reversalAmount || 0) > 0
-          ? "Reversed promotion"
-          : "Marketplace funded promotion",
+          ? "Reversed Promotion"
+          : "Marketplace Funded Promotion",
       amount: Number(row.netPlatformContributionAmount || 0),
       description:
         "The customer promotion is split by funding source. Marketplace contribution is included toward your receivable, not charged as commission.",
@@ -370,7 +370,7 @@ export default function FinanceAdjustments() {
                 <span className="text-sm text-[var(--admin-muted)]">
                   Amount
                 </span>
-                <strong className="text-xl">
+                <strong className={`text-xl ${Number(detail.amount) > 0 ? "text-emerald-700" : Number(detail.amount) < 0 ? "text-red-700" : "text-[var(--admin-ink)]"}`}>
                   {signedFinanceMoney(detail.amount, detail.currency)}
                 </strong>
               </div>
@@ -379,7 +379,7 @@ export default function FinanceAdjustments() {
             {detail.adjustmentType === "promotions" && (
               <div className="space-y-2 rounded-lg border border-[var(--admin-line)] p-4 text-sm">
                 <div className="flex justify-between">
-                  <span>Customer discount</span>
+                  <span>Customer Discount</span>
                   <span>
                     {financeMoney(
                       detail.customerDiscountAmount,
@@ -388,7 +388,7 @@ export default function FinanceAdjustments() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Marketplace funded</span>
+                  <span>Marketplace Funded</span>
                   <span>
                     {financeMoney(
                       detail.marketplaceContributionAmount,
@@ -397,7 +397,7 @@ export default function FinanceAdjustments() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Seller funded</span>
+                  <span>Seller Funded</span>
                   <span>
                     {financeMoney(
                       detail.sellerFundedDiscountAmount,
@@ -406,7 +406,7 @@ export default function FinanceAdjustments() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Payment partner funded</span>
+                  <span>Payment Partner Funded</span>
                   <span>
                     {financeMoney(
                       detail.paymentPartnerContributionAmount,

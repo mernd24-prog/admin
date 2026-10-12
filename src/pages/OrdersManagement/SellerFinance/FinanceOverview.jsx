@@ -416,7 +416,7 @@ export default function FinanceOverview() {
       <section className="admin-card overflow-hidden">
         <div className="flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4">
           <div>
-            <h2 className="font-semibold text-xl">Recent money activity</h2>
+            <h2 className="font-semibold text-xl">RECENT MONEY ACTIVITY</h2>
             <p className="mt-1 text-xs text-[var(--admin-muted)]">
               The latest changes to your earnings.
             </p>
@@ -438,9 +438,9 @@ export default function FinanceOverview() {
                   type="button"
                   onClick={() => navigate("/app/finance-earnings")}
                   key={item.id || item.commissionId || item.orderId}
-                  className="flex w-full flex-wrap items-center gap-3 px-5 py-4 text-left hover:bg-[var(--admin-soft)]"
+                  className="grid w-full grid-cols-2 items-center gap-x-3 gap-y-2 px-5 py-4 text-left hover:bg-[var(--admin-soft)] lg:grid-cols-[minmax(0,1fr)_8rem_7.5rem_11.5rem]"
                 >
-                  <div className="min-w-0 flex-1">
+                  <div className="col-span-2 min-w-0 lg:col-span-1">
                     <strong className="block truncate">
                       Order #
                       {item.orderNumber ||
@@ -450,18 +450,18 @@ export default function FinanceOverview() {
                       {status.detail}
                     </span>
                   </div>
-                  <strong>
+                  <strong className="whitespace-nowrap tabular-nums lg:text-right">
                     {financeMoney(
                       item.netAmount ?? item.net_amount,
                       item.currency || currency,
                     )}
                   </strong>
-                  <FinanceStatusBadge row={item} />
-                  {(item.eligibleAt || item.updatedAt) && (
-                    <span className="w-full text-xs text-[var(--admin-muted)] sm:w-auto">
-                      {financeDateTime(item.eligibleAt || item.updatedAt)}
-                    </span>
-                  )}
+                  <div className="flex justify-end lg:justify-center">
+                    <FinanceStatusBadge row={item} />
+                  </div>
+                  <span className="col-span-2 text-xs tabular-nums text-[var(--admin-muted)] lg:col-span-1 lg:text-right">
+                    {financeDateTime(item.eligibleAt || item.updatedAt)}
+                  </span>
                 </button>
               );
             })}

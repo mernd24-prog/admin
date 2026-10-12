@@ -24,12 +24,25 @@ const label = (value) => String(value || "-").replace(/_/g, " ");
 
 export default function CodCollections() {
   const [items, setItems] = useState([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 100,
   });
   const [sellerMap, setSellerMap] = useState({});
+  const filteredItems = useMemo(() => {
+    const term = search.trim().toLowerCase().replace(/^#/, "");
+    if (!term) return items;
+    return items.filter((row) => [
+      row.id, row.order_id, row.orderId, row.order_number, row.orderNumber,
+      row.shipment_id, row.shipmentId, row.awb_number, row.tracking_number,
+      row.sellerName, row.storeName, row.organizationName,
+      row.seller?.name, row.seller?.displayName, row.seller?.email,
+      sellerMap[row.seller_id || row.sellerId],
+      row.collection_mode, row.collected_by, row.status, row.reference_id,
+    ].some((value) => String(value ?? "").toLowerCase().replace(/_/g, " ").includes(term)));
+  }, [items, search, sellerMap]);
   const [decision, setDecision] = useState({
     open: false,
     row: null,
@@ -242,9 +255,9 @@ export default function CodCollections() {
       )}
       <DataTable
         columns={columns}
-        data={items}
+        data={filteredItems}
         loading={loading}
-        totalCount={items.length}
+        totalCount={filteredItems.length}
         rowActions={(row) => {
           const actions = [];
 
@@ -280,7 +293,10 @@ export default function CodCollections() {
           setPagination((current) => ({ ...current, page }))
         }
         onPageSizeChange={(pageSize) => setPagination({ page: 1, pageSize })}
-        onSearch={() => {}}
+        onSearch={(value) => {
+          setSearch(value);
+          setPagination((current) => ({ ...current, page: 1 }));
+        }}
         onSort={() => {}}
         onRefresh={load}
         requiredModule="payments"

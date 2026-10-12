@@ -214,9 +214,12 @@ const getReturnItemTitle = (item = {}) => {
   );
 };
 
-const getReturnItemQuantity = (item = {}) =>
+const getReturnItemQuantity = (item = {}, requestStatus = "") =>
   Number(
     firstDefined(
+      ["requested", "pending", "under_review"].includes(String(requestStatus).toLowerCase())
+        ? firstDefined(item.requestedQuantity, item.requested_quantity, item.quantity)
+        : undefined,
       item.approvedQuantity,
       item.approved_quantity,
       item.requestedQuantity,
@@ -3402,33 +3405,12 @@ const OrderSummary = () => {
                       <div className="hidden grid-cols-12 gap-3 border-b border-[#e6ebf7] bg-[#eef2fb] px-4 py-2 text-xs font-semibold uppercase text-[#65718b] md:grid">
                         <span className="col-span-5">Product</span>
                         <span className="col-span-1 text-center">Qty</span>
-                        <span className="col-span-2">Item status</span>
+                        <span className="col-span-2">Order status</span>
                         <span className="col-span-2 text-right">Price</span>
                         <span className="col-span-2 text-right">Total</span>
                       </div>
                       {group.items.map((item) => {
                         const itemTax = getReconciledItemTax(item);
-                        const itemCancellation = cancellations.find((request) =>
-                          (request.items || []).some(
-                            (entry) =>
-                              String(
-                                firstDefined(
-                                  entry.orderItemId,
-                                  entry.order_item_id,
-                                  "",
-                                ),
-                              ) === String(getItemKey(item)),
-                          ),
-                        );
-                        const cancellationDisplayStatus =
-                          itemCancellation?.status === "requested"
-                            ? "cancellation_requested"
-                            : itemCancellation?.status === "rejected"
-                              ? null
-                              : itemCancellation?.status &&
-                                  itemCancellation.status !== "completed"
-                                ? "cancellation_approved"
-                                : null;
                         const productSnapshot = normalizeJson(
                           firstDefined(
                             item.product_snapshot,
@@ -3505,16 +3487,7 @@ const OrderSummary = () => {
                             </div>
                             <div className="md:col-span-2">
                               <StatusBadge
-                                status={firstDefined(
-                                  item.effective_status,
-                                  item.effectiveStatus,
-                                  cancellationDisplayStatus,
-                                  item.cancellation_status,
-                                  item.delivery_status,
-                                  item.deliveryStatus,
-                                  packageStatus,
-                                  order.status,
-                                )}
+                                status={displayedOrderStatus}
                                 size="sm"
                                 dot
                               />
@@ -4128,7 +4101,7 @@ const OrderSummary = () => {
                               : []
                           ).reduce(
                             (total, item) =>
-                              total + getReturnItemQuantity(item),
+                              total + getReturnItemQuantity(item, returnRequest.status),
                             0,
                           );
 
@@ -4231,7 +4204,7 @@ const OrderSummary = () => {
 
                                           <div className="text-[#65718b]">
                                             Returned Qty{" "}
-                                            {getReturnItemQuantity(item)}
+                                            {getReturnItemQuantity(item, returnRequest.status)}
                                             {getReturnItemVariantText(item)
                                               ? ` · ${getReturnItemVariantText(
                                                   item,

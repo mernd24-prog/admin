@@ -114,7 +114,7 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
       {field.label && (
         <label
           htmlFor={id}
-          className="text-[10px] font-medium text-gray-400 uppercase tracking-wide px-0.5"
+          className="text-[10px] font-medium text-gray-700 uppercase tracking-wide px-0.5"
         >
           {field.label}
         </label>
@@ -689,7 +689,7 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
           htmlFor={id}
           className={
             field.labelClassName ||
-            "px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
+            "px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-700"
           }
         >
           {field.label}
@@ -806,7 +806,7 @@ const DebouncedTextFilter = ({ field, value, onChange, id, wrapperClass }) => {
       {field.label && (
         <label
           htmlFor={id}
-          className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
+          className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-700"
         >
           {field.label}
         </label>
@@ -868,7 +868,7 @@ const FilterField = ({ field, value, onChange, values }) => {
         {field.label && (
           <label
             htmlFor={id}
-            className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
+            className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-700"
           >
             {field.label}
           </label>
@@ -918,7 +918,7 @@ const FilterField = ({ field, value, onChange, values }) => {
         {field.label && (
           <label
             htmlFor={id}
-            className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
+            className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-700"
           >
             {field.label}
           </label>

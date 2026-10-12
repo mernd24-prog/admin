@@ -187,6 +187,16 @@ const getEffectivePrice = (product = {}) => {
     : toNumberOrNull(product?.price ?? product?.salePrice);
 };
 
+const getSellerPricing = (product = {}) => {
+  const source = getDefaultVariant(product) || product;
+  const specialPrice = toNumberOrNull(source.salePrice);
+  return {
+    specialPrice: specialPrice !== null && specialPrice >= 0 ? specialPrice : null,
+    price: toNumberOrNull(source.price),
+    mrp: toNumberOrNull(source.mrp),
+  };
+};
+
 const getEffectiveStock = (product = {}) => {
   if (!hasVariants(product)) {
     return toNumberOrNull(product?.stock);
@@ -1183,7 +1193,23 @@ const ProductCatalog = () => {
         key: "price",
         label: "Price",
         sortable: true,
-        render: (_, product) => formatMoney(getEffectivePrice(product)),
+        render: (_, product) => {
+          if (!sellerView) return formatMoney(getEffectivePrice(product));
+          const { specialPrice, price, mrp } = getSellerPricing(product);
+          return specialPrice !== null ? (
+            <div className="flex flex-col gap-1">
+              <span>{formatMoney(specialPrice)}</span>
+              <span className="text-xs text-gray-500">Special Price</span>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <span>{formatMoney(price)}</span>
+              {mrp !== null && (
+                <span className="text-xs text-gray-500">MRP: {formatMoney(mrp)}</span>
+              )}
+            </div>
+          );
+        },
       },
       {
         key: "stock",

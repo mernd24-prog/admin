@@ -616,9 +616,9 @@ export const CalculationRows = ({ row }) => {
   const amounts = earningAmounts(row);
   const currency = row.currency || "INR";
   const lines = [
-    ["Order earning before deductions", amounts.product, "neutral"],
+    ["Order Earnings Before Deductions", amounts.product, "neutral"],
     [
-      "Shipping collected / reimbursed",
+      "Shipping Collected / Reimbursed",
       amounts.shippingNet,
       amounts.shippingNet >= 0 ? "positive" : "negative",
     ],
@@ -636,10 +636,10 @@ export const CalculationRows = ({ row }) => {
   return (
     <div className="space-y-2">
       {amounts.marketplacePromotion > 0 && (
-        <div className="flex justify-between gap-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">
-          <span>Marketplace funded promotion</span>
-          <span>
-            {financeMoney(amounts.marketplacePromotion, currency)} included
+        <div className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">
+          Marketplace-Funded Promotion:{" "}
+          <span className="font-medium">
+            {financeMoney(amounts.marketplacePromotion, currency)} (Included)
           </span>
         </div>
       )}
@@ -674,31 +674,26 @@ export const CalculationRows = ({ row }) => {
         is added to your earning; only an actual shipping deduction is
         subtracted.
       </p>
-      <details className="rounded-lg border border-[var(--admin-line)] p-3 text-xs">
-        <summary className="cursor-pointer font-semibold">
-          View tax & technical details
+      <details className="group rounded-lg border border-[var(--admin-line)] p-3 text-xs">
+        <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold [&::-webkit-details-marker]:hidden">
+          <MdChevronRight aria-hidden="true" size={18} className="shrink-0 transition-transform group-open:rotate-90" />
+          VIEW TAX &amp; TECHNICAL DETAILS
         </summary>
-        <div className="mt-3 grid gap-2 text-[var(--admin-muted)] sm:grid-cols-2">
-          <span>Settlement row: {row.id || "—"}</span>
-          <span>
-            Seller-funded promotion:{" "}
-            {financeMoney(amounts.sellerPromotion, currency)}
-          </span>
-          <span>
-            Payment-partner contribution:{" "}
-            {financeMoney(amounts.partnerPromotion, currency)}
-          </span>
-          <span>
-            Shipping credit: {financeMoney(amounts.shippingCredit, currency)}
-          </span>
-          <span>
-            Shipping deduction:{" "}
-            {financeMoney(amounts.shippingDeduction, currency)}
-          </span>
-          <span>
-            Created: {financeDateTime(row.created_at || row.createdAt)}
-          </span>
-        </div>
+        <dl className="mt-3 divide-y divide-[var(--admin-line)] border-t border-[var(--admin-line)]">
+          {[
+            ["Settlement Row", row.id || "—"],
+            ["Seller-funded Promotion", financeMoney(amounts.sellerPromotion, currency)],
+            ["Payment-partner Contribution", financeMoney(amounts.partnerPromotion, currency)],
+            ["Shipping Credit", financeMoney(amounts.shippingCredit, currency)],
+            ["Shipping Deduction", financeMoney(amounts.shippingDeduction, currency)],
+            ["Created", financeDateTime(row.created_at || row.createdAt)],
+          ].map(([label, value]) => (
+            <div key={label} className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-2 sm:gap-4">
+              <dt className="text-[var(--admin-muted)]">{label}</dt>
+              <dd className="min-w-0 break-words font-medium tabular-nums text-[var(--admin-ink)] sm:text-right">{value}</dd>
+            </div>
+          ))}
+        </dl>
       </details>
     </div>
   );

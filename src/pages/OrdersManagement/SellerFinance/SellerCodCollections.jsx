@@ -273,7 +273,6 @@ export default function SellerCodCollections() {
         }
         onSearch={() => {}}
         onSort={() => {}}
-        onRefresh={load}
         requiredModule="sellers/commissions"
       />
       <DefaultModal

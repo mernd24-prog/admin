@@ -252,15 +252,18 @@ export default function FinanceEarnings() {
         key: "orderAmount",
         label: "Order amount",
         render: (_, row) => {
-          const amount = financeValue(
-            row,
+          const amountKey = [
             "order_amount",
             "orderAmount",
+            "amount",
             "gross_amount",
             "grossAmount",
             "item_amount",
             "itemAmount",
-          );
+            "total_amount",
+            "totalAmount",
+          ].find((key) => row[key] !== undefined && row[key] !== null && row[key] !== "");
+          const amount = amountKey ? row[amountKey] : undefined;
 
           return amount !== undefined && amount !== null ? (
             <span>{financeMoney(amount, row.currency)}</span>

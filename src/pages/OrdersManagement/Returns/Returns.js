@@ -785,6 +785,7 @@ const Returns = () => {
         ? FILTER_FIELDS.filter(
             (field) =>
               ![
+                "orderId",
                 "sellerId",
                 "buyerId",
                 "refundStatus",
@@ -1300,7 +1301,7 @@ const Returns = () => {
       },
       {
         key: "createdAt",
-        label: "Requested",
+        label: "Requested At",
         sortable: true,
         render: (value) => formatDateTime12Hour(value),
       },
@@ -1332,7 +1333,7 @@ const Returns = () => {
         pageSize={list.pageSize}
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
-        onSearch={list.setSearch}
+        onSearch={isSeller ? undefined : list.setSearch}
         searchPlaceholder="Search return, order, buyer, or tracking"
         onSort={list.setSort}
         sortKey={list.sortKey}
@@ -1340,6 +1341,7 @@ const Returns = () => {
         onRefresh={fetchReturns}
         error={error}
         filterBar={
+          <div className="returns-filter-bar">
           <FilterBar
             filters={filterFields}
             values={list.filters}
@@ -1348,6 +1350,7 @@ const Returns = () => {
             loading={loading}
             activeCount={list.activeFilterCount}
           />
+          </div>
         }
         rowActions={(row) => {
           const actions = [

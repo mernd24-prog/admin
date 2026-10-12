@@ -74,6 +74,29 @@ const SHIPPING_METHODS = [
   { value: "hyperlocal", label: "Hyperlocal" },
 ];
 
+const getShippingNumericErrors = (form = {}) => {
+  const errors = {};
+  for (const [key, label] of [
+    ["shippingCharge", "Shipping charge"],
+    ["freeShippingThreshold", "Free shipping threshold"],
+    ["etaMin", "ETA Min"],
+    ["etaMax", "ETA Max"],
+  ]) {
+    const value = form[key];
+    if (value === "" || value == null) continue;
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0) {
+      errors[key] = `${label} must be a valid non-negative number`;
+    } else if (key.startsWith("eta") && !Number.isInteger(number)) {
+      errors[key] = `${label} must be a whole number of days`;
+    }
+  }
+  if (!errors.etaMin && !errors.etaMax && form.etaMin !== "" && form.etaMin != null && form.etaMax !== "" && form.etaMax != null && Number(form.etaMin) > Number(form.etaMax)) {
+    errors.etaMax = "ETA Max must be greater than or equal to ETA Min";
+  }
+  return errors;
+};
+
 const EMPTY_FORM = {
   name: "",
   description: "",
@@ -271,6 +294,7 @@ function ProfileForm({
   onSellerSearch,
 }) {
   const patch = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
+  const numericErrors = getShippingNumericErrors(form);
 
   const TOAST_ID = "shipping-profile-pincode";
 
@@ -324,8 +348,8 @@ function ProfileForm({
           {!isTemplate && !isSeller && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {/* Target Seller */}
-              <div className="space-y-1.5">
-                <label className="admin-label">
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <label className="admin-label !mb-0">
                   Target Seller <span className="text-red-500">*</span>
                 </label>
 
@@ -356,8 +380,8 @@ function ProfileForm({
               </div>
 
               {/* Organization */}
-              <div className="space-y-1.5">
-                <label className="admin-label">Organization</label>
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <label className="admin-label !mb-0">Organization</label>
 
                 <FilterSelect
                   options={organizationOptions}
@@ -380,12 +404,13 @@ function ProfileForm({
 
           {/* Profile Name & Shipping Method */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="admin-label">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <label htmlFor="shipping-profile-name" className="admin-label !mb-0">
                 Profile Name <span className="text-red-500">*</span>
               </label>
 
               <input
+                id="shipping-profile-name"
                 className="admin-input"
                 placeholder="e.g. Standard Shipping, Express, Heavy Products"
                 value={form.name}
@@ -393,10 +418,12 @@ function ProfileForm({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="admin-label">Shipping Method</label>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <label htmlFor="shipping-profile-method" className="admin-label !mb-0">Shipping Method</label>
 
               <FilterSelect
+                inputId="shipping-profile-method"
+                controlHeight={36}
                 options={SHIPPING_METHODS}
                 value={
                   SHIPPING_METHODS.find(
@@ -413,8 +440,8 @@ function ProfileForm({
           </div>
 
           {/* Description */}
-          <div className="space-y-1.5">
-            <label className="admin-label">Description</label>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <label className="admin-label !mb-0">Description</label>
 
             <input
               className="admin-input"
@@ -606,8 +633,12 @@ function ProfileForm({
               min="0"
               placeholder="e.g. 2"
               value={form.etaMin}
+              step="1"
+              max={form.etaMax !== "" && form.etaMax != null ? form.etaMax : undefined}
+              aria-invalid={Boolean(numericErrors.etaMin)}
               onChange={(e) => patch("etaMin", e.target.value)}
             />
+            {numericErrors.etaMin && <p role="alert" className="text-xs text-red-600">{numericErrors.etaMin}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -616,11 +647,14 @@ function ProfileForm({
             <input
               className="admin-input"
               type="number"
-              min="0"
               placeholder="e.g. 5"
               value={form.etaMax}
+              step="1"
+              min={form.etaMin !== "" && form.etaMin != null ? Math.max(0, Number(form.etaMin) || 0) : 0}
+              aria-invalid={Boolean(numericErrors.etaMax)}
               onChange={(e) => patch("etaMax", e.target.value)}
             />
+            {numericErrors.etaMax && <p role="alert" className="text-xs text-red-600">{numericErrors.etaMax}</p>}
           </div>
         </div>
       </FormSection>
@@ -1247,6 +1281,11 @@ export default function ShippingProfiles() {
   };
 
   const handleSave = async () => {
+    const numericError = Object.values(getShippingNumericErrors(form))[0];
+    if (numericError) {
+      toast.error(numericError);
+      return;
+    }
     if (modal.mode === "create" && !canCreateProfile) {
       toast.error("You do not have permission to create shipping profiles");
       return;
@@ -1295,6 +1334,11 @@ export default function ShippingProfiles() {
   };
 
   const handleTemplateSave = async () => {
+    const numericError = Object.values(getShippingNumericErrors(form))[0];
+    if (numericError) {
+      toast.error(numericError);
+      return;
+    }
     if (!form.name?.trim()) {
       toast.error("Template name is required");
       return;
@@ -1747,6 +1791,7 @@ export default function ShippingProfiles() {
             : `Edit - ${modal.profile?.name}`
         }
         onSubmit={handleSave}
+        submitDisabled={Object.keys(getShippingNumericErrors(form)).length > 0}
         submitButtonText={
           modal.mode === "create" ? "Create Profile" : "Save Changes"
         }
@@ -1772,6 +1817,7 @@ export default function ShippingProfiles() {
             : `Edit Template - ${templateModal.template?.name}`
         }
         onSubmit={handleTemplateSave}
+        submitDisabled={Object.keys(getShippingNumericErrors(form)).length > 0}
         submitButtonText={
           templateModal.mode === "create" ? "Create Template" : "Save Template"
         }

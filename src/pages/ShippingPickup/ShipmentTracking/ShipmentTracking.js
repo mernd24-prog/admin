@@ -118,6 +118,14 @@ const displayStatus = (value = "") =>
 const shipmentStepLabel = (value = "") =>
   FULFILLMENT_STATUS_OPTIONS.find((option) => option.value === value)?.label ||
   displayStatus(value);
+const isCancelledBeforeShipment = (shipment = {}) =>
+  String(shipment?.status || "").toLowerCase() === "cancelled" &&
+  !(
+    shipment?.shipped_at ||
+    shipment?.shippedAt ||
+    shipment?.delivered_at ||
+    shipment?.deliveredAt
+  );
 const getTrackingActionOptions = (currentStatus = "initiated") => {
   const nextStatuses = FULFILLMENT_TRANSITIONS[currentStatus] || [];
   const options = FULFILLMENT_STATUS_OPTIONS.filter(
@@ -861,12 +869,13 @@ const ShipmentTracking = () => {
                 </div>
               </ShipmentFact>
             </div>
+            {!isCancelledBeforeShipment(selectedShipment) && (
             <div className="grid grid-cols-1 gap-2 border-t border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 sm:grid-cols-2">
               <div>
                 Shipment date:{" "}
                 <strong className="font-medium text-gray-700">
                   {formatDateTime12Hour(
-                    selectedShipment?.shipped_at,
+                    selectedShipment?.shipped_at || selectedShipment?.shippedAt,
                     "Not shipped",
                   )}
                 </strong>
@@ -906,6 +915,7 @@ const ShipmentTracking = () => {
                 )}
               </div>
             </div>
+            )}
           </section>
 
           <section className="min-w-0 overflow-hidden rounded-2xl border border-blue-200 bg-blue-50/40 p-4 sm:p-5">

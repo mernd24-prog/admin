@@ -38,6 +38,7 @@ const toProfileUpdateBody = (payload = {}) => {
       : payload.sellerProfile?.description;
 
   return {
+    ...(payload.businessWebsite !== undefined ? { businessWebsite: payload.businessWebsite } : {}),
     profile: {
       firstName: profile.firstName || nameParts.firstName,
       lastName: profile.lastName || nameParts.lastName,

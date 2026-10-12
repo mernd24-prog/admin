@@ -76,6 +76,11 @@ const VARIANTS = {
   paused: "bg-amber-50 text-amber-700 border-amber-200",
   expired: "bg-red-50 text-red-600 border-red-200",
   // ── Payments ─────────────────────────────────────────────────────────────
+  waiting: "bg-amber-50 text-amber-700 border-amber-200",
+  available: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  paid: "bg-green-50 text-green-700 border-green-200",
+  adjusted: "bg-orange-50 text-orange-700 border-orange-200",
+  captured: "bg-green-50 text-green-700 border-green-200",
   completed: "bg-green-50 text-green-700 border-green-200",
   held: "bg-amber-50 text-amber-700 border-amber-200",
   released: "bg-blue-50 text-blue-700 border-blue-200",
@@ -95,6 +100,11 @@ const VARIANTS = {
 
 // Dot colors (optional indicator dot)
 const DOT_COLORS = {
+  waiting: "bg-amber-500",
+  available: "bg-emerald-500",
+  paid: "bg-green-500",
+  adjusted: "bg-orange-500",
+  captured: "bg-green-500",
   active: "bg-green-500",
   enabled: "bg-green-500",
   verified: "bg-emerald-500",

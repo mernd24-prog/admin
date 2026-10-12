@@ -717,6 +717,14 @@ const ProductCategories = () => {
     }
 
     const term = searchTerm.toLowerCase().trim();
+    const matchRank = (category) => {
+      const name = String(category.name || "").toLowerCase().trim();
+      if (name === term) return 0;
+      if (name.startsWith(term)) return 1;
+      if (name.split(/\s+/).some((word) => word.startsWith(term))) return 2;
+      if (name.includes(term)) return 3;
+      return 4; // Parent included only because a descendant matches.
+    };
 
     const filterNodes = (nodes = []) =>
       nodes
@@ -737,7 +745,8 @@ const ProductCategories = () => {
 
           return null;
         })
-        .filter(Boolean);
+        .filter(Boolean)
+        .sort((a, b) => matchRank(a) - matchRank(b));
 
     return filterNodes(sourceCategories);
   }, []);

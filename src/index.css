@@ -741,6 +741,31 @@ body
   transform: translateX(16px);
 }
 
+.orders-filter-bar label,
+.returns-filter-bar label {
+  color: #374151 !important;
+}
+
+.orders-filter-bar .admin-filter-select__placeholder,
+.returns-filter-bar .admin-filter-select__placeholder {
+  font-size: 13px !important;
+  color: #9ca3af !important;
+}
+
+.orders-filter-bar .admin-filter-select__single-value,
+.orders-filter-bar button.admin-input,
+.returns-filter-bar .admin-filter-select__single-value,
+.returns-filter-bar button.admin-input,
+.returns-filter-bar input.admin-input {
+  font-size: 13px !important;
+}
+
+.orders-filter-bar button.admin-input.text-gray-400,
+.returns-filter-bar button.admin-input.text-gray-400,
+.returns-filter-bar input.admin-input::placeholder {
+  color: #9ca3af !important;
+}
+
 .admin-label {
   margin-bottom: 6px;
   display: block;

@@ -1895,6 +1895,7 @@ const Orders = () => {
         }
         requiredModule="orders"
         filterBar={
+          <div className="orders-filter-bar">
           <FilterBar
             filters={filterFields}
             values={list.filters}
@@ -1903,6 +1904,7 @@ const Orders = () => {
             loading={loading}
             activeCount={list.activeFilterCount}
           />
+          </div>
         }
         rowActions={(row) => {
           const payout = payoutWindowOf(row);
