@@ -96,13 +96,11 @@ const ConfirmModal = ({
 
   return (
     <div className="fixed inset-0 z-[11000] flex items-center justify-center px-4">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-[rgba(31,27,95,0.38)] backdrop-blur-[3px]"
         onClick={!loading ? handleClose : undefined}
       />
 
-      {/* Dialog */}
       <div
         role="alertdialog"
         aria-modal="true"
@@ -121,9 +119,6 @@ const ConfirmModal = ({
           animate-fade-in
         "
       >
-        {/* Top subtle accent */}
-
-        {/* Close Button */}
         <button
           type="button"
           onClick={handleClose}
@@ -150,9 +145,7 @@ const ConfirmModal = ({
           <RxCross2 aria-hidden="true" size={18} />
         </button>
 
-        {/* Content */}
         <div className="px-6 pb-5 pt-6 sm:px-7">
-          {/* Icon + Heading */}
           <div className="flex items-start gap-4 pr-8">
             <div
               className={`
@@ -184,7 +177,6 @@ const ConfirmModal = ({
             </div>
           </div>
 
-          {/* Custom Content */}
           {children && (
             <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50/70 p-4">
               {children}
@@ -192,7 +184,6 @@ const ConfirmModal = ({
           )}
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 bg-gray-50/60 px-6 py-4 sm:px-7">
           <button
             type="button"
