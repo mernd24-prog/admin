@@ -45,6 +45,10 @@ import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import FormInput from "../../components/Atoms/FormInput/FormInput";
 
 import Tabs from "../../components/Shared/Tabs";
+import {
+  ExportButton,
+  ImportButton,
+} from "../../components/Atoms/buttons/exportImport";
 
 const STOCK_FILTER_OPTIONS = [
   { value: "", label: "All Stock" },
@@ -52,30 +56,6 @@ const STOCK_FILTER_OPTIONS = [
   { value: "out_of_stock", label: "Out of Stock" },
   { value: "low_stock", label: "Low Stock" },
 ];
-
-// const FILTERS = [
-//   {
-//     key: "variantStatus",
-//     type: "select",
-//     label: "Variant Status",
-//     options: [
-//       { value: "active", label: "Active" },
-//       { value: "inactive", label: "Inactive" },
-//       { value: "out_of_stock", label: "Out Of Stock" },
-//     ],
-//   },
-//   {
-//     key: "status",
-//     type: "select",
-//     label: "Product Status",
-//     options: [
-//       { value: "active", label: "Active" },
-//       { value: "inactive", label: "Inactive" },
-//       { value: "pending_approval", label: "Pending Approval" },
-//       { value: "draft", label: "Draft" },
-//     ],
-//   },
-// ];
 
 const ADJUST_TYPES = [
   { value: "add", label: "Add Stock", icon: MdAdd },
@@ -596,7 +576,9 @@ const Inventory = () => {
   const [adjusting, setAdjusting] = useState(false);
 
   const [historyPage, setHistoryPage] = useState(1);
-  const [historyPageSize, setHistoryPageSize] = useState(STOCK_HISTORY_PAGE_SIZE);
+  const [historyPageSize, setHistoryPageSize] = useState(
+    STOCK_HISTORY_PAGE_SIZE,
+  );
   const [inventoryPage, setInventoryPage] = useState(1);
   const [inventoryPageSize, setInventoryPageSize] = useState(20);
   const [tableTransitionLoading, setTableTransitionLoading] = useState(false);
@@ -698,7 +680,10 @@ const Inventory = () => {
   useEffect(() => {
     if (!tableTransitionLoading) return undefined;
 
-    const timer = window.setTimeout(() => setTableTransitionLoading(false), 220);
+    const timer = window.setTimeout(
+      () => setTableTransitionLoading(false),
+      220,
+    );
     return () => window.clearTimeout(timer);
   }, [tableTransitionLoading]);
 
@@ -1435,13 +1420,26 @@ const Inventory = () => {
             <button
               type="button"
               className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
-              onClick={(event) => { event.stopPropagation(); openImageGallery(variant); }}
+              onClick={(event) => {
+                event.stopPropagation();
+                openImageGallery(variant);
+              }}
               title="View product images"
             >
-              <img src={getVariantImage(variant)} alt={variant?.sku || variant?.variantName || "Variant"} className="h-full w-full object-cover" />
+              <img
+                src={getVariantImage(variant)}
+                alt={variant?.sku || variant?.variantName || "Variant"}
+                className="h-full w-full object-cover"
+              />
             </button>
-            <button type="button" className="text-xs text-blue-500 hover:underline"
-              onClick={(event) => { event.stopPropagation(); openImageGallery(variant); }}>
+            <button
+              type="button"
+              className="text-xs text-blue-500 hover:underline"
+              onClick={(event) => {
+                event.stopPropagation();
+                openImageGallery(variant);
+              }}
+            >
               View
             </button>
           </div>
@@ -1454,20 +1452,22 @@ const Inventory = () => {
         width: "280px",
         render: (_, row) => (
           <div className="special-price-product-cell">
-          <button
-            type="button"
-            className="special-price-product-name text-left font-semibold hover:underline"
-            onClick={(event) => {
-              event.stopPropagation();
+            <button
+              type="button"
+              className="special-price-product-name text-left font-semibold hover:underline"
+              onClick={(event) => {
+                event.stopPropagation();
 
-              if (row.productId) {
-                navigate(`/app/product-catalog/view/${row.productId}`);
-              }
-            }}
-          >
-            {productTitle(row)}
-          </button>
-          <span className="special-price-product-sku text-xs text-gray-500">{row.variantSku || row.sku || "N/A"}</span>
+                if (row.productId) {
+                  navigate(`/app/product-catalog/view/${row.productId}`);
+                }
+              }}
+            >
+              {productTitle(row)}
+            </button>
+            <span className="special-price-product-sku text-xs text-gray-500">
+              {row.variantSku || row.sku || "N/A"}
+            </span>
           </div>
         ),
       },
@@ -1577,22 +1577,23 @@ const Inventory = () => {
 
   const importExportActions = (
     <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        className={`${productId ? "" : "admin-btn-secondary"} inline-flex items-center gap-1.5`}
+      <ExportButton
+        label="Export"
         onClick={handleExport}
         disabled={loading || importing}
-      >
-        Export Template
-      </button>
-      <button
-        type="button"
-        className={`${productId ? "" : "admin-btn-secondary"} inline-flex items-center gap-1.5`}
+        loading={importing}
+        title="Export the inventory Excel template"
+      />
+
+      <ImportButton
+        label="Import"
+        loading={importing}
+        loadingText="Processing…"
         onClick={() => fileInputRef.current?.click()}
-        disabled={loading || importing}
-      >
-        {importing ? "Processing…" : "Import Excel"}
-      </button>
+        disabled={loading}
+        title="Import updated inventory stock"
+      />
+
       <input
         ref={fileInputRef}
         type="file"
@@ -1603,28 +1604,155 @@ const Inventory = () => {
     </div>
   );
 
+  // Inside your component:
+  const [isImportHelpOpen, setIsImportHelpOpen] = useState(false);
+
   const importHelp = (
-    <details className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-[11px] text-gray-600">
-      <summary className="cursor-pointer text-xs font-semibold text-gray-900">Import &amp; Export Guide</summary>
-      <p className="mt-2.5 font-semibold text-gray-800">How stock import works</p>
-      <ol className="mt-1 list-decimal space-y-0.5 pl-5">
-        <li>
-          Export the latest Excel template. Every product variant is a separate
-          row.
-        </li>
-        <li>
-          Edit only <code className="font-semibold">newStock</code> using a
-          whole number of 0 or more.
-        </li>
-        <li>
-          Import the file. Product IDs, SKUs, names, current stock, and every
-          other column are read-only and are validated.
-        </li>
-      </ol>
-      <p className="mt-2 text-xs">
-        Rows with unchanged stock are skipped. Stock cannot be lower than
-        already reserved stock.
-      </p>
+    <details
+      open={isImportHelpOpen}
+      onToggle={(event) => {
+        setIsImportHelpOpen(event.currentTarget.open);
+      }}
+      className="mb-4 overflow-hidden rounded-lg border border-[#e8ddc8] bg-[#fffdf9] text-xs text-gray-600"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-semibold text-gray-900 [&::-webkit-details-marker]:hidden">
+        <span>Import &amp; Export Guide</span>
+
+        <span
+          aria-hidden="true"
+          className={`inline-flex shrink-0 items-center justify-center text-gray-500 transition-transform duration-200 ${
+            isImportHelpOpen ? "rotate-180" : "rotate-0"
+          }`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </summary>
+
+      <div className="space-y-3 px-4 pb-4">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {/* Export instructions */}
+          <section className="rounded-lg border border-[#e8ddc8] bg-white p-3.5">
+            <h4 className="mb-2.5 border-b border-[#eee2d0] pb-2.5 font-bold text-[var(--admin-ink)]">
+              How to Export &amp; Edit Template
+            </h4>
+
+            <ol className="space-y-2 text-[11px] leading-5">
+              <li className="flex items-start gap-2">
+                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-800">
+                  1
+                </span>
+                <span>
+                  Export the latest Excel template. Every product variant is a
+                  separate row.
+                </span>
+              </li>
+
+              <li className="flex items-start gap-2">
+                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-800">
+                  2
+                </span>
+                <span>
+                  Edit only{" "}
+                  <code className="rounded border border-indigo-200 bg-indigo-50 px-1 py-0.5 text-[10px] font-semibold text-indigo-800">
+                    newStock
+                  </code>{" "}
+                  using a whole number of 0 or more.
+                </span>
+              </li>
+
+              <li className="flex items-start gap-2">
+                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-800">
+                  3
+                </span>
+                <span>
+                  Import the file. Product IDs, SKUs, names, current stock, and
+                  every other column are read-only and are validated.
+                </span>
+              </li>
+            </ol>
+          </section>
+
+          {/* Import instructions */}
+          <section className="rounded-lg border border-[#e8ddc8] bg-white p-3.5">
+            <h4 className="mb-2.5 border-b border-[#eee2d0] pb-2.5 font-bold text-[var(--admin-ink)]">
+              How to Import &amp; Apply Stock
+            </h4>
+
+            <ol className="space-y-2 text-[11px] leading-5">
+              <li className="flex items-start gap-2">
+                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800">
+                  1
+                </span>
+                <span>
+                  Export the latest Excel template. Every product variant is a
+                  separate row.
+                </span>
+              </li>
+
+              <li className="flex items-start gap-2">
+                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800">
+                  2
+                </span>
+                <span>
+                  Edit only{" "}
+                  <code className="rounded border border-emerald-200 bg-emerald-50 px-1 py-0.5 text-[10px] font-semibold text-emerald-800">
+                    newStock
+                  </code>{" "}
+                  using a whole number of 0 or more.
+                </span>
+              </li>
+
+              <li className="flex items-start gap-2">
+                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800">
+                  3
+                </span>
+                <span>
+                  Import the file. Product IDs, SKUs, names, current stock, and
+                  every other column are read-only and are validated.
+                </span>
+              </li>
+            </ol>
+          </section>
+        </div>
+
+        {/* Existing validation note */}
+        <section className="rounded-lg border border-amber-300 bg-[#fffdf2] p-3">
+          <h4 className="mb-2 flex items-center gap-2 font-bold text-gray-900">
+            <span className="text-amber-500" aria-hidden="true">
+              ⚠
+            </span>
+            Important Validation Notes
+          </h4>
+
+          <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+            <p className="flex items-start gap-2 leading-5">
+              <span className="text-amber-500" aria-hidden="true">
+                ●
+              </span>
+              <span>Rows with unchanged stock are skipped.</span>
+            </p>
+
+            <p className="flex items-start gap-2 leading-5">
+              <span className="text-amber-500" aria-hidden="true">
+                ●
+              </span>
+              <span>Stock cannot be lower than already reserved stock.</span>
+            </p>
+          </div>
+        </section>
+      </div>
     </details>
   );
 

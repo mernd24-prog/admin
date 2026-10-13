@@ -1881,9 +1881,7 @@ const Orders = () => {
         sortDir={list.sortDir}
         onRefresh={fetchOrders}
         searchPlaceholder={
-          isAdmin
-            ? "Search order number..."
-            : "Search order number…"
+          isAdmin ? "Search order number..." : "Search order number…"
         }
         emptyText="No orders found."
         emptyIcon={
@@ -1896,14 +1894,14 @@ const Orders = () => {
         requiredModule="orders"
         filterBar={
           <div className="orders-filter-bar">
-          <FilterBar
-            filters={filterFields}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
-            loading={loading}
-            activeCount={list.activeFilterCount}
-          />
+            <FilterBar
+              filters={filterFields}
+              values={list.filters}
+              onChange={list.setFilter}
+              onClear={list.clearFilters}
+              loading={loading}
+              activeCount={list.activeFilterCount}
+            />
           </div>
         }
         rowActions={(row) => {
