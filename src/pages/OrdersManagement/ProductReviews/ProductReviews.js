@@ -38,6 +38,8 @@ import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { getProducts } from "../../../Redux/productSlice";
 import { formatDateTime12Hour } from "../../../utils/formatters";
 import { useNavigate } from "react-router";
+import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
+import { ExportButton } from "../../../components/Atoms/buttons/exportImport";
 
 const SELLER_PANEL_ROLES = new Set([
   "seller",
@@ -687,6 +689,98 @@ const ProductReviews = () => {
     setSelectedProductId(String(productId));
   };
 
+  /* =====================================================
+     EXCEL EXPORT
+  ===================================================== */
+
+  const exportExcelSheets = useMemo(() => {
+    if (!items?.length) return [];
+
+    if (isDetailMode) {
+      // Detail mode: individual reviews
+      const detailRows = items.map((row, idx) => ({
+        serialNumber: idx + 1,
+        buyer: displayBuyerName(row),
+        rating: row.rating || 0,
+        title: row.title || "",
+        review: row.reviewText || row.comment || "",
+        status: row.status || "",
+        reviewedAt: row.createdAt ? formatDateTime12Hour(row.createdAt, "—") : "—",
+      }));
+
+      return [
+        {
+          name: "Review Details",
+          title: "Review Details",
+          data: detailRows,
+          columns: [
+            { key: "serialNumber", label: "S.No" },
+            { key: "buyer", label: "Buyer" },
+            { key: "rating", label: "Rating" },
+            { key: "title", label: "Title" },
+            { key: "review", label: "Review" },
+            { key: "status", label: "Status" },
+            { key: "reviewedAt", label: "Reviewed At" },
+          ],
+        },
+      ];
+    } else {
+      // Summary mode: product-level summaries
+      const summaryRows = items.map((row, idx) => ({
+        serialNumber: idx + 1,
+        productName: getProductName(row) || "Product",
+        averageRating: row.averageRating || 0,
+        reviewCount: row.reviewCount || 0,
+        publishedCount: row.publishedCount || 0,
+        pendingCount: row.pendingCount || 0,
+        latestReviewAt: row.latestReviewAt
+          ? formatDateTime12Hour(row.latestReviewAt, "—")
+          : "—",
+      }));
+
+      return [
+        {
+          name: "Review Summaries",
+          title: "Review Summaries",
+          data: summaryRows,
+          columns: [
+            { key: "serialNumber", label: "S.No" },
+            { key: "productName", label: "Product Name" },
+            { key: "averageRating", label: "Average Rating" },
+            { key: "reviewCount", label: "Reviews" },
+            { key: "publishedCount", label: "Published" },
+            { key: "pendingCount", label: "Pending" },
+            { key: "latestReviewAt", label: "Last Review" },
+          ],
+        },
+      ];
+    }
+  }, [items, isDetailMode]);
+
+  const exportFilename = isDetailMode
+    ? "product-review-details.xlsx"
+    : "product-review-summaries.xlsx";
+
+  const handleExport = () => {
+    if (!items?.length) {
+      toast.info("No reviews available to export.");
+      return;
+    }
+
+    try {
+      const exported = exportToExcelWorkbook(exportExcelSheets, exportFilename);
+
+      if (exported) {
+        toast.success("Reviews exported successfully.");
+      } else {
+        toast.error("Unable to export reviews.");
+      }
+    } catch (error) {
+      console.error("Reviews export error:", error);
+      toast.error("Failed to export reviews.");
+    }
+  };
+
   const summaryColumns = [
     {
       key: "productId",
@@ -1001,12 +1095,9 @@ const ProductReviews = () => {
           />
         }
         requiredModule="reviews"
-        exportConfig={{
-          filename: isDetailMode
-            ? "product-review-details"
-            : "product-review-summaries",
-          columns,
-        }}
+        actions={
+          <ExportButton onClick={handleExport} label="Export" />
+        }
         selectable={isDetailMode}
         selectedKeys={list.selectedKeys}
         onSelectionChange={list.setSelectedKeys}

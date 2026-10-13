@@ -191,7 +191,8 @@ const getSellerPricing = (product = {}) => {
   const source = getDefaultVariant(product) || product;
   const specialPrice = toNumberOrNull(source.salePrice);
   return {
-    specialPrice: specialPrice !== null && specialPrice >= 0 ? specialPrice : null,
+    specialPrice:
+      specialPrice !== null && specialPrice >= 0 ? specialPrice : null,
     price: toNumberOrNull(source.price),
     mrp: toNumberOrNull(source.mrp),
   };
@@ -1184,7 +1185,7 @@ const ProductCatalog = () => {
         key: "Varients",
         label: "Varients",
         render: (_, product) => (
-          <span className="block max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap">
+          <span className="block max-w-[160px] mx-auto overflow-hidden text-ellipsis whitespace-nowrap">
             {product?.variants ? product?.variants.length : "0"}
           </span>
         ),
@@ -1195,8 +1196,22 @@ const ProductCatalog = () => {
         sortable: true,
         render: (_, product) => {
           if (!sellerView) return formatMoney(getEffectivePrice(product));
-          const { specialPrice, price } = getSellerPricing(product);
-          return formatMoney(specialPrice ?? price);
+          const { specialPrice, price, mrp } = getSellerPricing(product);
+          return specialPrice !== null ? (
+            <div className="flex flex-col gap-1">
+              <span>{formatMoney(specialPrice)}</span>
+              <span className="text-xs text-gray-500">Special Price</span>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <span>{formatMoney(price)}</span>
+              {mrp !== null && (
+                <span className="text-xs text-gray-500">
+                  MRP: {formatMoney(mrp)}
+                </span>
+              )}
+            </div>
+          );
         },
       },
       {
@@ -1331,7 +1346,7 @@ const ProductCatalog = () => {
               onClick={fetchProductsList}
               disabled={loading}
               aria-busy={loading}
-              className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-1.5"
             >
               <MdRefresh
                 aria-hidden="true"
@@ -1384,30 +1399,30 @@ const ProductCatalog = () => {
           />
         </section>
 
-   {/* Selected Product Indication */}
-{selectedRow.length > 0 && (
-  <div className="mx-4 my-3 flex items-center justify-between rounded-lg  bg-[var(--admin-gold-soft)] border border-[var(--admin-line)] px-4 py-2.5 shadow-sm">
-    <div className="flex items-center gap-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--admin-gold)] text-xs font-bold text-white">
-        {selectedRow.length}
-      </span>
+        {/* Selected Product Indication */}
+        {selectedRow.length > 0 && (
+          <div className="mx-4 my-3 flex items-center justify-between rounded-lg  bg-[var(--admin-gold-soft)] border border-[var(--admin-line)] px-4 py-2.5 shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--admin-gold)] text-xs font-bold text-white">
+                {selectedRow.length}
+              </span>
 
-      <span className="text-sm font-semibold text-[var(--admin-navy)]">
-        {selectedRow.length === 1
-          ? "1 product selected"
-          : `${selectedRow.length } Products Selected`}
-      </span>
-    </div>
+              <span className="text-sm font-semibold text-[var(--admin-navy)]">
+                {selectedRow.length === 1
+                  ? "1 product selected"
+                  : `${selectedRow.length} Products Selected`}
+              </span>
+            </div>
 
-    <button
-      type="button"
-      onClick={() => setSelectedRow([])}
-      className="rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 transition hover:bg-white hover:text-[var(--admin-navy)]"
-    >
-      Clear selection
-    </button>
-  </div>
-)}
+            <button
+              type="button"
+              onClick={() => setSelectedRow([])}
+              className="rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 transition hover:bg-white hover:text-[var(--admin-navy)]"
+            >
+              Clear selection
+            </button>
+          </div>
+        )}
 
         <section>
           <DataTable
