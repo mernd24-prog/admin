@@ -118,6 +118,17 @@ const displayStatus = (value = "") =>
 const shipmentStepLabel = (value = "") =>
   FULFILLMENT_STATUS_OPTIONS.find((option) => option.value === value)?.label ||
   displayStatus(value);
+const isCodPayment = (codValue, row = {}) =>
+  Boolean(codValue) ||
+  codValue === "true" ||
+  codValue === 1 ||
+  String(
+    row?.payment_provider || row?.paymentProvider || "",
+  ).toLowerCase() === "cod";
+
+const paymentTypeLabel = (codValue, row = {}) =>
+  isCodPayment(codValue, row) ? "COD" : "Prepaid";
+
 const isCancelledBeforeShipment = (shipment = {}) =>
   String(shipment?.status || "").toLowerCase() === "cancelled" &&
   !(
@@ -698,9 +709,10 @@ const ShipmentTracking = () => {
       },
       {
         key: "cod",
-        label: "COD",
+        label: "Payment Type",
         sortable: true,
-        render: (value) => (value ? "Yes" : "No"),
+        value: (row) => paymentTypeLabel(row?.cod, row),
+        render: (value, row) => paymentTypeLabel(value, row),
       },
       {
         key: "expected_delivery_at",
@@ -854,7 +866,12 @@ const ShipmentTracking = () => {
               >
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span>
-                    {selectedShipment?.cod ? "Cash on delivery" : "Prepaid"}
+                    {paymentTypeLabel(
+                      selectedShipment?.cod,
+                      selectedShipment,
+                    ) === "COD"
+                      ? "Cash on delivery (COD)"
+                      : "Prepaid"}
                   </span>
                   <span className="text-gray-300">•</span>
                   <span>
@@ -1225,7 +1242,7 @@ const ShipmentTracking = () => {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-amber-800">
-                        Cancellation processing is not confirmed
+                        Cancellation processing is panding confirmation   
                       </div>
                       <div className="mt-1 text-xs text-gray-500">
                         Complete the cancellation workflow to release inventory

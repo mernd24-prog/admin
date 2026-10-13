@@ -336,14 +336,12 @@ export default function Collections() {
           loading={saving || Boolean(uploadingField)}
         >
           <div className="space-y-5">
-            {/* ==================== Basic Information ==================== */}
             <FormSection
               title="Basic Information"
               description="Enter the basic details for this collection."
             >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {/* Name */}
-                <FormInput
+                 <FormInput
                   label="Name"
                   name="name"
                   value={form.name}

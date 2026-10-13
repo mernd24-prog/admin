@@ -1,756 +1,756 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { MdRefresh, MdUnfoldMore, MdMoreVert } from "react-icons/md";
-import Pagination from "../Pagination/Pagination";
-import CustomCheckbox from "../Atoms/Checkbox/Checkbox";
-import SearchInput from "../Atoms/SearchInput/SearchInput";
-import { ExportButton, ImportButton } from "./TableTools";
-import { formatLabel } from "../../utils/formatters";
+  import React, { useCallback, useEffect, useRef, useState } from "react";
+  import { createPortal } from "react-dom";
+  import { MdRefresh, MdUnfoldMore, MdMoreVert } from "react-icons/md";
+  import Pagination from "../Pagination/Pagination";
+  import CustomCheckbox from "../Atoms/Checkbox/Checkbox";
+  import SearchInput from "../Atoms/SearchInput/SearchInput";
+  import { ExportButton, ImportButton } from "./TableTools";
+  import { formatLabel } from "../../utils/formatters";
 
-const SkeletonRow = ({ cols }) => (
-  <tr className="animate-pulse">
-    {Array.from({ length: cols }).map((_, i) => (
-      <td key={i} className="px-4 py-3">
-        <div className="h-4 w-3/4 rounded bg-[var(--admin-surface-soft)]" />
-      </td>
-    ))}
-  </tr>
-);
-
-const EMPTY_TEXT_VALUES = new Set(["", "NA", "N/A"]);
-
-const isEmptyCellValue = (value) =>
-  value === null ||
-  value === undefined ||
-  (typeof value === "string" &&
-    EMPTY_TEXT_VALUES.has(value.trim().toUpperCase()));
-
-const formatCellText = (value) => formatLabel(value, "N/A");
-
-const toNonNegativeNumber = (value, fallback = 0) => {
-  const parsedValue = Number(value);
-  return Number.isFinite(parsedValue) && parsedValue >= 0
-    ? parsedValue
-    : fallback;
-};
-
-const toPositiveInteger = (value, fallback) => {
-  const parsedValue = Number(value);
-  return Number.isFinite(parsedValue) && parsedValue > 0
-    ? Math.floor(parsedValue)
-    : fallback;
-};
-
-const VOID_ELEMENT_TAGS = new Set([
-  "area",
-  "base",
-  "br",
-  "col",
-  "embed",
-  "hr",
-  "img",
-  "input",
-  "link",
-  "meta",
-  "param",
-  "source",
-  "track",
-  "wbr",
-]);
-
-const renderCellValue = (value, nested = false) => {
-  if (
-    nested &&
-    (value === null || value === undefined || typeof value === "boolean")
-  ) {
-    return null;
-  }
-
-  if (nested && typeof value === "string" && value.trim() === "") {
-    return null;
-  }
-
-  if (isEmptyCellValue(value)) {
-    return <span className="inline-flex items-center  text-gray-400">N/A</span>;
-  }
-
-  if (typeof value === "string") {
-    return formatCellText(value);
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item, index) => (
-      <React.Fragment key={index}>{renderCellValue(item, true)}</React.Fragment>
-    ));
-  }
-
-  if (React.isValidElement(value)) {
-    const children = value.props?.children;
-    if (VOID_ELEMENT_TAGS.has(value.type)) return value;
-    if (children === undefined || children === null) return value;
-    if (isEmptyCellValue(children)) {
-      return React.cloneElement(value, undefined, "N/A");
-    }
-    return React.cloneElement(
-      value,
-      {
-        ...value.props,
-      },
-      React.Children.map(children, (child) => renderCellValue(child, true)),
-    );
-  }
-
-  return value;
-};
-
-const RowActionsMenu = ({ actions = [], rowLabel = "record" }) => {
-  const visibleActions = Array.isArray(actions)
-    ? actions.filter((action) => action && action.hidden !== true)
-    : [];
-  const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const buttonRef = useRef(null);
-  const menuRef = useRef(null);
-
-  const updatePosition = useCallback(() => {
-    const button = buttonRef.current;
-    if (!button) return;
-    const rect = button.getBoundingClientRect();
-    const width = 190;
-    const estimatedHeight = Math.min(visibleActions.length * 38 + 16, 320);
-    const left = Math.max(
-      8,
-      Math.min(window.innerWidth - width - 8, rect.right - width),
-    );
-    const belowTop = rect.bottom + 6;
-    const top =
-      belowTop + estimatedHeight > window.innerHeight
-        ? Math.max(8, rect.top - estimatedHeight - 6)
-        : belowTop;
-    setPosition({ top, left });
-  }, [visibleActions.length]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    updatePosition();
-
-    const closeOutside = (event) => {
-      if (
-        !buttonRef.current?.contains(event.target) &&
-        !menuRef.current?.contains(event.target)
-      ) {
-        setOpen(false);
-      }
-    };
-    const closeOnViewportChange = () => setOpen(false);
-
-    document.addEventListener("mousedown", closeOutside);
-    window.addEventListener("resize", closeOnViewportChange);
-    window.addEventListener("scroll", closeOnViewportChange, true);
-    return () => {
-      document.removeEventListener("mousedown", closeOutside);
-      window.removeEventListener("resize", closeOnViewportChange);
-      window.removeEventListener("scroll", closeOnViewportChange, true);
-    };
-  }, [open, updatePosition]);
-
-  if (!visibleActions.length) return null;
-
-  return (
-    <div className="inline-flex" onClick={(event) => event.stopPropagation()}>
-      <button
-        ref={buttonRef}
-        type="button"
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--admin-muted)] transition hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
-        aria-label={`Actions for ${rowLabel}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        title="Actions"
-        onClick={(event) => {
-          event.stopPropagation();
-          if (!open) updatePosition();
-          setOpen((value) => !value);
-        }}
-      >
-        <MdMoreVert aria-hidden="true" size={19} />
-      </button>
-
-      {open &&
-        createPortal(
-          <div
-            ref={menuRef}
-            role="menu"
-            className="fixed z-[1000] max-h-80 w-[190px] overflow-y-auto rounded-md border border-[var(--admin-line)] bg-white p-1.5 shadow-xl"
-            style={{ top: position.top, left: position.left }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            {visibleActions.map((action, index) => (
-              <button
-                key={`${action.label || "action"}-${index}`}
-                type="button"
-                role="menuitem"
-                disabled={action.disabled}
-                className={`flex min-h-9 w-full items-center gap-2 rounded px-3 py-2 text-left  text-xs transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                  action.danger
-                    ? "text-red-600 hover:bg-red-50"
-                    : "text-[var(--admin-ink)] hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
-                }`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setOpen(false);
-                  action.onClick?.();
-                }}
-              >
-                {action.icon ? (
-                  <span className="flex-shrink-0">{action.icon}</span>
-                ) : null}
-                <span>{action.label || "Action"}</span>
-              </button>
-            ))}
-          </div>,
-          document.body,
-        )}
-    </div>
-  );
-};
-
-/**
- * DataTable
- *
- * Props:
- *   columns          {Array<{key, label, render?, sortable?, width?}>}
- *   data             {Array<object>}
- *   loading          {boolean}
- *   totalCount       {number}
- *   page             {number}
- *   pageSize         {number}
- *   onPageChange     {(page: number) => void}
- *   onSearch         {(q: string) => void}
- *   searchPlaceholder {string}
- *   rowKey           {string | (row) => string}  — defaults to "_id"
- *   actions          {React.ReactNode}            — toolbar actions (buttons etc.)
- *   emptyText        {string}
- *   emptyIcon        {React.ReactNode}            — custom empty state icon
- *   filterBar        {React.ReactNode}            — FilterBar rendered between toolbar and table
- *   bulkActionBar    {React.ReactNode}            — BulkActionBar rendered above table body
- *   onSort           {(key, dir) => void}
- *   sortKey          {string}
- *   sortDir          {"asc"|"desc"}
- *   selectable       {boolean}
- *   selectedKeys     {Array}
- *   onSelectionChange{(keys) => void}
- *   onRefresh        {() => void}
- *   error            {string}
- *   pageSizeOptions  {number[]}
- *   onPageSizeChange {(size: number) => void}
- *   tableContainerClassName {string}
- *   tableClassName   {string}
- *   exportConfig     {object}
- *   importConfig     {object}
- *   requiredModule   {string}
- *   onRowClick       {(row) => void}
- *   rowClassName     {string | (row) => string}
- *   rowActions       {(row) => Array<{label, icon?, onClick, danger?, disabled?, hidden?}>}
- *   showSerialNumber {boolean}
- */
-const DataTable = ({
-  columns = [],
-  data = [],
-  loading = false,
-  totalCount,
-  total,
-  page = 1,
-  pageSize = 20,
-  onPageChange,
-  onSearch,
-  searchPlaceholder = "Search…",
-  searchWrapperClassName = "",
-  toolbarLeft = null,
-  rowKey = "_id",
-  actions,
-  emptyText = "No records found.",
-  emptyMessage,
-  emptyIcon,
-  filterBar,
-  bulkActionBar,
-  onSort,
-  sortKey,
-  sortDir,
-  selectable = false,
-  selectedKeys = [],
-  onSelectionChange,
-  onRefresh,
-  error,
-  pageSizeOptions = [10, 20, 50, 100],
-  onPageSizeChange,
-  listPage,
-  tableContainerClassName = "",
-  tableClassName = "",
-  cardClassName = "admin-card overflow-hidden border border-[var(--admin-line)] bg-white shadow-sm",
-  exportConfig,
-  importConfig,
-  requiredModule,
-  onRowClick,
-  rowClassName = "",
-  rowActions,
-  showSerialNumber = true,
-}) => {
-  const [searchValue, setSearchValue] = useState("");
-  const [hasMounted, setHasMounted] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const safeData = Array.isArray(data) ? data : [];
-  const safeColumns = Array.isArray(columns) ? columns : [];
-  const hasSerialColumn = safeColumns.some((column) => {
-    const key = String(column?.key || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
-    const label = String(column?.label || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
-    return (
-      ["sno", "srno", "serial", "serialnumber"].includes(key) ||
-      ["sno", "srno", "serial", "serialnumber"].includes(label)
-    );
-  });
-  const shouldShowSerialNumber = showSerialNumber && !hasSerialColumn;
-  const resolvedTotalCount = toNonNegativeNumber(
-    totalCount ?? total,
-    safeData.length,
-  );
-  const resolvedPage = toPositiveInteger(listPage?.page ?? page, 1);
-  const resolvedPageSize = toPositiveInteger(
-    listPage?.pageSize ?? pageSize,
-    20,
-  );
-  const resolvedOnPageChange = onPageChange || listPage?.setPage;
-  const resolvedOnPageSizeChange = onPageSizeChange || listPage?.setPageSize;
-  const resolvedOnSearch = onSearch || listPage?.setSearch;
-  const resolvedOnSort = onSort || listPage?.setSort;
-  const resolvedSortKey = sortKey ?? listPage?.sortKey;
-  const resolvedSortDir = sortDir ?? listPage?.sortDir ?? "asc";
-  const resolvedSearchValue = listPage?.search ?? "";
-  const resolvedEmptyText = emptyMessage || emptyText;
-  const totalPages = Math.max(
-    1,
-    Math.ceil(resolvedTotalCount / resolvedPageSize),
-  );
-  const showLoading =
-    loading || (!hasMounted && safeData.length === 0 && !error);
-  const showRefreshLoading = refreshing || loading;
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  useEffect(() => {
-    setSearchValue(resolvedSearchValue);
-  }, [resolvedSearchValue]);
-
-  const getKey = (row, index) =>
-    typeof rowKey === "function"
-      ? rowKey(row)
-      : (row[rowKey] ?? row.id ?? index);
-
-  const pageKeys = safeData.map((row, index) => getKey(row, index));
-  const allSelected =
-    pageKeys.length > 0 && pageKeys.every((key) => selectedKeys.includes(key));
-  const selectedData = safeData.filter((row, index) =>
-    selectedKeys.includes(getKey(row, index)),
+  const SkeletonRow = ({ cols }) => (
+    <tr className="animate-pulse">
+      {Array.from({ length: cols }).map((_, i) => (
+        <td key={i} className="px-4 py-3">
+          <div className="h-4 w-3/4 rounded bg-[var(--admin-surface-soft)]" />
+        </td>
+      ))}
+    </tr>
   );
 
-  useEffect(() => {
-    if (resolvedPage > totalPages && resolvedOnPageChange) {
-      resolvedOnPageChange(totalPages);
-    }
-  }, [resolvedOnPageChange, resolvedPage, totalPages]);
+  const EMPTY_TEXT_VALUES = new Set(["", "NA", "N/A"]);
 
-  const handleSearch = (e) => {
-    const v = e.target.value;
-    setSearchValue(v);
-    resolvedOnSearch?.(v);
+  const isEmptyCellValue = (value) =>
+    value === null ||
+    value === undefined ||
+    (typeof value === "string" &&
+      EMPTY_TEXT_VALUES.has(value.trim().toUpperCase()));
+
+  const formatCellText = (value) => formatLabel(value, "N/A");
+
+  const toNonNegativeNumber = (value, fallback = 0) => {
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) && parsedValue >= 0
+      ? parsedValue
+      : fallback;
   };
 
-  const handleSort = (col) => {
-    if (col.sortable && resolvedOnSort) {
-      resolvedOnSort(
-        col.key,
-        resolvedSortKey === col.key && resolvedSortDir === "asc"
-          ? "desc"
-          : "asc",
+  const toPositiveInteger = (value, fallback) => {
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) && parsedValue > 0
+      ? Math.floor(parsedValue)
+      : fallback;
+  };
+
+  const VOID_ELEMENT_TAGS = new Set([
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
+  ]);
+
+  const renderCellValue = (value, nested = false) => {
+    if (
+      nested &&
+      (value === null || value === undefined || typeof value === "boolean")
+    ) {
+      return null;
+    }
+
+    if (nested && typeof value === "string" && value.trim() === "") {
+      return null;
+    }
+
+    if (isEmptyCellValue(value)) {
+      return <span className="inline-flex items-center  text-gray-400">N/A</span>;
+    }
+
+    if (typeof value === "string") {
+      return formatCellText(value);
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item, index) => (
+        <React.Fragment key={index}>{renderCellValue(item, true)}</React.Fragment>
+      ));
+    }
+
+    if (React.isValidElement(value)) {
+      const children = value.props?.children;
+      if (VOID_ELEMENT_TAGS.has(value.type)) return value;
+      if (children === undefined || children === null) return value;
+      if (isEmptyCellValue(children)) {
+        return React.cloneElement(value, undefined, "N/A");
+      }
+      return React.cloneElement(
+        value,
+        {
+          ...value.props,
+        },
+        React.Children.map(children, (child) => renderCellValue(child, true)),
       );
     }
+
+    return value;
   };
 
-  const handleRefresh = async () => {
-    if (!onRefresh || showRefreshLoading) return;
+  const RowActionsMenu = ({ actions = [], rowLabel = "record" }) => {
+    const visibleActions = Array.isArray(actions)
+      ? actions.filter((action) => action && action.hidden !== true)
+      : [];
+    const [open, setOpen] = useState(false);
+    const [position, setPosition] = useState({ top: 0, left: 0 });
+    const buttonRef = useRef(null);
+    const menuRef = useRef(null);
 
-    setRefreshing(true);
+    const updatePosition = useCallback(() => {
+      const button = buttonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      const width = 190;
+      const estimatedHeight = Math.min(visibleActions.length * 38 + 16, 320);
+      const left = Math.max(
+        8,
+        Math.min(window.innerWidth - width - 8, rect.right - width),
+      );
+      const belowTop = rect.bottom + 6;
+      const top =
+        belowTop + estimatedHeight > window.innerHeight
+          ? Math.max(8, rect.top - estimatedHeight - 6)
+          : belowTop;
+      setPosition({ top, left });
+    }, [visibleActions.length]);
 
-    try {
-      await Promise.resolve(onRefresh());
-    } finally {
-      setRefreshing(false);
-    }
-  };
+    useEffect(() => {
+      if (!open) return undefined;
+      updatePosition();
 
-  const getSerialNumber = (index) => {
-    const serialNumber =
-      (resolvedPage - 1) * resolvedPageSize + Number(index) + 1;
+      const closeOutside = (event) => {
+        if (
+          !buttonRef.current?.contains(event.target) &&
+          !menuRef.current?.contains(event.target)
+        ) {
+          setOpen(false);
+        }
+      };
+      const closeOnViewportChange = () => setOpen(false);
 
-    return Number.isFinite(serialNumber) ? serialNumber : Number(index) + 1;
-  };
+      document.addEventListener("mousedown", closeOutside);
+      window.addEventListener("resize", closeOnViewportChange);
+      window.addEventListener("scroll", closeOnViewportChange, true);
+      return () => {
+        document.removeEventListener("mousedown", closeOutside);
+        window.removeEventListener("resize", closeOnViewportChange);
+        window.removeEventListener("scroll", closeOnViewportChange, true);
+      };
+    }, [open, updatePosition]);
 
-  const toggleAll = (checked) => {
-    if (!onSelectionChange) return;
+    if (!visibleActions.length) return null;
 
-    const remaining = selectedKeys.filter((key) => !pageKeys.includes(key));
+    return (
+      <div className="inline-flex" onClick={(event) => event.stopPropagation()}>
+        <button
+          ref={buttonRef}
+          type="button"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--admin-muted)] transition hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+          aria-label={`Actions for ${rowLabel}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          title="Actions"
+          onClick={(event) => {
+            event.stopPropagation();
+            if (!open) updatePosition();
+            setOpen((value) => !value);
+          }}
+        >
+          <MdMoreVert aria-hidden="true" size={19} />
+        </button>
 
-    onSelectionChange(checked ? [...remaining, ...pageKeys] : remaining);
-  };
-
-  const toggleRow = (key, checked) => {
-    if (!onSelectionChange) return;
-
-    onSelectionChange(
-      checked
-        ? [...new Set([...selectedKeys, key])]
-        : selectedKeys.filter((item) => item !== key),
+        {open &&
+          createPortal(
+            <div
+              ref={menuRef}
+              role="menu"
+              className="fixed z-[1000] max-h-80 w-[190px] overflow-y-auto rounded-md border border-[var(--admin-line)] bg-white p-1.5 shadow-xl"
+              style={{ top: position.top, left: position.left }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              {visibleActions.map((action, index) => (
+                <button
+                  key={`${action.label || "action"}-${index}`}
+                  type="button"
+                  role="menuitem"
+                  disabled={action.disabled}
+                  className={`flex min-h-9 w-full items-center gap-2 rounded px-3 py-2 text-left  text-xs transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                    action.danger
+                      ? "text-red-600 hover:bg-red-50"
+                      : "text-[var(--admin-ink)] hover:bg-[var(--admin-blue-soft)] hover:text-[var(--admin-blue)]"
+                  }`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setOpen(false);
+                    action.onClick?.();
+                  }}
+                >
+                  {action.icon ? (
+                    <span className="flex-shrink-0">{action.icon}</span>
+                  ) : null}
+                  <span>{action.label || "Action"}</span>
+                </button>
+              ))}
+            </div>,
+            document.body,
+          )}
+      </div>
     );
   };
 
-  const colCount =
-    safeColumns.length +
-    (shouldShowSerialNumber ? 1 : 0) +
-    (selectable ? 1 : 0) +
-    (rowActions ? 1 : 0);
+  /**
+   * DataTable
+   *
+   * Props:
+   *   columns          {Array<{key, label, render?, sortable?, width?}>}
+   *   data             {Array<object>}
+   *   loading          {boolean}
+   *   totalCount       {number}
+   *   page             {number}
+   *   pageSize         {number}
+   *   onPageChange     {(page: number) => void}
+   *   onSearch         {(q: string) => void}
+   *   searchPlaceholder {string}
+   *   rowKey           {string | (row) => string}  — defaults to "_id"
+   *   actions          {React.ReactNode}            — toolbar actions (buttons etc.)
+   *   emptyText        {string}
+   *   emptyIcon        {React.ReactNode}            — custom empty state icon
+   *   filterBar        {React.ReactNode}            — FilterBar rendered between toolbar and table
+   *   bulkActionBar    {React.ReactNode}            — BulkActionBar rendered above table body
+   *   onSort           {(key, dir) => void}
+   *   sortKey          {string}
+   *   sortDir          {"asc"|"desc"}
+   *   selectable       {boolean}
+   *   selectedKeys     {Array}
+   *   onSelectionChange{(keys) => void}
+   *   onRefresh        {() => void}
+   *   error            {string}
+   *   pageSizeOptions  {number[]}
+   *   onPageSizeChange {(size: number) => void}
+   *   tableContainerClassName {string}
+   *   tableClassName   {string}
+   *   exportConfig     {object}
+   *   importConfig     {object}
+   *   requiredModule   {string}
+   *   onRowClick       {(row) => void}
+   *   rowClassName     {string | (row) => string}
+   *   rowActions       {(row) => Array<{label, icon?, onClick, danger?, disabled?, hidden?}>}
+   *   showSerialNumber {boolean}
+   */
+  const DataTable = ({
+    columns = [],
+    data = [],
+    loading = false,
+    totalCount,
+    total,
+    page = 1,
+    pageSize = 20,
+    onPageChange,
+    onSearch,
+    searchPlaceholder = "Search…",
+    searchWrapperClassName = "",
+    toolbarLeft = null,
+    rowKey = "_id",
+    actions,
+    emptyText = "No records found.",
+    emptyMessage,
+    emptyIcon,
+    filterBar,
+    bulkActionBar,
+    onSort,
+    sortKey,
+    sortDir,
+    selectable = false,
+    selectedKeys = [],
+    onSelectionChange,
+    onRefresh,
+    error,
+    pageSizeOptions = [10, 20, 50, 100],
+    onPageSizeChange,
+    listPage,
+    tableContainerClassName = "",
+    tableClassName = "",
+    cardClassName = "admin-card overflow-hidden border border-[var(--admin-line)] bg-white shadow-sm",
+    exportConfig,
+    importConfig,
+    requiredModule,
+    onRowClick,
+    rowClassName = "",
+    rowActions,
+    showSerialNumber = true,
+  }) => {
+    const [searchValue, setSearchValue] = useState("");
+    const [hasMounted, setHasMounted] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const safeData = Array.isArray(data) ? data : [];
+    const safeColumns = Array.isArray(columns) ? columns : [];
+    const hasSerialColumn = safeColumns.some((column) => {
+      const key = String(column?.key || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+      const label = String(column?.label || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+      return (
+        ["sno", "srno", "serial", "serialnumber"].includes(key) ||
+        ["sno", "srno", "serial", "serialnumber"].includes(label)
+      );
+    });
+    const shouldShowSerialNumber = showSerialNumber && !hasSerialColumn;
+    const resolvedTotalCount = toNonNegativeNumber(
+      totalCount ?? total,
+      safeData.length,
+    );
+    const resolvedPage = toPositiveInteger(listPage?.page ?? page, 1);
+    const resolvedPageSize = toPositiveInteger(
+      listPage?.pageSize ?? pageSize,
+      20,
+    );
+    const resolvedOnPageChange = onPageChange || listPage?.setPage;
+    const resolvedOnPageSizeChange = onPageSizeChange || listPage?.setPageSize;
+    const resolvedOnSearch = onSearch || listPage?.setSearch;
+    const resolvedOnSort = onSort || listPage?.setSort;
+    const resolvedSortKey = sortKey ?? listPage?.sortKey;
+    const resolvedSortDir = sortDir ?? listPage?.sortDir ?? "asc";
+    const resolvedSearchValue = listPage?.search ?? "";
+    const resolvedEmptyText = emptyMessage || emptyText;
+    const totalPages = Math.max(
+      1,
+      Math.ceil(resolvedTotalCount / resolvedPageSize),
+    );
+    const showLoading =
+      loading || (!hasMounted && safeData.length === 0 && !error);
+    const showRefreshLoading = refreshing || loading;
 
-  const tools = (
-    <>
-      {exportConfig && (
-        <ExportButton
-          {...exportConfig}
-          data={Array.isArray(exportConfig.data) ? exportConfig.data : safeData}
-          selectedData={selectedData}
-          columns={
-            Array.isArray(exportConfig.columns)
-              ? exportConfig.columns
-              : safeColumns
-          }
-          requiredModule={requiredModule}
-        />
-      )}
+    useEffect(() => {
+      setHasMounted(true);
+    }, []);
 
-      {importConfig && (
-        <ImportButton {...importConfig} requiredModule={requiredModule} />
-      )}
+    useEffect(() => {
+      setSearchValue(resolvedSearchValue);
+    }, [resolvedSearchValue]);
 
-      {onRefresh && (
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={showRefreshLoading}
-          className="admin-btn-secondary"
-          aria-label={
-            showRefreshLoading ? "Refreshing records" : "Refresh records"
-          }
-          aria-busy={showRefreshLoading}
-        >
-          <MdRefresh
-            aria-hidden="true"
-            size={17}
-            className={showRefreshLoading ? "animate-spin" : ""}
+    const getKey = (row, index) =>
+      typeof rowKey === "function"
+        ? rowKey(row)
+        : (row[rowKey] ?? row.id ?? index);
+
+    const pageKeys = safeData.map((row, index) => getKey(row, index));
+    const allSelected =
+      pageKeys.length > 0 && pageKeys.every((key) => selectedKeys.includes(key));
+    const selectedData = safeData.filter((row, index) =>
+      selectedKeys.includes(getKey(row, index)),
+    );
+
+    useEffect(() => {
+      if (resolvedPage > totalPages && resolvedOnPageChange) {
+        resolvedOnPageChange(totalPages);
+      }
+    }, [resolvedOnPageChange, resolvedPage, totalPages]);
+
+    const handleSearch = (e) => {
+      const v = e.target.value;
+      setSearchValue(v);
+      resolvedOnSearch?.(v);
+    };
+
+    const handleSort = (col) => {
+      if (col.sortable && resolvedOnSort) {
+        resolvedOnSort(
+          col.key,
+          resolvedSortKey === col.key && resolvedSortDir === "asc"
+            ? "desc"
+            : "asc",
+        );
+      }
+    };
+
+    const handleRefresh = async () => {
+      if (!onRefresh || showRefreshLoading) return;
+
+      setRefreshing(true);
+
+      try {
+        await Promise.resolve(onRefresh());
+      } finally {
+        setRefreshing(false);
+      }
+    };
+
+    const getSerialNumber = (index) => {
+      const serialNumber =
+        (resolvedPage - 1) * resolvedPageSize + Number(index) + 1;
+
+      return Number.isFinite(serialNumber) ? serialNumber : Number(index) + 1;
+    };
+
+    const toggleAll = (checked) => {
+      if (!onSelectionChange) return;
+
+      const remaining = selectedKeys.filter((key) => !pageKeys.includes(key));
+
+      onSelectionChange(checked ? [...remaining, ...pageKeys] : remaining);
+    };
+
+    const toggleRow = (key, checked) => {
+      if (!onSelectionChange) return;
+
+      onSelectionChange(
+        checked
+          ? [...new Set([...selectedKeys, key])]
+          : selectedKeys.filter((item) => item !== key),
+      );
+    };
+
+    const colCount =
+      safeColumns.length +
+      (shouldShowSerialNumber ? 1 : 0) +
+      (selectable ? 1 : 0) +
+      (rowActions ? 1 : 0);
+
+    const tools = (
+      <>
+        {exportConfig && (
+          <ExportButton
+            {...exportConfig}
+            data={Array.isArray(exportConfig.data) ? exportConfig.data : safeData}
+            selectedData={selectedData}
+            columns={
+              Array.isArray(exportConfig.columns)
+                ? exportConfig.columns
+                : safeColumns
+            }
+            requiredModule={requiredModule}
           />
+        )}
 
-          {showRefreshLoading ? "Refreshing..." : "Refresh"}
-        </button>
-      )}
+        {importConfig && (
+          <ImportButton {...importConfig} requiredModule={requiredModule} />
+        )}
 
-      {actions}
-    </>
-  );
+        {onRefresh && (
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={showRefreshLoading}
+            className="admin-btn-secondary"
+            aria-label={
+              showRefreshLoading ? "Refreshing records" : "Refresh records"
+            }
+            aria-busy={showRefreshLoading}
+          >
+            <MdRefresh
+              aria-hidden="true"
+              size={17}
+              className={showRefreshLoading ? "animate-spin" : ""}
+            />
 
-  return (
-    <div className={cardClassName}>
-      {/* Search + toolbar */}
-      {(resolvedOnSearch ||
-        toolbarLeft ||
-        actions ||
-        exportConfig ||
-        importConfig ||
-        onRefresh) && (
-        <div className="flex flex-col gap-3 border-b border-[var(--admin-line)] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
-          {(resolvedOnSearch || toolbarLeft) && (
-            <div className="flex flex-1 flex-col gap-3 min-w-0 sm:flex-row sm:items-center">
-              {resolvedOnSearch && (
-                <div
-                  className={
-                    searchWrapperClassName ||
-                    "w-full min-w-0 sm:max-w-2xl sm:flex-1"
-                  }
-                >
-                  <SearchInput
-                    searchTerm={searchValue}
-                    handleChange={handleSearch}
-                    placeholder={searchPlaceholder}
-                  />
-                </div>
-              )}
-              {toolbarLeft}
-            </div>
-          )}
+            {showRefreshLoading ? "Refreshing..." : "Refresh"}
+          </button>
+        )}
 
-          <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:justify-end">
-            {tools}
-          </div>
-        </div>
-      )}
+        {actions}
+      </>
+    );
 
-      {/* Filter bar slot */}
-      {filterBar}
-
-      {/* Bulk action bar slot */}
-      {bulkActionBar && <div className="px-4 pt-3">{bulkActionBar}</div>}
-
-      {/* Table */}
-      <div
-        className={`admin-table-scroll ${
-          tableContainerClassName || "overflow-x-auto overscroll-x-contain"
-        }`}
-      >
-        <table
-          className={`min-w-full whitespace-nowrap text-sm ${tableClassName}`}
-        >
-          <thead className="admin-table-head">
-            <tr>
-              {selectable && (
-                <th
-                  className="w-10 px-4 py-3 text-left"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <CustomCheckbox
-                    checked={allSelected}
-                    onChange={(event) => toggleAll(event.target.checked)}
-                  />
-                </th>
-              )}
-
-              {shouldShowSerialNumber && (
-                <th className="w-16 whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--admin-navy)]">
-                  S.No
-                </th>
-              )}
-
-              {safeColumns.map((col, columnIndex) => (
-                <th
-                  key={`${col.key}-${columnIndex}`}
-                  className={`whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--admin-navy)] ${
-                    col.sortable
-                      ? "cursor-pointer select-none hover:text-[var(--admin-blue)]"
-                      : ""
-                  } ${col.width ? `w-${col.width}` : ""} ${
-                    col.headerClassName || ""
-                  }`}
-                  onClick={() => handleSort(col)}
-                >
-                  <span
-                    className={`flex items-center gap-1 ${
-                      col.headerClassName?.includes("text-center")
-                        ? "justify-center"
-                        : col.headerClassName?.includes("text-right")
-                          ? "justify-end"
-                          : ""
-                    }`}
-                  >
-                    {col.label}
-
-                    {col.sortable && (
-                      <MdUnfoldMore
-                        aria-hidden="true"
-                        size={14}
-                        className={
-                          resolvedSortKey === col.key
-                            ? "text-[var(--admin-gold)]"
-                            : "text-[var(--admin-muted)]"
-                        }
-                      />
-                    )}
-                  </span>
-                </th>
-              ))}
-
-              {rowActions && (
-                <th className="w-16 whitespace-nowrap px-4 py-3 text-right text-xs font-semibold text-[var(--admin-navy)]">
-                  ACTIONS
-                </th>
-              )}
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-[#f0e8dc] bg-white">
-            {showLoading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <SkeletonRow key={i} cols={colCount} />
-              ))
-            ) : error ? (
-              <tr>
-                <td
-                  colSpan={colCount}
-                  className="px-4 py-12 text-center text-sm"
-                >
-                  <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-5 text-red-600">
-                    <span className="text-sm font-semibold">
-                      Unable to load records
-                    </span>
-
-                    <span className="text-xs text-red-500">{error}</span>
-
-                    {onRefresh && (
-                      <button
-                        type="button"
-                        onClick={onRefresh}
-                        className="mt-1 rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
-                      >
-                        Retry
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ) : safeData.length === 0 ? (
-              <tr>
-                <td colSpan={colCount}>
-                  <div className="mx-auto flex flex-col items-center gap-2 rounded-lg bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
-                    <img
-                      src="/Img/noData.png"
-                      alt="No records"
-                      className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
-                    />
-
-                    {React.isValidElement(resolvedEmptyText) ? (
-                      resolvedEmptyText
-                    ) : (
-                      <span className="text-sm font-medium">
-                        {formatLabel(resolvedEmptyText)}
-                      </span>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              safeData.map((row, index) => (
-                <tr
-                  key={getKey(row, index)}
-                  onClick={() => onRowClick?.(row)}
-                  onKeyDown={(event) => {
-                    if (!onRowClick) return;
-
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onRowClick(row);
+    return (
+      <div className={cardClassName}>
+        {/* Search + toolbar */}
+        {(resolvedOnSearch ||
+          toolbarLeft ||
+          actions ||
+          exportConfig ||
+          importConfig ||
+          onRefresh) && (
+          <div className="flex flex-col gap-3 border-b border-[var(--admin-line)] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+            {(resolvedOnSearch || toolbarLeft) && (
+              <div className="flex flex-1 flex-col gap-3 min-w-0 sm:flex-row sm:items-center">
+                {resolvedOnSearch && (
+                  <div
+                    className={
+                      searchWrapperClassName ||
+                      "w-full min-w-0 sm:max-w-2xl sm:flex-1"
                     }
-                  }}
-                  tabIndex={onRowClick ? 0 : undefined}
-                  role={onRowClick ? "button" : undefined}
-                  className={`align-middle transition-colors hover:bg-[var(--admin-surface-soft)] ${
-                    onRowClick
-                      ? "cursor-pointer focus:bg-[var(--admin-surface-soft)] focus:outline-none"
-                      : ""
-                  } ${
-                    typeof rowClassName === "function"
-                      ? rowClassName(row)
-                      : rowClassName
-                  }`}
-                >
-                  {/* Row Selection Checkbox */}
-                  {selectable && (
-                    <td
-                      className="px-4 py-3 !align-middle"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <CustomCheckbox
-                        checked={selectedKeys.includes(getKey(row, index))}
-                        onChange={(event) =>
-                          toggleRow(getKey(row, index), event.target.checked)
-                        }
-                      />
-                    </td>
-                  )}
+                  >
+                    <SearchInput
+                      searchTerm={searchValue}
+                      handleChange={handleSearch}
+                      placeholder={searchPlaceholder}
+                    />
+                  </div>
+                )}
+                {toolbarLeft}
+              </div>
+            )}
 
-                  {shouldShowSerialNumber && (
-                    <td className="w-16 px-4 py-3 !align-middle font-medium text-[var(--admin-muted)]">
-                      <div className="flex min-h-[32px] items-center">
-                        {getSerialNumber(index)}.
-                      </div>
-                    </td>
-                  )}
+            <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0 sm:justify-end">
+              {tools}
+            </div>
+          </div>
+        )}
 
-                  {safeColumns.map((col, columnIndex) => (
-                    <td
-                      key={`${col.key}-${columnIndex}`}
-                      className={`px-4 py-3 !align-middle text-[var(--admin-ink)] ${
-                        col.cellClassName || ""
+        {/* Filter bar slot */}
+        {filterBar}
+
+        {/* Bulk action bar slot */}
+        {bulkActionBar && <div className="px-4 pt-3">{bulkActionBar}</div>}
+
+        {/* Table */}
+        <div
+          className={`admin-table-scroll ${
+            tableContainerClassName || "overflow-x-auto overscroll-x-contain"
+          }`}
+        >
+          <table
+            className={`min-w-full whitespace-nowrap text-sm ${tableClassName}`}
+          >
+            <thead className="admin-table-head">
+              <tr>
+                {selectable && (
+                  <th
+                    className="w-10 px-4 py-3 text-left"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <CustomCheckbox
+                      checked={allSelected}
+                      onChange={(event) => toggleAll(event.target.checked)}
+                    />
+                  </th>
+                )}
+
+                {shouldShowSerialNumber && (
+                  <th className="w-16 whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--admin-navy)]">
+                    S.No
+                  </th>
+                )}
+
+                {safeColumns.map((col, columnIndex) => (
+                  <th
+                    key={`${col.key}-${columnIndex}`}
+                    className={`whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--admin-navy)] ${
+                      col.sortable
+                        ? "cursor-pointer select-none hover:text-[var(--admin-blue)]"
+                        : ""
+                    } ${col.width ? `w-${col.width}` : ""} ${
+                      col.headerClassName || ""
+                    }`}
+                    onClick={() => handleSort(col)}
+                  >
+                    <span
+                      className={`flex items-center gap-1 ${
+                        col.headerClassName?.includes("text-center")
+                          ? "justify-center"
+                          : col.headerClassName?.includes("text-right")
+                            ? "justify-end"
+                            : ""
                       }`}
                     >
-                      <div className="flex min-h-[32px] items-center">
-                        {renderCellValue(
-                          col.render
-                            ? col.render(row[col.key], row, index)
-                            : row[col.key],
-                        )}
-                      </div>
-                    </td>
-                  ))}
+                      {col.label}
 
-                  {rowActions && (
-                    <td className="px-4 py-3 align-middle">
-                      <div className="flex h-full items-center justify-end">
-                        <RowActionsMenu
-                          actions={rowActions(row)}
-                          rowLabel={
-                            row.full_name ||
-                            row.name ||
-                            row.title ||
-                            getKey(row, index)
+                      {col.sortable && (
+                        <MdUnfoldMore
+                          aria-hidden="true"
+                          size={14}
+                          className={
+                            resolvedSortKey === col.key
+                              ? "text-[var(--admin-gold)]"
+                              : "text-[var(--admin-muted)]"
                           }
                         />
-                      </div>
-                    </td>
-                  )}
+                      )}
+                    </span>
+                  </th>
+                ))}
+
+                {rowActions && (
+                  <th className="w-16 whitespace-nowrap px-4 py-3 text-right text-xs font-semibold text-[var(--admin-navy)]">
+                    ACTIONS
+                  </th>
+                )}
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-[#f0e8dc] bg-white">
+              {showLoading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <SkeletonRow key={i} cols={colCount} />
+                ))
+              ) : error ? (
+                <tr>
+                  <td
+                    colSpan={colCount}
+                    className="px-4 py-12 text-center text-sm"
+                  >
+                    <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-5 text-red-600">
+                      <span className="text-sm font-semibold">
+                        Unable to load records
+                      </span>
+
+                      <span className="text-xs text-red-500">{error}</span>
+
+                      {onRefresh && (
+                        <button
+                          type="button"
+                          onClick={onRefresh}
+                          className="mt-1 rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                        >
+                          Retry
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : safeData.length === 0 ? (
+                <tr>
+                  <td colSpan={colCount}>
+                    <div className="mx-auto flex flex-col items-center gap-2 rounded-lg bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
+                      <img
+                        src="/Img/noData.png"
+                        alt="No records"
+                        className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
+                      />
 
-      {/* Pagination */}
-      {(totalPages > 1 || resolvedOnPageSizeChange) && (
-        <div className="flex flex-col gap-3 border-t border-[var(--admin-line)] bg-white px-3 py-3 text-sm text-[var(--admin-muted)] sm:flex-row sm:items-center sm:justify-between sm:px-4">
-          <span className="text-xs font-medium">
-            Showing{" "}
-            {resolvedTotalCount
-              ? Math.min(
-                  (resolvedPage - 1) * resolvedPageSize + 1,
-                  resolvedTotalCount,
-                )
-              : 0}
-            –{Math.min(resolvedPage * resolvedPageSize, resolvedTotalCount)} of{" "}
-            {resolvedTotalCount}
-          </span>
+                      {React.isValidElement(resolvedEmptyText) ? (
+                        resolvedEmptyText
+                      ) : (
+                        <span className="text-sm font-medium">
+                          {formatLabel(resolvedEmptyText)}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                safeData.map((row, index) => (
+                  <tr
+                    key={getKey(row, index)}
+                    onClick={() => onRowClick?.(row)}
+                    onKeyDown={(event) => {
+                      if (!onRowClick) return;
 
-          <Pagination
-            totalPages={totalPages}
-            currentPage={resolvedPage}
-            onPageChange={resolvedOnPageChange}
-            pageSize={resolvedPageSize}
-            pageSizeOptions={pageSizeOptions}
-            onPageSizeChange={resolvedOnPageSizeChange}
-            compact
-          />
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onRowClick(row);
+                      }
+                    }}
+                    tabIndex={onRowClick ? 0 : undefined}
+                    role={onRowClick ? "button" : undefined}
+                    className={`align-middle transition-colors hover:bg-[var(--admin-surface-soft)] ${
+                      onRowClick
+                        ? "cursor-pointer focus:bg-[var(--admin-surface-soft)] focus:outline-none"
+                        : ""
+                    } ${
+                      typeof rowClassName === "function"
+                        ? rowClassName(row)
+                        : rowClassName
+                    }`}
+                  >
+                    {/* Row Selection Checkbox */}
+                    {selectable && (
+                      <td
+                        className="px-4 py-3 !align-middle"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <CustomCheckbox
+                          checked={selectedKeys.includes(getKey(row, index))}
+                          onChange={(event) =>
+                            toggleRow(getKey(row, index), event.target.checked)
+                          }
+                        />
+                      </td>
+                    )}
+
+                    {shouldShowSerialNumber && (
+                      <td className="w-16 px-4 py-3 !align-middle font-medium text-[var(--admin-muted)]">
+                        <div className="flex min-h-[32px] items-center">
+                          {getSerialNumber(index)}.
+                        </div>
+                      </td>
+                    )}
+
+                    {safeColumns.map((col, columnIndex) => (
+                      <td
+                        key={`${col.key}-${columnIndex}`}
+                        className={`px-4 py-3 !align-middle text-[var(--admin-ink)] ${
+                          col.cellClassName || ""
+                        }`}
+                      >
+                        <div className="flex min-h-[32px] items-center">
+                          {renderCellValue(
+                            col.render
+                              ? col.render(row[col.key], row, index)
+                              : row[col.key],
+                          )}
+                        </div>
+                      </td>
+                    ))}
+
+                    {rowActions && (
+                      <td className="px-4 py-3 align-middle">
+                        <div className="flex h-full items-center justify-end">
+                          <RowActionsMenu
+                            actions={rowActions(row)}
+                            rowLabel={
+                              row.full_name ||
+                              row.name ||
+                              row.title ||
+                              getKey(row, index)
+                            }
+                          />
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
-    </div>
-  );
-};
 
-export default DataTable;
+        {/* Pagination */}
+        {(totalPages > 1 || resolvedOnPageSizeChange) && (
+          <div className="flex flex-col gap-3 border-t border-[var(--admin-line)] bg-white px-3 py-3 text-sm text-[var(--admin-muted)] sm:flex-row sm:items-center sm:justify-between sm:px-4">
+            <span className="text-xs font-medium">
+              Showing{" "}
+              {resolvedTotalCount
+                ? Math.min(
+                    (resolvedPage - 1) * resolvedPageSize + 1,
+                    resolvedTotalCount,
+                  )
+                : 0}
+              –{Math.min(resolvedPage * resolvedPageSize, resolvedTotalCount)} of{" "}
+              {resolvedTotalCount}
+            </span>
+
+            <Pagination
+              totalPages={totalPages}
+              currentPage={resolvedPage}
+              onPageChange={resolvedOnPageChange}
+              pageSize={resolvedPageSize}
+              pageSizeOptions={pageSizeOptions}
+              onPageSizeChange={resolvedOnPageSizeChange}
+              compact
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  export default DataTable;

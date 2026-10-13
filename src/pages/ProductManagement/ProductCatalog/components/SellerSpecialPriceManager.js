@@ -786,11 +786,10 @@ const SellerSpecialPriceManager = () => {
 
               <button
                 type="button"
-                className={`text-xs ${
-                  productImages.length
-                    ? "text-blue-500 hover:underline"
-                    : "cursor-not-allowed text-gray-400"
-                }`}
+                className={`text-xs ${productImages.length
+                  ? "text-blue-500 hover:underline"
+                  : "cursor-not-allowed text-gray-400"
+                  }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleImageClick(productImages);
@@ -803,38 +802,47 @@ const SellerSpecialPriceManager = () => {
           );
         },
       },
-      ,
+
+
       {
         key: "title",
         label: "Product",
         sortable: true,
-        render: (_, row) => (
-          <div className="special-price-product-cell">
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  `/app/seller-special-price-manager/${row._id || row.id}`,
-                )
-              }
-              className="special-price-product-name text-left font-semibold text-[var(--admin-ink)] hover:text-[var(--admin-blue)] hover:underline focus:outline-none"
-            >
-              {row.title || row.name || "Untitled Product"}
-            </button>
-            <span className="special-price-product-sku text-xs text-gray-500">
-              {row.sku || "No SKU"}
-            </span>
-          </div>
-        ),
+        render: (_, row) => {
+          const productName = row.title || row.name || "Untitled Product";
+
+          return (
+            <div className="special-price-product-cell min-w-0">
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(`/app/seller-special-price-manager/${row._id || row.id}`)
+                }
+                title={productName}
+                className="block max-w-[180px] truncate text-left font-semibold text-[var(--admin-ink)] hover:text-[var(--admin-blue)] hover:underline focus:outline-none"
+              >
+                {productName}
+              </button>
+
+              <span
+                className="special-price-product-sku block max-w-[220px] truncate text-xs text-gray-500"
+                title={row.sku || "No SKU"}
+              >
+                {row.sku || "No SKU"}
+              </span>
+            </div>
+          );
+        },
       },
+
       ...(!sellerView
         ? [
-            {
-              key: "seller",
-              label: "Seller",
-              render: (_, row) => <SellerIdentity row={row} />,
-            },
-          ]
+          {
+            key: "seller",
+            label: "Seller",
+            render: (_, row) => <SellerIdentity row={row} />,
+          },
+        ]
         : []),
       {
         key: "category",
@@ -991,11 +999,10 @@ const SellerSpecialPriceManager = () => {
                   value={value ?? ""}
                   onChange={(e) => handleRowChange(row.id, e.target.value)}
                   placeholder="Enter price"
-                  className={`w-36 rounded-lg border py-1.5 pl-6 pr-2 text-sm font-mono transition-colors ${
-                    hasError
-                      ? "border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                      : "border-gray-300 bg-white focus:border-[var(--admin-blue)] focus:ring-1 focus:ring-[var(--admin-blue)]"
-                  }`}
+                  className={`w-36 rounded-lg border py-1.5 pl-6 pr-2 text-sm font-mono transition-colors ${hasError
+                    ? "border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                    : "border-gray-300 bg-white focus:border-[var(--admin-blue)] focus:ring-1 focus:ring-[var(--admin-blue)]"
+                    }`}
                 />
               </div>
               {hasError && (
@@ -1048,7 +1055,7 @@ const SellerSpecialPriceManager = () => {
         <PageHeader
           title="Special Price Management"
           subtitle="Set and update special promotional prices for product variants"
-         
+
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -1062,7 +1069,7 @@ const SellerSpecialPriceManager = () => {
               <button
                 type="button"
                 onClick={handleExport}
-                // className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+              // className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
               >
                 Export Template
               </button>
@@ -1071,7 +1078,7 @@ const SellerSpecialPriceManager = () => {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={importing}
-                // className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
+              // className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
                 {importing ? "Importing..." : "Import Excel"}
               </button>
@@ -1087,9 +1094,8 @@ const SellerSpecialPriceManager = () => {
                 type="button"
                 onClick={handleSave}
                 disabled={!canSave}
-                className={`${
-                  canSave ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-                }`}
+                className={`${canSave ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+                  }`}
               >
                 {saving
                   ? "Saving..."
@@ -1227,7 +1233,7 @@ const SellerSpecialPriceManager = () => {
       <PageHeader
         title="Special Price Management"
         subtitle="Manage promotional special prices for seller products and variants"
-          breadcrumbs={[
+        breadcrumbs={[
           { label: sellerView ? "Catalog" : "Catalog Management" },
           { label: "Special Price Management" },
         ]}

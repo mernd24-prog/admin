@@ -153,6 +153,30 @@ export default function FinanceOverview() {
       "paid",
     ],
   ];
+
+const EmptyPanel = ({
+  title = "No data found",
+  text = "No data returned for this period.",
+}) => (
+  <div className="mx-auto flex flex-col items-center gap-2 rounded-lg bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
+    <img
+      src="/Img/noData.png"
+      alt="No data"
+      className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
+    />
+
+    <h4 className="text-sm font-medium text-gray-500">
+      {title}
+    </h4>
+
+    {text && (
+      <p className="text-xs text-gray-400">
+        {text}
+      </p>
+    )}
+  </div>
+);
+
   return (
     <div className="space-y-5">
       <Loader loading={Boolean(state.loading)} />
@@ -172,7 +196,10 @@ export default function FinanceOverview() {
               disabled={Boolean(state.loading)}
               area-busy={Boolean(state.loading)}
             >
-              <MdRefresh   aria-hidden="true" className={state.loading ? "animate-spin" : ""} />
+              <MdRefresh
+                aria-hidden="true"
+                className={state.loading ? "animate-spin" : ""}
+              />
               {state.loading ? "Refreshing..." : "Refresh"}
             </button>
           </div>
@@ -260,9 +287,14 @@ export default function FinanceOverview() {
               ["Awaiting delivery", codReconciliation.awaitingDeliveryOrders],
               ["Cash liabilities", codReconciliation.ordersWithLiability],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-lg bg-[var(--admin-soft)] p-3">
+              <div
+                key={label}
+                className="rounded-lg bg-[var(--admin-soft)] p-3"
+              >
                 <strong className="block text-lg">{value || 0}</strong>
-                <span className="text-xs text-[var(--admin-muted)]">{label}</span>
+                <span className="text-xs text-[var(--admin-muted)]">
+                  {label}
+                </span>
               </div>
             ))}
           </div>
@@ -380,8 +412,8 @@ export default function FinanceOverview() {
                 <p className="mt-1 text-xs text-[var(--admin-muted)]">
                   This was recorded automatically from delivered COD orders.
                   Confirm retained cash, report remittance, or dispute an
-                  incorrect entry. It reduces available or future earnings
-                  until resolved.
+                  incorrect entry. It reduces available or future earnings until
+                  resolved.
                 </p>
               </div>
               <MdArrowForward aria-hidden="true" />
@@ -413,14 +445,16 @@ export default function FinanceOverview() {
           )}
         </section>
       )}
+
       <section className="admin-card overflow-hidden">
         <div className="flex items-center justify-between border-b border-[var(--admin-line)] px-5 py-4">
           <div>
-            <h2 className="font-semibold text-xl">RECENT MONEY ACTIVITY</h2>
+            <h2 className="font-semibold text-xl">Recent Money Activity</h2>
             <p className="mt-1 text-xs text-[var(--admin-muted)]">
               The latest changes to your earnings.
             </p>
           </div>
+
           <button
             type="button"
             className="text-sm font-semibold text-blue-700"
@@ -429,10 +463,12 @@ export default function FinanceOverview() {
             View all activity
           </button>
         </div>
+
         {items.length ? (
           <div className="divide-y divide-[var(--admin-line)]">
             {items.slice(0, 6).map((item) => {
               const status = sellerFinanceStatus(item);
+
               return (
                 <button
                   type="button"
@@ -450,15 +486,18 @@ export default function FinanceOverview() {
                       {status.detail}
                     </span>
                   </div>
+
                   <strong className="whitespace-nowrap tabular-nums lg:text-right">
                     {financeMoney(
                       item.netAmount ?? item.net_amount,
                       item.currency || currency,
                     )}
                   </strong>
+
                   <div className="flex justify-end lg:justify-center">
                     <FinanceStatusBadge row={item} />
                   </div>
+
                   <span className="col-span-2 text-xs tabular-nums text-[var(--admin-muted)] lg:col-span-1 lg:text-right">
                     {financeDateTime(item.eligibleAt || item.updatedAt)}
                   </span>
@@ -467,9 +506,10 @@ export default function FinanceOverview() {
             })}
           </div>
         ) : (
-          <div className="px-5 py-10 text-center text-sm text-[var(--admin-muted)]">
-            No money activity yet.
-          </div>
+          <EmptyPanel
+            title="No money activity yet."
+            text="No earnings activity found for the selected period."
+          />
         )}
       </section>
     </div>

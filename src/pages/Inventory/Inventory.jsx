@@ -10,6 +10,7 @@ import {
   MdFileDownload,
   MdFileUpload,
   MdInventory2,
+  MdKeyboardArrowDown,
   MdOpenInNew,
   MdRemove,
   MdRefresh,
@@ -1604,27 +1605,33 @@ const Inventory = () => {
   );
 
   const importHelp = (
-    <details className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-[11px] text-gray-600">
-      <summary className="cursor-pointer text-xs font-semibold text-gray-900">Import &amp; Export Guide</summary>
-      <p className="mt-2.5 font-semibold text-gray-800">How stock import works</p>
-      <ol className="mt-1 list-decimal space-y-0.5 pl-5">
-        <li>
-          Export the latest Excel template. Every product variant is a separate
-          row.
-        </li>
-        <li>
-          Edit only <code className="font-semibold">newStock</code> using a
-          whole number of 0 or more.
-        </li>
-        <li>
-          Import the file. Product IDs, SKUs, names, current stock, and every
-          other column are read-only and are validated.
-        </li>
-      </ol>
-      <p className="mt-2 text-xs">
-        Rows with unchanged stock are skipped. Stock cannot be lower than
-        already reserved stock.
-      </p>
+    <details className="mb-4 overflow-hidden rounded-xl border border-[#b7d7ef] bg-[#edf7ff] text-[12px] text-slate-600 shadow-sm" open>
+      <summary className="flex cursor-pointer list-none items-center gap-2 bg-[#eaf4fe] px-4 py-3 text-sm font-bold text-slate-800 marker:content-none [&::-webkit-details-marker]:hidden">
+        <MdKeyboardArrowDown aria-hidden="true" size={16} className="text-slate-700" />
+        <span>Import &amp; Export Guide</span>
+      </summary>
+
+      <div className="px-4 py-3">
+        <p className="font-semibold text-slate-800">How stock import works</p>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 leading-relaxed">
+          <li> 
+            Export the latest Excel template. Every product variant is a separate
+            row.
+          </li>
+          <li>
+            Edit only <code className="font-semibold text-slate-800">newStock</code> using a
+            whole number of 0 or more.
+          </li>
+          <li>
+            Import the file. Product IDs, SKUs, names, current stock, and every
+            other column are read-only and are validated.
+          </li>
+        </ol>
+        <p className="mt-2 text-[12px] leading-relaxed text-slate-600">
+          Rows with unchanged stock are skipped. Stock cannot be lower than
+          already reserved stock.
+        </p>
+      </div>
     </details>
   );
 

@@ -280,16 +280,22 @@ const EmptyPanel = ({
   title = "No data found",
   text = "No data returned for this period.",
 }) => (
-  <div className="flex min-h-[190px] items-center justify-center rounded-lg border border-dashed border-[var(--admin-line-strong)] bg-[var(--admin-surface-soft)] p-5 text-center">
-    <div className="max-w-sm">
-      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-[var(--admin-gold-dark)] shadow-sm">
-        <FaChartLine size={28} />
-      </span>
-      <h4 className="mt-3 text-[13px] font-bold text-[var(--admin-navy)]">
-        {title}
-      </h4>
-      <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">{text}</p>
-    </div>
+  <div className="mx-auto flex flex-col items-center gap-2 rounded-lg bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
+    <img
+      src="/Img/noData.png"
+      alt="No data"
+      className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
+    />
+
+    <h4 className="text-sm font-medium text-gray-500">
+      {title}
+    </h4>
+
+    {text && (
+      <p className="text-xs text-gray-400">
+        {text}
+      </p>
+    )}
   </div>
 );
 
@@ -339,7 +345,6 @@ const ReportTable = ({
   return (
     <div className="admin-card overflow-hidden border-[var(--admin-line)] shadow-[0_10px_28px_rgba(31,27,95,0.06)]">
       <div className="flex items-center gap-3 border-b border-[var(--admin-line)] bg-white px-4 py-3.5">
-        <span className="h-6 w-1 rounded-full bg-[var(--admin-gold)]" />
         <h3 className="text-[14px] font-bold text-[var(--admin-navy)]">
           {title}
         </h3>
@@ -989,10 +994,9 @@ const PerformanceOverview = ({
     <div className="admin-card overflow-hidden border-[var(--admin-line)] bg-white p-4 shadow-[0_12px_34px_rgba(31,27,95,0.06)]">
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--admin-line)] pb-3.5">
         <div>
-          <h3 className="text-[17px] font-extrabold leading-tight text-[var(--admin-navy)] sm:text-[20px]">
-            {title}
-          </h3>
-          <span className="mt-2.5 block h-0.5 w-12 rounded-full bg-[var(--admin-gold)]" />
+          <h3 className="text-[14px] font-bold text-[var(--admin-navy)]">
+          {title}
+        </h3>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-[var(--admin-muted)]">
           <span className="inline-flex items-center gap-2">
@@ -1212,10 +1216,10 @@ const SummaryColumnChart = ({ title, items = [] }) => {
   return (
     <div className="admin-card overflow-hidden border-[var(--admin-line)] bg-white p-4 shadow-[0_12px_34px_rgba(31,27,95,0.06)]">
       <div className="border-b border-[var(--admin-line)] pb-3.5">
-        <h3 className="text-[17px] font-extrabold leading-tight text-[var(--admin-navy)] sm:text-[20px]">
+        <h3 className="text-[14px] font-bold leading-tight text-[var(--admin-navy)] sm:text-[20px]">
           {title}
         </h3>
-        <span className="mt-2.5 block h-0.5 w-12 rounded-full bg-[var(--admin-gold)]" />
+       
       </div>
 
       {loading ? (

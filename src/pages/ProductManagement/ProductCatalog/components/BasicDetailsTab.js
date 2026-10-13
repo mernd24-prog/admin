@@ -2106,37 +2106,44 @@ const submitBrandRequest = async (values) => {
               </div>
 
               <div className="mb-4 grid gap-4 md:grid-cols-2">
-                <Input
-                  labelName="Warranty Period"
-                  name="warranty.period"
-                  type="number"
-                  min={0}
-                  value={formData.warranty?.period ?? ""}
-                  onChange={(event) =>
-                    handleNestedChange("warranty.period", event.target.value)
-                  }
-                  placeholder="Example: 12"
-                />
+                <div className="md:col-span-2">
+                  <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+                    <Input
+                      labelName="Warranty Period"
+                      name="warranty.period"
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={formData.warranty?.period ?? ""}
+                      onChange={(event) =>
+                        handleNestedChange("warranty.period", event.target.value)
+                      }
+                      placeholder="Example: 12"
+                      helperText="Use a value between 1 and 365."
+                    />
 
-                <FilterSelect
-                  label="Warranty Unit"
-                  value={
-                    warrantyUnits.options.find(
-                      (option) =>
-                        option.value === formData.warranty?.periodUnit,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    handleNestedChange(
-                      "warranty.periodUnit",
-                      option?.value || "",
-                    )
-                  }
-                  options={warrantyUnits.options}
-                  placeholder="Select warranty unit"
-                  isLoading={warrantyUnits.loading}
-                  isClearable
-                />
+                    <FilterSelect
+                      label="Warranty Unit"
+                      value={
+                        warrantyUnits.options.find(
+                          (option) =>
+                            option.value === formData.warranty?.periodUnit,
+                        ) || null
+                      }
+                      onChange={(option) =>
+                        handleNestedChange(
+                          "warranty.periodUnit",
+                          option?.value || "",
+                        )
+                      }
+                      options={warrantyUnits.options}
+                      placeholder="Select warranty unit"
+                      isLoading={warrantyUnits.loading}
+                      isClearable
+                    />
+                  </div>
+                </div>
+
                 <FilterSelect
                   label="Warranty Provider"
                   value={
@@ -2198,44 +2205,46 @@ const submitBrandRequest = async (values) => {
                   </p>
                 </div>
 
-                <div className="shrink-0 rounded-full bg-[var(--admin-surface-soft)] px-3 py-2">
-                  <Input
-                    className="!mb-0"
-                    labelName="Returnable"
-                    name="warranty.returnPolicy.returnable"
-                    type="switch"
-                    value={isReturnable}
-                    onChange={(eventOrValue) => {
-                      const checked =
-                        typeof eventOrValue === "boolean"
-                          ? eventOrValue
-                          : Boolean(eventOrValue?.target?.checked);
-
-                      handleNestedChange(
-                        "warranty.returnPolicy.returnable",
-                        checked,
-                      );
-
-                      handleNestedChange(
-                        "warranty.returnPolicy.eligible",
-                        checked,
-                      );
-
-                      handleNestedChange(
-                        "warranty.returnPolicy.type",
-                        checked ? "standard" : "non_returnable",
-                      );
-
-                      if (!checked) {
-                        handleNestedChange("warranty.returnPolicy.days", 0);
+                <div className="shrink-0">
+                  <div className="flex items-center justify-end rounded-full border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2">
+                    <Input
+                      className="!mb-0"
+                      labelName="Returnable"
+                      name="warranty.returnPolicy.returnable"
+                      type="switch"
+                      value={isReturnable}
+                      onChange={(eventOrValue) => {
+                        const checked =
+                          typeof eventOrValue === "boolean"
+                            ? eventOrValue
+                            : Boolean(eventOrValue?.target?.checked);
 
                         handleNestedChange(
-                          "warranty.returnPolicy.returnWindowDays",
-                          0,
+                          "warranty.returnPolicy.returnable",
+                          checked,
                         );
-                      }
-                    }}
-                  />
+
+                        handleNestedChange(
+                          "warranty.returnPolicy.eligible",
+                          checked,
+                        );
+
+                        handleNestedChange(
+                          "warranty.returnPolicy.type",
+                          checked ? "standard" : "non_returnable",
+                        );
+
+                        if (!checked) {
+                          handleNestedChange("warranty.returnPolicy.days", 0);
+
+                          handleNestedChange(
+                            "warranty.returnPolicy.returnWindowDays",
+                            0,
+                          );
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -2244,11 +2253,17 @@ const submitBrandRequest = async (values) => {
                   labelName="Return Window Days"
                   name="warranty.returnPolicy.returnWindowDays"
                   type="number"
-                  min={0}
+                  min={1}
                   max={365}
                   disabled={!isReturnable}
                   value={
                     formData.warranty?.returnPolicy?.returnWindowDays ?? ""
+                  }
+                  error={errors?.returnWindowDays}
+                  helperText={
+                    isReturnable
+                      ? "Use a return window between 1 and 365 days."
+                      : "Enable Returnable to set the return window."
                   }
                   onChange={(event) => {
                     const value =
@@ -2256,12 +2271,14 @@ const submitBrandRequest = async (values) => {
                         ? ""
                         : Number(event.target.value);
 
+                    const nextValue = Number.isNaN(value) ? 0 : value;
+
                     handleNestedChange(
                       "warranty.returnPolicy.returnWindowDays",
-                      value,
+                      nextValue,
                     );
 
-                    handleNestedChange("warranty.returnPolicy.days", value);
+                    handleNestedChange("warranty.returnPolicy.days", nextValue);
                   }}
                 />
 

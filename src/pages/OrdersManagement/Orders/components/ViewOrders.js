@@ -1928,7 +1928,7 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
   <div className="overflow-hidden rounded-xl border border-[#eadfbd] bg-white">
     <div className="bg-[#fff9ea] px-4 py-3">
       <div className="text-sm font-bold text-[#202337]">
-        Seller payout by product
+        Seller Payout by Product
       </div>
       <div className="mt-1 text-xs text-[#65718b]">
         Simple view: original payout, reversed amount, and final payable.
@@ -2385,7 +2385,7 @@ const RelatedCard = ({
         </div>
 
         {subtitle && (
-          <div className="mt-0.5 text-xs text-[#65718b]">{subtitle}</div>
+          <div className="uppercase mt-0.5 text-xs text-[#65718b]">{subtitle}</div>
         )}
       </div>
 
@@ -2507,7 +2507,7 @@ const ShipmentCard = ({ shipment = {}, seller, onManage, onDownloadLabel }) => {
               className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-semibold text-[#2f6fed] hover:bg-[#f3f6ff]"
               onClick={onManage}
             >
-              Manage shipment
+              Manage Shipment
             </button>
           )}
         </div>
@@ -2620,7 +2620,7 @@ const DocumentCard = ({ document = {}, onOpen }) => {
             className="rounded-md border border-[#2f6fed] bg-white px-3 py-1.5 text-xs font-semibold text-[#2f6fed] hover:bg-[#f3f6ff]"
             onClick={onOpen}
           >
-            Open document
+            Open Document
           </button>
         </div>
       )}
@@ -3649,7 +3649,7 @@ const OrderSummary = () => {
                                 )}
                               </div>
                               <div className="text-xs text-[#65718b]">
-                                GST included:{" "}
+                                GST Included:{" "}
                                 {formatIndianNumber(
                                   firstDefined(
                                     itemTax.taxAmount,
@@ -3810,7 +3810,7 @@ const OrderSummary = () => {
                       ? orderTaxRates.map(percent).join(", ")
                       : "N/A"}
                     {money(taxBreakup.taxableAmount) > 0
-                      ? ` · Taxable value: ${formatIndianNumber(taxBreakup.taxableAmount)}`
+                      ? ` · Taxable Value: ${formatIndianNumber(taxBreakup.taxableAmount)}`
                       : ""}
                   </div>
                 </div>
@@ -4619,7 +4619,7 @@ const OrderSummary = () => {
                       </div>
                       <div className="rounded-lg bg-[#f8faff] px-3 py-2 text-right">
                         <div className="text-xs text-[#65718b]">
-                          Amount payable to seller
+                          Amount Payable to Seller
                         </div>
                         <div className="text-lg font-bold text-[#1f4fc9]">
                           {formatIndianNumber(displaySellerPayout)}
@@ -4647,7 +4647,7 @@ const OrderSummary = () => {
                       {hasProductRows && itemRefundRecovery > 0 && (
                         <details className="rounded-lg border border-[#dbe6f7] bg-white">
                           <summary className="cursor-pointer px-3 py-2 text-sm font-bold text-[#1f4fc9]">
-                            View full calculation
+                            View Full Calculation
                           </summary>
                           <ItemWisePayoutCalculation
                             rows={productRows}
@@ -4672,7 +4672,7 @@ const OrderSummary = () => {
                               (hasProductRows
                                 ? itemTaxCollected
                                 : seller.taxCollected) > 0
-                                ? `Product GST included: ${formatIndianNumber(hasProductRows ? itemTaxCollected : seller.taxCollected)}`
+                                ? `Product GST Included: ${formatIndianNumber(hasProductRows ? itemTaxCollected : seller.taxCollected)}`
                                 : ""
                             }
                             value={formatIndianNumber(productPayable)}
