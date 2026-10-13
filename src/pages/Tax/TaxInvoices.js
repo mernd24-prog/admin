@@ -499,7 +499,7 @@ const TaxInvoices = () => {
         loading={loading}
         total={payload.total}
         listPage={list}
-        searchPlaceholder="Search Invoice or Order..."
+        searchPlaceholder="Search By Order Id"
         emptyMessage={error || "No tax invoices found"}
         onRefresh={fetchInvoices}
         filterBar={
@@ -536,7 +536,7 @@ const TaxInvoices = () => {
                 <MdDownload
                   aria-hidden="true"
                   size={16}
-                  className="text-gray-600"
+                  className="text-blue-600"
                 />
               ),
               disabled: downloadingId === invoiceId,

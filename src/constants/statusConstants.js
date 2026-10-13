@@ -62,17 +62,24 @@ export const PAYMENT_PROVIDER_OPTIONS = statusOptions(PAYMENT_PROVIDERS);
 
 export const DELIVERY_STATUSES = [
   "initiated",
-  "manifested",
   "picked_up",
   "in_transit",
   "out_for_delivery",
   "partially_delivered",
   "delivered",
   "failed",
+  "delivery_attempted",
+  "delivery_failed",
+  "pickup_scheduled",
+  "pickup_pending",
+  "ready_to_ship",
+  "packed",
+  "on_hold",
+  "return_requested",
+  "return_in_transit",
+  "returned",
   "cancelled",
-  "rto",
-  "lost",
-  "damaged",
+  "captured",
 ];
 
 export const DELIVERY_STATUS_OPTIONS = statusOptions(DELIVERY_STATUSES);
@@ -197,11 +204,7 @@ export const INVENTORY_STATUS_OPTIONS = statusOptions(INVENTORY_STATUSES);
 
 // ── Products ──────────────────────────────────────────────────────────────────
 
-export const PRODUCT_STATUSES = [
-  "draft",
-  "published",
-  "unpublished",
-];
+export const PRODUCT_STATUSES = ["draft", "published", "unpublished"];
 
 export const PRODUCT_STATUS_OPTIONS = statusOptions(PRODUCT_STATUSES);
 

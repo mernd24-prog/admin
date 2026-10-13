@@ -52,6 +52,7 @@ import { formatDateTime } from "../../utils/formatters";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import Pagination from "../../components/Pagination/Pagination";
 import { FaChartLine } from "react-icons/fa";
+import { ExportButton } from "../../components/Atoms/buttons/exportImport";
 
 const CHART_GRID_COLOR = "#e9dfc9";
 const REPORT_GOLD = "#d6a323";
@@ -254,15 +255,9 @@ const EmptyPanel = ({
       className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
     />
 
-    <h4 className="text-sm font-medium text-gray-500">
-      {title}
-    </h4>
+    <h4 className="text-sm font-medium text-gray-500">{title}</h4>
 
-    {text && (
-      <p className="text-xs text-gray-400">
-        {text}
-      </p>
-    )}
+    {text && <p className="text-xs text-gray-400">{text}</p>}
   </div>
 );
 
@@ -479,18 +474,14 @@ export const ReportShell = ({
             exportCsvSections?.length ||
             exportExcelSheets?.length) && (
             <PermissionGuard module="reports" action="export" hide>
-              <button
-                type="button"
+              <ExportButton
                 onClick={handleExport}
-                disabled={exporting || loading}
-              >
-                <MdFileDownload size={16} />{" "}
-                {loading
-                  ? "Loading"
-                  : exporting
-                    ? "Exporting"
-                    : "Export Report"}
-              </button>
+                label={
+                  loading ? "Loading" : exporting ? "Exporting" : "Export "
+                }
+                loading={exporting || loading}
+                disabled={loading}
+              />
             </PermissionGuard>
           )
         }
@@ -845,8 +836,8 @@ const PerformanceOverview = ({
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--admin-line)] pb-3.5">
         <div>
           <h3 className="text-[14px] font-bold text-[var(--admin-navy)]">
-          {title}
-        </h3>
+            {title}
+          </h3>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-[var(--admin-muted)]">
           <span className="inline-flex items-center gap-2">
@@ -1069,7 +1060,6 @@ const SummaryColumnChart = ({ title, items = [] }) => {
         <h3 className="text-[14px] font-bold leading-tight text-[var(--admin-navy)] sm:text-[20px]">
           {title}
         </h3>
-       
       </div>
 
       {loading ? (

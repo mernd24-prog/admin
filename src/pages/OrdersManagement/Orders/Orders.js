@@ -40,6 +40,7 @@ import {
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import useRealtimeRefresh from "../../../hooks/useRealtimeRefresh";
 import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
+import { ExportButton } from "../../../components/Atoms/buttons/exportImport";
 
 /* =========================================================
    PAYMENT TYPE OPTIONS
@@ -1854,15 +1855,11 @@ const Orders = () => {
           },
         ]}
         actions={
-          <button
-            type="button"
+          <ExportButton
             onClick={handleExport}
+            label="Export Report"
             disabled={loading || !displayItems.length}
-            className="inline-flex items-center gap-2 rounded-md bg-[#CE9F2D] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#b88d25] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <MdFileDownload aria-hidden="true" size={17} />
-            Export Report
-          </button>
+          />
         }
       />
 

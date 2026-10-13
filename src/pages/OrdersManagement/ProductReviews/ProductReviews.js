@@ -59,45 +59,6 @@ const getSessionUserData = () => {
   }
 };
 
-const getProductOptions = async (dispatch, search = "", sellerId = "") => {
-  try {
-    const response = await dispatch(
-      getProducts({
-        page: 1,
-        limit: 20,
-        q: search || undefined,
-        sellerId: sellerId || undefined,
-      }),
-    ).unwrap();
-
-    const list = Array.isArray(response?.data?.products)
-      ? response.data.products
-      : Array.isArray(response?.data?.docs)
-        ? response.data.docs
-        : Array.isArray(response?.items)
-          ? response.items
-          : Array.isArray(response?.list)
-            ? response.list
-            : Array.isArray(response?.data?.items)
-              ? response.data.items
-              : Array.isArray(response?.data?.list)
-                ? response.data.list
-                : [];
-
-    return list.map((product) => ({
-      value: product._id || product.id,
-      label:
-        product.title ||
-        product.name ||
-        product.productName ||
-        product.sku ||
-        "Unnamed product",
-    }));
-  } catch {
-    return [];
-  }
-};
-
 const getProductName = (row = {}) =>
   row.productName ||
   row.product?.title ||
@@ -124,21 +85,26 @@ const displayBuyerName = (review = {}) => {
 };
 
 const getProductId = (row = {}) =>
-  row.productId || row.product?.id || row._id || row.id || "";
+  row.productId ||
+  row.product?._id ||
+  row.product?.id ||
+  row._id ||
+  row.id ||
+  "";
 
 const getMetaTotal = (payload = {}, source = {}, list = []) =>
   Number(
-    source?.total ||
-      payload?.total ||
-      payload?.meta?.total ||
-      payload?.meta?.pagination?.total ||
-      list.length ||
-      0,
+    source?.total ??
+      payload?.total ??
+      source?.meta?.total ??
+      payload?.meta?.total ??
+      source?.meta?.pagination?.total ??
+      payload?.meta?.pagination?.total ??
+      list.length,
   );
 
 const getProductReviewSummaryPayload = (state = {}) => {
   const payload = state?.productReviewSummariesData?.data || {};
-
   const source =
     payload?.data && !payload?.list && !payload?.items ? payload.data : payload;
 
@@ -146,36 +112,92 @@ const getProductReviewSummaryPayload = (state = {}) => {
     ? source.list
     : Array.isArray(source?.items)
       ? source.items
-      : [];
+      : Array.isArray(source?.summaries)
+        ? source.summaries
+        : [];
 
   return {
-    list: Array.isArray(list) ? list : [],
-    total: Number(source?.total || payload?.total || list.length || 0),
+    list,
+    total: getMetaTotal(payload, source, list),
     summary: source?.summary || payload?.summary || {},
   };
 };
 
+/**
+ * Extract individual review rows from the detail thunk's Redux state.
+ *
+ * The exact reducer property should match the fulfilled reducer in
+ * adminCoreSlice.js. The candidate keys below support common naming
+ * conventions. If your slice uses another key, add it to candidateKeys.
+ */
 const getProductReviewDetailPayload = (state = {}) => {
-  const payload = state?.productReviewSummaryReviewsData?.data || {};
+  const candidateKeys = [
+    "productReviewSummaryReviewsData",
+    "productReviewSummaryReviews",
+    "productReviewDetailsData",
+    "productReviewDetails",
+    "productReviewsData",
+    "productReviews",
+  ];
+
+  let payload = null;
+
+  for (const key of candidateKeys) {
+    if (state?.[key] != null) {
+      payload = state[key]?.data ?? state[key];
+      break;
+    }
+  }
+
+  // Fallback for a differently named detail reducer property.
+  if (!payload) {
+    const matchingEntry = Object.entries(state || {}).find(
+      ([key, value]) =>
+        /product.*review|review.*product/i.test(key) &&
+        !/summaries/i.test(key) &&
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value),
+    );
+
+    if (matchingEntry) {
+      const value = matchingEntry[1];
+      payload = value?.data ?? value;
+    }
+  }
+
+  payload = payload || {};
 
   const source =
-    payload?.data && !payload?.list && !payload?.items ? payload.data : payload;
+    payload?.data &&
+    !Array.isArray(payload?.list) &&
+    !Array.isArray(payload?.items) &&
+    !Array.isArray(payload?.reviews)
+      ? payload.data
+      : payload;
 
-  const list = Array.isArray(source?.list)
-    ? source.list
-    : Array.isArray(source?.items)
-      ? source.items
-      : Array.isArray(payload?.data)
-        ? payload.data
-        : [];
+  const nestedSource = source?.data || source;
+
+  const list = Array.isArray(nestedSource?.list)
+    ? nestedSource.list
+    : Array.isArray(nestedSource?.items)
+      ? nestedSource.items
+      : Array.isArray(nestedSource?.reviews)
+        ? nestedSource.reviews
+        : Array.isArray(nestedSource?.docs)
+          ? nestedSource.docs
+          : Array.isArray(nestedSource?.results)
+            ? nestedSource.results
+            : Array.isArray(nestedSource?.data)
+              ? nestedSource.data
+              : [];
 
   return {
-    list: Array.isArray(list) ? list : [],
-    total: getMetaTotal(payload, source, list),
-    summary:
-      payload?.meta?.summary || source?.summary || payload?.summary || {},
+    list,
+    total: getMetaTotal(payload, nestedSource, list),
+    summary: nestedSource?.summary || source?.summary || payload?.summary || {},
     product:
-      payload?.meta?.product || source?.product || payload?.product || null,
+      nestedSource?.product || source?.product || payload?.product || null,
   };
 };
 
@@ -236,6 +258,7 @@ const StatusPill = ({ status = "pending" }) => {
 
 const ProductReviews = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const reviewsData = useSelector((state) => state.adminCore);
 
@@ -263,19 +286,22 @@ const ProductReviews = () => {
 
   const [userData, setUserData] = useState(() => getSessionUserData());
 
-  const [sellerOptions, setSellerOptions] = useState([]);
   const [productOptions, setProductOptions] = useState([]);
-
   const [selectedSellerId, setSelectedSellerId] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
 
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
-
   const sellerView = isSellerPanel();
-
-  const showSellerFilter = !isSellerPanelUser && !sellerView;
-
   const sellerScoped = isSellerPanelUser || sellerView;
+
+  // Must be declared before filterFields and any other dependent values.
+  const isDetailMode = Boolean(selectedProductId);
+
+  // Sellers should not be able to select another seller.
+  const showSellerFilter = !sellerScoped;
+
+  const summaryPayload = getProductReviewSummaryPayload(reviewsData);
+  const detailPayload = getProductReviewDetailPayload(reviewsData);
 
   const filterFields = useMemo(
     () => [
@@ -300,60 +326,30 @@ const ProductReviews = () => {
           ]
         : []),
 
-      {
-        key: "product",
-        type: "select",
-        label: "Product",
-        width: "w-52",
-        options: productOptions,
-        placeholder: "All Products",
-      },
-
-      {
-        key: "status",
-        type: "select",
-        label: "Status",
-        width: "w-36",
-        options: [
-          { value: "published", label: "Published" },
-          { value: "pending", label: "Pending" },
-          { value: "hidden", label: "Hidden" },
-          { value: "rejected", label: "Rejected" },
-        ],
-      },
-
-      {
-        key: "rating",
-        type: "select",
-        label: "Rating",
-        width: "w-32",
-        options: [
-          { value: "5", label: "5 Stars" },
-          { value: "4", label: "4 Stars" },
-          { value: "3", label: "3 Stars" },
-          { value: "2", label: "2 Stars" },
-          { value: "1", label: "1 Star" },
-        ],
-      },
+      ...(!isDetailMode
+        ? [
+            {
+              key: "product",
+              type: "select",
+              label: "Product",
+              width: "w-52",
+              options: productOptions,
+              placeholder: "All Products",
+            },
+          ]
+        : []),
     ],
-    [productOptions, showSellerFilter],
+    [productOptions, showSellerFilter, isDetailMode],
   );
 
-  const summaryPayload = getProductReviewSummaryPayload(reviewsData);
-
-  const detailPayload = getProductReviewDetailPayload(reviewsData);
-
-  const isDetailMode = Boolean(selectedProductId);
-
   const items = isDetailMode ? detailPayload.list : summaryPayload.list;
-
   const total = isDetailMode ? detailPayload.total : summaryPayload.total;
 
   const selectedSummaryRow =
     selectedProductId && summaryPayload.list.length
       ? summaryPayload.list.find(
           (row) =>
-            String(row.productId || row._id || row.id) ===
+            String(row.productId || row.product?._id || row._id || row.id) ===
             String(selectedProductId),
         ) || null
       : null;
@@ -378,14 +374,11 @@ const ProductReviews = () => {
     selectedProductOption?.label ||
     "Selected product";
 
-  const selectedStatusCounts = detailPayload.list.reduce(
-    (counts, review) => ({
-      ...counts,
-      [review.status || "pending"]:
-        (counts[review.status || "pending"] || 0) + 1,
-    }),
-    {},
-  );
+  const selectedStatusCounts = detailPayload.list.reduce((counts, review) => {
+    const status = review.status || "pending";
+    counts[status] = (counts[status] || 0) + 1;
+    return counts;
+  }, {});
 
   useEffect(() => {
     setUserData(getSessionUserData());
@@ -398,7 +391,6 @@ const ProductReviews = () => {
     setError("");
 
     const productIdFromFilter = list.filters.product || undefined;
-
     const sellerIdFromFilter =
       list.filters.sellerId || selectedSellerId || undefined;
 
@@ -408,78 +400,31 @@ const ProductReviews = () => {
       search: params.search || undefined,
       status: params.status || undefined,
       rating: params.rating ? Number(params.rating) : undefined,
-
-      sellerId:
-        !isSellerPanelUser && !sellerView ? sellerIdFromFilter : undefined,
-
+      sellerId: !sellerScoped ? sellerIdFromFilter : undefined,
       sortBy: params.sortBy,
       sortDir: params.sortDir,
       sellerScope: sellerScoped || undefined,
     };
 
-    let action;
-
-    if (selectedProductId) {
-      // Detail mode is only used when opening reviews
-      // from a product row.
-      action = getProductReviewSummaryReviews({
-        ...requestParams,
-        productId: selectedProductId,
-      });
-    } else {
-      // Main Product Reviews page:
-      // Product filter should filter the summary list
-      // instead of opening detail mode.
-      action = getProductReviewSummaries({
-        ...requestParams,
-        productId: productIdFromFilter,
-      });
-    }
+    const action = selectedProductId
+      ? getProductReviewSummaryReviews({
+          ...requestParams,
+          productId: selectedProductId,
+        })
+      : getProductReviewSummaries({
+          ...requestParams,
+          productId: productIdFromFilter,
+        });
 
     dispatch(action)
       .unwrap()
       .catch((err) => {
         const msg = err?.message || "Failed to load product reviews";
-
         setError(msg);
         toast.error(msg);
       })
       .finally(() => setLoading(false));
   };
-
-  useEffect(() => {
-    let mounted = true;
-
-    const loadSellerOptions = async () => {
-      if (isSellerPanelUser || sellerView) {
-        if (mounted) {
-          setSellerOptions([]);
-        }
-
-        return;
-      }
-
-      try {
-        const result = await dropdownApi.getSellers({
-          limit: 100,
-        });
-
-        if (mounted) {
-          setSellerOptions(Array.isArray(result) ? result : []);
-        }
-      } catch {
-        if (mounted) {
-          setSellerOptions([]);
-        }
-      }
-    };
-
-    loadSellerOptions();
-
-    return () => {
-      mounted = false;
-    };
-  }, [isSellerPanelUser, sellerView]);
 
   useEffect(() => {
     let mounted = true;
@@ -490,11 +435,11 @@ const ProductReviews = () => {
           getProducts({
             page: 1,
             limit: 200,
-            sellerId: selectedSellerId || undefined,
+            sellerId: !sellerScoped ? selectedSellerId || undefined : undefined,
           }),
         ).unwrap();
 
-        const list = Array.isArray(response?.data?.products)
+        const products = Array.isArray(response?.data?.products)
           ? response.data.products
           : Array.isArray(response?.data?.docs)
             ? response.data.docs
@@ -508,7 +453,7 @@ const ProductReviews = () => {
                     ? response.data.list
                     : [];
 
-        const mapped = list.map((product) => ({
+        const mapped = products.map((product) => ({
           value: product._id || product.id,
           label:
             product.title ||
@@ -533,7 +478,7 @@ const ProductReviews = () => {
     return () => {
       mounted = false;
     };
-  }, [dispatch, isSellerPanelUser, sellerView, selectedSellerId]);
+  }, [dispatch, sellerScoped, selectedSellerId]);
 
   useEffect(() => {
     const nextSellerId = list.filters.sellerId || "";
@@ -581,7 +526,6 @@ const ProductReviews = () => {
       );
 
       list.clearSelection();
-
       fetchReviews();
     } catch (err) {
       toast.error(err?.message || "Failed to update selected reviews");
@@ -591,24 +535,15 @@ const ProductReviews = () => {
   };
 
   const handleDelete = async () => {
-    const reviewId = deleteConfirm.review?._id || deleteConfirm.review?.id;
+    const reviewId = getReviewId(deleteConfirm.review || {});
 
     if (!reviewId) return;
 
     try {
-      await dispatch(
-        deleteProductReview({
-          reviewId,
-        }),
-      ).unwrap();
+      await dispatch(deleteProductReview({ reviewId })).unwrap();
 
       toast.success("Review deleted");
-
-      setDeleteConfirm({
-        open: false,
-        review: null,
-      });
-
+      setDeleteConfirm({ open: false, review: null });
       fetchReviews();
     } catch (err) {
       toast.error(err?.message || "Failed to delete review");
@@ -616,29 +551,20 @@ const ProductReviews = () => {
   };
 
   const handleBulkDelete = async () => {
-    if (sellerScoped || !list.selectedKeys.length) {
-      return;
-    }
+    if (sellerScoped || !list.selectedKeys.length) return;
 
     setBulkLoading(true);
 
     try {
       await Promise.all(
         list.selectedKeys.map((reviewId) =>
-          dispatch(
-            deleteProductReview({
-              reviewId,
-            }),
-          ).unwrap(),
+          dispatch(deleteProductReview({ reviewId })).unwrap(),
         ),
       );
 
       toast.success("Selected reviews deleted");
-
       setBulkDeleteConfirm(false);
-
       list.clearSelection();
-
       fetchReviews();
     } catch (err) {
       toast.error(err?.message || "Failed to delete selected reviews");
@@ -646,8 +572,6 @@ const ProductReviews = () => {
       setBulkLoading(false);
     }
   };
-
-  const navigate = useNavigate();
 
   const handleReviewStatus = async (row, status) => {
     const reviewId = getReviewId(row);
@@ -683,21 +607,14 @@ const ProductReviews = () => {
     if (!productId) return;
 
     list.setPage(1);
-
     list.setFilter("product", String(productId));
-
     setSelectedProductId(String(productId));
   };
-
-  /* =====================================================
-     EXCEL EXPORT
-  ===================================================== */
 
   const exportExcelSheets = useMemo(() => {
     if (!items?.length) return [];
 
     if (isDetailMode) {
-      // Detail mode: individual reviews
       const detailRows = items.map((row, idx) => ({
         serialNumber: idx + 1,
         buyer: displayBuyerName(row),
@@ -705,7 +622,9 @@ const ProductReviews = () => {
         title: row.title || "",
         review: row.reviewText || row.comment || "",
         status: row.status || "",
-        reviewedAt: row.createdAt ? formatDateTime12Hour(row.createdAt, "—") : "—",
+        reviewedAt: row.createdAt
+          ? formatDateTime12Hour(row.createdAt, "—")
+          : "—",
       }));
 
       return [
@@ -724,37 +643,36 @@ const ProductReviews = () => {
           ],
         },
       ];
-    } else {
-      // Summary mode: product-level summaries
-      const summaryRows = items.map((row, idx) => ({
-        serialNumber: idx + 1,
-        productName: getProductName(row) || "Product",
-        averageRating: row.averageRating || 0,
-        reviewCount: row.reviewCount || 0,
-        publishedCount: row.publishedCount || 0,
-        pendingCount: row.pendingCount || 0,
-        latestReviewAt: row.latestReviewAt
-          ? formatDateTime12Hour(row.latestReviewAt, "—")
-          : "—",
-      }));
-
-      return [
-        {
-          name: "Review Summaries",
-          title: "Review Summaries",
-          data: summaryRows,
-          columns: [
-            { key: "serialNumber", label: "S.No" },
-            { key: "productName", label: "Product Name" },
-            { key: "averageRating", label: "Average Rating" },
-            { key: "reviewCount", label: "Reviews" },
-            { key: "publishedCount", label: "Published" },
-            { key: "pendingCount", label: "Pending" },
-            { key: "latestReviewAt", label: "Last Review" },
-          ],
-        },
-      ];
     }
+
+    const summaryRows = items.map((row, idx) => ({
+      serialNumber: idx + 1,
+      productName: getProductName(row) || "Product",
+      averageRating: row.averageRating || 0,
+      reviewCount: row.reviewCount || 0,
+      publishedCount: row.publishedCount || 0,
+      pendingCount: row.pendingCount || 0,
+      latestReviewAt: row.latestReviewAt
+        ? formatDateTime12Hour(row.latestReviewAt, "—")
+        : "—",
+    }));
+
+    return [
+      {
+        name: "Review Summaries",
+        title: "Review Summaries",
+        data: summaryRows,
+        columns: [
+          { key: "serialNumber", label: "S.No" },
+          { key: "productName", label: "Product Name" },
+          { key: "averageRating", label: "Average Rating" },
+          { key: "reviewCount", label: "Reviews" },
+          { key: "publishedCount", label: "Published" },
+          { key: "pendingCount", label: "Pending" },
+          { key: "latestReviewAt", label: "Last Review" },
+        ],
+      },
+    ];
   }, [items, isDetailMode]);
 
   const exportFilename = isDetailMode
@@ -785,11 +703,9 @@ const ProductReviews = () => {
     {
       key: "productId",
       label: "Product",
-
       render: (v, row) => {
         const productImage =
           row.productImage || row.product?.image || row.image;
-
         const productName = getProductName(row) || "Product";
 
         return (
@@ -799,9 +715,7 @@ const ProductReviews = () => {
                 role="img"
                 aria-label={productName}
                 className="h-9 w-9 flex-shrink-0 rounded-md border border-gray-200 bg-cover bg-center"
-                style={{
-                  backgroundImage: cssImageUrl(productImage),
-                }}
+                style={{ backgroundImage: cssImageUrl(productImage) }}
               />
             )}
 
@@ -810,39 +724,33 @@ const ProductReviews = () => {
                 className="block max-w-[200px] truncate text-xs font-semibold text-gray-800"
                 title={productName}
               >
-                {productName || "Product not found"}
+                {productName}
               </span>
             </div>
           </div>
         );
       },
     },
-
     {
       key: "averageRating",
       label: "Average Rating",
       sortable: true,
-
       render: (v) => <RatingStars value={v} />,
     },
-
     {
       key: "reviewCount",
       label: "Reviews",
       headerClassName: "text-center",
       cellClassName: "text-center",
-
       render: (v) => (
         <span className="inline-flex items-center justify-center text-xs font-semibold text-gray-800">
           {v || 0}
         </span>
       ),
     },
-
     {
       key: "publishedCount",
       label: "Status",
-
       render: (v, row) => {
         const publishedCount = Number(row.publishedCount || 0);
         const pendingCount = Number(row.pendingCount || 0);
@@ -852,9 +760,7 @@ const ProductReviews = () => {
             {publishedCount > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-
                 <span className="font-bold">{publishedCount}</span>
-
                 <span>Live</span>
               </span>
             )}
@@ -862,9 +768,7 @@ const ProductReviews = () => {
             {pendingCount > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-
                 <span className="font-bold">{pendingCount}</span>
-
                 <span>Pending</span>
               </span>
             )}
@@ -872,12 +776,10 @@ const ProductReviews = () => {
         );
       },
     },
-
     {
       key: "latestReviewAt",
       label: "Last Review",
       sortable: true,
-
       render: (v) => (
         <span className="whitespace-nowrap text-xs font-medium text-gray-500">
           {v ? formatDateTime12Hour(v, "—") : "—"}
@@ -890,7 +792,6 @@ const ProductReviews = () => {
     {
       key: "buyerName",
       label: "Buyer",
-
       render: (v, row) => (
         <div className="min-w-0">
           <span className="block max-w-[180px] truncate text-xs font-semibold text-gray-800">
@@ -905,19 +806,15 @@ const ProductReviews = () => {
         </div>
       ),
     },
-
     {
       key: "rating",
       label: "Rating",
       sortable: true,
-
       render: (v) => <RatingStars value={v} showValue={false} />,
     },
-
     {
       key: "reviewText",
       label: "Review",
-
       render: (v, row) => (
         <div className="min-w-[260px] max-w-[460px]">
           {row.title && (
@@ -932,19 +829,15 @@ const ProductReviews = () => {
         </div>
       ),
     },
-
     {
       key: "status",
       label: "Status",
-
       render: (v) => <StatusPill status={v} />,
     },
-
     {
       key: "createdAt",
       label: "Reviewed At",
       sortable: true,
-
       render: (v) => (
         <span className="whitespace-nowrap text-xs font-medium text-gray-500">
           {v ? formatDateTime12Hour(v, "—") : "—"}
@@ -973,12 +866,8 @@ const ProductReviews = () => {
         breadcrumbs={
           !isDetailMode
             ? [
-                {
-                  label: sellerView ? "Catalog" : "Orders Management",
-                },
-                {
-                  label: "Product Reviews",
-                },
+                { label: sellerView ? "Catalog" : "Orders Management" },
+                { label: "Product Reviews" },
               ]
             : undefined
         }
@@ -995,77 +884,69 @@ const ProductReviews = () => {
       />
 
       {isDetailMode && (
-        <div>
-          <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                  Selected Product
-                </p>
-
-                <h3 className="mt-1 text-lg font-semibold text-gray-800">
-                  {selectedProductTitle}
-                </h3>
-              </div>
-
-              <RatingStars
-                value={
-                  detailPayload.summary?.avgRating ||
-                  selectedSummaryRow?.averageRating ||
-                  selectedProduct?.rating ||
-                  0
-                }
-              />
+        <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Selected Product
+              </p>
+              <h3 className="mt-1 text-lg font-semibold text-gray-800">
+                {selectedProductTitle}
+              </h3>
             </div>
 
-            {/* Global Cards component */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <Cards
-                label="Total Reviews"
-                value={Number(
-                  detailPayload.summary?.count ||
-                    selectedSummaryRow?.reviewCount ||
-                    total ||
-                    0,
-                )}
-              />
+            <RatingStars
+              value={
+                detailPayload.summary?.avgRating ||
+                selectedSummaryRow?.averageRating ||
+                selectedProduct?.rating ||
+                0
+              }
+            />
+          </div>
 
-              <Cards
-                label="Published"
-                value={
-                  selectedSummaryRow?.publishedCount ||
-                  selectedStatusCounts.published ||
-                  0
-                }
-              />
-
-              <Cards
-                label="Pending"
-                value={
-                  selectedSummaryRow?.pendingCount ||
-                  selectedStatusCounts.pending ||
-                  0
-                }
-              />
-
-              <Cards
-                label="Hidden"
-                value={
-                  selectedSummaryRow?.hiddenCount ||
-                  selectedStatusCounts.hidden ||
-                  0
-                }
-              />
-
-              <Cards
-                label="Rejected"
-                value={
-                  selectedSummaryRow?.rejectedCount ||
-                  selectedStatusCounts.rejected ||
-                  0
-                }
-              />
-            </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <Cards
+              label="Total Reviews"
+              value={Number(
+                detailPayload.summary?.count ||
+                  selectedSummaryRow?.reviewCount ||
+                  total ||
+                  0,
+              )}
+            />
+            <Cards
+              label="Published"
+              value={
+                selectedSummaryRow?.publishedCount ||
+                selectedStatusCounts.published ||
+                0
+              }
+            />
+            <Cards
+              label="Pending"
+              value={
+                selectedSummaryRow?.pendingCount ||
+                selectedStatusCounts.pending ||
+                0
+              }
+            />
+            <Cards
+              label="Hidden"
+              value={
+                selectedSummaryRow?.hiddenCount ||
+                selectedStatusCounts.hidden ||
+                0
+              }
+            />
+            <Cards
+              label="Rejected"
+              value={
+                selectedSummaryRow?.rejectedCount ||
+                selectedStatusCounts.rejected ||
+                0
+              }
+            />
           </div>
         </div>
       )}
@@ -1095,9 +976,7 @@ const ProductReviews = () => {
           />
         }
         requiredModule="reviews"
-        actions={
-          <ExportButton onClick={handleExport} label="Export" />
-        }
+        actions={<ExportButton onClick={handleExport} label="Export" />}
         selectable={isDetailMode}
         selectedKeys={list.selectedKeys}
         onSelectionChange={list.setSelectedKeys}
@@ -1110,9 +989,7 @@ const ProductReviews = () => {
             excludeCountKeys={isDetailMode ? ["product"] : []}
             onClear={() => {
               if (isDetailMode && selectedProductId) {
-                list.setFilters({
-                  product: selectedProductId,
-                });
+                list.setFilters({ product: selectedProductId });
               } else {
                 list.clearFilters();
               }
@@ -1186,48 +1063,60 @@ const ProductReviews = () => {
           ) : null
         }
         rowActions={(row) => {
-          {
-            /* =====================================================
-              SUMMARY MODE ACTION
-             ===================================================== */
-          }
           if (!isDetailMode) {
             return [
               {
                 label: "View Reviews",
-                icon: <MdVisibility size={16} className="text-blue-600" />,
+                icon: (
+                  <MdVisibility
+                    aria-hidden="true"
+                    size={16}
+                    className="text-blue-600"
+                  />
+                ),
                 onClick: () => openProductReviews(row),
               },
             ];
           }
 
-          {
-            /* =====================================================
-              DETAIL MODE ACTIONS
-             ===================================================== */
-          }
           const actions = [
             {
               label: "Approve Review",
-              icon: <MdCheckCircle size={16} className="text-emerald-600" />,
+              icon: (
+                <MdCheckCircle
+                  aria-hidden="true"
+                  size={16}
+                  className="text-emerald-600"
+                />
+              ),
               requiredModule: "reviews",
               requiredAction: ACTIONS.EDIT,
               hidden: row.status === "published",
               onClick: () => handleReviewStatus(row, "published"),
             },
-
             {
               label: "Hide Review",
-              icon: <MdVisibilityOff size={16} className="text-amber-600" />,
+              icon: (
+                <MdVisibilityOff
+                  aria-hidden="true"
+                  size={16}
+                  className="text-amber-600"
+                />
+              ),
               requiredModule: "reviews",
               requiredAction: ACTIONS.EDIT,
               hidden: row.status === "hidden",
               onClick: () => handleReviewStatus(row, "hidden"),
             },
-
             {
               label: "Reject Review",
-              icon: <MdClose size={16} className="text-red-600" />,
+              icon: (
+                <MdClose
+                  aria-hidden="true"
+                  size={16}
+                  className="text-red-600"
+                />
+              ),
               requiredModule: "reviews",
               requiredAction: ACTIONS.EDIT,
               hidden: row.status === "rejected",
@@ -1235,11 +1124,6 @@ const ProductReviews = () => {
             },
           ];
 
-          {
-            /* =====================================================
-              ADMIN ONLY EDIT + DELETE
-             ===================================================== */
-          }
           if (!sellerScoped) {
             actions.push(
               {
@@ -1255,7 +1139,6 @@ const ProductReviews = () => {
                 requiredAction: ACTIONS.EDIT,
                 onClick: () => setEditTarget(row),
               },
-
               {
                 label: "Delete Review",
                 icon: (
@@ -1280,9 +1163,6 @@ const ProductReviews = () => {
         }}
       />
 
-      {/* =========================================================
-          EDIT REVIEW
-         ========================================================= */}
       <EditProductReview
         isOpen={Boolean(editTarget)}
         onClose={() => {
@@ -1292,18 +1172,12 @@ const ProductReviews = () => {
         reviewData={editTarget}
       />
 
-      {/* =========================================================
-          ADD REVIEW
-         ========================================================= */}
       <AddProductReview
         isOpen={addOpen}
         onClose={() => setAddOpen(false)}
         onCreated={fetchReviews}
       />
 
-      {/* =========================================================
-          SINGLE DELETE CONFIRMATION
-         ========================================================= */}
       <ConfirmModal
         isOpen={deleteConfirm.open}
         title="Delete Review"
@@ -1319,9 +1193,6 @@ const ProductReviews = () => {
         }
       />
 
-      {/* =========================================================
-          BULK DELETE CONFIRMATION
-         ========================================================= */}
       <ConfirmModal
         isOpen={bulkDeleteConfirm}
         title="Delete Selected Reviews"

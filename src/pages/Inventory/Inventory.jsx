@@ -29,7 +29,10 @@ import {
 } from "../../components/Shared";
 import OrangeButton from "../../components/Atoms/buttons/OrangeButton";
 import Loader from "../../components/Loader/Loader";
-import { exportToExcel, parseImportFile } from "../../_helpers/exportToCsv";
+import {
+  exportToExcelWorkbook,
+  parseImportFile,
+} from "../../_helpers/exportToCsv";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 import { useListPage } from "../../hooks/useListPage";
 import {
@@ -904,30 +907,98 @@ const Inventory = () => {
     try {
       setImporting(true);
       setImportError("");
+
+      // Export stock history when the History tab is active
+      if (productId && activeTab === "history") {
+        if (!transactions.length) {
+          toast.info("No stock history available to export");
+          return;
+        }
+
+        const historyRows = transactions.map((row) => ({
+          date: row.createdAt || "",
+          variantSku: row.variantSku || "",
+          type: row.type || "",
+          quantity: Number(row.quantity || 0),
+          actorRole: row.actorRole || "",
+          reason: row.metadata?.reason || row.metadata?.note || "",
+        }));
+
+        exportToExcelWorkbook(
+          [
+            {
+              name: "Stock History",
+              title: "Stock History",
+              data: historyRows,
+              columns: [
+                { key: "date", label: "Date" },
+                { key: "variantSku", label: "Variant SKU" },
+                { key: "type", label: "Type" },
+                { key: "quantity", label: "Change" },
+                { key: "actorRole", label: "Actor" },
+                { key: "reason", label: "Reason" },
+              ],
+            },
+          ],
+          `${normalizeText(detail?.product?.sku || "product")}-stock-history.xlsx`,
+        );
+
+        toast.success(`Exported ${historyRows.length} stock history rows`);
+        return;
+      }
+
+      // Existing inventory export
       const sourceRows = productId ? detailRows : await fetchAllInventoryRows();
+
       const exportRows = sourceRows.map((row) => ({
-        productId: row.productId,
-        productName: row.productName,
-        productSku: row.productSku,
-        variantId: row.variantId,
-        variantSku: row.variantSku,
-        variantName: row.variantName,
-        currentStock: Number(row.originalStock ?? row.currentStock ?? 0),
-        newStock: Number(row.currentStock ?? 0),
+        productId: row.productId || row.product_id || "",
+        productName: row.productName || row.name || "",
+        productSku: row.productSku || row.product_sku || row.sku || "",
+        variantId: row.variantId || row.variant_id || row._id || row.id || "",
+        variantSku: row.variantSku || row.variant_sku || row.sku || "",
+        variantName:
+          row.variantName || row.variantTitle || row.name || "Default variant",
+        currentStock: Number(
+          row.originalStock ?? row.currentStock ?? row.stock ?? 0,
+        ),
+        newStock: Number(
+          row.currentStock ?? row.originalStock ?? row.stock ?? 0,
+        ),
       }));
-      if (!exportRows.length)
-        return toast.info("No inventory variants available to export");
-      exportToExcel(exportRows, {
-        filename: `${productId ? normalizeText(detail?.product?.sku || "product") : "inventory"}-stock-template.xlsx`,
-        sheetName: "Inventory Stock",
-        columns: IMPORT_COLUMNS.map((key) => ({ label: key, key })),
-      });
+
+      if (!exportRows.length) {
+        toast.info("No inventory variants available to export");
+        return;
+      }
+
+      const filename = `${
+        productId
+          ? normalizeText(detail?.product?.sku || "product")
+          : "inventory"
+      }-stock-template.xlsx`;
+
+      exportToExcelWorkbook(
+        [
+          {
+            name: "Inventory Stock",
+            title: "Inventory Stock",
+            data: exportRows,
+            columns: IMPORT_COLUMNS.map((key) => ({
+              key,
+              label: key,
+            })),
+          },
+        ],
+        filename,
+      );
+
       toast.success(`Exported ${exportRows.length} variant rows`);
     } catch (requestError) {
       const message = getErrorMessage(
         requestError,
         "Unable to export inventory",
       );
+
       setImportError(message);
       toast.error(message);
     } finally {

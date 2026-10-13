@@ -41,7 +41,13 @@ import {
 } from "../../utils/formatters";
 import { resolveStoreName } from "../../utils/storeNameUtils";
 
-const REF_TYPES = ["return", "cancellation", "refund", "manual"];
+const REF_TYPES = [
+  "cancellation_commission",
+  "cancellation_seller",
+  "cancellation_customer_fee",
+  "refund",
+  "manual",
+];
 
 const CLASS_TEXT_XS_MUTED = "text-xs text-gray-500";
 const CLASS_CARD_WHITE = "rounded-lg border border-gray-100 bg-white p-3";
@@ -66,10 +72,13 @@ const FILTER_FIELDS = [
     key: "referenceType",
     type: "select",
     label: "Ref Type",
-    options: REF_TYPES.map((s) => ({
-      value: s,
-      label: formatLabel(s),
-    })),
+    options: [
+      { value: "", label: "All Reference Types" },
+      ...REF_TYPES.map((type) => ({
+        value: type,
+        label: formatLabel(type),
+      })),
+    ],
   },
   { key: "fromDate", type: "date", label: "From" },
   { key: "toDate", type: "date", label: "To" },
@@ -166,13 +175,24 @@ const CreditNotes = () => {
         ? params.sortBy
         : "issuedAt";
 
-      await dispatch(
-        getTaxCreditNotes({
-          ...params,
-          sortBy,
-          offset: (params.page - 1) * params.limit,
-        }),
-      ).unwrap();
+      const referenceType = params.referenceType || params.reference_type;
+
+      const queryParams = {
+        ...params,
+        sortBy,
+        offset: (params.page - 1) * params.limit,
+      };
+
+      // Send only the selected reference type.
+      delete queryParams.reference_type;
+
+      if (referenceType) {
+        queryParams.reference_type = referenceType;
+      } else {
+        delete queryParams.referenceType;
+      }
+
+      await dispatch(getTaxCreditNotes(queryParams)).unwrap();
     } catch (err) {
       const msg = err?.message || "Failed to load credit notes";
       setError(msg);
@@ -186,42 +206,47 @@ const CreditNotes = () => {
     fetchNotes();
   }, [fetchNotes]);
 
-  const handleCreate = useCallback(async (values) => {
-    if (isSeller) {
-      toast.error("Credit note creation is admin-only");
-      return;
-    }
+  const handleCreate = useCallback(
+    async (values) => {
+      if (isSeller) {
+        toast.error("Credit note creation is admin-only");
+        return;
+      }
 
-    try {
-      setSaving(true);
+      try {
+        setSaving(true);
 
-      const taxableAmount = Number(values.taxableAmount);
-      const taxAmount = values.taxAmount ? Number(values.taxAmount) : undefined;
+        const taxableAmount = Number(values.taxableAmount);
+        const taxAmount = values.taxAmount
+          ? Number(values.taxAmount)
+          : undefined;
 
-      await dispatch(
-        createTaxCreditNote({
-          orderId: values.orderId.trim(),
-          referenceId: values.referenceId.trim() || undefined,
-          referenceType: values.referenceType,
-          taxableAmount,
-          taxAmount,
-          ...(values.totalAmount
-            ? { totalAmount: Number(values.totalAmount) }
-            : {}),
-          reason: values.reason.trim() || undefined,
-        }),
-      ).unwrap();
+        await dispatch(
+          createTaxCreditNote({
+            orderId: values.orderId.trim(),
+            referenceId: values.referenceId.trim() || undefined,
+            referenceType: values.referenceType,
+            taxableAmount,
+            taxAmount,
+            ...(values.totalAmount
+              ? { totalAmount: Number(values.totalAmount) }
+              : {}),
+            reason: values.reason.trim() || undefined,
+          }),
+        ).unwrap();
 
-      toast.success("Credit note created");
-      setShowCreate(false);
-      formik.resetForm();
-      fetchNotes();
-    } catch (err) {
-      toast.error(err?.message || "Failed to create credit note");
-    } finally {
-      setSaving(false);
-    }
-  }, [dispatch, fetchNotes, isSeller]);
+        toast.success("Credit note created");
+        setShowCreate(false);
+        formik.resetForm();
+        fetchNotes();
+      } catch (err) {
+        toast.error(err?.message || "Failed to create credit note");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [dispatch, fetchNotes, isSeller],
+  );
 
   const formik = useFormik({
     initialValues: EMPTY_FORM,
@@ -375,7 +400,7 @@ const CreditNotes = () => {
             <MdDownload
               aria-hidden="true"
               size={16}
-              className="text-gray-600"
+              className="text-blue-600"
             />
           ),
           disabled: downloadingId === creditNoteId,
@@ -666,12 +691,14 @@ const CreditNotes = () => {
                   label: type,
                   value: type,
                 }))}
-                value={REF_TYPES.map((type) => ({
-                  label: type,
-                  value: type,
-                })).find(
-                  (option) => option.value === formik.values.referenceType,
-                ) || null}
+                value={
+                  REF_TYPES.map((type) => ({
+                    label: type,
+                    value: type,
+                  })).find(
+                    (option) => option.value === formik.values.referenceType,
+                  ) || null
+                }
                 onChange={(selectedOption) =>
                   formik.setFieldValue(
                     "referenceType",
@@ -719,9 +746,7 @@ const CreditNotes = () => {
                 value={formik.values.taxAmount}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={
-                  formik.touched.taxAmount ? formik.errors.taxAmount : ""
-                }
+                error={formik.touched.taxAmount ? formik.errors.taxAmount : ""}
                 onKeyDown={(e) => {
                   if (["-", "+", "e", "E"].includes(e.key)) {
                     e.preventDefault();
@@ -740,9 +765,7 @@ const CreditNotes = () => {
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={
-                    formik.touched.totalAmount
-                      ? formik.errors.totalAmount
-                      : ""
+                    formik.touched.totalAmount ? formik.errors.totalAmount : ""
                   }
                   placeholder="Taxable amount + tax"
                 />

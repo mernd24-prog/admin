@@ -36,7 +36,11 @@ import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
 import { exportToCsv } from "../../../_helpers/exportToCsv";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
-import { formatDateTime12Hour, formatLabel, truncateToWordBoundary } from "../../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatLabel,
+  truncateToWordBoundary,
+} from "../../../utils/formatters";
 
 import {
   FinancePageGuide,
@@ -47,6 +51,7 @@ import {
   shortReference,
 } from "./financeUi";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import { ExportButton } from "../../../components/Atoms/buttons/exportImport";
 
 /* -------------------------------------------------------------------------- */
 /* Constants                                                                  */
@@ -132,7 +137,10 @@ const formatPeriodDate = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-IN", {
-    day: "2-digit", month: "short", year: "numeric", timeZone: "UTC",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
   });
 };
 
@@ -559,9 +567,7 @@ const SellerPayouts = () => {
       {
         key: "seller_id",
         label: "Seller",
-        render: (_, row) => (
-          <SellerIdentity row={row} />
-        ),
+        render: (_, row) => <SellerIdentity row={row} />,
       },
 
       {
@@ -669,37 +675,37 @@ const SellerPayouts = () => {
         ),
       },
 
-     {
-  key: "outcome",
-  label: "Outcome / reason",
-  render: (_, row) => {
-    const explanation = payoutExplanation(row);
+      {
+        key: "outcome",
+        label: "Outcome / reason",
+        render: (_, row) => {
+          const explanation = payoutExplanation(row);
 
-    return (
-      <div className="max-w-[280px]">
-        <div
-          className={
-            explanation.tone === "green"
-              ? "font-semibold text-green-700"
-              : explanation.tone === "amber"
-                ? "font-semibold text-amber-700"
-                : "font-semibold text-gray-700"
-          }
-          title={explanation.title}
-        >
-          {truncateToWordBoundary(explanation.title, 40)}
-        </div>
+          return (
+            <div className="max-w-[280px]">
+              <div
+                className={
+                  explanation.tone === "green"
+                    ? "font-semibold text-green-700"
+                    : explanation.tone === "amber"
+                      ? "font-semibold text-amber-700"
+                      : "font-semibold text-gray-700"
+                }
+                title={explanation.title}
+              >
+                {truncateToWordBoundary(explanation.title, 40)}
+              </div>
 
-        <div
-          className="mt-0.5 text-xs leading-5 text-gray-500"
-          title={explanation.detail}
-        >
-          {truncateToWordBoundary(explanation.detail, 50)}
-        </div>
-      </div>
-    );
-  },
-},
+              <div
+                className="mt-0.5 text-xs leading-5 text-gray-500"
+                title={explanation.detail}
+              >
+                {truncateToWordBoundary(explanation.detail, 50)}
+              </div>
+            </div>
+          );
+        },
+      },
 
       {
         key: "period_start",
@@ -1010,15 +1016,11 @@ const SellerPayouts = () => {
               <MdRefresh size={17} className={loading ? "animate-spin" : ""} />
               {loading ? "Refreshing..." : "Refresh"}
             </button>
-            <button
-              type="button"
+            <ExportButton
               onClick={exportPayoutTable}
+              label="Export"
               disabled={!payload.list?.length}
-              className="disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <MdDownload aria-hidden="true" size={16} />
-              Export
-            </button>
+            />
           </div>
         }
       />
@@ -1385,8 +1387,13 @@ const SellerPayouts = () => {
                         <span className="font-medium text-gray-700">
                           Earning Period:
                         </span>{" "}
-                        {formatPeriodDate(valueOf(detail, "period_start", "periodStart"))} –{" "}
-                        {formatPeriodDate(valueOf(detail, "period_end", "periodEnd"))}
+                        {formatPeriodDate(
+                          valueOf(detail, "period_start", "periodStart"),
+                        )}{" "}
+                        –{" "}
+                        {formatPeriodDate(
+                          valueOf(detail, "period_end", "periodEnd"),
+                        )}
                       </div>
                     </div>
                   </FormSection>
