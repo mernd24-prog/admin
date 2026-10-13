@@ -400,12 +400,13 @@ function SellerSearch({ value, onSelect }) {
 const DealManagement = () => {
   const dispatch = useDispatch();
   const { can } = usePermission();
-  const selector = useSelector((state) => state.adminCore);
-  const payload = unwrapList(selector.dealsData);
-  const analytics =
-    selector.dealAnalyticsData?.data?.data ||
-    selector.dealAnalyticsData?.data ||
-    {};
+  const dealsData = useSelector((state) => state.adminCore.dealsData);
+  const dealAnalyticsData = useSelector((state) => state.adminCore.dealAnalyticsData);
+  const payload = useMemo(() => unwrapList(dealsData), [dealsData]);
+  const analytics = useMemo(() =>
+    dealAnalyticsData?.data?.data || dealAnalyticsData?.data || {},
+    [dealAnalyticsData]);
+  const attemptedSellerIds = useRef(new Set());
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "created_at",
@@ -860,10 +861,12 @@ const DealManagement = () => {
           .map(String),
       ),
     );
-    const missingIds = sellerIds.filter((sellerId) => !sellerLookup[sellerId]);
+    const missingIds = sellerIds.filter((sellerId) => !sellerLookup[sellerId] && !attemptedSellerIds.current.has(sellerId));
     if (!missingIds.length) return undefined;
 
+    missingIds.forEach(id => attemptedSellerIds.current.add(id));
     let cancelled = false;
+    let completed = false;
     dropdownApi
       .getSellers({
         limit: 200,
@@ -871,6 +874,7 @@ const DealManagement = () => {
       })
       .then((options = []) => {
         if (cancelled) return;
+        completed = true;
         setSellerLookup((current) => {
           const next = { ...current };
           options.forEach((option) => {
@@ -884,6 +888,7 @@ const DealManagement = () => {
 
     return () => {
       cancelled = true;
+      if (!completed) missingIds.forEach(id => attemptedSellerIds.current.delete(id));
     };
   }, [sellerLookup, tableRows]);
 

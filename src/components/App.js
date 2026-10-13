@@ -36,7 +36,7 @@ import {
 const App = () => {
   const dispatch = useDispatch();
   const { currentSection } = useKYC();
-  const { seller } = useSelector((state) => state);
+  const seller = useSelector((state) => state.seller);
   const [bootstrapped, setBootstrapped] = useState(false);
   const hasAnyToken = useMemo(
     () =>

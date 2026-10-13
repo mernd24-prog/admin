@@ -454,7 +454,7 @@ const setFilter = useCallback((key, value) => {
     }
 
     return params;
-  }, [state]);
+  }, [state.page, state.pageSize, state.sortKey, state.sortDir, state.search, state.filters]);
 
   // ============================================================
   // RESET
