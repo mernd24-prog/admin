@@ -242,7 +242,7 @@ export default function FinanceEarnings() {
             </strong>
 
             <span className="text-xs text-[var(--admin-muted)]">
-              Qty {row.quantity || 1}
+              Qty : {row.quantity || 1}
             </span>
           </div>
         ),

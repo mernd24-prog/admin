@@ -749,25 +749,34 @@ const ProductReviews = () => {
       key: "publishedCount",
       label: "Status",
 
-      render: (v, row) => (
-        <div className="flex flex-wrap items-center gap-1.5 whitespace-nowrap">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+      render: (v, row) => {
+        const publishedCount = Number(row.publishedCount || 0);
+        const pendingCount = Number(row.pendingCount || 0);
 
-            <span className="font-bold">{row.publishedCount || 0}</span>
+        return (
+          <div className="flex flex-wrap items-center gap-1.5 whitespace-nowrap">
+            {publishedCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
 
-            <span>Live</span>
-          </span>
+                <span className="font-bold">{publishedCount}</span>
 
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                <span>Live</span>
+              </span>
+            )}
 
-            <span className="font-bold">{row.pendingCount || 0}</span>
+            {pendingCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
 
-            <span>Pending</span>
-          </span>
-        </div>
-      ),
+                <span className="font-bold">{pendingCount}</span>
+
+                <span>Pending</span>
+              </span>
+            )}
+          </div>
+        );
+      },
     },
 
     {

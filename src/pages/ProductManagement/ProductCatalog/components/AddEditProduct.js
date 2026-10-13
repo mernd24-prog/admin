@@ -1688,6 +1688,26 @@ export default function ProductManagementUI() {
       }
     }
 
+    // Return policy validation
+    const returnPolicy = formData?.warranty?.returnPolicy || {};
+    const isReturnable =
+      String(returnPolicy?.type || "").toLowerCase() !== "non_returnable" &&
+      returnPolicy?.returnable !== false &&
+      returnPolicy?.eligible !== false;
+
+    if (isReturnable) {
+      const returnWindowDays = Number(returnPolicy?.returnWindowDays ?? 0);
+
+      if (
+        !Number.isFinite(returnWindowDays) ||
+        returnWindowDays < 1 ||
+        returnWindowDays > 365
+      ) {
+        newErrors.returnWindowDays =
+          "Return window must be between 1 and 365 days.";
+      }
+    }
+
     // Variant field validation
     if (Array.isArray(variantsData) && variantsData.length) {
       const skuCounts = variantsData.reduce((counts, variant) => {
@@ -2675,6 +2695,15 @@ export default function ProductManagementUI() {
           : { ...(prev[group] || {}), [subKey]: value },
       }));
     }
+
+    setError((prev) => {
+      if (!prev || typeof prev !== "object") return prev;
+      if (field !== "warranty.returnPolicy.returnWindowDays") return prev;
+
+      const nextErrors = { ...prev };
+      delete nextErrors.returnWindowDays;
+      return Object.keys(nextErrors).length ? nextErrors : null;
+    });
   }, []);
 
   const patchShipping = useCallback((patch) => {

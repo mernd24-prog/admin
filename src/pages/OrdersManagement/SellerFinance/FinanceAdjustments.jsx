@@ -339,24 +339,31 @@ export default function FinanceAdjustments() {
           <MdArrowForward aria-hidden="true" />
         </button>
       )}
-      {rows.length || loading ? (
-        <DataTable
-          columns={columns}
-          data={rows}
-          loading={loading}
-          totalCount={rows.length}
-          pageSize={20}
-          rowKey={(row) =>
-            `${row.adjustmentType}-${row.id || row.orderId || row.shipment_id}`
-          }
-          emptyText="No adjustments found."
-        />
-      ) : (
-        <FinanceEmptyState
-          title="No adjustments"
-          description="There are currently no returns, refunds, COD recoveries, or other adjustments affecting your earnings."
-        />
-      )}
+    <DataTable
+  columns={columns}
+  data={rows}
+  loading={loading}
+  totalCount={rows.length}
+  pageSize={20}
+  rowKey={(row) =>
+    `${row.adjustmentType}-${row.id || row.orderId || row.shipment_id}`
+  }
+  emptyText={
+    category === "returns"
+      ? "No return or refund adjustments found for the selected filters."
+      : category === "promotions"
+        ? "No promotion adjustments found for the selected filters."
+        : category === "cod"
+          ? "No COD adjustments found for the selected filters."
+          : category === "holds"
+            ? "No temporary holds found for the selected filters."
+            : category === "recoveries"
+              ? "No recoveries found for the selected filters."
+              : category === "other"
+                ? "No other adjustments found for the selected filters."
+                : "No adjustments found for the selected filters."
+  }
+/>
       <DefaultModal
         isOpen={Boolean(detail)}
         onClose={() => setDetail(null)}
