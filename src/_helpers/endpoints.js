@@ -206,6 +206,7 @@ export const ENDPOINTS = {
     listForPanel: byPanel("/admin/orders", "/orders/seller/me"),
     create: "/orders",
     detail: (orderId) => `/orders/${orderId}`,
+    cancellationPreview: (orderId) => `/orders/${orderId}/cancellation-preview`,
     cancel: (orderId) => `/orders/${orderId}/cancel`,
     status: (orderId) => `/orders/${orderId}/status`,
     notes: (orderId) => `/orders/${orderId}/notes`,

@@ -61,7 +61,7 @@ const toCancellationListParams = (params = {}) => {
 
 const initialState = {
     getOrderListData: {}, getOrderInfoData: {}, updateOrderStatusData: {}, getProductInfoData: {},
-    orderCancelData: {}, createOrderData: {}, deleteOrderData: {}, addOrderNoteData: {}
+    orderCancelData: {}, cancellationPreviewData: {}, createOrderData: {}, deleteOrderData: {}, addOrderNoteData: {}
     , cancellationListData: {}, retryCancellationData: {}, approveCancellationData: {}, rejectCancellationData: {}, approveCancellationRefundData: {}, completeCancellationRefundData: {}
 
 }
@@ -91,6 +91,9 @@ export const orderCancel = createApiThunkPrivate('orderCancel', (payload) => END
         ...(payload.idempotencyKey ? { idempotencyKey: payload.idempotencyKey } : {}),
         ...(Array.isArray(payload.items) && payload.items.length ? { items: payload.items } : {}),
     }),
+})
+export const getCancellationPreview = createApiThunkPrivate('getCancellationPreview', (payload) => ENDPOINTS.orders.cancellationPreview(firstOrderId(payload)), 'POST', false, {
+    transformBody: (payload = {}) => ({ items: Array.isArray(payload.items) ? payload.items : [] }),
 })
 export const addOrderNote = createApiThunkPrivate('addOrderNote', (payload) => ENDPOINTS.orders.notes(firstOrderId(payload)), 'POST', false, {
     transformBody: (payload = {}) => ({ note: payload.note || "", visibility: payload.visibility || "internal" }),
@@ -135,6 +138,7 @@ createExtraReducersForThunk(builder, getOrderList, 'getOrderListData')
         createExtraReducersForThunk(builder, updateOrderStatus, 'updateOrderStatusData')
         createExtraReducersForThunk(builder, deleteOrder, 'deleteOrderData')
         createExtraReducersForThunk(builder, orderCancel, 'orderCancelData')
+        createExtraReducersForThunk(builder, getCancellationPreview, 'cancellationPreviewData')
         createExtraReducersForThunk(builder, addOrderNote, 'addOrderNoteData')
         createExtraReducersForThunk(builder, getCancellationList, 'cancellationListData')
         createExtraReducersForThunk(builder, retryCancellation, 'retryCancellationData')

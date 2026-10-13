@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { getAdminReturns } from "../../../../Redux/adminCoreSlice";
 import {
   addOrderNote,
+  getCancellationPreview,
   getOrderInfo,
   orderCancel,
   updateOrderStatus,
@@ -44,6 +45,19 @@ import FormSelectGroup from "../../../../components/Atoms/FormSelectGroup/FormSe
 import { orderNoteValidationSchema } from "../../../../_helpers/validationSchemas";
 
 const MINIMUM_CANCEL_REASON_LENGTH = 10;
+const CANCELLABLE_SHIPMENT_STATUSES = new Set([
+  "initiated",
+  "manifested",
+  "failed",
+  "cancelled",
+]);
+const ACTIVE_CANCELLATION_STATUSES = new Set([
+  "requested",
+  "approved",
+  "processing",
+  "manual_review",
+  "refund_pending",
+]);
 
 // All structurally valid transitions (mirrors backend assertOrderTransitionAllowed)
 const ALLOWED_TRANSITIONS = {
@@ -126,6 +140,32 @@ const normalizePaymentStatusKey = (status = "") =>
     .trim()
     .toLowerCase()
     .replace(/[-\s]+/g, "_");
+
+const cancellationDisplayStatus = (cancellation = {}) => {
+  const status = normalizeStatusKey(cancellation.status);
+  const refundStatus = normalizeStatusKey(
+    cancellation.refund_status || cancellation.refundStatus,
+  );
+  if (status === "requested") return "cancellation_requested";
+  if (status === "approved") return "cancellation_approved";
+  if (status === "processing") return "cancellation_processing";
+  if (status === "rejected") return "cancellation_rejected";
+  if (status === "failed" || refundStatus === "failed") return "cancellation_failed";
+  if (status === "completed") return "cancelled";
+  if (
+    ["refund_pending", "manual_review"].includes(status) ||
+    ["pending", "provider_pending", "manual_review"].includes(refundStatus)
+  ) return "refund_pending";
+  return status || "cancellation_requested";
+};
+
+const returnDisplayStatus = (returnRequest = {}) => {
+  const status = normalizeStatusKey(returnRequest.status);
+  if (status === "requested") return "return_requested";
+  if (status === "approved") return "return_approved";
+  if (status === "rejected") return "return_rejected";
+  return status;
+};
 
 const toOption = (status) => ({ value: status, label: formatLabel(status) });
 
@@ -2625,6 +2665,10 @@ const OrderSummary = () => {
     noteModal: false,
     userData: {},
     returns: [],
+    cancellationPreview: null,
+    cancellationPreviewLoading: false,
+    cancellationPreviewError: "",
+    cancellationPreviewUnavailable: false,
   });
   const [formData, setFormData] = useState({
     status: "",
@@ -2878,6 +2922,58 @@ const OrderSummary = () => {
   const cancellations = Array.isArray(relations.cancellations)
     ? relations.cancellations
     : [];
+  const pendingCancellationQuantityByItem = useMemo(() => {
+    const quantities = new Map();
+    cancellations
+      .filter((request) =>
+        ACTIVE_CANCELLATION_STATUSES.has(String(request.status || "").toLowerCase()),
+      )
+      .flatMap((request) => (Array.isArray(request.items) ? request.items : []))
+      .forEach((item) => {
+        const itemId = String(item.orderItemId || item.order_item_id || "");
+        if (!itemId) return;
+        quantities.set(
+          itemId,
+          (quantities.get(itemId) || 0) + Number(item.quantity || 0),
+        );
+      });
+    return quantities;
+  }, [cancellations]);
+  const isItemShipmentCancellable = useCallback(
+    (item) => {
+      const itemId = String(item.id || item._id || "");
+      const sellerId = String(item.seller_id || item.sellerId || "");
+      const relevant = shipments.filter((shipment) => {
+        if (shipment.direction === "reverse") return false;
+        const metadata = normalizeJson(shipment.metadata, {});
+        const itemIds = Array.isArray(metadata.orderItemIds)
+          ? metadata.orderItemIds.map(String)
+          : [];
+        return itemIds.length
+          ? itemIds.includes(itemId)
+          : String(shipment.seller_id || shipment.sellerId || "") === sellerId;
+      });
+      if (!relevant.length) {
+        return !["shipped", "out_for_delivery", "delivered", "fulfilled", "cancelled"].includes(
+          String(order.status || "").toLowerCase(),
+        );
+      }
+      return relevant.every((shipment) =>
+        CANCELLABLE_SHIPMENT_STATUSES.has(String(shipment.status || "").toLowerCase()),
+      );
+    },
+    [order.status, shipments],
+  );
+  const cancellableSellerItems = useMemo(
+    () =>
+      items.filter((item) => {
+        const pending = pendingCancellationQuantityByItem.get(String(item.id)) || 0;
+        const remaining =
+          Number(item.quantity || 0) - Number(item.cancelled_quantity || 0) - pending;
+        return remaining > 0 && isItemShipmentCancellable(item);
+      }),
+    [items, pendingCancellationQuantityByItem, isItemShipmentCancellable],
+  );
   const returns = Array.isArray(state.returns) ? state.returns : [];
   const hasPendingItemRequest =
     cancellations.some(
@@ -3025,17 +3121,64 @@ const OrderSummary = () => {
       status: "cancelled",
       reasonCode: "inventory_unavailable",
       refundMethod: "auto",
-      cancelItems: Object.fromEntries(
-        items
-          .map((item) => [
-            String(item.id),
-            Number(item.quantity || 0) - Number(item.cancelled_quantity || 0),
-          ])
-          .filter(([, quantity]) => quantity > 0),
-      ),
+      cancelItems: {},
+    }));
+    setState((prev) => ({
+      ...prev,
+      cancellationPreview: null,
+      cancellationPreviewError: "",
+      cancellationPreviewUnavailable: false,
     }));
     setState((prev) => ({ ...prev, statusModal: true }));
-  }, [items]);
+  }, []);
+
+  useEffect(() => {
+    if (!state.statusModal || formData.status !== "cancelled" || !orderId) return undefined;
+    const selectedItems = Object.entries(formData.cancelItems || {})
+      .filter(([, quantity]) => Number(quantity) > 0)
+      .map(([orderItemId, quantity]) => ({ orderItemId, quantity: Number(quantity) }));
+    if (!selectedItems.length) {
+      setState((prev) => ({
+        ...prev,
+        cancellationPreview: null,
+        cancellationPreviewLoading: false,
+        cancellationPreviewError: "",
+        cancellationPreviewUnavailable: false,
+      }));
+      return undefined;
+    }
+    const timer = window.setTimeout(async () => {
+      setState((prev) => ({
+        ...prev,
+        cancellationPreviewLoading: true,
+        cancellationPreviewError: "",
+      }));
+      try {
+        const response = await dispatch(
+          getCancellationPreview({ orderId, items: selectedItems }),
+        ).unwrap();
+        setState((prev) => ({
+          ...prev,
+        cancellationPreview: response?.data || null,
+        cancellationPreviewLoading: false,
+        cancellationPreviewUnavailable: false,
+      }));
+      } catch (error) {
+        const previewError = String(error?.message || error || "");
+        const previewUnavailable = previewError.toLowerCase().includes("route not found");
+        setState((prev) => ({
+          ...prev,
+          cancellationPreview: null,
+          cancellationPreviewLoading: false,
+          cancellationPreviewError: previewUnavailable
+            ? ""
+            : previewError || "Unable to calculate cancellation impact",
+          cancellationPreviewUnavailable: previewUnavailable,
+        }));
+      }
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [dispatch, formData.cancelItems, formData.status, orderId, state.statusModal]);
 
   const handleStatusSubmit = useCallback(async () => {
     const reason = String(formData.reason || "").trim();
@@ -3073,9 +3216,24 @@ const OrderSummary = () => {
     }
     const cancellationItems = Object.entries(formData.cancelItems || {})
       .filter(([, quantity]) => Number(quantity) > 0)
-      .map(([orderItemId]) => ({ orderItemId }));
+      .map(([orderItemId, quantity]) => ({
+        orderItemId,
+        quantity: Number(quantity),
+      }));
     if (formData.status === "cancelled" && !cancellationItems.length) {
       toast.error("Select at least one product to cancel");
+      return;
+    }
+    if (
+      formData.status === "cancelled" &&
+      (state.cancellationPreviewLoading ||
+        (!state.cancellationPreviewUnavailable &&
+          (state.cancellationPreviewError || !state.cancellationPreview)))
+    ) {
+      toast.error(
+        state.cancellationPreviewError ||
+          "Wait for the cancellation impact to be calculated",
+      );
       return;
     }
     try {
@@ -3098,7 +3256,7 @@ const OrderSummary = () => {
                 reasonCode: formData.reasonCode,
                 refundMethod: formData.refundMethod,
                 items: cancellationItems,
-                idempotencyKey: `admin:${orderId}:${Date.now()}`,
+                idempotencyKey: `${isSeller ? "seller" : "admin"}:${orderId}:${Date.now()}`,
               }),
             ).unwrap()
           : await dispatch(updateOrderStatus(payload)).unwrap();
@@ -3121,7 +3279,7 @@ const OrderSummary = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, fetchOrderInfo, formData, handleError, orderId, setLoading]);
+  }, [dispatch, fetchOrderInfo, formData, handleError, isSeller, orderId, setLoading, state.cancellationPreview, state.cancellationPreviewError, state.cancellationPreviewLoading, state.cancellationPreviewUnavailable]);
 
   const handleNoteSubmit = useCallback(async (values, { resetForm }) => {
     try {
@@ -3187,7 +3345,7 @@ const OrderSummary = () => {
                   <FaRegNoteSticky /> Add Note
                 </button>
               </PermissionGuard>
-              {orderId && paidForFulfillment && (
+              {!isSeller && orderId && paidForFulfillment && (
                 <button
                   type="button"
                   onClick={() =>
@@ -3206,15 +3364,7 @@ const OrderSummary = () => {
                   </button>
                 </PermissionGuard>
               )}
-              {isSeller &&
-                !["shipped", "delivered", "fulfilled", "cancelled"].includes(
-                  String(order.status || "").toLowerCase(),
-                ) &&
-                items.some(
-                  (item) =>
-                    Number(item.quantity || 0) >
-                    Number(item.cancelled_quantity || 0),
-                ) && (
+              {isSeller && cancellableSellerItems.length > 0 && (
                   <button type="button" onClick={openSellerCancellationModal}>
                     <FaFile /> Cancel Items
                   </button>
@@ -3904,7 +4054,7 @@ const OrderSummary = () => {
                       key={cancellation.id}
                       title={cancellation.cancellation_number}
                       subtitle={`${displayStatus(cancellation.scope)} · ${cancellation.reason}`}
-                      status={cancellation.status}
+                      status={cancellationDisplayStatus(cancellation)}
                       rows={[
                         {
                           label: "Refund",
@@ -4122,7 +4272,7 @@ const OrderSummary = () => {
                               subtitle={displayStatus(
                                 formatLabel(returnRequest.reason),
                               )}
-                              status={returnRequest.status}
+                              status={returnDisplayStatus(returnRequest)}
                               rows={[
                                 {
                                   label: "Refund",
@@ -4787,6 +4937,15 @@ const OrderSummary = () => {
         title={isSeller ? "Cancel My Items" : "Administrative Status Override"}
         onSubmit={handleStatusSubmit}
         loading={state.isLoading}
+        submitButtonText={formData.status === "cancelled" ? "Confirm cancellation" : "Update status"}
+        closeButtonText="Close"
+        submitDisabled={
+          formData.status === "cancelled" &&
+          (state.cancellationPreviewLoading ||
+            (!state.cancellationPreviewUnavailable &&
+              (Boolean(state.cancellationPreviewError) ||
+                !state.cancellationPreview)))
+        }
       >
         <div className="space-y-5 py-2">
           {/* Admin Warning */}
@@ -4815,23 +4974,11 @@ const OrderSummary = () => {
                 onChange={(option) => {
                   const status = option?.value || "";
 
-                  const cancelItems =
-                    status === "cancelled"
-                      ? Object.fromEntries(
-                          items
-                            .map((item) => [
-                              String(item.id),
-                              Number(item.quantity || 0) -
-                                Number(item.cancelled_quantity || 0),
-                            ])
-                            .filter(([, quantity]) => quantity > 0),
-                        )
-                      : {};
-
                   setFormData((prev) => ({
                     ...prev,
                     status,
-                    cancelItems,
+                    // Require an explicit selection for destructive actions.
+                    cancelItems: {},
                   }));
                 }}
                 placeholder="Select Status"
@@ -4930,6 +5077,34 @@ const OrderSummary = () => {
                         value: "payment_issue",
                         label: "Payment issue",
                       },
+                      {
+                        value: "item_damaged",
+                        label: "Item damaged before dispatch",
+                      },
+                      {
+                        value: "quality_check_failed",
+                        label: "Quality check failed",
+                      },
+                      {
+                        value: "warehouse_unavailable",
+                        label: "Warehouse unable to fulfil",
+                      },
+                      {
+                        value: "catalog_issue",
+                        label: "Incorrect catalogue or listing",
+                      },
+                      {
+                        value: "delivery_restricted",
+                        label: "Restricted delivery location",
+                      },
+                      {
+                        value: "compliance_hold",
+                        label: "Compliance or fraud hold",
+                      },
+                      {
+                        value: "customer_support_request",
+                        label: "Customer requested through support",
+                      },
                     ]}
                     value={{
                       value: formData.reasonCode,
@@ -4942,6 +5117,13 @@ const OrderSummary = () => {
                           pricing_issue: "Pricing issue",
                           address_issue: "Address issue",
                           payment_issue: "Payment issue",
+                          item_damaged: "Item damaged before dispatch",
+                          quality_check_failed: "Quality check failed",
+                          warehouse_unavailable: "Warehouse unable to fulfil",
+                          catalog_issue: "Incorrect catalogue or listing",
+                          delivery_restricted: "Restricted delivery location",
+                          compliance_hold: "Compliance or fraud hold",
+                          customer_support_request: "Customer requested through support",
                         }[formData.reasonCode] || "Other",
                     }}
                     onChange={(option) =>
@@ -4954,36 +5136,41 @@ const OrderSummary = () => {
                     isSearchable={false}
                   />
 
-                  <FormSelectGroup
-                    label="Refund Handling"
-                    options={[
-                      { value: "auto", label: "Automatic" },
-                      {
-                        value: "original_source",
-                        label: "Original source",
-                      },
-                      { value: "wallet", label: "Wallet" },
-                      { value: "manual", label: "Manual review" },
-                    ]}
-                    value={{
-                      value: formData.refundMethod,
-                      label:
-                        {
+                  {isSeller ? (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                      <p className="font-semibold">Refund managed by the platform</p>
+                      <p className="mt-1 text-xs">
+                        The customer refund route is selected from the payment method and platform policy. Sellers cannot redirect or manually complete refunds.
+                      </p>
+                    </div>
+                  ) : (
+                    <FormSelectGroup
+                      label="Refund Handling"
+                      options={[
+                        { value: "auto", label: "Automatic" },
+                        { value: "original_source", label: "Original source" },
+                        { value: "wallet", label: "Wallet" },
+                        { value: "manual", label: "Manual review" },
+                      ]}
+                      value={{
+                        value: formData.refundMethod,
+                        label: {
                           auto: "Automatic",
                           original_source: "Original source",
                           wallet: "Wallet",
                           manual: "Manual review",
                         }[formData.refundMethod] || "Automatic",
-                    }}
-                    onChange={(option) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        refundMethod: option?.value || "auto",
-                      }))
-                    }
-                    placeholder="Select refund method"
-                    isSearchable={false}
-                  />
+                      }}
+                      onChange={(option) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          refundMethod: option?.value || "auto",
+                        }))
+                      }
+                      placeholder="Select refund method"
+                      isSearchable={false}
+                    />
+                  )}
                 </div>
 
                 {/* Products */}
@@ -5002,9 +5189,15 @@ const OrderSummary = () => {
                     {items.map((item) => {
                       const itemId = String(item.id);
 
+                      const pending = Number(
+                        pendingCancellationQuantityByItem.get(itemId) || 0,
+                      );
                       const remaining =
                         Number(item.quantity || 0) -
-                        Number(item.cancelled_quantity || 0);
+                        Number(item.cancelled_quantity || 0) -
+                        pending;
+                      const shipmentCancellable = isItemShipmentCancellable(item);
+                      const blocked = remaining <= 0 || !shipmentCancellable;
 
                       const selected = Object.prototype.hasOwnProperty.call(
                         formData.cancelItems,
@@ -5019,7 +5212,7 @@ const OrderSummary = () => {
                               ? "border-red-200 bg-red-50/50"
                               : "border-gray-200 bg-white hover:bg-gray-50"
                           } ${
-                            remaining <= 0
+                            blocked
                               ? "cursor-not-allowed opacity-60"
                               : "cursor-pointer"
                           }`}
@@ -5027,7 +5220,7 @@ const OrderSummary = () => {
                           <input
                             type="checkbox"
                             checked={selected}
-                            disabled={remaining <= 0}
+                            disabled={blocked}
                             onChange={(event) =>
                               setFormData((prev) => {
                                 const next = { ...prev.cancelItems };
@@ -5060,12 +5253,43 @@ const OrderSummary = () => {
                           >
                             {selected
                               ? `Cancel all ${remaining}`
-                              : `${remaining} available`}
+                              : !shipmentCancellable
+                                ? "Handed to courier"
+                                : pending > 0
+                                  ? "Cancellation pending"
+                                  : `${remaining} available`}
                           </span>
                         </label>
                       );
                     })}
                   </div>
+                </div>
+
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-sm font-semibold text-gray-800">Cancellation impact</p>
+                  {state.cancellationPreviewLoading ? (
+                    <p className="mt-2 text-xs text-gray-500">Calculating from current order values…</p>
+                  ) : state.cancellationPreviewUnavailable ? (
+                    <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                      <p className="font-semibold">Preview temporarily unavailable</p>
+                      <p className="mt-1">The cancellation will still be validated and calculated by the server when you confirm. No estimated amount is being assumed.</p>
+                    </div>
+                  ) : state.cancellationPreviewError ? (
+                    <p className="mt-2 text-xs text-red-600">{state.cancellationPreviewError}</p>
+                  ) : state.cancellationPreview ? (
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                      <div><span className="text-gray-500">Items</span><p className="font-semibold">₹{formatIndianNumber(state.cancellationPreview.itemRefundAmount)}</p></div>
+                      <div><span className="text-gray-500">Shipping</span><p className="font-semibold">₹{formatIndianNumber(state.cancellationPreview.shippingRefundAmount)}</p></div>
+                      <div><span className="text-gray-500">Platform fee</span><p className="font-semibold">₹{formatIndianNumber(state.cancellationPreview.platformFeeRefundAmount)}</p></div>
+                      <div><span className="text-gray-500">Customer refund</span><p className="font-semibold text-red-700">₹{formatIndianNumber(state.cancellationPreview.totalRefundAmount)}</p></div>
+                      <div className="col-span-2 sm:col-span-4">
+                        <span className="text-gray-500">Handling: </span>
+                        <span className="font-semibold">{formatLabel(state.cancellationPreview.refundHandling)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-gray-500">Select at least one cancellable product.</p>
+                  )}
                 </div>
               </div>
             </FormSection>

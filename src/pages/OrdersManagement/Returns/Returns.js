@@ -673,7 +673,10 @@ const SellerReturnOverview = ({ returnRequest = {} }) => {
           </div>
         </div>
 
-        <StatusBadge status={status} dot />
+        <StatusBadge
+          status={status === "requested" ? "return_requested" : status === "approved" ? "return_approved" : status === "rejected" ? "return_rejected" : status}
+          dot
+        />
       </div>
 
       {/* Return Flow */}
@@ -1310,7 +1313,12 @@ const Returns = () => {
         key: "status",
         label: "Status",
         sortable: true,
-        render: (value) => <StatusBadge status={display(value)} dot />,
+        render: (value) => (
+          <StatusBadge
+            status={value === "requested" ? "return_requested" : value === "approved" ? "return_approved" : value === "rejected" ? "return_rejected" : value}
+            dot
+          />
+        ),
       },
       {
         key: "refundAmount",

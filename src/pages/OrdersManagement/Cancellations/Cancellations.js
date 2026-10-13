@@ -65,6 +65,16 @@ const STATUS_COLOR = {
   failed: "red",
   rejected: "red",
 };
+const cancellationStatusLabel = (status) => ({
+  requested: "Cancellation Requested",
+  approved: "Cancellation Approved",
+  processing: "Cancellation Processing",
+  refund_pending: "Refund Pending",
+  manual_review: "Manual Refund Review",
+  completed: "Cancelled",
+  failed: "Cancellation Failed",
+  rejected: "Cancellation Rejected",
+})[String(status || "").toLowerCase()] || formatLabel(status);
 
 const CLASS_TEXT_XS_MUTED = "text-xs text-gray-500";
 const CLASS_TEXT_XS_GRAY = "text-xs text-gray-600";
@@ -111,7 +121,7 @@ const FILTER_FIELDS = [
     label: "Status",
     options: STATUSES.map((s) => ({
       value: s,
-      label: formatLabel(s),
+      label: cancellationStatusLabel(s),
     })),
   },
   {
@@ -455,7 +465,11 @@ const Cancellations = () => {
       label: "Cancellation Status",
       sortable: true,
       render: (v) => (
-        <StatusBadge status={v} color={STATUS_COLOR[v] || "gray"} />
+        <StatusBadge
+          status={v === "requested" ? "cancellation_requested" : v}
+          label={cancellationStatusLabel(v)}
+          color={STATUS_COLOR[v] || "gray"}
+        />
       ),
     },
     {
