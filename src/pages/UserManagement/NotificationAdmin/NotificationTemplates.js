@@ -14,9 +14,7 @@ import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import OrangeButton from "../../../components/Atoms/buttons/OrangeButton";
 
 const CHANNEL_OPTIONS = [
-  { value: "push", label: "Push" },
   { value: "email", label: "Email" },
-  { value: "sms", label: "SMS" },
   { value: "in_app", label: "In-App" },
 ];
 
@@ -32,7 +30,7 @@ const fmt = (d) => (d ? moment(d).format("DD MMM YYYY, h:mm A") : "—");
 const EMPTY_FORM = {
   title: "",
   body: "",
-  channel: "push",
+  channel: "in_app",
   audience: "all",
   userIds: "",
   data: "",
@@ -45,6 +43,32 @@ const NotificationTemplates = () => {
   const [showSend, setShowSend] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [sending, setSending] = useState(false);
+  const [campaignId, setCampaignId] = useState(() => localStorage.getItem("notificationCampaignId") || "");
+  const [campaignProgress, setCampaignProgress] = useState(null);
+  const [retrying, setRetrying] = useState(false);
+  const loadCampaign = useCallback(async () => {
+    if (!campaignId) return;
+    try {
+      const response = await api.get(`/notifications/campaigns/${campaignId}`);
+      setCampaignProgress(response?.data?.data);
+    } catch { /* Keep the last known progress during transient network failures. */ }
+  }, [campaignId]);
+  useEffect(() => {
+    loadCampaign();
+    if (!campaignId) return undefined;
+    const timer = window.setInterval(loadCampaign, 10000);
+    return () => window.clearInterval(timer);
+  }, [campaignId, loadCampaign]);
+  const retryCampaign = async () => {
+    setRetrying(true);
+    try {
+      await api.post(`/notifications/campaigns/${campaignId}/retry`);
+      toast.success("Failed recipients queued for retry");
+      await loadCampaign();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Retry failed");
+    } finally { setRetrying(false); }
+  };
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
@@ -87,7 +111,7 @@ const NotificationTemplates = () => {
           return;
         }
       }
-      await api.post(ENDPOINTS.notifications.send, {
+      const response = await api.post(ENDPOINTS.notifications.send, {
         title: form.title,
         body: form.body,
         channel: form.channel,
@@ -100,7 +124,12 @@ const NotificationTemplates = () => {
           : undefined,
         data: Object.keys(extraData).length ? extraData : undefined,
       });
-      toast.success("Notification sent");
+      const queuedId = response?.data?.data?.campaignId;
+      if (queuedId) {
+        setCampaignId(queuedId);
+        localStorage.setItem("notificationCampaignId", queuedId);
+      }
+      toast.success("Notification campaign queued. Sending will continue in the background.");
       setShowSend(false);
       setForm(EMPTY_FORM);
       fetchNotifications();
@@ -184,6 +213,27 @@ const NotificationTemplates = () => {
           </div>
         }
       />
+
+      {campaignProgress && (
+        <div className="mb-4 rounded border bg-white p-4 text-sm">
+          <div className="font-semibold">Latest campaign: {campaignProgress.campaign?.title}</div>
+          <div>Preparation: {campaignProgress.campaign?.status}</div>
+          <div className="my-2 flex flex-wrap gap-4">
+            {Object.entries(campaignProgress.counts || {}).map(([status, count]) => (
+              <span key={status}>{status.replace(/_/g, " ")}: {count}</span>
+            ))}
+          </div>
+          {campaignProgress.campaign?.lastError && <p>{campaignProgress.campaign.lastError}</p>}
+          {(campaignProgress.counts?.failed > 0 || campaignProgress.campaign?.status === "failed") && (
+            <button type="button" disabled={retrying} onClick={retryCampaign} className="rounded border px-3 py-2">
+              {retrying ? "Queueing…" : "Retry failed recipients / resume campaign"}
+            </button>
+          )}
+          {campaignProgress.failed?.map(item => (
+            <div key={item._id}>{item.userId}: {item.lastError}</div>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <Loader />

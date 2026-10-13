@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react";
 import moment from "moment";
+import { getDealOverview } from "./dealOverview";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -807,95 +808,17 @@ const DealManagement = () => {
     }
   }, [confirm, dispatch, fetchDeals, fetchAnalytics]);
 
-  const metrics = useMemo(() => {
-    const listData = payload.list || [];
-    return {
-      total: analytics.totalDeals ?? payload.total ?? listData.length,
-      active:
-        analytics.activeDeals ??
-        listData.filter((deal) => deal.status === "active").length,
-      scheduled:
-        analytics.scheduledDeals ??
-        listData.filter((deal) => deal.status === "scheduled").length,
-      expired:
-        analytics.expiredDeals ??
-        listData.filter((deal) => deal.status === "expired").length,
-      revenue: analytics.revenueFromDeals ?? analytics.revenue ?? 0,
-      units:
-        analytics.unitsSold ??
-        listData.reduce((sum, deal) => sum + num(deal.soldQuantity), 0),
-    };
-  }, [analytics, payload]);
+  // Overview totals come from all deals, never from the selected table page.
+  const { metrics, tabCounts } = useMemo(
+    () => getDealOverview(analytics, dealProductKeys.length),
+    [analytics, dealProductKeys.length],
+  );
 
-  const tabCounts = useMemo(() => {
-    const listData = payload.list || [];
-
-    const countsFromAnalytics = {};
-    if (Array.isArray(analytics.statusCounts)) {
-      analytics.statusCounts.forEach((item) => {
-        if (item && item.status) {
-          countsFromAnalytics[item.status] = Number(item.count || 0);
-        }
-      });
-    } else if (
-      analytics.statusCounts &&
-      typeof analytics.statusCounts === "object"
-    ) {
-      Object.entries(analytics.statusCounts).forEach(([k, v]) => {
-        countsFromAnalytics[k] = Number(v || 0);
-      });
-    }
-
-    const getStatusCount = (statusKey) => {
-      if (activeTab === statusKey) {
-        return payload.total !== undefined ? payload.total : listData.length;
-      }
-      if (countsFromAnalytics[statusKey] !== undefined) {
-        return countsFromAnalytics[statusKey];
-      }
-      if (statusKey === "active" && metrics.active !== undefined) {
-        return metrics.active;
-      }
-      if (statusKey === "scheduled" && metrics.scheduled !== undefined) {
-        return metrics.scheduled;
-      }
-      if (statusKey === "expired" && metrics.expired !== undefined) {
-        return metrics.expired;
-      }
-      return listData.filter((deal) => deal.status === statusKey).length;
-    };
-
-    const activeCount = getStatusCount("active");
-    const scheduledCount = getStatusCount("scheduled");
-    const expiredCount = getStatusCount("expired");
-    const pendingCount = getStatusCount("pending_approval");
-    const rejectedCount = getStatusCount("rejected");
-    const cancelledCount = getStatusCount("cancelled");
-    const productKeysCount = dealProductKeys.length;
-
-    const allDealsCount =
-      activeTab === ""
-        ? (payload.total !== undefined ? payload.total : listData.length) +
-          productKeysCount
-        : (metrics.total ??
-            activeCount +
-              scheduledCount +
-              expiredCount +
-              pendingCount +
-              rejectedCount +
-              cancelledCount) + productKeysCount;
-
-    return {
-      "": allDealsCount,
-      product_keys: productKeysCount,
-      pending_approval: pendingCount,
-      active: activeCount,
-      scheduled: scheduledCount,
-      expired: expiredCount,
-      rejected: rejectedCount,
-      cancelled: cancelledCount,
-    };
-  }, [analytics, payload, activeTab, metrics, dealProductKeys]);
+  const refreshDeals = useCallback(() => {
+    fetchDeals();
+    fetchAnalytics();
+    fetchDealProductKeys();
+  }, [fetchDeals, fetchAnalytics, fetchDealProductKeys]);
 
   const tableRows = useMemo(() => {
     const deals = payload.list || [];
@@ -1259,7 +1182,7 @@ const DealManagement = () => {
       <DataTable
         columns={columns}
         data={tableRows}
-        onRefresh={fetchDeals}
+        onRefresh={refreshDeals}
         total={
           activeTab === "product_keys"
             ? tableRows.length

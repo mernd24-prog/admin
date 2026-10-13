@@ -3247,6 +3247,8 @@ export const SellerAnalytics = () => {
 
         <ReportTable
           title="Seller Scorecard"
+          emptyTitle="No seller scorecards found"
+          emptyText="No seller performance data is available for the selected date range."
           rows={rows}
           columns={[
             {
