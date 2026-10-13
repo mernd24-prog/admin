@@ -475,6 +475,7 @@ const SellerFinance = () => {
   const [orderId, setOrderId] = useState(initialParams.get("orderId") || "");
   const [submitting, setSubmitting] = useState(false);
   const [sellerOptions, setSellerOptions] = React.useState([]);
+  const [sellerLoading, setSellerLoading] = useState(false);
   const [orderOptions, setOrderOptions] = useState([]);
   const [organizationOptions, setOrganizationOptions] = useState([]);
   const [processOrganizationOptions, setProcessOrganizationOptions] = useState(
@@ -509,10 +510,18 @@ const SellerFinance = () => {
   React.useEffect(() => {
     if (isSeller) return;
     loadRuntime();
-    dropdownApi
-      .getSellers({ limit: 100 })
-      .then(setSellerOptions)
-      .catch(() => {});
+    const loadSellers = async () => {
+      setSellerLoading(true);
+      try {
+        const options = await dropdownApi.getSellers({ limit: 100 });
+        setSellerOptions(options);
+      } catch {
+        setSellerOptions([]);
+      } finally {
+        setSellerLoading(false);
+      }
+    };
+    loadSellers();
     dropdownApi
       .getOrders({ limit: 100 })
       .then(setOrderOptions)
@@ -667,6 +676,7 @@ const SellerFinance = () => {
               label: "Seller Name",
               options: sellerOpts,
               placeholder: "All Sellers",
+              isLoading: sellerLoading,
             },
             {
               key: "organizationId",
@@ -700,7 +710,7 @@ const SellerFinance = () => {
           ]
         : []),
     ],
-    [filters.sellerId, isSeller, isSellerDetail, orgOpts, sellerOpts],
+    [filters.sellerId, isSeller, isSellerDetail, orgOpts, sellerLoading, sellerOpts],
   );
   const visibleCommissions = useMemo(
     () =>

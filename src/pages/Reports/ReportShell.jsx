@@ -19,7 +19,6 @@ import {
 import {
   MdAccountBalanceWallet,
   MdAssignmentReturn,
-  MdArrowDropDown,
   MdCurrencyRupee,
   MdFileDownload,
   MdFilterList,
@@ -35,7 +34,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  DateRangePickerModal,
   PageHeader,
   SummaryCard,
   SellerIdentity,
@@ -49,7 +47,7 @@ import {
 } from "../../_helpers/exportToCsv";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
-import { GoldDateRangeCalendar } from "../../components/Shared/FilterBar";
+import { DateRangeFilter } from "../../components/Shared/FilterBar";
 import { formatDateTime } from "../../utils/formatters";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import Pagination from "../../components/Pagination/Pagination";
@@ -59,11 +57,6 @@ const CHART_GRID_COLOR = "#e9dfc9";
 const REPORT_GOLD = "#d6a323";
 const REPORT_GOLD_DARK = "#b98514";
 const SELLER_REPORT_CRUMB = "My Reports";
-const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const monthFormatter = new Intl.DateTimeFormat("en-IN", {
-  month: "long",
-  year: "numeric",
-});
 
 const STAT_ICON_BY_LABEL = {
   "Total Revenue": MdCurrencyRupee,
@@ -122,32 +115,6 @@ const parseInputDate = (value) => {
   if (!year || !month || !day) return null;
   return new Date(year, month - 1, day);
 };
-
-const addMonths = (date, amount) => {
-  const next = new Date(date);
-  next.setMonth(next.getMonth() + amount, 1);
-  return next;
-};
-
-const buildCalendarDays = (viewDate) => {
-  const monthStart = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
-  const gridStart = new Date(monthStart);
-  gridStart.setDate(monthStart.getDate() - monthStart.getDay());
-
-  return Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(gridStart);
-    date.setDate(gridStart.getDate() + index);
-    return {
-      date,
-      value: toIsoDate(date),
-      day: date.getDate(),
-      isCurrentMonth: date.getMonth() === viewDate.getMonth(),
-    };
-  });
-};
-
-const isBetweenDates = (value, start, end) =>
-  Boolean(start && end && value >= start && value <= end);
 
 const formatDateLabel = (value) => {
   const date = parseInputDate(value);
@@ -436,123 +403,6 @@ const ReportTable = ({
   );
 };
 
-const ReportDateRangeModal = ({ open, filters, loading, onClose }) => {
-  const [draftDates, setDraftDates] = useState({
-    fromDate: filters?.fromDate || "",
-    toDate: filters?.toDate || "",
-  });
-
-  const [viewDate, setViewDate] = useState(
-    () => parseInputDate(filters?.fromDate || filters?.toDate) || new Date(),
-  );
-
-  useEffect(() => {
-    if (!open) return;
-
-    setDraftDates({
-      fromDate: filters?.fromDate || "",
-      toDate: filters?.toDate || "",
-    });
-
-    setViewDate(
-      parseInputDate(filters?.fromDate || filters?.toDate) || new Date(),
-    );
-  }, [filters?.fromDate, filters?.toDate, open]);
-
-  if (!open) return null;
-
-  const handleSelectDate = (value) => {
-    const selectedDate = parseInputDate(value);
-
-    if (!selectedDate) return;
-
-    setViewDate(selectedDate);
-
-    setDraftDates((current) => {
-      // First selection = start date
-      if (!current.fromDate || current.toDate) {
-        return {
-          fromDate: value,
-          toDate: "",
-        };
-      }
-
-      // If second date is before first date,
-      // automatically make it the start date.
-      if (value < current.fromDate) {
-        return {
-          fromDate: value,
-          toDate: current.fromDate,
-        };
-      }
-
-      // Second selection = end date
-      return {
-        ...current,
-        toDate: value,
-      };
-    });
-  };
-
-  const handleApply = () => {
-    if (!draftDates.fromDate || !draftDates.toDate) {
-      return;
-    }
-
-    const nextDates =
-      draftDates.fromDate <= draftDates.toDate
-        ? draftDates
-        : {
-            fromDate: draftDates.toDate,
-            toDate: draftDates.fromDate,
-          };
-
-    filters.setDateRange(nextDates.fromDate, nextDates.toDate);
-
-    onClose();
-  };
-
-  const handleClear = () => {
-    setDraftDates({
-      fromDate: "",
-      toDate: "",
-    });
-  };
-
-  const handleToday = () => {
-    const today = toIsoDate(new Date());
-
-    setDraftDates({
-      fromDate: today,
-      toDate: today,
-    });
-
-    setViewDate(new Date());
-  };
-
-  return (
-    <DateRangePickerModal
-      open={open}
-      onClose={onClose}
-      title="Select Date Range"
-      subtitle="Report data will update after apply."
-      loading={loading}
-    >
-      <GoldDateRangeCalendar
-        dates={draftDates}
-        viewDate={viewDate}
-        onViewDateChange={setViewDate}
-        onSelectDate={handleSelectDate}
-        onApply={handleApply}
-        onCancel={onClose}
-        onClear={handleClear}
-        onToday={handleToday}
-        loading={loading}
-      />
-    </DateRangePickerModal>
-  );
-};
-
 export const ReportShell = ({
   title,
   subtitle,
@@ -571,7 +421,6 @@ export const ReportShell = ({
   showFilters = true,
 }) => {
   const [exporting, setExporting] = useState(false);
-  const [dateModalOpen, setDateModalOpen] = useState(false);
   const dateRangeLabel =
     filters?.fromDate && filters?.toDate
       ? `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(filters.toDate)}`
@@ -642,13 +491,6 @@ export const ReportShell = ({
         }
       />
 
-      <ReportDateRangeModal
-        open={dateModalOpen}
-        filters={filters}
-        loading={loading}
-        onClose={() => setDateModalOpen(false)}
-      />
-
       <section className="mb-4 rounded-lg border border-[var(--admin-line)] bg-white p-3.5 shadow-[0_10px_28px_rgba(31,27,95,0.05)]">
         {showFilters ? (
           <>
@@ -658,25 +500,33 @@ export const ReportShell = ({
             </div>
 
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div className="flex w-full min-w-0 flex-col gap-1 sm:max-w-sm">
-                <label
-                  htmlFor="report-date-range"
-                  className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400"
-                >
-                  Date Range
-                </label>
-                <button
-                  id="report-date-range"
-                  type="button"
-                  onClick={() => setDateModalOpen(true)}
-                  className="admin-input !flex !h-9 w-full items-center justify-between gap-2 !py-0 text-left !text-[13px] !leading-none text-[var(--admin-ink)]"
-                >
-                  <span className="min-w-0 truncate">{dateRangeLabel}</span>
-                  <MdArrowDropDown
-                    size={16}
-                    className="shrink-0 text-gray-400"
-                  />
-                </button>
+              <div className="w-full sm:max-w-sm">
+                <DateRangeFilter
+                  field={{
+                    key: "reportDateRange",
+                    type: "daterange",
+                    startKey: "fromDate",
+                    endKey: "toDate",
+                    label: "Date Range",
+                    labelClassName:
+                      "px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400",
+                    inputClassName: "text-[var(--admin-ink)]",
+                    subtitle: "Report data will update after apply.",
+                    disableFuture: true,
+                  }}
+                  values={{
+                    fromDate: filters?.fromDate || "",
+                    toDate: filters?.toDate || "",
+                  }}
+                  onChange={(key, value) => {
+                    if (key === "fromDate") {
+                      filters.setDateRange(value, filters.toDate);
+                    } else {
+                      filters.setDateRange(filters.fromDate, value);
+                    }
+                  }}
+                  loading={loading}
+                />
               </div>
 
               <button

@@ -29,6 +29,7 @@ export default function SearchComponent({
   isProduct = false,
   isUser = false,
   isCategory = false,
+  categoryLoading = false,
   isActivationStatus = false,
   isApprovalOptions = false,
   isRevisionOptions = false,
@@ -646,6 +647,7 @@ export default function SearchComponent({
                 <div className={compactFilterBar ? "min-w-0" : undefined}>
                   <FilterSelect
                     label="Category"
+                    isLoading={categoryLoading}
                     value={filters.category}
                     mutedValue={isSellerPanel() && (!filters.category?.value || filters.category?.value === "All")}
                     options={categoryOptions}

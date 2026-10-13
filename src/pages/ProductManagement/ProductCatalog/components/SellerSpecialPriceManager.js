@@ -35,6 +35,7 @@ import Loader from "../../../../components/Loader/Loader";
 import { useListPage } from "../../../../hooks/useListPage";
 import { isSellerPanel } from "../../../../_helpers/panelConfig";
 import { toast } from "../../../../utils/toast";
+import { truncateToWordBoundary } from "../../../../utils/formatters";
 
 const getErrorMessage = (error, fallback) => {
   if (typeof error === "string" && error.trim()) return error;
@@ -805,28 +806,34 @@ const SellerSpecialPriceManager = () => {
       },
       ,
       {
-        key: "title",
-        label: "Product",
-        sortable: true,
-        render: (_, row) => (
-          <div className="special-price-product-cell">
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  `/app/seller-special-price-manager/${row._id || row.id}`,
-                )
-              }
-              className="special-price-product-name text-left font-semibold text-[var(--admin-ink)] hover:text-[var(--admin-blue)] hover:underline focus:outline-none"
-            >
-              {row.title || row.name || "Untitled Product"}
-            </button>
-            <span className="special-price-product-sku text-xs text-gray-500">
-              {row.sku || "No SKU"}
-            </span>
-          </div>
-        ),
-      },
+  key: "title",
+  label: "Product",
+  sortable: true,
+  render: (_, row) => {
+    const productName = row.title || row.name || "Untitled Product";
+
+    return (
+      <div className="special-price-product-cell">
+        <button
+          type="button"
+          onClick={() =>
+            navigate(
+              `/app/seller-special-price-manager/${row._id || row.id}`,
+            )
+          }
+          title={productName}
+          className="special-price-product-name text-left font-semibold text-[var(--admin-ink)] hover:text-[var(--admin-blue)] hover:underline focus:outline-none"
+        >
+          {truncateToWordBoundary(productName, 40)}
+        </button>
+
+        <span className="special-price-product-sku text-xs text-gray-500">
+          {row.sku || "No SKU"}
+        </span>
+      </div>
+    );
+  },
+},
       ...(!sellerView
         ? [
             {

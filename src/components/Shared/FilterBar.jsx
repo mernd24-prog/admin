@@ -14,7 +14,9 @@ import {
   MdClear,
   MdKeyboardArrowDown,
 } from "react-icons/md";
-import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
+import FilterSelect, {
+  ThreeDotLoadingIndicator,
+} from "../Atoms/FilterSelect/FilterSelect";
 import DateRangePickerModal from "./DateRangePickerModal";
 
 /**
@@ -122,6 +124,7 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
       <button
         id={id}
         type="button"
+        aria-busy={loading}
         onClick={() => {
           setOpen((o) => !o);
           if (!open) setTimeout(() => inputRef.current?.focus(), 50);
@@ -130,6 +133,7 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
       >
         <span className="truncate">{displayText}</span>
         <span className="flex items-center gap-0.5 shrink-0">
+          {loading && <ThreeDotLoadingIndicator />}
           {hasValue && (
             <MdClear
               size={14}
@@ -528,7 +532,8 @@ export const GoldDateRangeCalendar = ({
           );
 
           const isDisabled =
-            (disableFuture && isFutureDate) || Boolean(maxDate && day.value > maxDate);
+            (disableFuture && isFutureDate) ||
+            Boolean(maxDate && day.value > maxDate);
 
           return (
             <button
@@ -604,7 +609,14 @@ export const GoldDateRangeCalendar = ({
   );
 };
 
-export const DateRangeFilter = ({ field, value, onChange, values }) => {
+export const DateRangeFilter = ({
+  field,
+  value,
+  onChange,
+  values,
+  onApply: onApplyOverride,
+  loading = false,
+}) => {
   const id = useId();
   const startKey = field.startKey || "startDate";
   const endKey = field.endKey || "endDate";
@@ -639,6 +651,7 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
         : { fromDate: draftDates.toDate, toDate: draftDates.fromDate };
     onChange(startKey, nextDates.fromDate);
     onChange(endKey, nextDates.toDate);
+    onApplyOverride?.(nextDates.fromDate, nextDates.toDate);
     setOpen(false);
   };
 
@@ -697,18 +710,28 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
       <button
         id={id}
         type="button"
-        onClick={openPicker}
+        onClick={() => {
+          if (open) {
+            setOpen(false);
+          } else {
+            openPicker();
+          }
+        }}
         className={`admin-input !flex !h-9 w-full items-center justify-between gap-2 !py-0 text-left !text-[13px] !leading-none ${
           field.inputClassName || ""
         } ${
-          startValue && endValue ? "text-[var(--admin-ink)]" : "text-gray-400"
+          startValue && endValue ? "text-[var(--admin-ink)]" : "text-gray-500"
         }`}
       >
         <span className="whitespace-nowrap">{displayLabel}</span>
+
         <MdKeyboardArrowDown
           aria-hidden="true"
-          size={18}
-          className="shrink-0 text-gray-400"
+          size={22}
+          color="hsl(0, 0%, 80%)"
+          className={`shrink-0 transition-transform duration-200 ${
+            open ? "rotate-180" : "rotate-0"
+          }`}
         />
       </button>
 
@@ -716,7 +739,8 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
         open={open}
         onClose={() => setOpen(false)}
         title="Select Date Range"
-        subtitle="Filter data will update after apply."
+        subtitle={field.subtitle || "Filter data will update after apply."}
+        loading={loading}
       >
         <GoldDateRangeCalendar
           dates={draftDates}
@@ -729,6 +753,7 @@ export const DateRangeFilter = ({ field, value, onChange, values }) => {
           onToday={selectToday}
           maxDate={maxDate}
           disableFuture={field.disableFuture ?? true}
+          loading={loading}
         />
       </DateRangePickerModal>
     </div>
@@ -874,6 +899,7 @@ const FilterField = ({ field, value, onChange, values }) => {
 
         <FilterSelect
           options={field.options || []}
+          isLoading={field.isLoading}
           value={selectedOption}
           onChange={(opt) => onChange(field.key, opt ? opt.value : "")}
           placeholder={field.placeholder || `All ${field.label || ""}`}
@@ -943,6 +969,8 @@ const FilterField = ({ field, value, onChange, values }) => {
         value={value}
         onChange={onChange}
         values={values}
+        loading={field.loading}
+        onApply={field.onApply}
       />
     );
   }

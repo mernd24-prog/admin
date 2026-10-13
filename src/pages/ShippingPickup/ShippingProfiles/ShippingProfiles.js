@@ -296,7 +296,10 @@ function ProfileForm({
   organizationOptions = [],
   onSellerSearch,
 }) {
-  const patch = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
+  const patch = (key, val) => {
+    setForm((prev) => ({ ...prev, [key]: val }));
+    formik?.setFieldValue(key, val);
+  };
   const numericErrors = getShippingNumericErrors(form);
 
   const TOAST_ID = "shipping-profile-pincode";
@@ -450,16 +453,17 @@ function ProfileForm({
           </div>
 
           {/* Description */}
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <label className="admin-label !mb-0">Description</label>
+       <div className="flex min-w-0 flex-col gap-1.5">
+  <label className="admin-label !mb-0">Description</label>
 
-            <input
-              className="admin-input"
-              placeholder="Optional description"
-              value={form.description}
-              onChange={(e) => patch("description", e.target.value)}
-            />
-          </div>
+  <textarea
+    className="admin-input min-h-[100px] resize-y"
+    placeholder="Optional description"
+    value={form.description}
+    onChange={(e) => patch("description", e.target.value)}
+    rows={4}
+  />
+</div>
         </div>
       </FormSection>
 

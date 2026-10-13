@@ -103,11 +103,20 @@ const DealPayouts = () => {
     sellerId: "",
   });
   const [sellerOptions, setSellerOptions] = useState([]);
+  const [sellerLoading, setSellerLoading] = useState(false);
   useEffect(() => {
-    dropdownApi
-      .getSellers({ limit: 100 })
-      .then(setSellerOptions)
-      .catch(() => {});
+    const loadSellers = async () => {
+      setSellerLoading(true);
+      try {
+        const options = await dropdownApi.getSellers({ limit: 100 });
+        setSellerOptions(options);
+      } catch {
+        setSellerOptions([]);
+      } finally {
+        setSellerLoading(false);
+      }
+    };
+    loadSellers();
   }, []);
   const [generating, setGenerating] = useState(false);
   const [processConfirm, setProcessConfirm] = useState({
@@ -412,6 +421,7 @@ const DealPayouts = () => {
                     sellerId: option?.value || "",
                   }))
                 }
+                isLoading={sellerLoading}
                 placeholder="All Sellers"
                 isClearable
                 isSearchable

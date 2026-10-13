@@ -173,6 +173,18 @@ const CustomDropdownIndicator = (props) => {
   );
 };
 
+export const ThreeDotLoadingIndicator = () => (
+  <span
+    className="inline-flex items-center gap-0.5 text-gray-400"
+    role="status"
+    aria-label="Loading"
+  >
+    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
+    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
+    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" />
+  </span>
+);
+
 const FilterSelect = ({
   label,
   options,
@@ -194,7 +206,7 @@ const FilterSelect = ({
   className = "",
   loadOptions,
   defaultOptions = true,
-  loadingMessage,
+  loadingMessage = () => <ThreeDotLoadingIndicator />,
   cacheOptions = true,
   formatOptionLabel,
   controlHeight,
@@ -254,7 +266,7 @@ const FilterSelect = ({
           menuPosition="fixed"
           aria-invalid={Boolean(error)}
           noOptionsMessage={noOptionsMessage}
-          loadingMessage={loadingMessage}
+          loadingMessage={loadingMessage || (() => " ")}
           components={{
             DropdownIndicator: CustomDropdownIndicator,
           }}
