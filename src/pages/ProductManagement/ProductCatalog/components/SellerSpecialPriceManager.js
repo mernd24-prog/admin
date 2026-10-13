@@ -48,11 +48,12 @@ import {
 } from "../../../../components/Atoms/buttons/exportImport";
 import { MdFileDownload } from "react-icons/md";
 
-import toast from "../../../../utils/toast";
 import {
   exportToExcelWorkbook,
   parseImportFile,
 } from "../../../../_helpers/exportToCsv";
+import { toast } from "../../../../utils/toast";
+import { truncateToWordBoundary } from "../../../../utils/formatters";
 
 const getErrorMessage = (error, fallback) => {
   if (typeof error === "string" && error.trim()) return error;
@@ -990,29 +991,27 @@ const SellerSpecialPriceManager = () => {
           const productName = row.title || row.name || "Untitled Product";
 
           return (
-            <div className="special-price-product-cell min-w-0">
+            <div className="special-price-product-cell">
               <button
                 type="button"
                 onClick={() =>
-                  navigate(`/app/seller-special-price-manager/${row._id || row.id}`)
+                  navigate(
+                    `/app/seller-special-price-manager/${row._id || row.id}`,
+                  )
                 }
                 title={productName}
-                className="block max-w-[180px] truncate text-left font-semibold text-[var(--admin-ink)] hover:text-[var(--admin-blue)] hover:underline focus:outline-none"
+                className="special-price-product-name text-left font-semibold text-[var(--admin-ink)] hover:text-[var(--admin-blue)] hover:underline focus:outline-none"
               >
-                {productName}
+                {truncateToWordBoundary(productName, 40)}
               </button>
 
-              <span
-                className="special-price-product-sku block max-w-[220px] truncate text-xs text-gray-500"
-                title={row.sku || "No SKU"}
-              >
+              <span className="special-price-product-sku text-xs text-gray-500">
                 {row.sku || "No SKU"}
               </span>
             </div>
           );
         },
       },
-
       ...(!sellerView
         ? [
           {
@@ -1263,9 +1262,8 @@ const SellerSpecialPriceManager = () => {
                 type="button"
                 onClick={handleSave}
                 disabled={!canSave}
-                className={`inline-flex items-center gap-1.5 rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:opacity-90 focus:outline-none ${
-                  canSave ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-                }`}
+                className={`inline-flex items-center gap-1.5 rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:opacity-90 focus:outline-none ${canSave ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+                  }`}
               >
                 {saving
                   ? "Saving..."

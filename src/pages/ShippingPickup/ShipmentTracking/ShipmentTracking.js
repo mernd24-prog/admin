@@ -39,6 +39,7 @@ import { usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 
 const STATUS_OPTIONS = [
   "initiated",
@@ -975,28 +976,36 @@ const ShipmentTracking = () => {
               )}
             {trackingActionOptions.length > 0 ? (
               <div className="mt-4 space-y-2">
-                <div className="grid min-w-0 gap-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    Next status
-                  </label>
-                  <select
-                    className="min-w-0 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-800 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    value={trackingAction.status}
-                    onChange={(event) => {
-                      setTrackingErrors({});
-                      setTrackingAction((prev) => ({
-                        ...prev,
-                        status: event.target.value,
-                      }));
-                    }}
-                  >
-                    {trackingActionOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div className="mt-4 space-y-2">
+  <FilterSelect
+    label="Next status"
+    name="trackingStatus"
+    options={trackingActionOptions.map((option) => ({
+      label: option.label,
+      value: option.value,
+    }))}
+    value={
+      trackingActionOptions
+        .map((option) => ({
+          label: option.label,
+          value: option.value,
+        }))
+        .find((option) => option.value === trackingAction.status) || null
+    }
+    onChange={(option) => {
+      setTrackingErrors({});
+      setTrackingAction((prev) => ({
+        ...prev,
+        status: option?.value || "",
+      }));
+    }}
+    placeholder="Select next status"
+    isClearable={false}
+    isSearchable={false}
+  />
+
+  {/* Keep the remaining fields and buttons unchanged */}
+</div>
 
                 {["in_transit", "delivered", "failed", "rto"].includes(
                   trackingAction.status,
@@ -1065,48 +1074,59 @@ const ShipmentTracking = () => {
                       Dispatch details
                     </div>
                     <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-x-3 gap-y-1">
-                      <label className="grid min-w-0 gap-1 text-xs text-gray-500">
-                        <span>
-                          Courier / Delivery Method{" "}
-                          <span className="text-red-500" aria-hidden="true">
-                            *
-                          </span>
-                        </span>
-                        <select
-                          className={`min-w-0 w-full rounded-lg border px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${trackingErrors.courierName ? "border-red-400" : "border-gray-200"}`}
-                          value={trackingAction.courierName}
-                          required
-                          aria-required="true"
-                          aria-invalid={Boolean(trackingErrors.courierName)}
-                          onChange={(event) => {
-                            setTrackingAction((prev) => ({
-                              ...prev,
-                              courierName: event.target.value,
-                            }));
-                            setTrackingErrors((prev) => ({
-                              ...prev,
-                              courierName: "",
-                            }));
-                          }}
-                        >
-                          <option value="">Select delivery method</option>
-                          {trackingAction.courierName &&
-                            !DELIVERY_METHOD_OPTIONS.some(
-                              (option) =>
-                                option.value === trackingAction.courierName,
-                            ) && (
-                              <option value={trackingAction.courierName}>
-                                {trackingAction.courierName}
-                              </option>
-                            )}
-                          {DELIVERY_METHOD_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                        <FieldError message={trackingErrors.courierName} />
-                      </label>
+                     <div className="min-w-0">
+  <FilterSelect
+    label="Courier / Delivery Method"
+    name="courierName"
+    options={[
+      ...(trackingAction.courierName &&
+      !DELIVERY_METHOD_OPTIONS.some(
+        (option) => option.value === trackingAction.courierName,
+      )
+        ? [
+            {
+              value: trackingAction.courierName,
+              label: trackingAction.courierName,
+            },
+          ]
+        : []),
+      ...DELIVERY_METHOD_OPTIONS,
+    ]}
+    value={
+      [
+        ...(trackingAction.courierName &&
+        !DELIVERY_METHOD_OPTIONS.some(
+          (option) => option.value === trackingAction.courierName,
+        )
+          ? [
+              {
+                value: trackingAction.courierName,
+                label: trackingAction.courierName,
+              },
+            ]
+          : []),
+        ...DELIVERY_METHOD_OPTIONS,
+      ].find((option) => option.value === trackingAction.courierName) ||
+      null
+    }
+    onChange={(option) => {
+      setTrackingAction((prev) => ({
+        ...prev,
+        courierName: option?.value || "",
+      }));
+
+      setTrackingErrors((prev) => ({
+        ...prev,
+        courierName: "",
+      }));
+    }}
+    placeholder="Select delivery method"
+    required
+    isClearable={false}
+    isSearchable={false}
+    error={trackingErrors.courierName}
+  />
+</div>
                       <label className="grid min-w-0 gap-1 text-xs text-gray-500">
                         <span>
                           AWB / Tracking Reference{" "}

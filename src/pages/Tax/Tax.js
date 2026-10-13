@@ -100,6 +100,9 @@ const Tax = () => {
 
   const selector = useSelector((state) => state.cms);
   const countrySelector = useSelector((state) => state.country);
+  const countryLoading = Boolean(
+    countrySelector?.getAllCountryListData?.loading,
+  );
   const listPayload = selector?.getTaxListData?.data?.data || {};
   const taxList = listPayload?.list || [];
   const totalTax = Number(listPayload?.total || 0);
@@ -378,6 +381,7 @@ const Tax = () => {
                 }
                 placeholder="Select country"
                 required
+                isLoading={countryLoading}
               />
             </div>
           </FormSection>

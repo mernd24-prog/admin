@@ -62,7 +62,7 @@ const unwrapList = (payload = {}) => {
 const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
 
 const FILTER_FIELDS = [
-  { key: "orderId", type: "text", label: "Order #", width: "w-48" },
+  // { key: "orderId", type: "text", label: "Order #", width: "w-48" },
   // {
   //   key: "buyerId",
   //   type: "asyncDropdown",

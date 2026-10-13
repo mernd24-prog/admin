@@ -260,6 +260,7 @@ const ProductCatalog = () => {
   });
 
   const [categoryOptions, setCategoryOptions] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
   const [selectedImages, setSelectedImages] = useState(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
 
@@ -533,6 +534,7 @@ const ProductCatalog = () => {
       });
     }
 
+    setCategoryLoading(true);
     dispatch(
       getCategoryList({
         tree: true,
@@ -575,7 +577,8 @@ const ProductCatalog = () => {
           ...flattenTree(source),
         ]);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setCategoryLoading(false));
   }, [canFilterBySeller, dispatch]);
 
   useEffect(() => {
@@ -1377,9 +1380,11 @@ const ProductCatalog = () => {
             storeOptions={storeListData}
             isSellerStoreName={canFilterBySeller}
             categoryOptions={categoryOptions}
+            categoryLoading={categoryLoading}
             dateFrom={true}
             dateTo={true}
             userOptions={sellerListData}
+            sellerLoading={sellerLoading}
             approvalOptions={APPROVAL_STATUS_OPTIONS}
             revisionOptions={REVISION_STATUS_OPTIONS}
             activationStatusOptions={ACTIVATION_STATUS_OPTIONS}

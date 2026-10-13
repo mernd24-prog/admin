@@ -494,21 +494,7 @@ const TaxRule = () => {
             >
               <div className="space-y-2">
                 {/* Description */}
-                <FormInput
-                  label="Description"
-                  name="description"
-                  type="textarea"
-                  value={formik.values.description}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={
-                    formik.touched.description && formik.errors.description
-                  }
-                  placeholder="Describe this tax rule"
-                  rows={3}
-                  required
-                />
-
+               
                 {/* Tax + Sub Tax */}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -550,6 +536,21 @@ const TaxRule = () => {
                   required
                   placeholder="Select category"
                 />
+                 <FormInput
+                  label="Description"
+                  name="description"
+                  type="textarea"
+                  value={formik.values.description}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={
+                    formik.touched.description && formik.errors.description
+                  }
+                  placeholder="Describe this tax rule"
+                  rows={3}
+                  required
+                />
+
               </div>
             </FormSection>
 
