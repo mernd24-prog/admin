@@ -1195,21 +1195,14 @@ const ProductCatalog = () => {
         sortable: true,
         render: (_, product) => {
           if (!sellerView) return formatMoney(getEffectivePrice(product));
-          const { specialPrice, price, mrp } = getSellerPricing(product);
-          return specialPrice !== null ? (
-            <div className="flex flex-col gap-1">
-              <span>{formatMoney(specialPrice)}</span>
-              <span className="text-xs text-gray-500">Special Price</span>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <span>{formatMoney(price)}</span>
-              {mrp !== null && (
-                <span className="text-xs text-gray-500">MRP: {formatMoney(mrp)}</span>
-              )}
-            </div>
-          );
+          const { specialPrice, price } = getSellerPricing(product);
+          return formatMoney(specialPrice ?? price);
         },
+      },
+      {
+        key: "mrp",
+        label: "MRP",
+        render: (_, product) => formatMoney(getSellerPricing(product).mrp),
       },
       {
         key: "stock",

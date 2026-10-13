@@ -27,6 +27,7 @@ import { getAllStateList } from "../../../../Redux/stateSlice";
 import { getAllCityList } from "../../../../Redux/citySlice";
 import { GrDocument } from "react-icons/gr";
 import {
+  FiRefreshCw,
   FiTrash2,
   FiAlertCircle,
   FiPlus,
@@ -400,6 +401,8 @@ export default function ProductManagementUI() {
   const leaveGuardDisabledRef = useRef(false);
   const sellerPanelMode = isSellerPanel();
   const [shippingProfileOptions, setShippingProfileOptions] = useState([]);
+  const [shippingProfilesRefresh, setShippingProfilesRefresh] = useState(0);
+  const [shippingProfilesLoading, setShippingProfilesLoading] = useState(false);
   const [allowedPincodeInput, setAllowedPincodeInput] = useState("");
   const [selectedShippingTemplate, setSelectedShippingTemplate] =
     useState(null);
@@ -1248,6 +1251,8 @@ export default function ProductManagementUI() {
   // Load shipping profiles whenever the seller / org context changes.
   // Published Admin templates are available to both panels as copy sources.
   useEffect(() => {
+    let cancelled = false;
+    setShippingProfilesLoading(true);
     const sid =
       formData?.sellerId ||
       userData?.ownerSellerId ||
@@ -1306,19 +1311,20 @@ export default function ProductManagementUI() {
         })
         .catch(() => []),
     );
-    if (!requests.length) {
-      setShippingProfileOptions([]);
-      return;
-    }
     Promise.all(requests).then((groups) => {
-      setShippingProfileOptions(groups.flat());
+      if (!cancelled) {
+        setShippingProfileOptions(groups.flat());
+        setShippingProfilesLoading(false);
+      }
     });
+    return () => { cancelled = true; };
   }, [
     dispatch,
     formData?.sellerId,
     formData?.organizationId,
     isSellerPanelUser,
     userData,
+    shippingProfilesRefresh,
   ]);
 
   const handleOptionSearch = useCallback(
@@ -3462,6 +3468,29 @@ export default function ProductManagementUI() {
             )}
 
             <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-xs font-semibold text-gray-700">Shipping profiles</span>
+                <div className="flex items-center gap-2">
+                  <a
+                    href="/app/shipping-profiles"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] hover:bg-[var(--admin-gold-soft)]"
+                  >
+                    <FiPlus aria-hidden="true" /> Create profile
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setShippingProfilesRefresh(value => value + 1)}
+                    disabled={shippingProfilesLoading}
+                    aria-label="Refresh shipping profiles and templates"
+                    className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <FiRefreshCw aria-hidden="true" className={shippingProfilesLoading ? "animate-spin" : ""} />
+                    {shippingProfilesLoading ? "Refreshing…" : "Refresh"}
+                  </button>
+                </div>
+              </div>
               {/* Selected Profile Actions */}
               <div className="flex items-start justify-end gap-2">
                 {formData?.shipping?.shippingProfileId && (
@@ -3599,17 +3628,10 @@ export default function ProductManagementUI() {
               {shippingProfileOptions.filter(
                 (option) => option.type === "profile",
               ).length === 0 &&
-                formData?.sellerId && (
+                formData?.sellerId && !shippingProfilesLoading && (
                   <p className="text-xs text-gray-400">
-                    No active shipping profiles found.{" "}
-                    <a
-                      href="/app/shipping-profiles"
-                      className="text-[var(--admin-blue)] hover:underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Create one →
-                    </a>
+                    No active shipping profiles found. Create a profile above,
+                    then refresh to load it.
                   </p>
                 )}
 
