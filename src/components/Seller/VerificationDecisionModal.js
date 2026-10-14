@@ -27,9 +27,14 @@ const VerificationDecisionModal = ({
   rejectionValue = "rejected",
   rejectionLabel = "Rejection Reason",
   submitText = "Submit",
+  showNoteField = false,
+  noteLabel = "Note",
+  notePlaceholder = "Add a note...",
+  noteRequired = false,
 }) => {
   const [decision, setDecision] = useState(defaultDecision);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -37,22 +42,46 @@ const VerificationDecisionModal = ({
     if (isOpen) {
       setDecision(defaultDecision);
       setRejectionReason("");
+      setNote("");
       setError("");
     }
   }, [isOpen, defaultDecision]);
 
-  const needsReason = decision === rejectionValue;
+  const needsReason = !showNoteField && decision === rejectionValue;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (showNoteField) {
+      if (noteRequired && !note.trim()) {
+        setError(`${noteLabel} is required`);
+        return;
+      }
+      setError("");
+      setLoading(true);
+      try {
+        await onSubmit(decision, note.trim());
+        onClose();
+      } catch (err) {
+        setError(err?.message || "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (needsReason && !rejectionReason.trim()) {
       setError("Rejection reason is required");
       return;
     }
+
     setError("");
     setLoading(true);
     try {
-      await onSubmit(decision, needsReason ? rejectionReason.trim() : null);
+      await onSubmit(
+        decision,
+        showNoteField ? note.trim() : needsReason ? rejectionReason.trim() : null,
+      );
       onClose();
     } catch (err) {
       setError(err?.message || "Something went wrong");
@@ -69,27 +98,29 @@ const VerificationDecisionModal = ({
       isButtonView={false}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">
-            {decisionLabel}
-          </label>
-          <select
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
-            value={decision}
-            onChange={(e) => {
-              setDecision(e.target.value);
-              setError("");
-            }}
-          >
-            {options.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!showNoteField && (
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">
+              {decisionLabel}
+            </label>
+            <select
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
+              value={decision}
+              onChange={(e) => {
+                setDecision(e.target.value);
+                setError("");
+              }}
+            >
+              {options.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
-        {needsReason && (
+        {needsReason && !showNoteField && (
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">
               {rejectionLabel} <span className="text-red-500">*</span>
@@ -101,6 +132,24 @@ const VerificationDecisionModal = ({
               value={rejectionReason}
               onChange={(e) => {
                 setRejectionReason(e.target.value);
+                setError("");
+              }}
+            />
+          </div>
+        )}
+
+        {showNoteField && (
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">
+              {noteLabel} {noteRequired && <span className="text-red-500">*</span>}
+            </label>
+            <textarea
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
+              rows={4}
+              placeholder={notePlaceholder}
+              value={note}
+              onChange={(e) => {
+                setNote(e.target.value);
                 setError("");
               }}
             />
