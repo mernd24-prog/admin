@@ -170,7 +170,7 @@ export const useAuthFlow = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { formType, setFormType } = useAuthLayout();
-  const { authSlice } = useSelector((state) => state);
+  const authSlice = useSelector((state) => state.authSlice);
   const { loading } = authSlice || {};
   const sellerPanel = isSellerPanel();
   const panelMode = sellerPanel ? PANEL_MODES.SELLER : PANEL_MODES.ADMIN;
