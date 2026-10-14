@@ -40,6 +40,8 @@ import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
+import { ExportButton } from "../../../components/Atoms/buttons/exportImport";
 
 const STATUS_OPTIONS = [
   "initiated",
@@ -123,9 +125,8 @@ const isCodPayment = (codValue, row = {}) =>
   Boolean(codValue) ||
   codValue === "true" ||
   codValue === 1 ||
-  String(
-    row?.payment_provider || row?.paymentProvider || "",
-  ).toLowerCase() === "cod";
+  String(row?.payment_provider || row?.paymentProvider || "").toLowerCase() ===
+    "cod";
 
 const paymentTypeLabel = (codValue, row = {}) =>
   isCodPayment(codValue, row) ? "COD" : "Prepaid";
@@ -231,6 +232,70 @@ const ShipmentTracking = () => {
       search: initialShipmentId,
     },
   });
+
+  const handleExport = () => {
+    const shipmentRows = shipmentPayload?.list || [];
+
+    if (!shipmentRows.length) {
+      toast.info("No shipment data available to export.");
+      return;
+    }
+
+    try {
+      const excelColumns = columns.map((column) => ({
+        key: column.key,
+        label: column.label,
+      }));
+
+      const data = shipmentRows.map((row) => {
+        const exportRow = {};
+
+        excelColumns.forEach(({ key, label }) => {
+          if (
+            String(key).toLowerCase() === "shipment" ||
+            String(label).toLowerCase() === "shipment"
+          ) {
+            exportRow[key] =
+              row?.order_number ||
+              row?.label_data?.orderNumber ||
+              row?.order_id ||
+              "";
+            return;
+          }
+
+          const value = row?.[key];
+
+          exportRow[key] = value === null || value === undefined ? "" : value;
+        });
+
+        return exportRow;
+      });
+
+      const sheets = [
+        {
+          name: "Shipments",
+          title: "Shipment Tracking Report",
+          data,
+          columns: excelColumns,
+        },
+      ];
+
+      const exported = exportToExcelWorkbook(
+        sheets,
+        "Shipment_Tracking_Report.xlsx",
+      );
+
+      if (exported) {
+        toast.success("Shipment report exported successfully.");
+      } else {
+        toast.error("Unable to export shipment report.");
+      }
+    } catch (error) {
+      console.error("Shipment export error:", error);
+      toast.error("Failed to export shipment report.");
+    }
+  };
+
   const { toQueryParams, filters, setFilter } = list;
 
   const hasResolvedInitialRef = useRef(false);
@@ -756,6 +821,10 @@ const ShipmentTracking = () => {
         sortKey={list.sortKey}
         sortDir={list.sortDir}
         onRefresh={fetchShipments}
+        exportConfig={{
+          onClick: handleExport,
+          disabled: loading || !shipmentPayload.list.length,
+        }}
         error={error}
         filterBar={
           <FilterBar
@@ -771,11 +840,6 @@ const ShipmentTracking = () => {
         selectedKeys={[]}
         rowKey="id"
         requiredModule="delivery"
-        exportConfig={{
-          filename: "shipments",
-          columns,
-          data: shipmentPayload.list,
-        }}
         rowActions={(row) => [
           {
             label: "View Shipment Details",
@@ -886,51 +950,52 @@ const ShipmentTracking = () => {
               </ShipmentFact>
             </div>
             {!isCancelledBeforeShipment(selectedShipment) && (
-            <div className="grid grid-cols-1 gap-2 border-t border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 sm:grid-cols-2">
-              <div>
-                Shipment date:{" "}
-                <strong className="font-medium text-gray-700">
-                  {formatDateTime12Hour(
-                    selectedShipment?.shipped_at || selectedShipment?.shippedAt,
-                    "Not shipped",
-                  )}
-                </strong>
-              </div>
-              <div className="sm:text-right">
-                {selectedShipment?.status === "delivered"
-                  ? "Delivered at"
-                  : "Expected delivery"}
-                :{" "}
-                <strong className="font-medium text-gray-700">
-                  {formatDateTime12Hour(
-                    selectedShipment?.status === "delivered"
-                      ? selectedShipment?.delivered_at ||
-                          selectedShipment?.deliveredAt
-                      : selectedShipment?.expected_delivery_at ||
-                          selectedShipment?.expectedDeliveryAt,
-                    "Not added",
-                  )}
-                </strong>
-              </div>
-              <div className="sm:col-span-2 sm:text-right">
-                Tracking URL:{" "}
-                {selectedShipment?.tracking_url ? (
-                  <a
-                    className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700"
-                    href={selectedShipment.tracking_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open Live Tracking{" "}
-                    <MdOpenInNew aria-hidden="true" size={14} />
-                  </a>
-                ) : (
+              <div className="grid grid-cols-1 gap-2 border-t border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 sm:grid-cols-2">
+                <div>
+                  Shipment date:{" "}
                   <strong className="font-medium text-gray-700">
-                    Not added
+                    {formatDateTime12Hour(
+                      selectedShipment?.shipped_at ||
+                        selectedShipment?.shippedAt,
+                      "Not shipped",
+                    )}
                   </strong>
-                )}
+                </div>
+                <div className="sm:text-right">
+                  {selectedShipment?.status === "delivered"
+                    ? "Delivered at"
+                    : "Expected delivery"}
+                  :{" "}
+                  <strong className="font-medium text-gray-700">
+                    {formatDateTime12Hour(
+                      selectedShipment?.status === "delivered"
+                        ? selectedShipment?.delivered_at ||
+                            selectedShipment?.deliveredAt
+                        : selectedShipment?.expected_delivery_at ||
+                            selectedShipment?.expectedDeliveryAt,
+                      "Not added",
+                    )}
+                  </strong>
+                </div>
+                <div className="sm:col-span-2 sm:text-right">
+                  Tracking URL:{" "}
+                  {selectedShipment?.tracking_url ? (
+                    <a
+                      className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700"
+                      href={selectedShipment.tracking_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open Live Tracking{" "}
+                      <MdOpenInNew aria-hidden="true" size={14} />
+                    </a>
+                  ) : (
+                    <strong className="font-medium text-gray-700">
+                      Not added
+                    </strong>
+                  )}
+                </div>
               </div>
-            </div>
             )}
           </section>
 
@@ -976,36 +1041,38 @@ const ShipmentTracking = () => {
               )}
             {trackingActionOptions.length > 0 ? (
               <div className="mt-4 space-y-2">
-            <div className="mt-4 space-y-2">
-  <FilterSelect
-    label="Next status"
-    name="trackingStatus"
-    options={trackingActionOptions.map((option) => ({
-      label: option.label,
-      value: option.value,
-    }))}
-    value={
-      trackingActionOptions
-        .map((option) => ({
-          label: option.label,
-          value: option.value,
-        }))
-        .find((option) => option.value === trackingAction.status) || null
-    }
-    onChange={(option) => {
-      setTrackingErrors({});
-      setTrackingAction((prev) => ({
-        ...prev,
-        status: option?.value || "",
-      }));
-    }}
-    placeholder="Select next status"
-    isClearable={false}
-    isSearchable={false}
-  />
+                <div className="mt-4 space-y-2">
+                  <FilterSelect
+                    label="Next status"
+                    name="trackingStatus"
+                    options={trackingActionOptions.map((option) => ({
+                      label: option.label,
+                      value: option.value,
+                    }))}
+                    value={
+                      trackingActionOptions
+                        .map((option) => ({
+                          label: option.label,
+                          value: option.value,
+                        }))
+                        .find(
+                          (option) => option.value === trackingAction.status,
+                        ) || null
+                    }
+                    onChange={(option) => {
+                      setTrackingErrors({});
+                      setTrackingAction((prev) => ({
+                        ...prev,
+                        status: option?.value || "",
+                      }));
+                    }}
+                    placeholder="Select next status"
+                    isClearable={false}
+                    isSearchable={false}
+                  />
 
-  {/* Keep the remaining fields and buttons unchanged */}
-</div>
+                  {/* Keep the remaining fields and buttons unchanged */}
+                </div>
 
                 {["in_transit", "delivered", "failed", "rto"].includes(
                   trackingAction.status,
@@ -1074,59 +1141,63 @@ const ShipmentTracking = () => {
                       Dispatch details
                     </div>
                     <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-x-3 gap-y-1">
-                     <div className="min-w-0">
-  <FilterSelect
-    label="Courier / Delivery Method"
-    name="courierName"
-    options={[
-      ...(trackingAction.courierName &&
-      !DELIVERY_METHOD_OPTIONS.some(
-        (option) => option.value === trackingAction.courierName,
-      )
-        ? [
-            {
-              value: trackingAction.courierName,
-              label: trackingAction.courierName,
-            },
-          ]
-        : []),
-      ...DELIVERY_METHOD_OPTIONS,
-    ]}
-    value={
-      [
-        ...(trackingAction.courierName &&
-        !DELIVERY_METHOD_OPTIONS.some(
-          (option) => option.value === trackingAction.courierName,
-        )
-          ? [
-              {
-                value: trackingAction.courierName,
-                label: trackingAction.courierName,
-              },
-            ]
-          : []),
-        ...DELIVERY_METHOD_OPTIONS,
-      ].find((option) => option.value === trackingAction.courierName) ||
-      null
-    }
-    onChange={(option) => {
-      setTrackingAction((prev) => ({
-        ...prev,
-        courierName: option?.value || "",
-      }));
+                      <div className="min-w-0">
+                        <FilterSelect
+                          label="Courier / Delivery Method"
+                          name="courierName"
+                          options={[
+                            ...(trackingAction.courierName &&
+                            !DELIVERY_METHOD_OPTIONS.some(
+                              (option) =>
+                                option.value === trackingAction.courierName,
+                            )
+                              ? [
+                                  {
+                                    value: trackingAction.courierName,
+                                    label: trackingAction.courierName,
+                                  },
+                                ]
+                              : []),
+                            ...DELIVERY_METHOD_OPTIONS,
+                          ]}
+                          value={
+                            [
+                              ...(trackingAction.courierName &&
+                              !DELIVERY_METHOD_OPTIONS.some(
+                                (option) =>
+                                  option.value === trackingAction.courierName,
+                              )
+                                ? [
+                                    {
+                                      value: trackingAction.courierName,
+                                      label: trackingAction.courierName,
+                                    },
+                                  ]
+                                : []),
+                              ...DELIVERY_METHOD_OPTIONS,
+                            ].find(
+                              (option) =>
+                                option.value === trackingAction.courierName,
+                            ) || null
+                          }
+                          onChange={(option) => {
+                            setTrackingAction((prev) => ({
+                              ...prev,
+                              courierName: option?.value || "",
+                            }));
 
-      setTrackingErrors((prev) => ({
-        ...prev,
-        courierName: "",
-      }));
-    }}
-    placeholder="Select delivery method"
-    required
-    isClearable={false}
-    isSearchable={false}
-    error={trackingErrors.courierName}
-  />
-</div>
+                            setTrackingErrors((prev) => ({
+                              ...prev,
+                              courierName: "",
+                            }));
+                          }}
+                          placeholder="Select delivery method"
+                          required
+                          isClearable={false}
+                          isSearchable={false}
+                          error={trackingErrors.courierName}
+                        />
+                      </div>
                       <label className="grid min-w-0 gap-1 text-xs text-gray-500">
                         <span>
                           AWB / Tracking Reference{" "}
@@ -1262,7 +1333,7 @@ const ShipmentTracking = () => {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-amber-800">
-                        Cancellation processing is panding confirmation   
+                        Cancellation processing is panding confirmation
                       </div>
                       <div className="mt-1 text-xs text-gray-500">
                         Complete the cancellation workflow to release inventory

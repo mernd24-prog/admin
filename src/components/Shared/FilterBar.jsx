@@ -133,7 +133,7 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
       >
         <span className="truncate">{displayText}</span>
         <span className="flex items-center gap-0.5 shrink-0">
-          {loading && <ThreeDotLoadingIndicator />}
+          {/* {loading && <ThreeDotLoadingIndicator />} */}
           {hasValue && (
             <MdClear
               size={14}

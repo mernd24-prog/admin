@@ -51,6 +51,7 @@ import {
   truncateToWordBoundary,
 } from "../../../utils/formatters";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
+import { RefreshButton } from "../../../components/Atoms/buttons/exportImport";
 
 const INITIAL_FILTERS = {
   search: "",
@@ -1343,22 +1344,6 @@ const ProductCatalog = () => {
         actions={
           <>
             <AddButton onClick={handleAddNavigate} requiredModule="products" />
-
-            <button
-              type="button"
-              onClick={fetchProductsList}
-              disabled={loading}
-              aria-busy={loading}
-              className="inline-flex items-center gap-1.5"
-            >
-              <MdRefresh
-                aria-hidden="true"
-                size={17}
-                className={loading ? "animate-spin" : ""}
-              />
-
-              {loading ? "Refreshing..." : "Refresh"}
-            </button>
           </>
         }
       />
@@ -1366,6 +1351,9 @@ const ProductCatalog = () => {
       <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white shadow-sm">
         <section className="border-b border-[var(--admin-line)]">
           <SearchComponent
+            showRefresh={true}
+            onRefresh={fetchProductsList}
+            refreshLoading={loading}
             selectedRow={selectedRow}
             placeholder="Search product name..."
             setSelectedRow={setSelectedRow}

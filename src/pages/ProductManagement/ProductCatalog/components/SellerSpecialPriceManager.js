@@ -569,52 +569,76 @@ const SellerSpecialPriceManager = () => {
   // Load single product details & variant rows for detail page
   const loadProductDetail = useCallback(async () => {
     if (!productId) return;
+
     setDetailLoading(true);
+
     try {
-      let foundProduct = products.find((p) => (p._id || p.id) === productId);
+      let foundProduct = null;
 
-      if (!foundProduct) {
-        const res = await dispatch(getProductById({ _id: productId })).unwrap();
-        foundProduct =
-          res?.data?.data?.product ||
-          res?.data?.data ||
-          res?.data?.product ||
-          res?.data;
-      }
+      // Always fetch fresh product details when loading or refreshing.
+      const res = await dispatch(getProductById({ _id: productId })).unwrap();
 
+      const responseCandidates = [
+        res?.data?.data?.product,
+        res?.data?.product,
+        res?.data?.data,
+        res?.data,
+        res?.product,
+        res,
+      ];
+
+      foundProduct = responseCandidates.find(
+        (candidate) =>
+          candidate &&
+          typeof candidate === "object" &&
+          !Array.isArray(candidate) &&
+          String(candidate._id || candidate.id || "") === String(productId),
+      );
+
+      // Fallback if the detail endpoint does not return the expected product.
       if (!foundProduct) {
-        // Fallback: search products endpoint for this productId
         const listRes = await dispatch(
           getProducts({
             page: 1,
-            limit: 10,
+            limit: 100,
             search: productId,
+            keyWord: productId,
             includeAllStatuses: true,
             includeVariants: true,
           }),
         ).unwrap();
+
         const listData =
           listRes?.data?.data?.list ||
           listRes?.data?.list ||
-          listRes?.data?.data ||
-          [];
-        foundProduct =
-          listData.find((p) => (p._id || p.id) === productId) || listData[0];
+          (Array.isArray(listRes?.data?.data) ? listRes.data.data : []);
+
+        foundProduct = Array.isArray(listData)
+          ? listData.find(
+              (product) =>
+                String(product?._id || product?.id || "") === String(productId),
+            )
+          : null;
       }
 
-      if (foundProduct) {
-        setDetailProduct(foundProduct);
-        setRows(buildRowsFromProducts([foundProduct]));
-      } else {
+      if (!foundProduct) {
+        setDetailProduct(null);
+        setRows([]);
         toast.error("Product not found");
-        navigate("/app/seller-special-price-manager");
+        return;
       }
+
+      setDetailProduct(foundProduct);
+      setRows(buildRowsFromProducts([foundProduct]));
+      setImportError("");
+      setImportInfo("");
+      setImportSuccess("");
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to load product variants"));
     } finally {
       setDetailLoading(false);
     }
-  }, [dispatch, productId, products, navigate]);
+  }, [dispatch, productId]);
 
   useEffect(() => {
     if (productId) {
@@ -807,8 +831,8 @@ const SellerSpecialPriceManager = () => {
         { key: "variantTitle", label: "Variant Title" },
         { key: "mrp", label: "MRP" },
         { key: "sellingPrice", label: "Selling Price" },
-        { key: "specialPrice", label: "Current Special Price" },
         { key: "newSpecialPrice", label: "New Special Price" },
+        { key: "specialPrice", label: "Updated Special Price" },
         { key: "productStatus", label: "Product Status" },
         { key: "variantStatus", label: "Variant Status" },
       ];
@@ -859,69 +883,181 @@ const SellerSpecialPriceManager = () => {
     }
   };
 
-  const handleImport = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const SPECIAL_PRICE_HEADER_MAP = {
+    productid: "productId",
+    productname: "productName",
+    sku: "sku",
+    variantid: "variantId",
+    variantsku: "variantSku",
+    varianttitle: "variantTitle",
+    mrp: "mrp",
+    sellingprice: "sellingPrice",
+    newspecialprice: "newSpecialPrice",
+    updatedspecialprice: "updatedSpecialPrice",
+    specialprice: "updatedSpecialPrice",
+    productstatus: "productStatus",
+    variantstatus: "variantStatus",
+  };
+
+  const normalizeSpecialPriceRows = (importedRows) => {
+    if (!Array.isArray(importedRows)) return [];
+
+    return importedRows.map((row) =>
+      Object.fromEntries(
+        Object.entries(row || {}).map(([header, value]) => {
+          const normalizedHeader = String(header)
+            .replace(/^\uFEFF/, "")
+            .trim()
+            .replace(/[\s_-]+/g, "")
+            .toLowerCase();
+
+          return [SPECIAL_PRICE_HEADER_MAP[normalizedHeader] || header, value];
+        }),
+      ),
+    );
+  };
+
+  const handleImport = async (imported, file) => {
+    if (!Array.isArray(imported) || imported.length === 0) {
+      throw new Error("The selected file contains no importable rows.");
+    }
+
+    setImporting(true);
+    setImportError("");
+    setImportInfo("");
+    setImportSuccess("");
 
     try {
-      setImporting(true);
-      setImportError("");
-      setImportInfo("");
-      setImportSuccess("");
+      // Normalize the uploaded file's headers, not the existing table rows.
+      const normalizedRows = normalizeSpecialPriceRows(imported);
+      const importedColumns = Object.keys(normalizedRows[0] || {});
 
-      const imported = await parseImportFile(file);
-
-      if (!imported.length) {
-        throw new Error("The selected file did not contain any rows");
-      }
-
-      const importedColumns = Object.keys(imported[0] || {});
       const missingColumns = IMPORT_COLUMNS.filter(
         (column) => !importedColumns.includes(column),
       );
+
       if (missingColumns.length) {
         throw new Error(
-          `Missing required column(s): ${missingColumns.join(", ")}. Export a fresh template and edit only the "${EDITABLE_IMPORT_COLUMN}" column.`,
+          `Missing required column(s): ${missingColumns.join(", ")}. ` +
+            `Please export a fresh template and edit only "${EDITABLE_IMPORT_COLUMN}".`,
         );
       }
 
-      const nextRows = rows.map((row) => ({ ...row }));
-      let matchesFound = 0;
+      // Index existing table rows using their stable identifiers.
+      const rowByVariantId = new Map();
+      const rowByVariantSku = new Map();
 
-      imported.forEach((importedRow) => {
-        const targetRow = nextRows.find((row) => {
-          if (importedRow.variantId && row.variantId) {
-            return String(importedRow.variantId) === String(row.variantId);
-          }
-          if (importedRow.variantSku && row.variantSku) {
-            return (
-              String(importedRow.variantSku).toLowerCase() ===
-              String(row.variantSku).toLowerCase()
-            );
-          }
-          return String(importedRow.productId) === String(row.productId);
-        });
+      rows.forEach((row) => {
+        if (row.variantId) {
+          rowByVariantId.set(String(row.variantId).trim(), row);
+        }
 
-        if (targetRow) {
-          matchesFound += 1;
-          const parsedVal = normalizeSpecialPriceValue(
-            importedRow.newSpecialPrice,
-          );
-          targetRow.specialPrice = parsedVal;
+        if (row.variantSku) {
+          rowByVariantSku.set(String(row.variantSku).trim().toLowerCase(), row);
         }
       });
 
-      if (!matchesFound) {
-        throw new Error("No matching variant rows were found in the template");
+      const seenRows = new Set();
+      const updatesById = new Map();
+      const errors = [];
+
+      normalizedRows.forEach((item, index) => {
+        const excelRow = index + 2;
+
+        const variantId = String(item.variantId ?? "").trim();
+        const variantSku = String(item.variantSku ?? "").trim();
+        const productId = String(item.productId ?? "").trim();
+
+        const matchedRow =
+          (variantId && rowByVariantId.get(variantId)) ||
+          (variantSku && rowByVariantSku.get(variantSku.toLowerCase()));
+
+        if (!matchedRow) {
+          errors.push(`Row ${excelRow}: Variant does not match this product.`);
+          return;
+        }
+
+        // Prevent duplicate entries from overwriting each other silently.
+        if (seenRows.has(matchedRow.id)) {
+          errors.push(`Row ${excelRow}: Duplicate variant in the Excel file.`);
+          return;
+        }
+        seenRows.add(matchedRow.id);
+
+        if (
+          productId &&
+          String(matchedRow.productId ?? "").trim() !== productId
+        ) {
+          errors.push(
+            `Row ${excelRow}: Product ID does not match the variant.`,
+          );
+          return;
+        }
+
+        // Only newSpecialPrice is editable during import.
+        const rawPrice = item.newSpecialPrice;
+
+        if (rawPrice === "" || rawPrice === null || rawPrice === undefined) {
+          return;
+        }
+
+        const price = normalizeSpecialPriceValue(rawPrice);
+        const flags = getRowFlags({
+          ...matchedRow,
+          specialPrice: price,
+        });
+
+        if (price === null || flags.isZeroPrice || flags.hasError) {
+          errors.push(
+            `Row ${excelRow}: Special price must be at least ${formatMoney(
+              flags.minimumSpecialPrice,
+            )} and below ${formatMoney(flags.sellingPrice)}.`,
+          );
+          return;
+        }
+
+        updatesById.set(matchedRow.id, price);
+      });
+
+      if (errors.length) {
+        throw new Error(
+          `Import validation failed:\n${errors.slice(0, 10).join("\n")}` +
+            (errors.length > 10
+              ? `\nAnd ${errors.length - 10} more error(s).`
+              : ""),
+        );
       }
 
-      setRows(nextRows);
-      setImportSuccess(`Loaded prices for ${matchesFound} variants from file`);
+      if (updatesById.size === 0) {
+        throw new Error(
+          `No new special prices found. Fill in the "${EDITABLE_IMPORT_COLUMN}" column for the variants you want to update.`,
+        );
+      }
+
+      setRows((currentRows) =>
+        currentRows.map((row) =>
+          updatesById.has(row.id)
+            ? { ...row, specialPrice: updatesById.get(row.id) }
+            : row,
+        ),
+      );
+
+      setImportSuccess(
+        `Loaded ${updatesById.size} special price change(s). Click Save Changes to apply them.`,
+      );
+
+      toast.success(
+        `${updatesById.size} special price change(s) loaded. Click Save Changes to apply.`,
+      );
     } catch (error) {
-      setImportError(getErrorMessage(error, "Failed to parse import file"));
+      const message = getErrorMessage(
+        error,
+        "Failed to import special prices.",
+      );
+      setImportError(message);
+      throw error;
     } finally {
       setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -967,10 +1103,11 @@ const SellerSpecialPriceManager = () => {
 
               <button
                 type="button"
-                className={`text-xs ${productImages.length
-                  ? "text-blue-500 hover:underline"
-                  : "cursor-not-allowed text-gray-400"
-                  }`}
+                className={`text-xs ${
+                  productImages.length
+                    ? "text-blue-500 hover:underline"
+                    : "cursor-not-allowed text-gray-400"
+                }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleImageClick(productImages);
@@ -1014,12 +1151,12 @@ const SellerSpecialPriceManager = () => {
       },
       ...(!sellerView
         ? [
-          {
-            key: "seller",
-            label: "Seller",
-            render: (_, row) => <SellerIdentity row={row} />,
-          },
-        ]
+            {
+              key: "seller",
+              label: "Seller",
+              render: (_, row) => <SellerIdentity row={row} />,
+            },
+          ]
         : []),
       {
         key: "category",
@@ -1176,10 +1313,11 @@ const SellerSpecialPriceManager = () => {
                   value={value ?? ""}
                   onChange={(e) => handleRowChange(row.id, e.target.value)}
                   placeholder="Enter price"
-                  className={`w-36 rounded-lg border py-1.5 pl-6 pr-2 text-sm font-mono transition-colors ${hasError
-                    ? "border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                    : "border-gray-300 bg-white focus:border-[var(--admin-blue)] focus:ring-1 focus:ring-[var(--admin-blue)]"
-                    }`}
+                  className={`w-36 rounded-lg border py-1.5 pl-6 pr-2 text-sm font-mono transition-colors ${
+                    hasError
+                      ? "border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      : "border-gray-300 bg-white focus:border-[var(--admin-blue)] focus:ring-1 focus:ring-[var(--admin-blue)]"
+                  }`}
                 />
               </div>
               {hasError && (
@@ -1232,24 +1370,10 @@ const SellerSpecialPriceManager = () => {
         <PageHeader
           title="Special Price Management"
           subtitle="Set and update special promotional prices for product variants"
+          backPath="/app/seller-special-price-manager"
+          onBack={() => navigate("/app/seller-special-price-manager")}
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => navigate("/app/seller-special-price-manager")}
-                className="admin-btn-secondary"
-              >
-                <ArrowLeft aria-hidden="true" size={15} />
-                Back
-              </button>
-
-              <ExportButton onClick={handleExport} disabled={importing} />
-
-              <ImportButton
-                onClick={() => fileInputRef.current?.click()}
-                importing={importing}
-              />
-
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1262,8 +1386,9 @@ const SellerSpecialPriceManager = () => {
                 type="button"
                 onClick={handleSave}
                 disabled={!canSave}
-                className={`inline-flex items-center gap-1.5 rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:opacity-90 focus:outline-none ${canSave ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-                  }`}
+                className={`inline-flex items-center gap-1.5 rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:opacity-90 focus:outline-none ${
+                  canSave ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+                }`}
               >
                 {saving
                   ? "Saving..."
@@ -1349,18 +1474,24 @@ const SellerSpecialPriceManager = () => {
         <SpecialPriceGuide />
 
         {/* Variants Data Table */}
-        {detailLoading ? (
-          <Loader />
-        ) : (
-          <DataTable
-            columns={variantColumns}
-            data={filteredVariantRows}
-            loading={detailLoading}
-            listPage={detailList}
-            searchPlaceholder="Search variant title or SKU..."
-            emptyText="No variants found for this product."
-          />
-        )}
+
+        <DataTable
+          columns={variantColumns}
+          data={filteredVariantRows}
+          loading={detailLoading}
+          listPage={detailList}
+          searchPlaceholder="Search variant title or SKU..."
+          emptyText="No variants found for this product."
+          onRefresh={loadProductDetail}
+          exportConfig={{
+            onClick: handleExport,
+            disabled: importing || !rows.length,
+          }}
+          importConfig={{
+            label: "Import",
+            onImport: handleImport,
+          }}
+        />
       </div>
     );
   }
@@ -1386,6 +1517,7 @@ const SellerSpecialPriceManager = () => {
         loading={productsLoading}
         totalCount={totalProducts}
         listPage={list}
+        onRefresh={loadProducts}
         rowKey="_id"
         searchPlaceholder="Search product name, SKU"
         filterBar={

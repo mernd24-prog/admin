@@ -446,6 +446,7 @@ const TaxRule = () => {
         totalCount={totalRules}
         page={list.page}
         pageSize={list.pageSize}
+        onRefresh={() => setIsRefresh((prev) => !prev)}
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
         onSearch={list.setSearch}
@@ -494,7 +495,7 @@ const TaxRule = () => {
             >
               <div className="space-y-2">
                 {/* Description */}
-               
+
                 {/* Tax + Sub Tax */}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -536,7 +537,7 @@ const TaxRule = () => {
                   required
                   placeholder="Select category"
                 />
-                 <FormInput
+                <FormInput
                   label="Description"
                   name="description"
                   type="textarea"
@@ -550,7 +551,6 @@ const TaxRule = () => {
                   rows={3}
                   required
                 />
-
               </div>
             </FormSection>
 

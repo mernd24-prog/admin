@@ -26,6 +26,7 @@ import {
   unwrapFinance,
   useFinanceDateRange,
 } from "./financeUi";
+import { RefreshButton } from "../../../components/Atoms/buttons/exportImport";
 
 export default function FinanceOverview() {
   const dispatch = useDispatch();
@@ -154,28 +155,22 @@ export default function FinanceOverview() {
     ],
   ];
 
-const EmptyPanel = ({
-  title = "No data found",
-  text = "No data returned for this period.",
-}) => (
-  <div className="mx-auto flex flex-col items-center gap-2 rounded-lg bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
-    <img
-      src="/Img/noData.png"
-      alt="No data"
-      className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
-    />
+  const EmptyPanel = ({
+    title = "No data found",
+    text = "No data returned for this period.",
+  }) => (
+    <div className="mx-auto flex flex-col items-center gap-2 rounded-lg bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
+      <img
+        src="/Img/noData.png"
+        alt="No data"
+        className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
+      />
 
-    <h4 className="text-sm font-medium text-gray-500">
-      {title}
-    </h4>
+      <h4 className="text-sm font-medium text-gray-500">{title}</h4>
 
-    {text && (
-      <p className="text-xs text-gray-400">
-        {text}
-      </p>
-    )}
-  </div>
-);
+      {text && <p className="text-xs text-gray-400">{text}</p>}
+    </div>
+  );
 
   return (
     <div className="space-y-5">
@@ -190,18 +185,11 @@ const EmptyPanel = ({
               dateRange={dateRange}
               loading={Boolean(state.loading)}
             />
-            <button
-              type="button"
+            <RefreshButton
               onClick={load}
+              loading={Boolean(state.loading)}
               disabled={Boolean(state.loading)}
-              area-busy={Boolean(state.loading)}
-            >
-              <MdRefresh
-                aria-hidden="true"
-                className={state.loading ? "animate-spin" : ""}
-              />
-              {state.loading ? "Refreshing..." : "Refresh"}
-            </button>
+            />
           </div>
         }
       />

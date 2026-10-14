@@ -106,7 +106,10 @@ export default function SellerCodCollections() {
       toast.error("Explain why this COD liability is disputed");
       return;
     }
-    if (!isDispute && (Number(form.amount) <= 0 || form.referenceId.trim().length < 3)) {
+    if (
+      !isDispute &&
+      (Number(form.amount) <= 0 || form.referenceId.trim().length < 3)
+    ) {
       toast.error("Collected amount and reference are required");
       return;
     }
@@ -187,9 +190,17 @@ export default function SellerCodCollections() {
         label: "Action due",
         render: (value, row) =>
           row.seller_action_required ? (
-            <div className={row.is_overdue ? "font-semibold text-red-600" : "text-xs"}>
-              {value ? new Date(value).toLocaleString("en-IN") : "Action required"}
-              {row.is_overdue && <div className="text-[10px] uppercase">Overdue</div>}
+            <div
+              className={
+                row.is_overdue ? "font-semibold text-red-600" : "text-xs"
+              }
+            >
+              {value
+                ? new Date(value).toLocaleString("en-IN")
+                : "Action required"}
+              {row.is_overdue && (
+                <div className="text-[10px] uppercase">Overdue</div>
+              )}
             </div>
           ) : (
             "—"
@@ -244,23 +255,21 @@ export default function SellerCodCollections() {
           { label: "Seller Finance" },
           { label: "COD Collections" },
         ]}
-        actions={
-          <button type="button" onClick={load}>
-            <MdRefresh aria-hidden="true" size={17} /> Refresh
-          </button>
-        }
       />
       {items.some((row) => row.seller_action_required) && (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           <strong>COD action required</strong>
           <p className="mt-1 text-xs leading-5">
-            These amounts were recorded as liabilities when delivery was confirmed and reduce current or future payouts. Confirm retained cash, report a remittance, or dispute an incorrect entry.
+            These amounts were recorded as liabilities when delivery was
+            confirmed and reduce current or future payouts. Confirm retained
+            cash, report a remittance, or dispute an incorrect entry.
           </p>
         </div>
       )}
       <DataTable
         columns={columns}
         data={items}
+        onRefresh={load}
         loading={loading}
         totalCount={items.length}
         page={pagination.page}
@@ -268,9 +277,7 @@ export default function SellerCodCollections() {
         onPageChange={(page) =>
           setPagination((current) => ({ ...current, page }))
         }
-        onPageSizeChange={(pageSize) =>
-          setPagination({ page: 1, pageSize })
-        }
+        onPageSizeChange={(pageSize) => setPagination({ page: 1, pageSize })}
         onSearch={() => {}}
         onSort={() => {}}
         requiredModule="sellers/commissions"
@@ -286,7 +293,8 @@ export default function SellerCodCollections() {
             Expected COD: {money(form.row?.expected_amount)}
           </p>
           <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs leading-5 text-red-700">
-            This liability was recorded automatically when delivery was confirmed. Ignoring it does not remove it from your finance balance.
+            This liability was recorded automatically when delivery was
+            confirmed. Ignoring it does not remove it from your finance balance.
           </div>
           <FilterSelect
             label="Your response"

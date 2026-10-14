@@ -52,6 +52,7 @@ import Tabs from "../../components/Shared/Tabs";
 import {
   ExportButton,
   ImportButton,
+  RefreshButton,
 } from "../../components/Atoms/buttons/exportImport";
 
 const STOCK_FILTER_OPTIONS = [
@@ -1840,24 +1841,6 @@ const Inventory = () => {
           subtitle="Update variant-wise stock, export a template, edit it in Excel, and import the updated values."
           backPath="/app/inventory"
           status={product.status}
-          actions={
-            <div className="flex flex-wrap gap-2">
-              {importExportActions}
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5"
-                onClick={refresh}
-                disabled={loading}
-              >
-                <MdRefresh
-                  aria-hidden="true"
-                  size={17}
-                  className={loading ? "animate-spin" : ""}
-                />
-                {loading ? "Refreshing..." : "Refresh"}
-              </button>
-            </div>
-          }
         />
 
         {importHelp}
@@ -1931,17 +1914,31 @@ const Inventory = () => {
             }}
             searchPlaceholder="Search variant name or SKU"
             actions={
-              <OrangeButton
-                onClick={handleSave}
-                disabled={!canSave}
-                title={
-                  pendingCount ? "Save inventory changes" : "No changes to save"
-                }
-              >
-                {saving
-                  ? "Saving…"
-                  : `Save ${pendingCount ? `(${pendingCount})` : ""}`}
-              </OrangeButton>
+              <div className="flex flex-wrap items-center gap-2">
+                <OrangeButton
+                  onClick={handleSave}
+                  disabled={!canSave}
+                  title={
+                    pendingCount
+                      ? "Save inventory changes"
+                      : "No changes to save"
+                  }
+                >
+                  {saving
+                    ? "Saving…"
+                    : `Save ${pendingCount ? `(${pendingCount})` : ""}`}
+                </OrangeButton>
+                {importExportActions}
+
+                <RefreshButton
+                  onClick={refresh}
+                  disabled={loading || importing}
+                  loading={loading}
+                  label="Refresh"
+                  loadingText="Refreshing…"
+                  title="Refresh inventory"
+                />
+              </div>
             }
             emptyText="No variants found"
             rowActions={(row) => [
@@ -1973,6 +1970,26 @@ const Inventory = () => {
                 setHistoryPageSize(size);
                 setHistoryPage(1);
               }}
+              actions={
+                <div className="flex flex-wrap items-center gap-2">
+                  <ExportButton
+                    label="Export"
+                    onClick={handleExport}
+                    disabled={loading || importing || transactions.length === 0}
+                    loading={importing}
+                    title="Export stock history to Excel"
+                  />
+
+                  <RefreshButton
+                    onClick={refresh}
+                    disabled={importing}
+                    loading={loading}
+                    label="Refresh"
+                    loadingText="Refreshing…"
+                    title="Refresh stock history"
+                  />
+                </div>
+              }
               pageSizeOptions={[10, 20, 50, 100]}
               rowKey={(row, index) => row._id || row.id || index}
               emptyText="No stock history found"
@@ -2064,12 +2081,6 @@ const Inventory = () => {
               icon: <MdOpenInNew aria-hidden="true" />,
               onClick: () => navigate(`/app/inventory/${row.productId}`),
             },
-            // {
-            //   label: "Quick Adjust",
-            //   icon: <MdInventory2 />,
-            //   hidden: variants.length !== 1,
-            //   onClick: () => setAdjustTarget(variants[0]),
-            // },
           ];
         }}
       />

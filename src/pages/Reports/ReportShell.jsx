@@ -468,33 +468,21 @@ export const ReportShell = ({
         title={title}
         subtitle={subtitle}
         breadcrumbs={breadcrumbs}
-        actions={
-          (exportEndpoint ||
-            exportRows?.length ||
-            exportCsvSections?.length ||
-            exportExcelSheets?.length) && (
-            <PermissionGuard module="reports" action="export" hide>
-              <ExportButton
-                onClick={handleExport}
-                label={
-                  loading ? "Loading" : exporting ? "Exporting" : "Export "
-                }
-                loading={exporting || loading}
-                disabled={loading}
-              />
-            </PermissionGuard>
-          )
-        }
+        // actions={
+        //   (exportEndpoint ||
+        //     exportRows?.length ||
+        //     exportCsvSections?.length ||
+        //     exportExcelSheets?.length) && (
+        //     <PermissionGuard module="reports" action="export" hide>
+
+        //     </PermissionGuard>
+        //   )
+        // }
       />
 
-      <section className="mb-4 rounded-lg border border-[var(--admin-line)] bg-white p-3.5 shadow-[0_10px_28px_rgba(31,27,95,0.05)]">
+      <section className="mb-4 rounded-lg border border-[var(--admin-line)] bg-white py-2 px-4 shadow-[0_10px_28px_rgba(31,27,95,0.05)]">
         {showFilters ? (
           <>
-            <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase text-[var(--admin-muted)]">
-              <MdFilterList size={15} />
-              Filters
-            </div>
-
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="w-full sm:max-w-sm">
                 <DateRangeFilter
@@ -524,19 +512,29 @@ export const ReportShell = ({
                   loading={loading}
                 />
               </div>
-
-              <button
-                type="button"
-                onClick={onRefresh}
-                disabled={loading}
-                className="admin-btn-secondary w-full justify-center sm:w-auto sm:min-w-[112px]"
-              >
-                <MdRefresh
-                  className={loading ? "animate-spin" : ""}
-                  size={16}
+              <div className="flex gap-2">
+                <ExportButton
+                  onClick={handleExport}
+                  label={
+                    loading ? "Loading" : exporting ? "Exporting" : "Export "
+                  }
+                  loading={exporting || loading}
+                  disabled={loading}
                 />
-                {loading ? "Refreshing" : "Refresh"}
-              </button>
+
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  disabled={loading}
+                  className="admin-btn-secondary w-full justify-center sm:w-auto sm:min-w-[112px]"
+                >
+                  <MdRefresh
+                    className={loading ? "animate-spin" : ""}
+                    size={16}
+                  />
+                  {loading ? "Refreshing" : "Refresh"}
+                </button>
+              </div>
             </div>
           </>
         ) : (

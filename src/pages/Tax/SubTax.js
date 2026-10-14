@@ -315,6 +315,7 @@ const SubTax = () => {
         pageSize={list.pageSize}
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
+        onRefresh={() => setIsRefresh((prev) => !prev)}
         onSearch={list.setSearch}
         onSort={list.setSort}
         sortKey={list.sortKey}

@@ -12,6 +12,7 @@ import Input from "../Input/Input";
 import selectJson from "../../../_helpers/SelectJson.json";
 import { PiToggleLeftThin, PiToggleRightThin } from "react-icons/pi";
 import { getRouteModuleCandidates } from "../../../_helpers/rbacRoutes";
+import { RefreshButton } from "../buttons/exportImport";
 
 export default function SearchComponent({
   userLabel,
@@ -21,6 +22,8 @@ export default function SearchComponent({
   filters,
   setFilters,
   isSellerName = false,
+  onRefresh,
+  refreshLoading = false,
   isSellerStoreName = false,
   userOptions = [],
   storeOptions = [],
@@ -461,6 +464,15 @@ export default function SearchComponent({
                 Delete
               </Button>
             )}
+
+            <RefreshButton
+              onClick={onRefresh}
+              loading={refreshLoading}
+              disabled={loading}
+              label="Refresh"
+              loadingText="Refreshing..."
+              className="h-9 !min-h-9 whitespace-nowrap"
+            />
           </div>
         )}
       </div>
@@ -649,7 +661,11 @@ export default function SearchComponent({
                     label="Category"
                     isLoading={categoryLoading}
                     value={filters.category}
-                    mutedValue={isSellerPanel() && (!filters.category?.value || filters.category?.value === "All")}
+                    mutedValue={
+                      isSellerPanel() &&
+                      (!filters.category?.value ||
+                        filters.category?.value === "All")
+                    }
                     options={categoryOptions}
                     isSearchable
                     onChange={(option) =>
@@ -665,7 +681,11 @@ export default function SearchComponent({
                   <FilterSelect
                     label={activationStatus || "Activation status"}
                     value={filters.activationStatus}
-                    mutedValue={isSellerPanel() && (!filters.activationStatus?.value || filters.activationStatus?.value === "All")}
+                    mutedValue={
+                      isSellerPanel() &&
+                      (!filters.activationStatus?.value ||
+                        filters.activationStatus?.value === "All")
+                    }
                     options={activationStatusOptions}
                     isSearchable={false}
                     onChange={(option) =>
@@ -681,7 +701,11 @@ export default function SearchComponent({
                   <FilterSelect
                     label={approvalStatus || "Approval Status"}
                     value={filters.approvalStatus}
-                    mutedValue={isSellerPanel() && (!filters.approvalStatus?.value || filters.approvalStatus?.value === "All")}
+                    mutedValue={
+                      isSellerPanel() &&
+                      (!filters.approvalStatus?.value ||
+                        filters.approvalStatus?.value === "All")
+                    }
                     options={approvalOptions}
                     isSearchable={false}
                     onChange={(option) =>
@@ -697,7 +721,11 @@ export default function SearchComponent({
                   <FilterSelect
                     label={revisionStatus || "Revision Status"}
                     value={filters.revisionStatus}
-                    mutedValue={isSellerPanel() && (!filters.revisionStatus?.value || filters.revisionStatus?.value === "All")}
+                    mutedValue={
+                      isSellerPanel() &&
+                      (!filters.revisionStatus?.value ||
+                        filters.revisionStatus?.value === "All")
+                    }
                     options={revisionOptions}
                     isSearchable={false}
                     onChange={(option) =>

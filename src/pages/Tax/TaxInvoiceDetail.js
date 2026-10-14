@@ -247,15 +247,16 @@ const TaxInvoiceDetail = () => {
             label: pick(invoice, "invoiceNumber", "invoice_number") || "Detail",
           },
         ]}
+        backPath="/app/tax-invoices"
         actions={
           <div className="flex flex-wrap gap-2">
-            <button
+            {/* <button
               type="button"
               onClick={() => navigate("/app/tax-invoices")}
               className="admin-btn-secondary"
             >
               <MdArrowBack aria-hidden="true" size={16} /> Back
-            </button>
+            </button> */}
             <button
               type="button"
               onClick={downloadInvoice}
@@ -268,16 +269,15 @@ const TaxInvoiceDetail = () => {
         }
       />
 
-      <section className="rounded-lg border border-gray-200 bg-[#FFFDF8] p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <section className="rounded-lg border border-[var(--admin-line)] bg-white p-4">
+        <div className="mb-4 flex items-center justify-between border-b border-[var(--admin-line)] pb-3">
           <div>
-            <p className="font-mono text-sm font-semibold text-gray-950">
+            <p className="text-xs text-[var(--admin-muted)]">Invoice Number</p>
+            <h3 className="font-semibold text-[var(--admin-ink)]">
               {pick(invoice, "invoiceNumber", "invoice_number") || "—"}
-            </p>
-            <p className="mt-1 text-sm text-gray-500 capitalize">
-              {label(invoiceType)}
-            </p>
+            </h3>
           </div>
+
           <StatusBadge
             status={
               pick(invoice, "state", "status", "invoice_state") || "issued"
@@ -285,7 +285,12 @@ const TaxInvoiceDetail = () => {
             dot
           />
         </div>
-        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+
+        <h3 className="mb-3 text-sm font-semibold text-[var(--admin-ink)]">
+          Invoice Details
+        </h3>
+
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <Field
             label="Order"
             value={
@@ -295,38 +300,46 @@ const TaxInvoiceDetail = () => {
               />
             }
           />
+
           <Field
             label="Reference"
-            value={[
-              pick(invoice, "reference_type"),
-              pick(invoice, "reference_id"),
-            ]
-              .filter(Boolean)
-              .join(" / ")}
+            value={
+              [pick(invoice, "reference_type"), pick(invoice, "reference_id")]
+                .filter(Boolean)
+                .join(" / ") || "—"
+            }
             mono
           />
+
           <Field
             label="Issued"
             value={date(pick(invoice, "issuedAt", "issued_at", "created_at"))}
           />
+
           <Field
             label="Place of Supply"
             value={
               pick(invoice, "place_of_supply") ||
-              metadata.shippingAddress?.state
+              metadata.shippingAddress?.state ||
+              "—"
             }
           />
-          <Field label="Issued By" value={issuerName} />
-          <Field label="Recipient" value={recipientName} />
+
+          <Field label="Issued By" value={issuerName || "—"} />
+
+          <Field label="Recipient" value={recipientName || "—"} />
+
           <Field
             label="Organization"
             value={
               pick(invoice, "organizationId", "organization_id") ||
-              metadata.organization?.legalBusinessName
+              metadata.organization?.legalBusinessName ||
+              "—"
             }
             mono
           />
-          <Field label={partyGstinLabel} value={partyGstin} mono />
+
+          <Field label={partyGstinLabel} value={partyGstin || "—"} mono />
         </div>
       </section>
 
@@ -359,7 +372,6 @@ const TaxInvoiceDetail = () => {
           tone="green"
         />
       </section>
-
       {invoiceType === "seller_customer" && (
         <section className="rounded-lg border border-blue-100 bg-blue-50 p-4">
           <h2 className="text-sm font-semibold text-gray-900">
@@ -400,7 +412,6 @@ const TaxInvoiceDetail = () => {
           </div>
         </section>
       )}
-
       <section className="rounded-lg border border-gray-200 bg-white">
         <div className="border-b border-gray-100 px-4 py-3">
           <h2 className="text-sm font-semibold text-gray-900">Tax Breakup</h2>
@@ -420,7 +431,6 @@ const TaxInvoiceDetail = () => {
           />
         </div>
       </section>
-
       <section className="rounded-lg border border-gray-200 bg-white">
         <div className="border-b border-gray-100 px-4 py-3">
           <h2 className="text-sm font-semibold text-gray-900">Line Items</h2>
