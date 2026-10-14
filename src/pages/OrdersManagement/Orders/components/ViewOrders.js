@@ -42,9 +42,11 @@ import {
 } from "../../../../utils/formatters";
 import { FormSection } from "../../../../components/Shared";
 import FormSelectGroup from "../../../../components/Atoms/FormSelectGroup/FormSelectGroup";
-import { orderNoteValidationSchema } from "../../../../_helpers/validationSchemas";
+import {
+  orderNoteValidationSchema,
+  orderStatusOverrideValidationSchema,
+} from "../../../../_helpers/validationSchemas";
 
-const MINIMUM_CANCEL_REASON_LENGTH = 10;
 const CANCELLABLE_SHIPMENT_STATUSES = new Set([
   "initiated",
   "manifested",
@@ -2638,10 +2640,6 @@ const OrderSummary = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
-  const [validationErrors, setValidationErrors] = useState({
-    reason: "",
-    note: "",
-  });
   const realtimeRevision = useRealtimeRefresh(
     [
       "order",
@@ -2680,10 +2678,6 @@ const OrderSummary = () => {
     trackingNumber: "",
     carrierName: "",
     carrierUrl: "",
-  });
-  const [noteData, setNoteData] = useState({
-    note: "",
-    visibility: "internal",
   });
 
   const setLoading = useCallback((loading) => {
@@ -3111,7 +3105,13 @@ const OrderSummary = () => {
   ]);
 
   const openStatusModal = useCallback(() => {
-    setFormData((prev) => ({ ...prev, status: "", cancelItems: {} }));
+    setFormData((prev) => ({
+      ...prev,
+      status: "",
+      reason: "",
+      note: "",
+      cancelItems: {},
+    }));
     setState((prev) => ({ ...prev, statusModal: true }));
   }, []);
 
@@ -3119,6 +3119,8 @@ const OrderSummary = () => {
     setFormData((prev) => ({
       ...prev,
       status: "cancelled",
+      reason: "",
+      note: "",
       reasonCode: "inventory_unavailable",
       refundMethod: "auto",
       cancelItems: {},
@@ -3181,39 +3183,6 @@ const OrderSummary = () => {
   }, [dispatch, formData.cancelItems, formData.status, orderId, state.statusModal]);
 
   const handleStatusSubmit = useCallback(async () => {
-    const reason = String(formData.reason || "").trim();
-
-    if (
-      formData.status === "cancelled" &&
-      reason.length < MINIMUM_CANCEL_REASON_LENGTH
-    ) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        reason: reason
-          ? `Reason must be at least ${MINIMUM_CANCEL_REASON_LENGTH} characters.`
-          : "Please enter a cancellation reason.",
-      }));
-
-      return;
-    }
-
-    setValidationErrors((prev) => ({
-      ...prev,
-      reason: "",
-    }));
-    if (!formData.status) {
-      toast.error("Status is required");
-      return;
-    }
-    if (
-      formData.status === "cancelled" &&
-      formData.reason.trim().length < MINIMUM_CANCEL_REASON_LENGTH
-    ) {
-      toast.error(
-        `Please provide a cancellation reason with at least ${MINIMUM_CANCEL_REASON_LENGTH} characters`,
-      );
-      return;
-    }
     const cancellationItems = Object.entries(formData.cancelItems || {})
       .filter(([, quantity]) => Number(quantity) > 0)
       .map(([orderItemId, quantity]) => ({
@@ -3303,6 +3272,45 @@ const OrderSummary = () => {
     validationSchema: orderNoteValidationSchema,
     onSubmit: handleNoteSubmit,
   });
+
+  const statusFormik = useFormik({
+    initialValues: { status: "", reason: "", note: "" },
+    validationSchema: orderStatusOverrideValidationSchema,
+    validateOnChange: false,
+    validateOnBlur: false,
+    onSubmit: handleStatusSubmit,
+  });
+
+  useEffect(() => {
+    if (!state.statusModal) return;
+
+    statusFormik.resetForm({
+      values: {
+        status: formData.status,
+        reason: formData.reason,
+        note: formData.note,
+      },
+    });
+  }, [state.statusModal]);
+
+  const closeStatusModal = useCallback(() => {
+    statusFormik.resetForm();
+    setFormData((prev) => ({
+      ...prev,
+      status: "",
+      reason: "",
+      note: "",
+      cancelItems: {},
+    }));
+    setState((prev) => ({
+      ...prev,
+      statusModal: false,
+      cancellationPreview: null,
+      cancellationPreviewLoading: false,
+      cancellationPreviewError: "",
+      cancellationPreviewUnavailable: false,
+    }));
+  }, [statusFormik.resetForm]);
 
   const closeNoteDrawer = () => {
     noteFormik.resetForm();
@@ -4928,14 +4936,9 @@ const OrderSummary = () => {
 
       <DefaultModal
         isOpen={state.statusModal}
-        onClose={() =>
-          setState((prev) => ({
-            ...prev,
-            statusModal: false,
-          }))
-        }
+        onClose={closeStatusModal}
         title={isSeller ? "Cancel My Items" : "Administrative Status Override"}
-        onSubmit={handleStatusSubmit}
+        onSubmit={statusFormik.handleSubmit}
         loading={state.isLoading}
         submitButtonText={formData.status === "cancelled" ? "Confirm cancellation" : "Update status"}
         closeButtonText="Close"
@@ -4973,6 +4976,11 @@ const OrderSummary = () => {
                 }
                 onChange={(option) => {
                   const status = option?.value || "";
+                  statusFormik.setFieldValue(
+                    "status",
+                    status,
+                    statusFormik.submitCount > 0,
+                  );
 
                   setFormData((prev) => ({
                     ...prev,
@@ -4983,6 +4991,7 @@ const OrderSummary = () => {
                 }}
                 placeholder="Select Status"
                 isSearchable={false}
+                error={statusFormik.submitCount > 0 && statusFormik.errors.status}
               />
             </FormSection>
           )}
@@ -5307,59 +5316,40 @@ const OrderSummary = () => {
                 value={formData.reason}
                 onChange={(event) => {
                   const value = event.target.value;
+                  statusFormik.setFieldValue(
+                    "reason",
+                    value,
+                    statusFormik.submitCount > 0,
+                  );
 
                   setFormData((prev) => ({
                     ...prev,
                     reason: value,
                   }));
-
-                  if (validationErrors.reason) {
-                    setValidationErrors((prev) => ({
-                      ...prev,
-                      reason:
-                        value.trim().length === 0
-                          ? "Please enter a cancellation reason."
-                          : value.trim().length < MINIMUM_CANCEL_REASON_LENGTH
-                            ? `Reason must be at least ${MINIMUM_CANCEL_REASON_LENGTH} characters.`
-                            : "",
-                    }));
-                  }
                 }}
+                onBlur={statusFormik.handleBlur}
                 name="reason"
                 placeholder="Reason or operational note"
+                error={statusFormik.submitCount > 0 && statusFormik.errors.reason}
               />
-
-              {formData.status === "cancelled" && validationErrors.reason && (
-                <p
-                  className="mt-0 text-xs leading-none text-red-600"
-                  role="alert"
-                >
-                  {validationErrors.reason}
-                </p>
-              )}
 
               <Input
                 type="textarea"
                 labelName="Note"
-                value={noteData.note}
+                value={formData.note}
                 onChange={(event) => {
                   const value = event.target.value;
-
-                  setNoteData((prev) => ({
-                    ...prev,
-                    note: value,
-                  }));
-
-                  if (validationErrors.note) {
-                    setValidationErrors((prev) => ({
-                      ...prev,
-                      note: value.trim() ? "" : "Please enter a note.",
-                    }));
-                  }
+                  statusFormik.setFieldValue(
+                    "note",
+                    value,
+                    statusFormik.submitCount > 0,
+                  );
+                  setFormData((prev) => ({ ...prev, note: value }));
                 }}
+                onBlur={statusFormik.handleBlur}
                 name="note"
                 placeholder="Enter order note"
-                maxLength={2000}
+                error={statusFormik.submitCount > 0 && statusFormik.errors.note}
               />
             </div>
           </FormSection>

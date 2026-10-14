@@ -1367,7 +1367,7 @@ const ProductCatalog = () => {
         <section className="border-b border-[var(--admin-line)]">
           <SearchComponent
             selectedRow={selectedRow}
-            placeholder="Search product name..."
+            placeholder="Search product name, SKU, Brand..."
             setSelectedRow={setSelectedRow}
             filters={filters}
             setFilters={setFilters}

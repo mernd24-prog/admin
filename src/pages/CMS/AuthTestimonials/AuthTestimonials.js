@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useFormik } from "formik";
 import { toast } from "sonner";
 import { MdAdd, MdDelete, MdEdit, MdReviews } from "react-icons/md";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
@@ -21,6 +22,7 @@ import { uploadFile } from "../../../_helpers/globalFunctions";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
+import { authTestimonialValidationSchema } from "../../../_helpers/validationSchemas";
 
 const DEFAULT_PAGE_SIZE = 10;
 const PAGE_TYPE = "auth_testimonial";
@@ -39,6 +41,32 @@ const emptyForm = {
   published: true,
 };
 
+const PAGE_TARGET_OPTIONS = [
+  {
+    label: "Login + Register",
+    value: "all",
+  },
+  {
+    label: "Login only",
+    value: "login",
+  },
+  {
+    label: "Register only",
+    value: "register",
+  },
+];
+
+const PUBLISHED_OPTIONS = [
+  {
+    label: "Yes",
+    value: "yes",
+  },
+  {
+    label: "Draft",
+    value: "no",
+  },
+];
+
 const slugify = (value = "") =>
   String(value || "auth-testimonial")
     .trim()
@@ -54,40 +82,49 @@ const truncateText = (value = "", maxLength = 90) => {
   const text = String(value || "")
     .replace(/\s+/g, " ")
     .trim();
+
   if (text.length <= maxLength) return text || "N/A";
+
   return `${text.slice(0, maxLength).trim()}...`;
 };
 
 const toForm = (page = {}) => {
   const meta = metaOf(page);
+
   return {
     ...emptyForm,
     recordSlug: pageSlug(page),
     name: page.title || page.author?.name || meta.name || "",
     avatarUrl: page.author?.avatar || page.image?.url || meta.avatarUrl || "",
-    rating: Number(meta.rating || 5),
+    rating: Number(meta.rating ?? 5),
     reviewText: page.description || page.body || meta.reviewText || "",
-    googleRating: Number(meta.googleRating || 4.7),
+    googleRating: Number(meta.googleRating ?? 4.7),
     googleReviewCount: meta.googleReviewCount || "",
     googlePlaceUrl: meta.googlePlaceUrl || "",
     pageTarget: meta.pageTarget || "all",
-    sortOrder: Number(page.sortOrder || 0),
+    sortOrder: Number(page.sortOrder ?? 0),
     published: Boolean(page.published),
   };
 };
 
 const buildPayload = (form = {}) => {
-  const name = form.name.trim();
-  const reviewText = form.reviewText.trim();
+  const name = String(form.name || "").trim();
+  const reviewText = String(form.reviewText || "").trim();
+  const avatarUrl = String(form.avatarUrl || "").trim();
+
   const slug =
     form.recordSlug || `auth-testimonial-${slugify(name)}-${Date.now()}`;
+
   const metadata = {
     data: {
       name,
-      avatarUrl: form.avatarUrl.trim(),
-      rating: Number(form.rating || 0),
+      avatarUrl,
+      rating: Number(form.rating),
       reviewText,
-      googleRating: Number(form.googleRating || 0),
+      googleRating:
+        form.googleRating === "" || form.googleRating == null
+          ? 0
+          : Number(form.googleRating),
       googleReviewCount: String(form.googleReviewCount || "").trim(),
       googlePlaceUrl: String(form.googlePlaceUrl || "").trim(),
       pageTarget: form.pageTarget || "all",
@@ -103,21 +140,26 @@ const buildPayload = (form = {}) => {
     description: reviewText,
     body: reviewText,
     excerpt: reviewText,
-    image: { url: form.avatarUrl.trim(), alt: name, type: "avatar" },
-    author: { name, avatar: form.avatarUrl.trim() },
-    sortOrder: Number(form.sortOrder || 0),
-    visibility: { channels: ["web"], roles: ["public"] },
+    image: {
+      url: avatarUrl,
+      alt: name,
+      type: "avatar",
+    },
+    author: {
+      name,
+      avatar: avatarUrl,
+    },
+    sortOrder:
+      form.sortOrder === "" || form.sortOrder == null
+        ? 0
+        : Number(form.sortOrder),
+    visibility: {
+      channels: ["web"],
+      roles: ["public"],
+    },
     metadata,
   };
 };
-
-const Field = ({ label, children, error }) => (
-  <label className="block text-sm font-medium text-[#202337]">
-    <span>{label}</span>
-    <div className="mt-1">{children}</div>
-    {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-  </label>
-);
 
 const inputClass =
   "w-full rounded-md border border-[#d8deec] bg-white px-3 py-2 text-sm text-[#202337] outline-none focus:border-[#2f6fed] focus:ring-2 focus:ring-[#dce7ff]";
@@ -125,24 +167,24 @@ const inputClass =
 const AuthTestimonials = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.adminCore);
+
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [isRefresh, setIsRefresh] = useState(false);
-  const [formData, setFormData] = useState(emptyForm);
-  const [errors, setErrors] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [statusLoadingSlug, setStatusLoadingSlug] = useState("");
 
   const payload = selector?.contentPagesData?.data?.data || {};
+
   const testimonials = useMemo(
     () => (payload?.list || []).filter((page) => page.pageType === PAGE_TYPE),
     [payload?.list],
   );
+
   const total = payload?.total || testimonials.length;
 
   const fetchTestimonials = useCallback(() => {
@@ -160,39 +202,81 @@ const AuthTestimonials = () => {
     fetchTestimonials();
   }, [fetchTestimonials, isRefresh]);
 
+  const formik = useFormik({
+    initialValues: emptyForm,
+    validationSchema: authTestimonialValidationSchema,
+    validateOnChange: true,
+    validateOnBlur: true,
+
+    onSubmit: async (values, { resetForm }) => {
+      if (uploadingAvatar) {
+        toast.error("Please wait until the avatar upload is complete.");
+        return;
+      }
+
+      const body = buildPayload(values);
+
+      try {
+        if (values.recordSlug) {
+          await dispatch(
+            updateContentPage({
+              ...body,
+              slug: values.recordSlug,
+            }),
+          ).unwrap();
+
+          toast.success("Auth testimonial updated");
+        } else {
+          await dispatch(createContentPage(body)).unwrap();
+
+          toast.success("Auth testimonial added");
+        }
+
+        resetForm({ values: emptyForm });
+        setIsModalOpen(false);
+        setIsRefresh((value) => !value);
+      } catch (error) {
+        toast.error(error?.message || "Failed to save auth testimonial");
+      }
+    },
+  });
+
   const resetModal = () => {
     setIsModalOpen(false);
-    setFormData(emptyForm);
-    setErrors({});
+    formik.resetForm({ values: emptyForm });
   };
+
   const closeModal = () => {
-    if (submitting) return;
+    if (formik.isSubmitting || uploadingAvatar) return;
+
     resetModal();
   };
 
-  const patchForm = (key, value) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => ({ ...prev, [key]: undefined }));
+  const openAddModal = () => {
+    formik.resetForm({ values: emptyForm });
+    setIsModalOpen(true);
   };
 
-  const validate = () => {
-    const nextErrors = {};
-    if (!formData.name.trim()) nextErrors.name = "Name is required";
-    if (!formData.reviewText.trim())
-      nextErrors.reviewText = "Review text is required";
-    const rating = Number(formData.rating);
-    if (!Number.isFinite(rating) || rating < 1 || rating > 5)
-      nextErrors.rating = "Rating must be between 1 and 5";
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+  const openEditModal = (row) => {
+    formik.resetForm({ values: toForm(row) });
+    setIsModalOpen(true);
+  };
+
+  const patchForm = (key, value) => {
+    formik.setFieldValue(key, value);
   };
 
   const uploadAvatar = async (file) => {
-    if (!file || uploadingAvatar) return;
+    if (!file || uploadingAvatar || formik.isSubmitting) return;
+
     try {
       setUploadingAvatar(true);
+
       const url = await uploadFile(file, "onboarding-testimonials");
-      patchForm("avatarUrl", url);
+
+      await formik.setFieldValue("avatarUrl", url);
+      await formik.setFieldTouched("avatarUrl", true, false);
+
       toast.success("Avatar uploaded to Cloudinary");
     } catch (error) {
       toast.error(error?.message || "Avatar upload failed");
@@ -201,34 +285,14 @@ const AuthTestimonials = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (submitting || uploadingAvatar || !validate()) return;
-    const body = buildPayload(formData);
-    try {
-      setSubmitting(true);
-      if (formData.recordSlug) {
-        await dispatch(
-          updateContentPage({ ...body, slug: formData.recordSlug }),
-        ).unwrap();
-        toast.success("Auth testimonial updated");
-      } else {
-        await dispatch(createContentPage(body)).unwrap();
-        toast.success("Auth testimonial added");
-      }
-      resetModal();
-      setIsRefresh((value) => !value);
-    } catch (error) {
-      toast.error(error?.message || "Failed to save auth testimonial");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const togglePublished = async (page) => {
     const slug = pageSlug(page);
+
     if (!slug || statusLoadingSlug) return;
+
     try {
       setStatusLoadingSlug(slug);
+
       await dispatch(
         updateContentPage({
           slug,
@@ -236,6 +300,7 @@ const AuthTestimonials = () => {
           status: !page.published ? "published" : "draft",
         }),
       ).unwrap();
+
       toast.success("Visibility updated");
       setIsRefresh((value) => !value);
     } catch (error) {
@@ -247,10 +312,14 @@ const AuthTestimonials = () => {
 
   const confirmDelete = async () => {
     const slug = pageSlug(deleteTarget);
+
     if (!slug || deleting) return;
+
     try {
       setDeleting(true);
+
       await dispatch(deleteContentPage({ slug })).unwrap();
+
       toast.success("Auth testimonial deleted");
       setDeleteTarget(null);
       setIsRefresh((value) => !value);
@@ -267,6 +336,7 @@ const AuthTestimonials = () => {
       label: "Reviewer",
       render: (value, row) => {
         const form = toForm(row);
+
         return (
           <div className="flex items-center gap-3">
             <img
@@ -274,8 +344,10 @@ const AuthTestimonials = () => {
               alt={form.name}
               className="h-10 w-10 rounded-full border border-[#eadfbd] object-cover"
             />
+
             <div>
               <div className="font-semibold text-[#202337]">{value}</div>
+
               <div className="text-xs text-[#65718b]">
                 {form.pageTarget === "all"
                   ? "Login + register"
@@ -292,6 +364,7 @@ const AuthTestimonials = () => {
       cellClassName: "max-w-[360px]",
       render: (value, row) => {
         const review = toForm(row).reviewText || value;
+
         return (
           <span
             className="block max-w-[360px] overflow-hidden text-ellipsis whitespace-nowrap text-sm text-[#65718b]"
@@ -307,7 +380,10 @@ const AuthTestimonials = () => {
       label: "Rating",
       render: (_, row) => `${toForm(row).rating}/5`,
     },
-    { key: "sortOrder", label: "Order" },
+    {
+      key: "sortOrder",
+      label: "Order",
+    },
     {
       key: "published",
       label: "Live",
@@ -316,7 +392,9 @@ const AuthTestimonials = () => {
           isToggle={Boolean(value)}
           handleClick={() => togglePublished(row)}
           loading={statusLoadingSlug === pageSlug(row)}
-          disabled={Boolean(statusLoadingSlug) || submitting || deleting}
+          disabled={
+            Boolean(statusLoadingSlug) || formik.isSubmitting || deleting
+          }
         />
       ),
     },
@@ -326,18 +404,15 @@ const AuthTestimonials = () => {
     {
       label: "Edit",
       icon: <MdEdit aria-hidden="true" size={16} />,
-      onClick: () => {
-        setFormData(toForm(row));
-        setIsModalOpen(true);
-      },
-      disabled: submitting || deleting || Boolean(statusLoadingSlug),
+      onClick: () => openEditModal(row),
+      disabled: formik.isSubmitting || deleting || Boolean(statusLoadingSlug),
     },
     {
       label: "Delete",
       icon: <MdDelete aria-hidden="true" size={16} />,
       onClick: () => setDeleteTarget(row),
       danger: true,
-      disabled: submitting || deleting || Boolean(statusLoadingSlug),
+      disabled: formik.isSubmitting || deleting || Boolean(statusLoadingSlug),
     },
   ];
 
@@ -353,10 +428,11 @@ const AuthTestimonials = () => {
         actions={
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={openAddModal}
             className="flex items-center gap-1"
           >
-            <MdAdd aria-hidden="true" size={16} /> Add Testimonial
+            <MdAdd aria-hidden="true" size={16} />
+            Add Testimonial
           </button>
         }
       />
@@ -401,12 +477,14 @@ const AuthTestimonials = () => {
       <DefaultModal
         isOpen={isModalOpen}
         onClose={closeModal}
-        onSubmit={handleSubmit}
-        loading={submitting || uploadingAvatar}
+        onSubmit={formik.handleSubmit}
+        loading={formik.isSubmitting || uploadingAvatar}
         title={
-          formData.recordSlug ? "Edit Auth Testimonial" : "Add Auth Testimonial"
+          formik.values.recordSlug
+            ? "Edit Auth Testimonial"
+            : "Add Auth Testimonial"
         }
-        submitButtonText={formData.recordSlug ? "Update" : "Create"}
+        submitButtonText={formik.values.recordSlug ? "Update" : "Create"}
         closeButtonText="Cancel"
         isButtonView={true}
       >
@@ -421,11 +499,15 @@ const AuthTestimonials = () => {
               <FormInput
                 label="Reviewer Name"
                 name="name"
-                value={formData.name}
-                onChange={(event) => patchForm("name", event.target.value)}
-                error={errors.name}
+                value={formik.values.name}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.name && formik.errors.name
+                    ? formik.errors.name
+                    : ""
+                }
                 placeholder="Enter reviewer name"
-                maxLength={80}
                 required
               />
 
@@ -434,21 +516,27 @@ const AuthTestimonials = () => {
                 <ImageUpload
                   id="auth-testimonial-avatar"
                   label="Upload Avatar"
-                  file={formData.avatarUrl}
+                  file={formik.values.avatarUrl}
                   onChange={uploadAvatar}
-                  isDisabled={uploadingAvatar || submitting}
+                  isDisabled={uploadingAvatar || formik.isSubmitting}
                   previewClassName="!h-32 !min-h-32 rounded-full object-cover"
                 />
 
                 <input
                   className={`${inputClass} mt-2`}
-                  value={formData.avatarUrl}
-                  onChange={(event) =>
-                    patchForm("avatarUrl", event.target.value)
-                  }
+                  name="avatarUrl"
+                  value={formik.values.avatarUrl}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   placeholder="Uploaded Cloudinary URL"
-                  disabled={uploadingAvatar}
+                  disabled={uploadingAvatar || formik.isSubmitting}
                 />
+
+                {formik.touched.avatarUrl && formik.errors.avatarUrl && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {formik.errors.avatarUrl}
+                  </p>
+                )}
 
                 <p className="mt-1 text-xs text-[#65718b]">
                   Upload folder: ecommerce/uploads/onboarding-testimonials
@@ -471,9 +559,14 @@ const AuthTestimonials = () => {
                 min="1"
                 max="5"
                 step="0.1"
-                value={formData.rating}
-                onChange={(event) => patchForm("rating", event.target.value)}
-                error={errors.rating}
+                value={formik.values.rating}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.rating && formik.errors.rating
+                    ? formik.errors.rating
+                    : ""
+                }
                 placeholder="Enter rating"
                 required
               />
@@ -481,55 +574,39 @@ const AuthTestimonials = () => {
               {/* Show On */}
               <FormSelectGroup
                 label="Show On"
-                options={[
-                  {
-                    label: "Login + Register",
-                    value: "all",
-                  },
-                  {
-                    label: "Login only",
-                    value: "login",
-                  },
-                  {
-                    label: "Register only",
-                    value: "register",
-                  },
-                ]}
+                options={PAGE_TARGET_OPTIONS}
                 value={
-                  [
-                    {
-                      label: "Login + Register",
-                      value: "all",
-                    },
-                    {
-                      label: "Login only",
-                      value: "login",
-                    },
-                    {
-                      label: "Register only",
-                      value: "register",
-                    },
-                  ].find((option) => option.value === formData.pageTarget) ||
-                  null
+                  PAGE_TARGET_OPTIONS.find(
+                    (option) => option.value === formik.values.pageTarget,
+                  ) || null
                 }
-                onChange={(selectedOption) =>
-                  patchForm("pageTarget", selectedOption?.value || "all")
-                }
+                onChange={(selectedOption) => {
+                  patchForm("pageTarget", selectedOption?.value || "all");
+                  formik.setFieldTouched("pageTarget", true, false);
+                }}
                 placeholder="Select page"
               />
+
+              {formik.touched.pageTarget && formik.errors.pageTarget && (
+                <p className="mt-1 text-xs text-red-600">
+                  {formik.errors.pageTarget}
+                </p>
+              )}
 
               {/* Review Text */}
               <FormInput
                 label="Review Text"
                 type="textarea"
                 name="reviewText"
-                value={formData.reviewText}
-                onChange={(event) =>
-                  patchForm("reviewText", event.target.value)
+                value={formik.values.reviewText}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.reviewText && formik.errors.reviewText
+                    ? formik.errors.reviewText
+                    : ""
                 }
-                error={errors.reviewText}
                 placeholder="Enter customer review"
-                maxLength={600}
                 multiline
                 rows={5}
                 required
@@ -551,9 +628,13 @@ const AuthTestimonials = () => {
                 min="0"
                 max="5"
                 step="0.1"
-                value={formData.googleRating}
-                onChange={(event) =>
-                  patchForm("googleRating", event.target.value)
+                value={formik.values.googleRating}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.googleRating && formik.errors.googleRating
+                    ? formik.errors.googleRating
+                    : ""
                 }
                 placeholder="Enter Google rating"
               />
@@ -562,9 +643,14 @@ const AuthTestimonials = () => {
               <FormInput
                 label="Google Review Count"
                 name="googleReviewCount"
-                value={formData.googleReviewCount}
-                onChange={(event) =>
-                  patchForm("googleReviewCount", event.target.value)
+                value={formik.values.googleReviewCount}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.googleReviewCount &&
+                  formik.errors.googleReviewCount
+                    ? formik.errors.googleReviewCount
+                    : ""
                 }
                 placeholder="e.g. 128 reviews"
               />
@@ -573,9 +659,13 @@ const AuthTestimonials = () => {
               <FormInput
                 label="Google Place / Review URL"
                 name="googlePlaceUrl"
-                value={formData.googlePlaceUrl}
-                onChange={(event) =>
-                  patchForm("googlePlaceUrl", event.target.value)
+                value={formik.values.googlePlaceUrl}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.googlePlaceUrl && formik.errors.googlePlaceUrl
+                    ? formik.errors.googlePlaceUrl
+                    : ""
                 }
                 placeholder="https://g.page/..."
               />
@@ -594,33 +684,37 @@ const AuthTestimonials = () => {
                 name="sortOrder"
                 type="number"
                 min="0"
-                value={formData.sortOrder}
-                onChange={(event) => patchForm("sortOrder", event.target.value)}
+                value={formik.values.sortOrder}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.sortOrder && formik.errors.sortOrder
+                    ? formik.errors.sortOrder
+                    : ""
+                }
                 placeholder="Enter display order"
               />
 
               {/* Published */}
               <FormSelectGroup
                 label="Published"
-                options={[
-                  {
-                    label: "Yes",
-                    value: "yes",
-                  },
-                  {
-                    label: "Draft",
-                    value: "no",
-                  },
-                ]}
+                options={PUBLISHED_OPTIONS}
                 value={{
-                  label: formData.published ? "Yes" : "Draft",
-                  value: formData.published ? "yes" : "no",
+                  label: formik.values.published ? "Yes" : "Draft",
+                  value: formik.values.published ? "yes" : "no",
                 }}
-                onChange={(selectedOption) =>
-                  patchForm("published", selectedOption?.value === "yes")
-                }
+                onChange={(selectedOption) => {
+                  patchForm("published", selectedOption?.value === "yes");
+                  formik.setFieldTouched("published", true, false);
+                }}
                 placeholder="Select status"
               />
+
+              {formik.touched.published && formik.errors.published && (
+                <p className="mt-1 text-xs text-red-600">
+                  {formik.errors.published}
+                </p>
+              )}
             </div>
           </FormSection>
         </div>
