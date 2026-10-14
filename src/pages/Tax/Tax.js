@@ -294,6 +294,7 @@ const Tax = () => {
         totalCount={totalTax}
         page={list.page}
         pageSize={list.pageSize}
+        onRefresh={() => setIsRefresh((prev) => !prev)}
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
         onSearch={list.setSearch}

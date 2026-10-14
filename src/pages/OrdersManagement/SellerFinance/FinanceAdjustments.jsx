@@ -252,17 +252,6 @@ export default function FinanceAdjustments() {
           { label: "My Finance & Payouts" },
           { label: "Adjustments" },
         ]}
-        actions={
-          <button
-            type="button"
-            onClick={load}
-            disabled={Boolean(loading)}
-            aria-busy={Boolean(loading)}
-          >
-            <MdRefresh size={17}  aria-hidden="true" className={loading ? "animate-spin" : ""} />
-            {loading ? "Refreshing..." : "Refresh"}
-          </button>
-        }
       />
       {/* <FinanceNav /> */}
       <FinancePageGuide
@@ -339,31 +328,32 @@ export default function FinanceAdjustments() {
           <MdArrowForward aria-hidden="true" />
         </button>
       )}
-    <DataTable
-  columns={columns}
-  data={rows}
-  loading={loading}
-  totalCount={rows.length}
-  pageSize={20}
-  rowKey={(row) =>
-    `${row.adjustmentType}-${row.id || row.orderId || row.shipment_id}`
-  }
-  emptyText={
-    category === "returns"
-      ? "No return or refund adjustments found for the selected filters."
-      : category === "promotions"
-        ? "No promotion adjustments found for the selected filters."
-        : category === "cod"
-          ? "No COD adjustments found for the selected filters."
-          : category === "holds"
-            ? "No temporary holds found for the selected filters."
-            : category === "recoveries"
-              ? "No recoveries found for the selected filters."
-              : category === "other"
-                ? "No other adjustments found for the selected filters."
-                : "No adjustments found for the selected filters."
-  }
-/>
+      <DataTable
+        columns={columns}
+        data={rows}
+        loading={loading}
+        totalCount={rows.length}
+        pageSize={20}
+        onRefresh={load}
+        rowKey={(row) =>
+          `${row.adjustmentType}-${row.id || row.orderId || row.shipment_id}`
+        }
+        emptyText={
+          category === "returns"
+            ? "No return or refund adjustments found for the selected filters."
+            : category === "promotions"
+              ? "No promotion adjustments found for the selected filters."
+              : category === "cod"
+                ? "No COD adjustments found for the selected filters."
+                : category === "holds"
+                  ? "No temporary holds found for the selected filters."
+                  : category === "recoveries"
+                    ? "No recoveries found for the selected filters."
+                    : category === "other"
+                      ? "No other adjustments found for the selected filters."
+                      : "No adjustments found for the selected filters."
+        }
+      />
       <DefaultModal
         isOpen={Boolean(detail)}
         onClose={() => setDetail(null)}
@@ -377,7 +367,9 @@ export default function FinanceAdjustments() {
                 <span className="text-sm text-[var(--admin-muted)]">
                   Amount
                 </span>
-                <strong className={`text-xl ${Number(detail.amount) > 0 ? "text-emerald-700" : Number(detail.amount) < 0 ? "text-red-700" : "text-[var(--admin-ink)]"}`}>
+                <strong
+                  className={`text-xl ${Number(detail.amount) > 0 ? "text-emerald-700" : Number(detail.amount) < 0 ? "text-red-700" : "text-[var(--admin-ink)]"}`}
+                >
                   {signedFinanceMoney(detail.amount, detail.currency)}
                 </strong>
               </div>

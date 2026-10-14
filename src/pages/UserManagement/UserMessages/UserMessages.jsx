@@ -30,6 +30,7 @@ import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal"
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
+import { RefreshButton } from "../../../components/Atoms/buttons/exportImport";
 
 const CHANNEL_OPTIONS = [
   { value: "in_app", label: "In-App" },
@@ -532,6 +533,7 @@ const UserMessages = () => {
         onSearch={list.setSearch}
         onSort={list.setSort}
         sortKey={list.sortKey}
+        onRefresh={fetchNotifications}
         sortDir={list.sortDir}
         searchPlaceholder="Search notifications…"
         emptyText="No notifications sent yet."

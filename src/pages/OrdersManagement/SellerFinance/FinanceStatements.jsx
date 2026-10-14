@@ -146,17 +146,6 @@ export default function FinanceStatements() {
           { label: "My Finance & Payouts" },
           { label: "Statements" },
         ]}
-        actions={
-          <button
-            type="button"
-            onClick={load}
-            disabled={Boolean(state.loading)}
-            aria-busy={Boolean(state.loading)}
-          >
-            <MdRefresh aria-hidden="true" className={state.loading ? "animate-spin" : ""} />
-            {state.loading ? "Refreshing..." : "Refresh"}
-          </button>
-        }
       />
       {/* <FinanceNav /> */}
       <FinancePageGuide
@@ -172,6 +161,7 @@ export default function FinanceStatements() {
       <DataTable
         columns={columns}
         data={pagedRows}
+        onRefresh={load}
         loading={Boolean(state.loading)}
         totalCount={rows.length}
         page={page}

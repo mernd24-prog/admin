@@ -41,6 +41,8 @@ import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
+import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
+import { ExportButton } from "../../../components/Atoms/buttons/exportImport";
 
 const STATUS_OPTIONS = [
   "initiated",
@@ -219,6 +221,70 @@ const ShipmentTracking = () => {
       search: initialShipmentId,
     },
   });
+
+  const handleExport = () => {
+    const shipmentRows = shipmentPayload?.list || [];
+
+    if (!shipmentRows.length) {
+      toast.info("No shipment data available to export.");
+      return;
+    }
+
+    try {
+      const excelColumns = columns.map((column) => ({
+        key: column.key,
+        label: column.label,
+      }));
+
+      const data = shipmentRows.map((row) => {
+        const exportRow = {};
+
+        excelColumns.forEach(({ key, label }) => {
+          if (
+            String(key).toLowerCase() === "shipment" ||
+            String(label).toLowerCase() === "shipment"
+          ) {
+            exportRow[key] =
+              row?.order_number ||
+              row?.label_data?.orderNumber ||
+              row?.order_id ||
+              "";
+            return;
+          }
+
+          const value = row?.[key];
+
+          exportRow[key] = value === null || value === undefined ? "" : value;
+        });
+
+        return exportRow;
+      });
+
+      const sheets = [
+        {
+          name: "Shipments",
+          title: "Shipment Tracking Report",
+          data,
+          columns: excelColumns,
+        },
+      ];
+
+      const exported = exportToExcelWorkbook(
+        sheets,
+        "Shipment_Tracking_Report.xlsx",
+      );
+
+      if (exported) {
+        toast.success("Shipment report exported successfully.");
+      } else {
+        toast.error("Unable to export shipment report.");
+      }
+    } catch (error) {
+      console.error("Shipment export error:", error);
+      toast.error("Failed to export shipment report.");
+    }
+  };
+
   const { toQueryParams, filters, setFilter } = list;
 
   const hasResolvedInitialRef = useRef(false);
@@ -744,6 +810,10 @@ const ShipmentTracking = () => {
         sortKey={list.sortKey}
         sortDir={list.sortDir}
         onRefresh={fetchShipments}
+        exportConfig={{
+          onClick: handleExport,
+          disabled: loading || !shipmentPayload.list.length,
+        }}
         error={error}
         filterBar={
           <FilterBar
@@ -759,11 +829,6 @@ const ShipmentTracking = () => {
         selectedKeys={[]}
         rowKey="id"
         requiredModule="delivery"
-        exportConfig={{
-          filename: "shipments",
-          columns,
-          data: shipmentPayload.list,
-        }}
         rowActions={(row) => [
           {
             label: "View Shipment Details",

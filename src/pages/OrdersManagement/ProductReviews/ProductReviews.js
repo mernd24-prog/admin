@@ -958,10 +958,9 @@ const ProductReviews = () => {
         error={error}
         total={total}
         listPage={list}
+        onRefresh={fetchReviews}
         searchPlaceholder={
-          isDetailMode
-            ? "Search buyers, review text, orders..."
-            : "Search products..."
+          isDetailMode ? "Search buyers, review text..." : "Search products..."
         }
         emptyMessage={
           isDetailMode

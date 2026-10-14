@@ -1854,13 +1854,6 @@ const Orders = () => {
             label: "Orders",
           },
         ]}
-        actions={
-          <ExportButton
-            onClick={handleExport}
-            label="Export Report"
-            disabled={loading || !displayItems.length}
-          />
-        }
       />
 
       <DataTable
@@ -1869,6 +1862,11 @@ const Orders = () => {
         loading={loading}
         totalCount={total}
         page={list.page}
+        exportConfig={{
+          onClick: handleExport,
+          label: "Export",
+          disabled: loading || !displayItems.length,
+        }}
         pageSize={list.pageSize}
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}

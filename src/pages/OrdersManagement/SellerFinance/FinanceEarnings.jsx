@@ -37,6 +37,7 @@ import {
   useFinanceDateRange,
 } from "./financeUi";
 import Tabs from "../../../components/Shared/Tabs";
+import { RefreshButton } from "../../../components/Atoms/buttons/exportImport";
 
 const FILTERS = [
   ["", "All"],
@@ -262,7 +263,10 @@ export default function FinanceEarnings() {
             "itemAmount",
             "total_amount",
             "totalAmount",
-          ].find((key) => row[key] !== undefined && row[key] !== null && row[key] !== "");
+          ].find(
+            (key) =>
+              row[key] !== undefined && row[key] !== null && row[key] !== "",
+          );
           const amount = amountKey ? row[amountKey] : undefined;
 
           return amount !== undefined && amount !== null ? (
@@ -364,16 +368,6 @@ export default function FinanceEarnings() {
               dateRange={dateRange}
               loading={Boolean(state.loading)}
             />
-
-            <button
-              type="button"
-              onClick={load}
-              disabled={Boolean(state.loading)}
-              aria-busy={Boolean(state.loading)}
-            >
-              <MdRefresh size={17} aria-hidden="true" className={state.loading ? "animate-spin" : ""} />
-              {state.loading ? "Refreshing..." : "Refresh"}
-            </button>
           </div>
         }
       />
@@ -404,10 +398,38 @@ export default function FinanceEarnings() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
-              <div><strong className="block">{codReconciliation.totalOrders || 0}</strong><span className="text-xs text-[var(--admin-muted)]">COD orders</span></div>
-              <div><strong className="block">{codReconciliation.deliveredOrders || 0}</strong><span className="text-xs text-[var(--admin-muted)]">Delivered</span></div>
-              <div><strong className="block">{codReconciliation.awaitingDeliveryOrders || 0}</strong><span className="text-xs text-[var(--admin-muted)]">Awaiting delivery</span></div>
-              <div><strong className="block">{codReconciliation.ordersWithLiability || 0}</strong><span className="text-xs text-[var(--admin-muted)]">Cash liabilities</span></div>
+              <div>
+                <strong className="block">
+                  {codReconciliation.totalOrders || 0}
+                </strong>
+                <span className="text-xs text-[var(--admin-muted)]">
+                  COD orders
+                </span>
+              </div>
+              <div>
+                <strong className="block">
+                  {codReconciliation.deliveredOrders || 0}
+                </strong>
+                <span className="text-xs text-[var(--admin-muted)]">
+                  Delivered
+                </span>
+              </div>
+              <div>
+                <strong className="block">
+                  {codReconciliation.awaitingDeliveryOrders || 0}
+                </strong>
+                <span className="text-xs text-[var(--admin-muted)]">
+                  Awaiting delivery
+                </span>
+              </div>
+              <div>
+                <strong className="block">
+                  {codReconciliation.ordersWithLiability || 0}
+                </strong>
+                <span className="text-xs text-[var(--admin-muted)]">
+                  Cash liabilities
+                </span>
+              </div>
             </div>
           </div>
           {Number(codReconciliation.missingEarningOrders || 0) > 0 && (
@@ -553,6 +575,7 @@ export default function FinanceEarnings() {
           setPageSize(size);
           setPage(1);
         }}
+        onRefresh={load}
         pageSizeOptions={[10, 20, 50, 100]}
         rowKey={(row) => row.id || row.commissionId}
         searchPlaceholder="Search order or product"
@@ -590,9 +613,9 @@ export default function FinanceEarnings() {
         isButtonView={false}
       >
         {detail && (
-          <div className="space-y-5 p-2">
+          <div className="space-y-5 border border-golden p-6 rounded-lg">
             {/* EARNING SUMMARY */}
-            <div className="rounded-lg bg-[var(--admin-soft)] p-4">
+            <div className="rounded-lg bg-[var(--admin-soft)]  p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <span className="text-xs text-[var(--admin-muted)]">
@@ -616,7 +639,7 @@ export default function FinanceEarnings() {
                     Your earning
                   </span>
 
-                  <strong className="mt-1 block text-2xl">
+                  <strong className="mt-1 block text-[#2E1B78] text-2xl">
                     {financeMoney(
                       financeValue(detail, "net_amount", "netAmount"),
                       detail.currency,
@@ -640,7 +663,7 @@ export default function FinanceEarnings() {
 
             {/* AVAILABILITY INFORMATION */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-[var(--admin-border)] p-3">
+              <div className="rounded-lg border border-golden p-3">
                 <span className="text-xs text-[var(--admin-muted)]">
                   Available / Paid On
                 </span>
@@ -657,7 +680,7 @@ export default function FinanceEarnings() {
                 </p>
               </div>
 
-              <div className="rounded-lg border border-[var(--admin-border)] p-3">
+              <div className="rounded-lg border border-golden p-3">
                 <span className="text-xs text-[var(--admin-muted)]">
                   Status
                 </span>

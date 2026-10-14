@@ -1005,24 +1005,6 @@ const SellerPayouts = () => {
             label: isSeller ? "Payouts" : "Seller Payouts",
           },
         ]}
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={fetchPayouts}
-              disabled={Boolean(loading)}
-              aria-busy={Boolean(loading)}
-            >
-              <MdRefresh size={17} className={loading ? "animate-spin" : ""} />
-              {loading ? "Refreshing..." : "Refresh"}
-            </button>
-            <ExportButton
-              onClick={exportPayoutTable}
-              label="Export"
-              disabled={!payload.list?.length}
-            />
-          </div>
-        }
       />
 
       {/* {isSeller && <FinanceNav />} */}
@@ -1130,6 +1112,11 @@ const SellerPayouts = () => {
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
+        onRefresh={fetchPayouts}
+        exportConfig={{
+          onClick: exportPayoutTable,
+          disabled: loading || !payload.list.length,
+        }}
         searchPlaceholder="Search Seller..."
         emptyText="No calculated payouts found"
         filterBar={

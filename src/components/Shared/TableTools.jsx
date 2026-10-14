@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { MdFileDownload, MdFileUpload } from "react-icons/md";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import Input from "../Atoms/Input/Input";
 import {
   exportToCsv,
   exportToExcel,
+  exportToExcelWorkbook,
   findDuplicateRows,
   parseImportFile,
 } from "../../_helpers/exportToCsv";
@@ -36,22 +37,60 @@ export const ExportButton = ({
   requiredAction = "export",
   requiredScope = "any",
   label,
+  onClick,
+  onExport,
+  workbookTitle = "Export Report",
+  sheetName = "Data",
 }) => {
   const rows = selectedData.length ? selectedData : data;
-  const exportRows = () => {
+
+  const exportRows = async () => {
     if (!rows.length) {
       toast.error("No records available to export");
       return;
     }
-    const options = {
-      filename: `${filename}.${format === "excel" ? "xlsx" : "csv"}`,
-      columns,
-    };
-    if (format === "excel") exportToExcel(rows, options);
-    else exportToCsv(rows, options);
-    toast.success(
-      `${rows.length} record${rows.length === 1 ? "" : "s"} exported`,
-    );
+
+    // Custom export takes precedence when supplied.
+    const customExport = onExport || onClick;
+
+    if (customExport) {
+      await customExport(rows, columns);
+      return;
+    }
+
+    try {
+      const filenameWithExtension = `${filename}.${format === "excel" ? "xlsx" : "csv"}`;
+
+      if (format === "excel") {
+        const exported = exportToExcelWorkbook(
+          [
+            {
+              name: sheetName,
+              title: workbookTitle,
+              data: rows,
+              columns,
+            },
+          ],
+          filenameWithExtension,
+        );
+
+        if (exported === false) {
+          toast.error("Unable to export Excel workbook");
+          return;
+        }
+      } else {
+        exportToCsv(rows, {
+          filename: filenameWithExtension,
+          columns,
+        });
+      }
+
+      toast.success(
+        `${rows.length} record${rows.length === 1 ? "" : "s"} exported`,
+      );
+    } catch (error) {
+      toast.error(error?.message || "Failed to export records");
+    }
   };
 
   return (
@@ -65,8 +104,8 @@ export const ExportButton = ({
         onClick={exportRows}
         className="admin-btn-secondary"
       >
-        <MdFileDownload size={17} />
-        {label || `Export ${format === "excel" ? "Excel" : "CSV"}`}
+        <MdFileDownload aria-hidden="true" size={17} />
+        {label || "Export"}
       </button>
     </MaybeGuard>
   );
@@ -74,6 +113,8 @@ export const ExportButton = ({
 
 export const ImportButton = ({
   onImport,
+  onClick,
+  importing = false,
   validateRow,
   duplicateKey,
   requiredModule,
@@ -83,54 +124,102 @@ export const ImportButton = ({
   templateRows = [],
   templateFilename = "import-template",
 }) => {
-  const [open, setOpen] = useState(false);
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState([]);
-  const [file, setFile] = useState(null);
-  const [errors, setErrors] = useState([]);
+
   const duplicateRows = useMemo(
     () => findDuplicateRows(rows, duplicateKey),
     [duplicateKey, rows],
   );
 
-  const readFile = async (event) => {
-    const nextFile = event.target.files?.[0] || event.target.value;
-    if (!nextFile) return;
-    setFile(nextFile);
-    try {
-      const nextRows = await parseImportFile(nextFile);
-      const rowErrors = validateRow
-        ? nextRows.flatMap((row, index) => {
-            const error = validateRow(row, index);
-            return error
-              ? [
-                  {
-                    row: index + 2,
-                    message: typeof error === "string" ? error : "Invalid row",
-                  },
-                ]
-              : [];
-          })
-        : [];
-      setRows(nextRows);
-      setErrors(rowErrors);
-    } catch (error) {
-      toast.error(error.message);
-      setRows([]);
-    }
+  const handleImportClick = () => {
+    if (loading || importing) return;
+    fileInputRef.current?.click();
   };
 
-  const submit = async () => {
-    if (errors.length || duplicateRows.length) return;
+  const readFile = async (event) => {
+    const input = event.target;
+    const selectedFile = input.files?.[0];
+
+    // Allow selecting the same file again.
+    input.value = "";
+
+    if (!selectedFile) return;
+
+    const importHandler = onImport || onClick;
+
+    if (typeof importHandler !== "function") {
+      toast.error("Import handler is not configured.");
+      return;
+    }
+
+    const extension = selectedFile.name.split(".").pop()?.toLowerCase();
+
+    if (!["csv", "xlsx", "xls"].includes(extension)) {
+      toast.error("Please select a CSV or Excel file.");
+      return;
+    }
+
     setLoading(true);
+
     try {
-      await onImport?.(rows, file);
-      toast.success(`${rows.length} rows ready for import`);
-      setOpen(false);
-      setRows([]);
-      setFile(null);
+      const parsedRows = await parseImportFile(selectedFile);
+
+      if (!Array.isArray(parsedRows) || parsedRows.length === 0) {
+        toast.error("The selected file contains no importable rows.");
+        return;
+      }
+
+      const rowErrors = validateRow
+        ? parsedRows.flatMap((row, index) => {
+            try {
+              const error = validateRow(row, index);
+
+              return error
+                ? [
+                    {
+                      row: index + 2,
+                      message:
+                        typeof error === "string" ? error : "Invalid row",
+                    },
+                  ]
+                : [];
+            } catch (error) {
+              return [
+                {
+                  row: index + 2,
+                  message: error?.message || "Invalid row",
+                },
+              ];
+            }
+          })
+        : [];
+
+      setRows(parsedRows);
+
+      if (rowErrors.length > 0) {
+        toast.error(`Import cancelled: ${rowErrors.length} invalid row(s).`);
+        console.error("Import validation errors:", rowErrors);
+        return;
+      }
+
+      const duplicates = findDuplicateRows(parsedRows, duplicateKey);
+
+      if (duplicates.length > 0) {
+        toast.error(`Import cancelled: ${duplicates.length} duplicate row(s).`);
+        return;
+      }
+
+      // Call the existing Special Price Management import handler.
+      await importHandler(parsedRows, selectedFile);
+
+      toast.success(
+        `${parsedRows.length} row${parsedRows.length === 1 ? "" : "s"} imported successfully.`,
+      );
     } catch (error) {
-      toast.error(error?.message || "Import failed");
+      console.error("Special price import failed:", error);
+      toast.error(error?.message || "Failed to import the selected file.");
     } finally {
       setLoading(false);
     }
@@ -143,59 +232,24 @@ export const ImportButton = ({
       scope={requiredScope}
     >
       <>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,.xlsx,.xls"
+          onChange={readFile}
+          style={{ display: "none" }}
+          aria-label="Select a CSV or Excel file to import"
+        />
+
         <button
           type="button"
           className="admin-btn-secondary"
-          onClick={() => setOpen(true)}
+          onClick={handleImportClick}
+          disabled={loading || importing}
         >
-          <MdFileUpload size={17} /> {label}
+          <MdFileUpload aria-hidden="true" size={17} />
+          {loading || importing ? "Importing..." : label}
         </button>
-        <DefaultMiddleModal
-          isOpen={open}
-          onClose={() => setOpen(false)}
-          onSubmit={submit}
-          title="Bulk Import"
-          loading={loading}
-          submitButtonText={loading ? "Importing..." : "Import"}
-        >
-          <Input
-            type="drag-drop-upload"
-            name="bulkFile"
-            accept=".csv,.xlsx,.xls"
-            onChange={readFile}
-            placeholder="Drop or choose a CSV / Excel file"
-          />
-          {templateRows.length > 0 && (
-            <button
-              type="button"
-              className="mt-3 text-sm text-primary"
-              onClick={() =>
-                exportToExcel(templateRows, {
-                  filename: `${templateFilename}.xlsx`,
-                })
-              }
-            >
-              Download template
-            </button>
-          )}
-          {rows.length > 0 && (
-            <div className="admin-import-summary">
-              <p>
-                {rows.length} row{rows.length === 1 ? "" : "s"} found
-              </p>
-              {duplicateRows.length > 0 && (
-                <p className="text-red-600">
-                  {duplicateRows.length} duplicate row(s) must be resolved.
-                </p>
-              )}
-              {errors.slice(0, 5).map((item) => (
-                <p key={`${item.row}-${item.message}`} className="text-red-600">
-                  Row {item.row}: {item.message}
-                </p>
-              ))}
-            </div>
-          )}
-        </DefaultMiddleModal>
       </>
     </MaybeGuard>
   );

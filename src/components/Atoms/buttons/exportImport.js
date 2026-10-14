@@ -1,9 +1,9 @@
 import React from "react";
-import { Download, Upload } from "lucide-react";
+import { Download, Upload, RefreshCw } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
 /**
- * Reusable Export Button with blue icon and admin-btn-secondary styling
+ * Reusable Export Button
  */
 export const ExportButton = React.memo(
   ({
@@ -34,7 +34,7 @@ export const ExportButton = React.memo(
           (icon || (
             <Download
               size={15}
-              className="text-[var(--admin-blue)] shrink-0"
+              className="shrink-0 text-[var(--admin-blue)]"
               aria-hidden="true"
             />
           ))}
@@ -48,7 +48,7 @@ export const ExportButton = React.memo(
 ExportButton.displayName = "ExportButton";
 
 /**
- * Reusable Import Button with blue icon and admin-btn-secondary styling
+ * Reusable Import Button
  */
 export const ImportButton = React.memo(
   ({
@@ -82,7 +82,7 @@ export const ImportButton = React.memo(
           (icon || (
             <Upload
               size={15}
-              className="text-[var(--admin-blue)] shrink-0"
+              className="shrink-0 text-[var(--admin-blue)]"
               aria-hidden="true"
             />
           ))}
@@ -95,7 +95,58 @@ export const ImportButton = React.memo(
 
 ImportButton.displayName = "ImportButton";
 
+/**
+ * Reusable Refresh Button
+ */
+export const RefreshButton = React.memo(
+  ({
+    type = "button",
+    onClick,
+    label = "Refresh",
+    loadingText = "Refreshing…",
+    className = "",
+    disabled = false,
+    isDisable = false,
+    loading = false,
+    icon,
+    showIcon = true,
+    ...rest
+  }) => {
+    const isDisabled = disabled || isDisable || loading;
+
+    return (
+      <button
+        type={type}
+        onClick={onClick}
+        disabled={isDisabled}
+        aria-label={label}
+        className={twMerge(
+          `admin-btn-secondary inline-flex items-center gap-1.5 ${className}`,
+        )}
+        {...rest}
+      >
+        {showIcon &&
+          (icon || (
+            <RefreshCw
+              size={15}
+              className={twMerge(
+                "shrink-0 text-[var(--admin-blue)]",
+                loading && "animate-spin",
+              )}
+              aria-hidden="true"
+            />
+          ))}
+
+        <span>{loading ? loadingText : label}</span>
+      </button>
+    );
+  },
+);
+
+RefreshButton.displayName = "RefreshButton";
+
 export default {
   ExportButton,
   ImportButton,
+  RefreshButton,
 };
