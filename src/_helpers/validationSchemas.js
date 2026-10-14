@@ -23,11 +23,11 @@ export const parentInfluencerValidationSchema = Yup.object({
     .required("Temporary password is required")
     .min(8, "Password must be at least 8 characters")
     .max(128, "Password must be no more than 128 characters"),
-phone: Yup.string()
-  .trim()
-  .transform((value) => (value === "" ? undefined : value))
-  .notRequired()
-  .matches(/^[6-9][0-9]{9}$/, "Enter a valid 10 digit mobile number"),
+  phone: Yup.string()
+    .trim()
+    .transform((value) => (value === "" ? undefined : value))
+    .notRequired()
+    .matches(/^[6-9][0-9]{9}$/, "Enter a valid 10 digit mobile number"),
   code: Yup.string()
     .trim()
     .transform((value) => (value === "" ? undefined : value))
@@ -140,9 +140,7 @@ export const taxRuleValidationSchema = Yup.object({
     .min(3, "Min 3 characters")
     .max(100, "Max 2500 characters"),
   tax_id: Yup.string().required("Tax is required"),
-  subTaxes_id: Yup.array()
-    .of(Yup.string())
-    .min(1, "Sub Tax is required"),
+  subTaxes_id: Yup.array().of(Yup.string()).min(1, "Sub Tax is required"),
   category_id: Yup.string().required("Category is required"),
 });
 
@@ -248,6 +246,177 @@ export const orderNoteValidationSchema = Yup.object({
     .required("Visibility is required"),
 });
 
+export const orderStatusOverrideValidationSchema = Yup.object({
+  status: Yup.string().trim().required("Status is required"),
+  reason: Yup.string().when("status", {
+    is: "cancelled",
+    then: (schema) =>
+      schema
+        .trim()
+        .required("Please enter a cancellation reason.")
+        .min(10, "Reason must be at least 10 characters.")
+        .max(2000, "Reason must be no more than 2000 characters."),
+    otherwise: (schema) =>
+      schema
+        .transform((value) => (value?.trim() ? value.trim() : undefined))
+        .notRequired()
+        .min(3, "Reason must be at least 3 characters.")
+        .max(2000, "Reason must be no more than 2000 characters."),
+  }),
+  note: Yup.string()
+    .max(2000, "Note must be no more than 2000 characters.")
+    .min(3, "Note must be at least 3 characters."),
+});
+
+const cmsOptionalText = (label, min = 2, max = 120) =>
+  Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(min, `${label} must be at least ${min} characters`)
+    .max(max, `${label} must be no more than ${max} characters`);
+
+const cmsRequiredText = (label, min = 2, max = 120) =>
+  Yup.string()
+    .trim()
+    .required(`${label} is required`)
+    .min(min, `${label} must be at least ${min} characters`)
+    .max(max, `${label} must be no more than ${max} characters`);
+
+const cmsOptionalTextMax = (label, max) =>
+  Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .max(max, `${label} must be no more than ${max} characters`);
+
+const cmsBoundedNumber = (label, min, max) =>
+  Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" || originalValue == null ? undefined : value,
+    )
+    .typeError(`${label} must be a number`)
+    .integer(`${label} must be a whole number`)
+    .min(min, `${label} must be at least ${min}`)
+    .max(max, `${label} must be no more than ${max}`);
+
+const cmsImageValidationSchema = Yup.object({
+  url: cmsOptionalText("Image URL", 2, 2048),
+  alt: cmsOptionalTextMax("Image alt text", 150),
+  title: cmsOptionalText("Image title", 2, 120),
+  caption: cmsOptionalText("Image caption", 2, 500),
+  type: cmsOptionalText("Image type", 2, 60),
+});
+
+const cmsCtaValidationSchema = Yup.object({
+  label: cmsOptionalText("CTA label", 2, 50),
+  url: cmsOptionalText("CTA URL", 2, 2048),
+  target: cmsOptionalText("CTA target", 2, 30),
+});
+
+const cmsPointValidationSchema = Yup.object({
+  title: cmsOptionalText("Point title", 2, 120),
+  description: cmsOptionalText("Point description", 3, 2000),
+  sortOrder: cmsBoundedNumber("Point sort order", 0, 99999),
+  image: cmsImageValidationSchema,
+  cta: cmsCtaValidationSchema,
+});
+
+const cmsSectionValidationSchema = Yup.object({
+  type: cmsOptionalText("Section type", 2, 60),
+  title: cmsOptionalText("Section title", 2, 100),
+  description: cmsOptionalText("Section description", 3, 5000),
+  sortOrder: cmsBoundedNumber("Section sort order", 0, 99999),
+  image: cmsImageValidationSchema,
+  gallery: Yup.array()
+    .of(cmsImageValidationSchema)
+    .max(50, "A section can have no more than 50 gallery images"),
+  points: Yup.array()
+    .of(cmsPointValidationSchema)
+    .max(100, "A section can have no more than 100 points"),
+  cta: cmsCtaValidationSchema,
+});
+
+const cmsOptionalTextList = (label, maxItems = 100) =>
+  Yup.array()
+    .of(cmsOptionalText(label, 2, 100))
+    .max(maxItems, `${label} can contain no more than ${maxItems} items`);
+
+export const contentPageValidationSchema = Yup.object({
+  title: cmsRequiredText("Title", 2, 100),
+  slug: cmsRequiredText("Slug", 2, 150),
+  pageType: cmsRequiredText("Page type", 2, 60),
+  category: cmsOptionalText("Category", 2, 100),
+  language: cmsOptionalText("Language", 2, 12),
+  sortOrder: cmsBoundedNumber("Sort order", 0, 99999),
+  description: cmsOptionalText("Description", 3, 1000),
+  excerpt: cmsOptionalText("Excerpt", 3, 500),
+  body: cmsOptionalText("Body content", 3, 100000),
+  image: cmsImageValidationSchema,
+  gallery: Yup.array()
+    .of(cmsImageValidationSchema)
+    .max(100, "A page can have no more than 100 gallery images"),
+  galleryImages: cmsOptionalTextList("Gallery image URL", 100),
+  sections: Yup.array()
+    .of(cmsSectionValidationSchema)
+    .max(100, "A page can have no more than 100 sections"),
+  points: Yup.array()
+    .of(cmsPointValidationSchema)
+    .max(100, "A page can have no more than 100 points"),
+  cta: cmsCtaValidationSchema,
+  tags: cmsOptionalTextList("Tag", 100),
+  visibility: Yup.object({
+    channels: cmsOptionalTextList("Channel", 20),
+    roles: cmsOptionalTextList("Role", 50),
+  }),
+  seo: Yup.object({
+    metaTitle: cmsOptionalTextMax("Meta title", 60),
+    metaDescription: cmsOptionalText("Meta description", 3, 160),
+    keywords: cmsOptionalTextList("SEO keyword", 100),
+    focusKeyword: cmsOptionalText("Focus keyword", 2, 100),
+    canonicalUrl: cmsOptionalText("Canonical URL", 2, 2048),
+    robots: cmsOptionalText("Robots value", 2, 100),
+    ogTitle: cmsOptionalText("Open Graph title", 2, 100),
+    ogDescription: cmsOptionalText("Open Graph description", 3, 500),
+    ogImage: cmsImageValidationSchema,
+    twitterTitle: cmsOptionalText("Twitter title", 2, 100),
+    twitterDescription: cmsOptionalText("Twitter description", 3, 500),
+    twitterImage: cmsImageValidationSchema,
+    schemaType: cmsOptionalText("Schema type", 2, 100),
+    schemaJson: Yup.mixed().test(
+      "schema-json-size",
+      "Schema JSON must be no more than 100000 characters",
+      (value) => JSON.stringify(value || {}).length <= 100000,
+    ),
+    breadcrumbs: Yup.array()
+      .of(Yup.mixed())
+      .max(100, "No more than 100 breadcrumbs are allowed"),
+  }),
+  author: Yup.object({
+    name: cmsOptionalText("Author name", 2, 100),
+    avatar: cmsOptionalText("Author avatar URL", 2, 2048),
+  }),
+  publishedAt: Yup.string()
+    .transform((value) => (value?.trim() ? value : undefined))
+    .notRequired()
+    .min(16, "Publish date and time must be at least 16 characters")
+    .max(35, "Publish date and time must be no more than 35 characters")
+    .test(
+      "valid-published-at",
+      "Enter a valid publish date and time",
+      (value) => value === undefined || !Number.isNaN(Date.parse(value)),
+    ),
+  coverImage: cmsOptionalText("Cover image URL", 2, 2048),
+  thumbnailUrl: cmsOptionalText("Thumbnail URL", 2, 2048),
+  heroImage: cmsOptionalText("Hero image URL", 2, 2048),
+  metadata: Yup.mixed().test(
+    "metadata-size",
+    "Metadata JSON must be between 2 and 100000 characters",
+    (value) => {
+      const length = JSON.stringify(value || {}).length;
+      return length >= 2 && length <= 100000;
+    },
+  ),
+});
+
 const optionalShippingNumber = (label) =>
   Yup.number()
     .transform((value, originalValue) =>
@@ -330,49 +499,40 @@ export const scheduleReturnValidationSchema = Yup.object({
 });
 
 export const codCollectionValidationSchema = Yup.object({
- collectedAmount: Yup.number()
-  .transform((value, originalValue) =>
-    typeof originalValue === "string" &&
-    originalValue.trim() === ""
-      ? undefined
-      : value,
-  )
-  .typeError("Enter a valid collected amount")
-  .required("Collected amount is required")
-  .min(0, "Collected amount cannot be negative")
-  .test(
-    "valid-amount",
-    "Only numbers and up to 2 decimal places are allowed",
-    (_, context) => {
-      const value = context.originalValue;
+  collectedAmount: Yup.number()
+    .transform((value, originalValue) =>
+      typeof originalValue === "string" && originalValue.trim() === ""
+        ? undefined
+        : value,
+    )
+    .typeError("Enter a valid collected amount")
+    .required("Collected amount is required")
+    .min(0, "Collected amount cannot be negative")
+    .test(
+      "valid-amount",
+      "Only numbers and up to 2 decimal places are allowed",
+      (_, context) => {
+        const value = context.originalValue;
 
-      if (value === "" || value === undefined || value === null) {
-        return true;
-      }
+        if (value === "" || value === undefined || value === null) {
+          return true;
+        }
 
-      return /^\d+(\.\d{1,2})?$/.test(String(value).trim());
-    },
-  ),
+        return /^\d+(\.\d{1,2})?$/.test(String(value).trim());
+      },
+    ),
   referenceId: Yup.string()
     .trim()
     .required("Collection reference is required")
     .min(3, "Collection reference must be at least 3 characters")
-    .max(
-      100,
-      "Collection reference must be no more than 100 characters",
-    ),
+    .max(100, "Collection reference must be no more than 100 characters"),
 
-  notes: Yup.string().max(
-    500,
-    "Notes must be no more than 500 characters",
-  )
-  .min(3, "Notes must be at least 3 characters"),
+  notes: Yup.string()
+    .max(500, "Notes must be no more than 500 characters")
+    .min(3, "Notes must be at least 3 characters"),
 
-  markRemitted: Yup.boolean().required(
-    "Remittance status is required",
-  ),
+  markRemitted: Yup.boolean().required("Remittance status is required"),
 });
-
 
 export const brandValidationSchema = Yup.object({
   name: Yup.string()
@@ -381,28 +541,22 @@ export const brandValidationSchema = Yup.object({
     .min(2, "Brand name must be at least 2 characters")
     .max(200, "Brand name must be no more than 200 characters"),
 
-  logo: Yup.string()
-    .required("Please upload a brand logo"),
+  logo: Yup.string().required("Please upload a brand logo"),
 
   description: Yup.string()
-  .min(3, "Description must be at least 3 characters")
+    .min(3, "Description must be at least 3 characters")
     .max(1000, "Description must be no more than 1000 characters"),
 });
 export const bonusRuleValidationSchema = Yup.object({
-  ruleName: Yup.string()
-    .trim()
-    .required("Bonus rule name is required"),
+  ruleName: Yup.string().trim().required("Bonus rule name is required"),
 
-  period: Yup.string()
-    .required("Please select a bonus period"),
+  period: Yup.string().required("Please select a bonus period"),
 
-  targetType: Yup.string()
-    .required("Please select a target type"),
+  targetType: Yup.string().required("Please select a target type"),
 
   customStartAt: Yup.string().when("period", {
     is: "custom",
-    then: (schema) =>
-      schema.required("Custom start date is required"),
+    then: (schema) => schema.required("Custom start date is required"),
     otherwise: (schema) => schema.notRequired(),
   }),
 
@@ -422,44 +576,173 @@ export const bonusRuleValidationSchema = Yup.object({
             }
 
             return value >= customStartAt;
-          }
+          },
         ),
     otherwise: (schema) => schema.notRequired(),
   }),
 
   targetValue: Yup.number()
     .transform((value, originalValue) =>
-      originalValue === "" || originalValue == null
-        ? undefined
-        : value
+      originalValue === "" || originalValue == null ? undefined : value,
     )
     .typeError("Target value must be a valid number")
     .required("Target value is required")
     .moreThan(0, "Target value must be greater than 0"),
 
-  bonusType: Yup.string()
-    .required("Please select a bonus type"),
+  bonusType: Yup.string().required("Please select a bonus type"),
 
   bonusValue: Yup.number()
     .transform((value, originalValue) =>
-      originalValue === "" || originalValue == null
-        ? undefined
-        : value
+      originalValue === "" || originalValue == null ? undefined : value,
     )
     .typeError("Bonus value must be a valid number")
     .required("Bonus value is required")
     .moreThan(0, "Bonus value must be greater than 0"),
 
-  applyTo: Yup.string()
-    .required("Please select where the bonus applies"),
+  applyTo: Yup.string().required("Please select where the bonus applies"),
 
-  resetCycle: Yup.string()
-    .required("Please select a reset cycle"),
+  resetCycle: Yup.string().required("Please select a reset cycle"),
 
-  releaseRule: Yup.string()
-    .required("Please select a release rule"),
+  releaseRule: Yup.string().required("Please select a release rule"),
 
   status: Yup.string()
     .oneOf(["active", "inactive"], "Please select a valid status")
     .required("Status is required"),
+});
+export const authTestimonialValidationSchema = Yup.object({
+  name: Yup.string()
+    .trim()
+    .required("Reviewer name is required")
+    .min(2, "Reviewer name must be at least 2 characters")
+    .max(100, "Reviewer name must be no more than 100 characters")
+    .matches(/^[A-Za-z\s.'-]+$/, "Enter a valid reviewer name"),
+
+  avatarUrl: Yup.string()
+    .trim()
+    .transform((value) => (value === "" ? undefined : value))
+    .notRequired()
+    .url("Enter a valid avatar URL")
+    .max(2048, "Avatar URL must be no more than 2048 characters"),
+
+  rating: Yup.number()
+    .transform((value, originalValue) => (originalValue === "" ? NaN : value))
+    .typeError("Rating must be a number")
+    .required("Rating is required")
+    .min(1, "Rating must be at least 1")
+    .max(5, "Rating must be no more than 5"),
+
+  reviewText: Yup.string()
+    .trim()
+    .required("Review text is required")
+    .min(10, "Review text must be at least 10 characters")
+    .max(2000, "Review text must be no more than 2000 characters"),
+
+  googleRating: Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" ? undefined : value,
+    )
+    .typeError("Google rating must be a number")
+    .notRequired()
+    .min(0, "Google rating cannot be less than 0")
+    .max(5, "Google rating must be no more than 5"),
+
+  googleReviewCount: Yup.string()
+    .trim()
+    .max(50, "Google review count must be no more than 50 characters"),
+
+  googlePlaceUrl: Yup.string()
+    .trim()
+    .transform((value) => (value === "" ? undefined : value))
+    .notRequired()
+    .url("Enter a valid Google Place / Review URL")
+    .max(
+      2048,
+      "Google Place / Review URL must be no more than 2048 characters",
+    ),
+
+  pageTarget: Yup.string()
+    .required("Please select where the testimonial should appear")
+    .oneOf(["all", "login", "register"], "Select a valid display location"),
+
+  sortOrder: Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" ? undefined : value,
+    )
+    .typeError("Sort order must be a number")
+    .notRequired()
+    .integer("Sort order must be a whole number")
+    .min(0, "Sort order cannot be negative"),
+
+  published: Yup.boolean().required("Please select a publication status"),
+});
+
+export const generateInvoiceValidationSchema = Yup.object({
+  orderId: Yup.string().trim().required("Order ID is required"),
+});
+
+export const dealProductValidationSchema = Yup.object({
+  sellerId: Yup.string().when("mode", {
+    is: "seller_request",
+    then: (schema) => schema.notRequired(),
+    otherwise: (schema) => schema.required("Please select a seller"),
+  }),
+  productId: Yup.string().required("Please select a product"),
+  variantId: Yup.string().test(
+    "variant-required",
+    "Please select a product variant",
+    function (value) {
+      return Boolean(value || this.parent.variantSku);
+    },
+  ),
+  variantSku: Yup.string().notRequired(),
+  title: Yup.string()
+    .trim()
+    .required("Deal title is required")
+    .min(2, "Deal title must be at least 2 characters")
+    .max(120, "Deal title must be no more than 120 characters"),
+  dealType: Yup.string().notRequired(),
+  dealSource: Yup.string().notRequired(),
+  allocatedQuantity: Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" || originalValue == null ? undefined : value,
+    )
+    .typeError("Deal quantity must be a number")
+    .integer("Deal quantity must be a whole number")
+    .min(0, "Deal quantity cannot be negative")
+    .notRequired(),
+  maxQuantityPerOrder: Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" || originalValue == null ? undefined : value,
+    )
+    .typeError("Maximum quantity must be a number")
+    .integer("Maximum quantity must be a whole number")
+    .min(1, "Maximum quantity must be at least 1")
+    .notRequired(),
+  startAt: Yup.string().required("Please select the deal period"),
+  endAt: Yup.string()
+    .required("Please select the deal period")
+    .test(
+      "end-date-after-start",
+      "End date must be after the start date",
+      function (endAt) {
+        const { startAt } = this.parent;
+        if (!startAt || !endAt) return true;
+        return new Date(endAt).getTime() > new Date(startAt).getTime();
+      },
+    ),
+  dealBadge: Yup.string().notRequired(),
+  priority: Yup.number()
+    .transform((value, originalValue) =>
+      originalValue === "" ? undefined : value,
+    )
+    .typeError("Priority must be a number")
+    .integer("Priority must be a whole number")
+    .min(0, "Priority cannot be negative")
+    .notRequired(),
+  reason: Yup.string().when("mode", {
+    is: "seller_request",
+    then: (schema) => schema.trim().required("Reason is required"),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+  message: Yup.string().notRequired(),
 });

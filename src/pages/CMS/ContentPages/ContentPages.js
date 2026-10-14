@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useState } from "react";
+import { useFormik } from "formik";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { MdAdd, MdArticle, MdDelete, MdEdit } from "react-icons/md";
@@ -16,6 +17,7 @@ import {
   getContentPages,
   updateContentPage,
 } from "../../../Redux/adminCoreSlice";
+import { contentPageValidationSchema } from "../../../_helpers/validationSchemas";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -88,8 +90,6 @@ const ContentPages = () => {
   // This now controls whether the full-page setup screen is shown.
   const [isSetupOpen, setIsSetupOpen] = useState(false);
 
-  const [formData, setFormData] = useState(emptyForm);
-  const [errors, setErrors] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -98,6 +98,51 @@ const ContentPages = () => {
   const payload = selector?.contentPagesData?.data?.data || {};
   const pages = payload?.list || [];
   const total = payload?.total || 0;
+
+  const formik = useFormik({
+    initialValues: emptyForm,
+    validationSchema: contentPageValidationSchema,
+    onSubmit: async (values) => {
+      if (submitting) return;
+
+      const body = {
+        ...values,
+        published: values.status === "published" || Boolean(values.published),
+        heroImage: values.heroImage || values.image?.url || "",
+        coverImage: values.coverImage || values.image?.url || "",
+        thumbnailUrl: values.thumbnailUrl || values.image?.url || "",
+        galleryImages: Array.isArray(values.gallery)
+          ? values.gallery.map((item) => item?.url).filter(Boolean)
+          : values.galleryImages || [],
+      };
+
+      try {
+        setSubmitting(true);
+
+        if (values.recordSlug) {
+          await dispatch(
+            updateContentPage({
+              ...body,
+              slug: values.recordSlug,
+            }),
+          ).unwrap();
+
+          toast.success("Content page updated successfully");
+        } else {
+          await dispatch(createContentPage(body)).unwrap();
+
+          toast.success("Content page created successfully");
+        }
+
+        closeSetup(true);
+        setIsRefresh((value) => !value);
+      } catch (error) {
+        toast.error(error?.message || "Failed to save content page");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
   const fetchPages = useCallback(() => {
     dispatch(getContentPages({ page: pageNo, limit: pageSize, q: search }));
@@ -110,206 +155,107 @@ const ContentPages = () => {
   const onChange = (event) => {
     const { name, value } = event.target;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-      ...(name === "title" && !prev.recordSlug && !prev.slug
-        ? { slug: slugify(value) }
-        : {}),
-    }));
+    formik.setFieldValue(name, value);
 
-    setErrors((prev) => ({
-      ...prev,
-      [name]: undefined,
-    }));
-  };
-
-  const validate = () => {
-    const nextErrors = {};
-
-    if (!formData.title.trim()) {
-      nextErrors.title = "Title is required";
+    if (name === "title" && !formik.values.recordSlug && !formik.values.slug) {
+      formik.setFieldValue("slug", slugify(value));
     }
-
-    if (!formData.slug.trim()) {
-      nextErrors.slug = "Slug is required";
-    }
-
-    if (!formData.pageType.trim()) {
-      nextErrors.pageType = "Page type is required";
-    }
-
-    const hasSectionContent = (formData.sections || []).some(
-      (section) =>
-        String(section?.title || "").trim() ||
-        String(section?.description || "").trim() ||
-        (section?.points || []).some(
-          (point) =>
-            String(point?.title || "").trim() ||
-            String(point?.description || "").trim(),
-        ),
-    );
-
-    if (
-      !formData.description.trim() &&
-      !formData.body.trim() &&
-      !hasSectionContent
-    ) {
-      nextErrors.description =
-        "Description, body, or at least one section is required";
-    }
-
-    setErrors(nextErrors);
-
-    return Object.keys(nextErrors).length === 0;
   };
 
   const closeSetup = (force = false) => {
     if (submitting && !force) return;
 
     setIsSetupOpen(false);
-    setFormData(emptyForm);
-    setErrors({});
+    formik.resetForm({ values: emptyForm });
   };
 
   const handleAddPage = () => {
     if (submitting || deleting || statusLoadingSlug) return;
 
-    setFormData(emptyForm);
-    setErrors({});
+    formik.resetForm({ values: emptyForm });
     setIsSetupOpen(true);
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    if (submitting) return;
-
-    if (!validate()) return;
-
-    const body = {
-      ...formData,
-
-      published: formData.status === "published" || Boolean(formData.published),
-
-      heroImage: formData.heroImage || formData.image?.url || "",
-
-      coverImage: formData.coverImage || formData.image?.url || "",
-
-      thumbnailUrl: formData.thumbnailUrl || formData.image?.url || "",
-
-      galleryImages: Array.isArray(formData.gallery)
-        ? formData.gallery.map((item) => item?.url).filter(Boolean)
-        : formData.galleryImages || [],
-    };
-
-    try {
-      setSubmitting(true);
-
-      if (formData.recordSlug) {
-        await dispatch(
-          updateContentPage({
-            ...body,
-            slug: formData.recordSlug,
-          }),
-        ).unwrap();
-
-        toast.success("Content page updated successfully");
-      } else {
-        await dispatch(createContentPage(body)).unwrap();
-
-        toast.success("Content page created successfully");
-      }
-
-      closeSetup(true);
-      setIsRefresh((v) => !v);
-    } catch (error) {
-      toast.error(error?.message || "Failed to save content page");
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const openEdit = (page) => {
     if (submitting || deleting || statusLoadingSlug) return;
 
-    setFormData({
-      ...emptyForm,
-      ...page,
+    formik.resetForm({
+      values: {
+        ...emptyForm,
+        ...page,
 
-      recordSlug: pageSlug(page),
+        recordSlug: pageSlug(page),
 
-      slug: page.slug || pageSlug(page),
+        slug: page.slug || pageSlug(page),
 
-      title: page.title || "",
+        title: page.title || "",
 
-      pageType: page.pageType || "content",
+        pageType: page.pageType || "content",
 
-      status: page.status || (page.published ? "published" : "draft"),
+        status: page.status || (page.published ? "published" : "draft"),
 
-      description: page.description || page.excerpt || "",
+        description: page.description || page.excerpt || "",
 
-      excerpt: page.excerpt || page.description || "",
+        excerpt: page.excerpt || page.description || "",
 
-      category: page.category || "",
+        category: page.category || "",
 
-      tags: page.tags || [],
+        tags: page.tags || [],
 
-      image: page.image || {
-        url: page.heroImage || page.coverImage || "",
+        image: page.image || {
+          url: page.heroImage || page.coverImage || "",
 
-        alt: page.title || "",
-
-        title: "",
-
-        caption: "",
-
-        type: "hero",
-      },
-
-      gallery:
-        page.gallery ||
-        (page.galleryImages || []).map((url) => ({
-          url,
           alt: page.title || "",
-        })),
 
-      sections: page.sections || [],
+          title: "",
 
-      cta: page.cta || emptyForm.cta,
+          caption: "",
 
-      seo: {
-        ...emptyForm.seo,
-        ...(page.seo || {}),
+          type: "hero",
+        },
+
+        gallery:
+          page.gallery ||
+          (page.galleryImages || []).map((url) => ({
+            url,
+            alt: page.title || "",
+          })),
+
+        sections: page.sections || [],
+
+        cta: page.cta || emptyForm.cta,
+
+        seo: {
+          ...emptyForm.seo,
+          ...(page.seo || {}),
+        },
+
+        visibility: {
+          ...emptyForm.visibility,
+          ...(page.visibility || {}),
+        },
+
+        sortOrder: page.sortOrder || 0,
+
+        coverImage: page.coverImage || page.image?.url || "",
+
+        thumbnailUrl: page.thumbnailUrl || page.image?.url || "",
+
+        heroImage: page.heroImage || page.image?.url || "",
+
+        galleryImages: page.galleryImages || [],
+
+        author: page.author || emptyForm.author,
+
+        readTime: page.readTime || 0,
+
+        language: page.language || "en",
+
+        body: page.body || "",
+
+        published: Boolean(page.published),
       },
-
-      visibility: {
-        ...emptyForm.visibility,
-        ...(page.visibility || {}),
-      },
-
-      sortOrder: page.sortOrder || 0,
-
-      coverImage: page.coverImage || page.image?.url || "",
-
-      thumbnailUrl: page.thumbnailUrl || page.image?.url || "",
-
-      heroImage: page.heroImage || page.image?.url || "",
-
-      galleryImages: page.galleryImages || [],
-
-      author: page.author || emptyForm.author,
-
-      readTime: page.readTime || 0,
-
-      language: page.language || "en",
-
-      body: page.body || "",
-
-      published: Boolean(page.published),
     });
-
-    setErrors({});
     setIsSetupOpen(true);
   };
 
@@ -435,12 +381,14 @@ const ContentPages = () => {
   if (isSetupOpen) {
     return (
       <ContentPageSetup
-        errors={errors}
-        formData={formData}
+        errors={formik.submitCount > 0 ? formik.errors : {}}
+        validationAttempt={formik.submitCount}
+        isValidating={formik.isValidating}
+        formData={formik.values}
         isOpen={true}
         onChange={onChange}
         onClose={closeSetup}
-        onSubmit={handleSubmit}
+        onSubmit={formik.handleSubmit}
         loading={submitting}
       />
     );

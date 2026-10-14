@@ -265,6 +265,8 @@ const normalizeContentFormData = (value = {}, overrides = {}) => {
 
 const ContentPageSetup = ({
   errors = {},
+  validationAttempt = 0,
+  isValidating = false,
   formData,
   initialData,
   pageType = "",
@@ -283,6 +285,59 @@ const ContentPageSetup = ({
   const [openSections, setOpenSections] = useState({});
 
   const [openPoints, setOpenPoints] = useState({});
+
+  const firstErrorPath = (value, prefix = "") => {
+    if (typeof value === "string") return prefix;
+    if (!value || typeof value !== "object") return "";
+
+    for (const [key, child] of Object.entries(value)) {
+      const path = prefix ? `${prefix}.${key}` : key;
+      const nestedPath = firstErrorPath(child, path);
+      if (nestedPath) return nestedPath;
+    }
+
+    return "";
+  };
+
+  const firstValidationErrorPath = firstErrorPath(errors);
+
+  useEffect(() => {
+    if (isValidating || !firstValidationErrorPath) return;
+    const sectionMatch = firstValidationErrorPath.match(
+      /^sections\.(\d+)(?:\.points\.(\d+))?/,
+    );
+    if (sectionMatch) {
+      const sectionIndex = Number(sectionMatch[1]);
+      const pointIndex =
+        sectionMatch[2] == null ? null : Number(sectionMatch[2]);
+
+      setOpenSections((current) => ({ ...current, [sectionIndex]: true }));
+      if (pointIndex !== null) {
+        setOpenPoints((current) => ({
+          ...current,
+          [`${sectionIndex}-${pointIndex}`]: true,
+        }));
+      }
+    }
+  }, [validationAttempt, isValidating]);
+
+  useEffect(() => {
+    if (isValidating || !firstValidationErrorPath) return;
+    requestAnimationFrame(() => {
+      const field =
+        document.querySelector(
+          `[data-validation-path="${firstValidationErrorPath}"]`,
+        ) || document.querySelector(".admin-input-error");
+      field?.scrollIntoView({ behavior: "smooth", block: "center" });
+      field?.focus({ preventScroll: true });
+    });
+  }, [
+    validationAttempt,
+    isValidating,
+    firstValidationErrorPath,
+    openSections,
+    openPoints,
+  ]);
 
   useEffect(() => {
     if (!isOpen || isControlled) return;
@@ -581,47 +636,47 @@ const ContentPageSetup = ({
       {/* =========================================================
           PAGE HEADER
       ========================================================= */}
-<div>
-  <PageHeader
-    title={
-      form?.recordSlug || initialData
-        ? "Edit Content Page"
-        : "Create Content Page"
-    }
-    subtitle={
-      form?.recordSlug || initialData
-        ? "Update content page details"
-        : "Create a new content page"
-    }
-    breadcrumbs={[
-      { label: "Settings" },
-      { label: "Content Pages" },
-      {
-        label:
-          form?.recordSlug || initialData
-            ? "Edit Content Page"
-            : "Create Content Page",
-      },
-    ]}
-    actions={
-      <div className="flex items-center gap-2">
-        <OrangeButton type="button" onClick={onClose} disabled={loading}>
-          <MdArrowBack size={18} aria-hidden="true" />
-          Back
-        </OrangeButton>
+      <div>
+        <PageHeader
+          title={
+            form?.recordSlug || initialData
+              ? "Edit Content Page"
+              : "Create Content Page"
+          }
+          subtitle={
+            form?.recordSlug || initialData
+              ? "Update content page details"
+              : "Create a new content page"
+          }
+          breadcrumbs={[
+            { label: "Settings" },
+            { label: "Content Pages" },
+            {
+              label:
+                form?.recordSlug || initialData
+                  ? "Edit Content Page"
+                  : "Create Content Page",
+            },
+          ]}
+          actions={
+            <div className="flex items-center gap-2">
+              <OrangeButton type="button" onClick={onClose} disabled={loading}>
+                <MdArrowBack size={18} aria-hidden="true" />
+                Back
+              </OrangeButton>
 
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={loading}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Cancel
-        </button>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          }
+        />
       </div>
-    }
-  />
-</div>
       {/* =========================================================
           FORM CONTENT
       ========================================================= */}
@@ -635,88 +690,104 @@ const ContentPageSetup = ({
           title="Basic Information"
           subtitle="Define the page title, URL, type, language, and basic information."
         >
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <FormInput
-              label="Title"
-              name="title"
-              value={form.title || ""}
-              onChange={(e) => setField("title", e.target.value)}
-              error={errors.title}
-              placeholder="About Us"
-              required
-            />
+          <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="md:col-span-1 xl:col-span-2">
+              <FormInput
+                label="Title"
+                name="title"
+                data-validation-path="title"
+                value={form.title || ""}
+                onChange={(e) => setField("title", e.target.value)}
+                error={errors.title}
+                placeholder="About Us"
+                required
+              />
+            </div>
 
-            <FormInput
-              label="Slug"
-              name="slug"
-              value={form.slug || ""}
-              onChange={(e) => setField("slug", e.target.value)}
-              error={errors.slug}
-              placeholder="about-us"
-              required
-            />
+            <div className="md:col-span-1 xl:col-span-2">
+              <FormInput
+                label="Slug"
+                name="slug"
+                data-validation-path="slug"
+                value={form.slug || ""}
+                onChange={(e) => setField("slug", e.target.value)}
+                error={errors.slug}
+                placeholder="about-us"
+                required
+              />
+            </div>
+            <div className="md:col-span-1 xl:col-span-1">
+              <FormInput
+                label="Page Type"
+                name="pageType"
+                data-validation-path="pageType"
+                value={form.pageType || ""}
+                onChange={(e) => setField("pageType", e.target.value)}
+                error={errors.pageType}
+                placeholder="static_page"
+                required
+              />
+            </div>
 
-            <FormInput
-              label="Page Type"
-              name="pageType"
-              value={form.pageType || ""}
-              onChange={(e) => setField("pageType", e.target.value)}
-              error={errors.pageType}
-              placeholder="static_page"
-              required
-            />
+            <div className="md:col-span-1 xl:col-span-1">
+              <FormInput
+                label="Category"
+                name="category"
+                value={form.category || ""}
+                onChange={(e) => setField("category", e.target.value)}
+                error={errors.category}
+                placeholder="company / support / legal"
+              />
+            </div>
 
-            <FormInput
-              label="Category"
-              name="category"
-              value={form.category || ""}
-              onChange={(e) => setField("category", e.target.value)}
-              error={errors.category}
-              placeholder="company / support / legal"
-            />
+            <div className="md:col-span-1 xl:col-span-1">
+              <FormInput
+                label="Language"
+                name="language"
+                value={form.language || "en"}
+                onChange={(e) => setField("language", e.target.value)}
+                error={errors.language}
+                placeholder="en"
+              />
+            </div>
 
-            <FormInput
-              label="Language"
-              name="language"
-              value={form.language || "en"}
-              onChange={(e) => setField("language", e.target.value)}
-              error={errors.language}
-              placeholder="en"
-            />
+            <div className="md:col-span-1 xl:col-span-1">
+              <FormInput
+                label="Sort Order"
+                name="sortOrder"
+                type="number"
+                value={form.sortOrder ?? 0}
+                onChange={(e) =>
+                  setField("sortOrder", Number(e.target.value || 0))
+                }
+                error={errors.sortOrder}
+                placeholder="0"
+              />
+            </div>
 
-            <FormInput
-              label="Sort Order"
-              name="sortOrder"
-              type="number"
-              value={form.sortOrder || 0}
-              onChange={(e) =>
-                setField("sortOrder", Number(e.target.value || 0))
-              }
-              error={errors.sortOrder}
-              placeholder="0"
-            />
-          </div>
+            <div className="col-span-full">
+              <FormInput
+                label="Description"
+                name="description"
+                value={form.description || ""}
+                onChange={(e) => setField("description", e.target.value)}
+                error={errors.description}
+                placeholder="Short customer-facing page description"
+                type="textarea"
+              />
+            </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-3">
-            <FormInput
-              label="Description"
-              name="description"
-              value={form.description || ""}
-              onChange={(e) => setField("description", e.target.value)}
-              error={errors.description}
-              placeholder="Short customer-facing page description"
-              type="textarea"
-            />
-
-            <FormInput
-              label="Excerpt"
-              name="excerpt"
-              value={form.excerpt || ""}
-              onChange={(e) => setField("excerpt", e.target.value)}
-              error={errors.excerpt}
-              placeholder="Listing summary"
-              type="textarea"
-            />
+            <div className="col-span-full">
+              <FormInput
+                label="Excerpt"
+                name="excerpt"
+                value={form.excerpt || ""}
+                onChange={(e) => setField("excerpt", e.target.value)}
+                error={errors.excerpt}
+                placeholder="Listing summary"
+                type="textarea"
+              />
+            </div>
           </div>
         </FormSection>
 
@@ -771,8 +842,10 @@ const ContentPageSetup = ({
 
               <FormInput
                 label="Image Alt"
+                data-validation-path="image.alt"
                 value={form.image?.alt || ""}
                 onChange={(e) => setNested("image", "alt", e.target.value)}
+                error={errors.image?.alt}
                 placeholder="Describe the image"
               />
 
@@ -927,7 +1000,7 @@ const ContentPageSetup = ({
                               </p>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                               <FormInput
                                 label="Section Type"
                                 value={section.type || ""}
@@ -955,6 +1028,7 @@ const ContentPageSetup = ({
 
                               <FormInput
                                 label="Section Title"
+                                data-validation-path={`sections.${sectionIndex}.title`}
                                 value={section.title || ""}
                                 onChange={(e) =>
                                   updateSection(sectionIndex, (item) => ({
@@ -962,6 +1036,7 @@ const ContentPageSetup = ({
                                     title: e.target.value,
                                   }))
                                 }
+                                error={errors.sections?.[sectionIndex]?.title}
                                 placeholder="Our Story"
                               />
 
@@ -982,6 +1057,7 @@ const ContentPageSetup = ({
 
                               <FormInput
                                 label="Section Image Alt"
+                                data-validation-path={`sections.${sectionIndex}.image.alt`}
                                 value={section.image?.alt || ""}
                                 onChange={(e) =>
                                   updateSection(sectionIndex, (item) => ({
@@ -991,6 +1067,9 @@ const ContentPageSetup = ({
                                       alt: e.target.value,
                                     },
                                   }))
+                                }
+                                error={
+                                  errors.sections?.[sectionIndex]?.image?.alt
                                 }
                                 placeholder="Section image alt"
                               />
@@ -1085,6 +1164,7 @@ const ContentPageSetup = ({
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                               <FormInput
                                 label="CTA Label"
+                                data-validation-path={`sections.${sectionIndex}.cta.label`}
                                 value={section.cta?.label || ""}
                                 onChange={(e) =>
                                   updateSection(sectionIndex, (item) => ({
@@ -1094,6 +1174,9 @@ const ContentPageSetup = ({
                                       label: e.target.value,
                                     },
                                   }))
+                                }
+                                error={
+                                  errors.sections?.[sectionIndex]?.cta?.label
                                 }
                                 placeholder="Shop Now"
                               />
@@ -1306,6 +1389,7 @@ const ContentPageSetup = ({
 
                                               <FormInput
                                                 label="Point Image Alt"
+                                                data-validation-path={`sections.${sectionIndex}.points.${pointIndex}.image.alt`}
                                                 value={point.image?.alt || ""}
                                                 onChange={(e) =>
                                                   updatePoint(
@@ -1320,6 +1404,12 @@ const ContentPageSetup = ({
                                                       },
                                                     }),
                                                   )
+                                                }
+                                                error={
+                                                  errors.sections?.[
+                                                    sectionIndex
+                                                  ]?.points?.[pointIndex]?.image
+                                                    ?.alt
                                                 }
                                                 placeholder="Fast delivery icon"
                                               />
@@ -1409,6 +1499,7 @@ const ContentPageSetup = ({
                                               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                                 <FormInput
                                                   label="CTA Label"
+                                                  data-validation-path={`sections.${sectionIndex}.points.${pointIndex}.cta.label`}
                                                   value={point.cta?.label || ""}
                                                   onChange={(e) =>
                                                     updatePoint(
@@ -1423,6 +1514,12 @@ const ContentPageSetup = ({
                                                         },
                                                       }),
                                                     )
+                                                  }
+                                                  error={
+                                                    errors.sections?.[
+                                                      sectionIndex
+                                                    ]?.points?.[pointIndex]?.cta
+                                                      ?.label
                                                   }
                                                   placeholder="Shop Now"
                                                 />
@@ -1558,11 +1655,13 @@ const ContentPageSetup = ({
           title="CTA, Tags & Visibility"
           subtitle="Configure the page call-to-action and audience visibility."
         >
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <FormInput
               label="CTA Label"
+              data-validation-path="cta.label"
               value={form.cta?.label || ""}
               onChange={(e) => setNested("cta", "label", e.target.value)}
+              error={errors.cta?.label}
               placeholder="Start Shopping"
             />
 
@@ -1625,8 +1724,10 @@ const ContentPageSetup = ({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormInput
               label="Meta Title"
+              data-validation-path="seo.metaTitle"
               value={seo.metaTitle || ""}
               onChange={(e) => setNested("seo", "metaTitle", e.target.value)}
+              error={errors.seo?.metaTitle}
               placeholder="About Sam Global"
             />
 
@@ -1667,14 +1768,15 @@ const ContentPageSetup = ({
               placeholder="WebPage"
             />
           </div>
-
           <div className="mt-4">
             <FormInput
               label="Meta Description"
+              data-validation-path="seo.metaDescription"
               value={seo.metaDescription || ""}
               onChange={(e) =>
                 setNested("seo", "metaDescription", e.target.value)
               }
+              error={errors.seo?.metaDescription}
               placeholder="Search result description"
               type="textarea"
             />
@@ -1724,10 +1826,12 @@ const ContentPageSetup = ({
 
               <FormInput
                 label="OG Description"
+                data-validation-path="seo.ogDescription"
                 value={seo.ogDescription || ""}
                 onChange={(e) =>
                   setNested("seo", "ogDescription", e.target.value)
                 }
+                error={errors.seo?.ogDescription}
                 placeholder="Social description"
                 type="textarea"
               />
@@ -1777,40 +1881,16 @@ const ContentPageSetup = ({
 
               <FormInput
                 label="Twitter Description"
+                data-validation-path="seo.twitterDescription"
                 value={seo.twitterDescription || ""}
                 onChange={(e) =>
                   setNested("seo", "twitterDescription", e.target.value)
                 }
+                error={errors.seo?.twitterDescription}
                 placeholder="Twitter description"
                 type="textarea"
               />
             </div>
-          </div>
-
-          <div className="mt-6 border-t border-gray-200 pt-6">
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-gray-800">Schema</h3>
-
-              <p className="mt-1 text-xs text-gray-500">
-                Add structured data for search engines.
-              </p>
-            </div>
-
-            <FormInput
-              label="Schema JSON"
-              value={JSON.stringify(seo.schemaJson || {}, null, 2)}
-              onChange={(e) => {
-                try {
-                  setNested(
-                    "seo",
-                    "schemaJson",
-                    JSON.parse(e.target.value || "{}"),
-                  );
-                } catch (error) {}
-              }}
-              placeholder='{"@type":"WebPage"}'
-              type="textarea"
-            />
           </div>
         </FormSection>
 
@@ -1822,7 +1902,7 @@ const ContentPageSetup = ({
           title="Author & Compatibility Media"
           subtitle="Manage author details and legacy-compatible media fields."
         >
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             <ImageUpload
               id="cms-author-avatar"
               label="Author Avatar"
@@ -1859,8 +1939,10 @@ const ContentPageSetup = ({
           <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormInput
               label="Author Name"
+              data-validation-path="author.name"
               value={form.author?.name || ""}
               onChange={(e) => setNested("author", "name", e.target.value)}
+              error={errors.author?.name}
               placeholder="Sam Global Team"
             />
 
@@ -1955,7 +2037,7 @@ const ContentPageSetup = ({
             PUBLISHING
         ========================================================= */}
 
-        <div className="">
+        <div className="bg-[var(--admin-surface)]">
           <FormToggleRow
             title="Publish Content"
             description="Published pages are publicly visible to customers."

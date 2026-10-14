@@ -301,16 +301,16 @@ const Payments = () => {
         title="Payments"
         subtitle="Reconcile online, COD, and manual payments"
         breadcrumbs={[{ label: "Payments & Finance" }, { label: "Payments" }]}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => navigate("/app/cod-collections")}
-            >
-              <MdCheckCircle aria-hidden="true" size={17} /> COD Collections
-            </button>
-          </div>
-        }
+        // actions={
+        //   <div className="flex flex-wrap items-center gap-2">
+        //     <button
+        //       type="button"
+        //       onClick={() => navigate("/app/cod-collections")}
+        //     >
+        //       <MdCheckCircle aria-hidden="true" size={17} /> COD Collections
+        //     </button>
+        //   </div>
+        // }
       />
 
       <DataTable

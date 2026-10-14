@@ -26,6 +26,7 @@ const Login = () => {
   return (
     <div className="relative overflow-hidden">
       <Loader loading={auth.isBusy} />
+
       <FormLayout
         title="Welcome back!"
         subTitle={
@@ -40,7 +41,7 @@ const Login = () => {
         onLinkClick={auth.sellerPanel ? auth.goToRegister : undefined}
         showLogo
       >
-        <div className="relative z-10 flex flex-col ">
+        <div className="relative z-10 flex flex-col">
           <div className={auth.sellerPanel ? "mb-[24px]" : "mb-[18px]"}>
             <EmailInput
               id="email"
@@ -81,10 +82,7 @@ const Login = () => {
           </div>
 
           {auth.sellerPanel && (
-            <div
-              className="mb-[24px] flex min-h-[13px] items-center justify-end"
-              style={{ animationDelay: "0.3s" }}
-            >
+            <div className="mb-[24px] flex min-h-[13px] items-center justify-end">
               <button
                 type="button"
                 onClick={auth.goToForgotPassword}
@@ -94,25 +92,27 @@ const Login = () => {
               </button>
             </div>
           )}
-          {auth.sellerPanel && (
-            <>
-              <AuthTermsCheckbox
-                checked={auth.termsAccepted}
-                onChange={(event) =>
-                  auth.handleTermsChange(event.target.checked)
-                }
-              />
 
-              {auth.loginError && (
-                <div
-                  role="alert"
-                  className="mt-2 mb-[12px] animate-fade-in rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-[15px] text-red-600"
-                >
-                  {auth.loginError}
-                </div>
-              )}
-            </>
+          {auth.sellerPanel && (
+            <AuthTermsCheckbox
+              checked={auth.termsAccepted}
+              onChange={(event) =>
+                auth.handleTermsChange(event.target.checked)
+              }
+            />
           )}
+
+          {/* Display invalid credential errors for Admin and Seller */}
+          {auth.loginError && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="mt-2 mb-[12px] animate-fade-in rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] leading-[16px] text-red-600"
+            >
+              {auth.loginError}
+            </div>
+          )}
+
           <FormSubmitButton
             buttonLabel={
               auth.loading

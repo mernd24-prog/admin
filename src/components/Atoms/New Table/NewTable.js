@@ -585,6 +585,7 @@ export default function SearchComponent({
                         label: "All Sellers",
                       }
                     }
+                    isClearable={Boolean(filters?.sellerName?.value)}
                     options={[
                       {
                         value: "",
@@ -617,6 +618,7 @@ export default function SearchComponent({
                             label: "First select the seller",
                           }
                     }
+                    isClearable={Boolean(filters?.storeName?.value)}
                     options={
                       filters?.sellerName?.value
                         ? [
@@ -649,7 +651,15 @@ export default function SearchComponent({
                     label="Category"
                     isLoading={categoryLoading}
                     value={filters.category}
-                    mutedValue={isSellerPanel() && (!filters.category?.value || filters.category?.value === "All")}
+                    mutedValue={
+                      isSellerPanel() &&
+                      (!filters.category?.value ||
+                        filters.category?.value === "All")
+                    }
+                    isClearable={Boolean(
+                      filters?.category?.value &&
+                      filters.category.value !== "All",
+                    )}
                     options={categoryOptions}
                     isSearchable
                     onChange={(option) =>
@@ -665,7 +675,15 @@ export default function SearchComponent({
                   <FilterSelect
                     label={activationStatus || "Activation status"}
                     value={filters.activationStatus}
-                    mutedValue={isSellerPanel() && (!filters.activationStatus?.value || filters.activationStatus?.value === "All")}
+                    mutedValue={
+                      isSellerPanel() &&
+                      (!filters.activationStatus?.value ||
+                        filters.activationStatus?.value === "All")
+                    }
+                    isClearable={Boolean(
+                      filters?.activationStatus?.value &&
+                      filters.activationStatus.value !== "All",
+                    )}
                     options={activationStatusOptions}
                     isSearchable={false}
                     onChange={(option) =>
@@ -681,7 +699,15 @@ export default function SearchComponent({
                   <FilterSelect
                     label={approvalStatus || "Approval Status"}
                     value={filters.approvalStatus}
-                    mutedValue={isSellerPanel() && (!filters.approvalStatus?.value || filters.approvalStatus?.value === "All")}
+                    mutedValue={
+                      isSellerPanel() &&
+                      (!filters.approvalStatus?.value ||
+                        filters.approvalStatus?.value === "All")
+                    }
+                    isClearable={Boolean(
+                      filters?.approvalStatus?.value &&
+                      filters.approvalStatus.value !== "All",
+                    )}
                     options={approvalOptions}
                     isSearchable={false}
                     onChange={(option) =>
@@ -697,7 +723,15 @@ export default function SearchComponent({
                   <FilterSelect
                     label={revisionStatus || "Revision Status"}
                     value={filters.revisionStatus}
-                    mutedValue={isSellerPanel() && (!filters.revisionStatus?.value || filters.revisionStatus?.value === "All")}
+                    mutedValue={
+                      isSellerPanel() &&
+                      (!filters.revisionStatus?.value ||
+                        filters.revisionStatus?.value === "All")
+                    }
+                    isClearable={Boolean(
+                      filters?.revisionStatus?.value &&
+                      filters.revisionStatus.value !== "All",
+                    )}
                     options={revisionOptions}
                     isSearchable={false}
                     onChange={(option) =>
@@ -713,6 +747,10 @@ export default function SearchComponent({
                   <FilterSelect
                     label="Product type"
                     value={filters.productType}
+                    isClearable={Boolean(
+                      filters?.productType?.value &&
+                      filters.productType.value !== "All",
+                    )}
                     options={productTypeOptions}
                     isSearchable={false}
                     onChange={(option) =>

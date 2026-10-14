@@ -1,8 +1,10 @@
+
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { useFormik } from "formik";
 import { MdAdd, MdDownload, MdVisibility } from "react-icons/md";
 
 import {
@@ -13,11 +15,16 @@ import {
   StatusBadge,
 } from "../../components/Shared";
 
-import { createTaxInvoice, getTaxInvoices } from "../../Redux/adminCoreSlice";
+import {
+  createTaxInvoice,
+  getTaxInvoices,
+} from "../../Redux/adminCoreSlice";
+
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import FormInput from "../../components/Atoms/FormInput/FormInput";
 import FormSection from "../../components/Atoms/FormSection/FormSection";
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
+
 import { ACTIONS } from "../../_helpers/usePermission";
 import { useListPage } from "../../hooks/useListPage";
 import useStoreNames from "../../hooks/useStoreNames";
@@ -25,12 +32,16 @@ import { dropdownApi } from "../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
+
 import {
   formatDateTime12Hour,
   formatIndianNumber,
   formatLabel,
+  truncateToWordBoundary,
 } from "../../utils/formatters";
+
 import { resolveStoreName } from "../../utils/storeNameUtils";
+import { generateInvoiceValidationSchema } from "../../_helpers/validationSchemas";
 
 const STATES = ["draft", "issued", "cancelled", "amended"];
 
@@ -74,9 +85,9 @@ const FILTER_FIELDS = isSellerPanel()
         key: "status",
         type: "select",
         label: "Status",
-        options: STATES.map((s) => ({
-          value: s,
-          label: formatLabel(s),
+        options: STATES.map((status) => ({
+          value: status,
+          label: formatLabel(status),
         })),
       },
       { key: "fromDate", type: "date", label: "From" },
@@ -135,7 +146,9 @@ const invoicePurpose = (row = {}) => {
 
   if (type === "seller_customer") {
     const discount = Number(
-      amounts.marketplaceFundedDiscountAmount || amounts.discountAmount || 0,
+      amounts.marketplaceFundedDiscountAmount ||
+        amounts.discountAmount ||
+        0,
     );
 
     return discount > 0
@@ -162,18 +175,15 @@ const TaxInvoices = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const selector = useSelector((s) => s.adminCore);
+  const selector = useSelector((state) => state.adminCore);
   const payload = unwrapList(selector.taxInvoicesData);
 
-  // Global store-name lookup.
   const { storeNameMap } = useStoreNames();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [downloadingId, setDownloadingId] = useState(null);
   const [invoiceModal, setInvoiceModal] = useState(false);
-  const [orderId, setOrderId] = useState("");
-  const [generating, setGenerating] = useState(false);
 
   const hideOrganizationColumn = isSellerPanel();
 
@@ -224,10 +234,10 @@ const TaxInvoices = () => {
         }),
       ).unwrap();
     } catch (err) {
-      const msg = err?.message || "Failed to load tax invoices";
+      const message = err?.message || "Failed to load tax invoices";
 
-      setError(msg);
-      toast.error(msg);
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -237,25 +247,37 @@ const TaxInvoices = () => {
     fetchInvoices();
   }, [fetchInvoices]);
 
-  const generateInvoice = useCallback(async () => {
-    const normalizedOrderId = orderId.trim();
-    if (!normalizedOrderId) {
-      toast.error("Order ID is required");
-      return;
-    }
-    try {
-      setGenerating(true);
-      await dispatch(createTaxInvoice({ orderId: normalizedOrderId })).unwrap();
-      toast.success("Invoice generated successfully");
-      setInvoiceModal(false);
-      setOrderId("");
-      await fetchInvoices();
-    } catch (error) {
-      toast.error(error?.message || "Failed to generate invoice");
-    } finally {
-      setGenerating(false);
-    }
-  }, [dispatch, fetchInvoices, orderId]);
+  const invoiceFormik = useFormik({
+    initialValues: {
+      orderId: "",
+    },
+    validationSchema: generateInvoiceValidationSchema,
+    onSubmit: async (values, { resetForm }) => {
+      try {
+        await dispatch(
+          createTaxInvoice({
+            orderId: values.orderId.trim(),
+          }),
+        ).unwrap();
+
+        toast.success("Invoice generated successfully");
+
+        setInvoiceModal(false);
+        resetForm();
+
+        await fetchInvoices();
+      } catch (err) {
+        toast.error(err?.message || "Failed to generate invoice");
+      }
+    },
+  });
+
+  const closeInvoiceModal = () => {
+    if (invoiceFormik.isSubmitting) return;
+
+    setInvoiceModal(false);
+    invoiceFormik.resetForm();
+  };
 
   /**
    * Download invoice PDF.
@@ -284,7 +306,9 @@ const TaxInvoices = () => {
 
       toast.success("Download started");
     } catch (downloadError) {
-      toast.error(downloadError?.message || "Unable to download invoice");
+      toast.error(
+        downloadError?.message || "Unable to download invoice",
+      );
     } finally {
       setDownloadingId(null);
     }
@@ -306,7 +330,6 @@ const TaxInvoices = () => {
             </span>
           ),
         },
-
         {
           key: "orderId",
           label: "Order",
@@ -321,24 +344,35 @@ const TaxInvoices = () => {
             );
           },
         },
-
         {
           key: "invoiceType",
           label: "Document",
           sortable: true,
-          render: (value, row) => (
-            <div className="min-w-[180px]">
-              <span className="whitespace-nowrap rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">
-                {invoiceTypeLabel(value || row.invoice_type)}
-              </span>
+          render: (value, row) => {
+            const documentLabel = invoiceTypeLabel(
+              value || row.invoice_type,
+            );
+            const purpose = invoicePurpose(row);
 
-              <div className="mt-1 text-xs text-gray-500">
-                {invoicePurpose(row)}
+            return (
+              <div className="min-w-[180px]">
+                <span
+                  title={documentLabel}
+                  className="whitespace-nowrap rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700"
+                >
+                  {truncateToWordBoundary(documentLabel, 25)}
+                </span>
+
+                <div
+                  className="mt-1 text-xs text-gray-500"
+                  title={purpose}
+                >
+                  {truncateToWordBoundary(purpose, 40)}
+                </div>
               </div>
-            </div>
-          ),
+            );
+          },
         },
-
         {
           key: "parties",
           label: "From / To",
@@ -359,7 +393,8 @@ const TaxInvoices = () => {
               metadata.buyer?.email ||
               "Customer";
 
-            const issuer = type === "seller_customer" ? seller : "Sam Global";
+            const issuer =
+              type === "seller_customer" ? seller : "Sam Global";
 
             const recipient =
               type === "platform_commission" ? seller : customer;
@@ -367,24 +402,28 @@ const TaxInvoices = () => {
             return (
               <div className="min-w-[220px] text-xs text-gray-600">
                 <div>
-                  <span className="font-semibold text-gray-800">From:</span>{" "}
+                  <span className="font-semibold text-gray-800">
+                    From:
+                  </span>{" "}
                   {issuer}
                 </div>
 
                 <div>
-                  <span className="font-semibold text-gray-800">To:</span>{" "}
+                  <span className="font-semibold text-gray-800">
+                    To:
+                  </span>{" "}
                   {recipient}
                 </div>
               </div>
             );
           },
         },
-
         {
           key: "state",
           label: "Status",
           render: (value, row) => {
-            const status = value || row.status || row.invoice_state || "issued";
+            const status =
+              value || row.status || row.invoice_state || "issued";
 
             return (
               <StatusBadge
@@ -402,7 +441,6 @@ const TaxInvoices = () => {
             );
           },
         },
-
         {
           key: "organizationId",
           label: "Store Name",
@@ -410,13 +448,15 @@ const TaxInvoices = () => {
             const { name, id } = resolveStoreName(row, storeNameMap);
 
             return (
-              <span className="font-medium text-[var(--admin-navy)]" title={id}>
+              <span
+                className="font-medium text-[var(--admin-navy)]"
+                title={id}
+              >
                 {name}
               </span>
             );
           },
         },
-
         {
           key: "taxableAmount",
           label: "Taxable",
@@ -427,18 +467,18 @@ const TaxInvoices = () => {
             </span>
           ),
         },
-
         {
           key: "taxAmount",
           label: "Tax",
           sortable: true,
           render: (value, row) => (
             <span className="text-sm font-medium">
-              {formatIndianNumber(value ?? row.totalTax ?? row.tax_amount)}
+              {formatIndianNumber(
+                value ?? row.totalTax ?? row.tax_amount,
+              )}
             </span>
           ),
         },
-
         {
           key: "totalAmount",
           label: "Total",
@@ -449,14 +489,15 @@ const TaxInvoices = () => {
             </span>
           ),
         },
-
         {
           key: "issuedAt",
           label: "Issued",
           sortable: true,
           render: (value, row) => (
             <span className="text-xs text-gray-500">
-              {formatDateTime12Hour(value ?? row.issueDate ?? row.issued_at)}
+              {formatDateTime12Hour(
+                value ?? row.issueDate ?? row.issued_at,
+              )}
             </span>
           ),
         },
@@ -479,14 +520,20 @@ const TaxInvoices = () => {
         breadcrumbs={[
           { label: "Invoices & Taxation" },
           {
-            label: isSellerPanel() ? "Invoice Documents" : "Tax Invoices",
+            label: isSellerPanel()
+              ? "Invoice Documents"
+              : "Tax Invoices",
           },
         ]}
         actions={
           !isSellerPanel() ? (
             <PermissionGuard module="tax" action={ACTIONS.UPDATE} hide>
-              <button type="button" onClick={() => setInvoiceModal(true)}>
-                <MdAdd aria-hidden="true" size={16} /> Generate Invoice
+              <button
+                type="button"
+                onClick={() => setInvoiceModal(true)}
+              >
+                <MdAdd aria-hidden="true" size={16} />
+                Generate Invoice
               </button>
             </PermissionGuard>
           ) : null
@@ -503,7 +550,11 @@ const TaxInvoices = () => {
         emptyMessage={error || "No tax invoices found"}
         onRefresh={fetchInvoices}
         filterBar={
-          <FilterBar filters={FILTER_FIELDS} listPage={list} loading={false} />
+          <FilterBar
+            filters={FILTER_FIELDS}
+            listPage={list}
+            loading={false}
+          />
         }
         rowActions={(row) => {
           const invoiceId = pick(row, "id", "invoiceId", "invoice_id");
@@ -529,7 +580,6 @@ const TaxInvoices = () => {
                 });
               },
             },
-
             {
               label: "Download PDF",
               icon: (
@@ -548,17 +598,15 @@ const TaxInvoices = () => {
 
       <DefaultModal
         isOpen={invoiceModal}
-        onClose={() => {
-          setInvoiceModal(false);
-          setOrderId("");
-        }}
+        onClose={closeInvoiceModal}
         title="Generate Invoice"
-        submitButtonText={generating ? "Generating..." : "Generate Invoice"}
+        submitButtonText={
+          invoiceFormik.isSubmitting
+            ? "Generating..."
+            : "Generate Invoice"
+        }
         closeButtonText="Cancel"
-        onSubmit={(event) => {
-          event.preventDefault();
-          generateInvoice();
-        }}
+        onSubmit={invoiceFormik.handleSubmit}
         isButtonView
       >
         <FormSection
@@ -568,10 +616,16 @@ const TaxInvoices = () => {
           <FormInput
             label="Order ID"
             name="orderId"
-            value={orderId}
-            onChange={(event) => setOrderId(event.target.value)}
+            value={invoiceFormik.values.orderId}
+            onChange={invoiceFormik.handleChange}
+            onBlur={invoiceFormik.handleBlur}
             placeholder="Enter order ID"
             required
+            error={
+              invoiceFormik.touched.orderId
+                ? invoiceFormik.errors.orderId
+                : ""
+            }
           />
         </FormSection>
       </DefaultModal>

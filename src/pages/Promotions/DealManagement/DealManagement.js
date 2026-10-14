@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react";
 import moment from "moment";
+import { useFormik } from "formik";
 import { getDealOverview } from "./dealOverview";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
@@ -59,6 +60,7 @@ import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import Tabs from "../../../components/Shared/Tabs";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import { DateRangeFilter } from "../../../components/Shared/FilterBar";
+import { dealProductValidationSchema } from "../../../_helpers/validationSchemas";
 
 const DEAL_TYPES = [
   { value: "fixed_price", label: "Variant Promotion" },
@@ -250,7 +252,7 @@ const sellerLookupFromOption = (option = {}) => ({
   email: option.meta?.email || option.email || "",
 });
 
-function ProductSearch({ sellerId, value, onSelect }) {
+function ProductSearch({ sellerId, value, onSelect, error }) {
   const loadProductOptions = useCallback(
     async (search = "") => {
       try {
@@ -348,6 +350,7 @@ function ProductSearch({ sellerId, value, onSelect }) {
       required
       name="productId"
       inputId="deal-product-id"
+      error={error}
       value={selectedValue}
       onChange={handleChange}
       loadOptions={loadProductOptions}
@@ -363,7 +366,7 @@ function ProductSearch({ sellerId, value, onSelect }) {
   );
 }
 
-function SellerSearch({ value, onSelect }) {
+function SellerSearch({ value, onSelect, error }) {
   const loadSellerOptions = useCallback(async (search = "") => {
     try {
       const options = await dropdownApi.getStoreName({
@@ -387,6 +390,7 @@ function SellerSearch({ value, onSelect }) {
       required
       name="sellerId"
       inputId="deal-seller-id"
+      error={error}
       value={value}
       onChange={onSelect}
       loadOptions={loadSellerOptions}
@@ -401,11 +405,14 @@ const DealManagement = () => {
   const dispatch = useDispatch();
   const { can } = usePermission();
   const dealsData = useSelector((state) => state.adminCore.dealsData);
-  const dealAnalyticsData = useSelector((state) => state.adminCore.dealAnalyticsData);
+  const dealAnalyticsData = useSelector(
+    (state) => state.adminCore.dealAnalyticsData,
+  );
   const payload = useMemo(() => unwrapList(dealsData), [dealsData]);
-  const analytics = useMemo(() =>
-    dealAnalyticsData?.data?.data || dealAnalyticsData?.data || {},
-    [dealAnalyticsData]);
+  const analytics = useMemo(
+    () => dealAnalyticsData?.data?.data || dealAnalyticsData?.data || {},
+    [dealAnalyticsData],
+  );
   const attemptedSellerIds = useRef(new Set());
   const list = useListPage({
     defaultPageSize: 20,
@@ -421,7 +428,18 @@ const DealManagement = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState(null);
-  const [form, setForm] = useState(initialForm);
+  const formik = useFormik({
+    initialValues: initialForm,
+    validationSchema: dealProductValidationSchema,
+    validateOnChange: true,
+    validateOnBlur: true,
+    onSubmit: async () => {},
+  });
+  const form = formik.values;
+  const setForm = (nextValues) =>
+    formik.setValues((current) =>
+      typeof nextValues === "function" ? nextValues(current) : nextValues,
+    );
   const [selectedSeller, setSelectedSeller] = useState(null);
   const [sellerLookup, setSellerLookup] = useState({});
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -515,10 +533,13 @@ const DealManagement = () => {
     mode = isSellerPanel() ? "seller_request" : "admin_direct",
   ) => {
     setEditingDeal(null);
-    setForm({
-      ...initialForm,
-      mode,
-      dealSource: mode === "seller_request" ? "seller_request" : "admin_direct",
+    formik.resetForm({
+      values: {
+        ...initialForm,
+        mode,
+        dealSource:
+          mode === "seller_request" ? "seller_request" : "admin_direct",
+      },
     });
     setSelectedSeller(null);
     setSelectedProduct(null);
@@ -546,28 +567,30 @@ const DealManagement = () => {
       stock: deal.allocatedQuantity,
       sku: metadata.productSku || deal.variantSku || "",
     });
-    setForm({
-      ...initialForm,
-      mode: "edit",
-      sellerId: deal.sellerId || "",
-      productId: deal.productId || "",
-      productLabel,
-      variantId: deal.variantId || "",
-      variantSku: deal.variantSku || "",
-      category: deal.category || "",
-      title: deal.title || productLabel,
-      allocatedQuantity: deal.allocatedQuantity ?? "",
-      maxQuantityPerOrder: deal.maxQuantityPerOrder ?? "",
-      startAt: deal.startAt
-        ? moment(deal.startAt).format("YYYY-MM-DDTHH:mm")
-        : "",
-      endAt: deal.endAt ? moment(deal.endAt).format("YYYY-MM-DDTHH:mm") : "",
-      dealType: deal.dealType || "fixed_price",
-      dealSource: metadata.dealSource || "admin_direct",
-      dealBadge: metadata.dealBadge || "Today's Deal",
-      priority: String(metadata.priority ?? "100"),
-      reason: metadata.sellerReason || "",
-      message: metadata.sellerMessage || "",
+    formik.resetForm({
+      values: {
+        ...initialForm,
+        mode: "edit",
+        sellerId: deal.sellerId || "",
+        productId: deal.productId || "",
+        productLabel,
+        variantId: deal.variantId || "",
+        variantSku: deal.variantSku || "",
+        category: deal.category || "",
+        title: deal.title || productLabel,
+        allocatedQuantity: deal.allocatedQuantity ?? "",
+        maxQuantityPerOrder: deal.maxQuantityPerOrder ?? "",
+        startAt: deal.startAt
+          ? moment(deal.startAt).format("YYYY-MM-DDTHH:mm")
+          : "",
+        endAt: deal.endAt ? moment(deal.endAt).format("YYYY-MM-DDTHH:mm") : "",
+        dealType: deal.dealType || "fixed_price",
+        dealSource: metadata.dealSource || "admin_direct",
+        dealBadge: metadata.dealBadge || "Today's Deal",
+        priority: String(metadata.priority ?? "100"),
+        reason: metadata.sellerReason || "",
+        message: metadata.sellerMessage || "",
+      },
     });
     setFormOpen(true);
   };
@@ -724,6 +747,25 @@ const DealManagement = () => {
   });
 
   const submitForm = async () => {
+    if (submitLoading) return;
+
+    const validationErrors = await formik.validateForm(form);
+    formik.setTouched(
+      {
+        sellerId: true,
+        productId: true,
+        variantId: true,
+        title: true,
+        allocatedQuantity: true,
+        maxQuantityPerOrder: true,
+        startAt: true,
+        endAt: true,
+        reason: true,
+      },
+      false,
+    );
+    if (Object.keys(validationErrors).length) return;
+
     const message = validateForm();
     if (message) {
       toast.error(message);
@@ -861,10 +903,13 @@ const DealManagement = () => {
           .map(String),
       ),
     );
-    const missingIds = sellerIds.filter((sellerId) => !sellerLookup[sellerId] && !attemptedSellerIds.current.has(sellerId));
+    const missingIds = sellerIds.filter(
+      (sellerId) =>
+        !sellerLookup[sellerId] && !attemptedSellerIds.current.has(sellerId),
+    );
     if (!missingIds.length) return undefined;
 
-    missingIds.forEach(id => attemptedSellerIds.current.add(id));
+    missingIds.forEach((id) => attemptedSellerIds.current.add(id));
     let cancelled = false;
     let completed = false;
     dropdownApi
@@ -888,7 +933,8 @@ const DealManagement = () => {
 
     return () => {
       cancelled = true;
-      if (!completed) missingIds.forEach(id => attemptedSellerIds.current.delete(id));
+      if (!completed)
+        missingIds.forEach((id) => attemptedSellerIds.current.delete(id));
     };
   }, [sellerLookup, tableRows]);
 
@@ -1244,6 +1290,7 @@ const DealManagement = () => {
                 <SellerSearch
                   value={selectedSeller}
                   onSelect={onSellerSelect}
+                  error={formik.touched.sellerId ? formik.errors.sellerId : ""}
                 />
               )}
 
@@ -1252,6 +1299,11 @@ const DealManagement = () => {
                 sellerId={form.sellerId}
                 value={selectedProduct}
                 onSelect={onProductSelect}
+                error={
+                  (formik.touched.productId && formik.errors.productId) ||
+                  (formik.touched.variantId && formik.errors.variantId) ||
+                  ""
+                }
               />
             </div>
           </FormSection>
@@ -1265,32 +1317,46 @@ const DealManagement = () => {
               {/* Deal Title */}
               <Input
                 label="Deal Title"
+                name="title"
                 value={form.title}
                 onChange={(event) => setField("title", event.target.value)}
+                error={formik.touched.title ? formik.errors.title : ""}
                 placeholder="Enter deal title"
                 required
               />
 
-              {/* Deal Type + Source */}
+              {/* Deal Type + Deal Source */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
+                <FilterSelect
                   label="Deal Type"
-                  type="select"
-                  value={form.dealType}
+                  name="dealType"
                   options={DEAL_TYPES}
+                  value={
+                    DEAL_TYPES.find(
+                      (option) => option.value === form.dealType,
+                    ) || null
+                  }
                   onChange={(option) =>
                     setField("dealType", option?.value || "fixed_price")
                   }
+                  placeholder="Select deal type"
+                  isClearable={false}
                 />
 
-                <Input
+                <FilterSelect
                   label="Deal Source"
-                  type="select"
-                  value={form.dealSource}
+                  name="dealSource"
                   options={DEAL_SOURCES}
+                  value={
+                    DEAL_SOURCES.find(
+                      (option) => option.value === form.dealSource,
+                    ) || null
+                  }
                   onChange={(option) =>
                     setField("dealSource", option?.value || "admin_direct")
                   }
+                  placeholder="Select deal source"
+                  isClearable={false}
                 />
               </div>
 
@@ -1310,20 +1376,32 @@ const DealManagement = () => {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label="Deal Quantity Allocation"
+                  name="allocatedQuantity"
                   type="number"
                   value={form.allocatedQuantity}
                   onChange={(event) =>
                     setField("allocatedQuantity", event.target.value)
+                  }
+                  error={
+                    formik.touched.allocatedQuantity
+                      ? formik.errors.allocatedQuantity
+                      : ""
                   }
                   min="0"
                 />
 
                 <Input
                   label="Maximum Quantity Per Customer"
+                  name="maxQuantityPerOrder"
                   type="number"
                   value={form.maxQuantityPerOrder}
                   onChange={(event) =>
                     setField("maxQuantityPerOrder", event.target.value)
+                  }
+                  error={
+                    formik.touched.maxQuantityPerOrder
+                      ? formik.errors.maxQuantityPerOrder
+                      : ""
                   }
                   min="1"
                 />
@@ -1336,6 +1414,7 @@ const DealManagement = () => {
                     key: "dateRange",
                     type: "daterange",
                     label: "Deal Period",
+                    required: true,
                     startKey: "startAt",
                     endKey: "endAt",
                     width: "w-full",
@@ -1345,6 +1424,12 @@ const DealManagement = () => {
                   values={form}
                   onChange={(key, value) => setField(key, value)}
                 />
+                {(formik.touched.startAt || formik.touched.endAt) &&
+                  (formik.errors.startAt || formik.errors.endAt) && (
+                    <p className="admin-field-error" role="alert">
+                      {formik.errors.startAt || formik.errors.endAt}
+                    </p>
+                  )}
               </div>
             </div>
           </FormSection>
@@ -1355,17 +1440,24 @@ const DealManagement = () => {
             description="Configure how the deal is displayed and prioritized."
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Input
+              <FilterSelect
                 label="Deal Badge"
-                type="select"
-                value={form.dealBadge}
+                name="dealBadge"
                 options={DEAL_BADGES.map((badge) => ({
                   label: badge,
                   value: badge,
                 }))}
+                value={
+                  DEAL_BADGES.map((badge) => ({
+                    label: badge,
+                    value: badge,
+                  })).find((option) => option.value === form.dealBadge) || null
+                }
                 onChange={(option) =>
                   setField("dealBadge", option?.value || "")
                 }
+                placeholder="Select deal badge"
+                isClearable={false}
               />
 
               <Input
@@ -1390,6 +1482,7 @@ const DealManagement = () => {
                   type="textarea"
                   value={form.reason}
                   onChange={(event) => setField("reason", event.target.value)}
+                  error={formik.touched.reason ? formik.errors.reason : ""}
                   placeholder="Why should this product become a deal?"
                   required
                 />

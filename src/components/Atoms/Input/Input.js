@@ -170,6 +170,7 @@ const Input = ({
     `${helperText ? `${inputId}-help ` : ""}${invalid ? `${inputId}-error` : ""}`.trim() ||
     undefined;
   const commonProps = {
+    ...rest,
     id: inputId,
     name,
     value,
