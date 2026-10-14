@@ -1397,7 +1397,7 @@ const ProductCatalog = () => {
             requiredModule="products"
             isSearchDown={false}
             defaultSearchOpen={true}
-            exclusiveStatusFilters={true}
+            exclusiveStatusFilters={false}
             compactFilterBar={true}
             hideFilterActions={true}
             largeSearchInput={true}
