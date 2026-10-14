@@ -48,6 +48,7 @@ import {
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 import DocumentPreviewModal from "../../components/Shared/DocumentPreviewModal";
 import Tabs from "../../components/Shared/Tabs";
+import VerificationDecisionModal from "../../components/Seller/VerificationDecisionModal";
 
 const getBranchPayload = (branch = {}) =>
   branch?.normalized?.data || branch?.data?.data || branch?.data || {};
@@ -321,6 +322,13 @@ const ReferralPartnerDetails = () => {
   const [activeActivityTab, setActiveActivityTab] = useState("codes");
   const [loadedDetailId, setLoadedDetailId] = useState(null);
   const [loadingAction, setLoadingAction] = useState(null);
+  const [verificationModal, setVerificationModal] = useState({
+    open: false,
+    section: "kyc",
+    title: "Reject verification",
+    noteLabel: "Reason",
+    notePlaceholder: "Add a reason...",
+  });
 
   const influencers = useMemo(
     () => getBranchList(referralState.influencersData),
@@ -468,25 +476,73 @@ const ReferralPartnerDetails = () => {
     }
   };
 
-  const reviewVerification = (section, decision) =>
+  const reviewVerification = (section, decision) => {
+    if (decision === "rejected") {
+      setVerificationModal({
+        open: true,
+        section,
+        title:
+          section === "kyc"
+            ? "Reject KYC Documents"
+            : "Reject Bank Details",
+        noteLabel:
+          section === "kyc" ? "KYC Rejection Reason" : "Bank Rejection Reason",
+        notePlaceholder:
+          section === "kyc"
+            ? "Add a reason for rejecting KYC documents..."
+            : "Add a reason for rejecting bank details...",
+      });
+      return;
+    }
+
     runPartnerAction(async () => {
-      const reason =
-        decision === "rejected"
-          ? window.prompt(
-              `Reason for rejecting ${section === "kyc" ? "KYC documents" : "bank details"}:`,
-            )
-          : "";
-      if (decision === "rejected" && !reason?.trim()) return;
       await dispatch(
         reviewReferralInfluencerVerification({
           influencerId: getId(influencer),
           section,
           decision,
-          reason: reason?.trim() || null,
+          reason: null,
         }),
       ).unwrap();
       toast.success(`${section === "kyc" ? "KYC" : "Bank"} ${decision}`);
     }, `${section}_${decision}`);
+  };
+
+  const handleVerificationDecisionSubmit = async (selectedDecision, note) => {
+    const section = verificationModal.section;
+    const reason = String(note || "").trim();
+    const decision = selectedDecision || "rejected";
+
+    if (decision === "rejected" && !reason) {
+      throw new Error(
+        `${section === "kyc" ? "KYC" : "Bank"} rejection reason is required`,
+      );
+    }
+
+    setLoadingAction(`${section}_${decision}`);
+
+    try {
+      await dispatch(
+        reviewReferralInfluencerVerification({
+          influencerId: getId(influencer),
+          section,
+          decision,
+          reason: reason || null,
+        }),
+      ).unwrap();
+
+      toast.success(`${section === "kyc" ? "KYC" : "Bank"} ${decision}`);
+      setVerificationModal((current) => ({ ...current, open: false }));
+      refreshPartner(dispatch, id);
+    } catch (error) {
+      toast.error(
+        error?.message || "Unable to update referral partner verification",
+      );
+      throw error;
+    } finally {
+      setLoadingAction(null);
+    }
+  };
 
   const updatePartnerStatus = () =>
     runPartnerAction(async () => {
@@ -1374,6 +1430,29 @@ const ReferralPartnerDetails = () => {
           )}
         </div>
       </div>
+
+      <VerificationDecisionModal
+        isOpen={verificationModal.open}
+        onClose={() =>
+          setVerificationModal((current) => ({ ...current, open: false }))
+        }
+        onSubmit={handleVerificationDecisionSubmit}
+        title={verificationModal.title}
+        decisionLabel={
+          verificationModal.section === "kyc"
+            ? "KYC Decision"
+            : "Bank Decision"
+        }
+        options={[{ value: "rejected", label: "Reject" }]}
+        defaultDecision="rejected"
+        rejectionValue="rejected"
+        rejectionLabel={verificationModal.noteLabel}
+        submitText="Submit"
+        showNoteField
+        noteLabel={verificationModal.noteLabel}
+        notePlaceholder={verificationModal.notePlaceholder}
+        noteRequired
+      />
 
       {previewDocument && (
         <DocumentPreviewModal

@@ -78,6 +78,7 @@ import FormInput from "../../components/Atoms/FormInput/FormInput";
 import FormToggleRow from "../../components/Atoms/FormToggleRow/FormToggleRow";
 import FormSelectGroup from "../../components/Atoms/FormSelectGroup/FormSelectGroup";
 import ToggleButton from "../../components/Atoms/ToggleButton/ToggleButton";
+import VerificationDecisionModal from "../../components/Seller/VerificationDecisionModal";
 import {
   resolveProductStoreId,
   resolveProductStoreName,
@@ -1622,9 +1623,20 @@ const ReferralCommerce = () => {
       setPaginationsLoading((prev) => ({ ...prev, [key]: false }));
     }, 300);
   };
+
+  const handleOpenPartnerPortal = async (_decision, note) => {
+    const trimmedNote = String(note || "").trim();
+    if (trimmedNote) {
+      toast.info(`Note added: ${trimmedNote}`);
+    }
+
+    window.open(influencerPortalUrl, "_blank", "noopener,noreferrer");
+  };
+
   const [parentModalOpen, setParentModalOpen] = useState(false);
   const [childModalOpen, setChildModalOpen] = useState(false);
   const [codeModalOpen, setCodeModalOpen] = useState(false);
+  const [partnerPortalModalOpen, setPartnerPortalModalOpen] = useState(false);
   const [editingCode, setEditingCode] = useState(null);
   const [bonusRuleModalOpen, setBonusRuleModalOpen] = useState(false);
   const [editingBonusRule, setEditingBonusRule] = useState(null);
@@ -3907,18 +3919,32 @@ const ReferralCommerce = () => {
                 <Plus aria-hidden="true" size={16} />
                 Referral Code
               </button>
-              <a
-                href={influencerPortalUrl}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={() => setPartnerPortalModalOpen(true)}
                 title="Open the Referral Partner sign-in portal"
+                className="inline-flex items-center gap-1.5"
               >
                 <ExternalLink aria-hidden="true" size={16} />
                 Partner Login
-              </a>
+              </button>
             </div>
           ) : undefined
         }
+      />
+
+      <VerificationDecisionModal
+        isOpen={partnerPortalModalOpen}
+        onClose={() => setPartnerPortalModalOpen(false)}
+        onSubmit={handleOpenPartnerPortal}
+        title="Open Referral Partner Portal"
+        decisionLabel="Action"
+        options={[{ value: "continue", label: "Open portal" }]}
+        defaultDecision="continue"
+        showNoteField
+        noteLabel="Note"
+        notePlaceholder="Add a note before opening the partner portal..."
+        submitText="Open Portal"
       />
 
       {hasListFilters &&
@@ -3999,7 +4025,6 @@ const ReferralCommerce = () => {
         <SharedDataTable
           columns={[
             { key: "influencer", label: "Referral Partner" },
-            { key: "profileId", label: "Profile ID" },
             { key: "type", label: "Type" },
             { key: "code", label: "Referral Code" },
             { key: "hierarchy", label: "Hierarchy" },

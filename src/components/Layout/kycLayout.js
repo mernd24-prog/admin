@@ -11,7 +11,7 @@ import { clearStoredAuth } from "../../_helpers/authStorage";
 import { AUTH_ROUTES } from "../../pages/auth/authRoutes";
 import { logout as logoutAuth } from "../../Redux/auth-Slice";
 import { clearSellerOnboarding } from "../../Redux/seller-slice";
-import LogoutConfirmModal from "../Atoms/logoutPopup/logoutPopup";
+import LogoutConfirmModal from "../Atoms/logoutPopup/LogoutConfirmModal";
 const readStoredJson = (key) => {
   try {
     const value = localStorage.getItem(key);
@@ -267,7 +267,7 @@ const KYCStatusLayout = ({
     navigate(AUTH_ROUTES.LOGIN, { replace: true });
   };
 
-  // Open confirmation instead of logging out immediately
+  
   const openLogoutConfirmation = () => {
     setUserMenuOpen(false);
     setShowLogoutConfirm(true);
@@ -541,15 +541,15 @@ const KYCStatusLayout = ({
             {userMenuOpen && (
               <div
                 role="menu"
-                className="absolute right-0 top-[calc(100%+8px)] z-50 w-[210px] rounded-[8px] border border-[#eadfcb] bg-white py-2 shadow-xl"
+                className="absolute right-0 top-[calc(100%+8px)] z-50 w-[210px] rounded-[8px] border border-[#eadfcb] bg-white py-2 shadow-xl "
               >
                 <button
                   type="button"
                   role="menuitem"
                   onClick={openLogoutConfirmation}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-[#b42318] transition hover:bg-[#fff4f3]"
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-[#1B1D60] transition "
                 >
-                  <LogOut size={16} />
+                  <LogOut size={16} className="text-[#1B1D60]" />
                   Logout
                 </button>
               </div>
