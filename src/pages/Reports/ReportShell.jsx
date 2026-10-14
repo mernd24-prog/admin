@@ -21,7 +21,6 @@ import {
   MdAssignmentReturn,
   MdCurrencyRupee,
   MdFileDownload,
-  MdFilterList,
   MdInventory,
   MdLocalShipping,
   MdPayments,
@@ -410,6 +409,7 @@ export const ReportShell = ({
   stats = [],
   children,
   loading = false,
+  error = "",
   filters,
   onRefresh,
   exportEndpoint,
@@ -419,14 +419,14 @@ export const ReportShell = ({
   exportCsvSections,
   exportExcelSheets,
   showFilters = true,
+  hasExportData = Boolean(exportRows?.length),
 }) => {
   const [exporting, setExporting] = useState(false);
-  const dateRangeLabel =
-    filters?.fromDate && filters?.toDate
-      ? `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(filters.toDate)}`
-      : "Select date range";
+  const exportDisabled = loading || exporting || Boolean(error) || !hasExportData;
 
   const handleExport = async () => {
+    if (exportDisabled) return;
+
     if (exportCsvSections?.length) {
       exportToCsvSections(exportCsvSections, exportFilename || "report.csv");
       return;
@@ -469,43 +469,16 @@ export const ReportShell = ({
         subtitle={subtitle}
         breadcrumbs={breadcrumbs}
         actions={
-          (exportEndpoint ||
-            exportRows?.length ||
-            exportCsvSections?.length ||
-            exportExcelSheets?.length) && (
-            <PermissionGuard module="reports" action="export" hide>
-              <ExportButton
-                onClick={handleExport}
-                label={
-                  loading ? "Loading" : exporting ? "Exporting" : "Export "
-                }
-                loading={exporting || loading}
-                disabled={loading}
-              />
-            </PermissionGuard>
-          )
-        }
-      />
-
-      <section className="mb-4 rounded-lg border border-[var(--admin-line)] bg-white p-3.5 shadow-[0_10px_28px_rgba(31,27,95,0.05)]">
-        {showFilters ? (
-          <>
-            <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase text-[var(--admin-muted)]">
-              <MdFilterList size={15} />
-              Filters
-            </div>
-
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div className="w-full sm:max-w-sm">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+            {showFilters && (
+              <div className="w-full sm:w-[285px]">
                 <DateRangeFilter
                   field={{
                     key: "reportDateRange",
                     type: "daterange",
                     startKey: "fromDate",
                     endKey: "toDate",
-                    label: "Date Range",
-                    labelClassName:
-                      "px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400",
+                    placeholder: "Select date range",
                     inputClassName: "text-[var(--admin-ink)]",
                     subtitle: "Report data will update after apply.",
                     disableFuture: true,
@@ -521,41 +494,37 @@ export const ReportShell = ({
                       filters.setDateRange(filters.fromDate, value);
                     }
                   }}
+                  onApply={filters?.setDateRange}
                   loading={loading}
                 />
               </div>
-
-              <button
-                type="button"
-                onClick={onRefresh}
-                disabled={loading}
-                className="admin-btn-secondary w-full justify-center sm:w-auto sm:min-w-[112px]"
-              >
-                <MdRefresh
-                  className={loading ? "animate-spin" : ""}
-                  size={16}
-                />
-                {loading ? "Refreshing" : "Refresh"}
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-medium text-[var(--admin-muted)]">
-              Showing current report data.
-            </p>
+            )}
             <button
               type="button"
               onClick={onRefresh}
               disabled={loading}
-              className="admin-btn-secondary w-full justify-center sm:w-auto sm:min-w-[112px]"
+              className="admin-btn-secondary justify-center sm:min-w-[112px]"
             >
               <MdRefresh className={loading ? "animate-spin" : ""} size={16} />
               {loading ? "Refreshing" : "Refresh"}
             </button>
+            {(exportEndpoint ||
+              exportRows?.length ||
+              exportCsvSections?.length ||
+              exportExcelSheets?.length) && (
+              <PermissionGuard module="reports" action="export" hide>
+                <ExportButton
+                  onClick={handleExport}
+                  label={loading ? "Loading" : exporting ? "Exporting" : "Export "}
+                  loading={exporting || loading}
+                  disabled={exportDisabled}
+                  title={!hasExportData ? "No report data to export" : undefined}
+                />
+              </PermissionGuard>
+            )}
           </div>
-        )}
-      </section>
+        }
+      />
 
       <div className="mb-5 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
@@ -1557,6 +1526,7 @@ export const SalesReport = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
+      hasExportData={Boolean(salesDetailRows.length || [totalRevenue, totalOrders, deliveredOrders, totalProductViews, refundAmount].some((value) => value !== 0))}
       exportEndpoint={null}
       exportFilename={salesExportFilename}
       /*
@@ -2147,6 +2117,7 @@ export const ProductAnalytics = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
+      hasExportData={Boolean(rows.length || totalProductsCount)}
       exportEndpoint={null}
       exportFilename={productExportFilename}
       exportExcelSheets={[
@@ -2668,6 +2639,7 @@ export const InventoryAnalytics = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
+      hasExportData={Boolean(inventoryExportRows.length || [statsData.totalProducts, statsData.totalStock, statsData.totalReserved, statsData.lowStockCount].some((value) => asNumber(value) !== 0))}
       exportEndpoint={null}
       exportFilename={`Inventory_Report_${formatDateLabel(
         filters.fromDate,
@@ -2998,6 +2970,7 @@ export const SellerAnalytics = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
+      hasExportData={Boolean(rows.length)}
       exportEndpoint={null}
       exportFilename={`Seller_Analytics_${formatDateLabel(
         filters.fromDate,
