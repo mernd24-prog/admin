@@ -4,12 +4,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { MdStorefront, MdVisibility, MdRefresh } from "react-icons/md";
+import { MdStorefront, MdVisibility } from "react-icons/md";
 
 import {
   PageHeader,
   DataTable,
   StatusBadge,
+  FilterBar,
   ConfirmModal,
 } from "../../../components/Shared";
 
@@ -21,6 +22,71 @@ import {
   enableDisableSeller,
   getSellerList,
 } from "../../../Redux/userManagementSlice";
+
+const FILTER_FIELDS = [
+  {
+    key: "status",
+    type: "select",
+    label: "Account",
+    width: "w-40",
+    options: [
+      { value: "active", label: "Active" },
+      { value: "pending_approval", label: "Pending approval" },
+      { value: "suspended", label: "Suspended" },
+    ],
+  },
+  {
+    key: "onboardingStatus",
+    type: "select",
+    label: "Onboarding",
+    width: "w-44",
+    options: [
+      { value: "initiated", label: "Initiated" },
+      { value: "in_progress", label: "In progress" },
+      { value: "under_review", label: "Under review" },
+      { value: "ready_for_go_live", label: "Ready for go live" },
+      { value: "rejected", label: "Rejected" },
+    ],
+  },
+  {
+    key: "kycStatus",
+    type: "select",
+    label: "KYC",
+    width: "w-40",
+    options: [
+      { value: "not_submitted", label: "Not submitted" },
+      { value: "submitted", label: "Submitted" },
+      { value: "under_review", label: "Under review" },
+      { value: "verified", label: "Verified" },
+      { value: "rejected", label: "Rejected" },
+    ],
+  },
+  {
+    key: "bankVerificationStatus",
+    type: "select",
+    label: "Bank",
+    width: "w-40",
+    options: [
+      { value: "not_submitted", label: "Not submitted" },
+      { value: "submitted", label: "Submitted" },
+      { value: "verified", label: "Verified" },
+      { value: "rejected", label: "Rejected" },
+    ],
+  },
+  {
+    key: "goLiveStatus",
+    type: "select",
+    label: "Go live",
+    width: "w-40",
+    options: [
+      { value: "pending", label: "Pending" },
+      { value: "ready", label: "Ready" },
+      { value: "live", label: "Live" },
+      { value: "blocked", label: "Blocked" },
+      { value: "rejected", label: "Rejected" },
+    ],
+  },
+];
 
 const getGoLiveStatus = (user = {}) => {
   if (user?.organizationSummary?.goLiveStatus) {
@@ -55,6 +121,7 @@ const Sellers = () => {
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({});
   const [statusTarget, setStatusTarget] = useState(null);
 
   const selector = useSelector((state) => state.user);
@@ -71,13 +138,28 @@ const Sellers = () => {
           page: pageNo.toString(),
           size: pageSize.toString(),
           keyWord: search,
-          searchFields: "full_name,userName,email",
+          ...filters,
         }),
       ).unwrap();
     } catch (err) {
       toast.error(err?.message || "Failed to fetch sellers");
     }
-  }, [dispatch, pageNo, pageSize, search]);
+  }, [dispatch, pageNo, pageSize, search, filters]);
+
+  const setFilter = useCallback((key, value) => {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPageNo(1);
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setFilters({});
+    setPageNo(1);
+  }, []);
+
+  const activeFilterCount = useMemo(
+    () => Object.values(filters).filter(Boolean).length,
+    [filters],
+  );
 
   // Load data when page, page size, or search changes
   useEffect(() => {
@@ -395,6 +477,16 @@ const Sellers = () => {
             aria-hidden="true"
             size={40}
             className="text-gray-200"
+          />
+        }
+        filterBar={
+          <FilterBar
+            filters={FILTER_FIELDS}
+            values={filters}
+            onChange={setFilter}
+            onClear={clearFilters}
+            loading={selector.loading}
+            activeCount={activeFilterCount}
           />
         }
         requiredModule="sellers"

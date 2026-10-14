@@ -273,6 +273,11 @@ export const toListParams = (params = {}, defaults = {}) => ({
   ...(params.onboardingStatus
     ? { onboardingStatus: params.onboardingStatus }
     : {}),
+  ...(params.kycStatus ? { kycStatus: params.kycStatus } : {}),
+  ...(params.bankVerificationStatus
+    ? { bankVerificationStatus: params.bankVerificationStatus }
+    : {}),
+  ...(params.goLiveStatus ? { goLiveStatus: params.goLiveStatus } : {}),
   ...(params.active !== undefined ? { active: params.active } : {}),
   ...(params.isDisable !== undefined
     ? { active: !(params.isDisable === true || params.isDisable === "true") }
