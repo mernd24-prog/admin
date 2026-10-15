@@ -1,12 +1,16 @@
+
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormik } from "formik";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
+import { MdEdit } from "react-icons/md";
+
 import { dropdownApi } from "../../../_helpers/dropdownApi";
-import { MdEdit, MdRefresh } from "react-icons/md";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
+
 import {
   ConfirmModal,
   DataTable,
@@ -15,10 +19,12 @@ import {
   StatusBadge,
   SellerIdentity,
 } from "../../../components/Shared";
+
 import {
   getNegativeBalances,
   resolveNegativeBalance,
 } from "../../../Redux/sellerCommissionsSlice";
+
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import {
@@ -26,6 +32,7 @@ import {
   formatIndianNumber,
   formatLabel,
 } from "../../../utils/formatters";
+import { negativeBalanceRecoverySchema } from "../../../_helpers/validationSchemas";
 
 const NEGATIVE_BALANCE_STATUSES = [
   "pending",
@@ -65,9 +72,9 @@ const FILTER_FIELDS = [
     key: "status",
     type: "select",
     label: "Status",
-    options: NEGATIVE_BALANCE_STATUSES.map((s) => ({
-      value: s,
-      label: formatLabel(s),
+    options: NEGATIVE_BALANCE_STATUSES.map((status) => ({
+      value: status,
+      label: formatLabel(status),
     })),
   },
 ];
@@ -75,6 +82,9 @@ const FILTER_FIELDS = [
 const EMPTY_ACTION = {
   open: false,
   settlement: null,
+};
+
+const INITIAL_FORM_VALUES = {
   resolveAction: "collected_from_seller",
   referenceId: "",
   note: "",
@@ -82,7 +92,14 @@ const EMPTY_ACTION = {
 
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
-  if (Array.isArray(data)) return { list: data, total: data.length };
+
+  if (Array.isArray(data)) {
+    return {
+      list: data,
+      total: data.length,
+    };
+  }
+
   return {
     list: data?.items || data?.list || data || [],
     total: Number(
@@ -93,35 +110,79 @@ const unwrapList = (payload = {}) => {
 
 const valueOf = (row = {}, ...keys) => {
   for (const key of keys) {
-    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "")
+    if (
+      row?.[key] !== undefined &&
+      row?.[key] !== null &&
+      row?.[key] !== ""
+    ) {
       return row[key];
+    }
   }
+
   return 0;
 };
 
-const settlementId = (row) => row?._id || row?.id || row?.settlementId;
+const settlementId = (row) =>
+  row?._id || row?.id || row?.settlementId;
 
 const NegativeBalances = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.sellerCommissions);
   const payload = unwrapList(selector.negativeBalancesData);
+
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
   });
+
   const { toQueryParams } = list;
+
   const [sellerMap, setSellerMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [action, setAction] = useState(EMPTY_ACTION);
   const [confirmAction, setConfirmAction] = useState({ open: false });
 
+  const formik = useFormik({
+    initialValues: INITIAL_FORM_VALUES,
+    validationSchema: negativeBalanceRecoverySchema,
+    validateOnBlur: true,
+    validateOnChange: true,
+
+    onSubmit: async (values) => {
+      if (!settlementId(action.settlement)) {
+        toast.error("Settlement ID is missing");
+        return;
+      }
+
+      const isExternalPayment =
+        values.resolveAction === "collected_from_seller";
+
+      const amount = formatIndianNumber(
+        action.settlement?.remainingAmount ??
+          action.settlement?.net_amount,
+      );
+
+      setConfirmAction({
+        open: true,
+        title: isExternalPayment
+          ? "Confirm external payment?"
+          : "Confirm write-off?",
+        message: isExternalPayment
+          ? `Confirm that ${amount} was received outside the payout system. This closes the amount owed.`
+          : `This permanently stops recovery of ${amount}. The amount will not be collected from this seller.`,
+      });
+    },
+  });
+
   const fetchBalances = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
+
       const params = toQueryParams();
+
       await dispatch(
         getNegativeBalances({
           ...params,
@@ -133,6 +194,7 @@ const NegativeBalances = () => {
         requestError?.message ||
         requestError ||
         "Failed to load negative balances";
+
       setError(message);
       toast.error(message);
     } finally {
@@ -156,8 +218,8 @@ const NegativeBalances = () => {
         });
 
         setSellerMap(map);
-      } catch (error) {
-        console.error("Failed to load sellers", error);
+      } catch (requestError) {
+        console.error("Failed to load sellers", requestError);
       }
     };
 
@@ -168,63 +230,77 @@ const NegativeBalances = () => {
     fetchBalances();
   }, [fetchBalances]);
 
-  const openManageRecovery = (row) => {
-    setAction({
-      ...EMPTY_ACTION,
-      open: true,
-      settlement: row,
-    });
-  };
+  const openManageRecovery = useCallback(
+    (row) => {
+      setAction({
+        open: true,
+        settlement: row,
+      });
 
-  const validateAction = () => {
-    if (!settlementId(action.settlement)) return "Settlement ID is missing";
-    if (
-      action.resolveAction === "collected_from_seller" &&
-      !action.referenceId.trim()
-    ) {
-      return "Payment reference ID is required";
-    }
-    if (!action.note.trim()) return "Note is required";
-    return "";
-  };
+      formik.resetForm({
+        values: INITIAL_FORM_VALUES,
+      });
+    },
+    [formik.resetForm],
+  );
 
-  const prepareAction = () => {
-    const validationMessage = validateAction();
-    if (validationMessage) {
-      toast.error(validationMessage);
-      return;
-    }
-    const isExternalPayment = action.resolveAction === "collected_from_seller";
-    setConfirmAction({
-      open: true,
-      title: isExternalPayment
-        ? "Confirm external payment?"
-        : "Confirm write-off?",
-      message: isExternalPayment
-        ? `Confirm that ${formatIndianNumber(action.settlement?.remainingAmount ?? action.settlement?.net_amount)} was received outside the payout system. This closes the amount owed.`
-        : `This permanently stops recovery of ${formatIndianNumber(action.settlement?.remainingAmount ?? action.settlement?.net_amount)}. The amount will not be collected from this seller.`,
+  const closeManageRecovery = useCallback(() => {
+    setAction(EMPTY_ACTION);
+    formik.resetForm({
+      values: INITIAL_FORM_VALUES,
     });
-  };
+  }, [formik.resetForm]);
+
+  const handleRecoveryActionChange = useCallback(
+    async (nextAction) => {
+      // Update the selected recovery action and validate it immediately.
+      await formik.setFieldValue("resolveAction", nextAction, true);
+
+      // Clear the reference when a write-off does not require it.
+      if (nextAction === "platform_write_off") {
+        await formik.setFieldValue("referenceId", "", true);
+        formik.setFieldTouched("referenceId", false, false);
+      } else {
+        // Revalidate the reference when switching back to external payment.
+        await formik.validateField("referenceId");
+      }
+
+      // Refresh validation for the note under the selected action.
+      await formik.validateField("note");
+    },
+    [
+      formik.setFieldValue,
+      formik.setFieldTouched,
+      formik.validateField,
+    ],
+  );
 
   const executeAction = useCallback(async () => {
     try {
       setLoading(true);
+
       await dispatch(
         resolveNegativeBalance({
           settlementId: settlementId(action.settlement),
           id: settlementId(action.settlement),
-          action: action.resolveAction,
-          referenceId: action.referenceId.trim() || undefined,
-          note: action.note,
+          action: formik.values.resolveAction,
+          referenceId: formik.values.referenceId.trim() || undefined,
+          note: formik.values.note.trim(),
         }),
       ).unwrap();
+
       toast.success(
-        action.resolveAction === "collected_from_seller"
+        formik.values.resolveAction === "collected_from_seller"
           ? "External seller payment recorded"
           : "Remaining amount written off",
       );
+
       setAction(EMPTY_ACTION);
+      formik.resetForm({
+        values: INITIAL_FORM_VALUES,
+      });
       setConfirmAction({ open: false });
+
       await fetchBalances();
     } catch (requestError) {
       toast.error(
@@ -235,7 +311,15 @@ const NegativeBalances = () => {
     } finally {
       setLoading(false);
     }
-  }, [action, dispatch, fetchBalances]);
+  }, [
+    action.settlement,
+    dispatch,
+    fetchBalances,
+    formik.values.resolveAction,
+    formik.values.referenceId,
+    formik.values.note,
+    formik.resetForm,
+  ]);
 
   const columns = useMemo(
     () => [
@@ -248,6 +332,7 @@ const NegativeBalances = () => {
             <div className="font-semibold text-gray-800">
               {row.settlementNumber || settlementId(row)}
             </div>
+
             {row.settlementNumber && (
               <div className="font-mono text-xs text-gray-400">
                 {settlementId(row)}
@@ -261,27 +346,26 @@ const NegativeBalances = () => {
         label: "Seller",
         sortable: true,
         render: (_, row) => {
-          const sellerId = row.sellerId || row.seller_id;
+          const sellerIdValue = row.sellerId || row.seller_id;
 
           const name =
             row.sellerName ||
             row.seller?.name ||
             row.seller?.businessName ||
-            sellerMap[sellerId];
+            sellerMap[sellerIdValue];
 
           const email = row.sellerEmail || row.seller?.email;
 
           return (
             <SellerIdentity
               row={row}
-              sellerId={sellerId}
+              sellerId={sellerIdValue}
               storeName={name}
               loginName={email}
             />
           );
         },
       },
-      ,
       {
         key: "liabilityType",
         label: "Type / Order",
@@ -292,9 +376,12 @@ const NegativeBalances = () => {
                 ? "Seller-collected COD"
                 : "Other adjustment"}
             </div>
-            {row.orderId ? (
-              <div className="text-xs text-gray-500">Order: {row.orderId}</div>
-            ) : null}
+
+            {row.orderId && (
+              <div className="text-xs text-gray-500">
+                Order: {row.orderId}
+              </div>
+            )}
           </div>
         ),
       },
@@ -330,6 +417,7 @@ const NegativeBalances = () => {
                   0,
               )}
             </div>
+
             {Number(row.recoveredAmount || 0) > 0 && (
               <div className="mt-1 text-xs text-emerald-600">
                 {formatIndianNumber(row.recoveredAmount)} already recovered
@@ -345,7 +433,9 @@ const NegativeBalances = () => {
         render: (value) => (
           <StatusBadge
             status={value}
-            label={value === "pending" ? "Auto recovery active" : undefined}
+            label={
+              value === "pending" ? "Auto recovery active" : undefined
+            }
             dot
           />
         ),
@@ -361,6 +451,7 @@ const NegativeBalances = () => {
             "created_at",
             "createdAt",
           );
+
           return formatDateTime12Hour(createdAt, "N/A");
         },
       },
@@ -368,8 +459,8 @@ const NegativeBalances = () => {
         key: "actions",
         label: "Actions",
         render: (_, row) => {
-          const status = row.status;
-          if (status === "completed") return null;
+          if (row.status === "completed") return null;
+
           return (
             <PermissionGuard
               module="sellers/commissions"
@@ -389,7 +480,7 @@ const NegativeBalances = () => {
         },
       },
     ],
-    [sellerMap],
+    [sellerMap, openManageRecovery],
   );
 
   return (
@@ -404,11 +495,14 @@ const NegativeBalances = () => {
       />
 
       <div className="admin-card mb-4 border-l-4 border-l-blue-500 bg-blue-50/40 p-4 text-sm text-[var(--admin-ink)]">
-        <div className="font-semibold">Future-payout recovery is automatic</div>
+        <div className="font-semibold">
+          Future-payout recovery is automatic
+        </div>
+
         <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
-          No admin action is needed for normal recovery. Use “Manage recovery”
-          only when payment was received outside the platform or an authorized
-          write-off is required.
+          No admin action is needed for normal recovery. Use “Manage
+          recovery” only when payment was received outside the platform or
+          an authorized write-off is required.
         </p>
       </div>
 
@@ -447,83 +541,124 @@ const NegativeBalances = () => {
         }}
       />
 
-      {/* Exception recovery modal */}
+      {/* Recovery Exception Modal */}
       <DefaultModal
         isOpen={action.open}
-        onClose={() => setAction(EMPTY_ACTION)}
+        onClose={closeManageRecovery}
         title="Manage Recovery Exception"
-        onSubmit={prepareAction}
+        onSubmit={formik.handleSubmit}
         submitButtonText="Continue"
         closeButtonText="Cancel"
         loading={loading}
+        isButtonView={true}
       >
-        <div className="space-y-4">
-          <div>
-            <span className="mb-2 block text-sm font-medium text-gray-700">
-              What happened?
-            </span>
-            <div className="space-y-2">
-              {RECOVERY_ACTIONS.map((opt) => (
-                <label
-                  key={opt.value}
-                  className="flex cursor-pointer items-center gap-3 rounded border border-gray-200 p-3 hover:bg-gray-50"
-                >
-                  <input
-                    type="radio"
-                    name="resolveAction"
-                    value={opt.value}
-                    checked={action.resolveAction === opt.value}
-                    onChange={(e) =>
-                      setAction((prev) => ({
-                        ...prev,
-                        resolveAction: e.target.value,
-                      }))
-                    }
-                    className="h-4 w-4 text-blue-600"
-                  />
-                  <span>
-                    <span className="block text-sm font-medium text-gray-700">
-                      {opt.label}
-                    </span>
-                    <span className="mt-0.5 block text-xs leading-5 text-gray-500">
-                      {opt.description}
-                    </span>
-                  </span>
-                </label>
-              ))}
+        <div className="space-y-5">
+          <FormSection
+            title="Recovery Action"
+            description="Select how this recovery exception was resolved."
+          >
+            <div className="space-y-3">
+              <span className="admin-label">What happened?</span>
+
+              <div className="space-y-3">
+                {RECOVERY_ACTIONS.map((opt) => {
+                  const isSelected =
+                    formik.values.resolveAction === opt.value;
+
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                        isSelected
+                          ? "border-blue-600 bg-blue-50"
+                          : "border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="resolveAction"
+                        value={opt.value}
+                        checked={isSelected}
+                        onChange={() => handleRecoveryActionChange(opt.value)}
+                        className="mt-1 h-4 w-4 accent-blue-600"
+                      />
+
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-gray-700">
+                          {opt.label}
+                        </span>
+
+                        <span className="mt-1 block text-xs leading-5 text-gray-500">
+                          {opt.description}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {formik.touched.resolveAction &&
+                formik.errors.resolveAction && (
+                  <p className="text-xs text-red-500">
+                    {formik.errors.resolveAction}
+                  </p>
+                )}
             </div>
-          </div>
+          </FormSection>
 
-          {action.resolveAction === "collected_from_seller" && (
-            <Input
-              labelName="Payment reference ID"
-              value={action.referenceId}
-              onChange={(e) =>
-                setAction((prev) => ({
-                  ...prev,
-                  referenceId: e.target.value,
-                }))
-              }
-              required
-            />
-          )}
+          <FormSection
+            title="Payment Information"
+            description="Provide the payment reference and additional notes."
+          >
+            <div className="space-y-4">
+              {formik.values.resolveAction ===
+                "collected_from_seller" && (
+                <div>
+                  <Input
+                    labelName="Payment Reference ID"
+                    name="referenceId"
+                    value={formik.values.referenceId}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    required
+                  />
 
-          <Input
-            labelName={
-              action.resolveAction === "platform_write_off"
-                ? "Approved write-off reason"
-                : "Payment note"
-            }
-            type="textarea"
-            value={action.note}
-            onChange={(e) =>
-              setAction((prev) => ({ ...prev, note: e.target.value }))
-            }
-            required
-          />
+                  {formik.touched.referenceId &&
+                    formik.errors.referenceId && (
+                      <p className="mt-1 text-xs text-red-500">
+                        {formik.errors.referenceId}
+                      </p>
+                    )}
+                </div>
+              )}
+
+              <div>
+                <Input
+                  labelName={
+                    formik.values.resolveAction === "platform_write_off"
+                      ? "Approved Write-off Reason"
+                      : "Payment Note"
+                  }
+                  type="textarea"
+                  name="note"
+                  value={formik.values.note}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  required
+                />
+
+                {formik.touched.note && formik.errors.note && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {formik.errors.note}
+                  </p>
+                )}
+              </div>
+            </div>
+          </FormSection>
         </div>
       </DefaultModal>
 
+      {/* Confirmation Modal */}
       <ConfirmModal
         open={confirmAction.open}
         onClose={() => setConfirmAction({ open: false })}

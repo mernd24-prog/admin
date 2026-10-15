@@ -746,3 +746,37 @@ export const dealProductValidationSchema = Yup.object({
   }),
   message: Yup.string().notRequired(),
 });
+
+export const negativeBalanceRecoverySchema = Yup.object({
+  resolveAction: Yup.string()
+    .oneOf(
+      ["collected_from_seller", "platform_write_off"],
+      "Please select a valid recovery action",
+    )
+    .required("Please select a recovery action"),
+
+  referenceId: Yup.string().when("resolveAction", {
+  is: "collected_from_seller",
+  then: (schema) =>
+    schema
+      .trim()
+      .required("Payment reference ID is required"),
+  otherwise: (schema) => schema.notRequired(),
+}),
+
+  note: Yup.string()
+    .trim()
+    .when("resolveAction", {
+      is: "platform_write_off",
+      then: (schema) =>
+        schema
+          .required("Approved write-off reason is required")
+          .min(3, "Write-off reason must be at least 3 characters")
+          .max(1000, "Write-off reason must be no more than 1000 characters"),
+      otherwise: (schema) =>
+        schema
+          .required("Payment note is required")
+          .min(3, "Payment note must be at least 3 characters")
+          .max(1000, "Payment note must be no more than 1000 characters"),
+    }),
+});

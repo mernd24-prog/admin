@@ -556,45 +556,84 @@ const Payments = () => {
         </div>
       </DefaultModal>
 
-      <DefaultModal
-        isOpen={decision.open}
-        onClose={() =>
-          setDecision({
-            open: false,
-            type: "",
-            payment: null,
-            referenceId: "",
-            reason: "",
-          })
-        }
-        title={
-          decision.type === "approve" ? "Approve Payment" : "Reject Payment"
-        }
-        onSubmit={submitDecision}
-      >
-        <div className="space-y-3">
+
+<DefaultModal
+  isOpen={decision.open}
+  onClose={() =>
+    setDecision({
+      open: false,
+      type: "",
+      payment: null,
+      referenceId: "",
+      reason: "",
+    })
+  }
+  title={
+    decision.type === "approve" ? "Approve Payment" : "Reject Payment"
+  }
+  onSubmit={submitDecision}
+  submitButtonText={
+    decision.type === "approve" ? "Approve Payment" : "Reject Payment"
+  }
+  closeButtonText="Cancel"
+>
+  <div className="space-y-5">
+    <FormSection
+      title="Payment Decision"
+      description={
+        decision.type === "approve"
+          ? "Provide the collection or bank reference to approve this payment."
+          : "Provide a reason for rejecting this payment."
+      }
+    >
+      <div className="space-y-4">
+        {decision.type === "approve" && (
+          <div>
+            <Input
+              labelName="Collection / Bank Reference"
+              value={decision.referenceId}
+              onChange={(event) =>
+                setDecision((prev) => ({
+                  ...prev,
+                  referenceId: event.target.value,
+                }))
+              }
+              placeholder="Enter collection or bank reference"
+              required
+            />
+          
+          </div>
+        )}
+
+        <div>
           <Input
-            labelName="Collection / bank reference"
-            value={decision.referenceId}
+            type="textarea"
+            labelName={
+              decision.type === "reject"
+                ? "Rejection Reason"
+                : "Additional Notes (Optional)"
+            }
+            value={decision.reason}
             onChange={(event) =>
               setDecision((prev) => ({
                 ...prev,
-                referenceId: event.target.value,
+                reason: event.target.value,
               }))
             }
-            required={decision.type === "approve"}
-          />
-          <Input
-            type="textarea"
-            labelName="Reason"
-            value={decision.reason}
-            onChange={(event) =>
-              setDecision((prev) => ({ ...prev, reason: event.target.value }))
+            placeholder={
+              decision.type === "reject"
+                ? "Explain why this payment is being rejected"
+                : "Add any relevant payment notes"
             }
             required={decision.type === "reject"}
           />
+        
         </div>
-      </DefaultModal>
+      </div>
+    </FormSection>
+  </div>
+</DefaultModal>
+
     </div>
   );
 };

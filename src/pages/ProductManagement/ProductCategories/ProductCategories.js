@@ -1333,6 +1333,7 @@ const ProductCategories = () => {
         formData={formData}
         setFormData={setFormData}
         parentCategories={createSelectOptions}
+        parentCategoriesLoading={categoriesLoading}
         handleResetForm={handleResetForm}
         handleSubmit={categoryEditOpen ? handleEditSubmit : handleSubmit}
         isEditing={categoryEditOpen}
