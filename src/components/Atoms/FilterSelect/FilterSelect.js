@@ -185,6 +185,12 @@ export const ThreeDotLoadingIndicator = () => (
   </span>
 );
 
+const CustomLoadingIndicator = (props) => (
+  <components.LoadingIndicator {...props}>
+    <ThreeDotLoadingIndicator />
+  </components.LoadingIndicator>
+);
+
 const FilterSelect = ({
   label,
   options,
@@ -269,6 +275,7 @@ const FilterSelect = ({
           loadingMessage={loadingMessage || (() => " ")}
           components={{
             DropdownIndicator: CustomDropdownIndicator,
+            LoadingIndicator: CustomLoadingIndicator,
           }}
         />
 

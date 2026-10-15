@@ -55,7 +55,7 @@ const STATUS_OPTIONS = [
   "damaged",
 ];
 const FULFILLMENT_STATUS_OPTIONS = [
-  { value: "initiated", label: "Ready to Ship" },
+  { value: "initiated", label: "Initiated" },
   { value: "in_transit", label: "In Transit" },
   { value: "delivered", label: "Delivered" },
   { value: "failed", label: "Failed delivery" },
@@ -119,6 +119,14 @@ const displayStatus = (value = "") =>
   String(value || "N/A")
     .replace(/_/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+const sellerNameFromSnapshot = (snapshot = {}) =>
+  snapshot.sellerName ||
+  snapshot.seller_name ||
+  snapshot.displayName ||
+  snapshot.businessName ||
+  snapshot.name ||
+  snapshot.email ||
+  "";
 const shipmentStepLabel = (value = "") =>
   FULFILLMENT_STATUS_OPTIONS.find((option) => option.value === value)?.label ||
   displayStatus(value);
@@ -309,6 +317,7 @@ const ShipmentTracking = () => {
     }
   }, [shipmentPayload.list, initialOrderId, initialShipmentId, setFilter]);
 
+  const [organizationOptions, setOrganizationOptions] = useState([]);
   const FILTER_FIELDS = isSeller
     ? [
         { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
@@ -367,6 +376,22 @@ const ShipmentTracking = () => {
             }),
         },
         {
+          key: "organizationId",
+          type: "select",
+          label: "Organization",
+          width: "w-56",
+          placeholder: filters.sellerId
+            ? "All Organizations"
+            : "First Select The Seller",
+          disabled: !filters.sellerId,
+          options: filters.sellerId
+            ? organizationOptions.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))
+            : [],
+        },
+        {
           key: "awbNumber",
           type: "text",
           label: "AWB / Tracking",
@@ -395,6 +420,26 @@ const ShipmentTracking = () => {
       .then(setSellerOptions)
       .catch(() => {});
   }, []);
+  useEffect(() => {
+    const sellerId = filters.sellerId;
+    if (!sellerId) {
+      setOrganizationOptions([]);
+      if (filters.organizationId) setFilter("organizationId", "");
+      return undefined;
+    }
+    let active = true;
+    dropdownApi
+      .getSellerOrganizations(sellerId, { limit: 100 })
+      .then((options) => {
+        if (active) setOrganizationOptions(options || []);
+      })
+      .catch(() => {
+        if (active) setOrganizationOptions([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [filters.sellerId, filters.organizationId, setFilter]);
   const [detailModal, setDetailModal] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [trackingAction, setTrackingAction] = useState({
@@ -437,7 +482,7 @@ const ShipmentTracking = () => {
       isSeller
         ? FILTER_FIELDS.filter((field) => field.key !== "sellerId")
         : FILTER_FIELDS,
-    [isSeller],
+    [filters.sellerId, isSeller, organizationOptions],
   );
 
   const fetchShipments = useCallback(async () => {
@@ -729,15 +774,105 @@ const ShipmentTracking = () => {
 
       {
         key: "seller_id",
-        label: "Seller",
+        label: "Seller / Org",
         sortable: true,
         render: (value, row) => {
-          const name =
-            row.sellerName ||
-            row.seller?.name ||
+          const seller =
+            row.relations?.sellers?.[0] ||
+            row.relations?.seller ||
+            row.seller ||
+            row.vendor ||
+            {};
+          const sellerId =
+            row.sellerId ||
+            row.seller_id ||
+            seller.id ||
+            seller._id ||
+            seller.sellerId ||
+            value;
+          const organization =
+            row.organization ||
+            row.store ||
+            row.organizationSnapshot ||
+            row.organization_snapshot ||
+            {};
+          const organizationName =
+            row.organizationName ||
+            row.organization_name ||
+            row.storeName ||
+            row.store_name ||
+            row.seller?.businessName ||
             row.seller?.companyName ||
-            sellerOptions.find((o) => o.value === value)?.label;
-          return <SellerIdentity row={row} sellerId={value} storeName={name} />;
+            row.organization?.legalName ||
+            row.organizationSnapshot?.legalName ||
+            row.organization_snapshot?.legalName ||
+            row.organizationSnapshot?.storeDisplayName ||
+            row.organization_snapshot?.storeDisplayName ||
+            organization.organizationName ||
+            organization.organization_name ||
+            organization.legalBusinessName ||
+            organization.legalName ||
+            organization.legal_name ||
+            organization.storeDisplayName ||
+            organization.store_display_name ||
+            organization.name;
+          const order = row.order || row.orderSnapshot || row.order_snapshot || {};
+          const sellerGroup =
+            row.relations?.sellerFulfillmentGroups?.[0] ||
+            order.relations?.sellerFulfillmentGroups?.[0] ||
+            {};
+          const itemSellerSnapshot = [
+            ...(Array.isArray(row.items) ? row.items : []),
+            ...(Array.isArray(order.items) ? order.items : []),
+          ]
+            .filter((item) => {
+              const itemSellerId =
+                item.sellerId || item.seller_id ||
+                item.sellerSnapshot?.sellerId ||
+                item.seller_snapshot?.sellerId;
+              return !itemSellerId || String(itemSellerId) === String(sellerId);
+            })
+            .map((item) => item.sellerSnapshot || item.seller_snapshot)
+            .find(Boolean);
+          const sellerName =
+            seller.displayName ||
+            seller.fullName ||
+            seller.profile?.name ||
+            row.sellerSnapshot?.displayName ||
+            row.seller_snapshot?.displayName ||
+            row.sellerName ||
+            row.seller_name ||
+            sellerGroup.sellerName ||
+            sellerGroup.seller_name ||
+            seller.sellerName ||
+            seller.seller_name ||
+            seller.businessName ||
+            seller.name ||
+            seller.sellerProfile?.displayName ||
+            seller.sellerProfile?.businessName ||
+            seller.sellerProfile?.legalBusinessName ||
+            seller.profile?.name ||
+            seller.email ||
+            sellerNameFromSnapshot(row.sellerSnapshot || row.seller_snapshot) ||
+            sellerNameFromSnapshot(
+              sellerGroup.sellerSnapshot || sellerGroup.seller_snapshot,
+            ) ||
+            row.sellerSnapshot?.name ||
+            row.seller_snapshot?.name ||
+            sellerNameFromSnapshot(itemSellerSnapshot) ||
+            sellerOptions.find(
+              (option) => String(option.value) === String(sellerId),
+            )
+              ?.label;
+
+          return (
+            <SellerIdentity
+              row={row}
+              sellerId={sellerId}
+              storeName={organizationName}
+              loginName={sellerName}
+            />
+          );
         },
       },
       {

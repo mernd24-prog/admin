@@ -883,7 +883,7 @@ const DocumentUploadField = ({
   const inputId = `${id}-input`;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-onboarding-field={id}>
       <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
         {label} {required && STEP_ONE_REQUIRED}
       </label>
@@ -2779,8 +2779,8 @@ const SellerOnboarding = () => {
   };
 
   const scrollToFirstValidationError = (errors, attempt = 0) => {
-    const firstField = Object.keys(errors || {})[0];
-    if (!firstField || typeof document === "undefined") return;
+    const errorFields = Object.keys(errors || {});
+    if (!errorFields.length || typeof document === "undefined") return;
 
     // Wait for React to render the error message before measuring the field.
     requestAnimationFrame(() => {
@@ -2790,11 +2790,25 @@ const SellerOnboarding = () => {
           gstNumber: gstNumberRef,
           description: descriptionRef,
         };
-        const field =
-          explicitRefs[firstField]?.current ||
-          document.querySelector(`[data-onboarding-field="${firstField}"]`) ||
-          document.querySelector(`[name="${firstField}"]`) ||
-          document.getElementById(firstField);
+        const fields = errorFields
+          .map((fieldName) => ({
+            field:
+              explicitRefs[fieldName]?.current ||
+              document.querySelector(
+                `[data-onboarding-field="${fieldName}"]`,
+              ) ||
+              document.querySelector(`[name="${fieldName}"]`) ||
+              document.getElementById(fieldName),
+          }))
+          .filter(({ field }) => field)
+          .sort((left, right) => {
+            if (left.field === right.field) return 0;
+            const position = left.field.compareDocumentPosition(right.field);
+            return position & document.defaultView.Node.DOCUMENT_POSITION_FOLLOWING
+              ? -1
+              : 1;
+          });
+        const field = fields[0]?.field;
         if (!field) {
           if (attempt < 5) {
             setTimeout(
@@ -2805,7 +2819,19 @@ const SellerOnboarding = () => {
           return;
         }
 
-        field.scrollIntoView({ behavior: "smooth", block: "center" });
+        const scrollContainer = field.closest?.(".kyc-content-scroll");
+        if (scrollContainer) {
+          const fieldTop = field.getBoundingClientRect().top;
+          const containerTop = scrollContainer.getBoundingClientRect().top;
+          const targetTop =
+            scrollContainer.scrollTop + fieldTop - containerTop - 24;
+          scrollContainer.scrollTo({
+            top: Math.max(0, targetTop),
+            behavior: "smooth",
+          });
+        } else {
+          field.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
         const focusTarget = field.matches?.("input, select, textarea")
           ? field
           : field.querySelector?.(
@@ -3178,8 +3204,8 @@ const SellerOnboarding = () => {
 
     if (!kycForm.addressProofFile && !documentUrls.addressProofUrl)
       errors.addressProofFile = "Address proof document is required";
-    const supportEmail = getResolvedSupportEmail();
-    const supportPhone = getResolvedSupportPhone();
+    const supportEmail = profileForm.supportEmail.trim();
+    const supportPhone = profileForm.supportPhone.trim();
     if (!supportEmail)
       errors.supportEmail = "Business official email is required";
     else if (!isValidEmailAddress(supportEmail))
@@ -3606,6 +3632,7 @@ const SellerOnboarding = () => {
           {step === 1 && (
             <form
               onSubmit={submitKycStep}
+              noValidate
               onBlurCapture={(event) => {
                 if (event.target.name) validateKyc(event.target.name);
               }}
