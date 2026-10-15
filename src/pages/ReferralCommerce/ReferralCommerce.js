@@ -256,16 +256,6 @@ const validateRulesForm = (form) => {
     }
   };
 
-  if (!["fixed_amount", "percentage"].includes(form.distributionType))
-    errors.distributionType = "Select a valid distribution type.";
-  if (form.distributionType === "fixed_amount")
-    number("referralPoolAmount", "Referral pool amount", { positive: true });
-  else
-    number("referralPoolPercent", "Referral pool percentage", {
-      positive: true,
-      max: 100,
-    });
-  number("maximumReferralPoolAmount", "Maximum referral pool", { min: 0 });
   number("coinValue", "INR per coin", { positive: true });
   number("coinExpiryDays", "Coin expiry days", { min: 0, integer: true });
   number("minOrderAmount", "Minimum eligible order amount", { min: 0 });
@@ -1551,9 +1541,6 @@ const ReferralCommerce = () => {
   const { section } = useParams();
   const navigate = useNavigate();
   const referralCodeStatuses = useDropdownOptions("referral-code-statuses");
-  const referralDistributionTypes = useDropdownOptions(
-    "referral-distribution-types",
-  );
   const referralCoinUsageModes = useDropdownOptions(
     "referral-coin-usage-modes",
   );
@@ -2201,10 +2188,6 @@ const ReferralCommerce = () => {
       return;
     }
     const cleanRules = [
-      "distributionType",
-      "referralPoolAmount",
-      "referralPoolPercent",
-      "maximumReferralPoolAmount",
       "coinValue",
       "coinExpiryDays",
       "coinUsage",
@@ -2238,9 +2221,6 @@ const ReferralCommerce = () => {
       await dispatch(
         updateReferralRules(
           numberize(cleanRules, [
-            "referralPoolAmount",
-            "referralPoolPercent",
-            "maximumReferralPoolAmount",
             "coinValue",
             "coinExpiryDays",
             "customerSharePercent",
@@ -3199,68 +3179,14 @@ const ReferralCommerce = () => {
           </span>
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
-              Referral Pool & Coin Setup
+              Coin & Eligibility Setup
             </h3>
             <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-              Define the reward pool, coin value, validity, and eligible orders
+              Product pool amounts are configured below. Define shared coin
+              value, validity, usage, and order eligibility here.
             </p>
           </div>
         </div>
-        <SelectInput
-          label="Distribution Type"
-          name="distributionType"
-          value={rulesForm.distributionType}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.distributionType}
-        >
-          {optionList(referralDistributionTypes.options, [
-            "percentage",
-            "fixed_amount",
-          ]).map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </SelectInput>
-        {rulesForm.distributionType === "fixed_amount" ? (
-          <TextInput
-            label="Referral Pool Amount"
-            name="referralPoolAmount"
-            type="number"
-            min="0"
-            step="0.01"
-            value={rulesForm.referralPoolAmount}
-            onChange={handleRulesField}
-            required
-            error={rulesErrors.referralPoolAmount}
-          />
-        ) : (
-          <TextInput
-            label="Referral Pool %"
-            name="referralPoolPercent"
-            type="number"
-            min="0"
-            step="0.01"
-            value={rulesForm.referralPoolPercent}
-            onChange={handleRulesField}
-            max="100"
-            required
-            error={rulesErrors.referralPoolPercent}
-          />
-        )}
-        <TextInput
-          label="Maximum Referral Pool Per Order"
-          name="maximumReferralPoolAmount"
-          type="number"
-          min="0"
-          step="0.01"
-          value={rulesForm.maximumReferralPoolAmount}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.maximumReferralPoolAmount}
-          hint="Safety cap on the total referral pool calculated for one order. Enter 0 for unlimited; customer and partner shares are then calculated from this capped pool."
-        />
         <TextInput
           label="INR per Coin"
           name="coinValue"

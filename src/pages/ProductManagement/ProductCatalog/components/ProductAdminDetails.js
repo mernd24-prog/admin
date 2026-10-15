@@ -207,10 +207,14 @@ const ProductAdminDetails = () => {
       : product.attributes || {};
 
   const sellerDisplayName =
+    [product.seller?.profile?.firstName, product.seller?.profile?.lastName]
+      .filter(Boolean)
+      .join(" ") ||
     product.sellerName ||
     product.seller?.displayName ||
     product.seller?.name ||
     product.seller?.email ||
+    product.sellerEmail ||
     product.sellerId;
 
   const organizationDisplayName =
