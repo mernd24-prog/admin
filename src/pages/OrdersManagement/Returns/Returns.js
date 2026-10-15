@@ -76,6 +76,7 @@ import moment from "moment";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
 import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
+import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
 
 // const MODAL_SECTION_CLASS = "rounded-xl border border-gray-200 bg-white p-4";
 const INFO_CARD_CLASS = "rounded-lg border border-gray-100 bg-gray-50 p-3";
@@ -674,7 +675,15 @@ const SellerReturnOverview = ({ returnRequest = {} }) => {
         </div>
 
         <StatusBadge
-          status={status === "requested" ? "return_requested" : status === "approved" ? "return_approved" : status === "rejected" ? "return_rejected" : status}
+          status={
+            status === "requested"
+              ? "return_requested"
+              : status === "approved"
+                ? "return_approved"
+                : status === "rejected"
+                  ? "return_rejected"
+                  : status
+          }
           dot
         />
       </div>
@@ -1271,7 +1280,7 @@ const Returns = () => {
       {
         key: "orderId",
         label: "Return",
-        sortable: true,
+        sortable: false,
         render: (_, row) => (
           <div>
             <div className="font-semibold text-gray-800">
@@ -1306,16 +1315,24 @@ const Returns = () => {
       {
         key: "reason",
         label: "Reason",
-        sortable: true,
+        sortable: false,
         render: (value) => <span className="capitalize">{display(value)}</span>,
       },
       {
         key: "status",
         label: "Status",
-        sortable: true,
+        sortable: false,
         render: (value) => (
           <StatusBadge
-            status={value === "requested" ? "return_requested" : value === "approved" ? "return_approved" : value === "rejected" ? "return_rejected" : value}
+            status={
+              value === "requested"
+                ? "return_requested"
+                : value === "approved"
+                  ? "return_approved"
+                  : value === "rejected"
+                    ? "return_rejected"
+                    : value
+            }
             dot
           />
         ),
@@ -1330,12 +1347,85 @@ const Returns = () => {
       {
         key: "createdAt",
         label: "Requested At",
-        sortable: true,
+        sortable: false,
         render: (value) => formatDateTime12Hour(value),
       },
     ],
     [isSeller, openAction, openDetail],
   );
+
+  const handleExport = () => {
+    const returnRows = visibleReturns || [];
+
+    if (!returnRows.length) {
+      toast.info("No return data available to export.");
+      return;
+    }
+
+    try {
+      const excelColumns = columns.map(({ key, label }) => ({
+        key,
+        label,
+      }));
+
+      const data = returnRows.map((row) => {
+        const exportRow = {};
+
+        excelColumns.forEach(({ key }) => {
+          let value;
+
+          switch (key) {
+            case "orderId":
+              value = row.returnNumber || returnId(row) || "";
+              break;
+            case "buyerId":
+              value = buyerName(row);
+              break;
+            case "refundAmount":
+              value = money(
+                row.refundAmount || row.refundBreakup?.totalRefundAmount,
+              );
+              break;
+            case "createdAt":
+              value = formatDateTime12Hour(row.createdAt);
+              break;
+            default:
+              value = row?.[key];
+          }
+
+          exportRow[key] =
+            value === null || value === undefined
+              ? ""
+              : typeof value === "object"
+                ? JSON.stringify(value)
+                : value;
+        });
+
+        return exportRow;
+      });
+
+      const exported = exportToExcelWorkbook(
+        [
+          {
+            name: "Returns",
+            title: "Returns and Refunds Report",
+            data,
+            columns: excelColumns,
+          },
+        ],
+        "Returns_Refunds_Report.xlsx",
+      );
+
+      if (exported) {
+        toast.success("Returns report exported successfully.");
+      } else {
+        toast.error("Unable to export returns report.");
+      }
+    } catch (error) {
+      console.error("Returns export error:", error);
+      toast.error("Failed to export returns report.");
+    }
+  };
 
   return (
     <div>
@@ -1370,14 +1460,14 @@ const Returns = () => {
         error={error}
         filterBar={
           <div className="returns-filter-bar">
-          <FilterBar
-            filters={filterFields}
-            values={list.filters}
-            onChange={list.setFilter}
-            onClear={list.clearFilters}
-            loading={loading}
-            activeCount={list.activeFilterCount}
-          />
+            <FilterBar
+              filters={filterFields}
+              values={list.filters}
+              onChange={list.setFilter}
+              onClear={list.clearFilters}
+              loading={loading}
+              activeCount={list.activeFilterCount}
+            />
           </div>
         }
         rowActions={(row) => {
@@ -1739,9 +1829,8 @@ const Returns = () => {
         tableContainerClassName="overflow-x-auto overscroll-x-contain"
         tableClassName="min-w-[1480px]"
         exportConfig={{
-          filename: "returns-refunds",
-          columns,
-          data: visibleReturns,
+          onClick: handleExport,
+          disabled: loading || !visibleReturns.length,
         }}
       />
       <DefaultModal
@@ -2389,14 +2478,14 @@ const Returns = () => {
           action.type === "approve" && !isSeller
             ? approveReturnFormik.handleSubmit
             : action.type === "schedule"
-            ? scheduleReturnFormik.handleSubmit
-            : action.type === "close"
-              ? closeReturnFormik.handleSubmit
-              : action.type === "reject"
-                ? rejectReturnFormik.handleSubmit
-                : action.type === "replacement_request"
-                  ? replacementRequestFormik.handleSubmit
-                  : prepareAction
+              ? scheduleReturnFormik.handleSubmit
+              : action.type === "close"
+                ? closeReturnFormik.handleSubmit
+                : action.type === "reject"
+                  ? rejectReturnFormik.handleSubmit
+                  : action.type === "replacement_request"
+                    ? replacementRequestFormik.handleSubmit
+                    : prepareAction
         }
         submitButtonText="Continue"
         closeButtonText="Cancel"
@@ -2664,9 +2753,6 @@ const Returns = () => {
             </FormSection>
           )}
 
-          {/* =====================================================
-        RETURN SCHEDULE
-    ====================================================== */}
           {action.type === "schedule" && (
             <FormSection
               title="Return Shipment"
@@ -3335,29 +3421,30 @@ const Returns = () => {
                 action.type === "approve"
                   ? approveReturnFormik.handleBlur
                   : action.type === "schedule"
-                  ? scheduleReturnFormik.handleBlur
-                  : action.type === "close"
-                    ? closeReturnFormik.handleBlur
-                    : action.type === "reject"
-                      ? rejectReturnFormik.handleBlur
-                      : action.type === "replacement_request"
-                        ? replacementRequestFormik.handleBlur
-                        : undefined
+                    ? scheduleReturnFormik.handleBlur
+                    : action.type === "close"
+                      ? closeReturnFormik.handleBlur
+                      : action.type === "reject"
+                        ? rejectReturnFormik.handleBlur
+                        : action.type === "replacement_request"
+                          ? replacementRequestFormik.handleBlur
+                          : undefined
               }
               error={
                 action.type === "approve" && approveReturnFormik.touched.note
                   ? approveReturnFormik.errors.note
-                  : action.type === "schedule" && scheduleReturnFormik.touched.note
-                  ? scheduleReturnFormik.errors.note
-                  : action.type === "close" && closeReturnFormik.touched.note
-                    ? closeReturnFormik.errors.note
-                    : action.type === "reject" &&
-                        rejectReturnFormik.touched.note
-                      ? rejectReturnFormik.errors.note
-                      : action.type === "replacement_request" &&
-                          replacementRequestFormik.touched.note
-                        ? replacementRequestFormik.errors.note
-                        : ""
+                  : action.type === "schedule" &&
+                      scheduleReturnFormik.touched.note
+                    ? scheduleReturnFormik.errors.note
+                    : action.type === "close" && closeReturnFormik.touched.note
+                      ? closeReturnFormik.errors.note
+                      : action.type === "reject" &&
+                          rejectReturnFormik.touched.note
+                        ? rejectReturnFormik.errors.note
+                        : action.type === "replacement_request" &&
+                            replacementRequestFormik.touched.note
+                          ? replacementRequestFormik.errors.note
+                          : ""
               }
               placeholder="Add an optional note..."
             />

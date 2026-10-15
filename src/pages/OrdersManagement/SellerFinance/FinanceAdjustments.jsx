@@ -27,7 +27,6 @@ import {
 import {
   FinanceChoiceFilters,
   FinanceEmptyState,
-  FinancePageGuide,
   FinanceStatusBadge,
   financeDateTime,
   financeMoney,
@@ -254,7 +253,7 @@ export default function FinanceAdjustments() {
         ]}
       />
       {/* <FinanceNav /> */}
-      <FinancePageGuide
+      {/* <FinancePageGuide
         step="3"
         icon={MdTune}
         title="See why your balance changed"
@@ -263,7 +262,7 @@ export default function FinanceAdjustments() {
           "A minus amount reduces your balance",
           "Open details to see the reason",
         ]}
-      />
+      /> */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Cards
           label="Returns & refunds"

@@ -1,4 +1,3 @@
-
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -15,10 +14,7 @@ import {
   StatusBadge,
 } from "../../components/Shared";
 
-import {
-  createTaxInvoice,
-  getTaxInvoices,
-} from "../../Redux/adminCoreSlice";
+import { createTaxInvoice, getTaxInvoices } from "../../Redux/adminCoreSlice";
 
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import FormInput from "../../components/Atoms/FormInput/FormInput";
@@ -146,9 +142,7 @@ const invoicePurpose = (row = {}) => {
 
   if (type === "seller_customer") {
     const discount = Number(
-      amounts.marketplaceFundedDiscountAmount ||
-        amounts.discountAmount ||
-        0,
+      amounts.marketplaceFundedDiscountAmount || amounts.discountAmount || 0,
     );
 
     return discount > 0
@@ -306,9 +300,7 @@ const TaxInvoices = () => {
 
       toast.success("Download started");
     } catch (downloadError) {
-      toast.error(
-        downloadError?.message || "Unable to download invoice",
-      );
+      toast.error(downloadError?.message || "Unable to download invoice");
     } finally {
       setDownloadingId(null);
     }
@@ -349,9 +341,7 @@ const TaxInvoices = () => {
           label: "Document",
           sortable: true,
           render: (value, row) => {
-            const documentLabel = invoiceTypeLabel(
-              value || row.invoice_type,
-            );
+            const documentLabel = invoiceTypeLabel(value || row.invoice_type);
             const purpose = invoicePurpose(row);
 
             return (
@@ -363,10 +353,7 @@ const TaxInvoices = () => {
                   {truncateToWordBoundary(documentLabel, 25)}
                 </span>
 
-                <div
-                  className="mt-1 text-xs text-gray-500"
-                  title={purpose}
-                >
+                <div className="mt-1 text-xs text-gray-500" title={purpose}>
                   {truncateToWordBoundary(purpose, 40)}
                 </div>
               </div>
@@ -393,8 +380,7 @@ const TaxInvoices = () => {
               metadata.buyer?.email ||
               "Customer";
 
-            const issuer =
-              type === "seller_customer" ? seller : "Sam Global";
+            const issuer = type === "seller_customer" ? seller : "Sam Global";
 
             const recipient =
               type === "platform_commission" ? seller : customer;
@@ -402,16 +388,12 @@ const TaxInvoices = () => {
             return (
               <div className="min-w-[220px] text-xs text-gray-600">
                 <div>
-                  <span className="font-semibold text-gray-800">
-                    From:
-                  </span>{" "}
+                  <span className="font-semibold text-gray-800">From:</span>{" "}
                   {issuer}
                 </div>
 
                 <div>
-                  <span className="font-semibold text-gray-800">
-                    To:
-                  </span>{" "}
+                  <span className="font-semibold text-gray-800">To:</span>{" "}
                   {recipient}
                 </div>
               </div>
@@ -422,8 +404,7 @@ const TaxInvoices = () => {
           key: "state",
           label: "Status",
           render: (value, row) => {
-            const status =
-              value || row.status || row.invoice_state || "issued";
+            const status = value || row.status || row.invoice_state || "issued";
 
             return (
               <StatusBadge
@@ -448,10 +429,7 @@ const TaxInvoices = () => {
             const { name, id } = resolveStoreName(row, storeNameMap);
 
             return (
-              <span
-                className="font-medium text-[var(--admin-navy)]"
-                title={id}
-              >
+              <span className="font-medium text-[var(--admin-navy)]" title={id}>
                 {name}
               </span>
             );
@@ -473,9 +451,7 @@ const TaxInvoices = () => {
           sortable: true,
           render: (value, row) => (
             <span className="text-sm font-medium">
-              {formatIndianNumber(
-                value ?? row.totalTax ?? row.tax_amount,
-              )}
+              {formatIndianNumber(value ?? row.totalTax ?? row.tax_amount)}
             </span>
           ),
         },
@@ -495,9 +471,7 @@ const TaxInvoices = () => {
           sortable: true,
           render: (value, row) => (
             <span className="text-xs text-gray-500">
-              {formatDateTime12Hour(
-                value ?? row.issueDate ?? row.issued_at,
-              )}
+              {formatDateTime12Hour(value ?? row.issueDate ?? row.issued_at)}
             </span>
           ),
         },
@@ -520,24 +494,9 @@ const TaxInvoices = () => {
         breadcrumbs={[
           { label: "Invoices & Taxation" },
           {
-            label: isSellerPanel()
-              ? "Invoice Documents"
-              : "Tax Invoices",
+            label: isSellerPanel() ? "Invoice Documents" : "Tax Invoices",
           },
         ]}
-        actions={
-          !isSellerPanel() ? (
-            <PermissionGuard module="tax" action={ACTIONS.UPDATE} hide>
-              <button
-                type="button"
-                onClick={() => setInvoiceModal(true)}
-              >
-                <MdAdd aria-hidden="true" size={16} />
-                Generate Invoice
-              </button>
-            </PermissionGuard>
-          ) : null
-        }
       />
 
       <DataTable
@@ -550,11 +509,7 @@ const TaxInvoices = () => {
         emptyMessage={error || "No tax invoices found"}
         onRefresh={fetchInvoices}
         filterBar={
-          <FilterBar
-            filters={FILTER_FIELDS}
-            listPage={list}
-            loading={false}
-          />
+          <FilterBar filters={FILTER_FIELDS} listPage={list} loading={false} />
         }
         rowActions={(row) => {
           const invoiceId = pick(row, "id", "invoiceId", "invoice_id");
@@ -601,9 +556,7 @@ const TaxInvoices = () => {
         onClose={closeInvoiceModal}
         title="Generate Invoice"
         submitButtonText={
-          invoiceFormik.isSubmitting
-            ? "Generating..."
-            : "Generate Invoice"
+          invoiceFormik.isSubmitting ? "Generating..." : "Generate Invoice"
         }
         closeButtonText="Cancel"
         onSubmit={invoiceFormik.handleSubmit}
@@ -622,9 +575,7 @@ const TaxInvoices = () => {
             placeholder="Enter order ID"
             required
             error={
-              invoiceFormik.touched.orderId
-                ? invoiceFormik.errors.orderId
-                : ""
+              invoiceFormik.touched.orderId ? invoiceFormik.errors.orderId : ""
             }
           />
         </FormSection>

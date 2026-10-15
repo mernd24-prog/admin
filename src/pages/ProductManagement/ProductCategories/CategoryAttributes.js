@@ -7,7 +7,14 @@ import React, {
 } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { MdArrowBack, MdAdd, MdDelete, MdEdit, MdClose } from "react-icons/md";
+import {
+  MdArrowBack,
+  MdAdd,
+  MdDelete,
+  MdEdit,
+  MdClose,
+  MdInfoOutline,
+} from "react-icons/md";
 import { formatLabel } from "../../../utils/formatters";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import Input from "../../../components/Atoms/Input/Input";
@@ -293,6 +300,26 @@ const NOTEBOOK_COMMON_OPTIONS = [
   "90 GSM",
   "100 GSM",
 ];
+
+const InfoTooltip = ({ message }) => (
+  <span className="relative inline-flex items-center group">
+    <MdInfoOutline
+      size={16}
+      className="text-[var(--admin-blue)] cursor-help"
+      aria-label="More information"
+    />
+
+    <span
+      role="tooltip"
+      className="absolute bottom-full left-1/2 z-50 mb-2
+        hidden w-52 -translate-x-1/2 rounded-md bg-gray-900
+        px-3 py-2 text-center text-xs leading-5 text-white
+        shadow-lg group-hover:block group-focus-within:block"
+    >
+      {message}
+    </span>
+  </span>
+);
 
 const NOTEBOOK_ATTRIBUTE_PRESETS = [
   {
@@ -585,7 +612,7 @@ const AttributeRow = ({
         {(attribute.type === "select" || attribute.type === "multi_select") && (
           <>
             <FilterSelect
-              label="Product Option Master"
+              label="Product Option"
               options={platformOptionChoices}
               value={
                 platformOptionChoices.find(
@@ -597,12 +624,19 @@ const AttributeRow = ({
                 onUpdate(index, "platformOptionId", nextOptionId);
                 if (nextOptionId) onLoadOptionValues(nextOptionId);
               }}
-              placeholder="Select Size, Color, Ruling, Pages..."
+              placeholder="Select Size, Color..."
               isClearable
             />
             <div className="md:col-span-2">
+              <div className="mb-1 flex items-center gap-1.5">
+                <span className="text-sm font-medium text-gray-700">
+                  Allowed Values
+                </span>
+
+                <InfoTooltip message="Select values from existing options or type custom values. You can also enable custom category-specific values below." />
+              </div>
+
               <FilterSelect
-                label="Allowed Values"
                 isMulti
                 isCreatable
                 options={allowedSelectOptions}
@@ -613,10 +647,11 @@ const AttributeRow = ({
                       typeof item === "object" ? valueName(item) : String(item),
                     )
                     .filter(Boolean);
+
                   onUpdate(index, "options", values);
                 }}
                 placeholder="Select from options or type custom values..."
-                helperText="Click to select allowed values from the list, or type a custom value and press Enter"
+                helperText=""
               />
               <label className="mt-2 flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
                 <input

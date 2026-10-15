@@ -20,11 +20,7 @@ const customStyles = (error, controlHeight, mutedValue) => ({
           ? ""
           : "var(--admin-field-line)",
 
-    boxShadow: error
-      ? "0 0 0 1px var(--admin-danger)"
-      : state.isFocused
-        ? ""
-        : "none",
+    boxShadow: error ? "none" : state.isFocused ? "" : "none",
 
     borderRadius: "0.375rem",
     minHeight: controlHeight ? `${controlHeight}px` : "36px",
@@ -50,9 +46,7 @@ const customStyles = (error, controlHeight, mutedValue) => ({
 
   placeholder: (provided, state) => ({
     ...provided,
-    color: state.isDisabled
-      ? "#9ca3af"
-      : "var(--admin-muted)",
+    color: state.isDisabled ? "#9ca3af" : "var(--admin-muted)",
     fontSize: "0.875rem",
     paddingLeft: "2px",
   }),
@@ -61,7 +55,9 @@ const customStyles = (error, controlHeight, mutedValue) => ({
     ...provided,
     color: state.isDisabled
       ? "#9ca3af"
-      : mutedValue ? "var(--admin-muted)" : "var(--admin-ink)",
+      : mutedValue
+        ? "var(--admin-muted)"
+        : "var(--admin-ink)",
     fontSize: "0.875rem",
     paddingLeft: "2px",
   }),
@@ -173,17 +169,19 @@ const CustomDropdownIndicator = (props) => {
   );
 };
 
-export const ThreeDotLoadingIndicator = () => (
-  <span
-    className="inline-flex items-center gap-0.5 text-gray-400"
-    role="status"
-    aria-label="Loading"
-  >
-    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
-    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
-    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" />
-  </span>
-);
+// export const ThreeDotLoadingIndicator = () => (
+//   <span
+//     className="inline-flex items-center gap-0.5 text-gray-400"
+//     role="status"
+//     aria-label="Loading"
+//   >
+//     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
+//     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
+//     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" />
+//   </span>
+// );
+
+const NoLoadingIndicator = () => null;
 
 const FilterSelect = ({
   label,
@@ -206,7 +204,7 @@ const FilterSelect = ({
   className = "",
   loadOptions,
   defaultOptions = true,
-  loadingMessage = () => <ThreeDotLoadingIndicator />,
+  loadingMessage = () => <span className="text-sm">Loading...</span>,
   cacheOptions = true,
   formatOptionLabel,
   controlHeight,
@@ -266,9 +264,10 @@ const FilterSelect = ({
           menuPosition="fixed"
           aria-invalid={Boolean(error)}
           noOptionsMessage={noOptionsMessage}
-          loadingMessage={loadingMessage || (() => " ")}
+          loadingMessage={loadingMessage}
           components={{
             DropdownIndicator: CustomDropdownIndicator,
+            LoadingIndicator: NoLoadingIndicator,
           }}
         />
 

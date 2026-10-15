@@ -43,7 +43,6 @@ import {
 } from "../../../utils/formatters";
 
 import {
-  FinancePageGuide,
   FinanceStatusBadge,
   financeDateTime,
   financeMoney,
@@ -1009,7 +1008,7 @@ const SellerPayouts = () => {
 
       {/* {isSeller && <FinanceNav />} */}
 
-      {isSeller && (
+      {/* {isSeller && (
         <FinancePageGuide
           step="4"
           icon={MdPayments}
@@ -1020,7 +1019,7 @@ const SellerPayouts = () => {
             "Paid means the transfer completed",
           ]}
         />
-      )}
+      )} */}
 
       {isSeller && (
         <div className="grid gap-3 sm:grid-cols-3">
@@ -1083,15 +1082,23 @@ const SellerPayouts = () => {
       )}
 
       {isSeller && (
-        <div className="admin-card border-l-4 border-l-[var(--admin-gold)] px-4 py-3 text-sm text-[var(--admin-ink)]">
-          <strong>
-            Receivable − fees − COD/other adjustments = amount transferred.
-          </strong>
+        <div className="rounded-xl border border-[var(--admin-line)] bg-white px-4 py-4 shadow-sm sm:px-5">
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
+                How your payout is calculated
+              </h3>
 
-          <span className="ml-1 text-[var(--admin-muted)]">
-            A completed ₹0 payout means earnings were fully adjusted; check the
-            outcome column.
-          </span>
+              <p className="mt-2 text-sm font-medium leading-6 text-[var(--admin-ink)]">
+                Receivable − fees − COD/other adjustments = amount transferred
+              </p>
+
+              <p className="mt-1.5 text-xs leading-5 text-[var(--admin-muted)]">
+                A completed ₹0 payout means your earnings were fully adjusted.
+                Check the outcome column for details.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

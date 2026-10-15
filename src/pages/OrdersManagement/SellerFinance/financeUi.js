@@ -489,55 +489,55 @@ export const FinanceEmptyState = ({ title, description }) => (
   </div>
 );
 
-export const FinancePageGuide = ({
-  step,
-  title,
-  description,
-  points = [],
-  icon: Icon,
-}) => {
-  const GuideIcon = Icon || MdTipsAndUpdates;
+// export const FinancePageGuide = ({
+//   step,
+//   title,
+//   description,
+//   points = [],
+//   icon: Icon,
+// }) => {
+//   const GuideIcon = Icon || MdTipsAndUpdates;
 
-  return (
-    <div className="flex flex-col gap-3 rounded-lg  bg-[#fffdf8] border border-[var(--admin-line)]/70 px-4 py-6 sm:flex-row sm:items-center sm:justify-between shadow-xs">
-      <div className="flex min-w-0 flex-1 items-start gap-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#ead8a9] bg-[#fff8e6] text-[var(--admin-gold-dark)] shadow-xs">
-          <GuideIcon size={17} />
-        </span>
-        <div className="min-w-0 flex-1">
-          {step && (
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--admin-navy)]">
-              Step {step} of 5
-            </span>
-          )}
+//   return (
+//     <div className="flex flex-col gap-3 rounded-lg  bg-[#fffdf8] border border-[var(--admin-line)]/70 px-4 py-6 sm:flex-row sm:items-center sm:justify-between shadow-xs">
+//       <div className="flex min-w-0 flex-1 items-start gap-3">
+//         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#ead8a9] bg-[#fff8e6] text-[var(--admin-gold-dark)] shadow-xs">
+//           <GuideIcon size={17} />
+//         </span>
+//         <div className="min-w-0 flex-1">
+//           {step && (
+//             <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--admin-navy)]">
+//               Step {step} of 5
+//             </span>
+//           )}
 
-          <h2 className="!mb-0 my-2 text-xs sm:text-[13px] font-bold text-[var(--admin-navy)]">
-            {title}
-          </h2>
-          {description && (
-            <p className="mt-0.5 text-xs leading-relaxed text-[var(--admin-muted)]">
-              {description}
-            </p>
-          )}
-        </div>
-      </div>
+//           <h2 className="!mb-0 my-2 text-xs sm:text-[13px] font-bold text-[var(--admin-navy)]">
+//             {title}
+//           </h2>
+//           {description && (
+//             <p className="mt-0.5 text-xs leading-relaxed text-[var(--admin-muted)]">
+//               {description}
+//             </p>
+//           )}
+//         </div>
+//       </div>
 
-      {points.length > 0 && (
-        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-          {points.map((point) => (
-            <span
-              key={point}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700"
-            >
-              <MdCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-              <span>{point}</span>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+//       {points.length > 0 && (
+//         <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+//           {points.map((point) => (
+//             <span
+//               key={point}
+//               className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700"
+//             >
+//               <MdCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+//               <span>{point}</span>
+//             </span>
+//           ))}
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
 
 export const FinanceMetricCard = ({
   label,
@@ -676,21 +676,39 @@ export const CalculationRows = ({ row }) => {
       </p>
       <details className="group rounded-lg border border-[var(--admin-line)] p-3 text-xs">
         <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold [&::-webkit-details-marker]:hidden">
-          <MdChevronRight aria-hidden="true" size={18} className="shrink-0 transition-transform group-open:rotate-90" />
+          <MdChevronRight
+            aria-hidden="true"
+            size={18}
+            className="shrink-0 transition-transform group-open:rotate-90"
+          />
           VIEW TAX &amp; TECHNICAL DETAILS
         </summary>
         <dl className="mt-3 divide-y divide-[var(--admin-line)] border-t border-[var(--admin-line)]">
           {[
             ["Settlement Row", row.id || "—"],
-            ["Seller-funded Promotion", financeMoney(amounts.sellerPromotion, currency)],
-            ["Payment-partner Contribution", financeMoney(amounts.partnerPromotion, currency)],
+            [
+              "Seller-funded Promotion",
+              financeMoney(amounts.sellerPromotion, currency),
+            ],
+            [
+              "Payment-partner Contribution",
+              financeMoney(amounts.partnerPromotion, currency),
+            ],
             ["Shipping Credit", financeMoney(amounts.shippingCredit, currency)],
-            ["Shipping Deduction", financeMoney(amounts.shippingDeduction, currency)],
+            [
+              "Shipping Deduction",
+              financeMoney(amounts.shippingDeduction, currency),
+            ],
             ["Created", financeDateTime(row.created_at || row.createdAt)],
           ].map(([label, value]) => (
-            <div key={label} className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-2 sm:gap-4">
+            <div
+              key={label}
+              className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-2 sm:gap-4"
+            >
               <dt className="text-[var(--admin-muted)]">{label}</dt>
-              <dd className="min-w-0 break-words font-medium tabular-nums text-[var(--admin-ink)] sm:text-right">{value}</dd>
+              <dd className="min-w-0 break-words font-medium tabular-nums text-[var(--admin-ink)] sm:text-right">
+                {value}
+              </dd>
             </div>
           ))}
         </dl>

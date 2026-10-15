@@ -152,12 +152,14 @@ const cancellationDisplayStatus = (cancellation = {}) => {
   if (status === "approved") return "cancellation_approved";
   if (status === "processing") return "cancellation_processing";
   if (status === "rejected") return "cancellation_rejected";
-  if (status === "failed" || refundStatus === "failed") return "cancellation_failed";
+  if (status === "failed" || refundStatus === "failed")
+    return "cancellation_failed";
   if (status === "completed") return "cancelled";
   if (
     ["refund_pending", "manual_review"].includes(status) ||
     ["pending", "provider_pending", "manual_review"].includes(refundStatus)
-  ) return "refund_pending";
+  )
+    return "refund_pending";
   return status || "cancellation_requested";
 };
 
@@ -261,8 +263,14 @@ const getReturnItemTitle = (item = {}) => {
 const getReturnItemQuantity = (item = {}, requestStatus = "") =>
   Number(
     firstDefined(
-      ["requested", "pending", "under_review"].includes(String(requestStatus).toLowerCase())
-        ? firstDefined(item.requestedQuantity, item.requested_quantity, item.quantity)
+      ["requested", "pending", "under_review"].includes(
+        String(requestStatus).toLowerCase(),
+      )
+        ? firstDefined(
+            item.requestedQuantity,
+            item.requested_quantity,
+            item.quantity,
+          )
         : undefined,
       item.approvedQuantity,
       item.approved_quantity,
@@ -2387,7 +2395,9 @@ const RelatedCard = ({
         </div>
 
         {subtitle && (
-          <div className="uppercase mt-0.5 text-xs text-[#65718b]">{subtitle}</div>
+          <div className="uppercase mt-0.5 text-xs text-[#65718b]">
+            {subtitle}
+          </div>
         )}
       </div>
 
@@ -2920,7 +2930,9 @@ const OrderSummary = () => {
     const quantities = new Map();
     cancellations
       .filter((request) =>
-        ACTIVE_CANCELLATION_STATUSES.has(String(request.status || "").toLowerCase()),
+        ACTIVE_CANCELLATION_STATUSES.has(
+          String(request.status || "").toLowerCase(),
+        ),
       )
       .flatMap((request) => (Array.isArray(request.items) ? request.items : []))
       .forEach((item) => {
@@ -2948,12 +2960,18 @@ const OrderSummary = () => {
           : String(shipment.seller_id || shipment.sellerId || "") === sellerId;
       });
       if (!relevant.length) {
-        return !["shipped", "out_for_delivery", "delivered", "fulfilled", "cancelled"].includes(
-          String(order.status || "").toLowerCase(),
-        );
+        return ![
+          "shipped",
+          "out_for_delivery",
+          "delivered",
+          "fulfilled",
+          "cancelled",
+        ].includes(String(order.status || "").toLowerCase());
       }
       return relevant.every((shipment) =>
-        CANCELLABLE_SHIPMENT_STATUSES.has(String(shipment.status || "").toLowerCase()),
+        CANCELLABLE_SHIPMENT_STATUSES.has(
+          String(shipment.status || "").toLowerCase(),
+        ),
       );
     },
     [order.status, shipments],
@@ -2961,9 +2979,12 @@ const OrderSummary = () => {
   const cancellableSellerItems = useMemo(
     () =>
       items.filter((item) => {
-        const pending = pendingCancellationQuantityByItem.get(String(item.id)) || 0;
+        const pending =
+          pendingCancellationQuantityByItem.get(String(item.id)) || 0;
         const remaining =
-          Number(item.quantity || 0) - Number(item.cancelled_quantity || 0) - pending;
+          Number(item.quantity || 0) -
+          Number(item.cancelled_quantity || 0) -
+          pending;
         return remaining > 0 && isItemShipmentCancellable(item);
       }),
     [items, pendingCancellationQuantityByItem, isItemShipmentCancellable],
@@ -3135,10 +3156,14 @@ const OrderSummary = () => {
   }, []);
 
   useEffect(() => {
-    if (!state.statusModal || formData.status !== "cancelled" || !orderId) return undefined;
+    if (!state.statusModal || formData.status !== "cancelled" || !orderId)
+      return undefined;
     const selectedItems = Object.entries(formData.cancelItems || {})
       .filter(([, quantity]) => Number(quantity) > 0)
-      .map(([orderItemId, quantity]) => ({ orderItemId, quantity: Number(quantity) }));
+      .map(([orderItemId, quantity]) => ({
+        orderItemId,
+        quantity: Number(quantity),
+      }));
     if (!selectedItems.length) {
       setState((prev) => ({
         ...prev,
@@ -3161,13 +3186,15 @@ const OrderSummary = () => {
         ).unwrap();
         setState((prev) => ({
           ...prev,
-        cancellationPreview: response?.data || null,
-        cancellationPreviewLoading: false,
-        cancellationPreviewUnavailable: false,
-      }));
+          cancellationPreview: response?.data || null,
+          cancellationPreviewLoading: false,
+          cancellationPreviewUnavailable: false,
+        }));
       } catch (error) {
         const previewError = String(error?.message || error || "");
-        const previewUnavailable = previewError.toLowerCase().includes("route not found");
+        const previewUnavailable = previewError
+          .toLowerCase()
+          .includes("route not found");
         setState((prev) => ({
           ...prev,
           cancellationPreview: null,
@@ -3180,7 +3207,13 @@ const OrderSummary = () => {
       }
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [dispatch, formData.cancelItems, formData.status, orderId, state.statusModal]);
+  }, [
+    dispatch,
+    formData.cancelItems,
+    formData.status,
+    orderId,
+    state.statusModal,
+  ]);
 
   const handleStatusSubmit = useCallback(async () => {
     const cancellationItems = Object.entries(formData.cancelItems || {})
@@ -3248,24 +3281,39 @@ const OrderSummary = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, fetchOrderInfo, formData, handleError, isSeller, orderId, setLoading, state.cancellationPreview, state.cancellationPreviewError, state.cancellationPreviewLoading, state.cancellationPreviewUnavailable]);
+  }, [
+    dispatch,
+    fetchOrderInfo,
+    formData,
+    handleError,
+    isSeller,
+    orderId,
+    setLoading,
+    state.cancellationPreview,
+    state.cancellationPreviewError,
+    state.cancellationPreviewLoading,
+    state.cancellationPreviewUnavailable,
+  ]);
 
-  const handleNoteSubmit = useCallback(async (values, { resetForm }) => {
-    try {
-      setLoading(true);
-      await dispatch(
-        addOrderNote({ orderId, ...values, note: values.note.trim() }),
-      ).unwrap();
-      toast.success("Note added successfully");
-      setState((prev) => ({ ...prev, noteModal: false }));
-      resetForm();
-      await fetchOrderInfo();
-    } catch (error) {
-      handleError(error, "Failed to add order note");
-    } finally {
-      setLoading(false);
-    }
-  }, [dispatch, fetchOrderInfo, handleError, orderId, setLoading]);
+  const handleNoteSubmit = useCallback(
+    async (values, { resetForm }) => {
+      try {
+        setLoading(true);
+        await dispatch(
+          addOrderNote({ orderId, ...values, note: values.note.trim() }),
+        ).unwrap();
+        toast.success("Note added successfully");
+        setState((prev) => ({ ...prev, noteModal: false }));
+        resetForm();
+        await fetchOrderInfo();
+      } catch (error) {
+        handleError(error, "Failed to add order note");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [dispatch, fetchOrderInfo, handleError, orderId, setLoading],
+  );
 
   const noteFormik = useFormik({
     initialValues: { note: "", visibility: "internal" },
@@ -3373,10 +3421,10 @@ const OrderSummary = () => {
                 </PermissionGuard>
               )}
               {isSeller && cancellableSellerItems.length > 0 && (
-                  <button type="button" onClick={openSellerCancellationModal}>
-                    <FaFile /> Cancel Items
-                  </button>
-                )}
+                <button type="button" onClick={openSellerCancellationModal}>
+                  <FaFile /> Cancel Items
+                </button>
+              )}
             </>
           }
         />
@@ -4254,7 +4302,8 @@ const OrderSummary = () => {
                               : []
                           ).reduce(
                             (total, item) =>
-                              total + getReturnItemQuantity(item, returnRequest.status),
+                              total +
+                              getReturnItemQuantity(item, returnRequest.status),
                             0,
                           );
 
@@ -4357,7 +4406,10 @@ const OrderSummary = () => {
 
                                           <div className="text-[#65718b]">
                                             Returned Qty{" "}
-                                            {getReturnItemQuantity(item, returnRequest.status)}
+                                            {getReturnItemQuantity(
+                                              item,
+                                              returnRequest.status,
+                                            )}
                                             {getReturnItemVariantText(item)
                                               ? ` · ${getReturnItemVariantText(
                                                   item,
@@ -4940,7 +4992,11 @@ const OrderSummary = () => {
         title={isSeller ? "Cancel My Items" : "Administrative Status Override"}
         onSubmit={statusFormik.handleSubmit}
         loading={state.isLoading}
-        submitButtonText={formData.status === "cancelled" ? "Confirm cancellation" : "Update status"}
+        submitButtonText={
+          formData.status === "cancelled"
+            ? "Confirm cancellation"
+            : "Update status"
+        }
         closeButtonText="Close"
         submitDisabled={
           formData.status === "cancelled" &&
@@ -4991,7 +5047,9 @@ const OrderSummary = () => {
                 }}
                 placeholder="Select Status"
                 isSearchable={false}
-                error={statusFormik.submitCount > 0 && statusFormik.errors.status}
+                error={
+                  statusFormik.submitCount > 0 && statusFormik.errors.status
+                }
               />
             </FormSection>
           )}
@@ -5132,7 +5190,8 @@ const OrderSummary = () => {
                           catalog_issue: "Incorrect catalogue or listing",
                           delivery_restricted: "Restricted delivery location",
                           compliance_hold: "Compliance or fraud hold",
-                          customer_support_request: "Customer requested through support",
+                          customer_support_request:
+                            "Customer requested through support",
                         }[formData.reasonCode] || "Other",
                     }}
                     onChange={(option) =>
@@ -5147,9 +5206,13 @@ const OrderSummary = () => {
 
                   {isSeller ? (
                     <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-                      <p className="font-semibold">Refund managed by the platform</p>
+                      <p className="font-semibold">
+                        Refund managed by the platform
+                      </p>
                       <p className="mt-1 text-xs">
-                        The customer refund route is selected from the payment method and platform policy. Sellers cannot redirect or manually complete refunds.
+                        The customer refund route is selected from the payment
+                        method and platform policy. Sellers cannot redirect or
+                        manually complete refunds.
                       </p>
                     </div>
                   ) : (
@@ -5163,12 +5226,13 @@ const OrderSummary = () => {
                       ]}
                       value={{
                         value: formData.refundMethod,
-                        label: {
-                          auto: "Automatic",
-                          original_source: "Original source",
-                          wallet: "Wallet",
-                          manual: "Manual review",
-                        }[formData.refundMethod] || "Automatic",
+                        label:
+                          {
+                            auto: "Automatic",
+                            original_source: "Original source",
+                            wallet: "Wallet",
+                            manual: "Manual review",
+                          }[formData.refundMethod] || "Automatic",
                       }}
                       onChange={(option) =>
                         setFormData((prev) => ({
@@ -5205,7 +5269,8 @@ const OrderSummary = () => {
                         Number(item.quantity || 0) -
                         Number(item.cancelled_quantity || 0) -
                         pending;
-                      const shipmentCancellable = isItemShipmentCancellable(item);
+                      const shipmentCancellable =
+                        isItemShipmentCancellable(item);
                       const blocked = remaining <= 0 || !shipmentCancellable;
 
                       const selected = Object.prototype.hasOwnProperty.call(
@@ -5275,29 +5340,79 @@ const OrderSummary = () => {
                 </div>
 
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <p className="text-sm font-semibold text-gray-800">Cancellation impact</p>
+                  <p className="text-sm font-semibold text-gray-800">
+                    Cancellation impact
+                  </p>
                   {state.cancellationPreviewLoading ? (
-                    <p className="mt-2 text-xs text-gray-500">Calculating from current order values…</p>
+                    <p className="mt-2 text-xs text-gray-500">
+                      Calculating from current order values…
+                    </p>
                   ) : state.cancellationPreviewUnavailable ? (
                     <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                      <p className="font-semibold">Preview temporarily unavailable</p>
-                      <p className="mt-1">The cancellation will still be validated and calculated by the server when you confirm. No estimated amount is being assumed.</p>
+                      <p className="font-semibold">
+                        Preview temporarily unavailable
+                      </p>
+                      <p className="mt-1">
+                        The cancellation will still be validated and calculated
+                        by the server when you confirm. No estimated amount is
+                        being assumed.
+                      </p>
                     </div>
                   ) : state.cancellationPreviewError ? (
-                    <p className="mt-2 text-xs text-red-600">{state.cancellationPreviewError}</p>
+                    <p className="mt-2 text-xs text-red-600">
+                      {state.cancellationPreviewError}
+                    </p>
                   ) : state.cancellationPreview ? (
                     <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
-                      <div><span className="text-gray-500">Items</span><p className="font-semibold">₹{formatIndianNumber(state.cancellationPreview.itemRefundAmount)}</p></div>
-                      <div><span className="text-gray-500">Shipping</span><p className="font-semibold">₹{formatIndianNumber(state.cancellationPreview.shippingRefundAmount)}</p></div>
-                      <div><span className="text-gray-500">Platform fee</span><p className="font-semibold">₹{formatIndianNumber(state.cancellationPreview.platformFeeRefundAmount)}</p></div>
-                      <div><span className="text-gray-500">Customer refund</span><p className="font-semibold text-red-700">₹{formatIndianNumber(state.cancellationPreview.totalRefundAmount)}</p></div>
+                      <div>
+                        <span className="text-gray-500">Items</span>
+                        <p className="font-semibold">
+                          ₹
+                          {formatIndianNumber(
+                            state.cancellationPreview.itemRefundAmount,
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Shipping</span>
+                        <p className="font-semibold">
+                          ₹
+                          {formatIndianNumber(
+                            state.cancellationPreview.shippingRefundAmount,
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Platform fee</span>
+                        <p className="font-semibold">
+                          ₹
+                          {formatIndianNumber(
+                            state.cancellationPreview.platformFeeRefundAmount,
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Customer refund</span>
+                        <p className="font-semibold text-red-700">
+                          ₹
+                          {formatIndianNumber(
+                            state.cancellationPreview.totalRefundAmount,
+                          )}
+                        </p>
+                      </div>
                       <div className="col-span-2 sm:col-span-4">
                         <span className="text-gray-500">Handling: </span>
-                        <span className="font-semibold">{formatLabel(state.cancellationPreview.refundHandling)}</span>
+                        <span className="font-semibold">
+                          {formatLabel(
+                            state.cancellationPreview.refundHandling,
+                          )}
+                        </span>
                       </div>
                     </div>
                   ) : (
-                    <p className="mt-2 text-xs text-gray-500">Select at least one cancellable product.</p>
+                    <p className="mt-2 text-xs text-gray-500">
+                      Select at least one cancellable product.
+                    </p>
                   )}
                 </div>
               </div>
@@ -5330,7 +5445,9 @@ const OrderSummary = () => {
                 onBlur={statusFormik.handleBlur}
                 name="reason"
                 placeholder="Reason or operational note"
-                error={statusFormik.submitCount > 0 && statusFormik.errors.reason}
+                error={
+                  statusFormik.submitCount > 0 && statusFormik.errors.reason
+                }
               />
 
               <Input

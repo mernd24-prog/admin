@@ -34,7 +34,7 @@ import {
   softDeleteTaxRule,
   updateTaxRule,
 } from "../../../Redux/cmsSlice";
-import { getListCategory } from "../../../Redux/userManagementSlice";
+import { getList as getCategoryList } from "../../../Redux/productSlice";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
@@ -118,6 +118,8 @@ const TaxRule = () => {
   const [selectedSubTax, setSelectedSubTax] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [filteredSubTaxOptions, setFilteredSubTaxOptions] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -162,7 +164,6 @@ const TaxRule = () => {
   });
 
   const cmsSelector = useSelector((state) => state.cms);
-  const userSelector = useSelector((state) => state.user);
   const totalRules = cmsSelector?.getListTaxRuleData?.data?.data?.total || 0;
   const taxRuleList = cmsSelector?.getListTaxRuleData?.data?.data?.list || [];
   const taxList = cmsSelector?.getAllDocumentsData?.data?.data?.list || [];
@@ -173,7 +174,6 @@ const TaxRule = () => {
 
   useEffect(() => {
     dispatch(getAllDocuments());
-    dispatch(getListCategory());
   }, []);
 
   useEffect(() => {
@@ -220,51 +220,99 @@ const TaxRule = () => {
     }
   }, [selectedTax, subTaxList, subTaxOptions]);
 
-  const categoryOptions = useMemo(() => {
-    const options = [];
-    const categoryPayload = userSelector?.getListCategoryData?.data?.data;
-    const categories = Array.isArray(categoryPayload)
-      ? categoryPayload
-      : categoryPayload?.list || [];
-    if (!categories.length) return options;
+  // Use the same category-tree API and flattening approach as Product Catalog.
+  // This keeps parent categories and every nested subcategory available in the dropdown.
+  useEffect(() => {
+    let isMounted = true;
 
-    const hasNested = categories.some(
-      (c) => Array.isArray(c?.subcategories) || Array.isArray(c?.subCategories),
-    );
-    if (hasNested) {
-      const addOptions = (nodes, prefix = "") => {
-        if (!Array.isArray(nodes)) return;
-        nodes.forEach((cat) => {
-          const name = cat.name || cat.title || cat.categoryKey;
-          const label = prefix ? `${prefix} > ${name}` : name;
-          options.push({ value: String(cat.categoryKey || cat._id), label });
-          const children = cat.subcategories || cat.subCategories || [];
-          if (children.length) addOptions(children, label);
-        });
-      };
-      addOptions(categories);
-      return options;
-    }
+    const loadCategories = async () => {
+      setCategoryLoading(true);
+      try {
+        const response = await dispatch(
+          getCategoryList({
+            tree: true,
+            limit: 100,
+          }),
+        );
 
-    const byParent = new Map();
-    categories.forEach((cat) => {
-      const parent = cat?.parentKey ? String(cat.parentKey) : "__root__";
-      if (!byParent.has(parent)) byParent.set(parent, []);
-      byParent.get(parent).push(cat);
-    });
-    const walk = (parent = "__root__", prefix = "") => {
-      (byParent.get(parent) || [])
-        .sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0))
-        .forEach((cat) => {
-          const name = cat.name || cat.title || cat.categoryKey;
-          const label = prefix ? `${prefix} > ${name}` : name;
-          options.push({ value: String(cat.categoryKey || cat._id), label });
-          walk(String(cat.categoryKey || cat._id), label);
+        const raw =
+          response?.payload?.data?.data ||
+          response?.payload?.data ||
+          response?.payload?.data?.list ||
+          [];
+
+        const source = Array.isArray(raw) ? raw : raw?.items || raw?.list || [];
+
+        const options = [];
+        const seen = new Set();
+
+        const flattenTree = (nodes = [], prefix = "") => {
+          if (!Array.isArray(nodes)) return;
+
+          nodes.forEach((node) => {
+            if (!node || typeof node !== "object") return;
+
+            const name = node?.title || node?.name || node?.categoryKey || "";
+            const key = node?.categoryKey || String(node?._id || "");
+
+            if (name && key && !seen.has(String(key))) {
+              seen.add(String(key));
+              options.push({
+                value: String(key),
+                label: prefix ? `${prefix} > ${name}` : name,
+              });
+            }
+
+            const children = node?.children || node?.subCategories || [];
+            if (Array.isArray(children) && children.length) {
+              flattenTree(
+                children,
+                prefix ? `${prefix} > ${name}` : String(name),
+              );
+            }
+          });
+        };
+
+        flattenTree(source);
+
+        // Support flat category responses too, without dropping categories
+        // that do not have their parent nested in the response.
+        const flatSource = Array.isArray(raw)
+          ? raw
+          : raw?.items || raw?.list || [];
+        flatSource.forEach((category) => {
+          const key =
+            category?.categoryKey ||
+            category?._id ||
+            category?.id ||
+            category?.key;
+          const name =
+            category?.title ||
+            category?.name ||
+            category?.categoryName ||
+            category?.categoryKey;
+
+          if (key && name && !seen.has(String(key))) {
+            seen.add(String(key));
+            options.push({ value: String(key), label: String(name) });
+          }
         });
+
+        if (isMounted) setCategoryOptions(options);
+      } catch (error) {
+        console.error("Failed to load categories for tax rules:", error);
+        if (isMounted) setCategoryOptions([]);
+      } finally {
+        if (isMounted) setCategoryLoading(false);
+      }
     };
-    walk();
-    return options;
-  }, [userSelector.getListCategoryData]);
+
+    loadCategories();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [dispatch]);
 
   const closeModal = () => {
     setModalMode(null);
@@ -528,6 +576,7 @@ const TaxRule = () => {
                 {/* Category */}
                 <FilterSelect
                   options={categoryOptions}
+                  isLoading={categoryLoading}
                   label="Select Category"
                   value={selectedCategory}
                   onChange={handleCategoryChange}

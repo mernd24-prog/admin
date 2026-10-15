@@ -9,7 +9,6 @@ import { getMySellerSettlements } from "../../../Redux/sellerCommissionsSlice";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
 import {
-  FinancePageGuide,
   FinanceStatusBadge,
   financeDateTime,
   financeList,
@@ -148,7 +147,7 @@ export default function FinanceStatements() {
         ]}
       />
       {/* <FinanceNav /> */}
-      <FinancePageGuide
+      {/* <FinancePageGuide
         step="5"
         icon={MdReceiptLong}
         title="Keep a record of completed money movements"
@@ -157,7 +156,7 @@ export default function FinanceStatements() {
           "Match using the payout reference",
           "Download PDF for your records",
         ]}
-      />
+      /> */}
       <DataTable
         columns={columns}
         data={pagedRows}

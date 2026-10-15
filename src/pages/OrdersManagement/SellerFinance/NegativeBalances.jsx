@@ -26,6 +26,7 @@ import {
   formatIndianNumber,
   formatLabel,
 } from "../../../utils/formatters";
+import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
 
 const NEGATIVE_BALANCE_STATUSES = [
   "pending",
@@ -392,6 +393,125 @@ const NegativeBalances = () => {
     [sellerMap],
   );
 
+  const handleExport = () => {
+    const rows = payload?.list || [];
+
+    if (!rows.length) {
+      toast.info("No negative balance data available to export.");
+      return;
+    }
+
+    try {
+      const excelColumns = columns
+        .filter(Boolean)
+        .map((column) => ({
+          key: column.key,
+          label: column.label,
+        }))
+        .filter((column) => column.key !== "actions");
+
+      const data = rows.map((row) => {
+        const exportRow = {};
+
+        excelColumns.forEach(({ key }) => {
+          switch (key) {
+            case "settlementId":
+              exportRow[key] = row.settlementNumber || settlementId(row) || "";
+              break;
+
+            case "sellerId": {
+              const id = String(
+                row.sellerId ||
+                  row.seller_id ||
+                  row.seller?._id ||
+                  row.seller?.id ||
+                  "",
+              );
+
+              exportRow[key] =
+                row.sellerName ||
+                row.seller?.businessName ||
+                row.seller?.companyName ||
+                row.seller?.name ||
+                sellerMap[id] ||
+                "Sam Global";
+              break;
+            }
+
+            case "liabilityType":
+              exportRow[key] =
+                row.liabilityType === "seller_collected_cod"
+                  ? "Seller-collected COD"
+                  : "Other adjustment";
+              break;
+
+            case "negativeAmount":
+              exportRow[key] = Number(
+                valueOf(
+                  row,
+                  "negativeAmount",
+                  "originalLiabilityAmount",
+                  "balance",
+                  "net_amount",
+                  "netAmount",
+                  "amount",
+                ),
+              );
+              break;
+
+            case "remainingAmount":
+              exportRow[key] = Number(
+                valueOf(row, "remainingAmount", "net_amount", "netAmount"),
+              );
+              break;
+
+            case "status":
+              exportRow[key] = formatLabel(row.status || "N/A");
+              break;
+
+            case "createdAt":
+              exportRow[key] = formatDateTime12Hour(
+                row.created_at || row.createdAt,
+                "N/A",
+              );
+              break;
+
+            default:
+              exportRow[key] = row[key] ?? "";
+          }
+        });
+
+        // Include order reference in the Type / Order column.
+        if (row.orderId) {
+          exportRow.liabilityType = `${exportRow.liabilityType} | Order: ${row.orderId}`;
+        }
+
+        return exportRow;
+      });
+
+      const exported = exportToExcelWorkbook(
+        [
+          {
+            name: "Negative Balances",
+            title: "Negative Balances Report",
+            data,
+            columns: excelColumns,
+          },
+        ],
+        "Negative_Balances_Report.xlsx",
+      );
+
+      if (exported) {
+        toast.success("Negative balances report exported successfully.");
+      } else {
+        toast.error("Unable to export negative balances report.");
+      }
+    } catch (error) {
+      console.error("Negative balances export error:", error);
+      toast.error("Failed to export negative balances report.");
+    }
+  };
+
   return (
     <div>
       <PageHeader
@@ -441,9 +561,8 @@ const NegativeBalances = () => {
         requiredModule="sellers/commissions"
         emptyText="No sellers currently owe money to the platform."
         exportConfig={{
-          filename: "negative-balances",
-          columns,
-          data: payload.list,
+          onClick: handleExport,
+          disabled: loading || !payload.list.length,
         }}
       />
 

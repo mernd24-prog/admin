@@ -372,76 +372,6 @@ export default function FinanceEarnings() {
         }
       />
 
-      {/* <FinanceNav /> */}
-
-      {/* PAGE GUIDE */}
-      <FinancePageGuide
-        step="2"
-        icon={MdTrendingUp}
-        title="Understand every order earning"
-        description="Each row explains the amount earned from an order and when that money becomes available or gets paid."
-        points={[
-          "Use status and date filters to find money",
-          "View details for the full calculation",
-        ]}
-      />
-
-      {Number(codReconciliation.totalOrders || 0) > 0 && (
-        <section className="admin-card p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="font-semibold">COD order reconciliation</h2>
-              <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                COD orders and earnings are different records. An earning is
-                created after delivery; cash collected from the customer is
-                shown separately as a COD liability.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
-              <div>
-                <strong className="block">
-                  {codReconciliation.totalOrders || 0}
-                </strong>
-                <span className="text-xs text-[var(--admin-muted)]">
-                  COD orders
-                </span>
-              </div>
-              <div>
-                <strong className="block">
-                  {codReconciliation.deliveredOrders || 0}
-                </strong>
-                <span className="text-xs text-[var(--admin-muted)]">
-                  Delivered
-                </span>
-              </div>
-              <div>
-                <strong className="block">
-                  {codReconciliation.awaitingDeliveryOrders || 0}
-                </strong>
-                <span className="text-xs text-[var(--admin-muted)]">
-                  Awaiting delivery
-                </span>
-              </div>
-              <div>
-                <strong className="block">
-                  {codReconciliation.ordersWithLiability || 0}
-                </strong>
-                <span className="text-xs text-[var(--admin-muted)]">
-                  Cash liabilities
-                </span>
-              </div>
-            </div>
-          </div>
-          {Number(codReconciliation.missingEarningOrders || 0) > 0 && (
-            <p className="mt-3 rounded-md bg-amber-50 p-3 text-xs text-amber-800">
-              {codReconciliation.missingEarningOrders} delivered COD order(s)
-              still need an earning calculation. Refresh to retry; if this
-              remains, an administrator should review the order pricing data.
-            </p>
-          )}
-        </section>
-      )}
-
       {/* SUMMARY CARDS */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Cards
@@ -530,6 +460,77 @@ export default function FinanceEarnings() {
           }}
         />
       </div>
+
+      {Number(codReconciliation.totalOrders || 0) > 0 && (
+        <section className="admin-card overflow-hidden">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--admin-line)] px-5 py-4">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-semibold text-[var(--admin-navy)]">
+                COD Order Reconciliation
+              </h2>
+            </div>
+
+            <span className="shrink-0 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-1.5 text-xs font-medium text-[var(--admin-muted)]">
+              Cash on Delivery
+            </span>
+          </div>
+
+          <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
+            {[
+              {
+                label: "COD orders",
+                value: codReconciliation.totalOrders,
+                icon: <MdAccountBalanceWallet aria-hidden="true" size={18} />,
+                iconBg: "#FFF7EA",
+                iconColor: "#1F1B5F",
+              },
+              {
+                label: "Delivered",
+                value: codReconciliation.deliveredOrders,
+                icon: <MdCheckCircle aria-hidden="true" size={18} />,
+                iconBg: "#cce8c9",
+                iconColor: "#1d9b50",
+              },
+              {
+                label: "Awaiting delivery",
+                value: codReconciliation.awaitingDeliveryOrders,
+                icon: <MdHourglassEmpty aria-hidden="true" size={18} />,
+                iconBg: "#ffe5b5",
+                iconColor: "#f5a300",
+              },
+              {
+                label: "Cash liabilities",
+                value: codReconciliation.ordersWithLiability,
+                icon: <MdPauseCircle aria-hidden="true" size={18} />,
+                iconBg: "#ffd4d2",
+                iconColor: "#ff4b55",
+              },
+            ].map((item) => (
+              <Cards
+                key={item.label}
+                label={item.label}
+                value={item.value || 0}
+                icon={item.icon}
+                iconBg={item.iconBg}
+                iconColor={item.iconColor}
+              />
+            ))}
+          </div>
+
+          {Number(codReconciliation.missingEarningOrders || 0) > 0 && (
+            <div className="mx-4 mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 sm:mx-5">
+              <span className="mt-0.5 shrink-0 text-amber-700">
+                <MdHourglassEmpty aria-hidden="true" size={18} />
+              </span>
+              <p className="text-xs leading-5 text-amber-800">
+                {codReconciliation.missingEarningOrders} delivered COD order(s)
+                still need an earning calculation. Refresh to retry; if this
+                remains, an administrator should review the order pricing data.
+              </p>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* STATUS FILTERS */}
       <Tabs

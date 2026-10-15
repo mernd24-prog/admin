@@ -102,7 +102,7 @@ const FILTER_FIELDS = [
   {
     key: "deliveryStatus",
     type: "select",
-    label: "Delivery Status",
+    label: "Shipment Status",
     width: "w-44",
     options: DELIVERY_STATUS_OPTIONS,
   },
@@ -1823,7 +1823,7 @@ const Orders = () => {
     {
       key: "createdAt",
       label: "Date",
-      sortable: true,
+      sortable: false,
 
       render: (value, row) => {
         const date = firstDefined(value, row.created_at);
