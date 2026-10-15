@@ -32,6 +32,7 @@ import {
 } from "../../../utils/formatters";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import { MdCheckCircle, MdVisibility, MdCancel } from "react-icons/md";
+import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
 const PROVIDERS = [
   "razorpay",
   "cod",
@@ -224,7 +225,7 @@ const Payments = () => {
       {
         key: "transaction_reference",
         label: "Payment",
-        sortable: true,
+        sortable: false,
         render: (_, row) => (
           <div>
             <div className="font-semibold text-gray-800">
@@ -268,13 +269,13 @@ const Payments = () => {
       {
         key: "provider",
         label: "Provider",
-        sortable: true,
+        sortable: false,
         render: (value) => <span className="capitalize">{display(value)}</span>,
       },
       {
         key: "status",
         label: "Status",
-        sortable: true,
+        sortable: false,
         render: (value) => <StatusBadge status={display(value)} dot />,
       },
       {
@@ -287,12 +288,77 @@ const Payments = () => {
       {
         key: "created_at",
         label: "Date",
-        sortable: true,
+        sortable: false,
         render: (value) => formatDateTime12Hour(value, "N/A"),
       },
     ],
     [],
   );
+
+  const handleExportPayments = useCallback(() => {
+    if (!payload.list.length) {
+      toast.info("No payments available to export.");
+      return;
+    }
+
+    try {
+      const exportColumns = [
+        { key: "transaction_reference", label: "Payment" },
+        { key: "buyerName", label: "Buyer Name" },
+        { key: "provider", label: "Provider" },
+        { key: "status", label: "Status" },
+        { key: "amount", label: "Amount" },
+        { key: "created_at", label: "Date" },
+      ];
+
+      const exportRows = payload.list.map((row) => {
+        const buyerName =
+          row.buyerName ||
+          row.buyer?.displayName ||
+          row.buyer?.name ||
+          row.buyerSnapshot?.name ||
+          row.buyer_name ||
+          "N/A";
+
+        return {
+          transaction_reference: row.provider
+            ? `${display(row.provider)} payment`
+            : "N/A",
+
+          buyerName,
+
+          provider: display(row.provider),
+
+          status: display(row.status),
+
+          amount: `${row.currency || "INR"} ${formatIndianNumber(row.amount)}`,
+
+          created_at: formatDateTime12Hour(row.created_at, "N/A"),
+        };
+      });
+
+      const exported = exportToExcelWorkbook(
+        [
+          {
+            name: "Payments",
+            title: "Payments",
+            data: exportRows,
+            columns: exportColumns,
+          },
+        ],
+        "Payments.xlsx",
+      );
+
+      if (exported) {
+        toast.success("Payments exported successfully.");
+      } else {
+        toast.error("Unable to export payments.");
+      }
+    } catch (error) {
+      console.error("Payments export error:", error);
+      toast.error("Failed to export payments.");
+    }
+  }, [payload.list]);
 
   return (
     <div>
@@ -301,16 +367,6 @@ const Payments = () => {
         title="Payments"
         subtitle="Reconcile online, COD, and manual payments"
         breadcrumbs={[{ label: "Payments & Finance" }, { label: "Payments" }]}
-        // actions={
-        //   <div className="flex flex-wrap items-center gap-2">
-        //     <button
-        //       type="button"
-        //       onClick={() => navigate("/app/cod-collections")}
-        //     >
-        //       <MdCheckCircle aria-hidden="true" size={17} /> COD Collections
-        //     </button>
-        //   </div>
-        // }
       />
 
       <DataTable
@@ -323,7 +379,7 @@ const Payments = () => {
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
         onSearch={list.setSearch}
-        searchPlaceholder="Search payment, provider reference, or order"
+        searchPlaceholder="Search By Order Id"
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
@@ -402,7 +458,11 @@ const Payments = () => {
           return actions;
         }}
         requiredModule="payments"
-        exportConfig={{ filename: "payments", columns, data: payload.list }}
+        exportConfig={{
+          onClick: handleExportPayments,
+          label: "Export",
+          disabled: loading || !payload.list.length,
+        }}
       />
 
       <DefaultModal

@@ -84,8 +84,9 @@ export const hsnValidationSchema = Yup.object({
     .matches(/^\d{4,8}$/, "Must be 4-8 digits"),
   description: Yup.string()
     .trim()
+    .required("Description is required")
     .transform((value) => (value === "" ? undefined : value))
-    .notRequired()
+
     .min(3, "Description must be at least 3 characters")
     .max(100, "Description must be no more than 100 characters"),
   IGST: taxRateSchema("IGST"),

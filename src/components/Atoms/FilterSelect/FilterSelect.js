@@ -20,11 +20,7 @@ const customStyles = (error, controlHeight, mutedValue) => ({
           ? ""
           : "var(--admin-field-line)",
 
-    boxShadow: error
-      ? "0 0 0 1px var(--admin-danger)"
-      : state.isFocused
-        ? ""
-        : "none",
+    boxShadow: error ? "none" : state.isFocused ? "" : "none",
 
     borderRadius: "0.375rem",
     minHeight: controlHeight ? `${controlHeight}px` : "36px",
@@ -50,9 +46,7 @@ const customStyles = (error, controlHeight, mutedValue) => ({
 
   placeholder: (provided, state) => ({
     ...provided,
-    color: state.isDisabled
-      ? "#9ca3af"
-      : "var(--admin-muted)",
+    color: state.isDisabled ? "#9ca3af" : "var(--admin-muted)",
     fontSize: "0.875rem",
     paddingLeft: "2px",
   }),
@@ -61,7 +55,9 @@ const customStyles = (error, controlHeight, mutedValue) => ({
     ...provided,
     color: state.isDisabled
       ? "#9ca3af"
-      : mutedValue ? "var(--admin-muted)" : "var(--admin-ink)",
+      : mutedValue
+        ? "var(--admin-muted)"
+        : "var(--admin-ink)",
     fontSize: "0.875rem",
     paddingLeft: "2px",
   }),
@@ -185,6 +181,8 @@ export const ThreeDotLoadingIndicator = () => (
   </span>
 );
 
+const NoLoadingIndicator = () => null;
+
 const CustomLoadingIndicator = (props) => (
   <components.LoadingIndicator {...props}>
     <ThreeDotLoadingIndicator />
@@ -212,7 +210,7 @@ const FilterSelect = ({
   className = "",
   loadOptions,
   defaultOptions = true,
-  loadingMessage = () => <ThreeDotLoadingIndicator />,
+  loadingMessage = () => <span className="text-sm">Loading...</span>,
   cacheOptions = true,
   formatOptionLabel,
   controlHeight,
@@ -272,7 +270,7 @@ const FilterSelect = ({
           menuPosition="fixed"
           aria-invalid={Boolean(error)}
           noOptionsMessage={noOptionsMessage}
-          loadingMessage={loadingMessage || (() => " ")}
+          loadingMessage={loadingMessage}
           components={{
             DropdownIndicator: CustomDropdownIndicator,
             LoadingIndicator: CustomLoadingIndicator,

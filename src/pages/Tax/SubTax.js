@@ -425,19 +425,15 @@ const SubTax = () => {
           )}
 
           {/* ==================== Status ==================== */}
-          <FormSection
-            title="Status"
-            description="Control whether this sub-tax is active and available for use."
-          >
-            <FormToggleRow
-              title="Active"
-              description="Enable this sub-tax for applicable tax calculations."
-              isToggle={!formik.values.isDisable}
-              handleClick={() =>
-                formik.setFieldValue("isDisable", !formik.values.isDisable)
-              }
-            />
-          </FormSection>
+
+          <FormToggleRow
+            title="Active"
+            description="Enable this sub-tax for applicable tax calculations."
+            isToggle={!formik.values.isDisable}
+            handleClick={() =>
+              formik.setFieldValue("isDisable", !formik.values.isDisable)
+            }
+          />
         </div>
       </DefaultModal>
 

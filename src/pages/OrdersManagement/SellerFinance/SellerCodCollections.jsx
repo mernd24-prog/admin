@@ -1,9 +1,18 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import {
   MdDeleteOutline,
+  MdMoreVert,
   MdOpenInNew,
   MdRefresh,
   MdUpload,
+  MdVisibility,
 } from "react-icons/md";
 import { toast } from "sonner";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
@@ -20,6 +29,7 @@ import PermissionGuard from "../../../components/Atoms/PermissionGuard/Permissio
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { uploadDocumentFile } from "../../../_helpers/globalFunctions";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import ImageUpload from "../../../components/Atoms/ImageGallery/ImageUpload";
 
 const money = (amount) =>
   `₹${Number(amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -42,12 +52,32 @@ const emptyForm = {
 export default function SellerCodCollections() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 100,
   });
+  const emptyForm = {
+    open: false,
+    row: null,
+    responseType: "retained",
+    amount: "",
+    referenceId: "",
+    proofUrl: "",
+    proofPreview: "",
+    notes: "",
+  };
   const [uploadingProof, setUploadingProof] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [openActionId, setOpenActionId] = useState(null);
+  const [menuPosition, setMenuPosition] = useState(null);
+  const actionButtonRefs = useRef({});
+
+  const [validationErrors, setValidationErrors] = useState({
+    amount: "",
+    referenceId: "",
+    notes: "",
+  });
 
   const load = useCallback(async () => {
     try {
@@ -69,26 +99,82 @@ export default function SellerCodCollections() {
     load();
   }, [load]);
 
+  const filteredItems = useMemo(() => {
+    const query = search
+      .trim()
+      .toLowerCase()
+      .replace(/^#+\s*/, "");
+
+    if (!query) return items;
+
+    return items.filter((row) => {
+      const searchableValues = [
+        row?.order_number,
+        row?.order_id,
+        row?.orderId,
+        row?.shipment_id,
+        row?.awb_number,
+        row?.collection_mode,
+        row?.status,
+      ];
+
+      return searchableValues.some((value) =>
+        String(value ?? "")
+          .toLowerCase()
+          .replace(/^#+\s*/, "")
+          .includes(query),
+      );
+    });
+  }, [items, search]);
+
   const uploadProof = useCallback(async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+    const input = event.target;
+    const file = input.files?.[0];
+
     if (!file) return;
-    if (
-      !["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(
-        file.type,
-      )
-    ) {
-      toast.error("Upload a PDF, JPG, PNG, or WebP collection proof");
+
+    // Allow the same file to be selected again later.
+    input.value = "";
+
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Upload a PDF, JPG, PNG, or WebP file");
       return;
     }
+
+    const MAX_SIZE = 5 * 1024 * 1024;
+
+    if (file.size > MAX_SIZE) {
+      toast.error("File size must not exceed 5 MB");
+      return;
+    }
+
     try {
       setUploadingProof(true);
-      const proofUrl = await uploadDocumentFile(file, "COD_COLLECTIONS");
-      setForm((current) => ({ ...current, proofUrl }));
-      toast.success("Collection proof uploaded");
+
+      const uploadedUrl = await uploadDocumentFile(file, "COD_COLLECTIONS");
+
+      if (!uploadedUrl || typeof uploadedUrl !== "string") {
+        throw new Error("Upload did not return a valid file URL");
+      }
+
+      setForm((current) => ({
+        ...current,
+        proofUrl: uploadedUrl,
+      }));
+
+      toast.success("Collection proof uploaded successfully");
     } catch (error) {
       toast.error(
-        error?.message || error || "Unable to upload collection proof",
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload collection proof",
       );
     } finally {
       setUploadingProof(false);
@@ -100,33 +186,61 @@ export default function SellerCodCollections() {
       toast.error("Please wait for the proof upload to finish");
       return;
     }
+
     const isDispute = form.responseType === "dispute";
+
+    const errors = {
+      amount: "",
+      referenceId: "",
+      notes: "",
+    };
+
     if (!form.row?.shipment_id) return;
+
+    if (!isDispute) {
+      if (!form.amount || Number(form.amount) <= 0) {
+        errors.amount = "Please enter a valid collected amount";
+      }
+
+      if (form.referenceId.trim().length < 3) {
+        errors.referenceId =
+          "Collection reference must be at least 3 characters";
+      }
+    }
+
     if (isDispute && form.notes.trim().length < 5) {
-      toast.error("Explain why this COD liability is disputed");
+      errors.notes =
+        "Explain why this COD liability is disputed (minimum 5 characters)";
+    }
+
+    setValidationErrors(errors);
+
+    if (Object.values(errors).some(Boolean)) {
       return;
     }
-    if (
-      !isDispute &&
-      (Number(form.amount) <= 0 || form.referenceId.trim().length < 3)
-    ) {
-      toast.error("Collected amount and reference are required");
-      return;
-    }
+
     try {
       setLoading(true);
+
       await axiosProvider.post(
         ENDPOINTS.payments.submitCodCollection(form.row.shipment_id),
         {
           submissionType: form.responseType,
           collectedAmount: Number(form.amount),
-          referenceId: form.referenceId,
+          referenceId: form.referenceId.trim(),
           proofUrl: form.proofUrl || null,
           notes: form.notes || null,
         },
       );
+
       toast.success("COD collection submitted to Admin for verification");
       setForm(emptyForm);
+      setValidationErrors({
+        amount: "",
+        referenceId: "",
+        notes: "",
+      });
+
       await load();
     } catch (error) {
       toast.error(
@@ -206,50 +320,184 @@ export default function SellerCodCollections() {
             "—"
           ),
       },
+      // {
+      //   key: "actions",
+      //   label: "Action",
+      //   render: (_, row) =>
+      //     ["pending", "disputed"].includes(row.status) ? (
+      //       <PermissionGuard
+      //         module="sellers/commissions"
+      //         action={ACTIONS.UPDATE}
+      //         hide
+      //       >
+      //         <button
+      //           type="button"
+      //           className="admin-btn-secondary !px-2 !py-1"
+      //           onClick={() =>
+      //             setForm({
+      //               open: true,
+      //               row,
+      //               responseType: "retained",
+      //               amount: row.expected_amount || "",
+      //               referenceId: "",
+      //               proofUrl: "",
+      //               notes: "",
+      //             })
+      //           }
+      //         >
+      //           <MdUpload aria-hidden="true" size={14} /> Respond now
+      //         </button>
+      //       </PermissionGuard>
+      //     ) : row.status === "submitted" ? (
+      //       "Awaiting Admin verification"
+      //     ) : ["verified", "remitted"].includes(row.status) ? (
+      //       "Completed"
+      //     ) : (
+      //       "No action required"
+      //     ),
+      // },
+
       {
         key: "actions",
         label: "Action",
-        render: (_, row) =>
-          ["pending", "disputed"].includes(row.status) ? (
-            <PermissionGuard
-              module="sellers/commissions"
-              action={ACTIONS.UPDATE}
-              hide
-            >
+        render: (_, row) => {
+          const rowId = String(
+            row?.shipment_id || row?.order_id || row?.orderId,
+          );
+
+          const isOpen = openActionId === rowId;
+
+          const openMenu = (event) => {
+            event.stopPropagation();
+
+            if (isOpen) {
+              setOpenActionId(null);
+              setMenuPosition(null);
+              return;
+            }
+
+            const rect = event.currentTarget.getBoundingClientRect();
+            const menuWidth = 224;
+            const menuHeight = 100;
+
+            const left = Math.max(
+              8,
+              Math.min(
+                rect.right - menuWidth,
+                window.innerWidth - menuWidth - 8,
+              ),
+            );
+
+            const openAbove =
+              window.innerHeight - rect.bottom < menuHeight &&
+              rect.top > menuHeight;
+
+            setMenuPosition({
+              top: openAbove ? rect.top - menuHeight - 4 : rect.bottom + 4,
+              left,
+            });
+
+            setOpenActionId(rowId);
+          };
+
+          return (
+            <div className="flex justify-center">
               <button
+                ref={(element) => {
+                  actionButtonRefs.current[rowId] = element;
+                }}
                 type="button"
-                className="admin-btn-secondary !px-2 !py-1"
-                onClick={() =>
-                  setForm({
-                    open: true,
-                    row,
-                    responseType: "retained",
-                    amount: row.expected_amount || "",
-                    referenceId: "",
-                    proofUrl: "",
-                    notes: "",
-                  })
-                }
+                aria-label="Open shipment actions"
+                aria-expanded={isOpen}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-gray-600  focus:outline-none focus-visible:outline-none"
+                onClick={openMenu}
               >
-                <MdUpload aria-hidden="true" size={14} /> Respond now
+                <MdMoreVert aria-hidden="true" size={22} />
               </button>
-            </PermissionGuard>
-          ) : row.status === "submitted" ? (
-            "Awaiting Admin verification"
-          ) : ["verified", "remitted"].includes(row.status) ? (
-            "Completed"
-          ) : (
-            "No action required"
-          ),
+
+              {isOpen &&
+                menuPosition &&
+                createPortal(
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close actions menu"
+                      className="fixed inset-0 z-[9998] cursor-default"
+                      onClick={() => {
+                        setOpenActionId(null);
+                        setMenuPosition(null);
+                      }}
+                    />
+
+                    <div
+                      className="fixed z-[9999] w-56 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl"
+                      style={{
+                        top: menuPosition.top,
+                        left: menuPosition.left,
+                      }}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {["pending", "disputed"].includes(row.status) ? (
+                        <PermissionGuard
+                          module="sellers/commissions"
+                          action={ACTIONS.UPDATE}
+                          hide
+                        >
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            onClick={() => {
+                              setOpenActionId(null);
+                              setMenuPosition(null);
+
+                              setForm({
+                                open: true,
+                                row,
+                                responseType: "retained",
+                                amount: row.expected_amount || "",
+                                referenceId: "",
+                                proofUrl: "",
+                                notes: "",
+                              });
+                            }}
+                          >
+                            <MdVisibility
+                              className="text-blue-700"
+                              aria-hidden="true"
+                              size={16}
+                            />
+                            View Cod details
+                          </button>
+                        </PermissionGuard>
+                      ) : row.status === "submitted" ? (
+                        <div className="px-4 py-2.5 text-sm text-gray-500">
+                          Awaiting Admin Verification
+                        </div>
+                      ) : ["verified", "remitted"].includes(row.status) ? (
+                        <div className="px-4 py-2.5 text-sm text-green-700">
+                          Completed
+                        </div>
+                      ) : (
+                        <div className="px-4 py-2.5 text-sm text-gray-500">
+                          No action required
+                        </div>
+                      )}
+                    </div>
+                  </>,
+                  document.body,
+                )}
+            </div>
+          );
+        },
       },
     ],
-    [],
+    [openActionId, menuPosition],
   );
 
   return (
     <div>
       <PageHeader
-        title="My COD Collections"
+        title="COD Collections"
         subtitle="COD is enabled per product. Submit cash collected from delivered COD orders for Admin verification before settlement."
         breadcrumbs={[
           { label: "Seller Finance" },
@@ -268,17 +516,20 @@ export default function SellerCodCollections() {
       )}
       <DataTable
         columns={columns}
-        data={items}
+        data={filteredItems}
         onRefresh={load}
         loading={loading}
-        totalCount={items.length}
+        totalCount={filteredItems.length}
         page={pagination.page}
         pageSize={pagination.pageSize}
         onPageChange={(page) =>
           setPagination((current) => ({ ...current, page }))
         }
         onPageSizeChange={(pageSize) => setPagination({ page: 1, pageSize })}
-        onSearch={() => {}}
+        onSearch={(value) => {
+          setSearch(value);
+          setPagination((current) => ({ ...current, page: 1 }));
+        }}
         onSort={() => {}}
         requiredModule="sellers/commissions"
       />
@@ -312,29 +563,53 @@ export default function SellerCodCollections() {
             required
           />
           {form.responseType !== "dispute" && (
-            <Input
-              labelName="Collected amount"
-              type="number"
-              value={form.amount}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, amount: event.target.value }))
-              }
-              required
-            />
+            <div>
+              <Input
+                labelName="Collected amount"
+                type="number"
+                value={form.amount}
+                onChange={(event) => {
+                  const amount = event.target.value;
+
+                  setForm((prev) => ({ ...prev, amount }));
+                  setValidationErrors((prev) => ({
+                    ...prev,
+                    amount: "",
+                  }));
+                }}
+                required
+              />
+
+              {validationErrors.amount && (
+                <p className="mt-1 text-xs text-red-600">
+                  {validationErrors.amount}
+                </p>
+              )}
+            </div>
           )}
           <div>
             <Input
               labelName="Collection reference"
               value={form.referenceId}
-              onChange={(event) =>
-                setForm((prev) => ({
+              onChange={(event) => {
+                const referenceId = event.target.value;
+
+                setForm((prev) => ({ ...prev, referenceId }));
+                setValidationErrors((prev) => ({
                   ...prev,
-                  referenceId: event.target.value,
-                }))
-              }
+                  referenceId: "",
+                }));
+              }}
               placeholder="Cash receipt / courier / deposit reference"
               required={form.responseType !== "dispute"}
             />
+
+            {validationErrors.referenceId && (
+              <p className="mt-1 text-xs text-red-600">
+                {validationErrors.referenceId}
+              </p>
+            )}
+
             <p className="mt-1 text-xs text-gray-500">
               {form.responseType === "remittance"
                 ? "Enter the bank deposit or platform remittance reference."
@@ -343,57 +618,92 @@ export default function SellerCodCollections() {
                   : "Enter the cash receipt or internal collection number."}
             </p>
           </div>
-          <div className="rounded-lg border border-dashed border-[#d8caa6] bg-[#fffaf0] p-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-medium uppercase text-gray-600">
-                  Collection proof (optional)
-                </div>
-                <div className="mt-1 text-xs text-gray-500">
-                  Upload a PDF, JPG, PNG, or WebP receipt.
-                </div>
-              </div>
-              <label
-                className={`admin-btn-secondary inline-flex cursor-pointer items-center gap-2 ${uploadingProof ? "pointer-events-none opacity-60" : ""}`}
-              >
-                <MdUpload aria-hidden="true" size={15} />
-                {uploadingProof
-                  ? "Uploading…"
-                  : form.proofUrl
-                    ? "Replace file"
-                    : "Upload proof"}
-                <input
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  disabled={uploadingProof}
-                  onChange={uploadProof}
-                />
-              </label>
-            </div>
-            {form.proofUrl && (
-              <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-green-200 bg-white px-3 py-2 text-xs">
-                <a
-                  href={form.proofUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex min-w-0 items-center gap-1 font-semibold text-green-700 hover:underline"
-                >
-                  <MdOpenInNew aria-hidden="true" size={14} /> View uploaded
-                  proof
-                </a>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 font-semibold text-red-600 hover:underline"
-                  onClick={() =>
-                    setForm((current) => ({ ...current, proofUrl: "" }))
+
+          <div className="!mt-4">
+            <ImageUpload
+              id="cod-collection-proof"
+              label="Collection Proof"
+              subtext="Upload a receipt or cash collection proof."
+              accept="image/jpeg,image/png,image/webp"
+              file={form.proofPreview || ""}
+              isLoading={uploadingProof}
+              loadingText="Uploading proof..."
+              isDisabled={loading}
+              helperText="JPG, PNG, WEBP"
+              errorMessage=""
+              onChange={async (file) => {
+                if (!file) return;
+
+                const previewUrl = URL.createObjectURL(file);
+
+                setForm((current) => ({
+                  ...current,
+                  proofPreview: previewUrl,
+                }));
+
+                try {
+                  setUploadingProof(true);
+
+                  const uploadedUrl = await uploadDocumentFile(
+                    file,
+                    "COD_COLLECTIONS",
+                  );
+
+                  if (!uploadedUrl || typeof uploadedUrl !== "string") {
+                    throw new Error("Unable to get the uploaded proof URL");
                   }
-                >
-                  <MdDeleteOutline aria-hidden="true" size={14} /> Remove
-                </button>
-              </div>
+
+                  setForm((current) => ({
+                    ...current,
+                    proofUrl: uploadedUrl,
+                    proofPreview: previewUrl,
+                  }));
+
+                  toast.success("Collection proof uploaded successfully");
+                } catch (error) {
+                  URL.revokeObjectURL(previewUrl);
+
+                  setForm((current) => ({
+                    ...current,
+                    proofUrl: "",
+                    proofPreview: "",
+                  }));
+
+                  toast.error(
+                    error?.response?.data?.message ||
+                      error?.message ||
+                      "Unable to upload collection proof",
+                  );
+                } finally {
+                  setUploadingProof(false);
+                }
+              }}
+              onRemove={() => {
+                if (form.proofPreview?.startsWith("blob:")) {
+                  URL.revokeObjectURL(form.proofPreview);
+                }
+
+                setForm((current) => ({
+                  ...current,
+                  proofUrl: "",
+                  proofPreview: "",
+                }));
+              }}
+            />
+
+            {form.proofUrl && (
+              <a
+                href={form.proofUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#2f6bff] hover:underline"
+              >
+                <MdOpenInNew aria-hidden="true" size={15} />
+                View uploaded proof
+              </a>
             )}
           </div>
+
           <Input
             labelName="Notes"
             type="textarea"

@@ -200,9 +200,12 @@ const AddHsnModal = ({
                 value={formik.values.description}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.description && formik.errors.description}
+                error={
+                  formik.touched.description ? formik.errors.description : ""
+                }
                 placeholder="Enter HSN code description"
                 rows={3}
+                required
               />
             </div>
           </FormSection>

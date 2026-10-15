@@ -7,6 +7,7 @@ import { useListPage } from "../../hooks/useListPage";
 import useStoreNames from "../../hooks/useStoreNames";
 import { resolveStoreName } from "../../utils/storeNameUtils";
 import { formatIndianNumber } from "../../utils/formatters";
+import { exportToExcelWorkbook } from "../../_helpers/exportToCsv";
 
 const FILTER_FIELDS = [
   {
@@ -33,13 +34,19 @@ const TaxReports = () => {
   const visibleEntries = useMemo(() => {
     const term = list.search.trim().toLowerCase();
     if (!term) return entries;
-    return entries.filter((row) => [
-      resolveStoreName(row, storeNameMap).name,
-      row.tax_component,
-      String(row.entry_type || "").replace(/_/g, " "),
-      row.entry_count,
-      row.total_amount,
-    ].some((value) => String(value ?? "").toLowerCase().includes(term)));
+    return entries.filter((row) =>
+      [
+        resolveStoreName(row, storeNameMap).name,
+        row.tax_component,
+        String(row.entry_type || "").replace(/_/g, " "),
+        row.entry_count,
+        row.total_amount,
+      ].some((value) =>
+        String(value ?? "")
+          .toLowerCase()
+          .includes(term),
+      ),
+    );
   }, [entries, list.search, storeNameMap]);
 
   const fetchReports = useCallback(async () => {
@@ -53,8 +60,14 @@ const TaxReports = () => {
       let offset = 0;
       let batch;
       do {
-        const result = await dispatch(getTaxReports({ ...params, limit: 1000, offset })).unwrap();
-        batch = result?.data?.data?.entries || result?.data?.entries || result?.entries || [];
+        const result = await dispatch(
+          getTaxReports({ ...params, limit: 1000, offset }),
+        ).unwrap();
+        batch =
+          result?.data?.data?.entries ||
+          result?.data?.entries ||
+          result?.entries ||
+          [];
         allEntries.push(...batch);
         offset += batch.length;
       } while (batch.length === 1000);
@@ -95,6 +108,73 @@ const TaxReports = () => {
     [storeNameMap],
   );
 
+  const handleExport = () => {
+    if (!visibleEntries.length) {
+      toast.info("No tax report data available to export.");
+      return;
+    }
+
+    try {
+      const excelColumns = columns.map((column) => ({
+        key: column.key,
+        label: column.label,
+      }));
+
+      const data = visibleEntries.map((row) => {
+        const exportRow = {};
+
+        excelColumns.forEach(({ key }) => {
+          if (key === "organization_id") {
+            exportRow[key] =
+              resolveStoreName(row, storeNameMap).name || "Sam Global";
+            return;
+          }
+
+          if (key === "tax_component") {
+            exportRow[key] = String(row.tax_component || "N/A").toUpperCase();
+            return;
+          }
+
+          if (key === "entry_type") {
+            exportRow[key] = String(row.entry_type || "N/A").replace(/_/g, " ");
+            return;
+          }
+
+          if (key === "total_amount") {
+            exportRow[key] = formatIndianNumber(row.total_amount);
+            return;
+          }
+
+          const value = row[key];
+          exportRow[key] = value === null || value === undefined ? "" : value;
+        });
+
+        return exportRow;
+      });
+
+      const exported = exportToExcelWorkbook(
+        [
+          {
+            name: "Tax Reports",
+            title: "Tax Reports",
+            data,
+            columns: excelColumns,
+          },
+        ],
+        "Tax_Reports.xlsx",
+      );
+
+      if (exported) {
+        toast.success("Tax reports exported successfully.");
+      } else {
+        toast.error("Unable to export tax reports.");
+      }
+    } catch (exportError) {
+      console.error("Tax reports export error:", exportError);
+      toast.error("Failed to export tax reports.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -107,13 +187,20 @@ const TaxReports = () => {
       />
       <DataTable
         columns={columns}
-        data={visibleEntries.slice((list.page - 1) * list.pageSize, list.page * list.pageSize)}
+        data={visibleEntries.slice(
+          (list.page - 1) * list.pageSize,
+          list.page * list.pageSize,
+        )}
         loading={loading}
         total={entries.length}
         searchPlaceholder="Search store name, component, or entry type..."
         listPage={list}
         emptyMessage={error || "No tax report entries found"}
         onRefresh={fetchReports}
+        exportConfig={{
+          onClick: handleExport,
+          disabled: loading || !visibleEntries.length,
+        }}
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}
@@ -121,7 +208,6 @@ const TaxReports = () => {
             loading={loading}
           />
         }
-        exportConfig={{ filename: "tax-report", columns, data: visibleEntries }}
       />
     </div>
   );

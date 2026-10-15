@@ -248,37 +248,60 @@ const ShipmentTracking = () => {
         const exportRow = {};
 
         excelColumns.forEach(({ key, label }) => {
+          // Export the order/shipment reference instead of the raw ID.
           if (
             String(key).toLowerCase() === "shipment" ||
             String(label).toLowerCase() === "shipment"
           ) {
             exportRow[key] =
+              row?.orderNumber ||
               row?.order_number ||
               row?.label_data?.orderNumber ||
+              row?.orderId ||
               row?.order_id ||
               "";
             return;
           }
 
-          const value = row?.[key];
+          // Export seller name instead of seller ID.
+          if (key === "seller_id") {
+            const sellerId = String(
+              row?.seller_id ||
+                row?.sellerId ||
+                row?.seller?._id ||
+                row?.seller?.id ||
+                "",
+            );
 
+            const sellerName =
+              row?.sellerName ||
+              row?.seller?.businessName ||
+              row?.seller?.companyName ||
+              row?.seller?.displayName ||
+              row?.seller?.name ||
+              sellerOptions.find((seller) => String(seller.value) === sellerId)
+                ?.label;
+
+            exportRow[key] = sellerName || "Sam Global";
+            return;
+          }
+
+          const value = row?.[key];
           exportRow[key] = value === null || value === undefined ? "" : value;
         });
 
         return exportRow;
       });
 
-      const sheets = [
-        {
-          name: "Shipments",
-          title: "Shipment Tracking Report",
-          data,
-          columns: excelColumns,
-        },
-      ];
-
       const exported = exportToExcelWorkbook(
-        sheets,
+        [
+          {
+            name: "Shipments",
+            title: "Shipment Tracking Report",
+            data,
+            columns: excelColumns,
+          },
+        ],
         "Shipment_Tracking_Report.xlsx",
       );
 

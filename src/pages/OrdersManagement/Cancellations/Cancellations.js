@@ -65,16 +65,17 @@ const STATUS_COLOR = {
   failed: "red",
   rejected: "red",
 };
-const cancellationStatusLabel = (status) => ({
-  requested: "Cancellation Requested",
-  approved: "Cancellation Approved",
-  processing: "Cancellation Processing",
-  refund_pending: "Refund Pending",
-  manual_review: "Manual Refund Review",
-  completed: "Cancelled",
-  failed: "Cancellation Failed",
-  rejected: "Cancellation Rejected",
-})[String(status || "").toLowerCase()] || formatLabel(status);
+const cancellationStatusLabel = (status) =>
+  ({
+    requested: "Cancellation Requested",
+    approved: "Cancellation Approved",
+    processing: "Cancellation Processing",
+    refund_pending: "Refund Pending",
+    manual_review: "Manual Refund Review",
+    completed: "Cancelled",
+    failed: "Cancellation Failed",
+    rejected: "Cancellation Rejected",
+  })[String(status || "").toLowerCase()] || formatLabel(status);
 
 const CLASS_TEXT_XS_MUTED = "text-xs text-gray-500";
 const CLASS_TEXT_XS_GRAY = "text-xs text-gray-600";
@@ -463,7 +464,7 @@ const Cancellations = () => {
     {
       key: "status",
       label: "Cancellation Status",
-      sortable: true,
+      sortable: false,
       render: (v) => (
         <StatusBadge
           status={v === "requested" ? "cancellation_requested" : v}
@@ -493,6 +494,7 @@ const Cancellations = () => {
     {
       key: "refundAmount",
       label: isSeller ? "My Cancelled Item Value" : "Customer Refund",
+      sortable: false,
       render: (v) => <span className="text-sm font-medium">{money(v)}</span>,
     },
     {
@@ -531,7 +533,7 @@ const Cancellations = () => {
     {
       key: "createdAt",
       label: "Created",
-      sortable: true,
+      sortable: false,
       render: (v) => <span className={CLASS_TEXT_XS_MUTED}>{fmt(v)}</span>,
     },
   ];
@@ -556,7 +558,11 @@ const Cancellations = () => {
       />
 
       <DataTable
-        columns={isSeller ? COLUMNS.filter((column) => column.key !== "orderId") : COLUMNS}
+        columns={
+          isSeller
+            ? COLUMNS.filter((column) => column.key !== "orderId")
+            : COLUMNS
+        }
         data={cancellations}
         searchPlaceholder="Search cancellation..."
         loading={loading}
@@ -999,20 +1005,20 @@ const Cancellations = () => {
         loading={actionLoading}
         confirmLabel="Approve Cancellation"
       >
-       <div className={CLASS_MODAL_BODY}>
-  <label className="block text-sm font-semibold text-[#30384d]">
-    Approval note (optional)
-    <textarea
-      className="mt-2 min-h-[120px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
-      value={approveRequest.note}
-      onChange={(event) =>
-        setApproveRequest((p) => ({ ...p, note: event.target.value }))
-      }
-      maxLength={5000}
-      placeholder="Enter your approval note."
-    />
-  </label>
-</div>
+        <div className={CLASS_MODAL_BODY}>
+          <label className="block text-sm font-semibold text-[#30384d]">
+            Approval note (optional)
+            <textarea
+              className="mt-2 min-h-[120px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
+              value={approveRequest.note}
+              onChange={(event) =>
+                setApproveRequest((p) => ({ ...p, note: event.target.value }))
+              }
+              maxLength={5000}
+              placeholder="Enter your approval note."
+            />
+          </label>
+        </div>
       </ConfirmModal>
 
       <ConfirmModal
@@ -1027,19 +1033,19 @@ const Cancellations = () => {
         confirmLabel="Reject Cancellation"
       >
         <div className={CLASS_MODAL_BODY}>
-  <label className="block text-sm font-semibold text-[#30384d]">
-    Rejection reason *
-    <textarea
-      className="mt-2 min-h-[120px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
-      value={rejectRequest.reason}
-      onChange={(event) =>
-        setRejectRequest((p) => ({ ...p, reason: event.target.value }))
-      }
-      maxLength={5000}
-      placeholder="Enter the reason for rejection."
-    />
-  </label>
-</div>
+          <label className="block text-sm font-semibold text-[#30384d]">
+            Rejection reason *
+            <textarea
+              className="mt-2 min-h-[120px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
+              value={rejectRequest.reason}
+              onChange={(event) =>
+                setRejectRequest((p) => ({ ...p, reason: event.target.value }))
+              }
+              maxLength={5000}
+              placeholder="Enter the reason for rejection."
+            />
+          </label>
+        </div>
       </ConfirmModal>
 
       {/* Refund approval */}
@@ -1052,21 +1058,20 @@ const Cancellations = () => {
         loading={actionLoading}
         confirmLabel="Approve Refund"
       >
-     
-  <div className={CLASS_MODAL_BODY}>
-  <label className="block text-sm font-semibold text-[#30384d]">
-    Approval note (optional)
-    <textarea
-      className="mt-2 min-h-[120px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
-      value={approveRefund.note}
-      onChange={(event) =>
-        setApproveRefund((p) => ({ ...p, note: event.target.value }))
-      }
-      maxLength={5000}
-      placeholder="Enter your approval note."
-    />
-  </label>
-</div>
+        <div className={CLASS_MODAL_BODY}>
+          <label className="block text-sm font-semibold text-[#30384d]">
+            Approval note (optional)
+            <textarea
+              className="mt-2 min-h-[120px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
+              value={approveRefund.note}
+              onChange={(event) =>
+                setApproveRefund((p) => ({ ...p, note: event.target.value }))
+              }
+              maxLength={5000}
+              placeholder="Enter your approval note."
+            />
+          </label>
+        </div>
       </ConfirmModal>
 
       {/* Retry confirm */}
