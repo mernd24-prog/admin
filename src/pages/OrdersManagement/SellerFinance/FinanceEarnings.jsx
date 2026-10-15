@@ -372,6 +372,66 @@ export default function FinanceEarnings() {
         }
       />
 
+      {/* <FinanceNav /> */}
+
+     
+
+      {Number(codReconciliation.totalOrders || 0) > 0 && (
+        <section className="admin-card p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-semibold">COD order reconciliation</h2>
+              <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                COD orders and earnings are different records. An earning is
+                created after delivery; cash collected from the customer is
+                shown separately as a COD liability.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+              <div>
+                <strong className="block">
+                  {codReconciliation.totalOrders || 0}
+                </strong>
+                <span className="text-xs text-[var(--admin-muted)]">
+                  COD orders
+                </span>
+              </div>
+              <div>
+                <strong className="block">
+                  {codReconciliation.deliveredOrders || 0}
+                </strong>
+                <span className="text-xs text-[var(--admin-muted)]">
+                  Delivered
+                </span>
+              </div>
+              <div>
+                <strong className="block">
+                  {codReconciliation.awaitingDeliveryOrders || 0}
+                </strong>
+                <span className="text-xs text-[var(--admin-muted)]">
+                  Awaiting delivery
+                </span>
+              </div>
+              <div>
+                <strong className="block">
+                  {codReconciliation.ordersWithLiability || 0}
+                </strong>
+                <span className="text-xs text-[var(--admin-muted)]">
+                  Cash liabilities
+                </span>
+              </div>
+            </div>
+          </div>
+          {Number(codReconciliation.missingEarningOrders || 0) > 0 && (
+            <p className="mt-3 rounded-md bg-amber-50 p-3 text-xs text-amber-800">
+              {codReconciliation.missingEarningOrders} delivered COD order(s)
+              still need an earning calculation. Refresh to retry; if this
+              remains, an administrator should review the order pricing data.
+            </p>
+          )}
+        </section>
+      )}
+
       {/* SUMMARY CARDS */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Cards

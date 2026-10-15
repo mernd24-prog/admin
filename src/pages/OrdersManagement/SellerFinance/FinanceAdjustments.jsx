@@ -253,16 +253,7 @@ export default function FinanceAdjustments() {
         ]}
       />
       {/* <FinanceNav /> */}
-      {/* <FinancePageGuide
-        step="3"
-        icon={MdTune}
-        title="See why your balance changed"
-        description="Credits add money and deductions reduce it. Returns, promotions, collected COD and temporary holds are separated here."
-        points={[
-          "A minus amount reduces your balance",
-          "Open details to see the reason",
-        ]}
-      /> */}
+     
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Cards
           label="Returns & refunds"

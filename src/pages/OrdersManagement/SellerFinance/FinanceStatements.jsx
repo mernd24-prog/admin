@@ -147,16 +147,7 @@ export default function FinanceStatements() {
         ]}
       />
       {/* <FinanceNav /> */}
-      {/* <FinancePageGuide
-        step="5"
-        icon={MdReceiptLong}
-        title="Keep a record of completed money movements"
-        description="Statements are generated after a payout or settlement completes. Download the PDF for accounts, reconciliation or support."
-        points={[
-          "Match using the payout reference",
-          "Download PDF for your records",
-        ]}
-      /> */}
+     
       <DataTable
         columns={columns}
         data={pagedRows}

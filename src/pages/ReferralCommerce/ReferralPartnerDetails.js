@@ -479,7 +479,7 @@ const ReferralPartnerDetails = () => {
       { label: "Full name", value: fullName(profileUser) },
       { label: "Email", value: profileUser.email || "-" },
       { label: "Phone", value: profile.phone || profileUser.phone || "-" },
-      { label: "Profile ID", value: shortId(getId(influencer)) },
+      // { label: "Profile ID", value: shortId(getId(influencer)) },
       // { label: "User ID", value: shortId(influencer.userId) },
       {
         label: "Role type",
