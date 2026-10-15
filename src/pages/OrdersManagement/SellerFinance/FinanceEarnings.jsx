@@ -613,7 +613,7 @@ export default function FinanceEarnings() {
         isButtonView={false}
       >
         {detail && (
-          <div className="space-y-5 border border-golden p-6 rounded-lg">
+          <div className="space-y-5 border border-golden p-4 rounded-lg">
             {/* EARNING SUMMARY */}
             <div className="rounded-lg bg-[var(--admin-soft)]  p-4">
               <div className="flex items-start justify-between gap-4">

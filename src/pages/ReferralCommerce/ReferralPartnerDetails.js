@@ -15,6 +15,7 @@ import {
   Landmark,
   Link,
   Loader2,
+  Pencil,
   ShieldCheck,
   UserPlus,
   UserRound,
@@ -43,6 +44,7 @@ import {
   promoteReferralInfluencer,
   reviewReferralInfluencerVerification,
   updateReferralInfluencerChildPermission,
+  updateReferralInfluencerProfile,
   updateReferralInfluencerStatus,
 } from "../../Redux/referralCommerceSlice";
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
@@ -322,6 +324,13 @@ const ReferralPartnerDetails = () => {
   const [activeActivityTab, setActiveActivityTab] = useState("codes");
   const [loadedDetailId, setLoadedDetailId] = useState(null);
   const [loadingAction, setLoadingAction] = useState(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+  });
   const [verificationModal, setVerificationModal] = useState({
     open: false,
     section: "kyc",
@@ -392,6 +401,41 @@ const ReferralPartnerDetails = () => {
     navigate(returnTo?.pathname || "/app/referral-commerce/influencers", {
       state: returnTo?.state,
     });
+  };
+
+  const openEditProfile = () => {
+    const user = influencer?.user || {};
+    setEditForm({
+      firstName: user.profile?.firstName || "",
+      lastName: user.profile?.lastName || "",
+      email: user.email || "",
+      phone: user.phone || user.profile?.phone || "",
+    });
+    setEditOpen(true);
+  };
+
+  const saveProfile = async (event) => {
+    event.preventDefault();
+    if (!editForm.firstName.trim() || !editForm.email.trim()) {
+      toast.error("First name and email are required");
+      return;
+    }
+    setLoadingAction("profile");
+    try {
+      await dispatch(
+        updateReferralInfluencerProfile({
+          influencerId: id,
+          ...editForm,
+        }),
+      ).unwrap();
+      toast.success("Referral partner profile updated");
+      setEditOpen(false);
+      refreshPartner(dispatch, id);
+    } catch (error) {
+      toast.error(error || "Unable to update referral partner");
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
   useEffect(() => {
@@ -482,9 +526,7 @@ const ReferralPartnerDetails = () => {
         open: true,
         section,
         title:
-          section === "kyc"
-            ? "Reject KYC Documents"
-            : "Reject Bank Details",
+          section === "kyc" ? "Reject KYC Documents" : "Reject Bank Details",
         noteLabel:
           section === "kyc" ? "KYC Rejection Reason" : "Bank Rejection Reason",
         notePlaceholder:
@@ -788,18 +830,87 @@ const ReferralPartnerDetails = () => {
           { label: "Details" },
         ]}
         actions={
-          <button
-            type="button"
-            className="admin-btn-primary"
-            onClick={handleBack}
-          >
-            <ArrowLeft size={16} />
-            {isAssociate && returnTo
-              ? "Back to Growth Partner"
-              : "Back to partners"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="admin-btn-secondary"
+              onClick={openEditProfile}
+            >
+              <Pencil size={16} /> Edit profile
+            </button>
+            <button
+              type="button"
+              className="admin-btn-primary"
+              onClick={handleBack}
+            >
+              <ArrowLeft size={16} />
+              {isAssociate && returnTo
+                ? "Back to Growth Partner"
+                : "Back to partners"}
+            </button>
+          </div>
         }
       />
+
+      {editOpen && (
+        <form onSubmit={saveProfile} className="admin-card p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-[var(--admin-navy)]">
+                Edit referral partner
+              </h2>
+              <p className="text-xs text-[var(--admin-muted)]">
+                Saving identical values is a no-op and does not restart
+                approval.
+              </p>
+            </div>
+            <button type="button" onClick={() => setEditOpen(false)}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {[
+              ["firstName", "First name", true],
+              ["lastName", "Last name", false],
+              ["email", "Email", true],
+              ["phone", "Phone", false],
+            ].map(([name, label, required]) => (
+              <label key={name} className="text-xs font-medium text-gray-700">
+                {label}
+                {required ? " *" : ""}
+                <input
+                  type={name === "email" ? "email" : "text"}
+                  required={required}
+                  value={editForm[name]}
+                  onChange={(event) =>
+                    setEditForm((current) => ({
+                      ...current,
+                      [name]: event.target.value,
+                    }))
+                  }
+                  className="mt-1 w-full rounded-md border border-[var(--admin-field-line)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--admin-gold)]"
+                />
+              </label>
+            ))}
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              type="button"
+              className="admin-btn-secondary"
+              onClick={() => setEditOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="admin-btn-primary"
+              disabled={loadingAction === "profile"}
+            >
+              {loadingAction === "profile" ? "Saving..." : "Save changes"}
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {activeSummaryCards.map((card) => (
@@ -1439,9 +1550,7 @@ const ReferralPartnerDetails = () => {
         onSubmit={handleVerificationDecisionSubmit}
         title={verificationModal.title}
         decisionLabel={
-          verificationModal.section === "kyc"
-            ? "KYC Decision"
-            : "Bank Decision"
+          verificationModal.section === "kyc" ? "KYC Decision" : "Bank Decision"
         }
         options={[{ value: "rejected", label: "Reject" }]}
         defaultDecision="rejected"

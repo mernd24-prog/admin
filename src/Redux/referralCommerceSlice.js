@@ -1,5 +1,8 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { createApiThunkPrivate, createExtraReducersForThunk } from "../_helpers/ApiThunk";
+import {
+  createApiThunkPrivate,
+  createExtraReducersForThunk,
+} from "../_helpers/ApiThunk";
 import { ENDPOINTS } from "../_helpers/endpoints";
 
 const initialState = {
@@ -10,6 +13,7 @@ const initialState = {
   createParentData: {},
   createChildData: {},
   updateInfluencerStatusData: {},
+  updateInfluencerProfileData: {},
   updateInfluencerChildPermissionData: {},
   reviewInfluencerVerificationData: {},
   promoteInfluencerData: {},
@@ -33,12 +37,15 @@ const initialState = {
   fraudReviewsData: {},
 };
 
-const pickQuery = (keys = []) => (params = {}) =>
-  keys.reduce((acc, key) => {
-    const value = params?.[key];
-    if (value !== undefined && value !== null && value !== "") acc[key] = value;
-    return acc;
-  }, {});
+const pickQuery =
+  (keys = []) =>
+  (params = {}) =>
+    keys.reduce((acc, key) => {
+      const value = params?.[key];
+      if (value !== undefined && value !== null && value !== "")
+        acc[key] = value;
+      return acc;
+    }, {});
 
 const omit = (payload = {}, keys = []) =>
   Object.entries(payload || {}).reduce((acc, [key, value]) => {
@@ -58,13 +65,13 @@ const listQueryKeys = ["q", "page", "limit", "status"];
 export const getReferralSummary = createApiThunkPrivate(
   "referralCommerce/getSummary",
   ENDPOINTS.referral.summary,
-  "GET"
+  "GET",
 );
 
 export const getReferralHierarchy = createApiThunkPrivate(
   "referralCommerce/getHierarchy",
   ENDPOINTS.referral.hierarchy,
-  "GET"
+  "GET",
 );
 
 export const getReferralInfluencers = createApiThunkPrivate(
@@ -80,7 +87,7 @@ export const getReferralInfluencers = createApiThunkPrivate(
       "parentInfluencerId",
       "canCreateChildren",
     ]),
-  }
+  },
 );
 
 export const getReferralBrandAssociates = createApiThunkPrivate(
@@ -97,47 +104,81 @@ export const getReferralBrandAssociates = createApiThunkPrivate(
 export const createReferralParent = createApiThunkPrivate(
   "referralCommerce/createParent",
   ENDPOINTS.referral.parentInfluencers,
-  "POST"
+  "POST",
 );
 
 export const createReferralChild = createApiThunkPrivate(
   "referralCommerce/createChild",
-  (payload) => ENDPOINTS.referral.childInfluencers(idOf(payload, "parentId", "parentInfluencerId")),
+  (payload) =>
+    ENDPOINTS.referral.childInfluencers(
+      idOf(payload, "parentId", "parentInfluencerId"),
+    ),
   "POST",
   false,
-  { transformBody: (payload = {}) => omit(payload, ["parentId", "parentInfluencerId"]) }
+  {
+    transformBody: (payload = {}) =>
+      omit(payload, ["parentId", "parentInfluencerId"]),
+  },
 );
 
 export const updateReferralInfluencerStatus = createApiThunkPrivate(
   "referralCommerce/updateInfluencerStatus",
-  (payload) => ENDPOINTS.referral.influencerStatus(idOf(payload, "influencerId")),
+  (payload) =>
+    ENDPOINTS.referral.influencerStatus(idOf(payload, "influencerId")),
   "PATCH",
   false,
-  { transformBody: (payload = {}) => omit(payload, ["influencerId", "id", "_id"]) }
+  {
+    transformBody: (payload = {}) =>
+      omit(payload, ["influencerId", "id", "_id"]),
+  },
+);
+
+export const updateReferralInfluencerProfile = createApiThunkPrivate(
+  "referralCommerce/updateInfluencerProfile",
+  (payload) =>
+    ENDPOINTS.referral.influencerProfile(idOf(payload, "influencerId")),
+  "PATCH",
+  false,
+  {
+    transformBody: (payload = {}) =>
+      omit(payload, ["influencerId", "id", "_id"]),
+  },
 );
 
 export const updateReferralInfluencerChildPermission = createApiThunkPrivate(
   "referralCommerce/updateInfluencerChildPermission",
-  (payload) => ENDPOINTS.referral.influencerChildPermission(idOf(payload, "influencerId")),
+  (payload) =>
+    ENDPOINTS.referral.influencerChildPermission(idOf(payload, "influencerId")),
   "PATCH",
   false,
-  { transformBody: (payload = {}) => omit(payload, ["influencerId", "id", "_id"]) }
+  {
+    transformBody: (payload = {}) =>
+      omit(payload, ["influencerId", "id", "_id"]),
+  },
 );
 
 export const reviewReferralInfluencerVerification = createApiThunkPrivate(
   "referralCommerce/reviewInfluencerVerification",
-  (payload) => ENDPOINTS.referral.influencerVerification(idOf(payload, "influencerId")),
+  (payload) =>
+    ENDPOINTS.referral.influencerVerification(idOf(payload, "influencerId")),
   "PATCH",
   false,
-  { transformBody: (payload = {}) => omit(payload, ["influencerId", "id", "_id"]) }
+  {
+    transformBody: (payload = {}) =>
+      omit(payload, ["influencerId", "id", "_id"]),
+  },
 );
 
 export const promoteReferralInfluencer = createApiThunkPrivate(
   "referralCommerce/promoteInfluencer",
-  (payload) => ENDPOINTS.referral.promoteInfluencer(idOf(payload, "influencerId")),
+  (payload) =>
+    ENDPOINTS.referral.promoteInfluencer(idOf(payload, "influencerId")),
   "PATCH",
   false,
-  { transformBody: (payload = {}) => omit(payload, ["influencerId", "id", "_id"]) }
+  {
+    transformBody: (payload = {}) =>
+      omit(payload, ["influencerId", "id", "_id"]),
+  },
 );
 
 export const getReferralCodes = createApiThunkPrivate(
@@ -145,13 +186,21 @@ export const getReferralCodes = createApiThunkPrivate(
   ENDPOINTS.referral.codes,
   "GET",
   true,
-  { transformParams: pickQuery([...listQueryKeys, "code", "influencerId", "fromDate", "toDate"]) }
+  {
+    transformParams: pickQuery([
+      ...listQueryKeys,
+      "code",
+      "influencerId",
+      "fromDate",
+      "toDate",
+    ]),
+  },
 );
 
 export const createReferralCode = createApiThunkPrivate(
   "referralCommerce/createCode",
   ENDPOINTS.referral.codes,
-  "POST"
+  "POST",
 );
 
 export const updateReferralCode = createApiThunkPrivate(
@@ -159,7 +208,7 @@ export const updateReferralCode = createApiThunkPrivate(
   (payload) => ENDPOINTS.referral.code(idOf(payload, "codeId")),
   "PATCH",
   false,
-  { transformBody: (payload = {}) => omit(payload, ["codeId", "id", "_id"]) }
+  { transformBody: (payload = {}) => omit(payload, ["codeId", "id", "_id"]) },
 );
 
 export const getReferralOrders = createApiThunkPrivate(
@@ -176,7 +225,7 @@ export const getReferralOrders = createApiThunkPrivate(
       "fromDate",
       "toDate",
     ]),
-  }
+  },
 );
 
 export const getReferralCommissions = createApiThunkPrivate(
@@ -194,7 +243,7 @@ export const getReferralCommissions = createApiThunkPrivate(
       "fromDate",
       "toDate",
     ]),
-  }
+  },
 );
 
 export const getReferralPayouts = createApiThunkPrivate(
@@ -202,7 +251,14 @@ export const getReferralPayouts = createApiThunkPrivate(
   ENDPOINTS.referral.payouts,
   "GET",
   true,
-  { transformParams: pickQuery([...listQueryKeys, "influencerId", "fromDate", "toDate"]) }
+  {
+    transformParams: pickQuery([
+      ...listQueryKeys,
+      "influencerId",
+      "fromDate",
+      "toDate",
+    ]),
+  },
 );
 
 export const approveReferralPayout = createApiThunkPrivate(
@@ -210,7 +266,7 @@ export const approveReferralPayout = createApiThunkPrivate(
   (payload) => ENDPOINTS.referral.approvePayout(idOf(payload, "payoutId")),
   "PATCH",
   false,
-  { transformBody: (payload = {}) => omit(payload, ["payoutId", "id", "_id"]) }
+  { transformBody: (payload = {}) => omit(payload, ["payoutId", "id", "_id"]) },
 );
 
 export const rejectReferralPayout = createApiThunkPrivate(
@@ -218,7 +274,7 @@ export const rejectReferralPayout = createApiThunkPrivate(
   (payload) => ENDPOINTS.referral.rejectPayout(idOf(payload, "payoutId")),
   "PATCH",
   false,
-  { transformBody: (payload = {}) => omit(payload, ["payoutId", "id", "_id"]) }
+  { transformBody: (payload = {}) => omit(payload, ["payoutId", "id", "_id"]) },
 );
 
 export const markReferralPayoutPaid = createApiThunkPrivate(
@@ -226,7 +282,7 @@ export const markReferralPayoutPaid = createApiThunkPrivate(
   (payload) => ENDPOINTS.referral.paidPayout(idOf(payload, "payoutId")),
   "PATCH",
   false,
-  { transformBody: (payload = {}) => omit(payload, ["payoutId", "id", "_id"]) }
+  { transformBody: (payload = {}) => omit(payload, ["payoutId", "id", "_id"]) },
 );
 
 export const getReferralRules = createApiThunkPrivate(
@@ -234,13 +290,13 @@ export const getReferralRules = createApiThunkPrivate(
   ENDPOINTS.referral.rules,
   "GET",
   true,
-  { transformParams: pickQuery(["page", "limit", "active"]) }
+  { transformParams: pickQuery(["page", "limit", "active"]) },
 );
 
 export const updateReferralRules = createApiThunkPrivate(
   "referralCommerce/updateRules",
   ENDPOINTS.referral.rules,
-  "PUT"
+  "PUT",
 );
 
 export const getReferralBonusRules = createApiThunkPrivate(
@@ -248,13 +304,20 @@ export const getReferralBonusRules = createApiThunkPrivate(
   ENDPOINTS.referral.bonusRules,
   "GET",
   true,
-  { transformParams: pickQuery([...listQueryKeys, "period", "targetType", "applyTo"]) }
+  {
+    transformParams: pickQuery([
+      ...listQueryKeys,
+      "period",
+      "targetType",
+      "applyTo",
+    ]),
+  },
 );
 
 export const createReferralBonusRule = createApiThunkPrivate(
   "referralCommerce/createBonusRule",
   ENDPOINTS.referral.bonusRules,
-  "POST"
+  "POST",
 );
 
 export const updateReferralBonusRule = createApiThunkPrivate(
@@ -262,7 +325,7 @@ export const updateReferralBonusRule = createApiThunkPrivate(
   (payload) => ENDPOINTS.referral.bonusRule(idOf(payload, "ruleId")),
   "PATCH",
   false,
-  { transformBody: (payload = {}) => omit(payload, ["ruleId", "id", "_id"]) }
+  { transformBody: (payload = {}) => omit(payload, ["ruleId", "id", "_id"]) },
 );
 
 export const getReferralBonusAchievements = createApiThunkPrivate(
@@ -270,7 +333,15 @@ export const getReferralBonusAchievements = createApiThunkPrivate(
   ENDPOINTS.referral.bonusAchievements,
   "GET",
   true,
-  { transformParams: pickQuery([...listQueryKeys, "ruleId", "influencerId", "fromDate", "toDate"]) }
+  {
+    transformParams: pickQuery([
+      ...listQueryKeys,
+      "ruleId",
+      "influencerId",
+      "fromDate",
+      "toDate",
+    ]),
+  },
 );
 
 export const getReferralBonusProgress = createApiThunkPrivate(
@@ -278,13 +349,21 @@ export const getReferralBonusProgress = createApiThunkPrivate(
   ENDPOINTS.referral.bonusProgress,
   "GET",
   true,
-  { transformParams: pickQuery(["page", "limit", "ruleId", "influencerId", "referenceDate"]) }
+  {
+    transformParams: pickQuery([
+      "page",
+      "limit",
+      "ruleId",
+      "influencerId",
+      "referenceDate",
+    ]),
+  },
 );
 
 export const evaluateReferralBonusRules = createApiThunkPrivate(
   "referralCommerce/evaluateBonusRules",
   ENDPOINTS.referral.evaluateBonusRules,
-  "POST"
+  "POST",
 );
 
 export const getReferralFraudReviews = createApiThunkPrivate(
@@ -292,7 +371,15 @@ export const getReferralFraudReviews = createApiThunkPrivate(
   ENDPOINTS.referral.fraud,
   "GET",
   true,
-  { transformParams: pickQuery(["page", "limit", "status", "severity", "influencerId"]) }
+  {
+    transformParams: pickQuery([
+      "page",
+      "limit",
+      "status",
+      "severity",
+      "influencerId",
+    ]),
+  },
 );
 
 const referralCommerceSlice = createSlice({
@@ -307,8 +394,15 @@ const referralCommerceSlice = createSlice({
       [createReferralParent, "createParentData"],
       [createReferralChild, "createChildData"],
       [updateReferralInfluencerStatus, "updateInfluencerStatusData"],
-      [updateReferralInfluencerChildPermission, "updateInfluencerChildPermissionData"],
-      [reviewReferralInfluencerVerification, "reviewInfluencerVerificationData"],
+      [updateReferralInfluencerProfile, "updateInfluencerProfileData"],
+      [
+        updateReferralInfluencerChildPermission,
+        "updateInfluencerChildPermissionData",
+      ],
+      [
+        reviewReferralInfluencerVerification,
+        "reviewInfluencerVerificationData",
+      ],
       [promoteReferralInfluencer, "promoteInfluencerData"],
       [getReferralCodes, "codesData"],
       [createReferralCode, "createCodeData"],
@@ -328,7 +422,9 @@ const referralCommerceSlice = createSlice({
       [getReferralBonusProgress, "bonusProgressData"],
       [evaluateReferralBonusRules, "evaluateBonusRulesData"],
       [getReferralFraudReviews, "fraudReviewsData"],
-    ].forEach(([thunk, key]) => createExtraReducersForThunk(builder, thunk, key));
+    ].forEach(([thunk, key]) =>
+      createExtraReducersForThunk(builder, thunk, key),
+    );
   },
 });
 

@@ -22,14 +22,16 @@ export const ENDPOINTS = {
     approvalBulk: "/admin/platform/brands/approval",
   },
   catalogApprovals: {
-    category: (categoryKey) => `/admin/platform/categories/${categoryKey}/approval`,
+    category: (categoryKey) =>
+      `/admin/platform/categories/${categoryKey}/approval`,
     hsn: (hsnCode) => `/admin/platform/hsn-codes/${hsnCode}/approval`,
   },
   productOptions: {
     submissions: "/platform/product-options/submissions",
     mySubmissions: "/platform/product-options/submissions/mine",
     availableMine: "/platform/product-options/available/mine",
-    approval: (optionId) => `/admin/platform/product-options/${optionId}/approval`,
+    approval: (optionId) =>
+      `/admin/platform/product-options/${optionId}/approval`,
   },
   auth: {
     register: "/auth/register",
@@ -327,6 +329,8 @@ export const ENDPOINTS = {
       `/admin/referral/influencers/${parentId}/children`,
     influencerStatus: (influencerId) =>
       `/admin/referral/influencers/${influencerId}/status`,
+    influencerProfile: (influencerId) =>
+      `/admin/referral/influencers/${influencerId}/profile`,
     influencerChildPermission: (influencerId) =>
       `/admin/referral/influencers/${influencerId}/child-permission`,
     influencerVerification: (influencerId) =>
@@ -557,10 +561,11 @@ export const ENDPOINTS = {
       "/admin/platform/product-review-summaries",
       "/sellers/me/product-review-summaries",
     ),
-    productReviewSummaryReviews: (productId) => byPanel(
-      `/admin/platform/product-review-summaries/${productId}/reviews`,
-      `/sellers/me/product-review-summaries/${productId}/reviews`,
-    ),
+    productReviewSummaryReviews: (productId) =>
+      byPanel(
+        `/admin/platform/product-review-summaries/${productId}/reviews`,
+        `/sellers/me/product-review-summaries/${productId}/reviews`,
+      ),
     sellerProductReviews: "/sellers/me/product-reviews",
     productReview: (reviewId) => `/admin/platform/product-reviews/${reviewId}`,
     sellerProductReview: (reviewId) =>
