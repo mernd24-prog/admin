@@ -374,17 +374,7 @@ export default function FinanceEarnings() {
 
       {/* <FinanceNav /> */}
 
-      {/* PAGE GUIDE */}
-      <FinancePageGuide
-        step="2"
-        icon={MdTrendingUp}
-        title="Understand every order earning"
-        description="Each row explains the amount earned from an order and when that money becomes available or gets paid."
-        points={[
-          "Use status and date filters to find money",
-          "View details for the full calculation",
-        ]}
-      />
+     
 
       {Number(codReconciliation.totalOrders || 0) > 0 && (
         <section className="admin-card p-4">

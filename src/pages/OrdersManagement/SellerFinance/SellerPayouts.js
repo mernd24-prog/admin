@@ -1009,18 +1009,6 @@ const SellerPayouts = () => {
 
       {/* {isSeller && <FinanceNav />} */}
 
-      {isSeller && (
-        <FinancePageGuide
-          step="4"
-          icon={MdPayments}
-          title="Track money sent to your payout account"
-          description="Follow each transfer from processing to completion. If a transfer fails, open it to see the reason before contacting support."
-          points={[
-            "Processing means transfer has started",
-            "Paid means the transfer completed",
-          ]}
-        />
-      )}
 
       {isSeller && (
         <div className="grid gap-3 sm:grid-cols-3">

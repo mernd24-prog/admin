@@ -193,16 +193,7 @@ export default function FinanceOverview() {
           </div>
         }
       />
-      {/* <FinanceNav /> */}
-      <FinancePageGuide
-        step="1"
-        title="Start with your current balance"
-        description="This is the simplest view of your money. Check what is payable now, then follow anything waiting or needing attention."
-        points={[
-          "Payable now is ready for transfer",
-          "Waiting moves after release conditions",
-        ]}
-      />
+     
       <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
         <Cards
           label="Payable now"
