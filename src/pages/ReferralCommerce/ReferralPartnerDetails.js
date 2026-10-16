@@ -91,6 +91,25 @@ const formatAmount = (value) =>
 const formatCoins = (value) =>
   `${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })} coins`;
 
+const commissionTypeLabel = (entry = {}) => {
+  if (entry.commissionType === "code_owner_base") {
+    return entry.metadata?.recipientPartnerType === "growth_partner"
+      ? "Growth Partner Base"
+      : "Brand Associate Base";
+  }
+  return entry.commissionType || "-";
+};
+
+const commissionBasis = (entry = {}) => {
+  const pool = Number(entry.metadata?.referralPoolAmount);
+  const percent = Number(entry.percent);
+  const coinValue = Number(entry.metadata?.coinValue || 1);
+  if (Number.isFinite(pool) && Number.isFinite(percent)) {
+    return `${formatAmount(pool)} pool × ${percent}% @ INR ${coinValue}/coin`;
+  }
+  return formatAmount(entry.basisAmount);
+};
+
 const formatDate = (value) => formatDateTime12Hour(value, "-");
 
 const humanize = (value) => formatLabel(value, "-");
@@ -669,9 +688,9 @@ const ReferralPartnerDetails = () => {
       commissions.map((entry) => ({
         key: getId(entry),
         order: entry.orderNumber || entry.orderId || "-",
-        type: entry.commissionType || "-",
+        type: commissionTypeLabel(entry),
         amount: formatCoins(entry.amount),
-        basis: formatAmount(entry.basisAmount),
+        basis: commissionBasis(entry),
         status: <StatusBadge status={entry.status} size="sm" />,
       })),
     [commissions],
