@@ -79,8 +79,11 @@ const FILTER_FIELDS = [
     label: "Go live",
     width: "w-40",
     options: [
+      { value: "not_created", label: "Not created" },
       { value: "pending", label: "Pending" },
+      { value: "approval_pending", label: "Approval pending" },
       { value: "ready", label: "Ready" },
+      { value: "partially_live", label: "Partially live" },
       { value: "live", label: "Live" },
       { value: "blocked", label: "Blocked" },
       { value: "rejected", label: "Rejected" },
