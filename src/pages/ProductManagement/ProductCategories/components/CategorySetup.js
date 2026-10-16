@@ -141,7 +141,9 @@ const CategorySetup = ({
         onClose={handleClose}
         onSubmit={formik.handleSubmit}
         title={title || (isEditing ? "Edit Category" : "Add New Category")}
-        submitButtonText={submitButtonText || (isEditing ? "Update" : "Add Category")}
+        submitButtonText={
+          submitButtonText || (isEditing ? "Update" : "Add Category")
+        }
         closeButtonText="Cancel"
         isButtonView={true}
       >
@@ -152,7 +154,7 @@ const CategorySetup = ({
             description="Enter the basic details for this category."
           >
             <div className="space-y-4">
-               {/* Category Name */}
+              {/* Category Name */}
               <FormInput
                 label="Category Name"
                 name="categoryName"
@@ -174,7 +176,7 @@ const CategorySetup = ({
                 }
                 required
               />
-                {/* Parent Category */}
+              {/* Parent Category */}
               <FormSelectGroup
                 label="Parent Category"
                 options={parentCategories}
@@ -185,7 +187,6 @@ const CategorySetup = ({
                 placeholder="Select parent category"
                 isLoading={parentCategoriesLoading}
               />
-
             </div>
           </FormSection>
 
