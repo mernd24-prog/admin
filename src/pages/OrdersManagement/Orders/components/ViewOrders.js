@@ -2369,7 +2369,7 @@ const MetricCard = ({ label, value, tone = "default" }) => {
   );
 };
 
-const EmptyState = ({ children }) => (
+export const EmptyState = ({ children }) => (
   <div className="mx-auto flex flex-col items-center justify-center rounded-lg border border-dashed border-[#eadfbd] bg-[#fffaf0] py-8 text-sm text-[#65718b]">
     <img
       src="/Img/noData.png"

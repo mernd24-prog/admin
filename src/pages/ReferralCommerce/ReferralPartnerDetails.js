@@ -822,6 +822,8 @@ const ReferralPartnerDetails = () => {
     <div className="space-y-5">
       <PageHeader
         title="Referral Partner Details"
+        backPath="/app/referral-commerce/influencers"
+        onBack={() => navigate("/app/referral-commerce/influencers")}
         subtitle={fullName(influencer?.user || {})}
         status={partnerTypeLabel(influencer?.influencerType)}
         breadcrumbs={[
@@ -838,7 +840,7 @@ const ReferralPartnerDetails = () => {
             >
               <Pencil size={16} /> Edit profile
             </button>
-            <button
+            {/* <button
               type="button"
               className="admin-btn-primary"
               onClick={handleBack}
@@ -847,7 +849,7 @@ const ReferralPartnerDetails = () => {
               {isAssociate && returnTo
                 ? "Back to Growth Partner"
                 : "Back to partners"}
-            </button>
+            </button> */}
           </div>
         }
       />
@@ -958,84 +960,65 @@ const ReferralPartnerDetails = () => {
         <div className="p-4">
           {activeMainTab === "overview" && (
             <div className="space-y-5">
-              <FormSection
-                title="Partner profile"
-                subtitle="Basic identity and referral account information"
-                icon={<UserRound aria-hidden="true" size={18} />}
-                className="border-0 shadow-none"
-              >
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  {infoRows.map((row) => (
-                    <div
-                      key={row.label}
-                      className="rounded-lg border border-gray-200 bg-gray-50 p-3"
-                    >
-                      <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                        {row.label}
-                      </div>
-                      <div className="mt-2 text-sm font-medium text-gray-800">
-                        {row.value}
-                      </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {infoRows.map((row) => (
+                  <div
+                    key={row.label}
+                    className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+                  >
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                      {row.label}
                     </div>
-                  ))}
-                </div>
-              </FormSection>
+                    <div className="mt-2 text-sm font-medium text-gray-800">
+                      {row.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
           {influencer?.influencerType === "parent" &&
             activeMainTab === "associated-brands" && (
-              <FormSection
-                title="Brand Associate"
-                subtitle="Brand Associates registered under this Growth Partner"
-                icon={<GitBranch aria-hidden="true" size={18} />}
-                className="border-0 shadow-none"
-              >
-                <SharedDataTable
-                  columns={[
-                    { key: "associate", label: "Brand Associate" },
-                    { key: "code", label: "Referral Code" },
-                    { key: "level", label: "Hierarchy" },
-                    { key: "wallet", label: "Available Coins" },
-                    { key: "status", label: "Status" },
-                    { key: "created", label: "Associated On" },
-                    { key: "actions", label: "Actions" },
-                  ]}
-                  data={brandAssociateRows}
-                  loading={
-                    detailLoading ||
-                    Boolean(referralState.brandAssociatesData?.loading)
-                  }
-                  rowKey="key"
-                  onRowClick={(row) =>
-                    navigate(
-                      `/app/referral-commerce/influencers/view/${row.key}`,
-                      {
-                        state: {
-                          influencer: brandAssociates.find(
-                            (item) => String(getId(item)) === String(row.key),
-                          ),
-                          returnTo: {
-                            pathname: `/app/referral-commerce/influencers/view/${id}`,
-                            state: { influencer },
-                          },
+              <SharedDataTable
+                columns={[
+                  { key: "associate", label: "Brand Associate" },
+                  { key: "code", label: "Referral Code" },
+                  { key: "level", label: "Hierarchy" },
+                  { key: "wallet", label: "Available Coins" },
+                  { key: "status", label: "Status" },
+                  { key: "created", label: "Associated On" },
+                  { key: "actions", label: "Actions" },
+                ]}
+                data={brandAssociateRows}
+                loading={
+                  detailLoading ||
+                  Boolean(referralState.brandAssociatesData?.loading)
+                }
+                rowKey="key"
+                onRowClick={(row) =>
+                  navigate(
+                    `/app/referral-commerce/influencers/view/${row.key}`,
+                    {
+                      state: {
+                        influencer: brandAssociates.find(
+                          (item) => String(getId(item)) === String(row.key),
+                        ),
+                        returnTo: {
+                          pathname: `/app/referral-commerce/influencers/view/${id}`,
+                          state: { influencer },
                         },
                       },
-                    )
-                  }
-                  emptyText="No Brand Associates are linked to this Growth Partner."
-                  cardClassName="overflow-hidden"
-                />
-              </FormSection>
+                    },
+                  )
+                }
+                emptyText="No Brand Associates are linked to this Growth Partner."
+                cardClassName="overflow-hidden"
+              />
             )}
 
           {activeMainTab === "activity" && (
-            <FormSection
-              title="Partner activity"
-              subtitle="Review this partner's referrals, earnings, payouts, and bonuses."
-              icon={<Activity aria-hidden="true" size={18} />}
-              className="border-0 shadow-none"
-            >
+            <div>
               <Tabs
                 tabs={[
                   {
@@ -1231,152 +1214,140 @@ const ReferralPartnerDetails = () => {
                   />
                 </div>
               )}
-            </FormSection>
+            </div>
           )}
 
           {activeMainTab === "verification" && (
-            <FormSection
-              title="Documents, KYC & bank details"
-              subtitle="Verification records and payout information"
-              icon={<BadgeCheck aria-hidden="true" size={18} />}
-              className="border-0 shadow-none"
-            >
-              <div className="grid gap-5 lg:grid-cols-3">
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                    <FileText
-                      aria-hidden="true"
-                      size={16}
-                      className="text-indigo-600"
-                    />
-                    Documents
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    {documentEntries(verificationData.documents).length ? (
-                      documentEntries(verificationData.documents).map(
-                        ([key, value]) => (
-                          <div
-                            key={key}
-                            className="flex items-center justify-between gap-3"
-                          >
-                            <span className="text-gray-500">
-                              {documentLabel(key)}
+            <div className="grid gap-5 lg:grid-cols-3">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
+                  <FileText
+                    aria-hidden="true"
+                    size={16}
+                    className="text-indigo-600"
+                  />
+                  Documents
+                </div>
+                <div className="space-y-2 text-sm">
+                  {documentEntries(verificationData.documents).length ? (
+                    documentEntries(verificationData.documents).map(
+                      ([key, value]) => (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between gap-3"
+                        >
+                          <span className="text-gray-500">
+                            {documentLabel(key)}
+                          </span>
+                          {String(value).startsWith("http") ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPreviewDocument({
+                                  label: documentLabel(key),
+                                  url: value,
+                                })
+                              }
+                              className="font-medium text-indigo-700 hover:text-indigo-900 hover:underline"
+                            >
+                              View
+                            </button>
+                          ) : (
+                            <span className="max-w-[65%] truncate text-right font-medium text-gray-800">
+                              {String(value)}
                             </span>
-                            {String(value).startsWith("http") ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPreviewDocument({
-                                    label: documentLabel(key),
-                                    url: value,
-                                  })
-                                }
-                                className="font-medium text-indigo-700 hover:text-indigo-900 hover:underline"
-                              >
-                                View
-                              </button>
-                            ) : (
-                              <span className="max-w-[65%] truncate text-right font-medium text-gray-800">
-                                {String(value)}
-                              </span>
-                            )}
-                          </div>
-                        ),
-                      )
-                    ) : (
-                      <span className="text-gray-500">
-                        No documents submitted.
-                      </span>
-                    )}
-                  </div>
+                          )}
+                        </div>
+                      ),
+                    )
+                  ) : (
+                    <span className="text-gray-500">
+                      No documents submitted.
+                    </span>
+                  )}
                 </div>
+              </div>
 
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                    <BadgeCheck
-                      aria-hidden="true"
-                      size={16}
-                      className="text-indigo-600"
-                    />
-                    KYC
-                  </div>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Verification status</span>
-                      <StatusBadge
-                        status={verificationData.kycStatus || "not_submitted"}
-                        size="sm"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">PAN</span>
-                      <span className="font-medium text-gray-800">
-                        {verificationData.panNumber || "-"}
-                      </span>
-                    </div>
-                  </div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
+                  <BadgeCheck
+                    aria-hidden="true"
+                    size={16}
+                    className="text-indigo-600"
+                  />
+                  KYC
                 </div>
-
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                    <Landmark
-                      aria-hidden="true"
-                      size={16}
-                      className="text-indigo-600"
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-gray-500">Verification status</span>
+                    <StatusBadge
+                      status={verificationData.kycStatus || "not_submitted"}
+                      size="sm"
                     />
-                    Bank details
                   </div>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Verification status</span>
-                      <StatusBadge
-                        status={verificationData.bankStatus || "not_submitted"}
-                        size="sm"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Bank</span>
-                      <span className="text-right font-medium text-gray-800">
-                        {verificationData.bankDetails.method === "upi"
-                          ? `UPI: ${verificationData.bankDetails.upiId || "-"}`
-                          : firstValue(
-                              verificationData.bankDetails.bankName,
-                              verificationData.bankDetails.bank,
-                            ) || "-"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Account</span>
-                      <CopyableValue
-                        value={firstValue(
-                          verificationData.bankDetails.accountNumber,
-                          verificationData.bankDetails.bankAccountNumber,
-                          verificationData.bankDetails.accountNo,
-                        )}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">IFSC</span>
-                      <span className="font-medium text-gray-800">
-                        {firstValue(
-                          verificationData.bankDetails.ifscCode,
-                          verificationData.bankDetails.ifsc,
-                        ) || "-"}
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-gray-500">PAN</span>
+                    <span className="font-medium text-gray-800">
+                      {verificationData.panNumber || "-"}
+                    </span>
                   </div>
                 </div>
               </div>
-            </FormSection>
+
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
+                  <Landmark
+                    aria-hidden="true"
+                    size={16}
+                    className="text-indigo-600"
+                  />
+                  Bank details
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-gray-500">Verification status</span>
+                    <StatusBadge
+                      status={verificationData.bankStatus || "not_submitted"}
+                      size="sm"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-gray-500">Bank</span>
+                    <span className="text-right font-medium text-gray-800">
+                      {verificationData.bankDetails.method === "upi"
+                        ? `UPI: ${verificationData.bankDetails.upiId || "-"}`
+                        : firstValue(
+                            verificationData.bankDetails.bankName,
+                            verificationData.bankDetails.bank,
+                          ) || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-gray-500">Account</span>
+                    <CopyableValue
+                      value={firstValue(
+                        verificationData.bankDetails.accountNumber,
+                        verificationData.bankDetails.bankAccountNumber,
+                        verificationData.bankDetails.accountNo,
+                      )}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-gray-500">IFSC</span>
+                    <span className="font-medium text-gray-800">
+                      {firstValue(
+                        verificationData.bankDetails.ifscCode,
+                        verificationData.bankDetails.ifsc,
+                      ) || "-"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {activeMainTab === "actions" && (
-            <FormSection
-              title="Partner actions"
-              subtitle="Review access, verification, and partner status"
-              icon={<ShieldCheck aria-hidden="true" size={18} />}
-              className="border-0 shadow-none"
-            >
+            <div>
               <div className="mb-3 flex justify-end">
                 <StatusBadge status={influencer?.status} size="sm" />
               </div>
@@ -1537,7 +1508,7 @@ const ReferralPartnerDetails = () => {
                   </button>
                 )}
               </div>
-            </FormSection>
+            </div>
           )}
         </div>
       </div>

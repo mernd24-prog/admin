@@ -489,7 +489,7 @@ const PayoutOpsQueue = () => {
       {
         key: "sellerId",
         label: "Seller Store Name",
-        sortable: true,
+        sortable: false,
         render: (_, row) => {
           const name =
             row.sellerName ||
@@ -505,14 +505,14 @@ const PayoutOpsQueue = () => {
       {
         key: "amount",
         label: "Amount",
-        sortable: true,
+        sortable: false,
         render: (_, row) =>
           formatIndianNumber(valueOf(row, "net_amount", "netAmount", "amount")),
       },
       {
         key: "status",
         label: "Status",
-        sortable: true,
+        sortable: false,
         cellClassName: "whitespace-normal",
         render: (value, row) => (
           <div className="min-w-0 max-w-[250px]">
@@ -551,7 +551,7 @@ const PayoutOpsQueue = () => {
       {
         key: "createdAt",
         label: "Created",
-        sortable: true,
+        sortable: false,
         render: (value, row) => {
           const createdAt = value || valueOf(row, "created_at", "createdAt");
           return formatDateTime12Hour(createdAt, "N/A");
