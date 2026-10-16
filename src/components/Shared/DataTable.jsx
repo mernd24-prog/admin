@@ -488,7 +488,6 @@ const DataTable = ({
         importConfig ||
         onRefresh) && (
         <div className="flex flex-col gap-3 border-b border-[var(--admin-line)] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
-          {/* Left side: Search and additional toolbar content */}
           <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
             {resolvedOnSearch && (
               <div
