@@ -67,6 +67,30 @@ export const referralCodeValidationSchema = Yup.object({
     .min(1, "Usage limit must be greater than 0"),
 });
 
+const referralPayoutAdminNote = Yup.string()
+  .transform((value) => (value?.trim() ? value.trim() : undefined))
+  .notRequired()
+  .min(3, "Admin note must be at least 3 characters")
+  .max(500, "Admin note must be at most 500 characters");
+
+export const approveReferralPayoutValidationSchema = Yup.object({
+  adminNote: referralPayoutAdminNote.required("Admin note is required"),
+});
+
+export const rejectReferralPayoutValidationSchema = Yup.object({
+  adminNote: referralPayoutAdminNote.required("Admin note is required"),
+});
+
+export const recordReferralPayoutPaymentValidationSchema = Yup.object({
+  transactionReference: Yup.string()
+    .trim()
+    .required("Transaction reference is required")
+    .min(3, "Transaction reference must be at least 3 characters")
+    .max(150, "Transaction reference must be at most 150 characters"),
+  paymentProofUrl: Yup.string().required("Payment proof is required"),
+  adminNote: referralPayoutAdminNote,
+});
+
 const taxRateSchema = (label) =>
   Yup.number()
     .transform((value, originalValue) =>
@@ -198,6 +222,45 @@ export const closeReturnValidationSchema = Yup.object({
     .min(3, "Close reason must be at least 3 characters")
     .max(250, "Close reason must be at most 250 characters"),
 
+  note: Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(3, "Note must be at least 3 characters")
+    .max(500, "Note must be at most 500 characters"),
+});
+
+export const payoutRetryValidationSchema = Yup.object({
+  paymentMethod: Yup.string().notRequired(),
+  paymentReference: Yup.string().when("paymentMethod", {
+    is: (method) => method !== "razorpayx",
+    then: (schema) =>
+      schema
+        .trim()
+        .required("Payment reference is required")
+        .min(3, "Payment reference must be at least 3 characters")
+        .max(200, "Payment reference must be at most 200 characters"),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+});
+
+export const payoutCancellationValidationSchema = Yup.object({
+  reason: Yup.string()
+    .trim()
+    .required("Cancellation reason is required")
+    .min(3, "Cancellation reason must be at least 3 characters")
+    .max(500, "Cancellation reason must be at most 500 characters"),
+});
+
+export const payoutReleaseValidationSchema = Yup.object({
+  paymentMethod: Yup.string().notRequired(),
+  approve: Yup.boolean().when("paymentMethod", {
+    is: "razorpayx",
+    then: (schema) =>
+      schema.oneOf(
+        [true],
+        "Approve on release is required for RazorpayX payouts",
+      ),
+  }),
   note: Yup.string()
     .transform((value) => (value?.trim() ? value.trim() : undefined))
     .notRequired()

@@ -2750,6 +2750,50 @@ const Returns = () => {
                 placeholder="Enter reason"
                 required={["reject", "close"].includes(action.type)}
               />
+              {action.type === "reject" && (
+                <FormInput
+                  label="Note"
+                  name="note"
+                  type="textarea"
+                  value={action.note}
+                  onChange={(event) => {
+                    rejectReturnFormik.handleChange(event);
+                    setAction((prev) => ({
+                      ...prev,
+                      note: event.target.value,
+                    }));
+                  }}
+                  onBlur={rejectReturnFormik.handleBlur}
+                  error={
+                    rejectReturnFormik.touched.note
+                      ? rejectReturnFormik.errors.note
+                      : ""
+                  }
+                  placeholder="Add an optional note..."
+                />
+              )}
+              {action.type === "close" && (
+                <FormInput
+                  label="Note"
+                  name="note"
+                  type="textarea"
+                  value={action.note}
+                  onChange={(event) => {
+                    closeReturnFormik.handleChange(event);
+                    setAction((prev) => ({
+                      ...prev,
+                      note: event.target.value,
+                    }));
+                  }}
+                  onBlur={closeReturnFormik.handleBlur}
+                  error={
+                    closeReturnFormik.touched.note
+                      ? closeReturnFormik.errors.note
+                      : ""
+                  }
+                  placeholder="Add an optional note..."
+                />
+              )}
             </FormSection>
           )}
 
@@ -3387,11 +3431,12 @@ const Returns = () => {
           {/* =====================================================
         COMMON NOTE
     ====================================================== */}
-          <FormSection
-            title="Additional Notes"
-            description="Add any additional information related to this action."
-          >
-            <FormInput
+          {!["reject", "close"].includes(action.type) && (
+            <FormSection
+              title="Additional Notes"
+              description="Add any additional information related to this action."
+            >
+              <FormInput
               label="Note"
               name="note"
               type="textarea"
@@ -3447,8 +3492,9 @@ const Returns = () => {
                           : ""
               }
               placeholder="Add an optional note..."
-            />
-          </FormSection>
+              />
+            </FormSection>
+          )}
         </div>
       </DefaultModal>
 

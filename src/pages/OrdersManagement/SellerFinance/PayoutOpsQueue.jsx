@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormik } from "formik";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
@@ -43,6 +44,13 @@ import {
 } from "../../../utils/formatters";
 import { apiRequest } from "../../../_helpers/apiConfig";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import {
+  payoutCancellationValidationSchema,
+  payoutReleaseValidationSchema,
+  payoutRetryValidationSchema,
+} from "../../../_helpers/validationSchemas";
 
 const PAYOUT_STATUSES = [
   "pending",
@@ -254,6 +262,36 @@ const PayoutOpsQueue = () => {
   const [error, setError] = useState("");
   const [action, setAction] = useState(EMPTY_ACTION);
   const [confirmAction, setConfirmAction] = useState({ open: false });
+
+  const actionFormik = useFormik({
+    initialValues: {
+      paymentReference: "",
+      paymentMethod: "",
+      reason: "",
+      approve: true,
+      note: "",
+    },
+    validationSchema: () =>
+      action.type === "retry"
+        ? payoutRetryValidationSchema
+        : action.type === "release"
+          ? payoutReleaseValidationSchema
+          : payoutCancellationValidationSchema,
+    validateOnBlur: true,
+    validateOnChange: true,
+    onSubmit: (values) => {
+      const validationMessage = validateAction({ ...action, ...values });
+      if (validationMessage) {
+        toast.error(validationMessage);
+        return;
+      }
+      setConfirmAction({
+        open: true,
+        title: `${ACTION_TITLES[action.type] || "Update Payout"}?`,
+        message: `This will move ${action.payout?.sellerName || action.payout?.seller?.displayName || "the seller"}'s payout to the next lifecycle state.`,
+      });
+    },
+  });
   const [runtime, setRuntime] = useState({
     razorpayX: { enabled: false, mode: "disabled", missingKeys: [] },
   });
@@ -320,46 +358,65 @@ const PayoutOpsQueue = () => {
         paymentMethod,
         paymentReference: paymentMethod === "razorpayx" ? "" : "",
       });
+      actionFormik.resetForm({
+        values: {
+          paymentReference: "",
+          paymentMethod,
+          reason: "",
+          approve: true,
+          note: "",
+        },
+      });
     },
-    [defaultPayoutMethod],
+    [actionFormik, defaultPayoutMethod],
   );
 
-  const validateAction = () => {
-    if (!payoutId(action.payout)) return "Payout ID is missing";
-    if (action.type === "hold" && !action.reason.trim())
+  const validateAction = (values = action) => {
+    if (!payoutId(values.payout)) return "Payout ID is missing";
+    if (values.type === "hold" && !values.reason.trim())
       return "Hold reason is required";
-    if (action.type === "fail" && !action.reason.trim())
+    if (values.type === "fail" && !values.reason.trim())
       return "Failure reason is required";
-    if (action.type === "cancel" && !action.reason.trim())
+    if (values.type === "cancel" && !values.reason.trim())
       return "Cancellation reason is required";
     if (
-      action.type === "complete" &&
-      action.paymentMethod !== "razorpayx" &&
-      !action.paymentReference.trim()
+      values.type === "complete" &&
+      values.paymentMethod !== "razorpayx" &&
+      !values.paymentReference.trim()
     )
       return "Payment reference is required before completion";
-    if (["approve", "retry", "release"].includes(action.type)) {
+    if (["approve", "retry", "release"].includes(values.type)) {
       const existingMethod = valueOf(
-        action.payout,
+        values.payout,
         "paymentMethod",
         "payment_method",
       );
-      const selectedMethod = action.paymentMethod || existingMethod;
+      const selectedMethod = values.paymentMethod || existingMethod;
       if (selectedMethod === "razorpayx" && !razorpayXEnabled) {
         return "RazorpayX is disabled. Configure RazorpayX keys or enable mock mode before starting bank payout.";
       }
     }
-    if (
-      ["approve", "retry", "release"].includes(action.type) &&
-      action.paymentMethod === "razorpayx" &&
-      action.type === "release" &&
-      !action.approve
-    )
-      return "Enable approve on release to send a held payout through RazorpayX";
+    if (values.type === "release") {
+      const existingMethod = valueOf(
+        values.payout,
+        "paymentMethod",
+        "payment_method",
+      );
+      if (
+        (values.paymentMethod || existingMethod) === "razorpayx" &&
+        !values.approve
+      ) {
+        return "Enable approve on release to send a held payout through RazorpayX";
+      }
+    }
     return "";
   };
 
   const prepareAction = () => {
+    if (["retry", "cancel", "release"].includes(action.type)) {
+      actionFormik.handleSubmit();
+      return;
+    }
     const validationMessage = validateAction();
     if (validationMessage) {
       toast.error(validationMessage);
@@ -399,24 +456,25 @@ const PayoutOpsQueue = () => {
         case "release":
           return {
             ...base,
-            approve: action.approve,
-            note: action.note,
+            approve: actionFormik.values.approve,
+            note: actionFormik.values.note.trim(),
             paymentMethod:
-              action.paymentMethod ||
+              actionFormik.values.paymentMethod ||
               valueOf(action.payout, "paymentMethod", "payment_method") ||
               undefined,
             autoProcess:
-              action.approve === true &&
-              (action.paymentMethod ||
+              actionFormik.values.approve === true &&
+              (actionFormik.values.paymentMethod ||
                 valueOf(action.payout, "paymentMethod", "payment_method")) ===
                 "razorpayx",
           };
         case "retry":
           return {
             ...base,
-            paymentReference: action.paymentReference || undefined,
-            paymentMethod: action.paymentMethod || undefined,
-            autoProcess: action.paymentMethod === "razorpayx",
+            paymentReference:
+              actionFormik.values.paymentReference.trim() || undefined,
+            paymentMethod: actionFormik.values.paymentMethod || undefined,
+            autoProcess: actionFormik.values.paymentMethod === "razorpayx",
           };
         case "complete":
           return {
@@ -427,7 +485,13 @@ const PayoutOpsQueue = () => {
           };
         case "fail":
         case "cancel":
-          return { ...base, reason: action.reason };
+          return {
+            ...base,
+            reason:
+              action.type === "cancel"
+                ? actionFormik.values.reason.trim()
+                : action.reason,
+          };
         default:
           return base;
       }
@@ -457,7 +521,7 @@ const PayoutOpsQueue = () => {
     } finally {
       setLoading(false);
     }
-  }, [action, dispatch, fetchQueue]);
+  }, [action, actionFormik.values, dispatch, fetchQueue]);
 
   const handleSyncRazorpayX = useCallback(
     async (row) => {
@@ -745,301 +809,413 @@ const PayoutOpsQueue = () => {
       />
 
       {/* Action modal */}
-      <DefaultModal
-        isOpen={action.open}
-        onClose={() => setAction(EMPTY_ACTION)}
-        title={action.title}
-        onSubmit={prepareAction}
-        submitButtonText="Continue"
-        closeButtonText="Cancel"
-        loading={loading}
+   <DefaultModal
+  isOpen={action.open}
+  onClose={() => setAction(EMPTY_ACTION)}
+  title={action.title}
+  onSubmit={prepareAction}
+  submitButtonText="Continue"
+  closeButtonText="Cancel"
+  loading={loading}
+>
+  <div className="space-y-5">
+    {/* Payout Summary */}
+    {action.payout && (
+      <FormSection
+        title="Payout Summary"
+        description="Review the seller and transaction details before proceeding."
       >
-        <div className="space-y-3">
-          {action.payout && (
-            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm text-gray-700">
-              <div>
-                <strong>Seller:</strong>{" "}
-                {action.payout.sellerName ||
-                  action.payout.seller?.displayName ||
-                  "Seller"}
-              </div>
-              <div>
-                <strong>Net amount:</strong>{" "}
-                {formatIndianNumber(
-                  valueOf(action.payout, "net_amount", "netAmount", "amount"),
-                )}
-              </div>
-              <div>
-                <strong>Current status:</strong> {display(action.payout.status)}
-              </div>
-              {payoutMethodText(action.payout) !== "—" && (
-                <div>
-                  <strong>Method:</strong> {payoutMethodText(action.payout)}
-                </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <p className="admin-label">Seller</p>
+            <p className="mt-1 break-words text-sm font-medium text-gray-800">
+              {action.payout.sellerName ||
+                action.payout.seller?.displayName ||
+                "Seller"}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <p className="admin-label">Net Amount</p>
+            <p className="mt-1 text-sm font-semibold text-gray-900">
+              {formatIndianNumber(
+                valueOf(action.payout, "net_amount", "netAmount", "amount"),
               )}
-              {razorpayXOf(action.payout).payoutId && (
-                <div>
-                  <strong>Provider ID:</strong>{" "}
-                  {razorpayXOf(action.payout).payoutId}
-                </div>
-              )}
-              {payoutFailureReason(action.payout) && (
-                <div className="text-red-600">
-                  <strong>Failure reason:</strong>{" "}
-                  {payoutFailureReason(action.payout)}
-                </div>
-              )}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <p className="admin-label">Current Status</p>
+            <p className="mt-1 text-sm font-medium text-gray-800">
+              {display(action.payout.status)}
+            </p>
+          </div>
+
+          {payoutMethodText(action.payout) !== "—" && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="admin-label">Payment Method</p>
+              <p className="mt-1 break-words text-sm text-gray-800">
+                {payoutMethodText(action.payout)}
+              </p>
             </div>
           )}
-          {!razorpayXEnabled && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-              RazorpayX bank payout is currently disabled. Enable live RazorpayX
-              keys or mock mode in backend env before using automatic seller
-              bank payouts.
-              {runtime?.razorpayX?.missingKeys?.length ? (
-                <span className="mt-1 block">
-                  Missing: {runtime.razorpayX.missingKeys.join(", ")}
-                </span>
-              ) : null}
+
+          {razorpayXOf(action.payout).payoutId && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:col-span-2">
+              <p className="admin-label">Provider ID</p>
+              <p className="mt-1 break-all text-sm text-gray-700">
+                {razorpayXOf(action.payout).payoutId}
+              </p>
             </div>
-          )}
-          {/* Approve */}
-          {action.type === "approve" && (
-            <>
-              <label className="block text-sm text-gray-700">
-                <span className="mb-1 block">Payment Method</span>
-                <select
-                  className="admin-input w-full"
-                  value={action.paymentMethod}
-                  onChange={(e) =>
-                    setAction((prev) => ({
-                      ...prev,
-                      paymentMethod: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="">-- Use seller preference --</option>
-                  {payoutMethods.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-                {action.paymentMethod === "razorpayx" && (
-                  <span className="mt-1 block text-xs text-gray-500">
-                    Sends money to the seller's verified onboarding bank account
-                    through RazorpayX.
-                  </span>
-                )}
-                {action.paymentMethod === "seller_wallet" && (
-                  <span className="mt-1 block text-xs text-gray-500">
-                    Credits this payout to the seller's internal wallet and does
-                    not validate bank IFSC.
-                  </span>
-                )}
-                {action.paymentMethod &&
-                  !["razorpayx", "seller_wallet"].includes(
-                    action.paymentMethod,
-                  ) && (
-                    <span className="mt-1 block text-xs text-amber-700">
-                      Approval only moves this payout to Processing. Transfer it
-                      externally, then use Complete and enter the UTR or
-                      transaction reference.
-                    </span>
-                  )}
-              </label>
-              <Input
-                labelName="Note (optional)"
-                type="textarea"
-                value={action.note}
-                onChange={(e) =>
-                  setAction((prev) => ({ ...prev, note: e.target.value }))
-                }
-              />
-            </>
-          )}
-
-          {/* Hold */}
-          {action.type === "hold" && (
-            <Input
-              labelName="Hold Reason"
-              type="textarea"
-              value={action.reason}
-              onChange={(e) =>
-                setAction((prev) => ({ ...prev, reason: e.target.value }))
-              }
-              required
-            />
-          )}
-
-          {/* Release Hold */}
-          {action.type === "release" && (
-            <>
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-700">
-                  Approve on release?
-                </label>
-                <input
-                  type="checkbox"
-                  checked={action.approve}
-                  onChange={(e) =>
-                    setAction((prev) => ({
-                      ...prev,
-                      approve: e.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600"
-                />
-              </div>
-              <Input
-                labelName="Note (optional)"
-                type="textarea"
-                value={action.note}
-                onChange={(e) =>
-                  setAction((prev) => ({ ...prev, note: e.target.value }))
-                }
-              />
-              {action.approve && (
-                <label className="block text-sm text-gray-700">
-                  <span className="mb-1 block">
-                    Payment method after release
-                  </span>
-                  <select
-                    className="admin-input w-full"
-                    value={action.paymentMethod}
-                    onChange={(e) =>
-                      setAction((prev) => ({
-                        ...prev,
-                        paymentMethod: e.target.value,
-                      }))
-                    }
-                  >
-                    <option value="">-- Keep manual / existing --</option>
-                    {payoutMethods.map((m) => (
-                      <option key={m.value} value={m.value}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-            </>
-          )}
-
-          {/* Retry */}
-          {action.type === "retry" && (
-            <>
-              <Input
-                labelName={
-                  action.paymentMethod === "razorpayx"
-                    ? "Payment Reference (not required for RazorpayX)"
-                    : "Payment Reference *"
-                }
-                value={action.paymentReference}
-                onChange={(e) =>
-                  setAction((prev) => ({
-                    ...prev,
-                    paymentReference: e.target.value,
-                  }))
-                }
-              />
-              <label className="block text-sm text-gray-700">
-                <span className="mb-1 block">Payment Method (optional)</span>
-                <select
-                  className="admin-input w-full"
-                  value={action.paymentMethod}
-                  onChange={(e) =>
-                    setAction((prev) => ({
-                      ...prev,
-                      paymentMethod: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="">-- Select --</option>
-                  {payoutMethods.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-                {action.paymentMethod === "razorpayx" && (
-                  <span className="mt-1 block text-xs text-gray-500">
-                    A fresh RazorpayX payout will be created. Provider ID will
-                    appear after initiation.
-                  </span>
-                )}
-              </label>
-              <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
-                Retrying creates a new payout request. Required approval still
-                applies.
-              </div>
-            </>
-          )}
-
-          {/* Complete */}
-          {action.type === "complete" && (
-            <>
-              <Input
-                labelName="Payment Reference *"
-                value={action.paymentReference}
-                onChange={(e) =>
-                  setAction((prev) => ({
-                    ...prev,
-                    paymentReference: e.target.value,
-                  }))
-                }
-              />
-              <label className="block text-sm text-gray-700">
-                <span className="mb-1 block">Payment Method (optional)</span>
-                <select
-                  className="admin-input w-full"
-                  value={action.paymentMethod}
-                  onChange={(e) =>
-                    setAction((prev) => ({
-                      ...prev,
-                      paymentMethod: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="">-- Select --</option>
-                  {payoutMethods
-                    .filter((m) => m.value !== "razorpayx")
-                    .map((m) => (
-                      <option key={m.value} value={m.value}>
-                        {m.label}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <Input
-                labelName="Notes (optional)"
-                type="textarea"
-                value={action.notes}
-                onChange={(e) =>
-                  setAction((prev) => ({ ...prev, notes: e.target.value }))
-                }
-              />
-            </>
-          )}
-
-          {/* Fail */}
-          {["fail", "cancel"].includes(action.type) && (
-            <Input
-              labelName={
-                action.type === "cancel"
-                  ? "Cancellation Reason"
-                  : "Failure Reason"
-              }
-              type="textarea"
-              value={action.reason}
-              onChange={(e) =>
-                setAction((prev) => ({ ...prev, reason: e.target.value }))
-              }
-              required
-            />
           )}
         </div>
-      </DefaultModal>
+
+        {payoutFailureReason(action.payout) && (
+          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+            <p className="text-xs font-semibold text-red-700">
+              Failure Reason
+            </p>
+            <p className="mt-1 break-words text-sm text-red-600">
+              {payoutFailureReason(action.payout)}
+            </p>
+          </div>
+        )}
+      </FormSection>
+    )}
+
+    {/* RazorpayX Configuration Warning */}
+    {!razorpayXEnabled && (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+        <p className="text-sm font-medium text-amber-800">
+          RazorpayX bank payout is currently disabled.
+        </p>
+        <p className="mt-1 text-xs text-amber-700">
+          Enable live RazorpayX keys or mock mode in the backend environment
+          before using automatic seller bank payouts.
+        </p>
+
+        {runtime?.razorpayX?.missingKeys?.length > 0 && (
+          <p className="mt-2 text-xs font-medium text-amber-800">
+            Missing: {runtime.razorpayX.missingKeys.join(", ")}
+          </p>
+        )}
+      </div>
+    )}
+
+    {/* Approve */}
+    {action.type === "approve" && (
+      <FormSection
+        title="Approval Details"
+        description="Choose the payment method and add any relevant notes."
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="admin-label">Payment Method</label>
+            <select
+              className="admin-input w-full"
+              value={action.paymentMethod}
+              onChange={(e) =>
+                setAction((prev) => ({
+                  ...prev,
+                  paymentMethod: e.target.value,
+                }))
+              }
+            >
+              <option value="">-- Use seller preference --</option>
+              {payoutMethods.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+
+            {action.paymentMethod === "razorpayx" && (
+              <p className="mt-1.5 text-xs text-gray-500">
+                Sends money to the seller's verified onboarding bank account
+                through RazorpayX.
+              </p>
+            )}
+
+            {action.paymentMethod === "seller_wallet" && (
+              <p className="mt-1.5 text-xs text-gray-500">
+                Credits this payout to the seller's internal wallet and does
+                not validate bank IFSC.
+              </p>
+            )}
+
+            {action.paymentMethod &&
+              !["razorpayx", "seller_wallet"].includes(
+                action.paymentMethod,
+              ) && (
+                <p className="mt-1.5 rounded-md bg-amber-50 p-2 text-xs text-amber-700">
+                  Approval moves this payout to Processing. Transfer the funds
+                  externally, then use Complete and enter the UTR or transaction
+                  reference.
+                </p>
+              )}
+          </div>
+
+          <Input
+            labelName="Note (optional)"
+            type="textarea"
+            value={action.note}
+            onChange={(e) =>
+              setAction((prev) => ({ ...prev, note: e.target.value }))
+            }
+          />
+        </div>
+      </FormSection>
+    )}
+
+    {/* Hold */}
+    {action.type === "hold" && (
+      <FormSection
+        title="Hold Details"
+        description="Provide the reason for placing this payout on hold."
+      >
+        <Input
+          labelName="Hold Reason"
+          type="textarea"
+          value={action.reason}
+          onChange={(e) =>
+            setAction((prev) => ({ ...prev, reason: e.target.value }))
+          }
+          required
+        />
+      </FormSection>
+    )}
+
+    {/* Release Hold */}
+    {action.type === "release" && (
+      <FormSection
+        title="Release Details"
+        description="Configure how the payout should proceed after release."
+      >
+        <div className="space-y-4">
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50">
+            <input
+              type="checkbox"
+              name="approve"
+              checked={actionFormik.values.approve}
+              onChange={(e) =>
+                actionFormik.setFieldValue("approve", e.target.checked)
+              }
+              onBlur={actionFormik.handleBlur}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600"
+            />
+
+            <span>
+              <span className="block text-sm font-medium text-gray-800">
+                Approve on release
+              </span>
+              <span className="mt-1 block text-xs text-gray-500">
+                Automatically approve the payout when it is released.
+              </span>
+            </span>
+          </label>
+          {actionFormik.touched.approve && actionFormik.errors.approve && (
+            <p className="text-xs text-red-600">{actionFormik.errors.approve}</p>
+          )}
+
+          <Input
+            labelName="Note (optional)"
+            type="textarea"
+            name="note"
+            value={actionFormik.values.note}
+            onChange={actionFormik.handleChange}
+            onBlur={actionFormik.handleBlur}
+            error={actionFormik.touched.note && actionFormik.errors.note}
+          />
+
+          {actionFormik.values.approve && (
+            <div>
+  <label className="admin-label">Payment Method After Release</label>
+
+  <FilterSelect
+    options={[
+      { value: "", label: "-- Keep manual / existing --" },
+      ...payoutMethods,
+    ]}
+    value={
+      [
+        { value: "", label: "-- Keep manual / existing --" },
+        ...payoutMethods,
+      ].find((option) => option.value === action.paymentMethod) || null
+    }
+    onChange={(selectedOption) =>
+      setAction((prev) => ({
+        ...prev,
+        paymentMethod:
+          typeof selectedOption === "object"
+            ? selectedOption?.value ?? ""
+            : selectedOption ?? "",
+      }))
+    }
+    placeholder="Select payment method"
+  />
+</div>
+          )}
+        </div>
+      </FormSection>
+    )}
+
+    {/* Retry */}
+    {action.type === "retry" && (
+      <FormSection
+        title="Retry Details"
+        description="Review the payment reference and method before retrying."
+      >
+        <div className="space-y-4">
+          <Input
+            labelName={
+              actionFormik.values.paymentMethod === "razorpayx"
+                ? "Payment Reference (not required for RazorpayX)"
+                : "Payment Reference *"
+            }
+            name="paymentReference"
+            value={actionFormik.values.paymentReference}
+            onChange={actionFormik.handleChange}
+            onBlur={actionFormik.handleBlur}
+            error={
+              actionFormik.touched.paymentReference &&
+              actionFormik.errors.paymentReference
+            }
+          />
+
+        <div>
+  <label className="admin-label">Payment Method (optional)</label>
+
+  <FilterSelect
+    options={payoutMethods}
+    value={
+      payoutMethods.find(
+        (method) => method.value === actionFormik.values.paymentMethod,
+      ) || null
+    }
+    onChange={(selectedOption) =>
+      actionFormik.setFieldValue(
+        "paymentMethod",
+        typeof selectedOption === "object"
+          ? selectedOption?.value ?? ""
+          : selectedOption ?? "",
+      )
+    }
+    placeholder="Select payment method"
+    isClearable
+  />
+
+  {actionFormik.values.paymentMethod === "razorpayx" && (
+    <p className="mt-1.5 text-xs text-gray-500">
+      A fresh RazorpayX payout will be created. The provider ID will appear
+      after initiation.
+    </p>
+  )}
+</div>
+
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+            <p className="text-sm font-medium text-blue-800">
+              Before retrying
+            </p>
+            <p className="mt-1 text-xs text-blue-700">
+              Retrying creates a new payout request. Required approval still
+              applies.
+            </p>
+          </div>
+        </div>
+      </FormSection>
+    )}
+
+    {/* Complete */}
+    {action.type === "complete" && (
+      <FormSection
+        title="Completion Details"
+        description="Enter the transaction reference to mark this payout as completed."
+      >
+        <div className="space-y-4">
+          <Input
+            labelName="Payment Reference *"
+            value={action.paymentReference}
+            onChange={(e) =>
+              setAction((prev) => ({
+                ...prev,
+                paymentReference: e.target.value,
+              }))
+            }
+          />
+
+          <div>
+            <label className="admin-label">
+              Payment Method (optional)
+            </label>
+            <select
+              className="admin-input w-full"
+                value={actionFormik.values.paymentMethod}
+                onChange={(e) =>
+                  actionFormik.setFieldValue("paymentMethod", e.target.value)
+                }
+            >
+              <option value="">-- Select --</option>
+              {payoutMethods
+                .filter((m) => m.value !== "razorpayx")
+                .map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <Input
+            labelName="Notes (optional)"
+            type="textarea"
+            value={action.notes}
+            onChange={(e) =>
+              setAction((prev) => ({ ...prev, notes: e.target.value }))
+            }
+          />
+        </div>
+      </FormSection>
+    )}
+
+    {/* Fail / Cancel */}
+    {["fail", "cancel"].includes(action.type) && (
+      <FormSection
+        title={
+          action.type === "cancel" ? "Cancellation Details" : "Failure Details"
+        }
+        description={
+          action.type === "cancel"
+            ? "Provide the reason for cancelling this payout."
+            : "Provide the reason for marking this payout as failed."
+        }
+      >
+        <Input
+          labelName={
+            action.type === "cancel" ? "Cancellation Reason" : "Failure Reason"
+          }
+          type="textarea"
+          name={action.type === "cancel" ? "reason" : undefined}
+          value={
+            action.type === "cancel" ? actionFormik.values.reason : action.reason
+          }
+          onChange={
+            action.type === "cancel"
+              ? actionFormik.handleChange
+              : (e) =>
+                  setAction((prev) => ({ ...prev, reason: e.target.value }))
+          }
+          onBlur={action.type === "cancel" ? actionFormik.handleBlur : undefined}
+          error={
+            action.type === "cancel" &&
+            actionFormik.touched.reason &&
+            actionFormik.errors.reason
+          }
+          required
+        />
+      </FormSection>
+    )}
+  </div>
+</DefaultModal>
 
       <ConfirmModal
         open={confirmAction.open}

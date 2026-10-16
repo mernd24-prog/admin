@@ -25,7 +25,7 @@ import {
   markNotificationRead,
   setNotificationsSeenAt,
 } from "../../../Redux/notificationsSlice";
-import { formatDateTime12Hour } from "../../../utils/formatters";
+import { formatDateTime12Hour, truncateToWordBoundary } from "../../../utils/formatters";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
@@ -312,15 +312,22 @@ const UserMessages = () => {
     }
 
     cols.push(
-      {
-        key: "template",
-        label: "Template",
-        render: (v, row) => (
-          <span className="text-xs text-gray-700 line-clamp-2">
-            {v || row.message || row.payload?.message || "—"}
-          </span>
-        ),
-      },
+    {
+  key: "template",
+  label: "Template",
+  render: (v, row) => {
+    const template = v || row.message || row.payload?.message || "—";
+
+    return (
+      <span
+        className="text-xs text-gray-700"
+        title={template}
+      >
+        {truncateToWordBoundary(template, 50)}
+      </span>
+    );
+  },
+},
       {
         key: "subject",
         label: "Subject",
