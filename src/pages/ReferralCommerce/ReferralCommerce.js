@@ -4194,22 +4194,17 @@ const ReferralCommerce = () => {
             </div>
           </FormSection>
 
-          <FormSection
-            title="Permissions"
-            description="Manage what this parent influencer can do."
-          >
-            <FormToggleRow
-              title="Can Create Brand Associates"
-              description="Allow this influencer to create and manage Brand Associates."
-              isToggle={Boolean(parentFormik.values.canCreateChildren)}
-              handleClick={() =>
-                parentFormik.setFieldValue(
-                  "canCreateChildren",
-                  !parentFormik.values.canCreateChildren,
-                )
-              }
-            />
-          </FormSection>
+          <FormToggleRow
+            title="Can Create Brand Associates"
+            description="Allow this influencer to create and manage Brand Associates."
+            isToggle={Boolean(parentFormik.values.canCreateChildren)}
+            handleClick={() =>
+              parentFormik.setFieldValue(
+                "canCreateChildren",
+                !parentFormik.values.canCreateChildren,
+              )
+            }
+          />
         </form>
       </DefaultModal>
 

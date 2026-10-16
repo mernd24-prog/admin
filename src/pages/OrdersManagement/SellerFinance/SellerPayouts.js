@@ -34,7 +34,7 @@ import { usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
-import { exportToCsv } from "../../../_helpers/exportToCsv";
+
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import {
   formatDateTime12Hour,
@@ -51,6 +51,10 @@ import {
 } from "./financeUi";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import { ExportButton } from "../../../components/Atoms/buttons/exportImport";
+import {
+  exportToCsv,
+  exportToExcelWorkbook,
+} from "../../../_helpers/exportToCsv";
 
 /* -------------------------------------------------------------------------- */
 /* Constants                                                                  */
@@ -654,7 +658,7 @@ const SellerPayouts = () => {
             <span
               className={
                 amount < 0
-                  ? "font-medium text-red-600"
+                  ? "font-medium  text-red-600 mx-auto"
                   : "text-green-700 mx-auto"
               }
             >
@@ -845,29 +849,58 @@ const SellerPayouts = () => {
     [isSeller],
   );
 
-  const exportPayoutTable = () => {
-    if (!payload.list.length) {
-      toast.error("No payout records available to export", {
-        id: "export-payout-error",
-      });
+  const exportPayoutTable = useCallback(() => {
+    const payoutRows = payload?.list || [];
 
+    if (!payoutRows.length) {
+      toast.info("No payout data available to export.");
       return;
     }
 
-    exportToCsv(payload.list, {
-      filename: "seller-payouts.csv",
-      columns: payoutExportColumns,
-    });
+    try {
+      const excelColumns = payoutExportColumns.map((column, index) => ({
+        key: `column_${index}`,
+        label: column.label,
+      }));
 
-    toast.success(
-      `${payload.list.length} payout record${
-        payload.list.length === 1 ? "" : "s"
-      } exported`,
-      {
-        id: "export-payout-success",
-      },
-    );
-  };
+      const data = payoutRows.map((row) =>
+        Object.fromEntries(
+          payoutExportColumns.map((column, index) => {
+            const value = column.value(row);
+
+            return [
+              `column_${index}`,
+              value === null || value === undefined ? "" : value,
+            ];
+          }),
+        ),
+      );
+
+      const exported = exportToExcelWorkbook(
+        [
+          {
+            name: "Seller Payouts",
+            title: "Seller Payouts Report",
+            data,
+            columns: excelColumns,
+          },
+        ],
+        "Seller_Payouts_Report.xlsx",
+      );
+
+      if (exported === false) {
+        toast.error("Unable to export seller payout report.");
+        return;
+      }
+
+      toast.success(
+        `Seller payout report exported successfully (${data.length} records).`,
+      );
+    } catch (error) {
+      console.error("Seller payout Excel export failed:", error);
+      toast.error(error?.message || "Failed to export seller payout report.");
+    }
+  }, [payload?.list, payoutExportColumns]);
 
   /* ------------------------------------------------------------------------ */
   /* Settlement Export                                                        */
@@ -1008,6 +1041,18 @@ const SellerPayouts = () => {
 
       {/* {isSeller && <FinanceNav />} */}
 
+      {/* {isSeller && (
+        <FinancePageGuide
+          step="4"
+          icon={MdPayments}
+          title="Track money sent to your payout account"
+          description="Follow each transfer from processing to completion. If a transfer fails, open it to see the reason before contacting support."
+          points={[
+            "Processing means transfer has started",
+            "Paid means the transfer completed",
+          ]}
+        />
+      )} */}
 
       {isSeller && (
         <div className="grid gap-3 sm:grid-cols-3">
@@ -1110,7 +1155,7 @@ const SellerPayouts = () => {
         onRefresh={fetchPayouts}
         exportConfig={{
           onClick: exportPayoutTable,
-          disabled: loading || !payload.list.length,
+          disabled: loading || !payload?.list?.length,
         }}
         searchPlaceholder="Search Seller..."
         emptyText="No calculated payouts found"

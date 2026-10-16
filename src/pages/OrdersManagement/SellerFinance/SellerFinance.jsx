@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
+import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   MdCalculate,
   MdCheckCircle,
@@ -47,7 +48,12 @@ import {
   getSellerSettlements,
   processSellerPayouts,
 } from "../../../Redux/sellerCommissionsSlice";
-import { formatDateTime12Hour, formatLabel, truncateToWordBoundary } from "../../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatLabel,
+  truncateToWordBoundary,
+} from "../../../utils/formatters";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 
 const unwrap = (payload) => payload?.data?.data || payload?.data || {};
 const listOf = (payload) => {
@@ -318,51 +324,64 @@ const MetricCard = ({ label, value, hint }) => {
   );
 };
 
-const ModalOverlay = ({
-  isOpen,
-  onClose,
-  title,
-  children,
-  onSubmit,
-  submitting,
-}) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded-xl border border-[#E6E6E6] bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-[#E6E6E6] px-5 py-4">
-          <h3 className="text-sm font-semibold text-[#202337]">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded p-1 text-[#65718b] hover:bg-[#f3f6ff]"
-          >
-            <MdClose aria-hidden="true" size={18} />
-          </button>
-        </div>
-        <div className="px-5 py-4">{children}</div>
-        <div className="flex justify-end gap-2 border-t border-[#E6E6E6] px-5 py-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-            className="rounded-md border border-[#E6E6E6] px-4 py-2 text-sm font-medium text-[#65718b] hover:bg-[#f8faff]"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={submitting}
-            className="rounded-md bg-[#2f6fed] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {submitting ? "Saving..." : "Confirm"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+// const ModalOverlay = ({
+//   isOpen,
+//   onClose,
+//   title,
+//   children,
+//   onSubmit,
+//   submitting,
+// }) => {
+//   if (!isOpen) return null;
+
+//   return (
+//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-3 py-4 backdrop-blur-[2px] sm:px-5">
+//       <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.18)]">
+//         {/* Header */}
+//         <div className="flex shrink-0 items-center justify-between border-b border-[#E8EAF0] px-5 py-4 sm:px-6">
+//           <h3 className="text-[15px] font-semibold tracking-[-0.2px] text-[#202337]">
+//             {title}
+//           </h3>
+
+//           <button
+//             type="button"
+//             onClick={onClose}
+//             aria-label="Close modal"
+//             className="flex h-8 w-8 items-center justify-center rounded-lg text-[#65718B] transition-colors hover:bg-[#F3F6FC] hover:text-[#202337] focus:outline-none focus:ring-2 focus:ring-[#2F6FED]/30"
+//           >
+//             <MdClose aria-hidden="true" size={19} />
+//           </button>
+//         </div>
+
+//         {/* Body */}
+//         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
+//           {children}
+//         </div>
+
+//         {/* Footer */}
+//         <div className="flex shrink-0 justify-end gap-2.5 border-t border-[#E8EAF0] bg-white px-5 py-3.5 sm:px-6">
+//           <button
+//             type="button"
+//             onClick={onClose}
+//             disabled={submitting}
+//             className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#DDE2EA] bg-white px-4 text-sm font-medium text-[#596780] transition-colors hover:bg-[#F7F9FC] hover:border-[#C8D0DD] focus:outline-none focus:ring-2 focus:ring-[#2F6FED]/20 disabled:cursor-not-allowed disabled:opacity-50"
+//           >
+//             Cancel
+//           </button>
+
+//           <button
+//             type="button"
+//             onClick={onSubmit}
+//             disabled={submitting}
+//             className="inline-flex min-h-10 min-w-[88px] items-center justify-center rounded-lg bg-[#2F6FED] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#245BD0] focus:outline-none focus:ring-2 focus:ring-[#2F6FED]/30 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+//           >
+//             {submitting ? "Saving..." : "Confirm"}
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
 
 const FieldRow = ({ label, children }) => (
   <div className="flex flex-col gap-1">
@@ -424,13 +443,15 @@ const SellerFinance = () => {
     status: "",
     search: initialParams.get("orderId") || "",
   });
-  
+
   const [overviewPage, setOverviewPage] = useState(1);
   const [overviewPageSize, setOverviewPageSize] = useState(20);
   const [commissionsPage, setCommissionsPage] = useState(1);
   const [commissionsPageSize, setCommissionsPageSize] = useState(20);
-  const [overviewPaginationLoading, setOverviewPaginationLoading] = useState(false);
-  const [commissionsPaginationLoading, setCommissionsPaginationLoading] = useState(false);
+  const [overviewPaginationLoading, setOverviewPaginationLoading] =
+    useState(false);
+  const [commissionsPaginationLoading, setCommissionsPaginationLoading] =
+    useState(false);
 
   const handleOverviewPageChange = (page) => {
     setOverviewPaginationLoading(true);
@@ -710,7 +731,14 @@ const SellerFinance = () => {
           ]
         : []),
     ],
-    [filters.sellerId, isSeller, isSellerDetail, orgOpts, sellerLoading, sellerOpts],
+    [
+      filters.sellerId,
+      isSeller,
+      isSellerDetail,
+      orgOpts,
+      sellerLoading,
+      sellerOpts,
+    ],
   );
   const visibleCommissions = useMemo(
     () =>
@@ -829,7 +857,13 @@ const SellerFinance = () => {
     const start = (commissionsPage - 1) * commissionsPageSize;
     const rows = isSellerDetail ? visibleCommissions : actionableCommissions;
     return rows.slice(start, start + commissionsPageSize);
-  }, [actionableCommissions, commissionsPage, commissionsPageSize, isSellerDetail, visibleCommissions]);
+  }, [
+    actionableCommissions,
+    commissionsPage,
+    commissionsPageSize,
+    isSellerDetail,
+    visibleCommissions,
+  ]);
 
   const financeBuckets = useMemo(
     () =>
@@ -1295,9 +1329,7 @@ const SellerFinance = () => {
         return (
           <span className={isCredit ? "text-[#208a3c]" : "text-[#d92d20]"}>
             {isCredit ? "+" : "−"}
-            {money(
-              Math.abs(deductions.shippingCredit - deductions.shipping),
-            )}
+            {money(Math.abs(deductions.shippingCredit - deductions.shipping))}
           </span>
         );
       },
@@ -1362,10 +1394,7 @@ const SellerFinance = () => {
       label: "Seller / Org",
       render: (_, row) => {
         const sellerId =
-          row.seller_id ||
-          row.sellerId ||
-          row.seller?.id ||
-          row.seller?._id;
+          row.seller_id || row.sellerId || row.seller?.id || row.seller?._id;
         const organization = organizationName(row);
         const sellerOptionName = sellerOptions.find(
           (option) => String(option.value) === String(sellerId),
@@ -1773,24 +1802,24 @@ const SellerFinance = () => {
                 );
               },
             },
-           {
-  key: "reason",
-  label: "Reason",
-  cellClassName: "min-w-[250px]",
-  render: (_, row) => {
-    const decision = payoutDecision(row);
-    const reason = formatLabel(decision.reason);
+            {
+              key: "reason",
+              label: "Reason",
+              cellClassName: "min-w-[250px]",
+              render: (_, row) => {
+                const decision = payoutDecision(row);
+                const reason = formatLabel(decision.reason);
 
-    return (
-      <span
-        className="block max-w-[220px] truncate text-xs text-[#65718b]"
-        title={reason}
-      >
-        {truncateToWordBoundary(reason, 50)}
-      </span>
-    );
-  },
-},
+                return (
+                  <span
+                    className="block max-w-[220px] truncate text-xs text-[#65718b]"
+                    title={reason}
+                  >
+                    {truncateToWordBoundary(reason, 50)}
+                  </span>
+                );
+              },
+            },
             ...(isSellerDetail ? financialStatusColumns : []),
           ]}
           data={paginatedCommissions}
@@ -1867,9 +1896,7 @@ const SellerFinance = () => {
 
       <details
         className={`${
-          !isSeller
-            ? "hidden"
-            : "rounded-lg border border-[#E6E6E6] bg-white"
+          !isSeller ? "hidden" : "rounded-lg border border-[#E6E6E6] bg-white"
         }`}
       >
         <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#202337]">
@@ -2109,30 +2136,45 @@ const SellerFinance = () => {
       {!isSeller && (
         <>
           {/* Process Payout Modal */}
-          <ModalOverlay
+          <DefaultModal
             isOpen={processModal.open}
             onClose={() =>
               setProcessModal((prev) => ({ ...prev, open: false }))
             }
             title="Initiate Seller Payout"
             onSubmit={handleProcessPayoutSubmit}
-            submitting={submitting}
+            loading={submitting}
+            submitButtonText="Initiate Payout"
+            closeButtonText="Cancel"
+            width="600px"
           >
             <div className="space-y-3">
               <FieldRow label="Payout Type *">
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    className={`rounded-md border px-3 py-2 text-sm font-semibold ${processModal.mode === "order" ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]" : "border-[#E6E6E6] text-[#65718b]"}`}
+                    className={`rounded-md border px-3 py-2 text-sm font-semibold ${
+                      processModal.mode === "order"
+                        ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]"
+                        : "border-[#E6E6E6] text-[#65718b]"
+                    }`}
                     onClick={() =>
-                      setProcessModal((prev) => ({ ...prev, mode: "order" }))
+                      setProcessModal((prev) => ({
+                        ...prev,
+                        mode: "order",
+                      }))
                     }
                   >
                     Particular Order
                   </button>
+
                   <button
                     type="button"
-                    className={`rounded-md border px-3 py-2 text-sm font-semibold ${processModal.mode === "bulk" ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]" : "border-[#E6E6E6] text-[#65718b]"}`}
+                    className={`rounded-md border px-3 py-2 text-sm font-semibold ${
+                      processModal.mode === "bulk"
+                        ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]"
+                        : "border-[#E6E6E6] text-[#65718b]"
+                    }`}
                     onClick={() =>
                       setProcessModal((prev) => ({
                         ...prev,
@@ -2145,69 +2187,81 @@ const SellerFinance = () => {
                   </button>
                 </div>
               </FieldRow>
+
               <FieldRow label="Seller *">
-                <select
-                  className={inputCls}
-                  value={processModal.sellerId}
-                  onChange={(e) =>
+                <FilterSelect
+                  name="sellerId"
+                  options={sellerOptions}
+                  value={
+                    sellerOptions.find(
+                      (option) => option.value === processModal.sellerId,
+                    ) || null
+                  }
+                  onChange={(option) =>
                     setProcessModal((prev) => ({
                       ...prev,
-                      sellerId: e.target.value,
+                      sellerId: option?.value || "",
                       organizationId: "",
+                      orderId: "",
                     }))
                   }
-                >
-                  <option value="">— Select seller —</option>
-                  {sellerOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Search or select seller"
+                  isClearable
+                />
               </FieldRow>
+
               <FieldRow label="Organization">
-                <select
-                  className={inputCls}
-                  value={processModal.organizationId}
-                  onChange={(e) =>
+                <FilterSelect
+                  name="organizationId"
+                  options={processOrganizationOptions}
+                  value={
+                    processOrganizationOptions.find(
+                      (option) => option.value === processModal.organizationId,
+                    ) || null
+                  }
+                  onChange={(option) =>
                     setProcessModal((prev) => ({
                       ...prev,
-                      organizationId: e.target.value,
+                      organizationId: option?.value || "",
                     }))
                   }
-                  disabled={!processModal.sellerId}
-                >
-                  <option value="">
-                    {processModal.sellerId
-                      ? "All Organizations Separately"
-                      : "Select seller first"}
-                  </option>
-                  {processOrganizationOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder={
+                    processModal.sellerId
+                      ? "Search or select organization"
+                      : "Select seller first"
+                  }
+                  isDisabled={!processModal.sellerId}
+                  isClearable
+                />
               </FieldRow>
+
               {processModal.mode === "order" ? (
                 <FieldRow label="Eligible Order *">
-                  <select
-                    className={inputCls}
-                    value={processModal.orderId}
-                    onChange={(e) =>
+                  <FilterSelect
+                    name="orderId"
+                    options={eligibleOrders.map((order) => ({
+                      value: order.id,
+                      label: `#${order.label} · ${money(order.amount)}`,
+                    }))}
+                    value={
+                      eligibleOrders
+                        .map((order) => ({
+                          value: order.id,
+                          label: `#${order.label} · ${money(order.amount)}`,
+                        }))
+                        .find(
+                          (option) => option.value === processModal.orderId,
+                        ) || null
+                    }
+                    onChange={(option) =>
                       setProcessModal((prev) => ({
                         ...prev,
-                        orderId: e.target.value,
+                        orderId: option?.value || "",
                       }))
                     }
-                  >
-                    <option value="">— Select eligible order —</option>
-                    {eligibleOrders.map((order) => (
-                      <option key={order.id} value={order.id}>
-                        #{order.label} · {money(order.amount)}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Search or select eligible order"
+                    isClearable
+                  />
                 </FieldRow>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
@@ -2224,6 +2278,7 @@ const SellerFinance = () => {
                       }
                     />
                   </FieldRow>
+
                   <FieldRow label="Period End">
                     <input
                       type="date"
@@ -2239,29 +2294,33 @@ const SellerFinance = () => {
                   </FieldRow>
                 </div>
               )}
+
               <FieldRow label="Payment Method">
-                <select
-                  className={inputCls}
-                  value={processModal.paymentMethod}
-                  onChange={(e) =>
+                <FilterSelect
+                  name="processPaymentMethod"
+                  options={payoutMethods}
+                  value={
+                    payoutMethods.find(
+                      (method) => method.value === processModal.paymentMethod,
+                    ) || null
+                  }
+                  onChange={(option) =>
                     setProcessModal((prev) => ({
                       ...prev,
-                      paymentMethod: e.target.value,
+                      paymentMethod: option?.value || "",
                     }))
                   }
-                >
-                  {payoutMethods.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select payment method"
+                  isClearable={false}
+                />
+
                 {processModal.paymentMethod === "razorpayx" && (
                   <p className="text-xs text-[#65718b]">
                     Uses the seller's verified onboarding bank details and sends
                     the payout through RazorpayX.
                   </p>
                 )}
+
                 {!razorpayXEnabled && (
                   <p className="text-xs text-amber-700">
                     RazorpayX is disabled in backend env, so automatic bank
@@ -2269,6 +2328,7 @@ const SellerFinance = () => {
                   </p>
                 )}
               </FieldRow>
+
               <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
                 {processModal.mode === "order"
                   ? "Only eligible unpaid commissions from the selected order will be prepared."
@@ -2276,6 +2336,7 @@ const SellerFinance = () => {
                 Approval remains required. Enter the transaction/UTR reference
                 only when completing payment.
               </div>
+
               <FieldRow label="Internal Note">
                 <textarea
                   className={`${inputCls} resize-none py-2`}
@@ -2291,17 +2352,20 @@ const SellerFinance = () => {
                 />
               </FieldRow>
             </div>
-          </ModalOverlay>
+          </DefaultModal>
 
           {/* Complete Payout Modal */}
-          <ModalOverlay
+          <DefaultModal
             isOpen={completeModal.open}
             onClose={() =>
               setCompleteModal((prev) => ({ ...prev, open: false }))
             }
             title="Complete Payout"
             onSubmit={handleCompletePayoutSubmit}
-            submitting={submitting}
+            loading={submitting}
+            submitButtonText="Complete Payout"
+            closeButtonText="Cancel"
+            width="600px"
           >
             {completeModal.payout && (
               <div className="mb-3 rounded-md bg-[#f8faff] p-3 text-xs text-[#65718b]">
@@ -2316,6 +2380,7 @@ const SellerFinance = () => {
                       )}
                   </span>
                 </div>
+
                 <div>
                   Net Amount:{" "}
                   <span className="font-semibold text-[#208a3c]">
@@ -2324,6 +2389,7 @@ const SellerFinance = () => {
                 </div>
               </div>
             )}
+
             <div className="space-y-3">
               <FieldRow
                 label={
@@ -2349,29 +2415,33 @@ const SellerFinance = () => {
                   }
                 />
               </FieldRow>
+
               <FieldRow label="Payment Method">
-                <select
-                  className={inputCls}
-                  value={completeModal.paymentMethod}
-                  onChange={(e) =>
+                <FilterSelect
+                  name="completePaymentMethod"
+                  options={payoutMethods}
+                  value={
+                    payoutMethods.find(
+                      (method) => method.value === completeModal.paymentMethod,
+                    ) || null
+                  }
+                  onChange={(option) =>
                     setCompleteModal((prev) => ({
                       ...prev,
-                      paymentMethod: e.target.value,
+                      paymentMethod: option?.value || "",
                     }))
                   }
-                >
-                  {payoutMethods.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select payment method"
+                  isClearable={false}
+                />
+
                 {completeModal.paymentMethod === "razorpayx" && (
                   <p className="text-xs text-[#65718b]">
                     Starts RazorpayX payout; the provider payout ID is saved as
                     the payment reference.
                   </p>
                 )}
+
                 {completeModal.paymentMethod !== "razorpayx" && (
                   <p className="text-xs text-amber-700">
                     Record this only after confirming the external transfer. The
@@ -2379,6 +2449,7 @@ const SellerFinance = () => {
                   </p>
                 )}
               </FieldRow>
+
               <FieldRow label="Internal Note">
                 <textarea
                   className={`${inputCls} resize-none py-2`}
@@ -2394,15 +2465,18 @@ const SellerFinance = () => {
                 />
               </FieldRow>
             </div>
-          </ModalOverlay>
+          </DefaultModal>
 
           {/* Fail Payout Modal */}
-          <ModalOverlay
+          <DefaultModal
             isOpen={failModal.open}
             onClose={() => setFailModal((prev) => ({ ...prev, open: false }))}
             title="Fail Payout"
             onSubmit={handleFailPayoutSubmit}
-            submitting={submitting}
+            loading={submitting}
+            submitButtonText="Confirm Failure"
+            closeButtonText="Cancel"
+            width="600px"
           >
             {failModal.payout && (
               <div className="mb-3 rounded-md bg-[#fff8f0] p-3 text-xs text-[#b45309]">
@@ -2414,12 +2488,14 @@ const SellerFinance = () => {
                       sellerLabel(failModal.payout.seller_id, sellerOptions)}
                   </span>
                 </div>
+
                 <div>
                   This will release the payout back to <strong>pending</strong>{" "}
                   status so it can be retried.
                 </div>
               </div>
             )}
+
             <div className="space-y-3">
               <FieldRow label="Failure Reason *">
                 <input
@@ -2434,6 +2510,7 @@ const SellerFinance = () => {
                   }
                 />
               </FieldRow>
+
               <FieldRow label="Internal Note">
                 <textarea
                   className={`${inputCls} resize-none py-2`}
@@ -2441,12 +2518,15 @@ const SellerFinance = () => {
                   placeholder="Optional additional context"
                   value={failModal.note}
                   onChange={(e) =>
-                    setFailModal((prev) => ({ ...prev, note: e.target.value }))
+                    setFailModal((prev) => ({
+                      ...prev,
+                      note: e.target.value,
+                    }))
                   }
                 />
               </FieldRow>
             </div>
-          </ModalOverlay>
+          </DefaultModal>
         </>
       )}
     </div>

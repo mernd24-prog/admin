@@ -133,7 +133,13 @@ const Sellers = () => {
   // Fetch sellers
   const load = useCallback(async () => {
     try {
-      await dispatch(
+      console.log("Seller filters sent to API:", {
+        page: pageNo.toString(),
+        size: pageSize.toString(),
+        keyWord: search,
+        ...filters,
+      });
+      const response = await dispatch(
         getSellerList({
           page: pageNo.toString(),
           size: pageSize.toString(),
@@ -141,6 +147,7 @@ const Sellers = () => {
           ...filters,
         }),
       ).unwrap();
+      console.log("Seller API response:", response);
     } catch (err) {
       toast.error(err?.message || "Failed to fetch sellers");
     }

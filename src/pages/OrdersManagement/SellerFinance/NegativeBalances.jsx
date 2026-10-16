@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormik } from "formik";
 import { toast } from "sonner";
@@ -111,11 +110,7 @@ const unwrapList = (payload = {}) => {
 
 const valueOf = (row = {}, ...keys) => {
   for (const key of keys) {
-    if (
-      row?.[key] !== undefined &&
-      row?.[key] !== null &&
-      row?.[key] !== ""
-    ) {
+    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "") {
       return row[key];
     }
   }
@@ -123,8 +118,7 @@ const valueOf = (row = {}, ...keys) => {
   return 0;
 };
 
-const settlementId = (row) =>
-  row?._id || row?.id || row?.settlementId;
+const settlementId = (row) => row?._id || row?.id || row?.settlementId;
 
 const NegativeBalances = () => {
   const dispatch = useDispatch();
@@ -161,8 +155,7 @@ const NegativeBalances = () => {
         values.resolveAction === "collected_from_seller";
 
       const amount = formatIndianNumber(
-        action.settlement?.remainingAmount ??
-          action.settlement?.net_amount,
+        action.settlement?.remainingAmount ?? action.settlement?.net_amount,
       );
 
       setConfirmAction({
@@ -269,11 +262,7 @@ const NegativeBalances = () => {
       // Refresh validation for the note under the selected action.
       await formik.validateField("note");
     },
-    [
-      formik.setFieldValue,
-      formik.setFieldTouched,
-      formik.validateField,
-    ],
+    [formik.setFieldValue, formik.setFieldTouched, formik.validateField],
   );
 
   const executeAction = useCallback(async () => {
@@ -379,9 +368,7 @@ const NegativeBalances = () => {
             </div>
 
             {row.orderId && (
-              <div className="text-xs text-gray-500">
-                Order: {row.orderId}
-              </div>
+              <div className="text-xs text-gray-500">Order: {row.orderId}</div>
             )}
           </div>
         ),
@@ -434,9 +421,7 @@ const NegativeBalances = () => {
         render: (value) => (
           <StatusBadge
             status={value}
-            label={
-              value === "pending" ? "Auto recovery active" : undefined
-            }
+            label={value === "pending" ? "Auto recovery active" : undefined}
             dot
           />
         ),
@@ -615,14 +600,12 @@ const NegativeBalances = () => {
       />
 
       <div className="admin-card mb-4 border-l-4 border-l-blue-500 bg-blue-50/40 p-4 text-sm text-[var(--admin-ink)]">
-        <div className="font-semibold">
-          Future-payout recovery is automatic
-        </div>
+        <div className="font-semibold">Future-payout recovery is automatic</div>
 
         <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
-          No admin action is needed for normal recovery. Use “Manage
-          recovery” only when payment was received outside the platform or
-          an authorized write-off is required.
+          No admin action is needed for normal recovery. Use “Manage recovery”
+          only when payment was received outside the platform or an authorized
+          write-off is required.
         </p>
       </div>
 
@@ -681,8 +664,7 @@ const NegativeBalances = () => {
 
               <div className="space-y-3">
                 {RECOVERY_ACTIONS.map((opt) => {
-                  const isSelected =
-                    formik.values.resolveAction === opt.value;
+                  const isSelected = formik.values.resolveAction === opt.value;
 
                   return (
                     <label
@@ -716,12 +698,11 @@ const NegativeBalances = () => {
                 })}
               </div>
 
-              {formik.touched.resolveAction &&
-                formik.errors.resolveAction && (
-                  <p className="text-xs text-red-500">
-                    {formik.errors.resolveAction}
-                  </p>
-                )}
+              {formik.touched.resolveAction && formik.errors.resolveAction && (
+                <p className="text-xs text-red-500">
+                  {formik.errors.resolveAction}
+                </p>
+              )}
             </div>
           </FormSection>
 
@@ -730,8 +711,7 @@ const NegativeBalances = () => {
             description="Provide the payment reference and additional notes."
           >
             <div className="space-y-4">
-              {formik.values.resolveAction ===
-                "collected_from_seller" && (
+              {formik.values.resolveAction === "collected_from_seller" && (
                 <div>
                   <Input
                     labelName="Payment Reference ID"
@@ -742,12 +722,11 @@ const NegativeBalances = () => {
                     required
                   />
 
-                  {formik.touched.referenceId &&
-                    formik.errors.referenceId && (
-                      <p className="mt-1 text-xs text-red-500">
-                        {formik.errors.referenceId}
-                      </p>
-                    )}
+                  {formik.touched.referenceId && formik.errors.referenceId && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {formik.errors.referenceId}
+                    </p>
+                  )}
                 </div>
               )}
 

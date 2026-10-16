@@ -33,20 +33,60 @@ import DateRangePickerModal from "./DateRangePickerModal";
  */
 
 /* ─────────────── AsyncDropdown ─────────────── */
+
+/* ─────────────── AsyncDropdown ─────────────── */
 const AsyncDropdownFilter = ({ field, value, onChange }) => {
   const id = useId();
   const [selectedLabel, setSelectedLabel] = useState("");
+
   const loadOptions = useCallback(
     (search) => (field.load ? field.load(search) : Promise.resolve([])),
     [field.load],
   );
-  const selectedOption = value
-    ? { value, label: selectedLabel || String(value) }
-    : null;
 
+  // Resolve the selected ID to its corresponding store name.
   useEffect(() => {
-    if (!value) setSelectedLabel("");
-  }, [value]);
+    let cancelled = false;
+
+    if (!value) {
+      setSelectedLabel("");
+      return;
+    }
+
+    // Avoid showing the previous seller's name while resolving a new ID.
+    setSelectedLabel("");
+
+    const resolveLabel = async () => {
+      try {
+        const options = await loadOptions("");
+
+        if (cancelled) return;
+
+        const matchedOption = (options || []).find(
+          (option) => String(option.value) === String(value),
+        );
+
+        if (matchedOption) {
+          setSelectedLabel(matchedOption.label);
+        }
+      } catch (error) {
+        console.error("Failed to resolve selected dropdown label:", error);
+      }
+    };
+
+    resolveLabel();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [value, loadOptions]);
+
+  const selectedOption = value
+    ? {
+        value,
+        label: selectedLabel || String(value),
+      }
+    : null;
 
   return (
     <div className="flex min-w-0 w-full flex-col gap-1">
@@ -58,6 +98,7 @@ const AsyncDropdownFilter = ({ field, value, onChange }) => {
           {field.label}
         </label>
       )}
+
       <FilterSelect
         inputId={id}
         value={selectedOption}
