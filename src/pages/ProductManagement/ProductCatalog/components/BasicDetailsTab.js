@@ -2106,8 +2106,6 @@ const submitBrandRequest = async (values) => {
               </div>
 
               <div className="mb-4 grid gap-4 md:grid-cols-2">
-                <div className="md:col-span-2">
-                  <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
                     <Input
                       labelName="Warranty Period"
                       name="warranty.period"
@@ -2141,9 +2139,6 @@ const submitBrandRequest = async (values) => {
                       isLoading={warrantyUnits.loading}
                       isClearable
                     />
-                  </div>
-                </div>
-
                 <FilterSelect
                   label="Warranty Provider"
                   value={

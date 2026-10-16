@@ -56,9 +56,12 @@ import {
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 import { uploadDocumentFile } from "../../_helpers/globalFunctions";
 import {
+  approveReferralPayoutValidationSchema,
   bonusRuleValidationSchema,
   brandAssociateValidationSchema,
   parentInfluencerValidationSchema,
+  recordReferralPayoutPaymentValidationSchema,
+  rejectReferralPayoutValidationSchema,
   referralCodeValidationSchema,
 } from "../../_helpers/validationSchemas";
 import { axiosPrivate } from "../../_helpers/axiosProvider";
@@ -598,6 +601,7 @@ const TextInput = ({
   step,
   hint = "",
   required = false,
+  nativeRequired = required,
   error = "",
   onBlur,
 }) => (
@@ -618,7 +622,7 @@ const TextInput = ({
       maxLength={maxLength}
       pattern={pattern}
       step={step}
-      required={required}
+      required={nativeRequired}
       onBlur={onBlur}
       aria-invalid={Boolean(error)}
       className={`h-10 w-full rounded border bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-400 ${error ? "border-red-400" : "border-gray-200"}`}
@@ -1631,11 +1635,6 @@ const ReferralCommerce = () => {
   const [payoutAction, setPayoutAction] = useState(null);
   const [uploadingPaymentProof, setUploadingPaymentProof] = useState(false);
   const [parentSubmitting, setParentSubmitting] = useState(false);
-  const [payoutActionForm, setPayoutActionForm] = useState({
-    adminNote: "",
-    transactionReference: "",
-    paymentProofUrl: "",
-  });
   const parentFormik = useFormik({
     initialValues: emptyInfluencerForm,
     validationSchema: parentInfluencerValidationSchema,
@@ -2358,22 +2357,94 @@ const ReferralCommerce = () => {
 
   const openPayoutAction = (payout, action) => {
     setPayoutAction({ payout, action });
-    setPayoutActionForm({
-      adminNote: "",
-      transactionReference: payout.transactionReference || "",
-      paymentProofUrl: payout.paymentProofUrl || "",
+    payoutDecisionFormik.resetForm({ values: { adminNote: "" } });
+    payoutPaymentFormik.resetForm({
+      values: {
+        adminNote: "",
+        transactionReference: payout.transactionReference || "",
+        paymentProofUrl: payout.paymentProofUrl || "",
+      },
     });
   };
 
   const closePayoutAction = () => {
     if (uploadingPaymentProof) return;
     setPayoutAction(null);
-    setPayoutActionForm({
+    payoutDecisionFormik.resetForm();
+    payoutPaymentFormik.resetForm();
+  };
+
+  const payoutDecisionFormik = useFormik({
+    initialValues: { adminNote: "" },
+    validationSchema: () =>
+      payoutAction?.action === "reject"
+        ? rejectReferralPayoutValidationSchema
+        : approveReferralPayoutValidationSchema,
+    validateOnBlur: true,
+    validateOnChange: true,
+    onSubmit: async (values) => {
+      if (!payoutAction || !["approve", "reject"].includes(payoutAction.action))
+        return;
+      const payoutId = getId(payoutAction.payout);
+      try {
+        if (payoutAction.action === "approve") {
+          await dispatch(
+            approveReferralPayout({
+              payoutId,
+              adminNote: values.adminNote.trim() || null,
+            }),
+          ).unwrap();
+        } else {
+          await dispatch(
+            rejectReferralPayout({
+              payoutId,
+              adminNote: values.adminNote.trim(),
+            }),
+          ).unwrap();
+        }
+        toast.success("Payout updated");
+        closePayoutAction();
+        await refreshAll();
+      } catch (error) {
+        toast.error(error || "Unable to update payout");
+      }
+    },
+  });
+
+  const payoutPaymentFormik = useFormik({
+    initialValues: {
       adminNote: "",
       transactionReference: "",
       paymentProofUrl: "",
-    });
-  };
+    },
+    validationSchema: recordReferralPayoutPaymentValidationSchema,
+    validateOnBlur: true,
+    validateOnChange: true,
+    onSubmit: async (values) => {
+      if (
+        !payoutAction ||
+        payoutAction.action !== "paid" ||
+        uploadingPaymentProof
+      )
+        return;
+      try {
+        await dispatch(
+          markReferralPayoutPaid({
+            payoutId: getId(payoutAction.payout),
+            transactionReference: values.transactionReference.trim(),
+            paymentProofUrl: values.paymentProofUrl,
+            adminNote: values.adminNote.trim() || null,
+            paidAt: new Date().toISOString(),
+          }),
+        ).unwrap();
+        toast.success("Payout updated");
+        closePayoutAction();
+        await refreshAll();
+      } catch (error) {
+        toast.error(error || "Unable to update payout");
+      }
+    },
+  });
 
   const handlePaymentProofUpload = async (event) => {
     const file = event.target.files?.[0];
@@ -2395,7 +2466,10 @@ const ReferralCommerce = () => {
         file,
         "REFERRAL_PAYOUTS",
       );
-      setPayoutActionForm((form) => ({ ...form, paymentProofUrl }));
+      await payoutPaymentFormik.setFieldValue(
+        "paymentProofUrl",
+        paymentProofUrl,
+      );
       toast.success("Payment proof uploaded");
     } catch (error) {
       toast.error(error?.message || error || "Unable to upload payment proof");
@@ -2407,42 +2481,11 @@ const ReferralCommerce = () => {
   const handlePayoutAction = async (event) => {
     event.preventDefault();
     if (!payoutAction || uploadingPaymentProof) return;
-    const { payout, action } = payoutAction;
-    const payoutId = getId(payout);
-    try {
-      if (action === "approve") {
-        await dispatch(
-          approveReferralPayout({
-            payoutId,
-            adminNote: payoutActionForm.adminNote,
-          }),
-        ).unwrap();
-      }
-      if (action === "reject") {
-        await dispatch(
-          rejectReferralPayout({
-            payoutId,
-            adminNote: payoutActionForm.adminNote,
-          }),
-        ).unwrap();
-      }
-      if (action === "paid") {
-        await dispatch(
-          markReferralPayoutPaid({
-            payoutId,
-            transactionReference: payoutActionForm.transactionReference.trim(),
-            paymentProofUrl: payoutActionForm.paymentProofUrl || null,
-            adminNote: payoutActionForm.adminNote || null,
-            paidAt: new Date().toISOString(),
-          }),
-        ).unwrap();
-      }
-      toast.success("Payout updated");
-      closePayoutAction();
-      await refreshAll();
-    } catch (error) {
-      toast.error(error || "Unable to update payout");
+    if (["approve", "reject"].includes(payoutAction.action)) {
+      payoutDecisionFormik.handleSubmit();
+      return;
     }
+    payoutPaymentFormik.handleSubmit();
   };
 
   const openEditCode = (code) => {
@@ -4435,7 +4478,10 @@ const ReferralCommerce = () => {
         </div>
       </DefaultModal>
 
-      <Modal
+      <DefaultModal
+        isOpen={Boolean(payoutAction)}
+        onClose={closePayoutAction}
+        onSubmit={handlePayoutAction}
         title={
           payoutAction?.action === "paid"
             ? "Record Payout Payment"
@@ -4443,224 +4489,276 @@ const ReferralCommerce = () => {
               ? "Reject Payout Request"
               : "Approve Payout Request"
         }
-        open={Boolean(payoutAction)}
-        onClose={closePayoutAction}
-        footer={
-          <>
-            <button
-              type="button"
-              disabled={uploadingPaymentProof}
-              onClick={closePayoutAction}
-              className="admin-btn-secondary"
-            >
-              Cancel
-            </button>
-            <OrangeButton
-              type="submit"
-              form="payoutActionForm"
-              disabled={
-                uploadingPaymentProof ||
-                (payoutAction?.action === "paid" &&
-                  !payoutActionForm.paymentProofUrl)
-              }
-            >
-              {payoutAction?.action === "paid"
-                ? "Mark Paid"
-                : payoutAction?.action === "reject"
-                  ? "Reject Request"
-                  : "Approve Request"}
-            </OrangeButton>
-          </>
+        submitButtonText={
+          payoutAction?.action === "paid"
+            ? "Mark Paid"
+            : payoutAction?.action === "reject"
+              ? "Reject Request"
+              : "Approve Request"
         }
+        closeButtonText="Cancel"
+        isButtonView={true}
       >
-        <form
-          id="payoutActionForm"
-          onSubmit={handlePayoutAction}
-          className="space-y-4"
-        >
-          <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-4 text-sm">
-            <div>
-              <span className="block text-xs text-gray-500">Partner</span>
-              {payoutAction
-                ? renderInfluencerRef(payoutAction.payout.influencerId)
-                : "-"}
-            </div>
-            <div>
-              <span className="block text-xs text-gray-500">
-                Requested coins
-              </span>
-              <strong>
-                {formatCoins(
-                  payoutAction?.payout?.coinAmount ??
-                    payoutAction?.payout?.amount,
-                )}
-              </strong>
-            </div>
-            <div>
-              <span className="block text-xs text-gray-500">
-                Transfer amount
-              </span>
-              <strong>
-                {formatAmount(
-                  payoutAction?.payout?.currencyAmount ??
-                    Number(
-                      (payoutAction?.payout?.coinAmount ??
-                        payoutAction?.payout?.amount) ||
-                        0,
-                    ) * Number(payoutAction?.payout?.coinValue || 1),
-                )}
-              </strong>
-            </div>
-            <div>
-              <span className="block text-xs text-gray-500">
-                Transfer destination
-              </span>
-              <strong>
-                {payoutAction?.payout?.destinationSnapshot?.accountNumber
-                  ? `${payoutAction.payout.destinationSnapshot.bankName || "Bank"} · ${payoutAction.payout.destinationSnapshot.accountNumber}`
-                  : payoutAction?.payout?.destinationSnapshot?.upiId ||
-                    payoutAction?.payout?.upiId ||
-                    payoutAction?.payout?.bankAccountId ||
-                    "Manual"}
-              </strong>
-            </div>
-            {payoutAction?.payout?.destinationSnapshot?.accountHolderName && (
-              <div>
-                <span className="block text-xs text-gray-500">
-                  Account holder
+        <div className="space-y-5">
+          {/* ==================== Payout Summary ==================== */}
+          <FormSection
+            title="Payout Summary"
+            description="Review the partner and payout details before proceeding."
+          >
+            <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 sm:grid-cols-2">
+              <div className="min-w-0">
+                <span className="mb-1 block text-xs text-gray-500">
+                  Partner
                 </span>
-                <strong>
-                  {payoutAction.payout.destinationSnapshot.accountHolderName}
-                </strong>
-              </div>
-            )}
-            {payoutAction?.payout?.destinationSnapshot?.ifscCode && (
-              <div>
-                <span className="block text-xs text-gray-500">IFSC</span>
-                <strong>
-                  {payoutAction.payout.destinationSnapshot.ifscCode}
-                </strong>
-              </div>
-            )}
-            {payoutAction?.payout?.payoutQrUrl && (
-              <div>
-                <span className="block text-xs text-gray-500">
-                  Submitted QR
-                </span>
-                <a
-                  href={payoutAction.payout.payoutQrUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 font-semibold text-blue-700 hover:underline"
-                >
-                  <ExternalLink aria-hidden="true" size={13} />
-                  Review QR
-                </a>
-              </div>
-            )}
-            <div>
-              <span className="block text-xs text-gray-500">
-                Destination source
-              </span>
-              <strong>
-                {payoutAction?.payout?.destinationSource === "saved_profile"
-                  ? "Saved profile details"
-                  : payoutAction?.payout?.destinationSource === "one_time"
-                    ? "One-time details"
-                    : "Legacy request"}
-              </strong>
-            </div>
-          </div>
-          {payoutAction?.action === "paid" && (
-            <>
-              <TextInput
-                required
-                label="Bank / UPI Transaction Reference *"
-                name="transactionReference"
-                value={payoutActionForm.transactionReference}
-                onChange={(event) =>
-                  setPayoutActionForm((form) => ({
-                    ...form,
-                    transactionReference: event.target.value,
-                  }))
-                }
-              />
-              <div className="rounded-lg border border-dashed border-[#d8caa6] bg-[#fffaf0] p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="text-xs font-medium uppercase text-gray-600">
-                      Payment proof *
-                    </div>
-                    <div className="mt-1 text-xs text-gray-500">
-                      Upload a PDF, JPG, PNG, or WebP receipt.
-                    </div>
-                  </div>
-                  <label
-                    className={`admin-btn-secondary inline-flex cursor-pointer items-center gap-2 ${uploadingPaymentProof ? "pointer-events-none opacity-60" : ""}`}
-                  >
-                    <UploadCloud aria-hidden="true" size={15} />
-                    {uploadingPaymentProof
-                      ? "Uploading…"
-                      : payoutActionForm.paymentProofUrl
-                        ? "Replace file"
-                        : "Upload proof"}
-                    <input
-                      type="file"
-                      accept="application/pdf,image/jpeg,image/png,image/webp"
-                      className="hidden"
-                      disabled={uploadingPaymentProof}
-                      onChange={handlePaymentProofUpload}
-                    />
-                  </label>
+                <div className="text-sm font-medium text-gray-800">
+                  {payoutAction
+                    ? renderInfluencerRef(payoutAction.payout.influencerId)
+                    : "-"}
                 </div>
-                {payoutActionForm.paymentProofUrl && (
-                  <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-green-200 bg-white px-3 py-2 text-xs">
-                    <a
-                      href={payoutActionForm.paymentProofUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-w-0 items-center gap-1 font-semibold text-green-700 hover:underline"
-                    >
-                      <ExternalLink aria-hidden="true" size={13} /> View
-                      uploaded payment proof
-                    </a>
-                    <button
-                      type="button"
-                      className="font-semibold text-red-600 hover:underline"
-                      onClick={() =>
-                        setPayoutActionForm((form) => ({
-                          ...form,
-                          paymentProofUrl: "",
-                        }))
-                      }
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
               </div>
-            </>
+
+              <div className="min-w-0">
+                <span className="mb-1 block text-xs text-gray-500">
+                  Requested Coins
+                </span>
+                <strong className="text-sm text-gray-800">
+                  {formatCoins(
+                    payoutAction?.payout?.coinAmount ??
+                      payoutAction?.payout?.amount,
+                  )}
+                </strong>
+              </div>
+
+              <div className="min-w-0">
+                <span className="mb-1 block text-xs text-gray-500">
+                  Transfer Amount
+                </span>
+                <strong className="text-sm text-gray-800">
+                  {formatAmount(
+                    payoutAction?.payout?.currencyAmount ??
+                      Number(
+                        (payoutAction?.payout?.coinAmount ??
+                          payoutAction?.payout?.amount) ||
+                          0,
+                      ) * Number(payoutAction?.payout?.coinValue || 1),
+                  )}
+                </strong>
+              </div>
+
+              <div className="min-w-0">
+                <span className="mb-1 block text-xs text-gray-500">
+                  Transfer Destination
+                </span>
+                <strong className="break-words text-sm text-gray-800">
+                  {payoutAction?.payout?.destinationSnapshot?.accountNumber
+                    ? `${payoutAction.payout.destinationSnapshot.bankName || "Bank"} · ${payoutAction.payout.destinationSnapshot.accountNumber}`
+                    : payoutAction?.payout?.destinationSnapshot?.upiId ||
+                      payoutAction?.payout?.upiId ||
+                      payoutAction?.payout?.bankAccountId ||
+                      "Manual"}
+                </strong>
+              </div>
+
+              {payoutAction?.payout?.destinationSnapshot?.accountHolderName && (
+                <div className="min-w-0">
+                  <span className="mb-1 block text-xs text-gray-500">
+                    Account Holder
+                  </span>
+                  <strong className="break-words text-sm text-gray-800">
+                    {payoutAction.payout.destinationSnapshot.accountHolderName}
+                  </strong>
+                </div>
+              )}
+
+              {payoutAction?.payout?.destinationSnapshot?.ifscCode && (
+                <div className="min-w-0">
+                  <span className="mb-1 block text-xs text-gray-500">
+                    IFSC Code
+                  </span>
+                  <strong className="text-sm text-gray-800">
+                    {payoutAction.payout.destinationSnapshot.ifscCode}
+                  </strong>
+                </div>
+              )}
+
+              {payoutAction?.payout?.payoutQrUrl && (
+                <div className="min-w-0">
+                  <span className="mb-1 block text-xs text-gray-500">
+                    Submitted QR
+                  </span>
+                  <a
+                    href={payoutAction.payout.payoutQrUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-blue-700 hover:underline"
+                  >
+                    <ExternalLink aria-hidden="true" size={13} />
+                    Review QR
+                  </a>
+                </div>
+              )}
+
+              <div className="min-w-0">
+                <span className="mb-1 block text-xs text-gray-500">
+                  Destination Source
+                </span>
+                <strong className="text-sm text-gray-800">
+                  {payoutAction?.payout?.destinationSource === "saved_profile"
+                    ? "Saved profile details"
+                    : payoutAction?.payout?.destinationSource === "one_time"
+                      ? "One-time details"
+                      : "Legacy request"}
+                </strong>
+              </div>
+            </div>
+          </FormSection>
+
+          {/* ==================== Payment Details ==================== */}
+          {payoutAction?.action === "paid" && (
+            <FormSection
+              title="Payment Details"
+              description="Enter the transaction reference and upload proof of payment."
+            >
+              <div className="space-y-4">
+                <TextInput
+                  required
+                  nativeRequired={false}
+                  label="Bank / UPI Transaction Reference"
+                  name="transactionReference"
+                  value={payoutPaymentFormik.values.transactionReference}
+                  onChange={payoutPaymentFormik.handleChange}
+                  onBlur={payoutPaymentFormik.handleBlur}
+                  error={
+                    payoutPaymentFormik.touched.transactionReference &&
+                    payoutPaymentFormik.errors.transactionReference
+                  }
+                />
+
+                <div className="rounded-lg border border-dashed border-[#d8caa6] bg-[#fffaf0] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <label className="block text-sm font-medium text-gray-800">
+                        Payment Proof *
+                      </label>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Upload a PDF, JPG, PNG, or WebP receipt.
+                      </p>
+                    </div>
+
+                    <label
+                      className={`admin-btn-secondary inline-flex shrink-0 cursor-pointer items-center gap-2 ${
+                        uploadingPaymentProof
+                          ? "pointer-events-none opacity-60"
+                          : ""
+                      }`}
+                    >
+                      <UploadCloud aria-hidden="true" size={15} />
+
+                      {uploadingPaymentProof
+                        ? "Uploading..."
+                        : payoutPaymentFormik.values.paymentProofUrl
+                          ? "Replace File"
+                          : "Upload Proof"}
+
+                      <input
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        disabled={uploadingPaymentProof}
+                        onChange={handlePaymentProofUpload}
+                      />
+                    </label>
+                  </div>
+
+                  {payoutPaymentFormik.values.paymentProofUrl && (
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-green-200 bg-white px-3 py-2">
+                      <a
+                        href={payoutPaymentFormik.values.paymentProofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-w-0 items-center gap-1 break-all text-xs font-semibold text-green-700 hover:underline"
+                      >
+                        <ExternalLink aria-hidden="true" size={13} />
+                        View Uploaded Payment Proof
+                      </a>
+
+                      <button
+                        type="button"
+                        className="shrink-0 text-xs font-semibold text-red-600 hover:underline"
+                        onClick={() =>
+                          payoutPaymentFormik.setFieldValue(
+                            "paymentProofUrl",
+                            "",
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                  {payoutPaymentFormik.touched.paymentProofUrl &&
+                    payoutPaymentFormik.errors.paymentProofUrl && (
+                      <p className="mt-2 text-xs text-red-600" role="alert">
+                        {payoutPaymentFormik.errors.paymentProofUrl}
+                      </p>
+                    )}
+                </div>
+              </div>
+            </FormSection>
           )}
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium uppercase text-gray-500">
-              Admin Note{payoutAction?.action === "reject" ? " *" : ""}
-            </span>
-            <textarea
-              required={payoutAction?.action === "reject"}
-              rows="3"
-              value={payoutActionForm.adminNote}
-              onChange={(event) =>
-                setPayoutActionForm((form) => ({
-                  ...form,
-                  adminNote: event.target.value,
-                }))
-              }
-              className="admin-input w-full resize-y"
-              placeholder="Add an audit note"
-            />
-          </label>
-        </form>
-      </Modal>
+
+          {/* ==================== Admin Note ==================== */}
+          <FormSection
+            title="Admin Note"
+            description="Add a note for the payout audit trail."
+          >
+            <div>
+              <label className="admin-label">
+                Note{payoutAction?.action !== "paid" ? " *" : ""}
+              </label>
+
+              <textarea
+                rows={3}
+                name="adminNote"
+                value={
+                  payoutAction?.action === "paid"
+                    ? payoutPaymentFormik.values.adminNote
+                    : payoutDecisionFormik.values.adminNote
+                }
+                onChange={(event) => {
+                  if (payoutAction?.action === "paid") {
+                    payoutPaymentFormik.handleChange(event);
+                  } else {
+                    payoutDecisionFormik.handleChange(event);
+                  }
+                }}
+                onBlur={
+                  payoutAction?.action === "paid"
+                    ? payoutPaymentFormik.handleBlur
+                    : payoutDecisionFormik.handleBlur
+                }
+                className="admin-input w-full resize-y"
+                placeholder="Add an audit note"
+              />
+
+              {payoutAction?.action === "paid" &&
+                payoutPaymentFormik.touched.adminNote &&
+                payoutPaymentFormik.errors.adminNote && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {payoutPaymentFormik.errors.adminNote}
+                  </p>
+                )}
+              {payoutAction?.action !== "paid" &&
+                payoutDecisionFormik.touched.adminNote &&
+                payoutDecisionFormik.errors.adminNote && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {payoutDecisionFormik.errors.adminNote}
+                  </p>
+                )}
+            </div>
+          </FormSection>
+        </div>
+      </DefaultModal>
 
       <DefaultModal
         isOpen={bonusRuleModalOpen}
