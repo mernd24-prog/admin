@@ -93,6 +93,7 @@ import Loader, { ButtonLoader } from "../../components/Loader/Loader";
 import ButtonTransparent from "../../components/Atoms/ButtonTransparent/button";
 import Cards from "../../components/Cards/Cards";
 import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
+import Input from "../../components/Atoms/Input/Input";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -4713,12 +4714,9 @@ const ReferralCommerce = () => {
             description="Add a note for the payout audit trail."
           >
             <div>
-              <label className="admin-label">
-                Note{payoutAction?.action !== "paid" ? " *" : ""}
-              </label>
-
-              <textarea
-                rows={3}
+              <Input
+                labelName={`Note ${payoutAction?.action === "paid" ? "(Optional)" : ""}`}
+                type="textarea"
                 name="adminNote"
                 value={
                   payoutAction?.action === "paid"
@@ -4737,8 +4735,7 @@ const ReferralCommerce = () => {
                     ? payoutPaymentFormik.handleBlur
                     : payoutDecisionFormik.handleBlur
                 }
-                className="admin-input w-full resize-y"
-                placeholder="Add an audit note"
+                required={payoutAction?.action !== "paid"}
               />
 
               {payoutAction?.action === "paid" &&
@@ -4748,6 +4745,7 @@ const ReferralCommerce = () => {
                     {payoutPaymentFormik.errors.adminNote}
                   </p>
                 )}
+
               {payoutAction?.action !== "paid" &&
                 payoutDecisionFormik.touched.adminNote &&
                 payoutDecisionFormik.errors.adminNote && (

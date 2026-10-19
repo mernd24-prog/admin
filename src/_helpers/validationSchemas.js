@@ -91,6 +91,93 @@ export const recordReferralPayoutPaymentValidationSchema = Yup.object({
   adminNote: referralPayoutAdminNote,
 });
 
+const shipmentTrackingNoteSchema = Yup.string().when("status", {
+  is: (status) => ["failed", "rto", "cancelled"].includes(status),
+  then: (schema) =>
+    schema
+      .trim()
+      .required("Add a reason of at least 3 characters.")
+      .min(3, "Add a reason of at least 3 characters.")
+      .max(1000, "Note must be at most 1000 characters."),
+  otherwise: (schema) =>
+    schema
+      .max(1000, "Note must be at most 1000 characters.")
+      .test(
+        "minimum-note-length",
+        "Note must be at least 3 characters.",
+        (value) => !value || value.trim().length >= 3,
+      ),
+});
+
+export const shipmentTrackingActionValidationSchema = Yup.object({
+  status: Yup.string().required("Select a shipment status."),
+  location: Yup.string()
+    .trim()
+    .max(200, "Location must be at most 200 characters.")
+    .test(
+      "minimum-location-length",
+      "Location must be at least 3 characters.",
+      (value) => !value || value.length >= 3,
+    )
+    .test(
+      "readable-location",
+      "Enter a readable location, not only numbers.",
+      (value) => !value || !/^\d+$/.test(value),
+    ),
+  note: shipmentTrackingNoteSchema,
+  courierName: Yup.string().when("status", {
+    is: "in_transit",
+    then: (schema) =>
+      schema
+        .trim()
+        .required("Courier or delivery method is required.")
+        .max(100, "Courier or delivery method must be at most 100 characters."),
+    otherwise: (schema) => schema,
+  }),
+  awbNumber: Yup.string().when("status", {
+    is: "in_transit",
+    then: (schema) =>
+      schema
+        .trim()
+        .required("Tracking reference is required.")
+        .min(5, "Tracking reference must be 5–50 characters.")
+        .max(50, "Tracking reference must be 5–50 characters.")
+        .matches(
+          /^[A-Za-z0-9_/-]+$/,
+          "Allowed: letters, numbers, -, _, and / only.",
+        ),
+    otherwise: (schema) => schema,
+  }),
+  expectedDeliveryAt: Yup.string().when("status", {
+    is: "in_transit",
+    then: (schema) =>
+      schema
+        .required("Expected delivery date is required.")
+        .test(
+          "future-date",
+          "Expected delivery must be in the future.",
+          (value) => Boolean(value) && new Date(value).getTime() > Date.now(),
+        ),
+    otherwise: (schema) => schema,
+  }),
+  trackingUrl: Yup.string()
+    .trim()
+    .max(2048, "Tracking URL must be at most 2048 characters.")
+    .test(
+      "valid-tracking-url",
+      "Enter a valid http:// or https:// tracking URL.",
+      (value) => {
+        if (!value) return true;
+        try {
+          const parsedUrl = new URL(value);
+          return ["http:", "https:"].includes(parsedUrl.protocol);
+        } catch {
+          return false;
+        }
+      },
+    ),
+});
+
 const taxRateSchema = (label) =>
   Yup.number()
     .transform((value, originalValue) =>
