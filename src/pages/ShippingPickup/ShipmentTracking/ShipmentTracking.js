@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFormik } from "formik";
 
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
@@ -19,7 +20,7 @@ import {
   MdTimeline,
   MdVisibility,
 } from "react-icons/md";
-import Loader from "../../../components/Loader/Loader";
+import Loader, { ButtonLoader } from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   DataTable,
@@ -43,6 +44,7 @@ import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
 import { ExportButton } from "../../../components/Atoms/buttons/exportImport";
+import { shipmentTrackingActionValidationSchema } from "../../../_helpers/validationSchemas";
 
 const STATUS_OPTIONS = [
   "initiated",
@@ -367,27 +369,7 @@ const ShipmentTracking = () => {
         // { key: "toDate", type: "date", label: "To" },
       ]
     : [
-        { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
-        { key: "returnId", type: "text", label: "Return #", width: "w-44" },
-        {
-          key: "shipmentType",
-          type: "select",
-          label: "Type",
-          options: [
-            { value: "forward", label: "Forward" },
-            { value: "return", label: "Return" },
-          ],
-        },
-        {
-          key: "direction",
-          type: "select",
-          label: "Direction",
-          options: [
-            { value: "forward", label: "Forward" },
-            { value: "reverse", label: "Reverse" },
-          ],
-        },
-        {
+             {
           key: "sellerId",
           type: "asyncDropdown",
           label: "Seller",
@@ -398,7 +380,7 @@ const ShipmentTracking = () => {
               searchFields: "full_name,email,businessName",
             }),
         },
-        {
+           {
           key: "organizationId",
           type: "select",
           label: "Organization",
@@ -414,6 +396,28 @@ const ShipmentTracking = () => {
               }))
             : [],
         },
+        { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
+        { key: "returnId", type: "text", label: "Return #", width: "w-44" },
+        {
+          key: "shipmentType",
+          type: "select",
+          label: "Type",
+          options: [
+            { value: "forward", label: "Forward" },
+            { value: "return", label: "Return" },
+          ],
+        },
+        // {
+        //   key: "direction",
+        //   type: "select",
+        //   label: "Direction",
+        //   options: [
+        //     { value: "forward", label: "Forward" },
+        //     { value: "reverse", label: "Reverse" },
+        //   ],
+        // },
+ 
+     
         {
           key: "awbNumber",
           type: "text",
@@ -474,7 +478,7 @@ const ShipmentTracking = () => {
     trackingUrl: "",
     expectedDeliveryAt: "",
   });
-  const [trackingErrors, setTrackingErrors] = useState({});
+  const [trackingSubmitAttempted, setTrackingSubmitAttempted] = useState(false);
   const [cancellationAction, setCancellationAction] = useState({
     open: false,
     reasonCode: "seller_unavailable",
@@ -500,6 +504,85 @@ const ShipmentTracking = () => {
         : [],
     [selectedShipment?.status, selectedShipmentPaid],
   );
+  const trackingFormik = useFormik({
+    initialValues: {
+      status: "in_transit",
+      note: "",
+      location: "",
+      courierName: "",
+      awbNumber: "",
+      trackingUrl: "",
+      expectedDeliveryAt: "",
+    },
+    validationSchema: shipmentTrackingActionValidationSchema,
+    validateOnBlur: true,
+    validateOnChange: true,
+    onSubmit: async (values) => {
+      if (!selectedShipment?.id) return;
+      try {
+        setLoading(true);
+        const eventTime = new Date().toISOString();
+        await dispatch(
+          addShipmentTracking({
+            shipmentId: selectedShipment.id,
+            status: values.status,
+            note: values.note.trim(),
+            location: values.location.trim(),
+            source: "seller_panel",
+            courierName: values.courierName.trim(),
+            awbNumber: values.awbNumber.trim(),
+            trackingNumber: values.awbNumber.trim(),
+            trackingUrl: values.trackingUrl.trim(),
+            expectedDeliveryAt: values.expectedDeliveryAt
+              ? new Date(values.expectedDeliveryAt).toISOString()
+              : undefined,
+            eventTime,
+            shippedAt: values.status === "in_transit" ? eventTime : undefined,
+          }),
+        ).unwrap();
+
+        toast.success(
+          `Shipment status updated to ${shipmentStepLabel(values.status)}.`,
+        );
+        await refreshSelectedShipment(selectedShipment.id);
+        if (["in_transit", "delivered"].includes(values.status)) {
+          setDetailModal(false);
+        }
+      } catch (requestError) {
+        toast.error(
+          requestError?.message ||
+            requestError ||
+            "Failed to update shipment status",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+  });
+  const trackingFormikResetRef = useRef(trackingFormik.resetForm);
+  trackingFormikResetRef.current = trackingFormik.resetForm;
+  const updateTrackingField = (field, value) => {
+    trackingFormik.setFieldValue(field, value);
+    setTrackingAction((prev) => ({ ...prev, [field]: value }));
+  };
+  const handleTrackingSubmit = async () => {
+    setTrackingSubmitAttempted(true);
+    const validationErrors = await trackingFormik.validateForm();
+    trackingFormik.setTouched(
+      {
+        status: true,
+        note: true,
+        location: true,
+        courierName: true,
+        awbNumber: true,
+        trackingUrl: true,
+        expectedDeliveryAt: true,
+      },
+      false,
+    );
+    if (Object.keys(validationErrors).length > 0) return;
+    await trackingFormik.submitForm();
+  };
   const filterFields = useMemo(
     () =>
       isSeller
@@ -536,7 +619,8 @@ const ShipmentTracking = () => {
     async (row) => {
       setSelectedShipment(row);
       setDetailModal(true);
-      setTrackingAction({
+      setTrackingSubmitAttempted(false);
+      const initialAction = {
         status: getDefaultTrackingStatus(row.status || "initiated"),
         note: "",
         location: "",
@@ -546,7 +630,9 @@ const ShipmentTracking = () => {
         expectedDeliveryAt: toDateTimeLocal(
           row.expected_delivery_at || row.expectedDeliveryAt,
         ),
-      });
+      };
+      setTrackingAction(initialAction);
+      trackingFormikResetRef.current({ values: initialAction });
       try {
         setLoading(true);
         const response = await dispatch(
@@ -554,7 +640,7 @@ const ShipmentTracking = () => {
         ).unwrap();
         const nextShipment = unwrapResult(response);
         setSelectedShipment(nextShipment);
-        setTrackingAction({
+        const nextAction = {
           status: getDefaultTrackingStatus(nextShipment.status || "initiated"),
           note: "",
           location: "",
@@ -566,7 +652,9 @@ const ShipmentTracking = () => {
             nextShipment.expected_delivery_at ||
               nextShipment.expectedDeliveryAt,
           ),
-        });
+        };
+        setTrackingAction(nextAction);
+        trackingFormikResetRef.current({ values: nextAction });
       } catch (requestError) {
         toast.error(
           requestError?.message ||
@@ -590,130 +678,19 @@ const ShipmentTracking = () => {
       const response = await dispatch(getShipment({ shipmentId })).unwrap();
       const nextShipment = unwrapResult(response);
       setSelectedShipment(nextShipment);
+      const nextStatus = getDefaultTrackingStatus(
+        nextShipment.status || "initiated",
+      );
       setTrackingAction((prev) => ({
         ...prev,
-        status: getDefaultTrackingStatus(nextShipment.status || "initiated"),
+        status: nextStatus,
       }));
+      trackingFormik.setFieldValue("status", nextStatus, false);
       await fetchShipments();
       return nextShipment;
     },
-    [dispatch, fetchShipments],
+    [dispatch, fetchShipments, trackingFormik.setFieldValue],
   );
-
-  const handleTrackingStatus = useCallback(async () => {
-    if (!selectedShipment?.id) return;
-
-    const nextErrors = {};
-    const location = trackingAction.location.trim();
-    const note = trackingAction.note.trim();
-    const trackingUrl = trackingAction.trackingUrl.trim();
-
-    if (location && (/^\d+$/.test(location) || location.length < 3)) {
-      nextErrors.location = "Enter a readable location, not only numbers.";
-    }
-
-    if (
-      ["failed", "rto", "cancelled"].includes(trackingAction.status) &&
-      note.length < 3
-    ) {
-      nextErrors.note = "Add a reason of at least 3 characters.";
-    }
-
-    if (trackingAction.status === "in_transit") {
-      if (!trackingAction.courierName.trim()) {
-        nextErrors.courierName = "Courier or delivery method is required.";
-      }
-
-      if (!trackingAction.awbNumber.trim()) {
-        nextErrors.awbNumber = "Tracking reference is required.";
-      } else if (
-        trackingAction.awbNumber.length < 5 ||
-        trackingAction.awbNumber.length > 50
-      ) {
-        nextErrors.awbNumber = "Tracking reference must be 5–50 characters.";
-      } else if (!/^[A-Za-z0-9_/-]+$/.test(trackingAction.awbNumber)) {
-        nextErrors.awbNumber = "Allowed: letters, numbers, -, _, and / only.";
-      }
-
-      if (!trackingAction.expectedDeliveryAt) {
-        nextErrors.expectedDeliveryAt = "Expected delivery date is required.";
-      } else if (
-        new Date(trackingAction.expectedDeliveryAt).getTime() <= Date.now()
-      ) {
-        nextErrors.expectedDeliveryAt =
-          "Expected delivery must be in the future.";
-      }
-    }
-
-    if (trackingUrl) {
-      try {
-        const parsedUrl = new URL(trackingUrl);
-
-        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-          throw new Error("Invalid protocol");
-        }
-      } catch {
-        nextErrors.trackingUrl =
-          "Enter a valid http:// or https:// tracking URL.";
-      }
-    }
-
-    if (Object.keys(nextErrors).length) {
-      setTrackingErrors(nextErrors);
-
-      toast.error(
-        "Please correct the highlighted shipment fields before updating.",
-        { id: "shipment-tracking-validation-error" },
-      );
-
-      return;
-    }
-
-    try {
-      setTrackingErrors({});
-      setLoading(true);
-
-      const eventTime = new Date().toISOString();
-
-      await dispatch(
-        addShipmentTracking({
-          shipmentId: selectedShipment.id,
-          status: trackingAction.status,
-          note: trackingAction.note,
-          location: trackingAction.location,
-          source: "seller_panel",
-          courierName: trackingAction.courierName,
-          awbNumber: trackingAction.awbNumber,
-          trackingNumber: trackingAction.awbNumber,
-          trackingUrl: trackingAction.trackingUrl,
-          expectedDeliveryAt: trackingAction.expectedDeliveryAt
-            ? new Date(trackingAction.expectedDeliveryAt).toISOString()
-            : undefined,
-          eventTime,
-          shippedAt:
-            trackingAction.status === "in_transit" ? eventTime : undefined,
-        }),
-      ).unwrap();
-
-      toast.success(
-        `Shipment status updated to ${shipmentStepLabel(trackingAction.status)}.`,
-      );
-
-      await refreshSelectedShipment(selectedShipment.id);
-
-      if (["in_transit", "delivered"].includes(trackingAction.status)) {
-        setDetailModal(false);
-      }
-    } catch (requestError) {
-      toast.error(
-        requestError?.message ||
-          requestError ||
-          "Failed to update shipment status",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [dispatch, refreshSelectedShipment, selectedShipment, trackingAction]);
 
   const handleSellerCancellation = useCallback(async () => {
     if (!selectedShipment?.order_id) return;
@@ -1146,340 +1123,379 @@ const ShipmentTracking = () => {
             )}
           </section>
 
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-blue-200 bg-blue-50/40 p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="font-semibold text-gray-800">
-                  Seller delivery action
-                </div>
-                <p className="mt-0.5 text-xs text-gray-500">
-                  Select the next valid shipment stage. Only relevant details
-                  are requested. Update time is recorded automatically.
-                </p>
-              </div>
-              <StatusBadge
-                status={selectedShipment?.status || "initiated"}
-                dot
-              />
-            </div>
-            {lastCancellation &&
-              String(lastCancellation.order_id || lastCancellation.orderId) ===
-                String(selectedShipment?.order_id) && (
-                <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-                  <div className="font-semibold">Seller items cancelled</div>
-                  <div className="mt-1 text-xs">
-                    Inventory processing:{" "}
-                    {displayStatus(lastCancellation.inventory_status)}
-                    {" · "}Customer refund:{" "}
-                    {displayStatus(lastCancellation.refund_status)}
-                  </div>
-                  <button
-                    type="button"
-                    className="mt-2 text-xs font-semibold text-green-800 underline"
-                    onClick={() =>
-                      navigate(
-                        `/app/cancellations?orderId=${encodeURIComponent(selectedShipment.order_id)}`,
-                      )
-                    }
-                  >
-                    View cancellation
-                  </button>
-                </div>
-              )}
-            {trackingActionOptions.length > 0 ? (
-              <div className="mt-4 space-y-2">
-                <div className="mt-4 space-y-2">
-                  <FilterSelect
-                    label="Next status"
-                    name="trackingStatus"
-                    options={trackingActionOptions.map((option) => ({
-                      label: option.label,
-                      value: option.value,
-                    }))}
-                    value={
-                      trackingActionOptions
-                        .map((option) => ({
-                          label: option.label,
-                          value: option.value,
-                        }))
-                        .find(
-                          (option) => option.value === trackingAction.status,
-                        ) || null
-                    }
-                    onChange={(option) => {
-                      setTrackingErrors({});
-                      setTrackingAction((prev) => ({
-                        ...prev,
-                        status: option?.value || "",
-                      }));
-                    }}
-                    placeholder="Select next status"
-                    isClearable={false}
-                    isSearchable={false}
-                  />
+       <section className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white">
+  {/* Section Header */}
+ <div className="flex items-start gap-3 border-b border-gray-200 bg-gray-50/70 p-4">
+  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+    <MdLocalShipping aria-hidden="true" size={19} />
+  </span>
 
-                  {/* Keep the remaining fields and buttons unchanged */}
-                </div>
+  <div className="min-w-0 flex-1">
+    <div className="flex flex-wrap items-center gap-2">
+      <h3 className="font-semibold text-gray-900">
+        Seller delivery action
+      </h3>
 
-                {["in_transit", "delivered", "failed", "rto"].includes(
-                  trackingAction.status,
-                ) && (
-                  <div className="grid min-w-0 grid-cols-1 items-start gap-4 sm:grid-cols-2">
-                    {trackingAction.status !== "delivered" && (
-                      <FormInput
-                        label="Checkpoint Location (optional)"
-                        type="textarea"
-                        rows={3}
-                        className="!mb-0"
-                        placeholder="Hub, city, or delivery area"
-                        value={trackingAction.location}
-                        error={trackingErrors.location}
-                        onChange={(event) =>
-                          setTrackingAction((prev) => ({
-                            ...prev,
-                            location: event.target.value,
-                          }))
+      {/* <StatusBadge
+        status={selectedShipment?.status || "initiated"}
+        dot
+      /> */}
+    </div>
+
+    <p className="mt-1 max-w-xl text-xs leading-5 text-gray-500">
+      Select the next valid shipment stage and provide the relevant
+      details. Update time is recorded automatically.
+    </p>
+  </div>
+</div>
+  <div className="space-y-4 p-4">
+    {/* Cancellation Confirmation */}
+    {lastCancellation &&
+      String(lastCancellation.order_id || lastCancellation.orderId) ===
+        String(selectedShipment?.order_id) && (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+          <div className="font-semibold text-green-800">
+            Seller items cancelled
+          </div>
+
+          <div className="mt-1 text-xs leading-5 text-green-700">
+            Inventory processing:{" "}
+            {displayStatus(lastCancellation.inventory_status)}
+            {" · "}
+            Customer refund:{" "}
+            {displayStatus(lastCancellation.refund_status)}
+          </div>
+
+          <button
+            type="button"
+            className="mt-2 text-xs font-semibold text-green-800 underline underline-offset-2"
+            onClick={() =>
+              navigate(
+                `/app/cancellations?orderId=${encodeURIComponent(
+                  selectedShipment.order_id,
+                )}`,
+              )
+            }
+          >
+            View cancellation
+          </button>
+        </div>
+      )}
+
+    {trackingActionOptions.length > 0 ? (
+      <div className="space-y-4">
+        {/* Next Shipment Status */}
+        <div>
+          <FilterSelect
+            label="Next Status"
+            name="trackingStatus"
+            options={trackingActionOptions.map((option) => ({
+              label: option.label,
+              value: option.value,
+            }))}
+            value={
+              trackingActionOptions
+                .map((option) => ({
+                  label: option.label,
+                  value: option.value,
+                }))
+                .find(
+                  (option) => option.value === trackingAction.status,
+                ) || null
+            }
+            onChange={(option) => {
+              updateTrackingField("status", option?.value || "");
+            }}
+            placeholder="Select next status"
+            isClearable={false}
+            isSearchable={false}
+          />
+        </div>
+
+        {/* Checkpoint Details */}
+        {["in_transit", "delivered", "failed", "rto"].includes(
+          trackingAction.status,
+        ) && (
+          <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+            {trackingAction.status !== "delivered" && (
+              <div className="sm:col-span-2">
+                <FormInput
+                  label="Checkpoint Location (optional)"
+                  name="location"
+                  type="textarea"
+                  rows={3}
+                  className="!mb-0"
+                  placeholder="Hub, city, or delivery area"
+                  value={trackingAction.location}
+                        error={
+                          trackingSubmitAttempted &&
+                          trackingFormik.errors.location
                         }
-                      />
-                    )}
-                    <FormInput
-                      label={
-                        ["failed", "rto"].includes(trackingAction.status)
-                          ? "Note"
-                          : "Note (optional)"
-                      }
-                      type="textarea"
-                      rows={3}
-                      className="!mb-0"
-                      required={["failed", "rto"].includes(
-                        trackingAction.status,
-                      )}
-                      placeholder={
-                        ["failed", "rto"].includes(trackingAction.status)
-                          ? "Explain the reason"
-                          : trackingAction.status === "delivered"
-                            ? "Add delivery details, recipient name, or proof reference"
-                            : "Add an update for this checkpoint"
-                      }
-                      value={trackingAction.note}
-                      error={trackingErrors.note}
-                      onChange={(event) =>
-                        setTrackingAction((prev) => ({
-                          ...prev,
-                          note: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                )}
-
-                {trackingAction.status === "in_transit" && (
-                  <div className="!mt-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Dispatch details
-                    </div>
-                    <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-x-3 gap-y-1">
-                      <FilterSelect
-                        label="Courier / Delivery Method"
-                        name="courierName"
-                        options={[
-                          ...(trackingAction.courierName &&
-                          !DELIVERY_METHOD_OPTIONS.some(
-                            (option) =>
-                              option.value === trackingAction.courierName,
-                          )
-                            ? [
-                                {
-                                  value: trackingAction.courierName,
-                                  label: trackingAction.courierName,
-                                },
-                              ]
-                            : []),
-                          ...DELIVERY_METHOD_OPTIONS,
-                        ]}
-                        value={
-                          [
-                            ...(trackingAction.courierName &&
-                            !DELIVERY_METHOD_OPTIONS.some(
-                              (option) =>
-                                option.value === trackingAction.courierName,
-                            )
-                              ? [
-                                  {
-                                    value: trackingAction.courierName,
-                                    label: trackingAction.courierName,
-                                  },
-                                ]
-                              : []),
-                            ...DELIVERY_METHOD_OPTIONS,
-                          ].find(
-                            (option) =>
-                              option.value === trackingAction.courierName,
-                          ) || null
-                        }
-                        onChange={(option) => {
-                          setTrackingAction((prev) => ({
-                            ...prev,
-                            courierName: option?.value || "",
-                          }));
-
-                          setTrackingErrors((prev) => ({
-                            ...prev,
-                            courierName: "",
-                          }));
-                        }}
-                        placeholder="Select delivery method"
-                        required
-                        isClearable={false}
-                        isSearchable={false}
-                        error={trackingErrors.courierName}
-                      />
-                      <FormInput
-                        label="AWB / Tracking Reference"
-                        name="awbNumber"
-                        required
-                        className="!mb-0"
-                        value={trackingAction.awbNumber}
-                        minLength={5}
-                        maxLength={50}
-                        pattern="[A-Za-z0-9_/-]{5,50}"
-                        title="Use 5–50 letters, numbers, hyphens, underscores, or slashes. Spaces are not allowed."
-                        autoCapitalize="characters"
-                        spellCheck={false}
-                        error={trackingErrors.awbNumber}
-                        onChange={(event) => {
-                          setTrackingAction((prev) => ({
-                            ...prev,
-                            awbNumber: event.target.value,
-                          }));
-                          setTrackingErrors((prev) => ({
-                            ...prev,
-                            awbNumber: "",
-                          }));
-                        }}
-                      />
-                      <FormInput
-                        label="Expected Delivery Date"
-                        name="expectedDeliveryAt"
-                        type="datetime-local"
-                        required
-                        className="!mb-0"
-                        min={toDateTimeLocal(new Date())}
-                        value={trackingAction.expectedDeliveryAt}
-                        error={trackingErrors.expectedDeliveryAt}
-                        onChange={(event) => {
-                          setTrackingAction((prev) => ({
-                            ...prev,
-                            expectedDeliveryAt: event.target.value,
-                          }));
-                          setTrackingErrors((prev) => ({
-                            ...prev,
-                            expectedDeliveryAt: "",
-                          }));
-                        }}
-                      />
-                      <FormInput
-                        label="Tracking URL"
-                        name="trackingUrl"
-                        type="url"
-                        className="!mb-0"
-                        placeholder="https://..."
-                        value={trackingAction.trackingUrl}
-                        error={trackingErrors.trackingUrl}
-                        onChange={(event) =>
-                          setTrackingAction((prev) => ({
-                            ...prev,
-                            trackingUrl: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-end pt-2">
-                  <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:justify-end">
-                    {isSeller &&
-                      ["initiated", "manifested", "failed"].includes(
-                        selectedShipment?.status,
-                      ) && (
-                        <button
-                          type="button"
-                          className="rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                          onClick={() =>
-                            setCancellationAction((prev) => ({
-                              ...prev,
-                              open: true,
-                            }))
-                          }
-                        >
-                          Cancel seller items
-                        </button>
-                      )}
-                    <button
-                      type="button"
-                      className="admin-btn-primary justify-center !px-4 !py-2.5"
-                      onClick={handleTrackingStatus}
-                    >
-                      Update shipment status
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
-                {!selectedShipmentPaid ? (
-                  <div>
-                    <div className="font-semibold text-amber-800">
-                      Awaiting payment
-                    </div>
-                    <div className="mt-1 text-xs text-gray-500">
-                      Shipment processing is locked until online payment is
-                      captured or COD is authorized.
-                    </div>
-                  </div>
-                ) : isSeller &&
-                  selectedShipment?.status === "cancelled" &&
-                  String(
-                    lastCancellation?.order_id ||
-                      lastCancellation?.orderId ||
-                      "",
-                  ) !== String(selectedShipment?.order_id || "") ? (
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="font-semibold text-amber-800">
-                        Cancellation processing is panding confirmation
-                      </div>
-                      <div className="mt-1 text-xs text-gray-500">
-                        Complete the cancellation workflow to release inventory
-                        and create the customer refund review.
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
-                      onClick={() =>
-                        setCancellationAction((prev) => ({
-                          ...prev,
-                          open: true,
-                        }))
-                      }
-                    >
-                      Complete cancellation
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    This shipment is{" "}
-                    <strong>
-                      {shipmentStepLabel(selectedShipment?.status)}
-                    </strong>
-                    . No further seller action is currently required.
-                  </>
-                )}
+                  onChange={(event) =>
+                    updateTrackingField("location", event.target.value)
+                  }
+                  onBlur={trackingFormik.handleBlur}
+                />
               </div>
             )}
-          </section>
+
+            <div className="sm:col-span-2">
+              <FormInput
+                label={
+                  ["failed", "rto"].includes(trackingAction.status)
+                    ? "Note"
+                    : "Note (optional)"
+                }
+                name="note"
+                type="textarea"
+                rows={3}
+                className="!mb-0"
+                required={["failed", "rto"].includes(
+                  trackingAction.status,
+                )}
+                placeholder={
+                  ["failed", "rto"].includes(trackingAction.status)
+                    ? "Explain the reason"
+                    : trackingAction.status === "delivered"
+                      ? "Add delivery details, recipient name, or proof reference"
+                      : "Add an update for this checkpoint"
+                }
+                value={trackingAction.note}
+                      error={
+                        trackingSubmitAttempted && trackingFormik.errors.note
+                      }
+                onChange={(event) =>
+                  updateTrackingField("note", event.target.value)
+                }
+                onBlur={trackingFormik.handleBlur}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Dispatch Details */}
+        {trackingAction.status === "in_transit" && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-4">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-blue-700 ring-1 ring-gray-200">
+                <MdLocalShipping aria-hidden="true" size={17} />
+              </span>
+
+              <div>
+                <h4 className="font-semibold text-gray-900">
+                  Dispatch Details
+                </h4>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Enter courier and tracking information.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+              <FilterSelect
+                label="Courier / Delivery Method"
+                name="courierName"
+                options={[
+                  ...(trackingAction.courierName &&
+                  !DELIVERY_METHOD_OPTIONS.some(
+                    (option) =>
+                      option.value === trackingAction.courierName,
+                  )
+                    ? [
+                        {
+                          value: trackingAction.courierName,
+                          label: trackingAction.courierName,
+                        },
+                      ]
+                    : []),
+                  ...DELIVERY_METHOD_OPTIONS,
+                ]}
+                value={
+                  [
+                    ...(trackingAction.courierName &&
+                    !DELIVERY_METHOD_OPTIONS.some(
+                      (option) =>
+                        option.value === trackingAction.courierName,
+                    )
+                      ? [
+                          {
+                            value: trackingAction.courierName,
+                            label: trackingAction.courierName,
+                          },
+                        ]
+                      : []),
+                    ...DELIVERY_METHOD_OPTIONS,
+                  ].find(
+                    (option) =>
+                      option.value === trackingAction.courierName,
+                  ) || null
+                }
+                onChange={(option) => {
+                  updateTrackingField("courierName", option?.value || "");
+                }}
+                placeholder="Select delivery method"
+                required
+                isClearable={false}
+                isSearchable={false}
+                        error={
+                          trackingSubmitAttempted &&
+                          trackingFormik.errors.courierName
+                        }
+              />
+
+              <FormInput
+                label="AWB / Tracking Reference"
+                name="awbNumber"
+                required
+                className="!mb-0"
+                value={trackingAction.awbNumber}
+                pattern="[A-Za-z0-9_/-]{5,50}"
+                title="Use 5–50 letters, numbers, hyphens, underscores, or slashes. Spaces are not allowed."
+                autoCapitalize="characters"
+                spellCheck={false}
+                        error={
+                          trackingSubmitAttempted &&
+                          trackingFormik.errors.awbNumber
+                        }
+                onChange={(event) =>
+                  updateTrackingField("awbNumber", event.target.value)
+                }
+                onBlur={trackingFormik.handleBlur}
+              />
+
+              <FormInput
+                label="Expected Delivery Date"
+                name="expectedDeliveryAt"
+                type="datetime-local"
+                required
+                className="!mb-0"
+                min={toDateTimeLocal(new Date())}
+                value={trackingAction.expectedDeliveryAt}
+                error={
+                  trackingSubmitAttempted &&
+                  trackingFormik.errors.expectedDeliveryAt
+                }
+                onChange={(event) =>
+                  updateTrackingField(
+                    "expectedDeliveryAt",
+                    event.target.value,
+                  )
+                }
+                onBlur={trackingFormik.handleBlur}
+              />
+
+              <FormInput
+                label="Tracking URL (optional)"
+                name="trackingUrl"
+                type="url"
+                className="!mb-0"
+                placeholder="https://..."
+                value={trackingAction.trackingUrl}
+                error={
+                  trackingSubmitAttempted && trackingFormik.errors.trackingUrl
+                }
+                onChange={(event) =>
+                  updateTrackingField("trackingUrl", event.target.value)
+                }
+                onBlur={trackingFormik.handleBlur}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          {isSeller &&
+            ["initiated", "manifested", "failed"].includes(
+              selectedShipment?.status,
+            ) && (
+              <button
+                type="button"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                onClick={() =>
+                  setCancellationAction((prev) => ({
+                    ...prev,
+                    open: true,
+                  }))
+                }
+              >
+                Cancel Seller Items
+              </button>
+            )}
+
+          <button
+            type="button"
+            className="admin-btn-primary inline-flex min-h-10 items-center justify-center gap-2 !px-4 !py-2"
+            onClick={handleTrackingSubmit}
+            disabled={trackingFormik.isSubmitting || loading}
+          >
+            {trackingFormik.isSubmitting ? (
+              <>
+                <ButtonLoader />
+                Updating shipment...
+              </>
+            ) : (
+              "Update Shipment Status"
+            )}
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        {!selectedShipmentPaid ? (
+          <div>
+            <p className="font-semibold text-amber-800">
+              Awaiting Payment
+            </p>
+            <p className="mt-1 text-xs leading-5 text-gray-500">
+              Shipment processing is locked until online payment is
+              captured or COD is authorized.
+            </p>
+          </div>
+        ) : isSeller &&
+          selectedShipment?.status === "cancelled" &&
+          String(
+            lastCancellation?.order_id ||
+              lastCancellation?.orderId ||
+              "",
+          ) !== String(selectedShipment?.order_id || "") ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-amber-800">
+                Cancellation Pending Confirmation
+              </p>
+              <p className="mt-1 text-xs leading-5 text-gray-500">
+                Complete the cancellation workflow to release inventory
+                and create the customer refund review.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+              onClick={() =>
+                setCancellationAction((prev) => ({
+                  ...prev,
+                  open: true,
+                }))
+              }
+            >
+              Complete Cancellation
+            </button>
+          </div>
+        ) : (
+          <p className="leading-5 text-gray-600">
+            This shipment is{" "}
+            <strong className="font-semibold text-gray-900">
+              {shipmentStepLabel(selectedShipment?.status)}
+            </strong>
+            . No further seller action is currently required.
+          </p>
+        )}
+      </div>
+    )}
+  </div>
+</section>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-1">
             <section className="rounded-2xl border border-gray-200 bg-white p-4">
