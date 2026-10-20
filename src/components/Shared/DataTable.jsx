@@ -286,6 +286,7 @@ const DataTable = ({
   listPage,
   tableContainerClassName = "",
   tableClassName = "",
+  stretchEmptyState = false,
   cardClassName = "admin-card overflow-hidden border border-[var(--admin-line)] bg-white shadow-sm",
   exportConfig,
   importConfig,
@@ -336,6 +337,8 @@ const DataTable = ({
   );
   const showLoading =
     loading || (!hasMounted && safeData.length === 0 && !error);
+  const shouldStretchEmptyState =
+    stretchEmptyState && !showLoading && !error && safeData.length === 0;
   const showRefreshLoading = refreshing || loading;
 
   useEffect(() => {
@@ -525,10 +528,16 @@ const DataTable = ({
       <div
         className={`admin-table-scroll ${
           tableContainerClassName || "overflow-x-auto overscroll-x-contain"
+        } ${
+          shouldStretchEmptyState
+            ? "flex min-h-0 flex-1 [&>table]:h-full [&>table>tbody]:h-full [&>table>tbody>tr]:h-full [&>table>tbody>tr>td]:h-full [&>table>tbody>tr>td>div]:h-full"
+            : ""
         }`}
       >
         <table
-          className={`min-w-full whitespace-nowrap text-sm ${tableClassName}`}
+          className={`min-w-full whitespace-nowrap text-sm ${
+            shouldStretchEmptyState ? "h-full" : ""
+          } ${tableClassName}`}
         >
           <thead className="admin-table-head">
             <tr>
@@ -627,9 +636,9 @@ const DataTable = ({
                 </td>
               </tr>
             ) : safeData.length === 0 ? (
-              <tr>
+              <tr className="h-full">
                 <td colSpan={colCount}>
-                  <div className="mx-auto flex flex-col items-center gap-2 rounded-lg bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
+                  <div className="mx-auto flex min-h-[240px] h-full w-full flex-col items-center justify-center gap-2 rounded-lg bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
                     <img
                       src="/Img/noData.png"
                       alt="No records"

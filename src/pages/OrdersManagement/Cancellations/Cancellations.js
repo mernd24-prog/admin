@@ -91,7 +91,6 @@ const CLASS_ACTION_ICON_ORANGE = "text-orange-600";
 const CLASS_MANUAL_REFUND_BODY = "p-4 space-y-4";
 const CLASS_MANUAL_REFUND_BUTTON =
   "w-full py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-60";
-const CLASS_REFUND_STATUS_BASE = "text-xs px-2 py-0.5 rounded-full";
 const CLASS_SECTION_TITLE = "mb-3 text-sm font-semibold text-gray-900";
 const CLASS_GRID_2_COL = "grid grid-cols-1 gap-3 sm:grid-cols-2";
 const CLASS_CARD_WHITE = "rounded-lg border border-gray-100 bg-white p-3";
@@ -469,7 +468,8 @@ const Cancellations = () => {
         <StatusBadge
           status={v === "requested" ? "cancellation_requested" : v}
           label={cancellationStatusLabel(v)}
-          color={STATUS_COLOR[v] || "gray"}
+          dot
+          appearance="order"
         />
       ),
     },
@@ -477,11 +477,12 @@ const Cancellations = () => {
       key: "refundStatus",
       label: "Refund Status",
       render: (v) => (
-        <span
-          className={`${CLASS_REFUND_STATUS_BASE} ${v === "completed" ? "bg-green-100 text-green-700" : v === "failed" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}
-        >
-          {display(v)}
-        </span>
+        <StatusBadge
+          status={v || "not_started"}
+          label={display(v)}
+          dot
+          appearance="order"
+        />
       ),
     },
     {
