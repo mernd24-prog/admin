@@ -54,11 +54,18 @@ const CategorySetup = ({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    formik.handleChange(e);
+
+    // Update Formik immediately
+    formik.setFieldValue(name, value, false);
+
+    // Keep the parent form data synchronized
     if (handleInputChange) {
       handleInputChange(name, value);
     } else {
-      setFormData((prevState) => ({ ...prevState, [name]: value }));
+      setFormData((prevState) => ({
+        ...prevState,
+        [name]: value,
+      }));
     }
   };
 
@@ -158,7 +165,7 @@ const CategorySetup = ({
               <FormInput
                 label="Category Name"
                 name="categoryName"
-                value={formik.values.categoryName || ""}
+                value={formik.values.categoryName ?? ""}
                 onChange={handleChange}
                 onBlur={(event) => {
                   formik.handleBlur(event);

@@ -3938,15 +3938,6 @@ const ReferralCommerce = () => {
                 <Plus aria-hidden="true" size={16} />
                 Referral Code
               </button>
-              <button
-                type="button"
-                onClick={() => setPartnerPortalModalOpen(true)}
-                title="Open the Referral Partner sign-in portal"
-                className="inline-flex items-center gap-1.5"
-              >
-                <ExternalLink aria-hidden="true" size={16} />
-                Partner Login
-              </button>
             </div>
           ) : undefined
         }
