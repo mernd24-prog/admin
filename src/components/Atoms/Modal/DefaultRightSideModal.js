@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { RxCross2 } from "react-icons/rx";
 import TransparentButton from "../buttons/TransParentButton";
@@ -20,62 +20,117 @@ const DefaultModal = ({
   showCloseButton = false,
   closeOnOutsideClick = true,
 }) => {
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [visible, setVisible] = useState(false);
+
   useEffect(() => {
-    document.body.style.overflow = isOpen ? "hidden" : "auto";
+    let frame;
+    let timer;
+
+    if (isOpen) {
+      setShouldRender(true);
+
+      frame = requestAnimationFrame(() => {
+        setVisible(true);
+      });
+    } else {
+      setVisible(false);
+
+      timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 200);
+    }
+
     return () => {
-      document.body.style.overflow = "auto";
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
     };
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen || loading) return undefined;
-    const closeOnEscape = (event) => event.key === "Escape" && onClose?.();
+    if (!shouldRender) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [shouldRender]);
+
+  useEffect(() => {
+    if (!isOpen || loading) return;
+
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") {
+        onClose?.();
+      }
+    };
+
     document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, [isOpen, loading, onClose]);
+
+  if (!shouldRender || typeof document === "undefined") {
+    return null;
+  }
 
   const modal = (
     <>
+      {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-[10000] transition-all duration-300 ease-in-out 
-                    ${isOpen ? "bg-[rgba(31,27,95,0.32)] backdrop-blur-sm" : "bg-transparent backdrop-blur-0 pointer-events-none"}
-                `}
-        onClick={!loading && closeOnOutsideClick ? onClose : undefined}
+        className="fixed inset-0 z-[10000] bg-[rgba(31,27,95,0.32)] backdrop-blur-sm"
+        style={{
+          opacity: visible ? 1 : 0,
+          transition: "opacity 200ms ease-in-out",
+          pointerEvents: visible ? "auto" : "none",
+        }}
+        onClick={
+          visible && !loading && closeOnOutsideClick ? onClose : undefined
+        }
       />
+
+      {/* Drawer - no sliding animation */}
       <div
-        className={`
-        fixed bottom-0 right-0 top-0 flex h-screen w-full flex-col overflow-hidden md:w-[var(--modal-width)] bg-white shadow-[var(--admin-shadow-strong)] z-[10001] text-sm
-        transform transition-transform duration-300 ease-in-out
-        ${isOpen ? "translate-x-0" : "translate-x-full"}
-                `}
+        className="fixed bottom-0 right-0 top-0 flex h-screen w-full flex-col overflow-hidden md:w-[var(--modal-width)] bg-white shadow-[var(--admin-shadow-strong)] z-[10001] text-sm"
         style={{
           "--modal-width": width,
-          ...(!isOpen ? { pointerEvents: "none" } : {}),
+          opacity: visible ? 1 : 0,
+          transition: "opacity 200ms ease-in-out",
+          pointerEvents: visible ? "auto" : "none",
         }}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
+        {/* Header */}
         <div className="admin-card-header flex shrink-0 items-center justify-between bg-white px-4 sm:px-6 py-3 sm:py-4">
           <h2
             className={`text-lg font-semibold text-[var(--admin-ink)] ${titleClassName}`}
           >
             {title}
           </h2>
+
           <button
+            type="button"
             onClick={onClose}
             disabled={loading}
-            className="text-gray-500 hover:text-gray-700 transition-colors duration-150 p-1"
+            className="text-gray-500 hover:text-gray-700 p-1"
             aria-label="Close modal"
           >
             <RxCross2 size={20} className="sm:w-5 sm:h-5 w-4 h-4" />
           </button>
         </div>
 
+        {/* Body */}
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {children}
         </div>
 
+        {/* Footer */}
         {(isButtonView || showCloseButton) && (
           <div
             className={`shrink-0 bg-[var(--admin-surface-soft)] py-3 px-6 flex ${
@@ -105,7 +160,6 @@ const DefaultModal = ({
     </>
   );
 
-  if (typeof document === "undefined") return modal;
   return createPortal(modal, document.body);
 };
 

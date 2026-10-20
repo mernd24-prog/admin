@@ -1408,6 +1408,8 @@ const DealManagement = () => {
               </div>
 
               {/* Deal Period */}
+
+              {/* Deal Period */}
               <div className="space-y-5">
                 <DateRangeFilter
                   field={{
@@ -1422,8 +1424,33 @@ const DealManagement = () => {
                     disableFuture: false,
                   }}
                   values={form}
-                  onChange={(key, value) => setField(key, value)}
+                  onChange={(key, value) => {
+                    // Handle individual start/end date updates.
+                    if (key === "startAt" || key === "endAt") {
+                      formik.setFieldValue(key, value);
+                      return;
+                    }
+
+                    // Handle date-range objects, if returned by the picker.
+                    if (
+                      key === "dateRange" &&
+                      value &&
+                      typeof value === "object"
+                    ) {
+                      const startAt =
+                        value.startAt ?? value.startDate ?? value.start ?? "";
+                      const endAt =
+                        value.endAt ?? value.endDate ?? value.end ?? "";
+
+                      formik.setValues((current) => ({
+                        ...current,
+                        startAt,
+                        endAt,
+                      }));
+                    }
+                  }}
                 />
+
                 {(formik.touched.startAt || formik.touched.endAt) &&
                   (formik.errors.startAt || formik.errors.endAt) && (
                     <p className="admin-field-error" role="alert">

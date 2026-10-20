@@ -369,7 +369,27 @@ const ShipmentTracking = () => {
         // { key: "toDate", type: "date", label: "To" },
       ]
     : [
-             {
+        { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
+        { key: "returnId", type: "text", label: "Return #", width: "w-44" },
+        {
+          key: "shipmentType",
+          type: "select",
+          label: "Type",
+          options: [
+            { value: "forward", label: "Forward" },
+            { value: "return", label: "Return" },
+          ],
+        },
+        // {
+        //   key: "direction",
+        //   type: "select",
+        //   label: "Direction",
+        //   options: [
+        //     { value: "forward", label: "Forward" },
+        //     { value: "reverse", label: "Reverse" },
+        //   ],
+        // },
+        {
           key: "sellerId",
           type: "asyncDropdown",
           label: "Seller",
@@ -816,7 +836,8 @@ const ShipmentTracking = () => {
             organization.storeDisplayName ||
             organization.store_display_name ||
             organization.name;
-          const order = row.order || row.orderSnapshot || row.order_snapshot || {};
+          const order =
+            row.order || row.orderSnapshot || row.order_snapshot || {};
           const sellerGroup =
             row.relations?.sellerFulfillmentGroups?.[0] ||
             order.relations?.sellerFulfillmentGroups?.[0] ||
@@ -827,7 +848,8 @@ const ShipmentTracking = () => {
           ]
             .filter((item) => {
               const itemSellerId =
-                item.sellerId || item.seller_id ||
+                item.sellerId ||
+                item.seller_id ||
                 item.sellerSnapshot?.sellerId ||
                 item.seller_snapshot?.sellerId;
               return !itemSellerId || String(itemSellerId) === String(sellerId);
@@ -862,8 +884,7 @@ const ShipmentTracking = () => {
             sellerNameFromSnapshot(itemSellerSnapshot) ||
             sellerOptions.find(
               (option) => String(option.value) === String(sellerId),
-            )
-              ?.label;
+            )?.label;
 
           return (
             <SellerIdentity

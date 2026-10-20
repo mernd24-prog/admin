@@ -51,6 +51,7 @@ import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 import DocumentPreviewModal from "../../components/Shared/DocumentPreviewModal";
 import Tabs from "../../components/Shared/Tabs";
 import VerificationDecisionModal from "../../components/Seller/VerificationDecisionModal";
+import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 
 const getBranchPayload = (branch = {}) =>
   branch?.normalized?.data || branch?.data?.data || branch?.data || {};
@@ -873,34 +874,50 @@ const ReferralPartnerDetails = () => {
         }
       />
 
-      {editOpen && (
-        <form onSubmit={saveProfile} className="admin-card p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold text-[var(--admin-navy)]">
-                Edit referral partner
-              </h2>
-              <p className="text-xs text-[var(--admin-muted)]">
-                Saving identical values is a no-op and does not restart
-                approval.
-              </p>
-            </div>
-            <button type="button" onClick={() => setEditOpen(false)}>
-              <X size={18} />
-            </button>
+      <DefaultModal
+        isOpen={editOpen}
+        onClose={() => setEditOpen(false)}
+        onSubmit={() =>
+          document.getElementById("edit-referral-partner-form")?.requestSubmit()
+        }
+        title="Edit Referral Partner"
+        width="600px"
+        isButtonView={false}
+        showCloseButton={false}
+        closeButtonText="Cancel"
+        loading={loadingAction === "profile"}
+      >
+        <form
+          id="edit-referral-partner-form"
+          onSubmit={saveProfile}
+          className="space-y-5"
+        >
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
+              Personal Information
+            </h3>
+            <p className="mt-1 text-xs text-[var(--admin-muted)]">
+              Update the referral partner's profile details.
+            </p>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+          <div className="grid grid-cols-1 gap-4">
             {[
               ["firstName", "First name", true],
               ["lastName", "Last name", false],
               ["email", "Email", true],
               ["phone", "Phone", false],
             ].map(([name, label, required]) => (
-              <label key={name} className="text-xs font-medium text-gray-700">
+              <label
+                key={name}
+                className="block text-sm font-medium text-gray-700"
+              >
                 {label}
-                {required ? " *" : ""}
+                {required && <span className="ml-1 text-red-500">*</span>}
+
                 <input
                   type={name === "email" ? "email" : "text"}
+                  name={name}
                   required={required}
                   value={editForm[name]}
                   onChange={(event) =>
@@ -909,29 +926,40 @@ const ReferralPartnerDetails = () => {
                       [name]: event.target.value,
                     }))
                   }
-                  className="mt-1 w-full rounded-md border border-[var(--admin-field-line)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--admin-gold)]"
+                  disabled={loadingAction === "profile"}
+                  className="mt-1.5 w-full rounded-md border border-[var(--admin-field-line)] bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
                 />
               </label>
             ))}
           </div>
-          <div className="mt-4 flex justify-end gap-2">
+
+          <div className="flex justify-end gap-2 border-t border-gray-200 pt-4">
             <button
               type="button"
               className="admin-btn-secondary"
               onClick={() => setEditOpen(false)}
+              disabled={loadingAction === "profile"}
             >
               Cancel
             </button>
+
             <button
               type="submit"
               className="admin-btn-primary"
               disabled={loadingAction === "profile"}
             >
-              {loadingAction === "profile" ? "Saving..." : "Save changes"}
+              {loadingAction === "profile" ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 size={15} className="animate-spin" />
+                  Saving...
+                </span>
+              ) : (
+                "Save changes"
+              )}
             </button>
           </div>
         </form>
-      )}
+      </DefaultModal>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {activeSummaryCards.map((card) => (
