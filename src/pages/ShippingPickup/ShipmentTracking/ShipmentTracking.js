@@ -378,15 +378,15 @@ const ShipmentTracking = () => {
             { value: "return", label: "Return" },
           ],
         },
-        {
-          key: "direction",
-          type: "select",
-          label: "Direction",
-          options: [
-            { value: "forward", label: "Forward" },
-            { value: "reverse", label: "Reverse" },
-          ],
-        },
+        // {
+        //   key: "direction",
+        //   type: "select",
+        //   label: "Direction",
+        //   options: [
+        //     { value: "forward", label: "Forward" },
+        //     { value: "reverse", label: "Reverse" },
+        //   ],
+        // },
         {
           key: "sellerId",
           type: "asyncDropdown",
@@ -839,7 +839,8 @@ const ShipmentTracking = () => {
             organization.storeDisplayName ||
             organization.store_display_name ||
             organization.name;
-          const order = row.order || row.orderSnapshot || row.order_snapshot || {};
+          const order =
+            row.order || row.orderSnapshot || row.order_snapshot || {};
           const sellerGroup =
             row.relations?.sellerFulfillmentGroups?.[0] ||
             order.relations?.sellerFulfillmentGroups?.[0] ||
@@ -850,7 +851,8 @@ const ShipmentTracking = () => {
           ]
             .filter((item) => {
               const itemSellerId =
-                item.sellerId || item.seller_id ||
+                item.sellerId ||
+                item.seller_id ||
                 item.sellerSnapshot?.sellerId ||
                 item.seller_snapshot?.sellerId;
               return !itemSellerId || String(itemSellerId) === String(sellerId);
@@ -885,8 +887,7 @@ const ShipmentTracking = () => {
             sellerNameFromSnapshot(itemSellerSnapshot) ||
             sellerOptions.find(
               (option) => String(option.value) === String(sellerId),
-            )
-              ?.label;
+            )?.label;
 
           return (
             <SellerIdentity
@@ -1242,34 +1243,43 @@ const ShipmentTracking = () => {
                         }
                       />
                     )}
-                    <FormInput
-                      label={
-                        ["failed", "rto"].includes(trackingAction.status)
-                          ? "Note"
-                          : "Note (optional)"
+
+                    <div
+                      className={
+                        trackingAction.status === "delivered"
+                          ? "w-full sm:col-span-2"
+                          : ""
                       }
-                      type="textarea"
-                      rows={3}
-                      className="!mb-0"
-                      required={["failed", "rto"].includes(
-                        trackingAction.status,
-                      )}
-                      placeholder={
-                        ["failed", "rto"].includes(trackingAction.status)
-                          ? "Explain the reason"
-                          : trackingAction.status === "delivered"
-                            ? "Add delivery details, recipient name, or proof reference"
-                            : "Add an update for this checkpoint"
-                      }
-                      value={trackingAction.note}
-                      error={trackingErrors.note}
-                      onChange={(event) =>
-                        setTrackingAction((prev) => ({
-                          ...prev,
-                          note: event.target.value,
-                        }))
-                      }
-                    />
+                    >
+                      <FormInput
+                        label={
+                          ["failed", "rto"].includes(trackingAction.status)
+                            ? "Note"
+                            : "Note (optional)"
+                        }
+                        type="textarea"
+                        rows={3}
+                        className="!mb-0"
+                        required={["failed", "rto"].includes(
+                          trackingAction.status,
+                        )}
+                        placeholder={
+                          ["failed", "rto"].includes(trackingAction.status)
+                            ? "Explain the reason"
+                            : trackingAction.status === "delivered"
+                              ? "Add delivery details, recipient name, or proof reference"
+                              : "Add an update for this checkpoint"
+                        }
+                        value={trackingAction.note}
+                        error={trackingErrors.note}
+                        onChange={(event) =>
+                          setTrackingAction((prev) => ({
+                            ...prev,
+                            note: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
                   </div>
                 )}
 

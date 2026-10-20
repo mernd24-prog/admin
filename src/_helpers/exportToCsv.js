@@ -47,10 +47,7 @@ export const exportToCsv = (
   return true;
 };
 
-export const exportToCsvSections = (
-  sections = [],
-  filename = "export.csv",
-) => {
+export const exportToCsvSections = (sections = [], filename = "export.csv") => {
   if (!sections.length) return false;
 
   const escape = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
@@ -98,364 +95,247 @@ export const exportToExcelWorkbook = (
 
   const workbook = XLSX.utils.book_new();
 
-  sheets.forEach(
-    ({
-      name,
-      data = [],
-      columns = [],
-      cellStyles = {},
-    }) => {
-      const normalizedRows = normalizeExportRows(
-        data,
-        columns,
+  // Sam Global theme
+  const headerColor = "2E1B78";
+  const headerTextColor = "FFFFFF";
+  const textColor = "2E1B78";
+  const alternateRowColor = "F0EDFA";
+  const whiteColor = "FFFFFF";
+  const borderColor = "D6A323";
+
+  const baseBorder = {
+    top: {
+      style: "thin",
+      color: { rgb: borderColor },
+    },
+    bottom: {
+      style: "thin",
+      color: { rgb: borderColor },
+    },
+    left: {
+      style: "thin",
+      color: { rgb: borderColor },
+    },
+    right: {
+      style: "thin",
+      color: { rgb: borderColor },
+    },
+  };
+
+  sheets.forEach(({ name, data = [], columns = [], cellStyles = {} }) => {
+    const exportColumns = columns.filter(
+      (column) => column.exportable !== false,
+    );
+
+    const headers = exportColumns.map((column) => column.label || column.key);
+
+    const normalizedRows = normalizeExportRows(data, columns);
+
+    const dataRows = normalizedRows.map((row) =>
+      headers.map((header) => row[header] ?? ""),
+    );
+
+    // Row 1: Header
+    // Row 2: Blank spacer
+    // Row 3 onwards: Data
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, [], ...dataRows]);
+
+    // =====================================
+    // HEADER FORMATTING
+    // =====================================
+    headers.forEach((header, columnIndex) => {
+      const cellRef = XLSX.utils.encode_cell({
+        r: 0,
+        c: columnIndex,
+      });
+
+      const cell = worksheet[cellRef];
+      if (!cell) return;
+
+      cell.s = {
+        font: {
+          bold: true,
+          sz: 11,
+          color: { rgb: headerTextColor },
+        },
+        fill: {
+          patternType: "solid",
+          fgColor: { rgb: headerColor },
+        },
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true,
+        },
+        border: baseBorder,
+      };
+    });
+
+    // =====================================
+    // DATA CELL FORMATTING
+    // =====================================
+    dataRows.forEach((row, rowIndex) => {
+      row.forEach((value, columnIndex) => {
+        const cellRef = XLSX.utils.encode_cell({
+          r: rowIndex + 2,
+          c: columnIndex,
+        });
+
+        const cell = worksheet[cellRef];
+        if (!cell) return;
+
+        cell.s = {
+          font: {
+            sz: 10,
+            color: { rgb: textColor },
+          },
+          fill: {
+            patternType: "solid",
+            fgColor: {
+              rgb: rowIndex % 2 === 1 ? alternateRowColor : whiteColor,
+            },
+          },
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
+          },
+          border: baseBorder,
+        };
+      });
+    });
+
+    // =====================================
+    // CUSTOM CELL STYLES
+    // Preserve custom status colors while
+    // keeping all data center-aligned.
+    // =====================================
+    Object.entries(cellStyles).forEach(([columnLabel, stylesByValue]) => {
+      const columnIndex = exportColumns.findIndex(
+        (column) => (column.label || column.key) === columnLabel,
       );
 
-      /*
-       * =====================================
-       * HEADERS
-       * =====================================
-       */
+      if (columnIndex < 0) return;
 
-      const headers = columns
-        .filter(
-          (column) =>
-            column.exportable !== false,
-        )
-        .map(
-          (column) =>
-            column.label || column.key,
+      data.forEach((row, rowIndex) => {
+        const cellRef = XLSX.utils.encode_cell({
+          r: rowIndex + 2,
+          c: columnIndex,
+        });
+
+        const cell = worksheet[cellRef];
+        if (!cell) return;
+
+        const value = getExportValue(row, exportColumns[columnIndex]);
+
+        const customStyle = stylesByValue[value];
+        if (!customStyle) return;
+
+        cell.s = {
+          ...cell.s,
+          ...customStyle,
+
+          font: {
+            ...(cell.s.font || {}),
+            ...(customStyle.font || {}),
+          },
+
+          fill: customStyle.fill || cell.s.fill,
+
+          border: customStyle.border || cell.s.border,
+
+          alignment: {
+            ...(cell.s.alignment || {}),
+            ...(customStyle.alignment || {}),
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
+          },
+        };
+      });
+    });
+
+    // =====================================
+    // DYNAMIC COLUMN WIDTH
+    // Minimum: 12
+    // Maximum: 40
+    // =====================================
+    worksheet["!cols"] = headers.map((header, columnIndex) => {
+      const headerLength = String(header ?? "").length;
+
+      const dataLength = dataRows.reduce((maxLength, row) => {
+        const value = String(row[columnIndex] ?? "");
+
+        const longestLine = Math.max(
+          ...value.split("\n").map((line) => line.length),
+          0,
         );
 
-      /*
-       * =====================================
-       * DATA ROWS
-       * =====================================
-       */
+        return Math.max(maxLength, longestLine);
+      }, 0);
 
-      const dataRows = normalizedRows.map(
-        (row) =>
-          headers.map(
-            (header) => row[header],
-          ),
-      );
+      const width = Math.max(headerLength, dataLength) + 3;
 
-      /*
-       * =====================================
-       * CREATE WORKSHEET
-       *
-       * Row 1 -> Header
-       * Row 2 -> Blank
-       * Row 3+ -> Data
-       * =====================================
-       */
-
-      const worksheet = XLSX.utils.aoa_to_sheet([
-        headers,
-        [],
-        ...dataRows,
-      ]);
-
-      /*
-       * =====================================
-       * HEADER STYLE
-       * =====================================
-       */
-
-      headers.forEach(
-        (header, columnIndex) => {
-          const cellRef =
-            XLSX.utils.encode_cell({
-              r: 0,
-              c: columnIndex,
-            });
-
-          const cell = worksheet[cellRef];
-
-          if (!cell) return;
-
-          cell.s = {
-            font: {
-              bold: true,
-              sz: 11,
-            },
-
-            fill: {
-              patternType: "solid",
-              fgColor: {
-                rgb: "FFF3D6",
-              },
-            },
-
-            alignment: {
-              horizontal: "center",
-              vertical: "center",
-            },
-
-            border: {
-              top: {
-                style: "thin",
-                color: {
-                  rgb: "FFD6A3",
-                },
-              },
-
-              bottom: {
-                style: "thin",
-                color: {
-                  rgb: "FFD6A3",
-                },
-              },
-
-              left: {
-                style: "thin",
-                color: {
-                  rgb: "FFD6A3",
-                },
-              },
-
-              right: {
-                style: "thin",
-                color: {
-                  rgb: "FFD6A3",
-                },
-              },
-            },
-          };
-        },
-      );
-
-      /*
-       * =====================================
-       * DATA CELL BASE STYLE
-       *
-       * Keep all data values left aligned.
-       * This prevents numbers from being
-       * automatically right aligned.
-       * =====================================
-       */
-
-      dataRows.forEach(
-        (row, rowIndex) => {
-          row.forEach(
-            (value, columnIndex) => {
-              const cellRef =
-                XLSX.utils.encode_cell({
-                  r: rowIndex + 2,
-                  c: columnIndex,
-                });
-
-              const cell =
-                worksheet[cellRef];
-
-              if (!cell) return;
-
-              cell.s = {
-                alignment: {
-                  horizontal: "left",
-                  vertical: "center",
-                },
-              };
-            },
-          );
-        },
-      );
-
-      /*
-       * =====================================
-       * CUSTOM CELL STYLES
-       *
-       * Example:
-       * Status -> In Stock / Low Stock /
-       *           Out of Stock
-       *
-       * Merge the custom style with the
-       * default left alignment.
-       * =====================================
-       */
-
-      Object.entries(cellStyles).forEach(
-        ([columnLabel, stylesByValue]) => {
-          const columnIndex =
-            columns.findIndex(
-              (column) =>
-                (column.label ||
-                  column.key) ===
-                columnLabel,
-            );
-
-          if (columnIndex < 0) return;
-
-          data.forEach(
-            (row, rowIndex) => {
-              /*
-               * Row 1 = Header
-               * Row 2 = Blank
-               * Row 3 = First data row
-               *
-               * Therefore:
-               * rowIndex + 2
-               */
-
-              const cellRef =
-                XLSX.utils.encode_cell({
-                  r: rowIndex + 2,
-                  c: columnIndex,
-                });
-
-              const cell =
-                worksheet[cellRef];
-
-              if (!cell) return;
-
-              const value =
-                getExportValue(
-                  row,
-                  columns[columnIndex],
-                );
-
-              const customStyle =
-                stylesByValue[value];
-
-              if (!customStyle) return;
-
-              /*
-               * Keep left alignment even
-               * when custom status styling
-               * is applied.
-               */
-
-              cell.s = {
-                alignment: {
-                  horizontal: "left",
-                  vertical: "center",
-                },
-
-                ...customStyle,
-
-                /*
-                 * Make sure custom style
-                 * cannot remove alignment.
-                 */
-                alignment: {
-                  horizontal: "left",
-                  vertical: "center",
-                  ...(customStyle.alignment ||
-                    {}),
-                },
-              };
-            },
-          );
-        },
-      );
-
-      /*
-       * =====================================
-       * DYNAMIC COLUMN WIDTH
-       *
-       * Width is calculated from the
-       * longest value in each column.
-       * =====================================
-       */
-
-      worksheet["!cols"] = headers.map(
-        (header, columnIndex) => {
-          const headerLength =
-            String(
-              header || "",
-            ).length;
-
-          const dataLength =
-            dataRows.reduce(
-              (maxLength, row) => {
-                const value =
-                  row[columnIndex];
-
-                return Math.max(
-                  maxLength,
-                  String(
-                    value ?? "",
-                  ).length,
-                );
-              },
-              0,
-            );
-
-          /*
-           * Add 3 characters of padding.
-           *
-           * Minimum width = 12
-           * Maximum width = 35
-           */
-
-          const width =
-            Math.max(
-              headerLength,
-              dataLength,
-            ) + 3;
-
-          return {
-            wch: Math.min(
-              35,
-              Math.max(12, width),
-            ),
-          };
-        },
-      );
-
-      /*
-       * =====================================
-       * ROW HEIGHT
-       * =====================================
-       */
-
-      worksheet["!rows"] = [
-        {
-          hpt: 22,
-        },
-        {
-          hpt: 8,
-        },
-      ];
-
-      /*
-       * =====================================
-       * FREEZE HEADER + BLANK ROW
-       *
-       * Row 1 -> Header
-       * Row 2 -> Blank
-       * Data starts from Row 3
-       * =====================================
-       */
-
-      worksheet["!freeze"] = {
-        xSplit: 0,
-        ySplit: 2,
+      return {
+        wch: Math.min(40, Math.max(12, width)),
       };
+    });
 
-      /*
-       * =====================================
-       * APPEND SHEET
-       * =====================================
-       */
+    // =====================================
+    // ROW HEIGHTS
+    // =====================================
+    worksheet["!rows"] = [
+      { hpt: 30 },
+      { hpt: 8 },
+      ...dataRows.map((row) => {
+        const maxLines = Math.max(
+          1,
+          ...row.map((value) => String(value ?? "").split("\n").length),
+        );
 
-      XLSX.utils.book_append_sheet(
-        workbook,
-        worksheet,
-        name,
-      );
-    },
-  );
+        return {
+          hpt: Math.min(60, Math.max(24, maxLines * 16)),
+        };
+      }),
+    ];
 
-  /*
-   * =====================================
-   * WRITE EXCEL FILE
-   * =====================================
-   */
+    // =====================================
+    // FREEZE HEADER + SPACER ROW
+    // =====================================
+    worksheet["!freeze"] = {
+      xSplit: 0,
+      ySplit: 2,
+    };
 
-  XLSXStyle.writeFile(
-    workbook,
-    filename,
-  );
+    // =====================================
+    // FILTERS
+    // =====================================
+    if (headers.length && dataRows.length) {
+      worksheet["!autofilter"] = {
+        ref: XLSX.utils.encode_range({
+          s: { r: 0, c: 0 },
+          e: {
+            r: dataRows.length + 2,
+            c: headers.length - 1,
+          },
+        }),
+      };
+    }
+
+    // =====================================
+    // APPEND WORKSHEET
+    // =====================================
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      name || `Sheet${workbook.SheetNames.length + 1}`,
+    );
+  });
+
+  // =====================================
+  // DOWNLOAD EXCEL WORKBOOK
+  // =====================================
+  XLSXStyle.writeFile(workbook, filename);
 
   return true;
 };

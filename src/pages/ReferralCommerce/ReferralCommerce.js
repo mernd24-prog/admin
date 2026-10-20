@@ -93,6 +93,8 @@ import Loader, { ButtonLoader } from "../../components/Loader/Loader";
 import ButtonTransparent from "../../components/Atoms/ButtonTransparent/button";
 import Cards from "../../components/Cards/Cards";
 import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
+import MultiImageUpload from "../../components/Atoms/ImageGallery/MultiImageUpload";
+import ImageUpload from "../../components/Atoms/ImageGallery/ImageUpload";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -625,7 +627,7 @@ const TextInput = ({
       required={nativeRequired}
       onBlur={onBlur}
       aria-invalid={Boolean(error)}
-      className={`h-10 w-full rounded border bg-white px-3 text-sm text-gray-800 outline-none focus:border-indigo-400 ${error ? "border-red-400" : "border-gray-200"}`}
+      className={`h-10 w-full rounded border bg-white px-3 text-sm text-gray-800 outline-none focus:border-golden-400 ${error ? "border-red-400" : "border-gray-200"}`}
     />
     {error ? (
       <span className="admin-field-error" role="alert">
@@ -2446,30 +2448,43 @@ const ReferralCommerce = () => {
     },
   });
 
-  const handlePaymentProofUpload = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+  const handlePaymentProofUpload = async (fileOrEvent) => {
+    const isFile = fileOrEvent instanceof File;
+
+    const file = isFile ? fileOrEvent : fileOrEvent?.target?.files?.[0];
+
     if (!file) return;
+
+    // Reset the native input only when an event was provided.
+    if (!isFile && fileOrEvent?.target) {
+      fileOrEvent.target.value = "";
+    }
+
     const allowedTypes = [
       "application/pdf",
       "image/jpeg",
       "image/png",
       "image/webp",
     ];
+
     if (!allowedTypes.includes(file.type)) {
       toast.error("Upload a PDF, JPG, PNG, or WebP payment proof");
       return;
     }
+
     try {
       setUploadingPaymentProof(true);
+
       const paymentProofUrl = await uploadDocumentFile(
         file,
         "REFERRAL_PAYOUTS",
       );
+
       await payoutPaymentFormik.setFieldValue(
         "paymentProofUrl",
         paymentProofUrl,
       );
+
       toast.success("Payment proof uploaded");
     } catch (error) {
       toast.error(error?.message || error || "Unable to upload payment proof");
@@ -4411,15 +4426,30 @@ const ReferralCommerce = () => {
                     label="Referral Partner"
                     options={influencers.map((item) => ({
                       label: `${fullName(item.user)} - ${getId(item)}`,
-                      value: getId(item),
+                      value: String(getId(item)),
                     }))}
-                    value={codeFormik.values.influencerId}
-                    onChange={(selectedOption) =>
+                    value={
+                      influencers
+                        .map((item) => ({
+                          label: `${fullName(item.user)} - ${getId(item)}`,
+                          value: String(getId(item)),
+                        }))
+                        .find(
+                          (option) =>
+                            option.value ===
+                            String(codeFormik.values.influencerId || ""),
+                        ) || null
+                    }
+                    onChange={(selectedOption) => {
+                      const influencerId =
+                        selectedOption?.value || selectedOption || "";
+
                       codeFormik.setFieldValue(
                         "influencerId",
-                        selectedOption?.value || selectedOption || "",
-                      )
-                    }
+                        String(influencerId),
+                      );
+                      codeFormik.setFieldTouched("influencerId", true, false);
+                    }}
                     error={
                       codeFormik.touched.influencerId &&
                       codeFormik.errors.influencerId
@@ -4461,13 +4491,20 @@ const ReferralCommerce = () => {
                 <FormSelectGroup
                   label="Status"
                   options={referralCodeStatuses.options}
-                  value={codeFormik.values.status}
-                  onChange={(selectedOption) =>
-                    codeFormik.setFieldValue(
-                      "status",
-                      selectedOption?.value || selectedOption || "",
-                    )
+                  value={
+                    referralCodeStatuses.options.find(
+                      (option) =>
+                        String(option.value) ===
+                        String(codeFormik.values.status || ""),
+                    ) || null
                   }
+                  onChange={(selectedOption) => {
+                    const status =
+                      selectedOption?.value || selectedOption || "";
+
+                    codeFormik.setFieldValue("status", status);
+                    codeFormik.setFieldTouched("status", true, false);
+                  }}
                   error={codeFormik.touched.status && codeFormik.errors.status}
                   required
                   placeholder="Select status"
@@ -4634,129 +4671,82 @@ const ReferralCommerce = () => {
                   }
                 />
 
-                <div className="rounded-lg border border-dashed border-[#d8caa6] bg-[#fffaf0] p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <label className="block text-sm font-medium text-gray-800">
-                        Payment Proof *
-                      </label>
-                      <p className="mt-1 text-xs text-gray-500">
-                        Upload a PDF, JPG, PNG, or WebP receipt.
-                      </p>
-                    </div>
-
-                    <label
-                      className={`admin-btn-secondary inline-flex shrink-0 cursor-pointer items-center gap-2 ${
-                        uploadingPaymentProof
-                          ? "pointer-events-none opacity-60"
-                          : ""
-                      }`}
-                    >
-                      <UploadCloud aria-hidden="true" size={15} />
-
-                      {uploadingPaymentProof
-                        ? "Uploading..."
-                        : payoutPaymentFormik.values.paymentProofUrl
-                          ? "Replace File"
-                          : "Upload Proof"}
-
-                      <input
-                        type="file"
-                        accept="application/pdf,image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        disabled={uploadingPaymentProof}
-                        onChange={handlePaymentProofUpload}
-                      />
-                    </label>
-                  </div>
-
-                  {payoutPaymentFormik.values.paymentProofUrl && (
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-green-200 bg-white px-3 py-2">
-                      <a
-                        href={payoutPaymentFormik.values.paymentProofUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex min-w-0 items-center gap-1 break-all text-xs font-semibold text-green-700 hover:underline"
-                      >
-                        <ExternalLink aria-hidden="true" size={13} />
-                        View Uploaded Payment Proof
-                      </a>
-
-                      <button
-                        type="button"
-                        className="shrink-0 text-xs font-semibold text-red-600 hover:underline"
-                        onClick={() =>
-                          payoutPaymentFormik.setFieldValue(
-                            "paymentProofUrl",
-                            "",
-                          )
-                        }
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                  {payoutPaymentFormik.touched.paymentProofUrl &&
-                    payoutPaymentFormik.errors.paymentProofUrl && (
-                      <p className="mt-2 text-xs text-red-600" role="alert">
-                        {payoutPaymentFormik.errors.paymentProofUrl}
-                      </p>
-                    )}
+                <div>
+                  <ImageUpload
+                    id="payout-payment-proof"
+                    label="Payment Proof"
+                    subtext="Upload a JPG, PNG, or WebP receipt (maximum 5 MB)."
+                    accept="image/jpeg,image/png,image/webp"
+                    file={payoutPaymentFormik.values.paymentProofUrl || ""}
+                    isLoading={uploadingPaymentProof}
+                    loadingText="Uploading payment proof..."
+                    isDisabled={uploadingPaymentProof}
+                    errorMessage={
+                      payoutPaymentFormik.touched.paymentProofUrl
+                        ? payoutPaymentFormik.errors.paymentProofUrl || ""
+                        : ""
+                    }
+                    onChange={handlePaymentProofUpload}
+                    onRemove={() =>
+                      payoutPaymentFormik.setFieldValue("paymentProofUrl", "")
+                    }
+                    required
+                    containerClassName="!bg-transparent"
+                    labelClassName="!text-[#1F1B5F]"
+                    dropzoneClassName="!border-[#E8D9B5] hover:!border-[#D6A323] !bg-white hover:!bg-[#FFF7EA]"
+                    iconClassName="!bg-[#FFF1CC] !text-[#B88713]"
+                  />
                 </div>
               </div>
             </FormSection>
           )}
 
           {/* ==================== Admin Note ==================== */}
-          <FormSection
-            title="Admin Note"
-            description="Add a note for the payout audit trail."
-          >
-            <div>
-              <label className="admin-label">
-                Note{payoutAction?.action !== "paid" ? " *" : ""}
-              </label>
 
-              <textarea
-                rows={3}
-                name="adminNote"
-                value={
-                  payoutAction?.action === "paid"
-                    ? payoutPaymentFormik.values.adminNote
-                    : payoutDecisionFormik.values.adminNote
-                }
-                onChange={(event) => {
-                  if (payoutAction?.action === "paid") {
-                    payoutPaymentFormik.handleChange(event);
-                  } else {
-                    payoutDecisionFormik.handleChange(event);
-                  }
-                }}
-                onBlur={
-                  payoutAction?.action === "paid"
-                    ? payoutPaymentFormik.handleBlur
-                    : payoutDecisionFormik.handleBlur
-                }
-                className="admin-input w-full resize-y"
-                placeholder="Add an audit note"
-              />
+          <div>
+            <label className="admin-label">
+              Note{payoutAction?.action !== "paid" ? " *" : ""}
+            </label>
 
-              {payoutAction?.action === "paid" &&
-                payoutPaymentFormik.touched.adminNote &&
-                payoutPaymentFormik.errors.adminNote && (
-                  <p className="mt-1 text-xs text-red-600">
-                    {payoutPaymentFormik.errors.adminNote}
-                  </p>
-                )}
-              {payoutAction?.action !== "paid" &&
-                payoutDecisionFormik.touched.adminNote &&
-                payoutDecisionFormik.errors.adminNote && (
-                  <p className="mt-1 text-xs text-red-600">
-                    {payoutDecisionFormik.errors.adminNote}
-                  </p>
-                )}
-            </div>
-          </FormSection>
+            <textarea
+              rows={2}
+              name="adminNote"
+              value={
+                payoutAction?.action === "paid"
+                  ? payoutPaymentFormik.values.adminNote
+                  : payoutDecisionFormik.values.adminNote
+              }
+              onChange={(event) => {
+                if (payoutAction?.action === "paid") {
+                  payoutPaymentFormik.handleChange(event);
+                } else {
+                  payoutDecisionFormik.handleChange(event);
+                }
+              }}
+              onBlur={
+                payoutAction?.action === "paid"
+                  ? payoutPaymentFormik.handleBlur
+                  : payoutDecisionFormik.handleBlur
+              }
+              className="admin-input w-full min-h-[60px] resize-y !pt-5"
+              placeholder="Add an audit note"
+            />
+
+            {payoutAction?.action === "paid" &&
+              payoutPaymentFormik.touched.adminNote &&
+              payoutPaymentFormik.errors.adminNote && (
+                <p className="mt-1 text-xs text-red-600">
+                  {payoutPaymentFormik.errors.adminNote}
+                </p>
+              )}
+            {payoutAction?.action !== "paid" &&
+              payoutDecisionFormik.touched.adminNote &&
+              payoutDecisionFormik.errors.adminNote && (
+                <p className="mt-1 text-xs text-red-600">
+                  {payoutDecisionFormik.errors.adminNote}
+                </p>
+              )}
+          </div>
         </div>
       </DefaultModal>
 
