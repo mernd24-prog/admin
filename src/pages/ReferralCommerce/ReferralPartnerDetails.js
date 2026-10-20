@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Activity,
   ArrowLeft,
-  BadgeCheck,
   BadgeIndianRupee,
   Check,
   CheckCheck,
@@ -18,7 +16,6 @@ import {
   Pencil,
   ShieldCheck,
   UserPlus,
-  UserRound,
   X,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -26,7 +23,6 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import SharedDataTable from "../../components/Shared/DataTable";
 import {
-  FormSection,
   PageHeader,
   StatusBadge,
   SummaryCard,
@@ -258,13 +254,13 @@ const partnerTypeLabel = (value) =>
       : humanize(value);
 
 const baseActionButtonClass =
-  "inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition";
+  "inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-semibold tracking-wide transition-all duration-150 shadow-xs active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed";
 const pendingApprovalButtonClass =
-  "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100";
+  "border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-xs";
 const approvedActionButtonClass =
-  "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100";
+  "border-emerald-500 bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-sm";
 const rejectedActionButtonClass =
-  "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100";
+  "border-rose-200 bg-white text-rose-600 hover:bg-rose-50 hover:border-rose-300 hover:shadow-xs";
 
 const findInfluencer = (items = [], influencerId) =>
   items.find((item) => String(getId(item)) === String(influencerId)) || null;
@@ -339,9 +335,8 @@ const ReferralPartnerDetails = () => {
   const referralState = useSelector((state) => state.referralCommerce || {});
   const navigatedInfluencer = location.state?.influencer;
   const returnTo = location.state?.returnTo;
-  const [activeMainTab, setActiveMainTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("overview");
   const [previewDocument, setPreviewDocument] = useState(null);
-  const [activeActivityTab, setActiveActivityTab] = useState("codes");
   const [loadedDetailId, setLoadedDetailId] = useState(null);
   const [loadingAction, setLoadingAction] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -459,8 +454,7 @@ const ReferralPartnerDetails = () => {
   };
 
   useEffect(() => {
-    setActiveMainTab("overview");
-    setActiveActivityTab("codes");
+    setActiveTab("overview");
   }, [id, influencer?.influencerType]);
 
   useEffect(() => {
@@ -805,6 +799,61 @@ const ReferralPartnerDetails = () => {
     },
   ];
 
+  const detailTabs = useMemo(
+    () => [
+      { value: "overview", label: "Overview" },
+      { value: "codes", label: "Referral Codes", count: codeRows.length },
+      ...(influencer?.influencerType === "parent"
+        ? [
+            {
+              value: "associated-brands",
+              label: "Brand Associate",
+              count: brandAssociateRows.length,
+            },
+          ]
+        : []),
+      { value: "orders", label: "Orders", count: orderRows.length },
+      {
+        value: "commissions",
+        label: "Commissions",
+        count: commissionRows.length,
+      },
+      { value: "payouts", label: "Payouts", count: payoutRows.length },
+      {
+        value: "progress",
+        label: "Bonus Progress",
+        count: bonusProgress.length,
+      },
+      {
+        value: "achievements",
+        label: "Bonus History",
+        count: bonusAchievements.length,
+      },
+      { value: "verification", label: "Verification" },
+      { value: "actions", label: "Actions" },
+    ],
+    [
+      codeRows.length,
+      influencer?.influencerType,
+      brandAssociateRows.length,
+      orderRows.length,
+      commissionRows.length,
+      payoutRows.length,
+      bonusProgress.length,
+      bonusAchievements.length,
+    ],
+  );
+
+  useEffect(() => {
+    if (
+      activeTab === "associated-brands" &&
+      influencer &&
+      influencer.influencerType !== "parent"
+    ) {
+      setActiveTab("overview");
+    }
+  }, [activeTab, influencer]);
+
   if (!influencer && id && detailLoading) {
     return <ReferralPartnerDetailsSkeleton onBack={handleBack} />;
   }
@@ -973,394 +1022,292 @@ const ReferralPartnerDetails = () => {
         ))}
       </div>
 
-      <div className="admin-card overflow-hidden border-0 shadow-none">
-        <div className="bg-[#f9f4eb] px-4 py-4">
-          <div className="flex flex-wrap gap-2 rounded-md border-0 bg-[var(--admin-blue-soft)] p-1.5">
-            {[
-              { value: "overview", label: "Overview" },
-              ...(influencer?.influencerType === "parent"
-                ? [{ value: "associated-brands", label: "Brand Associate" }]
-                : []),
-              { value: "activity", label: "Activity" },
-              { value: "verification", label: "Verification" },
-              { value: "actions", label: "Actions" },
-            ].map((tab) => {
-              const isActive = activeMainTab === tab.value;
-              return (
-                <button
-                  key={tab.value}
-                  type="button"
-                  onClick={() => setActiveMainTab(tab.value)}
-                  className={`rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? "bg-[var(--admin-navy)] text-white shadow-sm ring-1 ring-[var(--admin-navy-dark)]"
-                      : "bg-transparent text-[var(--admin-navy)] hover:bg-white hover:text-[var(--admin-navy-dark)]"
-                  }`}
+      <Tabs
+        tabs={detailTabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+      />
+
+      <div className="mt-4">
+        {activeTab === "overview" && (
+          <div className="admin-card p-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {infoRows.map((row) => (
+                <div
+                  key={row.label}
+                  className="rounded-lg border border-gray-200 bg-gray-50/70 p-3.5 transition hover:bg-gray-50"
                 >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="p-4">
-          {activeMainTab === "overview" && (
-            <div className="space-y-5">
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {infoRows.map((row) => (
-                  <div
-                    key={row.label}
-                    className="rounded-lg border border-gray-200 bg-gray-50 p-3"
-                  >
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                      {row.label}
-                    </div>
-                    <div className="mt-2 text-sm font-medium text-gray-800">
-                      {row.value}
-                    </div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                    {row.label}
                   </div>
-                ))}
-              </div>
+                  <div className="mt-1.5 text-sm font-medium text-gray-800">
+                    {row.value}
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
+        )}
 
-          {influencer?.influencerType === "parent" &&
-            activeMainTab === "associated-brands" && (
-              <SharedDataTable
-                columns={[
-                  { key: "associate", label: "Brand Associate" },
-                  { key: "code", label: "Referral Code" },
-                  { key: "level", label: "Hierarchy" },
-                  { key: "wallet", label: "Available Coins" },
-                  { key: "status", label: "Status" },
-                  { key: "created", label: "Associated On" },
-                  { key: "actions", label: "Actions" },
-                ]}
-                data={brandAssociateRows}
-                loading={
-                  detailLoading ||
-                  Boolean(referralState.brandAssociatesData?.loading)
-                }
-                rowKey="key"
-                onRowClick={(row) =>
-                  navigate(
-                    `/app/referral-commerce/influencers/view/${row.key}`,
-                    {
-                      state: {
-                        influencer: brandAssociates.find(
-                          (item) => String(getId(item)) === String(row.key),
-                        ),
-                        returnTo: {
-                          pathname: `/app/referral-commerce/influencers/view/${id}`,
-                          state: { influencer },
-                        },
+        {activeTab === "codes" && (
+          <SharedDataTable
+            columns={[
+              { key: "code", label: "Referral Code" },
+              { key: "status", label: "Status" },
+              { key: "usage", label: "Usage" },
+              { key: "created", label: "Created" },
+            ]}
+            data={codeRows}
+            loading={
+              detailLoading || Boolean(referralState.codesData?.loading)
+            }
+            rowKey="key"
+            emptyText="No referral codes found for this partner."
+            cardClassName="overflow-hidden"
+          />
+        )}
+
+        {influencer?.influencerType === "parent" &&
+          activeTab === "associated-brands" && (
+            <SharedDataTable
+              columns={[
+                { key: "associate", label: "Brand Associate" },
+                { key: "code", label: "Referral Code" },
+                { key: "level", label: "Hierarchy" },
+                { key: "wallet", label: "Available Coins" },
+                { key: "status", label: "Status" },
+                { key: "created", label: "Associated On" },
+                { key: "actions", label: "Actions" },
+              ]}
+              data={brandAssociateRows}
+              loading={
+                detailLoading ||
+                Boolean(referralState.brandAssociatesData?.loading)
+              }
+              rowKey="key"
+              onRowClick={(row) =>
+                navigate(
+                  `/app/referral-commerce/influencers/view/${row.key}`,
+                  {
+                    state: {
+                      influencer: brandAssociates.find(
+                        (item) => String(getId(item)) === String(row.key),
+                      ),
+                      returnTo: {
+                        pathname: `/app/referral-commerce/influencers/view/${id}`,
+                        state: { influencer },
                       },
                     },
-                  )
-                }
-                emptyText="No Brand Associates are linked to this Growth Partner."
-                cardClassName="overflow-hidden"
-              />
-            )}
-
-          {activeMainTab === "activity" && (
-            <div>
-              <Tabs
-                tabs={[
-                  {
-                    value: "codes",
-                    label: "Referral codes",
-                    count: codeRows.length,
                   },
-                  {
-                    value: "orders",
-                    label: "Orders",
-                    count: orderRows.length,
-                  },
-                  {
-                    value: "commissions",
-                    label: "Commissions",
-                    count: commissionRows.length,
-                  },
-                  {
-                    value: "payouts",
-                    label: "Payouts",
-                    count: payoutRows.length,
-                  },
-                  {
-                    value: "progress",
-                    label: "Bonus progress",
-                    count: bonusProgress.length,
-                  },
-                  {
-                    value: "achievements",
-                    label: "Bonus history",
-                    count: bonusAchievements.length,
-                  },
-                ]}
-                activeTab={activeActivityTab}
-                onChange={setActiveActivityTab}
-              />
-
-              {activeActivityTab === "codes" && (
-                <div className="pt-2">
-                  <SharedDataTable
-                    columns={[
-                      { key: "code", label: "Referral Code" },
-                      { key: "status", label: "Status" },
-                      { key: "usage", label: "Usage" },
-                      { key: "created", label: "Created" },
-                    ]}
-                    data={codeRows}
-                    loading={
-                      detailLoading || Boolean(referralState.codesData?.loading)
-                    }
-                    rowKey="key"
-                    emptyText="No referral codes found for this partner."
-                    cardClassName="overflow-hidden"
-                  />
-                </div>
-              )}
-
-              {activeActivityTab === "orders" && (
-                <div className="pt-2">
-                  <SharedDataTable
-                    columns={[
-                      { key: "order", label: "Order" },
-                      { key: "code", label: "Code" },
-                      { key: "amount", label: "Amount" },
-                      { key: "status", label: "Status" },
-                      { key: "created", label: "Created" },
-                    ]}
-                    data={orderRows}
-                    loading={
-                      detailLoading ||
-                      Boolean(referralState.ordersData?.loading)
-                    }
-                    rowKey="key"
-                    emptyText="No partner orders yet."
-                    cardClassName="overflow-hidden"
-                  />
-                </div>
-              )}
-
-              {activeActivityTab === "commissions" && (
-                <div className="pt-2">
-                  <SharedDataTable
-                    columns={[
-                      { key: "type", label: "Type" },
-                      { key: "basis", label: "Basis" },
-                      { key: "amount", label: "Coins" },
-                      { key: "status", label: "Status" },
-                    ]}
-                    data={commissionRows}
-                    loading={
-                      detailLoading ||
-                      Boolean(referralState.commissionsData?.loading)
-                    }
-                    rowKey="key"
-                    emptyText="No commission entries found."
-                    cardClassName="overflow-hidden"
-                  />
-                </div>
-              )}
-
-              {activeActivityTab === "payouts" && (
-                <div className="pt-2">
-                  <SharedDataTable
-                    columns={[
-                      { key: "coins", label: "Coins" },
-                      { key: "payable", label: "Payable" },
-                      { key: "method", label: "Method" },
-                      { key: "status", label: "Status" },
-                      { key: "requested", label: "Requested" },
-                    ]}
-                    data={payoutRows}
-                    loading={
-                      detailLoading ||
-                      Boolean(referralState.payoutsData?.loading)
-                    }
-                    rowKey="key"
-                    emptyText="No payout requests for this partner."
-                    cardClassName="overflow-hidden"
-                  />
-                </div>
-              )}
-
-              {activeActivityTab === "progress" && (
-                <div className="pt-2">
-                  <SharedDataTable
-                    columns={[
-                      { key: "rule", label: "Rule" },
-                      { key: "cycle", label: "Cycle" },
-                      { key: "target", label: "Target" },
-                      { key: "progress", label: "Progress" },
-                      { key: "status", label: "Status" },
-                    ]}
-                    data={bonusProgress.map((row) => ({
-                      key: `${getId(row.rule)}-${row.influencer?.id}-${row.cycleKey}`,
-                      rule: row.rule?.ruleName || "-",
-                      cycle: row.cycleKey || "-",
-                      target: Number(row.targetValue || 0).toLocaleString(
-                        "en-IN",
-                      ),
-                      progress: `${Number(row.progressPercent || 0).toFixed(2)}%`,
-                      status: row.existingAchievement ? (
-                        <StatusBadge
-                          status={row.existingAchievement.status}
-                          size="sm"
-                        />
-                      ) : (
-                        <StatusBadge
-                          status={row.achieved ? "achieved" : "in_progress"}
-                          size="sm"
-                        />
-                      ),
-                    }))}
-                    loading={
-                      detailLoading ||
-                      Boolean(referralState.bonusProgressData?.loading)
-                    }
-                    rowKey="key"
-                    emptyText="No bonus progress recorded."
-                    cardClassName="overflow-hidden"
-                  />
-                </div>
-              )}
-
-              {activeActivityTab === "achievements" && (
-                <div className="pt-2">
-                  <SharedDataTable
-                    columns={[
-                      { key: "rule", label: "Rule" },
-                      { key: "cycle", label: "Cycle" },
-                      { key: "bonus", label: "Bonus Coins" },
-                      { key: "status", label: "Status" },
-                      { key: "achievedAt", label: "Achieved At" },
-                    ]}
-                    data={bonusAchievements.map((achievement) => ({
-                      key: getId(achievement),
-                      rule: achievement.ruleName || "-",
-                      cycle: achievement.cycleKey || "-",
-                      bonus: `${Number(achievement.bonusCoins || 0).toLocaleString("en-IN")} coins`,
-                      status: (
-                        <StatusBadge status={achievement.status} size="sm" />
-                      ),
-                      achievedAt: formatDate(
-                        achievement.achievedAt || achievement.createdAt,
-                      ),
-                    }))}
-                    loading={
-                      detailLoading ||
-                      Boolean(referralState.bonusAchievementsData?.loading)
-                    }
-                    rowKey="key"
-                    emptyText="No bonus achievements for this partner."
-                    cardClassName="overflow-hidden"
-                  />
-                </div>
-              )}
-            </div>
+                )
+              }
+              emptyText="No Brand Associates are linked to this Growth Partner."
+              cardClassName="overflow-hidden"
+            />
           )}
 
-          {activeMainTab === "verification" && (
-            <div className="grid gap-5 lg:grid-cols-3">
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                  <FileText
-                    aria-hidden="true"
-                    size={16}
-                    className="text-indigo-600"
-                  />
-                  Documents
-                </div>
-                <div className="space-y-2 text-sm">
-                  {documentEntries(verificationData.documents).length ? (
-                    documentEntries(verificationData.documents).map(
-                      ([key, value]) => (
-                        <div
-                          key={key}
-                          className="flex items-center justify-between gap-3"
+        {activeTab === "orders" && (
+          <SharedDataTable
+            columns={[
+              { key: "order", label: "Order" },
+              { key: "code", label: "Code" },
+              { key: "amount", label: "Amount" },
+              { key: "status", label: "Status" },
+              { key: "created", label: "Created" },
+            ]}
+            data={orderRows}
+            loading={
+              detailLoading ||
+              Boolean(referralState.ordersData?.loading)
+            }
+            rowKey="key"
+            emptyText="No partner orders yet."
+            cardClassName="overflow-hidden"
+          />
+        )}
+
+        {activeTab === "commissions" && (
+          <SharedDataTable
+            columns={[
+              { key: "type", label: "Type" },
+              { key: "basis", label: "Basis" },
+              { key: "amount", label: "Coins" },
+              { key: "status", label: "Status" },
+            ]}
+            data={commissionRows}
+            loading={
+              detailLoading ||
+              Boolean(referralState.commissionsData?.loading)
+            }
+            rowKey="key"
+            emptyText="No commission entries found."
+            cardClassName="overflow-hidden"
+          />
+        )}
+
+        {activeTab === "payouts" && (
+          <SharedDataTable
+            columns={[
+              { key: "coins", label: "Coins" },
+              { key: "payable", label: "Payable" },
+              { key: "method", label: "Method" },
+              { key: "status", label: "Status" },
+              { key: "requested", label: "Requested" },
+            ]}
+            data={payoutRows}
+            loading={
+              detailLoading ||
+              Boolean(referralState.payoutsData?.loading)
+            }
+            rowKey="key"
+            emptyText="No payout requests for this partner."
+            cardClassName="overflow-hidden"
+          />
+        )}
+
+        {activeTab === "progress" && (
+          <SharedDataTable
+            columns={[
+              { key: "rule", label: "Rule" },
+              { key: "cycle", label: "Cycle" },
+              { key: "target", label: "Target" },
+              { key: "progress", label: "Progress" },
+              { key: "status", label: "Status" },
+            ]}
+            data={bonusProgress.map((row) => ({
+              key: `${getId(row.rule)}-${row.influencer?.id}-${row.cycleKey}`,
+              rule: row.rule?.ruleName || "-",
+              cycle: row.cycleKey || "-",
+              target: Number(row.targetValue || 0).toLocaleString(
+                "en-IN",
+              ),
+              progress: `${Number(row.progressPercent || 0).toFixed(2)}%`,
+              status: row.existingAchievement ? (
+                <StatusBadge
+                  status={row.existingAchievement.status}
+                  size="sm"
+                />
+              ) : (
+                <StatusBadge
+                  status={row.achieved ? "achieved" : "in_progress"}
+                  size="sm"
+                />
+              ),
+            }))}
+            loading={
+              detailLoading ||
+              Boolean(referralState.bonusProgressData?.loading)
+            }
+            rowKey="key"
+            emptyText="No bonus progress recorded."
+            cardClassName="overflow-hidden"
+          />
+        )}
+
+        {activeTab === "achievements" && (
+          <SharedDataTable
+            columns={[
+              { key: "rule", label: "Rule" },
+              { key: "cycle", label: "Cycle" },
+              { key: "bonus", label: "Bonus Coins" },
+              { key: "status", label: "Status" },
+              { key: "achievedAt", label: "Achieved At" },
+            ]}
+            data={bonusAchievements.map((achievement) => ({
+              key: getId(achievement),
+              rule: achievement.ruleName || "-",
+              cycle: achievement.cycleKey || "-",
+              bonus: `${Number(achievement.bonusCoins || 0).toLocaleString("en-IN")} coins`,
+              status: (
+                <StatusBadge status={achievement.status} size="sm" />
+              ),
+              achievedAt: formatDate(
+                achievement.achievedAt || achievement.createdAt,
+              ),
+            }))}
+            loading={
+              detailLoading ||
+              Boolean(referralState.bonusAchievementsData?.loading)
+            }
+            rowKey="key"
+            emptyText="No bonus achievements for this partner."
+            cardClassName="overflow-hidden"
+          />
+        )}
+
+        {activeTab === "verification" && (
+          <div className="admin-card p-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {/* Document Cards */}
+              {documentEntries(verificationData.documents).map(
+                ([key, value], index) => {
+                  const isAvailable = String(value).startsWith("http");
+                  const iconColors = [
+                    "border-purple-100 bg-purple-50 text-purple-600",
+                    "border-red-100 bg-red-50 text-red-500",
+                    "border-blue-100 bg-blue-50 text-blue-600",
+                    "border-emerald-100 bg-emerald-50 text-emerald-600",
+                  ];
+
+                  return (
+                    <div
+                      key={key}
+                      className="flex min-h-[155px] flex-col items-center justify-center rounded-lg border border-[#EADCC8] bg-white px-3 py-4 text-center transition-colors hover:border-[#D6A323] hover:bg-[#FFFCF7]"
+                    >
+                      <div
+                        className={`mb-3 flex h-11 w-11 items-center justify-center rounded-lg border ${
+                          iconColors[index % iconColors.length]
+                        }`}
+                      >
+                        <FileText aria-hidden="true" size={20} />
+                      </div>
+
+                      <h4 className="text-sm font-semibold text-[#252345]">
+                        {documentLabel(key)}
+                      </h4>
+
+                      <p className="mt-1 text-[11px] text-gray-400">
+                        {isAvailable
+                          ? "Document uploaded"
+                          : value
+                            ? String(value)
+                            : "Document not uploaded"}
+                      </p>
+
+                      {isAvailable && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPreviewDocument({
+                              label: documentLabel(key),
+                              url: value,
+                            })
+                          }
+                          className="mt-4 inline-flex items-center justify-center gap-2 rounded-md border border-[#BBD3FF] bg-white px-3.5 py-1.5 text-xs font-semibold text-[#2F6BFF] transition-colors hover:border-[#2F6BFF] hover:bg-blue-50"
                         >
-                          <span className="text-gray-500">
-                            {documentLabel(key)}
-                          </span>
-                          {String(value).startsWith("http") ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setPreviewDocument({
-                                  label: documentLabel(key),
-                                  url: value,
-                                })
-                              }
-                              className="font-medium text-indigo-700 hover:text-indigo-900 hover:underline"
-                            >
-                              View
-                            </button>
-                          ) : (
-                            <span className="max-w-[65%] truncate text-right font-medium text-gray-800">
-                              {String(value)}
-                            </span>
-                          )}
-                        </div>
-                      ),
-                    )
-                  ) : (
-                    <span className="text-gray-500">
-                      No documents submitted.
-                    </span>
-                  )}
-                </div>
-              </div>
+                          <Eye aria-hidden="true" size={14} />
+                          View Document
+                        </button>
+                      )}
+                    </div>
+                  );
+                },
+              )}
 
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                  <BadgeCheck
-                    aria-hidden="true"
-                    size={16}
-                    className="text-indigo-600"
-                  />
-                  KYC
+              {/* Bank Details Card - Same UI as document cards */}
+              <div className="flex min-h-[155px] flex-col items-center justify-center rounded-lg border border-[#EADCC8] bg-white px-3 py-4 text-center transition-colors hover:border-[#D6A323] hover:bg-[#FFFCF7]">
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-600">
+                  <Landmark aria-hidden="true" size={20} />
                 </div>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-gray-500">Verification status</span>
-                    <StatusBadge
-                      status={verificationData.kycStatus || "not_submitted"}
-                      size="sm"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-gray-500">PAN</span>
-                    <span className="font-medium text-gray-800">
-                      {verificationData.panNumber || "-"}
-                    </span>
-                  </div>
-                </div>
-              </div>
 
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                  <Landmark
-                    aria-hidden="true"
-                    size={16}
-                    className="text-indigo-600"
-                  />
-                  Bank details
-                </div>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-gray-500">Verification status</span>
-                    <StatusBadge
-                      status={verificationData.bankStatus || "not_submitted"}
-                      size="sm"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-gray-500">Bank</span>
-                    <span className="text-right font-medium text-gray-800">
+                <h4 className="text-sm font-semibold text-[#252345]">
+                  Bank Details
+                </h4>
+
+                <div className="mt-1 space-y-1 text-[11px] text-gray-400">
+                  <p>
+                    Bank:{" "}
+                    <span className="font-medium text-[#252345]">
                       {verificationData.bankDetails.method === "upi"
                         ? `UPI: ${verificationData.bankDetails.upiId || "-"}`
                         : firstValue(
@@ -1368,196 +1315,231 @@ const ReferralPartnerDetails = () => {
                             verificationData.bankDetails.bank,
                           ) || "-"}
                     </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-gray-500">Account</span>
-                    <CopyableValue
-                      value={firstValue(
-                        verificationData.bankDetails.accountNumber,
-                        verificationData.bankDetails.bankAccountNumber,
-                        verificationData.bankDetails.accountNo,
-                      )}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-gray-500">IFSC</span>
-                    <span className="font-medium text-gray-800">
+                  </p>
+
+                  <p className="flex items-center justify-center gap-1">
+                    <span>Account:</span>
+                    <span className="font-medium text-[#252345]">
+                      <CopyableValue
+                        value={firstValue(
+                          verificationData.bankDetails.accountNumber,
+                          verificationData.bankDetails.bankAccountNumber,
+                          verificationData.bankDetails.accountNo,
+                        )}
+                      />
+                    </span>
+                  </p>
+
+                  <p>
+                    IFSC:{" "}
+                    <span className="font-medium text-[#252345]">
                       {firstValue(
                         verificationData.bankDetails.ifscCode,
                         verificationData.bankDetails.ifsc,
                       ) || "-"}
                     </span>
-                  </div>
+                  </p>
                 </div>
               </div>
-            </div>
-          )}
 
-          {activeMainTab === "actions" && (
-            <div>
-              <div className="mb-3 flex justify-end">
-                <StatusBadge status={influencer?.status} size="sm" />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(influencer?.kycStatus === "submitted" ||
-                  influencer?.kycStatus === "rejected") && (
-                  <button
-                    type="button"
-                    className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`}
-                    disabled={!!loadingAction}
-                    onClick={() => reviewVerification("kyc", "verified")}
-                  >
-                    {loadingAction === "kyc_verified" ? (
-                      <Loader2
-                        aria-hidden="true"
-                        size={14}
-                        className="animate-spin"
-                      />
-                    ) : (
-                      <Check aria-hidden="true" size={14} />
-                    )}{" "}
-                    Approve KYC
-                  </button>
-                )}
-                {(influencer?.kycStatus === "submitted" ||
-                  influencer?.kycStatus === "verified") && (
-                  <button
-                    type="button"
-                    className={`${baseActionButtonClass} ${rejectedActionButtonClass}`}
-                    disabled={!!loadingAction}
-                    onClick={() => reviewVerification("kyc", "rejected")}
-                  >
-                    {loadingAction === "kyc_rejected" ? (
-                      <Loader2
-                        aria-hidden="true"
-                        size={14}
-                        className="animate-spin"
-                      />
-                    ) : (
-                      <X aria-hidden="true" size={14} />
-                    )}{" "}
-                    Reject KYC
-                  </button>
-                )}
-                {(influencer?.payoutProfileStatus === "submitted" ||
-                  influencer?.payoutProfileStatus === "rejected") && (
-                  <button
-                    type="button"
-                    className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`}
-                    disabled={!!loadingAction}
-                    onClick={() => reviewVerification("bank", "verified")}
-                  >
-                    {loadingAction === "bank_verified" ? (
-                      <Loader2
-                        aria-hidden="true"
-                        size={14}
-                        className="animate-spin"
-                      />
-                    ) : (
-                      <Check aria-hidden="true" size={14} />
-                    )}{" "}
-                    Verify Bank
-                  </button>
-                )}
-                {(influencer?.payoutProfileStatus === "submitted" ||
-                  influencer?.payoutProfileStatus === "verified") && (
-                  <button
-                    type="button"
-                    className={`${baseActionButtonClass} ${rejectedActionButtonClass}`}
-                    disabled={!!loadingAction}
-                    onClick={() => reviewVerification("bank", "rejected")}
-                  >
-                    {loadingAction === "bank_rejected" ? (
-                      <Loader2
-                        aria-hidden="true"
-                        size={14}
-                        className="animate-spin"
-                      />
-                    ) : (
-                      <X aria-hidden="true" size={14} />
-                    )}{" "}
-                    Reject Bank
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className={`${baseActionButtonClass} ${influencer?.status === "active" ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" : verificationApproved ? approvedActionButtonClass : pendingApprovalButtonClass}`}
-                  disabled={!!loadingAction}
-                  onClick={updatePartnerStatus}
-                >
-                  {loadingAction === "status" ? (
-                    <Loader2
-                      aria-hidden="true"
-                      size={14}
-                      className="animate-spin"
-                    />
-                  ) : influencer?.status === "active" ? (
-                    <X aria-hidden="true" size={14} />
-                  ) : (
-                    <Check aria-hidden="true" size={14} />
-                  )}
-                  {influencer?.status === "pending"
-                    ? "Approve account"
-                    : influencer?.status === "active"
-                      ? "Suspend partner"
-                      : "Reactivate partner"}
-                </button>
-                <button
-                  type="button"
-                  className={`inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition ${influencer?.canCreateChildren ? "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100" : "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"}`}
-                  disabled={!!loadingAction}
-                  onClick={togglePermission}
-                >
-                  {loadingAction === "permission" ? (
-                    <Loader2
-                      aria-hidden="true"
-                      size={14}
-                      className="animate-spin"
-                    />
-                  ) : influencer?.canCreateChildren ? (
-                    <X aria-hidden="true" size={14} />
-                  ) : (
-                    <UserPlus aria-hidden="true" size={14} />
-                  )}
-                  {influencer?.canCreateChildren
-                    ? "Revoke child creation"
-                    : "Grant child creation"}
-                </button>
-                {influencer?.childRegistration?.shareable && (
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
-                    onClick={copyRegistrationLink}
-                  >
-                    <Link aria-hidden="true" size={14} /> Copy registration link
-                  </button>
-                )}
-                {!(
-                  influencer?.influencerType === "parent" &&
-                  influencer?.canCreateChildren
-                ) && (
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 rounded border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100"
-                    disabled={!!loadingAction}
-                    onClick={promotePartner}
-                  >
-                    {loadingAction === "promote" ? (
-                      <Loader2
-                        aria-hidden="true"
-                        size={14}
-                        className="animate-spin"
-                      />
-                    ) : (
-                      <GitBranch aria-hidden="true" size={14} />
-                    )}{" "}
-                    Promote to Growth Partner
-                  </button>
-                )}
-              </div>
+              {/* Empty State */}
+              {!documentEntries(verificationData.documents).length && (
+                <div className="flex min-h-[155px] flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50/50 px-4 py-6 text-center">
+                  <FileText
+                    aria-hidden="true"
+                    size={25}
+                    className="mb-2 text-gray-400"
+                  />
+                  <p className="text-sm font-medium text-gray-600">
+                    No documents submitted
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Uploaded documents will appear here.
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {activeTab === "actions" && (
+          <div className="admin-card p-5">
+            <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Partner Actions
+              </span>
+              <StatusBadge status={influencer?.status} size="sm" />
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              {(influencer?.kycStatus === "submitted" ||
+                influencer?.kycStatus === "rejected") && (
+                <button
+                  type="button"
+                  className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`}
+                  disabled={!!loadingAction}
+                  onClick={() => reviewVerification("kyc", "verified")}
+                >
+                  {loadingAction === "kyc_verified" ? (
+                    <Loader2
+                      aria-hidden="true"
+                      size={14}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <Check aria-hidden="true" size={14} className="stroke-[2.5]" />
+                  )}
+                  Approve KYC
+                </button>
+              )}
+              {(influencer?.kycStatus === "submitted" ||
+                influencer?.kycStatus === "verified") && (
+                <button
+                  type="button"
+                  className={`${baseActionButtonClass} ${rejectedActionButtonClass}`}
+                  disabled={!!loadingAction}
+                  onClick={() => reviewVerification("kyc", "rejected")}
+                >
+                  {loadingAction === "kyc_rejected" ? (
+                    <Loader2
+                      aria-hidden="true"
+                      size={14}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <X aria-hidden="true" size={14} className="stroke-[2.5]" />
+                  )}
+                  Reject KYC
+                </button>
+              )}
+              {(influencer?.payoutProfileStatus === "submitted" ||
+                influencer?.payoutProfileStatus === "rejected") && (
+                <button
+                  type="button"
+                  className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`}
+                  disabled={!!loadingAction}
+                  onClick={() => reviewVerification("bank", "verified")}
+                >
+                  {loadingAction === "bank_verified" ? (
+                    <Loader2
+                      aria-hidden="true"
+                      size={14}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <Check aria-hidden="true" size={14} className="stroke-[2.5]" />
+                  )}
+                  Verify Bank
+                </button>
+              )}
+              {(influencer?.payoutProfileStatus === "submitted" ||
+                influencer?.payoutProfileStatus === "verified") && (
+                <button
+                  type="button"
+                  className={`${baseActionButtonClass} ${rejectedActionButtonClass}`}
+                  disabled={!!loadingAction}
+                  onClick={() => reviewVerification("bank", "rejected")}
+                >
+                  {loadingAction === "bank_rejected" ? (
+                    <Loader2
+                      aria-hidden="true"
+                      size={14}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <X aria-hidden="true" size={14} className="stroke-[2.5]" />
+                  )}
+                  Reject Bank
+                </button>
+              )}
+              <button
+                type="button"
+                className={`${baseActionButtonClass} ${
+                  influencer?.status === "active"
+                    ? "border-amber-200 bg-white text-amber-700 hover:bg-amber-50 hover:border-amber-300 hover:shadow-xs"
+                    : verificationApproved
+                      ? approvedActionButtonClass
+                      : pendingApprovalButtonClass
+                }`}
+                disabled={!!loadingAction}
+                onClick={updatePartnerStatus}
+              >
+                {loadingAction === "status" ? (
+                  <Loader2
+                    aria-hidden="true"
+                    size={14}
+                    className="animate-spin"
+                  />
+                ) : influencer?.status === "active" ? (
+                  <X aria-hidden="true" size={14} className="stroke-[2.5]" />
+                ) : (
+                  <Check aria-hidden="true" size={14} className="stroke-[2.5]" />
+                )}
+                {influencer?.status === "pending"
+                  ? "Approve account"
+                  : influencer?.status === "active"
+                    ? "Suspend partner"
+                    : "Reactivate partner"}
+              </button>
+              <button
+                type="button"
+                className={`${baseActionButtonClass} ${
+                  influencer?.canCreateChildren
+                    ? "border-orange-200 bg-white text-orange-700 hover:bg-orange-50 hover:border-orange-300 hover:shadow-xs"
+                    : "border-sky-200 bg-sky-50/70 text-sky-700 hover:bg-sky-100 hover:border-sky-300 hover:shadow-xs"
+                }`}
+                disabled={!!loadingAction}
+                onClick={togglePermission}
+              >
+                {loadingAction === "permission" ? (
+                  <Loader2
+                    aria-hidden="true"
+                    size={14}
+                    className="animate-spin"
+                  />
+                ) : influencer?.canCreateChildren ? (
+                  <X aria-hidden="true" size={14} className="stroke-[2.5]" />
+                ) : (
+                  <UserPlus aria-hidden="true" size={14} />
+                )}
+                {influencer?.canCreateChildren
+                  ? "Revoke child creation"
+                  : "Grant child creation"}
+              </button>
+              {influencer?.childRegistration?.shareable && (
+                <button
+                  type="button"
+                  className={`${baseActionButtonClass} border-[var(--admin-navy)]/15 bg-white text-[var(--admin-navy)] hover:bg-[var(--admin-blue-soft)] hover:border-[var(--admin-navy)]/30 hover:shadow-xs`}
+                  onClick={copyRegistrationLink}
+                >
+                  <Link aria-hidden="true" size={14} />
+                  Copy registration link
+                </button>
+              )}
+              {!(
+                influencer?.influencerType === "parent" &&
+                influencer?.canCreateChildren
+              ) && (
+                <button
+                  type="button"
+                  className={`${baseActionButtonClass} border-violet-200 bg-white text-violet-700 hover:bg-violet-50 hover:border-violet-300 hover:shadow-xs`}
+                  disabled={!!loadingAction}
+                  onClick={promotePartner}
+                >
+                  {loadingAction === "promote" ? (
+                    <Loader2
+                      aria-hidden="true"
+                      size={14}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <GitBranch aria-hidden="true" size={14} />
+                  )}
+                  Promote to Growth Partner
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <VerificationDecisionModal

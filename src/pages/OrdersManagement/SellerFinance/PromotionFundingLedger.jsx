@@ -212,36 +212,34 @@ const PromotionFundingLedger = () => {
   // Table columns
   const columns = useMemo(
     () => [
-     {
-  key: "orderId",
-  label: "Order / Item",
-  render: (value, row) => {
-    const orderId = row?.orderId || row?.order_id;
-    const orderDisplay = row?.orderNumber || value || "—";
-    const productName = row?.productTitle || "Order item";
+      {
+        key: "orderId",
+        label: "Order / Item",
+        render: (value, row) => {
+          const orderId = row?.orderId || row?.order_id;
+          const orderDisplay = row?.orderNumber || value || "—";
+          const productName = row?.productTitle || "Order item";
 
-    return (
-      <div className="flex flex-col">
-        <OrderLink
-          orderId={orderId}
-          orderNumber={row?.orderNumber || row?.order_number}
-        >
-          {orderDisplay}
-        </OrderLink>
+          return (
+            <div className="flex flex-col">
+              <OrderLink
+                orderId={orderId}
+                orderNumber={row?.orderNumber || row?.order_number}
+              >
+                {orderDisplay}
+              </OrderLink>
 
-        <div
-          title={productName}
-        >
-          {truncateToWordBoundary(productName)}
-        </div>
+              <div title={productName}>
+                {truncateToWordBoundary(productName)}
+              </div>
 
-        <div className="text-xs text-gray-500">
-          {row?.productSku || "No SKU"} · Qty {row?.quantity ?? 0}
-        </div>
-      </div>
-    );
-  },
-},
+              <div className="text-xs text-gray-500">
+                {row?.productSku || "No SKU"} · Qty {row?.quantity ?? 0}
+              </div>
+            </div>
+          );
+        },
+      },
 
       ...(!sellerMode
         ? [
@@ -421,10 +419,27 @@ const PromotionFundingLedger = () => {
         ]}
       />
 
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-        A marketplace contribution is not extra commission. Example: for a
-        ₹1,000 seller invoice with a ₹500 marketplace promotion, customer
-        payment ₹500 + marketplace contribution ₹500 = seller invoice ₹1,000.
+      <div className="rounded-lg border border-[var(--admin-gold)]/30 bg-amber-50/60 p-4 text-sm text-gray-700">
+        <p className="font-semibold text-gray-900">
+          How Marketplace Contribution Works
+        </p>
+        <p className="mt-1 leading-6">
+          Marketplace contribution is not an additional commission. It covers
+          part of the seller invoice through platform-funded promotion.
+        </p>
+        <div className="mt-3 rounded-md border border-amber-200/70 bg-white/80 px-3 py-2.5">
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            Example · Seller invoice ₹1,000
+          </p>
+          <p className="mt-1 font-medium text-gray-800">
+            Customer payment <span className="text-gray-500">₹500</span>
+            <span className="mx-2 text-gray-400">+</span>
+            Marketplace contribution{" "}
+            <span className="text-amber-800">₹500</span>
+            <span className="mx-2 text-gray-400">=</span>
+            <span className="font-bold text-gray-900">₹1,000</span>
+          </p>
+        </div>
       </div>
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -443,7 +458,9 @@ const PromotionFundingLedger = () => {
         columns={columns}
         data={rows}
         loading={loading}
-        totalCount={payload?.totalCount || payload?.total || payload?.count || rows.length}
+        totalCount={
+          payload?.totalCount || payload?.total || payload?.count || rows.length
+        }
         page={
           Math.floor(
             Number(filters.offset || 0) / Number(filters.limit || 50),
