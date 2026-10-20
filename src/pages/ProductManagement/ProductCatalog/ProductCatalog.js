@@ -20,21 +20,16 @@ import { MdVisibility, MdRefresh, MdEdit, MdDelete } from "react-icons/md";
 
 // Redux
 import {
-  approveDisapprove,
   bulkUpdateProducts,
   duplicateProduct,
   enableDisableProductCatalogs,
-  getProductById,
-  getProductRevisions,
   getProducts,
   getList as getCategoryList,
   permanentlyDeleteProduct,
-  reviewProductRevision,
 } from "../../../Redux/productSlice";
 
 import { toast } from "sonner";
 import { getAllSellerList } from "../../../Redux/StoreSlice";
-import ProductReviewModal from "../../../components/Product/ProductReviewModal";
 import ProductStatusBadge from "../../../components/Product/ProductStatusBadge";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { DataTable, PageHeader } from "../../../components/Shared";
@@ -118,7 +113,6 @@ const SELLER_PANEL_ROLES = new Set([
 
 const STATUS_TOGGLEABLE = new Set(["active", "inactive", "draft"]);
 
-const REVIEWABLE_STATUSES = new Set(["pending_approval"]);
 
 const normalizeRevisionFilterValue = (value = "") => {
   const normalized = String(value ?? "")
@@ -288,12 +282,6 @@ const ProductCatalog = () => {
   const handleAddNavigate = () => navigate("/app/product-catalog/form");
 
   const [userData, setUserData] = useState(null);
-
-  const [reviewModal, setReviewModal] = useState({
-    open: false,
-    product: null,
-    revision: null,
-  });
 
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
   const sellerView = isSellerPanel();
@@ -742,10 +730,6 @@ const ProductCatalog = () => {
       Boolean(product?.pendingRevisionId) ||
       Boolean(product?.pendingRevision));
 
-  const canReviewProduct = (product) =>
-    !isSellerPanelUser &&
-    (REVIEWABLE_STATUSES.has(product?.status) || hasPendingRevision(product));
-
   const canToggleProduct = (product) => {
     const status = getProductStatus(product);
 
@@ -775,153 +759,6 @@ const ProductCatalog = () => {
       ["draft", "rejected"].includes(status) &&
       ["pending", "rejected"].includes(approvalStatus)
     );
-  };
-
-  const extractRevisionList = (response) => {
-    const data = response?.data || response?.payload?.data || {};
-
-    if (Array.isArray(data)) {
-      return data;
-    }
-
-    return (
-      data?.list || data?.items || data?.data?.list || data?.data?.items || []
-    );
-  };
-
-  const handleApproveToggle = async (data) => {
-    if (isSellerPanelUser) {
-      toast.error(
-        "Product approval and revision review are admin-only actions.",
-      );
-
-      return;
-    }
-
-    if (!hasPendingRevision(data)) {
-      setReviewModal({
-        open: true,
-        product: data,
-        revision: null,
-      });
-
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const detailResponse = await dispatch(
-        getProductById({
-          id: data?._id,
-        }),
-      ).unwrap();
-
-      const product = detailResponse?.data || data;
-
-      let revision = product?.pendingRevision || null;
-
-      if (!revision) {
-        const revisionsResponse = await dispatch(
-          getProductRevisions({
-            productId: data?._id,
-            status: "pending",
-            size: 1,
-          }),
-        ).unwrap();
-
-        revision = extractRevisionList(revisionsResponse)[0] || null;
-      }
-
-      if (!revision) {
-        toast.error("Pending product revision was not found.");
-
-        return;
-      }
-
-      setReviewModal({
-        open: true,
-        product,
-        revision,
-      });
-    } catch (error) {
-      toast.error(error?.message || error || "Failed to load product revision");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReviewSubmit = async (
-    decision,
-    rejectionReason,
-    checklist,
-    notes,
-  ) => {
-    if (isSellerPanelUser) {
-      throw new Error(
-        "Product approval and revision review are admin-only actions.",
-      );
-    }
-
-    const product = reviewModal.product;
-
-    setLoading(true);
-
-    try {
-      const response = reviewModal.revision
-        ? await dispatch(
-            reviewProductRevision({
-              productId: product?._id,
-              revisionId: reviewModal.revision?._id || reviewModal.revision?.id,
-              status: decision,
-              rejectionReason: rejectionReason || null,
-              notes: notes || null,
-              checklist,
-            }),
-          ).unwrap()
-        : await dispatch(
-            approveDisapprove({
-              id: product?._id,
-              status: decision,
-              rejectionReason: rejectionReason || null,
-              notes: notes || null,
-              checklist,
-            }),
-          ).unwrap();
-
-      const labels = {
-        active: "approved",
-        inactive: "deactivated",
-        rejected: "rejected",
-      };
-
-      const subject = reviewModal.revision ? "Product revision" : "Product";
-
-      toast.success(
-        response?.message ||
-          `${subject} ${labels[decision] || "updated"} successfully.`,
-      );
-
-      updateVisibleProducts(product?._id, {
-        ...(reviewModal.revision
-          ? {
-              revisionStatus: "none",
-            }
-          : {
-              status: decision,
-              approvalStatus: decision === "active" ? "approved" : decision,
-              isApproved: decision === "active",
-            }),
-        pendingRevision: null,
-        pendingRevisionId: null,
-      });
-
-      await fetchProductsList();
-    } catch (error) {
-      throw new Error(error?.message || error || "Failed to update product");
-    } finally {
-      setLoading(false);
-    }
   };
 
   async function handlePermanentDeleteSubmit() {
@@ -1310,10 +1147,8 @@ const ProductCatalog = () => {
       },
     ],
     [
-      canReviewProduct,
       canSubmitForApproval,
       canToggleProduct,
-      handleApproveToggle,
       handleDuplicateProduct,
       handleEditProduct,
       handleImageClick,
@@ -1442,22 +1277,6 @@ const ProductCatalog = () => {
             tableClassName="min-w-[1880px]"
             rowActions={(product) => [
               {
-                label: "Review Revision",
-                icon: (
-                  <MdVisibility
-                    aria-hidden="true"
-                    size={16}
-                    className="text-violet-600"
-                  />
-                ),
-                hidden:
-                  !PRODUCT_REVISIONS_ENABLED ||
-                  sellerView ||
-                  !hasPendingRevision(product),
-                className: "font-semibold text-violet-700",
-                onClick: () => handleApproveToggle(product),
-              },
-              {
                 label: "View Product",
                 icon: (
                   <MdVisibility
@@ -1561,19 +1380,6 @@ const ProductCatalog = () => {
         onClose={() => setGalleryOpen(false)}
       />
 
-      <ProductReviewModal
-        isOpen={reviewModal.open}
-        product={reviewModal.product}
-        revision={reviewModal.revision}
-        onClose={() =>
-          setReviewModal({
-            open: false,
-            product: null,
-            revision: null,
-          })
-        }
-        onSubmit={handleReviewSubmit}
-      />
     </div>
   );
 };
