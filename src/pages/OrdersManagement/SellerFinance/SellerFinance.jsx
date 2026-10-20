@@ -1503,18 +1503,33 @@ const SellerFinance = () => {
       />
 
       {/* Commission Breakdown Info Banner */}
-      <div className="mb-4 rounded-lg border border-[#e0ecff] bg-[#f0f6ff] px-4 py-3 text-xs text-[#2f6fed]">
-        <strong>How seller payable is calculated:</strong> Each order item uses
-        its checkout pricing snapshot. Seller receives:{" "}
-        <em>
-          eligible item value + customer shipping allocated to the seller −
-          platform commission − GST on commission − GST TCS − income-tax TDS −
-          shipping deductions − refund/recovery adjustments
-        </em>{" "}
-        after that item's return window closes. Statutory TCS/TDS are withheld
-        for tax reporting and are not platform revenue. Seller-funded discount
-        is shown separately because it is already reflected in the eligible item
-        value.
+      <div className="mb-4 rounded-lg border border-[var(--admin-gold)]/30 bg-amber-50/60 px-4 py-3 text-xs text-gray-700">
+        <p className="font-semibold text-gray-900">
+          How seller payable is calculated
+        </p>
+
+        <p className="mt-1 leading-5">
+          Each order item uses its checkout pricing snapshot. Seller payable is
+          calculated as:
+        </p>
+
+        <div className="mt-2 rounded-md border border-amber-200/70 bg-white/80 px-3 py-2 leading-6">
+          <em className="not-italic font-medium text-gray-800">
+            Eligible item value + customer shipping allocated to the seller −
+            platform commission − GST on commission − GST TCS − income-tax TDS −
+            shipping deductions − refund/recovery adjustments
+          </em>
+        </div>
+
+        <p className="mt-2 leading-5">
+          Payable is released after that item's return window closes.{" "}
+          <span className="font-medium text-gray-800">
+            GST TCS and income-tax TDS
+          </span>{" "}
+          are withheld for tax reporting and are not platform revenue.
+          Seller-funded discounts are shown separately because they are already
+          reflected in the eligible item value.
+        </p>
       </div>
 
       {!isSeller && isSellerDetail && filters.sellerId && (

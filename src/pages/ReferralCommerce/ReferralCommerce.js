@@ -91,7 +91,6 @@ import {
 import Tabs from "../../components/Shared/Tabs";
 import { DateRangeFilter } from "../../components/Shared/FilterBar";
 import Loader, { ButtonLoader } from "../../components/Loader/Loader";
-import ButtonTransparent from "../../components/Atoms/ButtonTransparent/button";
 import Cards from "../../components/Cards/Cards";
 import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
 import Input from "../../components/Atoms/Input/Input";
@@ -783,11 +782,13 @@ const ProductReferralAmounts = () => {
   };
 
   const [form, setForm] = useState(empty);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, limit: 20 });
   const [totalCount, setTotalCount] = useState(0);
+  const [togglingId, setTogglingId] = useState(null);
 
   const isEditMode = Boolean(form.productId);
 
@@ -922,7 +923,9 @@ const ProductReferralAmounts = () => {
   }, [storeOptions, form.storeKey]);
 
   const save = async (event) => {
-    event.preventDefault();
+    if (event?.preventDefault) {
+      event.preventDefault();
+    }
 
     if (!form.storeKey) {
       toast.error("Please select a store");
@@ -987,6 +990,7 @@ const ProductReferralAmounts = () => {
       );
 
       setForm(empty);
+      setDrawerOpen(false);
 
       await load();
     } catch (error) {
@@ -1020,6 +1024,57 @@ const ProductReferralAmounts = () => {
     }
   };
 
+  const handleToggleStatus = async (row) => {
+    const rowId = getId(row) || row.productId;
+    try {
+      setTogglingId(rowId);
+      const product = products.find(
+        (item) => String(getId(item)) === String(row.productId),
+      );
+      const actualStoreId = row.storeId || getProductStoreId(product);
+      const nextActive = !row.active;
+
+      const payload = {
+        productId: row.productId,
+        productTitle:
+          row.productTitle || (product ? getProductTitle(product) : "") || "",
+        amountType: row.amountType || "fixed_amount",
+        amountValue: Number(row.amountValue || 0),
+        maximumAmount: Number(row.maximumAmount || 0),
+        active: nextActive,
+      };
+
+      if (actualStoreId) {
+        payload.storeId = actualStoreId;
+      }
+
+      await axiosPrivate.put(ENDPOINTS.referral.productAmounts, payload);
+
+      toast.success(
+        nextActive
+          ? "Product override activated"
+          : "Product override deactivated",
+      );
+
+      setConfigs((prev) =>
+        prev.map((item) => {
+          const isMatch =
+            (getId(item) && getId(item) === getId(row)) ||
+            (item.productId && item.productId === row.productId);
+          return isMatch ? { ...item, active: nextActive } : item;
+        }),
+      );
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to update product override status",
+      );
+      load();
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const handleEdit = (row) => {
     const product = products.find(
       (item) => String(getId(item)) === String(row.productId),
@@ -1031,516 +1086,396 @@ const ProductReferralAmounts = () => {
     }
 
     const storeKey = row.storeId || getProductStoreKey(product);
-
     const actualStoreId = row.storeId || getProductStoreId(product);
 
     setForm({
       storeId: actualStoreId ? String(actualStoreId) : "",
-
       storeKey: storeKey ? String(storeKey) : "",
-
       productId: row.productId ? String(row.productId) : "",
-
       productTitle: row.productTitle || getProductTitle(product) || "",
-
       amountType: row.amountType || "fixed_amount",
-
       amountValue: row.amountValue ?? "",
-
       maximumAmount: row.maximumAmount ?? "",
-
       active: row.active !== false,
     });
+    setDrawerOpen(true);
   };
 
   const handleCancelEdit = () => {
     setForm(empty);
+    setDrawerOpen(false);
   };
 
-  const showInitialSkeleton = loading && !configs.length && !products.length;
+  const handleOpenAdd = () => {
+    setForm(empty);
+    setDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setDrawerOpen(false);
+    setForm(empty);
+  };
 
   return (
     <>
-      {/* <Loader loading={loading} label="Loading..." /> */}
       <section className="admin-card overflow-hidden">
-        {/* Header */}
-        <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
+        {/* Existing Overrides Header */}
+        <div className="flex flex-col gap-3 border-b border-[var(--admin-line)] bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--admin-surface-soft)]">
-                <span className="text-sm font-bold text-[var(--admin-navy)]">
-                  %
-                </span>
-              </div>
+            <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
+              Existing Overrides
+            </h3>
 
-              <h2 className="text-base font-bold text-[var(--admin-navy)]">
-                Product Referral Pool Overrides
-              </h2>
-            </div>
-
-            <p className="max-w-3xl text-xs leading-5 text-[var(--admin-muted)]">
-              Configure the referral pool contribution for individual products.
-              Select a store first to view only the products belonging to that
-              store.
+            <p className="mt-1 text-xs text-[var(--admin-muted)]">
+              Manage product-specific referral pool configurations.
             </p>
           </div>
-        </div>
 
-        {/* Configuration Form */}
-        <form onSubmit={save} className="bg-[var(--admin-surface-soft)] p-5">
-          <div className="rounded-xl border border-[var(--admin-line)] bg-white p-5">
-            {/* Configuration Header */}
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
-                    {isEditMode ? "Edit Product Override" : "Referral Override"}
-                  </h3>
-
-                  {isEditMode && (
-                    <span className="rounded-full bg-[var(--admin-surface-soft)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--admin-navy)]">
-                      Edit Mode
-                    </span>
-                  )}
-                </div>
-
-                <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                  {isEditMode
-                    ? "Update the referral pool configuration for this product."
-                    : "Select a store first, then choose a product and define the pool contribution rules."}
-                </p>
-              </div>
-
-              {/* Active Toggle */}
-              {/* Active Toggle */}
-              {/* Override Status */}
-              <div className="flex shrink-0 items-center">
-                <ButtonTransparent
-                  type="button"
-                  onClick={() => {
-                    setForm((current) => ({
-                      ...current,
-                      active: !current.active,
-                    }));
-                  }}
-                  isDisable={loading}
-                  className={`!w-auto !space-x-2 !border !border-blue-500 !px-4 !py-2 !text-xs !font-semibold !text-blue-500 !rounded-md !hover:scale-100 ${
-                    form.active
-                      ? "!border-green-500 !text-green-600"
-                      : "!border-blue-500 !text-blue-500"
-                  }`}
-                >
-                  {/* Small toggle icon */}
-                  <span
-                    className={`relative inline-flex h-3.5 w-6 shrink-0 rounded-full border transition-colors ${
-                      form.active
-                        ? "border-green-500 bg-green-50"
-                        : "border-blue-400 bg-white"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 h-2 w-2 rounded-full transition-transform ${
-                        form.active
-                          ? "translate-x-[11px] bg-green-500"
-                          : "translate-x-0.5 bg-blue-500"
-                      }`}
-                    />
-                  </span>
-
-                  <span>{form.active ? "Active" : "Activate"}</span>
-                </ButtonTransparent>
-              </div>
-            </div>
-
-            {/* Form Fields */}
-            {showInitialSkeleton ? (
-              <div className="grid items-end gap-5 md:grid-cols-2 xl:grid-cols-5">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index}>
-                    <SkeletonLoader height={12} width={120} />
-                    <div className="mt-2">
-                      <SkeletonLoader height={42} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid items-end gap-5 md:grid-cols-2 xl:grid-cols-5">
-                {/* Store */}
-                <FormSelectGroup
-                  label="Store"
-                  options={storeOptions}
-                  value={
-                    storeOptions.find(
-                      (option) =>
-                        String(option.value) === String(form.storeKey),
-                    ) || null
-                  }
-                  onChange={(selectedOption) => {
-                    const storeKey = selectedOption?.value || "";
-
-                    setForm((current) => ({
-                      ...current,
-                      storeKey,
-                      storeId: "",
-                      productId: "",
-                      productTitle: "",
-                    }));
-                  }}
-                  placeholder="Select store"
-                  isSearchable
-                  isClearable
-                  className="w-full"
-                />
-
-                {/* Product */}
-                <FormSelectGroup
-                  label="Product"
-                  options={productOptions}
-                  value={
-                    productOptions.find(
-                      (option) =>
-                        String(option.value) === String(form.productId),
-                    ) || null
-                  }
-                  onChange={(selectedOption) => {
-                    const productId = selectedOption?.value || "";
-
-                    const product = storeProducts.find(
-                      (item) => String(getId(item)) === String(productId),
-                    );
-
-                    setForm((current) => ({
-                      ...current,
-                      productId,
-                      productTitle: getProductTitle(product),
-                      storeId: getProductStoreId(product),
-                    }));
-                  }}
-                  placeholder={
-                    form.storeKey ? "Select product" : "Select store first"
-                  }
-                  isDisabled={!form.storeKey}
-                  isSearchable
-                  isClearable
-                  className="w-full"
-                />
-
-                {/* Amount Type */}
-                <FormSelectGroup
-                  label="Amount Type"
-                  options={amountTypeOptions}
-                  value={
-                    amountTypeOptions.find(
-                      (option) => option.value === form.amountType,
-                    ) || null
-                  }
-                  onChange={(selectedOption) => {
-                    setForm((current) => ({
-                      ...current,
-                      amountType: selectedOption?.value || "fixed_amount",
-                    }));
-                  }}
-                  placeholder="Select amount type"
-                  isSearchable={false}
-                  className="w-full"
-                />
-
-                {/* Pool Amount */}
-                <FormInput
-                  label={
-                    form.amountType === "percentage"
-                      ? "Pool Percentage"
-                      : "Pool Amount Per Unit (₹)"
-                  }
-                  name="amountValue"
-                  type="number"
-                  min="0"
-                  max={form.amountType === "percentage" ? "100" : undefined}
-                  step="0.01"
-                  value={form.amountValue}
-                  onChange={(event) => {
-                    setForm((current) => ({
-                      ...current,
-                      amountValue: event.target.value,
-                    }));
-                  }}
-                  className="w-full"
-                />
-
-                {/* Maximum Amount */}
-                <FormInput
-                  label="Maximum Pool Per Line (₹)"
-                  name="maximumAmount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.maximumAmount}
-                  onChange={(event) => {
-                    setForm((current) => ({
-                      ...current,
-                      maximumAmount: event.target.value,
-                    }));
-                  }}
-                  hint="0 means no additional limit."
-                  className="w-full"
-                />
-              </div>
-            )}
-
-            {/* Selected Product Information */}
-            {selectedProduct && (
-              <div className="mt-5 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3">
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                  <div>
-                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                      Store
-                    </p>
-
-                    <p className="text-xs font-semibold text-[var(--admin-navy)]">
-                      {selectedStore?.label ||
-                        getProductStoreName(selectedProduct)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                      Product
-                    </p>
-
-                    <p className="max-w-xl text-xs font-semibold text-[var(--admin-navy)]">
-                      {getProductTitle(selectedProduct)}
-                    </p>
-                  </div>
-
-                  {selectedProduct?.sku && (
-                    <div>
-                      <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                        SKU
-                      </p>
-
-                      <p className="text-xs font-semibold text-[var(--admin-navy)]">
-                        {selectedProduct.sku}
-                      </p>
-                    </div>
-                  )}
-
-                  {selectedProduct?.price !== undefined && (
-                    <div>
-                      <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                        Price
-                      </p>
-
-                      <p className="text-xs font-semibold text-[var(--admin-navy)]">
-                        ₹{Number(selectedProduct.price).toLocaleString("en-IN")}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Referral Pool Preview */}
-            {form.amountValue !== "" && (
-              <div className="mt-4 rounded-lg border border-[var(--admin-line)] bg-white px-4 py-3">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold text-[var(--admin-navy)]">
-                      Referral Pool Preview
-                    </p>
-
-                    <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-                      Estimated contribution based on the selected
-                      configuration.
-                    </p>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-[var(--admin-navy)]">
-                      {form.amountType === "percentage"
-                        ? `${Number(form.amountValue || 0)}%`
-                        : `₹${Number(form.amountValue || 0).toLocaleString(
-                            "en-IN",
-                            {
-                              minimumFractionDigits: 2,
-                            },
-                          )}`}
-                    </p>
-
-                    <p className="text-[11px] text-[var(--admin-muted)]">
-                      {form.amountType === "percentage"
-                        ? "of product line"
-                        : "per unit"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="mt-6 flex justify-end gap-3 border-t border-[var(--admin-line)] pt-5">
-              {showInitialSkeleton ? (
-                <SkeletonLoader height={40} width={180} />
-              ) : (
-                <>
-                  {isEditMode && (
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      disabled={loading}
-                      className="rounded-md border border-[var(--admin-line)] bg-white px-4 py-2 text-sm font-medium text-[var(--admin-navy)] transition hover:bg-[var(--admin-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                  )}
-
-                  <OrangeButton
-                    type="submit"
-                    disabled={loading}
-                    className="min-w-[180px]"
-                  >
-                    {loading ? (
-                      <>
-                        <ButtonLoader />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Check aria-hidden="true" size={16} />
-                        {isEditMode
-                          ? "Update Product Amount"
-                          : "Save Product Amount"}
-                      </>
-                    )}
-                  </OrangeButton>
-                </>
-              )}
-            </div>
-          </div>
-        </form>
-
-        {/* Existing Overrides */}
-        <div className="border-t border-[var(--admin-line)]">
-          <div className="flex flex-col gap-1 border-b border-[var(--admin-line)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-[var(--admin-navy)]">
-                Existing Overrides
-              </h3>
-
-              <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                Manage product-specific referral pool configurations.
-              </p>
-            </div>
-
+          <div className="flex items-center gap-3">
             <div className="rounded-full bg-[var(--admin-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--admin-navy)]">
               {configs.length} {configs.length === 1 ? "Override" : "Overrides"}
             </div>
+
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="admin-btn-primary inline-flex items-center gap-2 text-xs font-semibold py-2 px-3.5 shadow-xs"
+            >
+              <Plus aria-hidden="true" size={16} />
+              Add Product Referral Pool
+            </button>
           </div>
-
-          <SharedDataTable
-            columns={[
-              {
-                key: "storeId",
-                label: "Store",
-                render: (value, row) => {
-                  const product = products.find(
-                    (item) => String(getId(item)) === String(row.productId),
-                  );
-
-                  return (
-                    row.storeName ||
-                    product?.organizationSnapshot?.storeDisplayName ||
-                    product?.storeDisplayName ||
-                    product?.organizationSnapshot?.legalBusinessName ||
-                    "—"
-                  );
-                },
-              },
-              {
-                key: "productTitle",
-                label: "Product",
-                className: "w-[280px] max-w-[280px]",
-                render: (value) => (
-                  <div className="max-w-[280px] truncate" title={value || "—"}>
-                    {value || "—"}
-                  </div>
-                ),
-              },
-              {
-                key: "amountType",
-                label: "Type",
-                render: (value) => formatLabel(value),
-              },
-              {
-                key: "amountValue",
-                label: "Pool Value",
-                render: (value, row) => {
-                  if (row.amountType === "percentage") {
-                    return `${value}%`;
-                  }
-
-                  return `₹${Number(value || 0).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                  })} / unit`;
-                },
-              },
-              {
-                key: "maximumAmount",
-                label: "Maximum",
-                render: (value) => {
-                  if (Number(value || 0) === 0) {
-                    return "No Limit";
-                  }
-
-                  return `₹${Number(value || 0).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                  })}`;
-                },
-              },
-              {
-                key: "active",
-                label: "Status",
-                render: (value) => (
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                      value
-                        ? "bg-green-50 text-green-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    {value ? "Active" : "Inactive"}
-                  </span>
-                ),
-              },
-            ]}
-            data={configs}
-            loading={loading}
-            page={pagination.page}
-            pageSize={pagination.limit}
-            totalCount={totalCount}
-            onPageChange={(page) =>
-              setPagination((prev) => ({ ...prev, page }))
-            }
-            onPageSizeChange={(limit) =>
-              setPagination((prev) => ({ ...prev, limit, page: 1 }))
-            }
-            rowActions={(row) => [
-              {
-                label: "Edit",
-                icon: <Pencil aria-hidden="true" size={15} />,
-                onClick: () => handleEdit(row),
-              },
-              {
-                label: "Remove override",
-                icon: <X aria-hidden="true" size={15} />,
-                danger: true,
-                onClick: () => remove(row),
-              },
-            ]}
-            emptyText="No product referral amount found."
-          />
         </div>
+
+        {/* Existing Overrides Table */}
+        <SharedDataTable
+          columns={[
+            {
+              key: "storeId",
+              label: "Store",
+              render: (value, row) => {
+                const product = products.find(
+                  (item) => String(getId(item)) === String(row.productId),
+                );
+
+                return (
+                  row.storeName ||
+                  product?.organizationSnapshot?.storeDisplayName ||
+                  product?.storeDisplayName ||
+                  product?.organizationSnapshot?.legalBusinessName ||
+                  "—"
+                );
+              },
+            },
+            {
+              key: "productTitle",
+              label: "Product",
+              className: "w-[280px] max-w-[280px]",
+              render: (value) => (
+                <div className="max-w-[280px] truncate" title={value || "—"}>
+                  {value || "—"}
+                </div>
+              ),
+            },
+            {
+              key: "amountType",
+              label: "Type",
+              render: (value) => formatLabel(value),
+            },
+            {
+              key: "amountValue",
+              label: "Pool Value",
+              render: (value, row) => {
+                if (row.amountType === "percentage") {
+                  return `${value}%`;
+                }
+
+                return `₹${Number(value || 0).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                })} / unit`;
+              },
+            },
+            {
+              key: "maximumAmount",
+              label: "Maximum",
+              render: (value) => {
+                if (Number(value || 0) === 0) {
+                  return "No Limit";
+                }
+
+                return `₹${Number(value || 0).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                })}`;
+              },
+            },
+            {
+              key: "active",
+              label: "Status",
+              render: (value, row) => (
+                <ToggleButton
+                  isToggle={Boolean(value)}
+                  handleClick={() => handleToggleStatus(row)}
+                  loading={togglingId === (getId(row) || row.productId)}
+                  disabled={Boolean(togglingId)}
+                  requiredAction=""
+                />
+              ),
+            },
+          ]}
+          data={configs}
+          loading={loading}
+          page={pagination.page}
+          pageSize={pagination.limit}
+          totalCount={totalCount}
+          onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+          onPageSizeChange={(limit) =>
+            setPagination((prev) => ({ ...prev, limit, page: 1 }))
+          }
+          rowActions={(row) => [
+            {
+              label: "Edit",
+              icon: <Pencil aria-hidden="true" size={15} />,
+              onClick: () => handleEdit(row),
+            },
+            {
+              label: "Remove override",
+              icon: <X aria-hidden="true" size={15} />,
+              danger: true,
+              onClick: () => remove(row),
+            },
+          ]}
+          emptyText="No product referral amount found."
+        />
       </section>
+
+      {/* Side Drawer Modal */}
+      <DefaultModal
+        isOpen={drawerOpen}
+        onClose={handleCloseDrawer}
+        onSubmit={save}
+        title={
+          isEditMode ? "Edit Product Override" : "Add Product Referral Pool"
+        }
+        submitButtonText={
+          isEditMode ? "Update Product Amount" : "Save Product Amount"
+        }
+        closeButtonText="Cancel"
+        isButtonView={true}
+        width="600px"
+        loading={loading}
+      >
+        <form onSubmit={save} className="space-y-4">
+          {/* Store */}
+          <FormSelectGroup
+            label="Store"
+            options={storeOptions}
+            value={
+              storeOptions.find(
+                (option) => String(option.value) === String(form.storeKey),
+              ) || null
+            }
+            onChange={(selectedOption) => {
+              const storeKey = selectedOption?.value || "";
+
+              setForm((current) => ({
+                ...current,
+                storeKey,
+                storeId: "",
+                productId: "",
+                productTitle: "",
+              }));
+            }}
+            placeholder="Select store"
+            isSearchable
+            isClearable
+            required
+            className="w-full"
+          />
+
+          {/* Product */}
+          <FormSelectGroup
+            label="Product"
+            options={productOptions}
+            value={
+              productOptions.find(
+                (option) => String(option.value) === String(form.productId),
+              ) || null
+            }
+            onChange={(selectedOption) => {
+              const productId = selectedOption?.value || "";
+
+              const product = storeProducts.find(
+                (item) => String(getId(item)) === String(productId),
+              );
+
+              setForm((current) => ({
+                ...current,
+                productId,
+                productTitle: getProductTitle(product),
+                storeId: getProductStoreId(product),
+              }));
+            }}
+            placeholder={
+              form.storeKey ? "Select product" : "Select store first"
+            }
+            isDisabled={!form.storeKey}
+            isSearchable
+            isClearable
+            required
+            className="w-full"
+          />
+
+          {/* Amount Type */}
+          <FormSelectGroup
+            label="Amount Type"
+            options={amountTypeOptions}
+            value={
+              amountTypeOptions.find(
+                (option) => option.value === form.amountType,
+              ) || null
+            }
+            onChange={(selectedOption) => {
+              setForm((current) => ({
+                ...current,
+                amountType: selectedOption?.value || "fixed_amount",
+              }));
+            }}
+            placeholder="Select amount type"
+            isSearchable={false}
+            className="w-full"
+          />
+
+          {/* Pool Amount */}
+          <FormInput
+            label={
+              form.amountType === "percentage"
+                ? "Pool Percentage (%)"
+                : "Pool Amount Per Unit (₹)"
+            }
+            name="amountValue"
+            type="number"
+            min="0"
+            max={form.amountType === "percentage" ? "100" : undefined}
+            step="0.01"
+            value={form.amountValue}
+            onChange={(event) => {
+              setForm((current) => ({
+                ...current,
+                amountValue: event.target.value,
+              }));
+            }}
+            placeholder={
+              form.amountType === "percentage" ? "e.g. 10" : "e.g. 50"
+            }
+            required
+            className="w-full"
+          />
+
+          {/* Maximum Amount */}
+          <FormInput
+            label="Maximum Pool Per Line (₹)"
+            name="maximumAmount"
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.maximumAmount}
+            onChange={(event) => {
+              setForm((current) => ({
+                ...current,
+                maximumAmount: event.target.value,
+              }));
+            }}
+            placeholder="0 means no additional limit"
+            hint="0 means no additional limit."
+            className="w-full"
+          />
+
+          {/* Selected Product Information */}
+          {selectedProduct && (
+            <div className="rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3.5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div>
+                  <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                    Store
+                  </p>
+                  <p className="text-xs font-semibold text-[var(--admin-navy)] truncate">
+                    {selectedStore?.label ||
+                      getProductStoreName(selectedProduct)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                    Product
+                  </p>
+                  <p
+                    className="text-xs font-semibold text-[var(--admin-navy)] truncate"
+                    title={getProductTitle(selectedProduct)}
+                  >
+                    {getProductTitle(selectedProduct)}
+                  </p>
+                </div>
+
+                {selectedProduct?.sku && (
+                  <div>
+                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                      SKU
+                    </p>
+                    <p className="text-xs font-semibold text-[var(--admin-navy)] truncate">
+                      {selectedProduct.sku}
+                    </p>
+                  </div>
+                )}
+
+                {selectedProduct?.price !== undefined && (
+                  <div>
+                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
+                      Price
+                    </p>
+                    <p className="text-xs font-semibold text-[var(--admin-navy)]">
+                      ₹{Number(selectedProduct.price).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Referral Pool Preview */}
+          {form.amountValue !== "" && (
+            <div className="rounded-lg border border-[var(--admin-line)] bg-white p-3.5 shadow-2xs">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-[var(--admin-navy)]">
+                    Referral Pool Preview
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+                    Estimated contribution based on the selected configuration.
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-sm font-bold text-[var(--admin-navy)]">
+                    {form.amountType === "percentage"
+                      ? `${Number(form.amountValue || 0)}%`
+                      : `₹${Number(form.amountValue || 0).toLocaleString(
+                          "en-IN",
+                          {
+                            minimumFractionDigits: 2,
+                          },
+                        )}`}
+                  </p>
+                  <p className="text-[11px] text-[var(--admin-muted)]">
+                    {form.amountType === "percentage"
+                      ? "of product line"
+                      : "per unit"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </form>
+      </DefaultModal>
     </>
   );
 };
@@ -4312,9 +4247,12 @@ const ReferralCommerce = () => {
               <FormInput
                 label="Phone"
                 name="phone"
-                type="phone"
+                type="tel"
                 value={parentFormik.values.phone}
-                onChange={parentFormik.handleChange}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                  parentFormik.setFieldValue("phone", value);
+                }}
                 onBlur={parentFormik.handleBlur}
                 placeholder="Enter phone number"
                 error={parentFormik.touched.phone && parentFormik.errors.phone}
@@ -4392,19 +4330,36 @@ const ReferralCommerce = () => {
                     label: `${fullName(parent.user)} - ${
                       parent.primaryCode?.code || getId(parent)
                     }`,
-                    value: getId(parent),
+                    value: String(getId(parent)),
                   }))}
-                  value={childFormik.values.parentId}
-                  onChange={(selectedOption) =>
+                  value={
+                    parentOptions
+                      .map((parent) => ({
+                        label: `${fullName(parent.user)} - ${
+                          parent.primaryCode?.code || getId(parent)
+                        }`,
+                        value: String(getId(parent)),
+                      }))
+                      .find(
+                        (option) =>
+                          option.value ===
+                          String(childFormik.values.parentId || ""),
+                      ) || null
+                  }
+                  onChange={(selectedOption) => {
                     childFormik.setFieldValue(
                       "parentId",
-                      selectedOption?.value || selectedOption || "",
-                    )
-                  }
+                      String(selectedOption?.value || ""),
+                    );
+                    childFormik.setFieldTouched("parentId", true, false);
+                  }}
+                  onBlur={() => childFormik.setFieldTouched("parentId", true)}
                   error={
                     childFormik.touched.parentId && childFormik.errors.parentId
                   }
                   required
+                  isSearchable
+                  isClearable
                   placeholder="Select Growth Partner"
                 />
               </div>
@@ -4455,7 +4410,10 @@ const ReferralCommerce = () => {
                 label="Phone"
                 name="phone"
                 value={childFormik.values.phone}
-                onChange={childFormik.handleChange}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                  childFormik.setFieldValue("phone", value);
+                }}
                 onBlur={childFormik.handleBlur}
                 error={childFormik.touched.phone && childFormik.errors.phone}
                 placeholder="Enter phone number"
