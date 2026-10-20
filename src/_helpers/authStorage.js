@@ -53,6 +53,7 @@ export const normalizeRole = (roleLike) => {
       .toLowerCase()
       .replace(/_/g, "-")
       .replace(/\s+/g, "-");
+    if (cleanRole === "superadmin") return "super-admin";
     return LEGACY_ROLE_BY_ID[cleanRole] || cleanRole;
   }
   return normalizeRole(
@@ -94,6 +95,30 @@ export const isAllowedAdminRole = (role) =>
   ADMIN_ROLES.includes(normalizeRole(role));
 export const isBlockedAdminRole = (role) =>
   BLOCKED_ADMIN_ROLES.includes(normalizeRole(role));
+
+export const isAdminOrSuperAdminRole = (...sources) => {
+  for (const source of sources) {
+    if (!source) continue;
+    if (source === 1) return true;
+    const role = typeof source === "object" ? extractRole(source) : source;
+    const normalized = normalizeRole(role);
+    if (normalized === "admin" || normalized === "super-admin") return true;
+    const clean = String(
+      typeof source === "object"
+        ? source.role ||
+            source.roleSlug ||
+            source.roleName ||
+            source.role_code ||
+            ""
+        : source,
+    )
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_-]+/g, "");
+    if (clean === "admin" || clean === "superadmin") return true;
+  }
+  return false;
+};
 export const SELLER_ROLES = ["seller", "seller-admin", "seller-sub-admin"];
 export const BLOCKED_SELLER_ROLES = [
   "super-admin",

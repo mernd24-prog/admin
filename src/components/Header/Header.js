@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { forceLogout } from "../../_helpers/authSession";
 import { IoLogOutOutline } from "react-icons/io5";
 import {
   MdOutlineMenu,
   MdOutlineNotificationsNone,
   MdInfoOutline,
+  MdSupportAgent,
 } from "react-icons/md";
 import { FiKey, FiUser } from "react-icons/fi";
 import { FcNext } from "react-icons/fc";
@@ -26,6 +27,11 @@ import {
 import Tooltip from "../Atoms/tooltip/Tooltip";
 import LogoutConfirmModal from "../Atoms/logoutPopup/LogoutConfirmModal";
 import { usePermission } from "../../_helpers/usePermission";
+import {
+  getStoredRole,
+  getStoredUser,
+  isAdminOrSuperAdminRole,
+} from "../../_helpers/authStorage";
 
 const SELLER_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
 
@@ -172,7 +178,8 @@ export default function Header({
   hasPermanentOpen,
   isSidebarExpanded,
 }) {
-  const { canRoute } = usePermission();
+  const { canRoute, isSuperAdmin, isAdmin, role: permissionRole } =
+    usePermission();
 
   const [openModel, setOpenModel] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -207,6 +214,21 @@ export default function Header({
   const [avatarFailed, setAvatarFailed] = useState(false);
 
   const avatarUrl = getAvatarUrl(userData);
+
+  const isAdminOrSuper = useMemo(() => {
+    return (
+      isAdminOrSuperAdminRole(
+        userData?.role,
+        userData?.roleSlug,
+        userData?.roleName,
+        getStoredRole(),
+        getStoredUser()?.role,
+        permissionRole,
+      ) ||
+      isSuperAdmin ||
+      (isAdmin && permissionRole !== "sub-admin")
+    );
+  }, [userData, permissionRole, isSuperAdmin, isAdmin]);
 
   const notificationsSelector = useSelector(
     (state) => state.notifications || {},
@@ -490,6 +512,24 @@ export default function Header({
 
           {/* Right: notifications and user profile */}
           <div className="flex flex-shrink-0 items-center gap-3">
+            {isAdminOrSuper && (
+              <Tooltip text="Queries" position="bottom">
+                <button
+                  type="button"
+                  aria-label="Queries"
+                  onClick={() => navigate("/app/queries")}
+                  className={`relative flex h-9 w-9 items-center justify-center rounded-full border transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)] ${
+                    currentPath === "/app/queries" ||
+                    currentPath.startsWith("/app/queries/")
+                      ? "border-[var(--admin-blue)] bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]"
+                      : "border-[var(--admin-line)] bg-white text-[var(--admin-blue)]"
+                  }`}
+                >
+                  <MdSupportAgent aria-hidden="true" size={19} />
+                </button>
+              </Tooltip>
+            )}
+
             <Tooltip text="Notifications" position="bottom">
               <button
                 type="button"

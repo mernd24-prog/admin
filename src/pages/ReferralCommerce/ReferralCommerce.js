@@ -1573,6 +1573,8 @@ const ReferralCommerce = () => {
     MARKETING_PAGE_META[activeTab] || MARKETING_PAGE_META.overview;
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [payoutPartnerFilter, setPayoutPartnerFilter] = useState("");
+  const [payoutMethodFilter, setPayoutMethodFilter] = useState("");
   const [hierarchySearch, setHierarchySearch] = useState("");
   const [expandedHierarchyIds, setExpandedHierarchyIds] = useState(
     () => new Set(),
@@ -1814,8 +1816,8 @@ const ReferralCommerce = () => {
         <div className="truncate text-sm font-medium text-gray-800">
           {fullName(influencer.user)}
         </div>
-        <div className="truncate font-mono text-xs text-gray-500">
-          Profile {shortId(getId(influencer))}
+        <div className="truncate text-xs text-gray-500">
+          {influencer.user?.email || "Email not available"}
         </div>
       </button>
     );
@@ -2727,6 +2729,20 @@ const ReferralCommerce = () => {
   const payoutHasReference = payouts.some(
     (payout) => payout.transactionReference,
   );
+
+  const filteredPayoutRows = payoutRows.filter((row) => {
+    const matchesPartner =
+      !payoutPartnerFilter ||
+      String(row.influencerId || "") === String(payoutPartnerFilter);
+    const payout = payouts.find(
+      (item) => String(getId(item)) === String(row.key),
+    );
+    const matchesMethod =
+      !payoutMethodFilter ||
+      String(payout?.payoutMethod || "") === String(payoutMethodFilter);
+
+    return matchesPartner && matchesMethod;
+  });
 
   const bonusRuleRows = bonusRules.map((rule) => ({
     key: getId(rule),
@@ -3731,6 +3747,84 @@ const ReferralCommerce = () => {
     />
   );
 
+  const payoutPartnerOptions = Array.from(
+    new Map(
+      payouts
+        .filter((payout) => payout.influencerId)
+        .map((payout) => {
+          const id = String(payout.influencerId);
+          const influencer = influencerById.get(id);
+          return [
+            id,
+            {
+              value: id,
+              label: influencer ? fullName(influencer.user) : shortId(id),
+            },
+          ];
+        }),
+    ).values(),
+  );
+
+  const payoutMethodOptions = Array.from(
+    new Set(payouts.map((payout) => payout.payoutMethod).filter(Boolean)),
+  ).map((method) => ({
+    value: method,
+    label: method === "upi_qr" ? "UPI QR" : humanize(method),
+  }));
+
+  const renderPayoutFilterBar = () => (
+    <FilterBar
+      filters={[
+        {
+          key: "partner",
+          type: "select",
+          label: "Referral Partner",
+          width: "w-56",
+          options: payoutPartnerOptions,
+        },
+        {
+          key: "method",
+          type: "select",
+          label: "Method",
+          width: "w-48",
+          options: payoutMethodOptions,
+        },
+        {
+          key: "status",
+          type: "select",
+          label: "Status",
+          width: "w-48",
+          options: activeStatusOptions,
+        },
+      ]}
+      values={{
+        partner: payoutPartnerFilter,
+        method: payoutMethodFilter,
+        status,
+      }}
+      onChange={(key, value) => {
+        if (key === "partner") setPayoutPartnerFilter(value);
+        else if (key === "method") setPayoutMethodFilter(value);
+        else if (key === "status") setStatus(value);
+
+        setPaginations((prev) => ({
+          ...prev,
+          payouts: { ...prev.payouts, page: 1 },
+        }));
+      }}
+      onClear={() => {
+        setPayoutPartnerFilter("");
+        setPayoutMethodFilter("");
+        setStatus("");
+        setPaginations((prev) => ({
+          ...prev,
+          payouts: { ...prev.payouts, page: 1 },
+        }));
+      }}
+      loading={loading}
+    />
+  );
+
   const renderBonusRules = () => (
     <SharedDataTable
       columns={[
@@ -4104,17 +4198,16 @@ const ReferralCommerce = () => {
               : []),
             ...(payoutHasActions ? [{ key: "actions", label: "Actions" }] : []),
           ]}
-          data={getPageData("payouts", payoutRows)}
+          data={getPageData("payouts", filteredPayoutRows)}
           page={paginations.payouts.page}
           pageSize={paginations.payouts.limit}
-          totalCount={payoutRows.length}
+          totalCount={filteredPayoutRows.length}
           onPageChange={(page) => handlePageChange("payouts", page)}
           onPageSizeChange={(limit) => handlePageSizeChange("payouts", limit)}
           loading={loading || paginationsLoading["payouts"]}
           rowKey="key"
-          onSearch={setSearch}
-          searchPlaceholder="Search payout requests..."
-          filterBar={renderActiveFilterBar()}
+        
+          filterBar={renderPayoutFilterBar()}
           emptyText="No payout requests found."
         />
       )}

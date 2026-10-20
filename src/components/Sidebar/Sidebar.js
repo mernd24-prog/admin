@@ -39,7 +39,10 @@ import {
   getAccessToken,
   getStoredRole,
   getStoredUser,
+  isAdminOrSuperAdminRole,
 } from "../../_helpers/authStorage";
+
+import { usePermission } from "../../_helpers/usePermission";
 
 import { isSellerPanel } from "../../_helpers/panelConfig";
 
@@ -320,8 +323,25 @@ const Sidebar = ({
 
   const adminCoreSelector = useSelector((state) => state.adminCore);
 
+  const { isSuperAdmin, isAdmin, role: permissionRole } = usePermission();
+
   const [userData, setUserData] = useState(null);
   const [activeTab, setActiveTab] = useState(null);
+
+  const isAdminOrSuper = useMemo(() => {
+    return (
+      isAdminOrSuperAdminRole(
+        userData?.role,
+        userData?.roleSlug,
+        userData?.roleName,
+        getStoredRole(),
+        getStoredUser()?.role,
+        permissionRole,
+      ) ||
+      isSuperAdmin ||
+      (isAdmin && permissionRole !== "sub-admin")
+    );
+  }, [userData, permissionRole, isSuperAdmin, isAdmin]);
 
   const [isPermanentlyOpen, setIsPermanentlyOpen] = useState(
     getStoredSidebarState,
@@ -375,10 +395,62 @@ const Sidebar = ({
       return [];
     }
 
-    return buildDynamicSidebarData(dynamicSidebarModules, {
+    const data = buildDynamicSidebarData(dynamicSidebarModules, {
       sellerPanel,
     });
-  }, [dynamicSidebarModules, sellerPanel]);
+
+    if (isAdminOrSuper) {
+      const isQueryItem = (val = "") => {
+        const clean = String(val || "").trim().toLowerCase();
+        return (
+          clean === "queries" ||
+          clean === "query" ||
+          clean === "app/queries" ||
+          clean === "customer & seller queries"
+        );
+      };
+
+      return data
+        .filter((item) => {
+          if (
+            isQueryItem(item.label) ||
+            isQueryItem(item.name) ||
+            isQueryItem(item.moduleName)
+          ) {
+            return false;
+          }
+          if (item.isSingleItem) {
+            const sub = item.subItems?.[0];
+            if (
+              isQueryItem(sub?.module_code) ||
+              isQueryItem(sub?.name) ||
+              isQueryItem(sub?.label)
+            ) {
+              return false;
+            }
+          }
+          return true;
+        })
+        .map((item) => {
+          if (!item.isSingleItem && Array.isArray(item.subItems)) {
+            const filteredSubs = item.subItems.filter(
+              (sub) =>
+                !isQueryItem(sub?.module_code) &&
+                !isQueryItem(sub?.name) &&
+                !isQueryItem(sub?.label),
+            );
+            return {
+              ...item,
+              subItems: filteredSubs,
+            };
+          }
+          return item;
+        })
+        .filter((item) => item.subItems?.length > 0);
+    }
+
+    return data;
+  }, [dynamicSidebarModules, sellerPanel, isAdminOrSuper]);
 
   // ───────────────────────────────────────────────────────────
   // Get current user
@@ -848,30 +920,31 @@ const Sidebar = ({
       )}
 
       {/* Need Help section */}
-      {isExpanded ? (
-        <NeedHelpCard
-          title="Need Help?"
-          onClick={handleNeedHelpClick}
-          description="Our verification team is available 24/7 to help you complete KYC."
-          buttonText="Contact Support"
-          className="mx-4 mb-5 mt-5 border-[var(--admin-line)] bg-[var(--admin-gold-soft)]"
-          titleClassName="text-[11px] tracking-[0.04em] text-[var(--admin-navy)]"
-          descriptionClassName="text-[11px] leading-4 text-[var(--admin-ink)]"
-          buttonClassName="mt-3 h-8 rounded-[5px] bg-[var(--admin-gold)] text-[10px] font-semibold text-[var(--admin-navy)] hover:bg-[var(--admin-gold-dark)]"
-        />
-      ) : (
-        <div className="mb-5 mt-3 flex justify-center">
-          <button
-            type="button"
-            onClick={handleNeedHelpClick}
+      {!isAdminOrSuper &&
+        (isExpanded ? (
+          <NeedHelpCard
             title="Need Help?"
-            aria-label="Need Help?"
-            className="flex h-10 w-10 items-center justify-center rounded-[6px] text-[var(--admin-blue)] transition-colors duration-200 hover:bg-white hover:text-[var(--admin-navy)]"
-          >
-            <MdSupportAgent aria-hidden="true" size={19} />
-          </button>
-        </div>
-      )}
+            onClick={handleNeedHelpClick}
+            description="Our verification team is available 24/7 to help you complete KYC."
+            buttonText="Contact Support"
+            className="mx-4 mb-5 mt-5 border-[var(--admin-line)] bg-[var(--admin-gold-soft)]"
+            titleClassName="text-[11px] tracking-[0.04em] text-[var(--admin-navy)]"
+            descriptionClassName="text-[11px] leading-4 text-[var(--admin-ink)]"
+            buttonClassName="mt-3 h-8 rounded-[5px] bg-[var(--admin-gold)] text-[10px] font-semibold text-[var(--admin-navy)] hover:bg-[var(--admin-gold-dark)]"
+          />
+        ) : (
+          <div className="mb-5 mt-3 flex justify-center">
+            <button
+              type="button"
+              onClick={handleNeedHelpClick}
+              title="Need Help?"
+              aria-label="Need Help?"
+              className="flex h-10 w-10 items-center justify-center rounded-[6px] text-[var(--admin-blue)] transition-colors duration-200 hover:bg-white hover:text-[var(--admin-navy)]"
+            >
+              <MdSupportAgent aria-hidden="true" size={19} />
+            </button>
+          </div>
+        ))}
     </div>
   );
 };
