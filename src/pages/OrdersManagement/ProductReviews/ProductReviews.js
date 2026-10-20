@@ -20,6 +20,7 @@ import {
   ConfirmModal,
   BulkActionBar,
   FilterBar,
+  StatusBadge,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -232,27 +233,6 @@ const RatingStars = ({ value = 0, showValue = true }) => {
         </span>
       )}
     </div>
-  );
-};
-
-const StatusPill = ({ status = "pending" }) => {
-  const normalized = String(status || "pending").toLowerCase();
-
-  const styles = {
-    published: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    pending: "border-amber-200 bg-amber-50 text-amber-700",
-    hidden: "border-slate-200 bg-slate-50 text-slate-600",
-    rejected: "border-red-200 bg-red-50 text-red-600",
-  };
-
-  return (
-    <span
-      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize ${
-        styles[normalized] || styles.pending
-      }`}
-    >
-      {normalized}
-    </span>
   );
 };
 
@@ -832,7 +812,7 @@ const ProductReviews = () => {
     {
       key: "status",
       label: "Status",
-      render: (v) => <StatusPill status={v} />,
+      render: (v) => <StatusBadge status={v || "pending"} dot size="sm" />,
     },
     {
       key: "createdAt",

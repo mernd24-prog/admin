@@ -37,6 +37,7 @@ import {
   PageHeader,
   FilterBar,
   SellerIdentity,
+  StatusBadge,
 } from "../../../../components/Shared";
 import ProductStatusBadge from "../../../../components/Product/ProductStatusBadge";
 import Loader from "../../../../components/Loader/Loader";
@@ -1337,24 +1338,12 @@ const SellerSpecialPriceManager = () => {
         render: (_, row) => {
           const { isPending, hasError } = getRowFlags(row);
           if (hasError) {
-            return (
-              <span className="inline-flex rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-                Invalid Price
-              </span>
-            );
+            return <StatusBadge status="invalid_price" label="Invalid Price" dot />;
           }
           if (isPending) {
-            return (
-              <span className="inline-flex rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                Modified
-              </span>
-            );
+            return <StatusBadge status="modified" label="Modified" dot />;
           }
-          return (
-            <span className="inline-flex rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-              Unchanged
-            </span>
-          );
+          return <StatusBadge status="unchanged" label="Unchanged" dot />;
         },
       },
     ],

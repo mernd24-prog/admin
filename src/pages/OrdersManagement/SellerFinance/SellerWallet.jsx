@@ -478,6 +478,7 @@ export default function SellerWallet() {
                   pageSize={Math.max(items.length, 1)}
                   rowKey={(item) => item.commissionId || item.orderId}
                   emptyText="No seller wallet entries yet."
+                  stretchEmptyState
                   cardClassName="flex h-full flex-col overflow-hidden"
                 />
               </div>

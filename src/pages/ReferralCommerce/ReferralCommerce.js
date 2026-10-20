@@ -4414,7 +4414,18 @@ const ReferralCommerce = () => {
                       label: `${fullName(item.user)} - ${getId(item)}`,
                       value: getId(item),
                     }))}
-                    value={codeFormik.values.influencerId}
+                    value={
+                      influencers
+                        .map((item) => ({
+                          label: `${fullName(item.user)} - ${getId(item)}`,
+                          value: getId(item),
+                        }))
+                        .find(
+                          (option) =>
+                            String(option.value) ===
+                            String(codeFormik.values.influencerId),
+                        ) || null
+                    }
                     onChange={(selectedOption) =>
                       codeFormik.setFieldValue(
                         "influencerId",
@@ -4462,7 +4473,13 @@ const ReferralCommerce = () => {
                 <FormSelectGroup
                   label="Status"
                   options={referralCodeStatuses.options}
-                  value={codeFormik.values.status}
+                  value={
+                    referralCodeStatuses.options.find(
+                      (option) =>
+                        String(option.value).toLowerCase() ===
+                        String(codeFormik.values.status).toLowerCase(),
+                    ) || null
+                  }
                   onChange={(selectedOption) =>
                     codeFormik.setFieldValue(
                       "status",

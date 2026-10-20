@@ -6,9 +6,13 @@ const VARIANTS = {
   // ── Generic ──────────────────────────────────────────────────────────────
   active: "bg-green-50 text-green-700 border-green-200",
   inactive: "bg-gray-50 text-gray-500 border-gray-200",
+  hidden: "bg-slate-50 text-slate-600 border-slate-200",
+  unchanged: "bg-gray-50 text-gray-500 border-gray-200",
   enabled: "bg-green-50 text-green-700 border-green-200",
   disabled: "bg-gray-50 text-gray-500 border-gray-200",
   pending: "bg-amber-50 text-amber-700 border-amber-200",
+  modified: "bg-amber-50 text-amber-700 border-amber-200",
+  invalid_price: "bg-red-50 text-red-700 border-red-200",
   ready: "bg-emerald-50 text-emerald-700 border-emerald-200",
   partially_live: "bg-cyan-50 text-cyan-700 border-cyan-200",
   partially_verified: "bg-cyan-50 text-cyan-700 border-cyan-200",
@@ -159,6 +163,10 @@ const DOT_COLORS = {
   banned: "bg-red-700",
   out_of_stock: "bg-red-500",
   inactive: "bg-gray-400",
+  hidden: "bg-slate-400",
+  unchanged: "bg-gray-400",
+  modified: "bg-amber-500",
+  invalid_price: "bg-red-500",
   archived: "bg-gray-400",
   closed: "bg-gray-400",
   live: "bg-emerald-500",
@@ -210,6 +218,66 @@ const DISPLAY_LABELS = {
   initiated: "Initiated",
 };
 
+const ORDER_VARIANTS = {
+  captured: "bg-green-50 text-green-700 border-green-200",
+  delivered: "bg-green-50 text-green-700 border-green-200",
+  eligible: "bg-green-50 text-green-700 border-green-200",
+  paid: "bg-green-50 text-green-700 border-green-200",
+  fulfilled: "bg-green-50 text-green-700 border-green-200",
+  confirmed: "bg-blue-50 text-blue-700 border-blue-200",
+  pending: "bg-blue-50 text-blue-700 border-blue-200",
+  partially_delivered: "bg-sky-50 text-sky-700 border-sky-200",
+  shipped: "bg-purple-50 text-purple-700 border-purple-200",
+  return_requested: "bg-amber-50 text-amber-700 border-amber-200",
+  return_pending: "bg-amber-50 text-amber-700 border-amber-200",
+  failed: "bg-red-50 text-red-700 border-red-200",
+  payment_failed: "bg-red-50 text-red-700 border-red-200",
+  rejected: "bg-red-50 text-red-700 border-red-200",
+  held: "bg-red-50 text-red-700 border-red-200",
+  waiting: "bg-gray-50 text-gray-600 border-[#E9DDC8]",
+  not_created: "bg-gray-50 text-gray-500 border-[#E9DDC8]",
+  rto: "bg-gray-50 text-gray-600 border-[#E9DDC8]",
+  initiated: "bg-gray-50 text-gray-600 border-[#E9DDC8]",
+  return_window_closed: "bg-gray-50 text-gray-600 border-[#E9DDC8]",
+  draft: "bg-gray-50 text-gray-600 border-[#E9DDC8]",
+  inactive: "bg-gray-50 text-gray-600 border-[#E9DDC8]",
+  active: "bg-green-50 text-green-700 border-green-200",
+  approved: "bg-green-50 text-green-700 border-green-200",
+  scheduled: "bg-blue-50 text-blue-700 border-blue-200",
+  change_pending: "bg-purple-50 text-purple-700 border-purple-200",
+  none: "bg-gray-50 text-gray-600 border-[#E9DDC8]",
+  pending_approval: "bg-amber-50 text-amber-700 border-amber-200",
+  revision_pending: "bg-purple-50 text-purple-700 border-purple-200",
+};
+
+const ORDER_DOT_COLORS = {
+  captured: "bg-green-500",
+  delivered: "bg-green-500",
+  eligible: "bg-green-500",
+  paid: "bg-green-500",
+  fulfilled: "bg-green-500",
+  confirmed: "bg-blue-500",
+  pending: "bg-blue-500",
+  partially_delivered: "bg-sky-500",
+  shipped: "bg-purple-500",
+  return_requested: "bg-amber-500",
+  return_pending: "bg-amber-500",
+  failed: "bg-red-500",
+  payment_failed: "bg-red-500",
+  rejected: "bg-red-500",
+  held: "bg-red-500",
+  not_created: "bg-gray-400",
+  rto: "bg-gray-400",
+  initiated: "bg-gray-400",
+  return_window_closed: "bg-gray-400",
+  draft: "bg-gray-400",
+  inactive: "bg-gray-400",
+  scheduled: "bg-blue-500",
+  change_pending: "bg-purple-500",
+  pending_approval: "bg-amber-500",
+  revision_pending: "bg-purple-500",
+};
+
 /**
  * StatusBadge
  *
@@ -228,17 +296,23 @@ const StatusBadge = ({
   size = "md",
   pill = true,
   className = "",
+  appearance = "default",
 }) => {
   const key = String(status)
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
   const colorClass =
-    VARIANTS[key] || "bg-gray-50 text-gray-600 border-gray-200";
-  const dotColor = DOT_COLORS[key] || "bg-gray-400";
-  const displayText = formatLabel(
-    label ?? DISPLAY_LABELS[key] ?? status,
-    "Not Available",
-  );
+    (appearance === "order" && ORDER_VARIANTS[key]) ||
+    VARIANTS[key] ||
+    "bg-gray-50 text-gray-600 border-gray-200";
+  const dotColor =
+    (appearance === "order" && ORDER_DOT_COLORS[key]) ||
+    DOT_COLORS[key] ||
+    "bg-gray-400";
+  const displayText =
+    appearance === "order" && key === "n/a"
+      ? "N/A"
+      : formatLabel(label ?? DISPLAY_LABELS[key] ?? status, "Not Available");
 
   const sizeClass =
     size === "xs"

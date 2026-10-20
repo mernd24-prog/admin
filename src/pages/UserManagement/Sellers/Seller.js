@@ -309,7 +309,7 @@ const Sellers = () => {
                   row?.sellerProfile?.onboardingStatus ||
                   "pending"
                 }
-                size="sm"
+                // size="sm"
                 dot
                 className="min-w-[108px] cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
               />
@@ -342,7 +342,7 @@ const Sellers = () => {
                   row?.sellerProfile?.kycStatus ||
                   "pending"
                 }
-                size="sm"
+                // size="sm"
                 dot
                 className="min-w-[108px] cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
               />
@@ -375,7 +375,7 @@ const Sellers = () => {
                   row?.sellerProfile?.bankVerificationStatus ||
                   "pending"
                 }
-                size="sm"
+                // size="sm"
                 dot
                 className="min-w-[108px] cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
               />
@@ -405,7 +405,7 @@ const Sellers = () => {
               <StatusBadge
                 status={getGoLiveStatus(row)}
                 label={getGoLiveLabel(row)}
-                size="sm"
+                // size="sm"
                 dot
                 className="min-w-[108px] cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
               />

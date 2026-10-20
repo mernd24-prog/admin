@@ -1,4 +1,5 @@
 import React from "react";
+import StatusBadge from "../Shared/StatusBadge";
 
 const STATUS_CONFIG = {
   draft: { label: "Draft", color: "bg-gray-100 text-gray-600" },
@@ -33,12 +34,16 @@ const ProductStatusBadge = ({ status, revisionStatus }) => {
     label: effectiveStatus || "Unknown",
     color: "bg-gray-100 text-gray-600",
   };
+  const colorStatus =
+    effectiveStatus === "pending" ? "pending_approval" : effectiveStatus;
+
   return (
-    <span
-      className={`inline-flex items-center gap-2 px-4 py-2  text-sm rounded-lg transition-colors px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}
-    >
-      {cfg.label}
-    </span>
+    <StatusBadge
+      status={colorStatus}
+      label={cfg.label}
+      dot
+      appearance="order"
+    />
   );
 };
 
