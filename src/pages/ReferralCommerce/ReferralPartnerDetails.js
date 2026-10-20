@@ -5,9 +5,7 @@ import {
   BadgeCheck,
   BadgeIndianRupee,
   Check,
-  CheckCheck,
   Coins,
-  Copy,
   Eye,
   FileText,
   GitBranch,
@@ -25,6 +23,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import SharedDataTable from "../../components/Shared/DataTable";
+import CopyButton from "../../components/Atoms/CopyButton/CopyButton";
 import {
   FormSection,
   PageHeader,
@@ -201,42 +200,12 @@ const documentEntries = (documents = {}) =>
     ])
     .filter(([, value]) => value);
 
-const CopyableValue = ({ value }) => {
-  const [copied, setCopied] = useState(false);
-  const displayValue = value || "-";
-
-  const handleCopy = () => {
-    if (!value) return;
-    navigator.clipboard.writeText(value).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  return (
-    <span className="flex items-center gap-1.5">
-      <span className="font-medium text-gray-800">{displayValue}</span>
-      {value && (
-        <button
-          type="button"
-          onClick={handleCopy}
-          title={copied ? "Copied!" : "Copy account number"}
-          className="rounded p-0.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-        >
-          {copied ? (
-            <CheckCheck
-              aria-hidden="true"
-              size={14}
-              className="text-emerald-500"
-            />
-          ) : (
-            <Copy aria-hidden="true" size={14} />
-          )}
-        </button>
-      )}
-    </span>
-  );
-};
+const CopyableValue = ({ value }) => (
+  <span className="flex items-center gap-1.5">
+    <span className="font-medium text-gray-800">{value || "-"}</span>
+    <CopyButton value={value} label="Account number" className="h-7 w-7 border-0" size={14} />
+  </span>
+);
 
 const refreshPartner = (dispatch, id) => {
   dispatch(getReferralInfluencers({ page: 1, limit: 200, influencerId: id }));

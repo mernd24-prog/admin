@@ -2469,7 +2469,7 @@ const submitBrandRequest = async (values) => {
   isButtonView
 >
   <div className="space-y-5">
-    <FormSection
+     <FormSection
       title="Brand Information"
       description={
         isSellerPanelUser
@@ -2484,7 +2484,13 @@ const submitBrandRequest = async (values) => {
             name="name"
             type="text"
             value={formik.values.name}
-            onChange={formik.handleChange}
+            onChange={(event) => {
+              formik.handleChange(event);
+              setBrandSubmission((current) => ({
+                ...current,
+                name: event.target.value,
+              }));
+            }}
             onBlur={formik.handleBlur}
             placeholder="Enter brand name"
             required
@@ -2503,7 +2509,13 @@ const submitBrandRequest = async (values) => {
             name="description"
             type="textarea"
             value={formik.values.description}
-            onChange={formik.handleChange}
+            onChange={(event) => {
+              formik.handleChange(event);
+              setBrandSubmission((current) => ({
+                ...current,
+                description: event.target.value,
+              }));
+            }}
             onBlur={formik.handleBlur}
             placeholder="Enter brand details (optional)"
             rows={4}
@@ -2551,6 +2563,7 @@ const submitBrandRequest = async (values) => {
     </div>
       </div>
     </FormSection>
+
 
     
 

@@ -32,6 +32,7 @@ import {
   OrganizationSkeletonLoader,
 } from "../../../components/Loader/SkeletonLoader";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
+import CopyButton from "../../../components/Atoms/CopyButton/CopyButton";
 import {
   getAdminUserDetails,
   reviewSellerKyc,
@@ -63,7 +64,7 @@ const Row = ({ label, value, className = "" }) => (
   </div>
 );
 
-const CopyableReferenceRow = ({ label, value, onCopy }) => (
+const CopyableReferenceRow = ({ label, value }) => (
   <div className="rounded-md border border-gray-200 bg-white p-3">
     <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
     <div className="mt-1 flex items-center gap-2">
@@ -71,13 +72,7 @@ const CopyableReferenceRow = ({ label, value, onCopy }) => (
         {value || "—"}
       </p>
       {value && (
-        <button
-          type="button"
-          className="shrink-0 rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-          onClick={() => onCopy(value)}
-        >
-          Copy
-        </button>
+        <CopyButton value={value} label={label} />
       )}
     </div>
   </div>
@@ -103,14 +98,8 @@ const DetailPill = ({
           {value || "—"}
         </p>
       )}
-      {copyable && value && onCopy && (
-        <button
-          type="button"
-          className="shrink-0 rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          onClick={() => onCopy(value)}
-        >
-          Copy
-        </button>
+      {copyable && value && (
+        <CopyButton value={value} label={label} onCopy={onCopy} />
       )}
     </div>
   </div>
@@ -247,7 +236,7 @@ const buildVerificationDetails = ({ service, source = {}, fallback = {} }) => {
   ];
 };
 
-const VerificationDetailsCard = ({ title, details = [], onCopy }) => {
+const VerificationDetailsCard = ({ title, details = [] }) => {
   const visibleDetails = details.filter(
     (item) =>
       item.value !== undefined &&
@@ -266,7 +255,6 @@ const VerificationDetailsCard = ({ title, details = [], onCopy }) => {
               key={`${title}-${item.label}`}
               label={item.label}
               value={item.value}
-              onCopy={onCopy}
             />
           ) : (
             <DetailPill
@@ -1348,15 +1336,6 @@ const UserDetails = () => {
   const ownerAdminDisplay =
     ownerAdminDisplayName || ownerAdmin?.email || ownerAdminId;
   const lastLoginDisplay = formatDateTime(getLastLoginValue(user));
-  const handleCopyReference = useCallback(async (value) => {
-    if (!value) return;
-    try {
-      await navigator.clipboard.writeText(value);
-      toast.success("Reference ID copied");
-    } catch {
-      toast.error("Unable to copy reference ID");
-    }
-  }, []);
   const handleCopyText = useCallback(async (value, label = "Item") => {
     if (!value) return;
     try {
@@ -2335,7 +2314,6 @@ const UserDetails = () => {
                           key={item.label}
                           label={item.label}
                           value={item.value}
-                          onCopy={handleCopyReference}
                         />
                       ))}
                     </div>
@@ -2360,7 +2338,6 @@ const UserDetails = () => {
                           key={card.key}
                           title={card.title}
                           details={card.details}
-                          onCopy={handleCopyReference}
                         />
                       ))}
                     </div>

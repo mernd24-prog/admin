@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { FaChevronRight } from "react-icons/fa";
-import { MdAdd, MdTune, MdFolder, MdSearch } from "react-icons/md";
+import { MdAdd, MdTune, MdFolder } from "react-icons/md";
 import { ChevronRight } from "lucide-react";
 // Components
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
@@ -1018,27 +1018,17 @@ const ProductCategories = () => {
         <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="w-full lg:max-w-2xl">
-              <div className="relative">
-                <MdSearch
-                  aria-hidden="true"
-                  size={18}
-                  className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[var(--admin-muted)]"
-                />
-
-                <div className="[&_input]:pl-10">
-                  <SearchInput
-                    placeholder="Search Category..."
-                    searchTerm={filters.search}
-                    handleChange={(e) =>
-                      setFilters((f) => ({
-                        ...f,
-                        search: e.target.value,
-                      }))
-                    }
-                    handleRemove={handleSearchRemove}
-                  />
-                </div>
-              </div>
+              <SearchInput
+                placeholder="Search Category..."
+                searchTerm={filters.search}
+                handleChange={(e) =>
+                  setFilters((f) => ({
+                    ...f,
+                    search: e.target.value,
+                  }))
+                }
+                handleRemove={handleSearchRemove}
+              />
             </div>
           </div>
         </div>

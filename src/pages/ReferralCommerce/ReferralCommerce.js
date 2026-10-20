@@ -72,6 +72,7 @@ import {
   FilterBar,
   OrderLink,
   PageHeader,
+  StatusBadge,
   SummaryCard,
 } from "../../components/Shared";
 import SharedDataTable from "../../components/Shared/DataTable";
@@ -3208,7 +3209,11 @@ const ReferralCommerce = () => {
                         </td>
 
                         <td className="px-4 py-3">
-                          <StatusPill value={status} />
+                          <StatusBadge
+                            status={status}
+                            appearance="order"
+                            size="sm"
+                          />
                         </td>
                       </tr>
                     );
@@ -4206,7 +4211,6 @@ const ReferralCommerce = () => {
           onPageSizeChange={(limit) => handlePageSizeChange("payouts", limit)}
           loading={loading || paginationsLoading["payouts"]}
           rowKey="key"
-        
           filterBar={renderPayoutFilterBar()}
           emptyText="No payout requests found."
         />

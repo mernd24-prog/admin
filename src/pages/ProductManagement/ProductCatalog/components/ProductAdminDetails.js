@@ -633,18 +633,21 @@ const ProductAdminDetails = () => {
       {/* Content                                                            */}
       {/* ------------------------------------------------------------------ */}
 
-      <div className="mt-4 grid grid-cols-1 gap-5">
+      <div className="mb-4">
+        <Tabs
+          tabs={productTabs}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5">
         {/* ---------------------------------------------------------------- */}
         {/* Overview                                                         */}
         {/* ---------------------------------------------------------------- */}
 
         {activeTab === "overview" && (
           <section className={sectionClass}>
-            <Tabs
-              tabs={productTabs}
-              activeTab={activeTab}
-              onChange={setActiveTab}
-            />
 
             <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
               <Row label="Title" value={product.title} />
@@ -718,11 +721,6 @@ const ProductAdminDetails = () => {
 
         {activeTab === "analytics" && product.analytics && (
           <section className={sectionClass}>
-            <Tabs
-              tabs={productTabs}
-              activeTab={activeTab}
-              onChange={setActiveTab}
-            />
 
             {/* <div className={sectionHeaderClass}>
               <div>
@@ -799,11 +797,6 @@ const ProductAdminDetails = () => {
 
         {activeTab === "attributes" && Object.keys(attributes).length > 0 && (
           <section className={sectionClass}>
-            <Tabs
-              tabs={productTabs}
-              activeTab={activeTab}
-              onChange={setActiveTab}
-            />
 
             <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
               {Object.entries(attributes).map(([key, value]) => (
@@ -827,11 +820,6 @@ const ProductAdminDetails = () => {
 
         {activeTab === "variants" && product.variants?.length > 0 && (
           <section className={sectionClass}>
-            <Tabs
-              tabs={productTabs}
-              activeTab={activeTab}
-              onChange={setActiveTab}
-            />
 
             <div className="overflow-x-auto p-3 sm:p-4">
               <DataTable
@@ -870,11 +858,6 @@ const ProductAdminDetails = () => {
             product.warranty ||
             product.shipping) && (
             <section className={sectionClass}>
-              <Tabs
-                tabs={productTabs}
-                activeTab={activeTab}
-                onChange={setActiveTab}
-              />
 
               <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
                 {product.shipping && (
@@ -993,11 +976,6 @@ const ProductAdminDetails = () => {
 
             {product.productType === "digital" && product.digital && (
               <section className={sectionClass}>
-                <Tabs
-                  tabs={productTabs}
-                  activeTab={activeTab}
-                  onChange={setActiveTab}
-                />
 
                 <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
                   <Row label="File Type" value={product.digital.fileType} />
@@ -1067,11 +1045,6 @@ const ProductAdminDetails = () => {
 
             {product.productType === "subscription" && product.subscription && (
               <section className={sectionClass}>
-                <Tabs
-                  tabs={productTabs}
-                  activeTab={activeTab}
-                  onChange={setActiveTab}
-                />
 
                 <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
                   <Row
@@ -1174,11 +1147,6 @@ const ProductAdminDetails = () => {
             {product.productType === "bundle" &&
               product.bundleItems?.length > 0 && (
                 <section className={sectionClass}>
-                  <Tabs
-                    tabs={productTabs}
-                    activeTab={activeTab}
-                    onChange={setActiveTab}
-                  />
 
                   <div className="overflow-x-auto p-3 sm:p-4">
                     <table className="w-full min-w-[750px] text-sm">
@@ -1278,11 +1246,6 @@ const ProductAdminDetails = () => {
             {product.seo &&
               Object.keys(product.seo).some((key) => product.seo[key]) && (
                 <section className={sectionClass}>
-                  <Tabs
-                    tabs={productTabs}
-                    activeTab={activeTab}
-                    onChange={setActiveTab}
-                  />
 
                   <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2">
                     <Row label="Meta Title" value={product.seo.metaTitle} />
