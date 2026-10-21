@@ -2771,30 +2771,26 @@ const Returns = () => {
                   {action.mode === "reverse_pickup" && (
                     <FormSelectGroup
                       label="Shipping Mode"
-                      value={action.shippingMode}
+                      value={
+                        [
+                          { value: "standard", label: "Standard" },
+                          { value: "express", label: "Express" },
+                          { value: "same_day", label: "Same day" },
+                          { value: "hyperlocal", label: "Hyperlocal" },
+                        ].find(
+                          (option) => option.value === action.shippingMode,
+                        ) || null
+                      }
                       options={[
-                        {
-                          value: "standard",
-                          label: "Standard",
-                        },
-                        {
-                          value: "express",
-                          label: "Express",
-                        },
-                        {
-                          value: "same_day",
-                          label: "Same day",
-                        },
-                        {
-                          value: "hyperlocal",
-                          label: "Hyperlocal",
-                        },
+                        { value: "standard", label: "Standard" },
+                        { value: "express", label: "Express" },
+                        { value: "same_day", label: "Same day" },
+                        { value: "hyperlocal", label: "Hyperlocal" },
                       ]}
                       onChange={(selectedOption) =>
                         setAction((prev) => ({
                           ...prev,
-                          shippingMode:
-                            selectedOption?.value || selectedOption || "",
+                          shippingMode: selectedOption?.value || "",
                         }))
                       }
                       placeholder="Select shipping mode"
