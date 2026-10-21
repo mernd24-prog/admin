@@ -140,6 +140,7 @@ const VariantBuilder = ({
   const [activeOptionIdx, setActiveOptionIdx] = useState(null);
   const [expandedVariants, setExpandedVariants] = useState(new Set());
   const [uploadingVariants, setUploadingVariants] = useState(new Set());
+  const [pendingDeleteVariant, setPendingDeleteVariant] = useState(null);
   const [bulkValues, setBulkValues] = useState({});
   const [showOptionSubmission, setShowOptionSubmission] = useState(false);
   const [optionSubmission, setOptionSubmission] = useState({
@@ -1133,7 +1134,13 @@ const VariantBuilder = ({
                       type="button"
                       title="Remove variant"
                       aria-label={`Remove variant ${idx + 1}`}
-                      onClick={() => removeVariant(idx)}
+                      onClick={() =>
+                        setPendingDeleteVariant({
+                          index: idx,
+                          label: variantLabel,
+                          sku: variant.sku,
+                        })
+                      }
                       className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent bg-white text-gray-400 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200"
                     >
                       <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
@@ -1689,6 +1696,74 @@ const VariantBuilder = ({
             <X className="h-3 w-3" />
             Remove
           </span>
+        </div>
+      )}
+
+      {pendingDeleteVariant && (
+        <div
+          className="fixed inset-0 z-[11000] flex items-center justify-center bg-[#000000]/20 px-4 backdrop-blur-[1px]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setPendingDeleteVariant(null);
+            }
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-variant-confirm-title"
+            className="relative w-full max-w-[450px] rounded-lg bg-white p-6 shadow-[0_12px_30px_rgba(17,24,39,0.12)]"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setPendingDeleteVariant(null)}
+              aria-label="Close"
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-[#1B1D60]/25 bg-white text-[20px] font-medium leading-none text-[#1B1D60] transition-colors hover:bg-[#f5f7ff]"
+            >
+              ×
+            </button>
+
+            <div className="pr-10">
+              <h2
+                id="delete-variant-confirm-title"
+                className="text-[19px] font-bold leading-[1.2] text-[#1B1D60]"
+              >
+                Delete Variant
+              </h2>
+
+              <p className="mt-3 text-[15px] leading-[1.5] text-[#1B1D60]">
+                Are you sure you want to delete {pendingDeleteVariant.label}?
+              </p>
+
+              {pendingDeleteVariant.sku && (
+                <p className="mt-1 text-sm text-gray-500">
+                  SKU: {pendingDeleteVariant.sku}
+                </p>
+              )}
+
+              <div className="mt-5 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPendingDeleteVariant(null)}
+                  className="h-[40px] min-w-[96px] rounded-lg border border-[#1B1D60] bg-white px-4 text-[15px] font-semibold text-[#1B1D60] transition-colors hover:bg-[#f4f6ff]"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    removeVariant(pendingDeleteVariant.index);
+                    setPendingDeleteVariant(null);
+                  }}
+                  className="h-[40px] min-w-[96px] rounded-lg border border-[#D93C3C] bg-[#D93C3C] px-4 text-[15px] font-semibold text-white transition-colors hover:bg-[#c52f2f]"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
