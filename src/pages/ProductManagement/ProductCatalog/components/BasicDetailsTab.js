@@ -1703,6 +1703,12 @@ const submitBrandRequest = async (values) => {
   };
 
   const isReturnable = Boolean(formData.warranty?.returnPolicy?.returnable);
+  const hasLegacyWarrantyDetails =
+    Number(formData.warranty?.period) >= 1 ||
+    Boolean(String(formData.warranty?.provider || "").trim());
+  const warrantyEnabled =
+    formData.warranty?.enabled === true ||
+    (formData.warranty?.enabled === undefined && hasLegacyWarrantyDetails);
 
   /*
    * ------------------------------------------------------------
@@ -2096,16 +2102,35 @@ const submitBrandRequest = async (values) => {
                 ===================================================== */}
 
             <section className="product-form-subsection md:col-span-2">
-              <div className="product-form-section-header">
-                <h3>Warranty information</h3>
-
-                <p>
-                  Describe warranty coverage, exclusions, claim rules, required
-                  documents, and support instructions.
-                </p>
+              <div className="product-form-section-header flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3>Warranty information</h3>
+                  <p>Enable this only when the product includes warranty coverage.</p>
+                </div>
+                <div className="shrink-0 rounded-full border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2">
+                  <Input
+                    className="!mb-0"
+                    labelName="Warranty offered"
+                    name="warranty.enabled"
+                    type="switch"
+                    value={warrantyEnabled}
+                    onChange={(eventOrValue) => {
+                      const checked = typeof eventOrValue === "boolean"
+                        ? eventOrValue
+                        : Boolean(eventOrValue?.target?.checked);
+                      handleNestedChange("warranty.enabled", checked);
+                      if (!checked) {
+                        ["period", "periodUnit", "provider", "type", "terms"].forEach(
+                          (field) => handleNestedChange(`warranty.${field}`, ""),
+                        );
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
-              <div className="mb-4 grid gap-4 md:grid-cols-2">
+              {warrantyEnabled ? (
+              <><div className="mb-4 grid gap-4 md:grid-cols-2">
                     <Input
                       labelName="Warranty Period"
                       name="warranty.period"
@@ -2118,6 +2143,7 @@ const submitBrandRequest = async (values) => {
                       }
                       placeholder="Example: 12"
                       helperText="Use a value between 1 and 365."
+                      error={errors?.warrantyPeriod}
                     />
 
                     <FilterSelect
@@ -2138,6 +2164,7 @@ const submitBrandRequest = async (values) => {
                       placeholder="Select warranty unit"
                       isLoading={warrantyUnits.loading}
                       isClearable
+                      error={errors?.warrantyPeriodUnit}
                     />
                 <FilterSelect
                   label="Warranty Provider"
@@ -2153,6 +2180,7 @@ const submitBrandRequest = async (values) => {
                   placeholder="Select warranty provider"
                   isLoading={warrantyProviders.loading}
                   isClearable
+                  error={errors?.warrantyProvider}
                 />
 
                 <FilterSelect
@@ -2169,6 +2197,7 @@ const submitBrandRequest = async (values) => {
                   placeholder="Select warranty type"
                   isLoading={warrantyTypes.loading}
                   isClearable
+                  error={errors?.warrantyType}
                 />
               </div>
 
@@ -2182,6 +2211,12 @@ const submitBrandRequest = async (values) => {
                 className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
                 placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
               />
+              </>
+              ) : (
+                <p className="text-sm text-[var(--admin-text-muted)]">
+                  No warranty will be advertised or available for registration. Return policy is configured separately below.
+                </p>
+              )}
             </section>
 
             {/* =====================================================

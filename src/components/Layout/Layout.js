@@ -284,6 +284,9 @@ const NotificationTemplates = React.lazy(
 const AnalyticsEvents = React.lazy(
   () => import("../../pages/Reports/AnalyticsEvents"),
 );
+const CaFinanceAnalytics = React.lazy(
+  () => import("../../pages/Reports/CaFinanceAnalytics"),
+);
 // ── System Admin pages ───────────────────────────────────────────────────────
 const SystemHealth = React.lazy(
   () => import("../../pages/Admin/SystemAdmin/SystemHealth"),
@@ -774,6 +777,7 @@ function Layout() {
       { path: "/deal-payouts", render: () => <DealPayouts /> },
 
       { path: "/analytics-events", render: () => <AnalyticsEvents /> },
+      { path: "/ca-finance-analytics", render: () => <CaFinanceAnalytics /> },
       { path: "/api-keys", render: () => <ApiKeys /> },
       { path: "/feature-flags", render: () => <FeatureFlags /> },
       { path: "/webhooks", render: () => <Webhooks /> },

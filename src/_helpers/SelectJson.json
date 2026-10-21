@@ -33,6 +33,7 @@
     "hsn_code": "",
     "warranty_id": "",
     "warranty": {
+      "enabled": false,
       "returnPolicy": {
         "eligible": true,
         "returnable": true,

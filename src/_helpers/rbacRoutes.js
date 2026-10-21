@@ -263,6 +263,8 @@ const MODULE_LABELS = {
   "influencer-management": "Referral Partner Management",
   // Analytics
   "analytics-events": "Analytics Events",
+  "ca-analytics": "CA Finance & Reconciliation",
+  "ca-finance-analytics": "CA Finance & Reconciliation",
   // Platform settings
   "api-keys": "API Key Management",
   "feature-flags": "Feature Flags",
@@ -498,6 +500,8 @@ export const MODULE_DEFAULT_ROUTES = {
   "influencer-management": "influencer-management",
   // Analytics events
   "analytics-events": "analytics-events",
+  "ca-analytics": "ca-finance-analytics",
+  "ca-finance-analytics": "ca-finance-analytics",
   // Platform settings
   "api-keys": "api-keys",
   "feature-flags": "feature-flags",

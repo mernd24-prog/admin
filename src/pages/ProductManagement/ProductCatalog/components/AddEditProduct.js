@@ -1696,6 +1696,29 @@ export default function ProductManagementUI() {
 
     // Return policy validation
     const returnPolicy = formData?.warranty?.returnPolicy || {};
+    const warranty = formData?.warranty || {};
+    const hasLegacyWarrantyDetails =
+      Number(warranty.period) >= 1 || Boolean(String(warranty.provider || "").trim());
+    const warrantyEnabled =
+      warranty.enabled === true ||
+      (warranty.enabled === undefined && hasLegacyWarrantyDetails);
+
+    if (warrantyEnabled) {
+      const period = Number(warranty.period);
+      if (!Number.isInteger(period) || period < 1 || period > 365) {
+        newErrors.warrantyPeriod =
+          "Warranty period must be a whole number between 1 and 365.";
+      }
+      if (!["days", "weeks", "months", "years"].includes(warranty.periodUnit)) {
+        newErrors.warrantyPeriodUnit = "Warranty unit is required.";
+      }
+      if (!String(warranty.provider || "").trim()) {
+        newErrors.warrantyProvider = "Warranty provider is required.";
+      }
+      if (!String(warranty.type || "").trim()) {
+        newErrors.warrantyType = "Warranty type is required.";
+      }
+    }
     const isReturnable =
       String(returnPolicy?.type || "").toLowerCase() !== "non_returnable" &&
       returnPolicy?.returnable !== false &&
@@ -2394,9 +2417,25 @@ export default function ProductManagementUI() {
       height: toOptionalNumber(updatedFormData.dimensions?.height),
       weight: toOptionalNumber(updatedFormData.dimensions?.weight),
     });
+    const warrantySource = updatedFormData.warranty || {};
+    const hasLegacyWarrantyDetails =
+      Number(warrantySource.period) >= 1 ||
+      Boolean(String(warrantySource.provider || "").trim());
+    const warrantyEnabled =
+      warrantySource.enabled === true ||
+      (warrantySource.enabled === undefined && hasLegacyWarrantyDetails);
     const warranty = compactObject({
-      ...(updatedFormData.warranty || {}),
-      period: toOptionalNumber(updatedFormData.warranty?.period),
+      enabled: warrantyEnabled,
+      ...(warrantyEnabled
+        ? {
+            period: toOptionalNumber(warrantySource.period),
+            periodUnit: warrantySource.periodUnit,
+            provider: warrantySource.provider,
+            type: warrantySource.type,
+            terms: warrantySource.terms,
+            serviceableCountries: warrantySource.serviceableCountries,
+          }
+        : {}),
       returnPolicy: (() => {
         const current = updatedFormData.warranty?.returnPolicy || {};
         const isNonReturnable =

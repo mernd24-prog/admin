@@ -11,6 +11,9 @@ const byPanelFn =
     isSellerPanel() ? sellerBuilder(...args) : adminBuilder(...args);
 
 export const ENDPOINTS = {
+  caAnalytics: {
+    base: byPanel("/admin/ca-analytics", "/sellers/me/ca-analytics"),
+  },
   meta: {
     dropdown: (resource) => `/meta/dropdowns/${resource}`,
   },
