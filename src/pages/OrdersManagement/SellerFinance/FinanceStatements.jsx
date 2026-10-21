@@ -14,6 +14,7 @@ import {
   financeList,
   financeMoney,
   financeValue,
+  sellerFinanceStatus,
   shortReference,
 } from "./financeUi";
 
@@ -24,6 +25,7 @@ export default function FinanceStatements() {
   );
   const rows = financeList(state);
   const [downloading, setDownloading] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const load = useCallback(async () => {
@@ -54,14 +56,57 @@ export default function FinanceStatements() {
     }
   }, []);
 
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return rows;
+
+    return rows.filter((row) => {
+      const periodStart =
+        row.period_start || row.periodStart || row.created_at;
+      const periodEnd =
+        row.period_end ||
+        row.periodEnd ||
+        row.settlement_date ||
+        row.settlementDate;
+      const payoutId = financeValue(row, "payout_id", "payoutId");
+      const payoutAmount = financeValue(row, "net_amount", "netAmount");
+      const adjustments = financeValue(
+        row,
+        "adjustment_amount",
+        "adjustmentAmount",
+      );
+      const generatedOn =
+        row.settlement_date || row.settlementDate || row.created_at;
+      const visibleValues = [
+        shortReference(row.id, "#"),
+        row.id,
+        shortReference(payoutId, "#"),
+        payoutId,
+        financeDateTime(periodStart),
+        financeDateTime(periodEnd),
+        financeMoney(payoutAmount, row.currency),
+        financeMoney(adjustments, row.currency),
+        row.status,
+        row.releaseStatus,
+        row.lifecycleStatus,
+        sellerFinanceStatus(row).label,
+        financeDateTime(generatedOn),
+      ];
+
+      return visibleValues.some((value) =>
+        String(value || "").toLowerCase().includes(query),
+      );
+    });
+  }, [rows, search]);
+
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return rows.slice(start, start + pageSize);
-  }, [rows, page, pageSize]);
+    return filteredRows.slice(start, start + pageSize);
+  }, [filteredRows, page, pageSize]);
 
   useEffect(() => {
     setPage(1);
-  }, [rows.length]);
+  }, [rows.length, search]);
   const columns = useMemo(
     () => [
       {
@@ -152,8 +197,13 @@ export default function FinanceStatements() {
         columns={columns}
         data={pagedRows}
         onRefresh={load}
+        onSearch={(value) => {
+          setSearch(value);
+          setPage(1);
+        }}
+        searchPlaceholder="Search statement period, reference, amount, or status..."
         loading={Boolean(state.loading)}
-        totalCount={rows.length}
+        totalCount={filteredRows.length}
         page={page}
         pageSize={pageSize}
         onPageChange={setPage}

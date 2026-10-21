@@ -4121,8 +4121,16 @@ export default function ProductManagementUI() {
                       })}
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-[var(--admin-line)] bg-gray-50 p-5 text-center text-xs text-gray-500">
-                      No collections match “{collectionSearch}”.
+                    <div className="flex min-h-[160px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-5 text-center">
+                      <img
+                        src="/Img/noData.png"
+                        alt=""
+                        aria-hidden="true"
+                        className="h-20 w-20 object-contain"
+                      />
+                      <p className="text-xs text-gray-500">
+                        No collections match “{collectionSearch}”.
+                      </p>
                     </div>
                   )}
                 </div>

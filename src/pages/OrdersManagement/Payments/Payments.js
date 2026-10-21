@@ -270,7 +270,13 @@ const Payments = () => {
         key: "provider",
         label: "Provider",
         sortable: false,
-        render: (value) => <span className="capitalize">{display(value)}</span>,
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        render: (value) => (
+          <span className="block w-full text-center capitalize">
+            {display(value)}
+          </span>
+        ),
       },
       {
         key: "status",

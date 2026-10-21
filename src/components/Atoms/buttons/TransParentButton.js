@@ -17,7 +17,8 @@ const TransparentButton = React.memo(
         onClick={onClick}
         disabled={isDisable}
         className={twMerge(
-          `button-outline-primary transition-all duration-300 ease-in-out transform  border border-[var(--admin-blue)]  px-4 py-2 text-[var(--admin-blue)] ${className}`,
+          "button-outline-primary transition-all duration-300 ease-in-out transform border border-[var(--admin-blue)] px-4 py-2 text-[var(--admin-blue)]",
+          className,
         )}
         style={style}
         {...rest}

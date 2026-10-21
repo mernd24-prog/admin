@@ -515,7 +515,38 @@ const ProductAdminDetails = () => {
       {/* Breadcrumb                                                         */}
       {/* ------------------------------------------------------------------ */}
 
-      <Breadcrumb currentLabel="Product Details" />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <Breadcrumb currentLabel="Product Details" />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {needsReview && (
+            <button
+              type="button"
+              onClick={() => setReviewOpen(true)}
+              className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[var(--admin-navy)] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:shadow-md"
+            >
+              Review Product
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setDuplicateConfirm(true)}
+            className="inline-flex min-h-9 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 transition hover:border-[var(--admin-gold)] hover:text-[var(--admin-navy)]"
+          >
+            Duplicate
+          </button>
+
+          <Link
+            to={`/app/product-catalog/form/${id}`}
+            className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:shadow-md"
+          >
+            Edit Product
+          </Link>
+        </div>
+      </div>
 
       {/* ------------------------------------------------------------------ */}
       {/* Product Header                                                     */}
@@ -572,32 +603,6 @@ const ProductAdminDetails = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col justify-center gap-2 border-t border-gray-100 bg-gray-50/50 p-4 lg:border-l lg:border-t-0">
-            {needsReview && (
-              <button
-                type="button"
-                onClick={() => setReviewOpen(true)}
-                className="inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-[var(--admin-navy)] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-              >
-                Review Product
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setDuplicateConfirm(true)}
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-700 transition-all hover:-translate-y-0.5 hover:border-[var(--admin-gold)] hover:text-[var(--admin-navy)] hover:shadow-sm"
-            >
-              Duplicate
-            </button>
-
-            <Link
-              to={`/app/product-catalog/form/${id}`}
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-[var(--admin-gold)] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-            >
-              Edit Product
-            </Link>
-          </div>
         </div>
       </div>
 
@@ -648,7 +653,6 @@ const ProductAdminDetails = () => {
 
         {activeTab === "overview" && (
           <section className={sectionClass}>
-
             <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
               <Row label="Title" value={product.title} />
 
@@ -721,7 +725,6 @@ const ProductAdminDetails = () => {
 
         {activeTab === "analytics" && product.analytics && (
           <section className={sectionClass}>
-
             {/* <div className={sectionHeaderClass}>
               <div>
                 <p className={sectionEyebrowClass}>Performance overview</p>
@@ -797,7 +800,6 @@ const ProductAdminDetails = () => {
 
         {activeTab === "attributes" && Object.keys(attributes).length > 0 && (
           <section className={sectionClass}>
-
             <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
               {Object.entries(attributes).map(([key, value]) => (
                 <Row
@@ -820,7 +822,6 @@ const ProductAdminDetails = () => {
 
         {activeTab === "variants" && product.variants?.length > 0 && (
           <section className={sectionClass}>
-
             <div className="overflow-x-auto p-3 sm:p-4">
               <DataTable
                 columns={variantColumns}
@@ -858,7 +859,6 @@ const ProductAdminDetails = () => {
             product.warranty ||
             product.shipping) && (
             <section className={sectionClass}>
-
               <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
                 {product.shipping && (
                   <>
@@ -976,7 +976,6 @@ const ProductAdminDetails = () => {
 
             {product.productType === "digital" && product.digital && (
               <section className={sectionClass}>
-
                 <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
                   <Row label="File Type" value={product.digital.fileType} />
 
@@ -1045,7 +1044,6 @@ const ProductAdminDetails = () => {
 
             {product.productType === "subscription" && product.subscription && (
               <section className={sectionClass}>
-
                 <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
                   <Row
                     label="Billing Cycle"
@@ -1147,7 +1145,6 @@ const ProductAdminDetails = () => {
             {product.productType === "bundle" &&
               product.bundleItems?.length > 0 && (
                 <section className={sectionClass}>
-
                   <div className="overflow-x-auto p-3 sm:p-4">
                     <table className="w-full min-w-[750px] text-sm">
                       <thead>
@@ -1246,7 +1243,6 @@ const ProductAdminDetails = () => {
             {product.seo &&
               Object.keys(product.seo).some((key) => product.seo[key]) && (
                 <section className={sectionClass}>
-
                   <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2">
                     <Row label="Meta Title" value={product.seo.metaTitle} />
 

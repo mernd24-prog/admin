@@ -81,7 +81,6 @@ const DEAL_SOURCES = [
 ];
 
 const DEAL_BADGES = [
-  "Today's Deal",
   "Flash Sale",
   "Hot Deal",
   "Limited Offer",
@@ -89,6 +88,83 @@ const DEAL_BADGES = [
   "Festival Offer",
   "Mega Sale",
 ];
+
+const DealStatusConfirmModal = ({
+  isOpen,
+  action,
+  onCancel,
+  onConfirm,
+  loading = false,
+}) => {
+  if (!isOpen) return null;
+
+  const isResume = action === "resume";
+  const actionLabel = isResume ? "Resume" : "Pause";
+
+  return (
+    <div
+      className="fixed inset-0 z-[11000] flex items-center justify-center bg-[#000000]/20 px-4 backdrop-blur-[1px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !loading) onCancel?.();
+      }}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="deal-status-confirm-title"
+        className="relative w-full max-w-[450px] rounded-lg bg-white p-6 shadow-[0_12px_30px_rgba(17,24,39,0.12)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={loading}
+          aria-label="Close"
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-[#1B1D60]/25 bg-white text-[#1B1D60] transition-colors hover:bg-[#f5f7ff] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <MdClose aria-hidden="true" size={18} />
+        </button>
+
+        <div className="pr-10">
+          <h2
+            id="deal-status-confirm-title"
+            className="text-[19px] font-bold leading-[1.2] text-[#1B1D60]"
+          >
+            {actionLabel} Deal
+          </h2>
+
+          <p className="mt-3 text-[15px] leading-[1.5] text-[#1B1D60]">
+            Are you sure you want to {actionLabel.toLowerCase()} this deal?
+          </p>
+
+          <div className="mt-5 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={loading}
+              className="h-[40px] min-w-[96px] rounded-lg border border-[#1B1D60] bg-white px-4 text-[15px] font-semibold text-[#1B1D60] transition-colors hover:bg-[#f4f6ff] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={loading}
+              className={`h-[40px] min-w-[96px] rounded-lg border px-4 text-[15px] font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                isResume
+                  ? "border-green-600 bg-green-600 hover:bg-green-700"
+                  : "border-amber-500 bg-amber-500 hover:bg-amber-600"
+              }`}
+            >
+              {loading ? (isResume ? "Resuming..." : "Pausing...") : actionLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const STATUS_COLOR = {
   draft: "gray",
@@ -990,7 +1066,11 @@ const DealManagement = () => {
     {
       key: "sellingPrice",
       label: "Selling Price",
-      render: (value) => money(value),
+      headerClassName: "text-center",
+      cellClassName: "text-center",
+      render: (value) => (
+        <span className="block w-full text-center">{money(value)}</span>
+      ),
     },
     {
       key: "allocatedQuantity",
@@ -998,13 +1078,16 @@ const DealManagement = () => {
       render: (_, row) => (
         <div className="text-xs">
           <p>
-            Allocated: <strong>{num(row.allocatedQuantity)}</strong>
+            Allocated :{"\u00a0"}
+            <strong>{num(row.allocatedQuantity)}</strong>
           </p>
           <p>
-            Sold: <strong>{num(row.soldQuantity)}</strong>
+            Sold :{"\u00a0"}
+            <strong>{num(row.soldQuantity)}</strong>
           </p>
           <p>
-            Remaining: <strong>{remainingQty(row)}</strong>
+            Remaining :{"\u00a0"}
+            <strong>{remainingQty(row)}</strong>
           </p>
         </div>
       ),
@@ -1725,47 +1808,55 @@ const DealManagement = () => {
         ) : null}
       </DefaultModal>
 
-      <ConfirmModal
-        isOpen={confirm.open}
-        title={`${display(confirm.action)} Deal`}
-        description={`Are you sure you want to ${display(confirm.action).toLowerCase()} this deal?`}
-        onConfirm={submitAction}
-        onCancel={closeConfirm}
-        loading={actionLoading}
-        confirmLabel={display(confirm.action)}
-        variant={
-          ["approve", "resume"].includes(confirm.action) ? "success" : "danger"
-        }
-      >
-        {["reject", "cancel"].includes(confirm.action) && (
-          <div className="mt-3">
-            <Input
-              label="Reason *"
-              value={confirm.reason}
-              onChange={(event) =>
-                setConfirm((current) => ({
-                  ...current,
-                  reason: event.target.value,
-                }))
-              }
-            />
-          </div>
-        )}
-        {["approve", "pause", "resume"].includes(confirm.action) && (
-          <div className="mt-3">
-            <Input
-              label="Note"
-              value={confirm.note}
-              onChange={(event) =>
-                setConfirm((current) => ({
-                  ...current,
-                  note: event.target.value,
-                }))
-              }
-            />
-          </div>
-        )}
-      </ConfirmModal>
+      {["pause", "resume"].includes(confirm.action) ? (
+        <DealStatusConfirmModal
+          isOpen={confirm.open}
+          action={confirm.action}
+          onConfirm={submitAction}
+          onCancel={closeConfirm}
+          loading={actionLoading}
+        />
+      ) : (
+        <ConfirmModal
+          isOpen={confirm.open}
+          title={`${display(confirm.action)} Deal`}
+          description={`Are you sure you want to ${display(confirm.action).toLowerCase()} this deal?`}
+          onConfirm={submitAction}
+          onCancel={closeConfirm}
+          loading={actionLoading}
+          confirmLabel={display(confirm.action)}
+          variant={confirm.action === "approve" ? "success" : "danger"}
+        >
+          {["reject", "cancel"].includes(confirm.action) && (
+            <div className="mt-3">
+              <Input
+                label="Reason *"
+                value={confirm.reason}
+                onChange={(event) =>
+                  setConfirm((current) => ({
+                    ...current,
+                    reason: event.target.value,
+                  }))
+                }
+              />
+            </div>
+          )}
+          {confirm.action === "approve" && (
+            <div className="mt-3">
+              <Input
+                label="Note"
+                value={confirm.note}
+                onChange={(event) =>
+                  setConfirm((current) => ({
+                    ...current,
+                    note: event.target.value,
+                  }))
+                }
+              />
+            </div>
+          )}
+        </ConfirmModal>
+      )}
     </div>
   );
 };

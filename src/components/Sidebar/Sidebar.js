@@ -29,6 +29,7 @@ import {
 } from "react-icons/md";
 
 import { CiSettings } from "react-icons/ci";
+import { IoReloadCircle } from "react-icons/io5";
 import { RxCross2 } from "react-icons/rx";
 
 import { getMyModulePermission } from "../../Redux/userManagementSlice";
@@ -63,15 +64,15 @@ const SECTION_ICONS = {
   "delivery & shipping": MdLocalShipping,
   "payments & finance": MdAccountBalance,
   "shipping & fulfilment": MdLocalShipping,
-  "returns & cancellations": MdShoppingCart,
+  "returns & cancellations": IoReloadCircle,
   "invoices & taxation": MdAccountBalance,
   "seller finance & payouts": MdAccountBalance,
-  "commerce settings": CiSettings,
+  "commerce settings": MdSettings,
   "users & access": MdPeople,
   marketing: MdCampaign,
   "tax & compliance": MdAccountBalance,
   "reports & analytics": MdBarChart,
-  settings: CiSettings,
+  settings: MdSettings,
   "location management": MdLocationOn,
   support: MdSupportAgent,
 };
@@ -111,6 +112,21 @@ const ICON_BY_NAME = {
 };
 
 const getSidebarIcon = (iconName, fallbackLabel) => {
+  const normalizedLabel = String(fallbackLabel || "")
+    .trim()
+    .toLowerCase();
+
+  if (
+    normalizedLabel === "settings" ||
+    normalizedLabel === "commerce settings"
+  ) {
+    return MdSettings;
+  }
+
+  if (normalizedLabel === "returns & cancellations") {
+    return IoReloadCircle;
+  }
+
   return (
     ICON_BY_NAME[String(iconName || "").trim()] || getIconForTab(fallbackLabel)
   );
@@ -401,7 +417,9 @@ const Sidebar = ({
 
     if (isAdminOrSuper) {
       const isQueryItem = (val = "") => {
-        const clean = String(val || "").trim().toLowerCase();
+        const clean = String(val || "")
+          .trim()
+          .toLowerCase();
         return (
           clean === "queries" ||
           clean === "query" ||

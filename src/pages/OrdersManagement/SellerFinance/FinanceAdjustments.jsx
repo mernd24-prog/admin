@@ -30,6 +30,7 @@ import {
   FinanceStatusBadge,
   financeDateTime,
   financeMoney,
+  sellerFinanceStatus,
   signedFinanceMoney,
   unwrapFinance,
 } from "./financeUi";
@@ -62,6 +63,7 @@ export default function FinanceAdjustments() {
   const [codRows, setCodRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [search, setSearch] = useState("");
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -159,6 +161,36 @@ export default function FinanceAdjustments() {
       (row) => !category || row.adjustmentType === category,
     );
   }, [category, codRows, promotionPayload.items, wallet.items]);
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return rows;
+
+    return rows.filter((row) => {
+      const visibleValues = [
+        row.title,
+        row.description,
+        row.orderNumber,
+        row.order_number,
+        row.orderId,
+        row.order_id,
+        row.amount,
+        row.currency,
+        row.status,
+        row.releaseStatus,
+        row.lifecycleStatus,
+        row.payoutStatus,
+        row.adjustmentType,
+        sellerFinanceStatus(row).label,
+        financeMoney(row.amount, row.currency),
+        signedFinanceMoney(row.amount, row.currency),
+        financeDateTime(row.createdAt || row.created_at || row.updatedAt, ""),
+      ];
+
+      return visibleValues
+        .filter((value) => value !== null && value !== undefined)
+        .some((value) => String(value).toLowerCase().includes(query));
+    });
+  }, [rows, search]);
   const owed = Math.abs(Number(balances.codLiabilityBalance || 0));
   const columns = useMemo(
     () => [
@@ -320,11 +352,13 @@ export default function FinanceAdjustments() {
       )}
       <DataTable
         columns={columns}
-        data={rows}
+        data={filteredRows}
         loading={loading}
-        totalCount={rows.length}
+        totalCount={filteredRows.length}
         pageSize={20}
         onRefresh={load}
+        onSearch={setSearch}
+        searchPlaceholder="Search adjustment, order, amount, status, or date..."
         rowKey={(row) =>
           `${row.adjustmentType}-${row.id || row.orderId || row.shipment_id}`
         }

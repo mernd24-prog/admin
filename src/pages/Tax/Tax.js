@@ -63,8 +63,9 @@ const COLUMNS = [
   {
     key: "countryId",
     label: "Country",
+    headerClassName: "text-center",
     render: (v, row) => (
-      <span className="text-sm text-gray-600">
+      <span className="block w-full text-center text-sm text-gray-600">
         {v?.name || row?.country_code?.name || "—"}
       </span>
     ),

@@ -600,8 +600,12 @@ const createColumns = (
   {
     key: "items",
     label: "Items",
-
-    render: (_, row) => <span className="font-mono">{countItems(row)}</span>,
+    headerClassName: "text-center",
+    render: (_, row) => (
+      <span className="block w-full text-center font-mono">
+        {countItems(row)}
+      </span>
+    ),
   },
 
   {

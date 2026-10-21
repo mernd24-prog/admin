@@ -371,31 +371,31 @@ const PromotionFundingLedger = () => {
   // Summary cards
   const cards = [
     [
-      "Customer discounts",
+      "Customer Discounts",
       totals.customerDiscountAmount,
       "Total promotion shown to customers",
       MdLocalOffer,
     ],
     [
-      "Marketplace contribution",
+      "Marketplace Contribution",
       totals.marketplaceContributionAmount,
       "Platform-funded seller invoice payment",
       MdStorefront,
     ],
     [
-      "Payment partner contribution",
+      "Payment Partner Contribution",
       totals.paymentPartnerContributionAmount,
       "Bank/payment-partner-funded payment",
       MdAccountBalance,
     ],
     [
-      "Contribution reversals",
+      "Contribution Reversals",
       totals.reversalAmount,
       "Reversed for refunded items",
       MdUndo,
     ],
     [
-      "Net contribution",
+      "Net Contribution",
       totals.netPlatformContributionAmount,
       "Still payable or already settled",
       MdPayments,
