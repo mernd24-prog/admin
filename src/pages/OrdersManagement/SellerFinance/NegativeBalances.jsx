@@ -599,10 +599,12 @@ const NegativeBalances = () => {
         ]}
       />
 
-      <div className="admin-card mb-4 border-l-4 border-l-blue-500 bg-blue-50/40 p-4 text-sm text-[var(--admin-ink)]">
-        <div className="font-semibold">Future-payout recovery is automatic</div>
+      <div className="mb-4 rounded-lg border border-[var(--admin-gold)]/30 bg-amber-50/60 px-4 py-3 text-xs text-gray-700">
+        <p className="font-semibold text-gray-900">
+          Future-payout recovery is automatic
+        </p>
 
-        <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
+        <p className="mt-1 leading-5">
           No admin action is needed for normal recovery. Use “Manage recovery”
           only when payment was received outside the platform or an authorized
           write-off is required.

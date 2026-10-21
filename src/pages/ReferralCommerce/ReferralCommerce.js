@@ -96,6 +96,7 @@ import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
 import Input from "../../components/Atoms/Input/Input";
 import MultiImageUpload from "../../components/Atoms/ImageGallery/MultiImageUpload";
 import ImageUpload from "../../components/Atoms/ImageGallery/ImageUpload";
+import TransparentButton from "../../components/Atoms/buttons/TransParentButton";
 
 const influencerPortalUrl =
   process.env.REACT_APP_INFLUENCER_PORTAL_URL ||
@@ -203,6 +204,17 @@ const emptyChildForm = {
   ...emptyInfluencerForm,
   canCreateChildren: false,
   parentId: "",
+};
+
+const emptyProductReferralAmountForm = {
+  storeId: "",
+  storeKey: "",
+  productId: "",
+  productTitle: "",
+  amountType: "fixed_amount",
+  amountValue: "",
+  maximumAmount: "",
+  active: true,
 };
 
 const emptyRulesForm = {
@@ -415,12 +427,7 @@ const optionList = (options = [], fallbackValues = []) =>
     : fallbackValues.map((value) => ({ value, label: humanize(value) }));
 
 const StatusPill = ({ value }) => (
-  <StatusBadge
-    status={value}
-    label={value ? undefined : "-"}
-    size="sm"
-    dot
-  />
+  <StatusBadge status={value} label={value ? undefined : "-"} size="sm" dot />
 );
 
 const IconButton = ({
@@ -735,18 +742,8 @@ const Modal = ({ title, open, onClose, children, footer }) => {
     </div>
   );
 };
-const ProductReferralAmounts = () => {
-  const empty = {
-    storeId: "",
-    storeKey: "",
-    productId: "",
-    productTitle: "",
-    amountType: "fixed_amount",
-    amountValue: "",
-    maximumAmount: "",
-    active: true,
-  };
-
+const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
+  const empty = emptyProductReferralAmountForm;
   const [form, setForm] = useState(empty);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [products, setProducts] = useState([]);
@@ -1072,10 +1069,19 @@ const ProductReferralAmounts = () => {
     setDrawerOpen(false);
   };
 
-  const handleOpenAdd = () => {
+  const handleOpenAdd = useCallback(() => {
     setForm(empty);
     setDrawerOpen(true);
-  };
+  }, [empty]);
+
+  useEffect(() => {
+    onHeaderActionsChange?.({
+      overrideCount: configs.length,
+      onAdd: handleOpenAdd,
+    });
+  }, [configs.length, handleOpenAdd, onHeaderActionsChange]);
+
+  useEffect(() => () => onHeaderActionsChange?.(null), [onHeaderActionsChange]);
 
   const handleCloseDrawer = () => {
     setDrawerOpen(false);
@@ -1096,21 +1102,20 @@ const ProductReferralAmounts = () => {
               Manage product-specific referral pool configurations.
             </p>
           </div>
-
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-[var(--admin-surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--admin-navy)]">
-              {configs.length} {configs.length === 1 ? "Override" : "Overrides"}
-            </div>
-
-            <button
-              type="button"
-              onClick={handleOpenAdd}
-              className="admin-btn-primary inline-flex items-center gap-2 text-xs font-semibold py-2 px-3.5 shadow-xs"
-            >
-              <Plus aria-hidden="true" size={16} />
-              Add Product Referral Pool
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={load}
+            disabled={loading}
+            className="admin-btn-secondary inline-flex items-center gap-2"
+            aria-label={loading ? "Refreshing overrides" : "Refresh overrides"}
+          >
+            <RefreshCw
+              aria-hidden="true"
+              size={16}
+              className={loading ? "animate-spin" : ""}
+            />
+            {loading ? "Refreshing..." : "Refresh"}
+          </button>
         </div>
 
         {/* Existing Overrides Table */}
@@ -1473,6 +1478,8 @@ const ReferralCommerce = () => {
   const activeTab = sectionToTab[section] || "overview";
   const pageMeta =
     MARKETING_PAGE_META[activeTab] || MARKETING_PAGE_META.overview;
+  const [productAmountsHeaderActions, setProductAmountsHeaderActions] =
+    useState(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [payoutPartnerFilter, setPayoutPartnerFilter] = useState("");
@@ -2545,19 +2552,23 @@ const ReferralCommerce = () => {
     bank: <StatusPill value={item.payoutProfileStatus || "not_submitted"} />,
     status: <StatusPill value={item.status} />,
     actions: (
-      <button
+      <TransparentButton
         type="button"
-        className="inline-flex items-center gap-1.5 rounded bg-[var(--admin-blue-soft)] px-2.5 py-1.5 text-xs font-medium text-[var(--admin-blue)] transition hover:bg-[var(--admin-blue)] hover:text-white"
-        onClick={() =>
+        className="inline-flex items-center justify-center gap-1 whitespace-nowrap !min-h-0 !px-2 !py-1.5 text-[11px] font-semibold leading-4"
+        onClick={(event) => {
+          event.stopPropagation();
           navigate(`/app/referral-commerce/influencers/view/${getId(item)}`, {
             state: { influencer: item },
-          })
-        }
+          });
+        }}
         aria-label={`View details for ${fullName(item.user)}`}
-      >
-        <Eye size={14} />
-        View
-      </button>
+        label={
+          <>
+            <Eye aria-hidden="true" size={13} />
+            <span>View</span>
+          </>
+        }
+      />
     ),
   }));
 
@@ -2989,13 +3000,27 @@ const ReferralCommerce = () => {
             Recent Orders
           </h2>
 
-          <button
-            type="button"
-            className="inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]"
-            onClick={() => navigate("/app/referral-commerce/orders")}
-          >
-            See All
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refreshActive()}
+              disabled={loading}
+              className="admin-btn-secondary inline-flex min-h-7 items-center gap-2 px-3 text-[11px]"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                size={15}
+                className={loading ? "animate-spin" : ""}
+              />
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+            <TransparentButton
+              type="button"
+              label="See All"
+              className="min-h-7 rounded px-3 py-0 text-[11px] font-semibold"
+              onClick={() => navigate("/app/referral-commerce/orders")}
+            />
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -3750,6 +3775,7 @@ const ReferralCommerce = () => {
       onPageChange={(page) => handlePageChange("bonusRules", page)}
       onPageSizeChange={(limit) => handlePageSizeChange("bonusRules", limit)}
       loading={loading || paginationsLoading["bonusRules"]}
+      onRefresh={refreshActive}
       rowKey="key"
       onSearch={setSearch}
       searchPlaceholder="Search bonus rules..."
@@ -3760,26 +3786,6 @@ const ReferralCommerce = () => {
         })),
       )}
       emptyText="No bonus rules found."
-      actions={
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={evaluateBonuses}
-            className="inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
-          >
-            <Check aria-hidden="true" size={16} />
-            Evaluate Bonuses
-          </button>
-          <button
-            type="button"
-            onClick={() => openBonusRuleModal()}
-            className="inline-flex items-center gap-2 rounded border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
-          >
-            <Plus aria-hidden="true" size={16} />
-            Bonus Rule
-          </button>
-        </div>
-      }
     />
   );
 
@@ -3801,6 +3807,7 @@ const ReferralCommerce = () => {
       onPageChange={(page) => handlePageChange("bonusProgress", page)}
       onPageSizeChange={(limit) => handlePageSizeChange("bonusProgress", limit)}
       loading={loading || paginationsLoading["bonusProgress"]}
+      onRefresh={refreshActive}
       rowKey="key"
       onSearch={setSearch}
       searchPlaceholder="Search bonus progress..."
@@ -3832,6 +3839,7 @@ const ReferralCommerce = () => {
       onPageChange={(page) => handlePageChange("bonusHistory", page)}
       onPageSizeChange={(limit) => handlePageSizeChange("bonusHistory", limit)}
       loading={loading || paginationsLoading["bonusHistory"]}
+      onRefresh={refreshActive}
       rowKey="key"
       onSearch={setSearch}
       searchPlaceholder="Search bonus achievements..."
@@ -3903,6 +3911,28 @@ const ReferralCommerce = () => {
               >
                 <Plus aria-hidden="true" size={16} />
                 Referral Code
+              </button>
+            </div>
+          ) : activeTab === "productAmounts" && productAmountsHeaderActions ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={productAmountsHeaderActions.onAdd}
+                className="admin-btn-primary inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold shadow-xs"
+              >
+                <Plus aria-hidden="true" size={16} />
+                Add Product Referral Pool
+              </button>
+            </div>
+          ) : activeTab === "bonuses" && bonusView === "rules" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={evaluateBonuses}>
+                <Check aria-hidden="true" size={16} />
+                Evaluate Bonuses
+              </button>
+              <button type="button" onClick={() => openBonusRuleModal()}>
+                <Plus aria-hidden="true" size={16} />
+                Bonus Rule
               </button>
             </div>
           ) : undefined
@@ -4017,6 +4047,7 @@ const ReferralCommerce = () => {
             handlePageSizeChange("influencers", limit)
           }
           loading={loading || paginationsLoading["influencers"]}
+          onRefresh={refreshActive}
           rowKey="key"
           onRowClick={(row) =>
             navigate(`/app/referral-commerce/influencers/view/${row.key}`, {
@@ -4052,7 +4083,11 @@ const ReferralCommerce = () => {
       )}
 
       {activeTab === "rules" && renderRules()}
-      {activeTab === "productAmounts" && <ProductReferralAmounts />}
+      {activeTab === "productAmounts" && (
+        <ProductReferralAmounts
+          onHeaderActionsChange={setProductAmountsHeaderActions}
+        />
+      )}
       {activeTab === "bonuses" && renderBonuses()}
       {activeTab === "orders" && (
         <SharedDataTable
@@ -4072,6 +4107,7 @@ const ReferralCommerce = () => {
           onPageChange={(page) => handlePageChange("orders", page)}
           onPageSizeChange={(limit) => handlePageSizeChange("orders", limit)}
           loading={loading || paginationsLoading["orders"]}
+          onRefresh={refreshActive}
           rowKey="key"
           onSearch={setSearch}
           searchPlaceholder="Search referral orders..."
@@ -4102,6 +4138,7 @@ const ReferralCommerce = () => {
           onPageChange={(page) => handlePageChange("payouts", page)}
           onPageSizeChange={(limit) => handlePageSizeChange("payouts", limit)}
           loading={loading || paginationsLoading["payouts"]}
+          onRefresh={refreshActive}
           rowKey="key"
           filterBar={renderPayoutFilterBar()}
           emptyText="No payout requests found."
@@ -4125,19 +4162,11 @@ const ReferralCommerce = () => {
           onPageChange={(page) => handlePageChange("fraud", page)}
           onPageSizeChange={(limit) => handlePageSizeChange("fraud", limit)}
           loading={loading || paginationsLoading["fraud"]}
+          onRefresh={refreshActive}
           rowKey="key"
           onSearch={setSearch}
           searchPlaceholder="Search fraud reviews..."
           filterBar={renderActiveFilterBar()}
-          actions={
-            <span title="Fraud review">
-              <ShieldAlert
-                aria-hidden="true"
-                size={18}
-                className="text-amber-600"
-              />
-            </span>
-          }
           emptyText="No fraud reviews found."
         />
       )}

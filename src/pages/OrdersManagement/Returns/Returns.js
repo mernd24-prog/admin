@@ -1451,8 +1451,8 @@ const Returns = () => {
         pageSize={list.pageSize}
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
-        onSearch={isSeller ? undefined : list.setSearch}
-        searchPlaceholder="Search return, order, buyer, or tracking"
+        onSearch={list.setSearch}
+        searchPlaceholder="Search return or order"
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
@@ -3437,61 +3437,62 @@ const Returns = () => {
               description="Add any additional information related to this action."
             >
               <FormInput
-              label="Note"
-              name="note"
-              type="textarea"
-              value={action.note}
-              onChange={(event) => {
-                if (action.type === "approve") {
-                  approveReturnFormik.handleChange(event);
+                label="Note"
+                name="note"
+                type="textarea"
+                value={action.note}
+                onChange={(event) => {
+                  if (action.type === "approve") {
+                    approveReturnFormik.handleChange(event);
+                  }
+                  if (action.type === "schedule") {
+                    scheduleReturnFormik.handleChange(event);
+                  }
+                  if (action.type === "close") {
+                    closeReturnFormik.handleChange(event);
+                  }
+                  if (action.type === "reject") {
+                    rejectReturnFormik.handleChange(event);
+                  }
+                  if (action.type === "replacement_request") {
+                    replacementRequestFormik.handleChange(event);
+                  }
+                  setAction((prev) => ({
+                    ...prev,
+                    note: event.target.value,
+                  }));
+                }}
+                onBlur={
+                  action.type === "approve"
+                    ? approveReturnFormik.handleBlur
+                    : action.type === "schedule"
+                      ? scheduleReturnFormik.handleBlur
+                      : action.type === "close"
+                        ? closeReturnFormik.handleBlur
+                        : action.type === "reject"
+                          ? rejectReturnFormik.handleBlur
+                          : action.type === "replacement_request"
+                            ? replacementRequestFormik.handleBlur
+                            : undefined
                 }
-                if (action.type === "schedule") {
-                  scheduleReturnFormik.handleChange(event);
+                error={
+                  action.type === "approve" && approveReturnFormik.touched.note
+                    ? approveReturnFormik.errors.note
+                    : action.type === "schedule" &&
+                        scheduleReturnFormik.touched.note
+                      ? scheduleReturnFormik.errors.note
+                      : action.type === "close" &&
+                          closeReturnFormik.touched.note
+                        ? closeReturnFormik.errors.note
+                        : action.type === "reject" &&
+                            rejectReturnFormik.touched.note
+                          ? rejectReturnFormik.errors.note
+                          : action.type === "replacement_request" &&
+                              replacementRequestFormik.touched.note
+                            ? replacementRequestFormik.errors.note
+                            : ""
                 }
-                if (action.type === "close") {
-                  closeReturnFormik.handleChange(event);
-                }
-                if (action.type === "reject") {
-                  rejectReturnFormik.handleChange(event);
-                }
-                if (action.type === "replacement_request") {
-                  replacementRequestFormik.handleChange(event);
-                }
-                setAction((prev) => ({
-                  ...prev,
-                  note: event.target.value,
-                }));
-              }}
-              onBlur={
-                action.type === "approve"
-                  ? approveReturnFormik.handleBlur
-                  : action.type === "schedule"
-                    ? scheduleReturnFormik.handleBlur
-                    : action.type === "close"
-                      ? closeReturnFormik.handleBlur
-                      : action.type === "reject"
-                        ? rejectReturnFormik.handleBlur
-                        : action.type === "replacement_request"
-                          ? replacementRequestFormik.handleBlur
-                          : undefined
-              }
-              error={
-                action.type === "approve" && approveReturnFormik.touched.note
-                  ? approveReturnFormik.errors.note
-                  : action.type === "schedule" &&
-                      scheduleReturnFormik.touched.note
-                    ? scheduleReturnFormik.errors.note
-                    : action.type === "close" && closeReturnFormik.touched.note
-                      ? closeReturnFormik.errors.note
-                      : action.type === "reject" &&
-                          rejectReturnFormik.touched.note
-                        ? rejectReturnFormik.errors.note
-                        : action.type === "replacement_request" &&
-                            replacementRequestFormik.touched.note
-                          ? replacementRequestFormik.errors.note
-                          : ""
-              }
-              placeholder="Add an optional note..."
+                placeholder="Add an optional note..."
               />
             </FormSection>
           )}

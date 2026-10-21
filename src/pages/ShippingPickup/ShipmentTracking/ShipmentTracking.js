@@ -899,18 +899,26 @@ const ShipmentTracking = () => {
       {
         key: "shipment_type",
         label: "Type",
+        headerClassName: "text-center",
         render: (value, row) => (
-          <StatusBadge
-            status={displayStatus(value || row.direction || "forward")}
-            dot
-          />
+          <span className="flex w-full justify-center">
+            <StatusBadge
+              status={displayStatus(value || row.direction || "forward")}
+              dot
+            />
+          </span>
         ),
       },
       {
         key: "courier_name",
         label: "Delivery Method",
         sortable: true,
-        render: (value) => value || "Seller delivery",
+        headerClassName: "text-center",
+        render: (value) => (
+          <span className="block w-full text-center">
+            {value || "Seller delivery"}
+          </span>
+        ),
       },
       {
         key: "status",
@@ -922,20 +930,29 @@ const ShipmentTracking = () => {
         key: "cod",
         label: "Payment Type",
         sortable: true,
+        headerClassName: "text-center",
         value: (row) => paymentTypeLabel(row?.cod, row),
-        render: (value, row) => paymentTypeLabel(value, row),
+        render: (value, row) => (
+          <span className="block w-full text-center">
+            {paymentTypeLabel(value, row)}
+          </span>
+        ),
       },
       {
         key: "expected_delivery_at",
         label: "Expected / Delivered",
         sortable: true,
-        render: (value, row) =>
-          formatDateTime12Hour(
-            row.status === "delivered"
-              ? row.delivered_at || row.deliveredAt || value
-              : value,
-            "N/A",
-          ),
+        headerClassName: "text-center",
+        render: (value, row) => (
+          <span className="block w-full text-center">
+            {formatDateTime12Hour(
+              row.status === "delivered"
+                ? row.delivered_at || row.deliveredAt || value
+                : value,
+              "N/A",
+            )}
+          </span>
+        ),
       },
     ];
     return isSeller

@@ -47,6 +47,7 @@ import {
   ExportButton,
   ImportButton,
 } from "../../../../components/Atoms/buttons/exportImport";
+import TransparentButton from "../../../../components/Atoms/buttons/TransParentButton";
 import { MdFileDownload } from "react-icons/md";
 
 import {
@@ -1221,16 +1222,19 @@ const SellerSpecialPriceManager = () => {
         key: "action",
         label: "Action",
         render: (_, row) => (
-          <button
+          <TransparentButton
             type="button"
             onClick={() =>
               navigate(`/app/seller-special-price-manager/${row._id || row.id}`)
             }
-            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--admin-gold)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--admin-gold)] transition-colors hover:bg-[var(--admin-gold)] hover:text-white focus:border-[var(--admin-gold)] focus:outline-none focus:ring-0"
-          >
-            Manage Special Prices
-            <ArrowRight aria-hidden="true" size={14} />
-          </button>
+            className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap !px-3 !py-1.5 text-xs font-semibold"
+            label={
+              <>
+                Manage Special Prices
+                <ArrowRight aria-hidden="true" size={14} />
+              </>
+            }
+          />
         ),
       },
     ],

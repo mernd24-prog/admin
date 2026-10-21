@@ -27,6 +27,7 @@ import Cards from "../../components/Cards/Cards";
 import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
 import { GoldDateRangeCalendar } from "../../components/Shared/FilterBar";
 import Loader from "../../components/Loader/Loader";
+import TransparentButton from "../../components/Atoms/buttons/TransParentButton";
 
 const EMPTY_PERFORMANCE = [
   { label: "Mon", value: 0, revenue: 0, averageOrderValue: 0 },
@@ -91,7 +92,7 @@ const CLASS_PAGE_TITLE =
 const CLASS_SECTION_TITLE =
   "text-[17px] font-inter font-bold text-[var(--admin-ink)]";
 const CLASS_TABLE_ACTION =
-  "inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition hover:bg-[#fff3cc] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]";
+  "inline-flex min-h-7 items-center justify-center rounded border border-[var(--admin-gold)] bg-[#fff8e6] px-3 text-[11px] font-semibold text-[var(--admin-gold-dark)] transition  focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]";
 const CLASS_DROPDOWN_BUTTON =
   "flex min-h-8 w-full items-center justify-between gap-2 rounded px-3 text-xs font-semibold transition bg-[#FFFDF8] border border-sidebarGold/60";
 const CLASS_DROPDOWN_OPTION =
@@ -966,8 +967,12 @@ export default function Dashboard() {
     {
       key: "unitsSold",
       label: "Units Sold",
-      render: (_, product) =>
-        formatNumber(product?.units_sold ?? product?.unitsSold),
+      headerClassName: "text-center",
+      render: (_, product) => (
+        <span className="block w-full text-center">
+          {formatNumber(product?.units_sold ?? product?.unitsSold)}
+        </span>
+      ),
     },
     {
       key: "revenue",
@@ -1481,13 +1486,12 @@ export default function Dashboard() {
           <div className={CLASS_CARD_HEADER}>
             <h2 className={CLASS_SECTION_TITLE}>Top Products</h2>
 
-            <button
+            <TransparentButton
               type="button"
+              label="See All"
               className={CLASS_TABLE_ACTION}
               onClick={() => navigate("/app/product-catalog")}
-            >
-              See All
-            </button>
+            />
           </div>
 
           <DataTable
@@ -1516,13 +1520,12 @@ export default function Dashboard() {
           <div className={CLASS_CARD_HEADER}>
             <h2 className={CLASS_SECTION_TITLE}>Recent Orders</h2>
 
-            <button
+            <TransparentButton
               type="button"
+              label="See All"
               className={CLASS_TABLE_ACTION}
               onClick={() => navigate("/app/orders")}
-            >
-              See All
-            </button>
+            />
           </div>
 
           <DataTable

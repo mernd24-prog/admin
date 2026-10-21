@@ -95,10 +95,18 @@ const TaxReports = () => {
       {
         key: "tax_component",
         label: "Component",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
         render: (value) => String(value || "N/A").toUpperCase(),
       },
       { key: "entry_type", label: "Entry Type" },
-      { key: "entry_count", label: "Count", render: (value) => value || 0 },
+      {
+        key: "entry_count",
+        label: "Count",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        render: (value) => value || 0,
+      },
       {
         key: "total_amount",
         label: "Amount",

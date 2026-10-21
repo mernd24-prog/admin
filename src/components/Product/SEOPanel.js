@@ -4,6 +4,7 @@ import {
   FiMonitor,
   FiSmartphone,
   FiMoreVertical,
+  FiHash,
 } from "react-icons/fi";
 
 const CharCount = ({ value = "", max }) => {
@@ -28,22 +29,30 @@ const SEOPanel = ({ seo = {}, onChange, slug = "" }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [keywordInput, setKeywordInput] = useState("");
   const [previewMode, setPreviewMode] = useState("desktop");
+  const keywords = Array.isArray(seo.keywords) ? seo.keywords : [];
+  const maxKeywords = 20;
+  const keywordsAtMax = keywords.length >= maxKeywords;
 
   const handleKeywordAdd = (e) => {
-    if ((e.key === "Enter" || e.key === ",") && keywordInput.trim()) {
+    if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
-      const existing = Array.isArray(seo.keywords) ? seo.keywords : [];
-      if (!existing.includes(keywordInput.trim())) {
-        onChange("seo.keywords", [...existing, keywordInput.trim()]);
+
+      const keyword = keywordInput.trim();
+      if (
+        keyword &&
+        !keywords.includes(keyword) &&
+        keywords.length < maxKeywords
+      ) {
+        onChange("seo.keywords", [...keywords, keyword]);
+        setKeywordInput("");
       }
-      setKeywordInput("");
     }
   };
 
   const removeKeyword = (kw) => {
     onChange(
       "seo.keywords",
-      (seo.keywords || []).filter((k) => k !== kw),
+      keywords.filter((k) => k !== kw),
     );
   };
 
@@ -217,35 +226,58 @@ const SEOPanel = ({ seo = {}, onChange, slug = "" }) => {
       </div>
 
       {/* Keywords */}
-      <div className="space-y-1">
+      <div className="space-y-2">
         <label className="text-sm font-medium text-gray-700">Keywords</label>
-        <div className="admin-input flex min-h-[42px] flex-wrap gap-1.5 rounded-md border border-gray-300 p-2 transition-colors focus-within:border-[var(--admin-gold)]">
-          {(seo.keywords || []).map((kw) => (
-            <span
-              key={kw}
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] text-xs rounded-full"
-            >
-              {kw}
-              <button
-                type="button"
-                onClick={() => removeKeyword(kw)}
-                className="hover:text-red-500"
+        <input
+          type="text"
+          className="admin-input w-full"
+          placeholder={
+            keywordsAtMax ? `Max ${maxKeywords} keywords reached` : "Add keyword..."
+          }
+          value={keywordInput}
+          disabled={keywordsAtMax}
+          onChange={(e) => setKeywordInput(e.target.value)}
+          onKeyDown={handleKeywordAdd}
+        />
+
+        <div className="flex min-h-[34px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-2">
+          {keywords.length ? (
+            keywords.map((kw) => (
+              <span
+                key={kw}
+                className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
               >
-                ×
-              </button>
-            </span>
-          ))}
-          <input
-            type="text"
-            className="product-tag-input min-w-[120px] flex-1 text-sm"
-            placeholder="Type keyword + Enter"
-            value={keywordInput}
-            onChange={(e) => setKeywordInput(e.target.value)}
-            onKeyDown={handleKeywordAdd}
-          />
+                <FiHash size={10} className="shrink-0 opacity-60" />
+                <span className="min-w-0 break-all">{kw}</span>
+                <button
+                  type="button"
+                  onClick={() => removeKeyword(kw)}
+                  className="ml-1 shrink-0 text-sm leading-none hover:text-red-500"
+                  aria-label={`Remove keyword ${kw}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))
+          ) : (
+            <span className="text-xs text-gray-400">No keywords added yet.</span>
+          )}
         </div>
-        <p className="text-xs text-gray-400">
-          Press Enter or comma to add a keyword
+
+        <p className="select-none text-xs text-gray-400">
+          Press{" "}
+          <kbd className="rounded border border-gray-200 bg-gray-100 px-1 py-0.5 font-mono text-[10px]">
+            Enter
+          </kbd>{" "}
+          or{" "}
+          <kbd className="rounded border border-gray-200 bg-gray-100 px-1 py-0.5 font-mono text-[10px]">
+            ,
+          </kbd>{" "}
+          to add ·{" "}
+          <span className={keywordsAtMax ? "font-semibold text-red-500" : ""}>
+            {keywords.length}/{maxKeywords}
+          </span>{" "}
+          keywords
         </p>
       </div>
 

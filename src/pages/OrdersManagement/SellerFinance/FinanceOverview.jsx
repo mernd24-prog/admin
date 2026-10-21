@@ -361,9 +361,6 @@ export default function FinanceOverview() {
               Earnings and deductions for the selected date range.
             </p>
           </div>
-          <span className="rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-1.5 text-xs font-medium text-[var(--admin-muted)]">
-            Selected period
-          </span>
         </div>
 
         <div className="grid gap-0 sm:grid-cols-2 xl:grid-cols-4">

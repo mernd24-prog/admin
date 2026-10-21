@@ -571,7 +571,7 @@ const DataTable = ({
                   onClick={() => handleSort(col)}
                 >
                   <span
-                    className={`flex items-center gap-1 ${
+                    className={`flex w-full items-center gap-1 ${
                       col.headerClassName?.includes("text-center")
                         ? "justify-center"
                         : col.headerClassName?.includes("text-right")
@@ -709,7 +709,15 @@ const DataTable = ({
                         col.cellClassName || ""
                       }`}
                     >
-                      <div className="flex min-h-[32px] items-center">
+                      <div
+                        className={`flex min-h-[32px] items-center ${
+                          col.cellClassName?.includes("text-center")
+                            ? "justify-center"
+                            : col.cellClassName?.includes("text-right")
+                              ? "justify-end"
+                              : ""
+                        }`}
+                      >
                         {renderCellValue(
                           col.render
                             ? col.render(row[col.key], row, index)

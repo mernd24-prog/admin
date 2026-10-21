@@ -56,6 +56,8 @@ const COLUMNS = [
     key: "code",
     label: "HSN Code",
     sortable: true,
+    headerClassName: "text-center",
+    cellClassName: "text-center",
     render: (v) => (
       <span className="font-mono font-semibold text-[var(--admin-navy)]">
         {v}
@@ -65,22 +67,38 @@ const COLUMNS = [
   {
     key: "IGST",
     label: "IGST %",
-    render: (v) => <span className="text-sm">{v ?? "—"}%</span>,
+    headerClassName: "text-center",
+    cellClassName: "text-center",
+    render: (v) => (
+      <span className="block w-full text-center text-sm">{v ?? "—"}%</span>
+    ),
   },
   {
     key: "CGST",
     label: "CGST %",
-    render: (v) => <span className="text-sm">{v ?? "—"}%</span>,
+    headerClassName: "text-center",
+    cellClassName: "text-center",
+    render: (v) => (
+      <span className="block w-full text-center text-sm">{v ?? "—"}%</span>
+    ),
   },
   {
     key: "SGST",
     label: "SGST %",
-    render: (v) => <span className="text-sm">{v ?? "—"}%</span>,
+    headerClassName: "text-center",
+    cellClassName: "text-center",
+    render: (v) => (
+      <span className="block w-full text-center text-sm">{v ?? "—"}%</span>
+    ),
   },
   {
     key: "additionalTax",
     label: "Additional %",
-    render: (v) => <span className="text-sm">{v ?? 0}%</span>,
+    headerClassName: "text-center",
+    cellClassName: "text-center",
+    render: (v) => (
+      <span className="block w-full text-center text-sm">{v ?? 0}%</span>
+    ),
   },
   {
     key: "description",

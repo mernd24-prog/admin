@@ -113,7 +113,6 @@ const SELLER_PANEL_ROLES = new Set([
 
 const STATUS_TOGGLEABLE = new Set(["active", "inactive", "draft"]);
 
-
 const normalizeRevisionFilterValue = (value = "") => {
   const normalized = String(value ?? "")
     .trim()
@@ -1067,7 +1066,11 @@ const ProductCatalog = () => {
         render: (_, product) => {
           const stock = getEffectiveStock(product);
 
-          return stock === null ? "N/A" : stock;
+          return (
+            <div className="w-full text-center">
+              {stock === null ? "N/A" : stock}
+            </div>
+          );
         },
       },
       {
@@ -1122,7 +1125,7 @@ const ProductCatalog = () => {
                 <button
                   type="button"
                   onClick={() => handleSubmitForApproval(product)}
-                  className="whitespace-nowrap rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] px-2.5 py-1.5 text-xs font-semibold text-[var(--admin-navy)] transition hover:bg-[var(--admin-gold)]"
+                  className="whitespace-nowrap mx-auto rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)] px-2.5 py-1.5 text-xs font-semibold text-[var(--admin-navy)] transition hover:bg-[var(--admin-gold)]"
                 >
                   Submit for approval
                 </button>
@@ -1131,17 +1134,21 @@ const ProductCatalog = () => {
           }
 
           return canToggleProduct(product) ? (
-            <ToggleButton
-              isToggle={isProductActive(product)}
-              handleClick={() => handleToggle(product)}
-              requiredModule="products"
-            />
+            <div className="flex w-full items-center justify-center">
+              <ToggleButton
+                isToggle={isProductActive(product)}
+                handleClick={() => handleToggle(product)}
+                requiredModule="products"
+              />
+            </div>
           ) : (
-            <span className="whitespace-nowrap text-xs text-gray-400">
-              {getProductStatus(product) === "pending_approval"
-                ? "Awaiting admin approval"
-                : "-"}
-            </span>
+            <div className="flex w-full items-center justify-center">
+              <span className="whitespace-nowrap text-xs text-gray-400">
+                {getProductStatus(product) === "pending_approval"
+                  ? "Awaiting admin approval"
+                  : "-"}
+              </span>
+            </div>
           );
         },
       },
@@ -1379,7 +1386,6 @@ const ProductCatalog = () => {
         isOpen={galleryOpen}
         onClose={() => setGalleryOpen(false)}
       />
-
     </div>
   );
 };

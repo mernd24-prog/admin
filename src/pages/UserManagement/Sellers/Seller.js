@@ -117,6 +117,39 @@ const getGoLiveLabel = (user = {}) => {
   return label === "approval_pending" ? "Approval pending" : label;
 };
 
+const getSellerInitials = (name = "") => {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+};
+
+const SellerAvatar = ({ name, src }) => {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  if (src && !imageFailed) {
+    return (
+      <img
+        src={src}
+        alt=""
+        onError={() => setImageFailed(true)}
+        className="h-8 w-8 shrink-0 rounded-full border border-gray-200 bg-gray-50 object-cover"
+      />
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-[var(--admin-surface-soft)] text-[10px] font-semibold uppercase tracking-wide text-[var(--admin-navy)]"
+    >
+      {getSellerInitials(name)}
+    </span>
+  );
+};
+
 const Sellers = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -208,42 +241,46 @@ const Sellers = () => {
       {
         key: "full_name",
         label: "Name",
-        render: (v, row) => (
-          <button
-            type="button"
-            onClick={() => {
-              const sellerId = row?._id || row?.id;
+        render: (v, row) => {
+          const sellerName =
+            `${row?.profile?.firstName || ""} ${
+              row?.profile?.lastName || ""
+            }`.trim() ||
+            v ||
+            "N/A";
+          const avatarUrl = row?.profile?.avatarUrl;
 
-              if (sellerId) {
-                navigate(`/app/seller/view/${sellerId}`);
-              }
-            }}
-            className="group flex items-center gap-2 text-left"
-            aria-label={`View ${v || "seller"} details`}
-          >
-            <img
-              src={row?.profile?.avatarUrl || "/Img/noData.png"}
-              alt={
-                `${row?.profile?.firstName || ""} ${
-                  row?.profile?.lastName || ""
-                }`.trim() || "N/A"
-              }
-              className="h-8 w-8 shrink-0 rounded-full border border-gray-200 bg-gray-50 object-cover transition group-hover:border-[var(--admin-blue)]"
-            />
+          return (
+            <button
+              type="button"
+              onClick={() => {
+                const sellerId = row?._id || row?.id;
 
-            <div className="min-w-0">
-              <p className="truncate font-medium capitalize text-gray-800 transition group-hover:text-[var(--admin-blue)] group-hover:underline">
-                {`${row?.profile?.firstName || ""} ${
-                  row?.profile?.lastName || ""
-                }`.trim() || "N/A"}
-              </p>
+                if (sellerId) {
+                  navigate(`/app/seller/view/${sellerId}`);
+                }
+              }}
+              className="group flex items-center gap-2 text-left"
+              aria-label={`View ${sellerName} details`}
+            >
+              <SellerAvatar
+                key={`${avatarUrl || "initials"}-${sellerName}`}
+                name={sellerName}
+                src={avatarUrl}
+              />
 
-              <p className="truncate text-xs text-gray-400">
-                {row?.userName || ""}
-              </p>
-            </div>
-          </button>
-        ),
+              <div className="min-w-0">
+                <p className="truncate font-medium capitalize text-gray-800">
+                  {sellerName}
+                </p>
+
+                <p className="truncate text-xs text-gray-400">
+                  {row?.userName || ""}
+                </p>
+              </div>
+            </button>
+          );
+        },
       },
       {
         key: "email",

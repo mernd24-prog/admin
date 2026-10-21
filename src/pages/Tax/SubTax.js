@@ -55,20 +55,32 @@ const COLUMNS = [
     key: "name",
     label: "Sub-Tax Name",
     sortable: true,
+    headerClassName: "text-center",
+    cellClassName: "text-center",
     render: (v) => (
-      <span className="font-medium text-gray-800 capitalize">{v || "—"}</span>
+      <span className="block w-full text-center font-medium capitalize text-gray-800">
+        {v || "—"}
+      </span>
     ),
   },
   {
     key: "percentage",
     label: "Rate (%)",
-    render: (v) => <span className="font-mono text-sm">{v ?? "—"}%</span>,
+    headerClassName: "text-center",
+    cellClassName: "text-center",
+    render: (v) => (
+      <span className="block w-full text-center font-mono text-sm">
+        {v ?? "—"}%
+      </span>
+    ),
   },
   {
     key: "taxId",
     label: "Parent Tax",
+    headerClassName: "text-center",
+    cellClassName: "text-center",
     render: (v, row) => (
-      <span className="text-sm text-gray-600">
+      <span className="block w-full text-center text-sm text-gray-600">
         {typeof v === "object" ? v?.name : row?.tax?.name || "—"}
       </span>
     ),
