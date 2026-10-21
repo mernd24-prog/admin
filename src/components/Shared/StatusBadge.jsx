@@ -5,6 +5,10 @@ import { formatLabel } from "../../utils/formatters";
 const VARIANTS = {
   // ── Generic ──────────────────────────────────────────────────────────────
   active: "bg-green-50 text-green-700 border-green-200",
+  locked: "bg-amber-50 text-amber-700 border-amber-200",
+  payout_requested: "bg-amber-50 text-amber-700 border-amber-200",
+  reviewing: "bg-amber-50 text-amber-700 border-amber-200",
+  reversed: "bg-rose-50 text-rose-700 border-rose-200",
   inactive: "bg-gray-50 text-gray-500 border-gray-200",
   hidden: "bg-slate-50 text-slate-600 border-slate-200",
   unchanged: "bg-gray-50 text-gray-500 border-gray-200",
@@ -119,6 +123,10 @@ const DOT_COLORS = {
   adjusted: "bg-orange-500",
   captured: "bg-green-500",
   active: "bg-green-500",
+  locked: "bg-amber-500",
+  payout_requested: "bg-amber-500",
+  reviewing: "bg-amber-500",
+  reversed: "bg-rose-500",
   enabled: "bg-green-500",
   verified: "bg-emerald-500",
   seen: "bg-green-500",
