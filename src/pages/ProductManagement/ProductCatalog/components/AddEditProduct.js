@@ -862,6 +862,11 @@ export default function ProductManagementUI() {
             isApproved:
               productData?.approvalStatus === "approved" ||
               Boolean(productData?.approvedAt),
+            markAsFeatured: Boolean(
+              productData?.metadata?.featured ??
+                productData?.featured ??
+                productData?.markAsFeatured,
+            ),
             isDealProduct: Boolean(productData?.metadata?.isDealProduct),
             dealBadge:
               productData?.metadata?.dealBadge || INITIALS_DATA.dealBadge,

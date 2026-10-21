@@ -1670,7 +1670,7 @@ const SellerFinance = () => {
             onPageSizeChange={handleOverviewPageSizeChange}
             rowKey="sellerId"
             emptyText="No seller commission records found"
-            cardClassName="overflow-hidden"
+            cardClassName="overflow-hidden rounded-lg border border-[var(--admin-line)] bg-white shadow-sm"
             rowClassName={(seller) =>
               String(filters.sellerId) === String(seller.sellerId)
                 ? "bg-blue-50"
