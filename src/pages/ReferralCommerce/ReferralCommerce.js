@@ -414,47 +414,13 @@ const optionList = (options = [], fallbackValues = []) =>
     ? options
     : fallbackValues.map((value) => ({ value, label: humanize(value) }));
 
-const statusClass = (status) => {
-  const normalized = String(status || "").toLowerCase();
-  if (
-    [
-      "active",
-      "completed",
-      "available",
-      "paid",
-      "approved",
-      "resolved",
-    ].includes(normalized)
-  ) {
-    return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  }
-  if (
-    ["pending", "locked", "payout_requested", "reviewing"].includes(normalized)
-  ) {
-    return "bg-amber-50 text-amber-700 border-amber-200";
-  }
-  if (
-    [
-      "suspended",
-      "rejected",
-      "reversed",
-      "failed",
-      "cancelled",
-      "refunded",
-      "dismissed",
-    ].includes(normalized)
-  ) {
-    return "bg-rose-50 text-rose-700 border-rose-200";
-  }
-  return "bg-slate-50 text-slate-700 border-slate-200";
-};
-
 const StatusPill = ({ value }) => (
-  <span
-    className={`inline-flex max-w-full items-center rounded border px-2 py-1 text-xs font-medium ${statusClass(value)}`}
-  >
-    {formatLabel(value, "-")}
-  </span>
+  <StatusBadge
+    status={value}
+    label={value ? undefined : "-"}
+    size="sm"
+    dot
+  />
 );
 
 const IconButton = ({
