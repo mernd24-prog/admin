@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Check, ChevronDown, LogOut, X } from "lucide-react";
+import { Check, ChevronDown, Headphones, Info, LogOut, X } from "lucide-react";
 import BrandLogo from "../BrandLogo";
 import { useKYC } from "../../context/KycContext";
 import NeedHelpCard from "../Shared/NeedHelpCard";
@@ -156,9 +156,12 @@ const OnboardingSupportModal = ({
         className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[10px] bg-white p-5 shadow-2xl"
       >
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eef2ff] text-[#082f91]">
+              <Headphones size={20} aria-hidden="true" />
+            </span>
             <p className="text-[17px] font-bold text-[#082f91]">
-              Onboarding Ticket.
+              Onboarding Support
             </p>
           </div>
 
@@ -173,25 +176,32 @@ const OnboardingSupportModal = ({
         </div>
 
         <div role="tablist" aria-label="Onboarding support" className="mt-4 flex gap-5 border-b border-[#eadfcb]">
-          {[ ["new", "New Ticket"], ["previous", "Previous Tickets"] ].map(([id, label]) => (
+          {[ ["new", "Create Ticket"], ["previous", "Ticket History"] ].map(([id, label]) => (
             <button type="button" role="tab" key={id} aria-selected={tab === id} onClick={() => setTab(id)}
               className={`border-b-2 px-1 py-3 text-sm font-semibold ${tab === id ? "border-[#082f91] text-[#082f91]" : "border-transparent text-[#5f6678]"}`}>{label}</button>
           ))}
         </div>
-        {tab === "new" ? <> 
+        {tab === "new" ? <>
+        <p className="mt-4 text-sm leading-5 text-[#71809b]">
+          Tell us what you need help with and our team will assist you.
+        </p>
         <label className="mt-5 block text-sm font-semibold text-[#30384d]">
-          Message
+          Describe Your Issue <span className="text-red-500">*</span>
           <textarea
             className="mt-2 min-h-[150px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
             value={message}
             onChange={(event) => onChange(event.target.value)}
             maxLength={5000}
-            placeholder="Tell us what is blocking your onboarding."
+            placeholder="Describe the issue you’re experiencing during onboarding. Include the affected step and any relevant details."
             autoFocus
           />
         </label>
+        <p className="mt-2 flex items-start gap-2 text-xs leading-5 text-[#71809b]">
+          <Info size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+          Please don’t include passwords or sensitive banking details.
+        </p>
 
-        <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <div className="-mx-5 mt-5 flex flex-col-reverse gap-3 border-t border-[#edf0f6] px-5 pt-5 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onClose}
@@ -206,7 +216,7 @@ const OnboardingSupportModal = ({
             className="admin-btn-primary min-w-[150px]"
             disabled={submitting}
           >
-            {submitting ? "Submitting..." : "Submit"}
+            {submitting ? "Submitting..." : "Submit Ticket"}
           </button>
         </div>
         </> : <div role="tabpanel" className="mt-5 min-h-[230px] space-y-3">
