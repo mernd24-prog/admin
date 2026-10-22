@@ -38,6 +38,10 @@ const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]{3}$/;
 const GST_EXAMPLE = "27ABCDE1234F1Z2";
 const AADHAAR_REGEX = /^(?!([0-9])\1{11}$)[0-9]{12}$/;
+const maskIdentityForReview = (value = "") => {
+  const normalized = String(value || "").trim();
+  return normalized ? `********${normalized.slice(-4)}` : "-";
+};
 const BANK_ACCOUNT_REGEX = /^[0-9]{9,18}$/;
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const PERSON_NAME_REGEX = /^[A-Za-z][A-Za-z .'-]{1,119}$/;
@@ -295,10 +299,10 @@ const ReviewSection = ({ number, title, onEdit, children }) => (
   </section>
 );
 
-const ReviewInput = ({ label, value, className = "" }) => (
+const ReviewInput = ({ label, value, className = "", masked = false }) => (
   <div className={className}>
     <label className="admin-label font-inter">{label}</label>
-    <input className={REVIEW_INPUT_CLASS} value={value || "-"} readOnly />
+    <input className={`${REVIEW_INPUT_CLASS} ${masked ? "!font-mono !text-[13px] !tracking-normal" : ""}`} value={value || "-"} readOnly />
   </div>
 );
 
@@ -1076,6 +1080,8 @@ const SellerOnboarding = () => {
     message: "",
   });
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const stepRestoredRef = useRef(false);
+  const lastRejectionRef = useRef(null);
   const dateOfBirthRef = useRef(null);
   const gstNumberRef = useRef(null);
   const aadhaarOtpInputRefs = useRef([]);
@@ -1889,7 +1895,22 @@ const SellerOnboarding = () => {
   };
 
   useEffect(() => {
-    if (!flowState) return;
+    if (!flowState || !draftLoaded) return;
+    const rejection = flowState.kycStatus === "rejected"
+      ? String(flowState.kyc?.reviewedAt || flowState.organization?.updatedAt || "rejected")
+      : null;
+    const newRejection = rejection && rejection !== lastRejectionRef.current;
+    lastRejectionRef.current = rejection;
+    // Restore once; later status fetches must not move a seller out of an edited step.
+    if (stepRestoredRef.current && !newRejection) return;
+    stepRestoredRef.current = true;
+    const restoreStep = (nextStep) => {
+      let savedStep;
+      try { savedStep = JSON.parse(localStorage.getItem(draftKey) || "null")?.step; } catch {}
+      const canResumeDraft = !newRejection && nextStep < 5 &&
+        Number.isInteger(savedStep) && savedStep >= 1 && savedStep <= nextStep;
+      setStep(canResumeDraft ? savedStep : nextStep);
+    };
     const sellerProfile = flowState?.sellerProfile || {};
     const pickupAddress = sellerProfile?.pickupAddress || {};
     const hasStoredBusinessProfile =
@@ -1932,41 +1953,43 @@ const SellerOnboarding = () => {
     );
 
     if (!organizationIdParam && flowState?.requiresOnboarding === false) {
-      setStep(5);
+      restoreStep(5);
       return;
     }
     if (flowState?.kycStatus === "rejected") {
-      setStep(1);
+      restoreStep(1);
       return;
     }
     if (requiresKycRefresh) {
       // KYC documents are incomplete (not rejected) - go directly to KYC form
-      setStep(1);
+      restoreStep(1);
       return;
     }
     if (statusMeansReview && profileCompleted && kycSubmitted && bankLinked) {
-      setStep(5);
+      restoreStep(5);
       return;
     }
     if (bankRejected && profileCompleted && kycSubmitted) {
-      setStep(3);
+      restoreStep(3);
       return;
     }
     if (profileCompleted && kycSubmitted && bankLinked) {
-      setStep(4);
+      restoreStep(4);
       return;
     }
     if (profileCompleted && kycSubmitted) {
-      setStep(3);
+      restoreStep(3);
       return;
     }
     if (kycSubmitted) {
-      setStep(2);
+      restoreStep(2);
       return;
     }
 
-    setStep(1);
+    restoreStep(1);
   }, [
+    draftLoaded,
+    draftKey,
     editSection,
     flowState,
     organizationIdParam,
@@ -2976,6 +2999,7 @@ const SellerOnboarding = () => {
   const buildProfilePayload = ({ includeBankDetails = false } = {}) => {
     const legalBusinessName = profileForm.businessName.trim();
     const payload = {
+      submitOnboarding: false,
       businessName: legalBusinessName,
       displayName: legalBusinessName,
       legalBusinessName,
@@ -4644,6 +4668,16 @@ const SellerOnboarding = () => {
                       label="Date of Birth"
                       value={formatDateForDisplay(kycForm.dateOfBirth)}
                     />
+                    <ReviewInput
+                      label="PAN Number"
+                      masked
+                      value={maskIdentityForReview(kycForm.panNumber)}
+                    />
+                    <ReviewInput
+                      label="Aadhaar Number"
+                      masked
+                      value={maskIdentityForReview(kycForm.aadhaarNumber)}
+                    />
                     <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
                       <ReviewInput
                         label="City"
@@ -4700,7 +4734,8 @@ const SellerOnboarding = () => {
                     />
                     <ReviewInput
                       label="Business PAN Number"
-                      value={kycForm.panNumber}
+                      masked
+                      value={maskIdentityForReview(kycForm.panNumber)}
                     />
                     <ReviewInput
                       label="Udyog Aadhaar Number"

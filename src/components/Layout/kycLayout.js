@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Check, ChevronDown, LogOut, X } from "lucide-react";
 import BrandLogo from "../BrandLogo";
+import { useKYC } from "../../context/KycContext";
 import NeedHelpCard from "../Shared/NeedHelpCard";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
@@ -157,7 +158,7 @@ const OnboardingSupportModal = ({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[17px] font-bold text-[#082f91]">
-              Onboarding Issue.
+              Onboarding Ticket.
             </p>
           </div>
 
@@ -172,12 +173,12 @@ const OnboardingSupportModal = ({
         </div>
 
         <div role="tablist" aria-label="Onboarding support" className="mt-4 flex gap-5 border-b border-[#eadfcb]">
-          {[ ["new", "New Issue"], ["previous", "Previous Issues"] ].map(([id, label]) => (
+          {[ ["new", "New Ticket"], ["previous", "Previous Tickets"] ].map(([id, label]) => (
             <button type="button" role="tab" key={id} aria-selected={tab === id} onClick={() => setTab(id)}
               className={`border-b-2 px-1 py-3 text-sm font-semibold ${tab === id ? "border-[#082f91] text-[#082f91]" : "border-transparent text-[#5f6678]"}`}>{label}</button>
           ))}
         </div>
-        {tab === "new" ? <>
+        {tab === "new" ? <> 
         <label className="mt-5 block text-sm font-semibold text-[#30384d]">
           Message
           <textarea
@@ -242,6 +243,7 @@ const KYCStatusLayout = ({
 }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { setStep } = useKYC();
 
   const stepsNavRef = useRef(null);
   const activeStepRef = useRef(null);
@@ -505,8 +507,12 @@ const KYCStatusLayout = ({
                     ref={item.id === currentSection ? activeStepRef : null}
                     className="relative z-10 min-w-[205px] sm:min-w-[225px] lg:min-w-0"
                   >
-                    <div
-                      className={`relative flex items-center gap-[10px] transition ${
+                    <button
+                      type="button"
+                      disabled={currentIndex >= 4 || index >= currentIndex}
+                      onClick={() => setStep(index + 1)}
+                      aria-current={item.id === currentSection ? "step" : undefined}
+                      className={`w-full text-left disabled:cursor-default enabled:cursor-pointer enabled:hover:brightness-95 relative flex items-center gap-[10px] transition ${
                         item.id === currentSection
                           ? "h-[46px] rounded-l-[4px] rounded-r-[12px] border-l-[4px] border-[#E49E1C] bg-[#042586] px-[8px] text-white shadow-[0_8px_16px_rgba(8,47,145,0.18)] lg:h-[50px]"
                           : "h-[42px] bg-transparent pl-[11px] pr-[2px] text-[#042586]"
@@ -549,7 +555,7 @@ const KYCStatusLayout = ({
                           {item.label}
                         </span>
                       </span>
-                    </div>
+                    </button>
                   </div>
                 ))}
               </nav>
