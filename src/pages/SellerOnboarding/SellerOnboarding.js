@@ -37,7 +37,7 @@ import { AUTH_ROUTES } from "../auth/authRoutes";
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]{3}$/;
 const GST_EXAMPLE = "27ABCDE1234F1Z2";
-const AADHAAR_REGEX = /^[0-9]{12}$/;
+const AADHAAR_REGEX = /^(?!([0-9])\1{11}$)[0-9]{12}$/;
 const BANK_ACCOUNT_REGEX = /^[0-9]{9,18}$/;
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const PERSON_NAME_REGEX = /^[A-Za-z][A-Za-z .'-]{1,119}$/;
@@ -517,7 +517,7 @@ const hasCompleteReviewDetails = (state = {}) => {
     ) &&
     hasText(
       organization.aadhaarNumber ||
-        state.kyc?.aadhaarNumber ||
+    state.kyc?.aadhaarNumber || state.kyc?.aadhaar_number ||
         sellerProfile.aadhaarNumber,
     ) &&
     hasText(pickupAddress.line1) &&
@@ -543,6 +543,8 @@ const hasCompleteReviewDetails = (state = {}) => {
 
 const isSellerReviewLocked = (state = {}) => {
   if (!state) return false;
+  // Saving KYC or bank details does not submit the final onboarding review.
+  if (!state.onboardingSubmittedAt && !state.sellerProfile?.onboardingSubmittedAt) return false;
   if (!hasCompleteReviewDetails(state)) return false;
   const organization = state.organization || {};
   const sellerProfile = state.sellerProfile || {};
@@ -966,8 +968,8 @@ const DocumentUploadField = ({
 const BankProofGuidanceModal = ({ open, onClose }) => {
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 px-4 backdrop-blur-[2px]">
       <div className="w-full max-w-lg rounded-[10px] bg-white p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -1018,7 +1020,8 @@ const BankProofGuidanceModal = ({ open, onClose }) => {
           Got it
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
@@ -1197,12 +1200,16 @@ const SellerOnboarding = () => {
       (option) => String(option.value) === String(profileForm.businessType),
     )?.label || profileForm.businessType;
   const aadhaarNumber = kycForm.aadhaarNumber.trim();
+  const storedKyc = flowState?.kyc || {};
   const isAadhaarVerified =
-    aadhaarVerification.verified &&
-    aadhaarVerification.number === aadhaarNumber;
+    (aadhaarVerification.verified && aadhaarVerification.number === aadhaarNumber) ||
+    ((storedKyc.aadhaarVerified === true || storedKyc.aadhaar_verified === true) &&
+      String(storedKyc.aadhaarNumber || storedKyc.aadhaar_number || "").trim() === aadhaarNumber);
   const panNumber = kycForm.panNumber.trim();
   const isPanVerified =
-    panVerification.verified && panVerification.number === panNumber;
+    (panVerification.verified && panVerification.number === panNumber) ||
+    ((storedKyc.panVerified === true || storedKyc.pan_verified === true) &&
+      String(storedKyc.panNumber || storedKyc.pan_number || "").trim().toUpperCase() === panNumber);
 
   const canAccess = useMemo(
     () => !!onboardingToken || !!accessToken,
@@ -1489,12 +1496,12 @@ const SellerOnboarding = () => {
         setKycForm((prev) => ({
           ...prev,
           panNumber:
-            prev.panNumber || kyc?.panNumber || sellerProfile?.panNumber || "",
+            prev.panNumber || kyc?.panNumber || kyc?.pan_number || sellerProfile?.panNumber || "",
           gstNumber:
             prev.gstNumber || kyc?.gstNumber || sellerProfile?.gstNumber || "",
           aadhaarNumber:
             prev.aadhaarNumber ||
-            kyc?.aadhaarNumber ||
+            kyc?.aadhaarNumber || kyc?.aadhaar_number ||
             sellerProfile?.aadhaarNumber ||
             "",
           legalName:
@@ -1716,12 +1723,12 @@ const SellerOnboarding = () => {
     setKycForm((prev) => ({
       ...prev,
       panNumber:
-        prev.panNumber || kyc?.panNumber || sellerProfile?.panNumber || "",
+        prev.panNumber || kyc?.panNumber || kyc?.pan_number || sellerProfile?.panNumber || "",
       gstNumber:
         prev.gstNumber || kyc?.gstNumber || sellerProfile?.gstNumber || "",
       aadhaarNumber:
         prev.aadhaarNumber ||
-        kyc?.aadhaarNumber ||
+        kyc?.aadhaarNumber || kyc?.aadhaar_number ||
         sellerProfile?.aadhaarNumber ||
         "",
       legalName:
@@ -1840,9 +1847,14 @@ const SellerOnboarding = () => {
     const verified =
       source?.aadhaarVerified === true || source?.aadhaar_verified === true;
     const number =
-      source?.aadhaarNumber || source?.aadhaar_number || kycForm.aadhaarNumber;
+      source?.aadhaar_number || source?.aadhaarNumber || kycForm.aadhaarNumber;
 
-    if (!verified || !number) return;
+    if (!verified || !number) {
+      if (source?.aadhaarVerified === false || source?.aadhaar_verified === false) {
+        setAadhaarVerification({ verified: false, number: "", referenceId: "", verifiedAt: "", testMode: false, message: "" });
+      }
+      return;
+    }
 
     setAadhaarVerification({
       verified: true,
@@ -1859,9 +1871,14 @@ const SellerOnboarding = () => {
   const hydratePanVerification = (source = {}) => {
     const verified =
       source?.panVerified === true || source?.pan_verified === true;
-    const number = source?.panNumber || source?.pan_number || kycForm.panNumber;
+    const number = source?.pan_number || source?.panNumber || kycForm.panNumber;
 
-    if (!verified || !number) return;
+    if (!verified || !number) {
+      if (source?.panVerified === false || source?.pan_verified === false) {
+        setPanVerification({ verified: false, number: "", verifiedAt: "", message: "" });
+      }
+      return;
+    }
 
     setPanVerification({
       verified: true,
@@ -1906,10 +1923,9 @@ const SellerOnboarding = () => {
         ["submitted", "under_review", "verified"].includes(
           flowState?.kycStatus,
         ));
-    const statusMeansReview =
-      flowState?.kycStatus === "submitted" ||
-      flowState?.kycStatus === "under_review" ||
-      flowState?.onboardingStatus === "under_review";
+    const statusMeansReview = Boolean(
+      flowState?.sellerProfile?.onboardingSubmittedAt,
+    );
 
     setKycSubmittedApi(
       Boolean(kycSubmitted && flowState?.kycStatus !== "rejected"),
@@ -2207,7 +2223,7 @@ const SellerOnboarding = () => {
     if (!AADHAAR_REGEX.test(number)) {
       setKycErrors((prev) => ({
         ...prev,
-        aadhaarNumber: "Aadhaar must be 12 digits",
+        aadhaarNumber: "Enter a 12-digit Aadhaar number; all digits cannot be the same.",
       }));
       return;
     }
@@ -2882,7 +2898,7 @@ const SellerOnboarding = () => {
     if (!kycForm.aadhaarNumber.trim()) {
       errors.aadhaarNumber = "Aadhaar number is required";
     } else if (!AADHAAR_REGEX.test(kycForm.aadhaarNumber.trim())) {
-      errors.aadhaarNumber = "Aadhaar must be 12 digits (12341048002615)";
+      errors.aadhaarNumber = "Enter a 12-digit Aadhaar number; all digits cannot be the same.";
     } else if (!isAadhaarVerified) {
       errors.aadhaarNumber = "Verify Aadhaar OTP before continuing.";
     }
@@ -3407,6 +3423,19 @@ const SellerOnboarding = () => {
     if (!validateBankDetails()) return;
     try {
       setPageLoading(true);
+      if (kycForm.bankProofFile) {
+        const kycPayload = await buildKycPayload({
+          includeGstCertificate: true,
+          includeBusinessType: true,
+        });
+        const kycResponse = await dispatch(submitSellerKyc(kycPayload)).unwrap();
+        const uploadedDocuments = unwrapKycDocuments(kycResponse);
+        if (!uploadedDocuments.bankProofUrl) {
+          throw new Error("Bank proof could not be saved. Please try again.");
+        }
+        setDocumentUrls((prev) => ({ ...prev, ...uploadedDocuments }));
+        setKycForm((prev) => ({ ...prev, bankProofFile: null }));
+      }
       const payload = buildProfilePayload({ includeBankDetails: true });
       await dispatch(updateSellerOnboardingProfile(payload)).unwrap();
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
@@ -3483,6 +3512,10 @@ const SellerOnboarding = () => {
       const payload = buildProfilePayload({ includeBankDetails: true });
       await dispatch(updateSellerOnboardingProfile(payload)).unwrap();
       await saveOrganizationFromOnboarding();
+      await dispatch(updateSellerOnboardingProfile({
+        ...payload,
+        submitOnboarding: true,
+      })).unwrap();
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
       localStorage.removeItem(draftKey);
       setStep(5);
@@ -4070,7 +4103,7 @@ const SellerOnboarding = () => {
 
                   <div>
                     <label className="mb-[6px] block text-[13px] font-medium leading-[17px] text-[#484555]">
-                      Udhyog Aadhaar Number
+                      Udhyog Aadhaar Number (Optional)
                     </label>
                     <input
                       name="udyogAadhaarNumber"
