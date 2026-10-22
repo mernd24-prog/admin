@@ -38,6 +38,10 @@ const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]{3}$/;
 const GST_EXAMPLE = "27ABCDE1234F1Z2";
 const AADHAAR_REGEX = /^(?!([0-9])\1{11}$)[0-9]{12}$/;
+const maskIdentityForReview = (value = "") => {
+  const normalized = String(value || "").trim();
+  return normalized ? `********${normalized.slice(-4)}` : "-";
+};
 const BANK_ACCOUNT_REGEX = /^[0-9]{9,18}$/;
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const PERSON_NAME_REGEX = /^[A-Za-z][A-Za-z .'-]{1,119}$/;
@@ -295,10 +299,10 @@ const ReviewSection = ({ number, title, onEdit, children }) => (
   </section>
 );
 
-const ReviewInput = ({ label, value, className = "" }) => (
+const ReviewInput = ({ label, value, className = "", masked = false }) => (
   <div className={className}>
     <label className="admin-label font-inter">{label}</label>
-    <input className={REVIEW_INPUT_CLASS} value={value || "-"} readOnly />
+    <input className={`${REVIEW_INPUT_CLASS} ${masked ? "!font-mono !text-[13px] !tracking-normal" : ""}`} value={value || "-"} readOnly />
   </div>
 );
 
@@ -4664,6 +4668,16 @@ const SellerOnboarding = () => {
                       label="Date of Birth"
                       value={formatDateForDisplay(kycForm.dateOfBirth)}
                     />
+                    <ReviewInput
+                      label="PAN Number"
+                      masked
+                      value={maskIdentityForReview(kycForm.panNumber)}
+                    />
+                    <ReviewInput
+                      label="Aadhaar Number"
+                      masked
+                      value={maskIdentityForReview(kycForm.aadhaarNumber)}
+                    />
                     <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
                       <ReviewInput
                         label="City"
@@ -4720,7 +4734,8 @@ const SellerOnboarding = () => {
                     />
                     <ReviewInput
                       label="Business PAN Number"
-                      value={kycForm.panNumber}
+                      masked
+                      value={maskIdentityForReview(kycForm.panNumber)}
                     />
                     <ReviewInput
                       label="Udyog Aadhaar Number"
