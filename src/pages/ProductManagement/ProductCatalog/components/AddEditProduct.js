@@ -3544,14 +3544,19 @@ export default function ProductManagementUI() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-xs font-semibold text-gray-700">Shipping profiles</span>
                 <div className="flex items-center gap-2">
-                  <a
-                    href="/app/shipping-profiles"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // window.open copies sessionStorage from its opener when
+                      // the new browsing context is created. Detach the opener
+                      // immediately afterward to prevent reverse tab access.
+                      const profileTab = window.open("/app/shipping-profiles", "_blank");
+                      if (profileTab) profileTab.opener = null;
+                    }}
                     className="inline-flex items-center gap-1 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] hover:bg-[var(--admin-gold-soft)]"
                   >
                     <FiPlus aria-hidden="true" /> Create profile
-                  </a>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setShippingProfilesRefresh(value => value + 1)}
@@ -3568,16 +3573,21 @@ export default function ProductManagementUI() {
               <div className="flex items-start justify-end gap-2">
                 {formData?.shipping?.shippingProfileId && (
                   <div className="flex items-center gap-3 whitespace-nowrap">
-                    <a
-                      href={`/app/shipping-profiles?edit=${encodeURIComponent(
-                        formData.shipping.shippingProfileId,
-                      )}`}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const profileTab = window.open(
+                          `/app/shipping-profiles?edit=${encodeURIComponent(
+                            formData.shipping.shippingProfileId,
+                          )}`,
+                          "_blank",
+                        );
+                        if (profileTab) profileTab.opener = null;
+                      }}
                       className="text-xs font-semibold text-[var(--admin-blue)] hover:underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
                     >
                       Edit profile
-                    </a>
+                    </button>
 
                     <button
                       type="button"
