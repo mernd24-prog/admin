@@ -12,7 +12,8 @@ import { PageHeader, ConfirmModal } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import SearchInput from "../../../components/Atoms/SearchInput/SearchInput";
 import { SkeletonLoader } from "../../../components/Loader/SkeletonLoader";
-import { ACTIONS } from "../../../_helpers/usePermission";
+import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
+import { isSellerPanel } from "../../../_helpers/panelConfig";
 import { categoryValidationSchema } from "../../../_helpers/validationSchemas";
 import CategorySetup from "./components/CategorySetup";
 import { CategoryAttributesPanel } from "./CategoryAttributes";
@@ -30,6 +31,8 @@ import {
 const CATEGORY_TABLE_PAGE_SIZE = 10;
 
 const ProductCategories = () => {
+  const { isSeller } = usePermission();
+  const isSellerAccount = isSellerPanel() || isSeller;
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
@@ -995,7 +998,7 @@ const ProductCategories = () => {
             onClick: () => handleNavigate(currentPath.slice(0, index + 1)),
           })),
         ]}
-        actions={
+        actions={!isSellerAccount ? (
           <PermissionGuard module="categories" action={ACTIONS.CREATE} hide>
             <button
               type="button"
@@ -1009,7 +1012,7 @@ const ProductCategories = () => {
               Add Category
             </button>
           </PermissionGuard>
-        }
+        ) : null}
       />
 
       {/* Main Content */}

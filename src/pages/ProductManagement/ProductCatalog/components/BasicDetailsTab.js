@@ -1530,21 +1530,21 @@ const submitBrandRequest = async (values) => {
 
   const handleCategorySubmit = async () => {
     try {
-      const type =
-        categoryForm.parentCategory?.value !== "ROOT" ? "CHILD" : "ROOT";
+      const selectedParentKey = categoryForm.parentCategory?.value;
+      const isRootCategory = !selectedParentKey || selectedParentKey === "ROOT";
 
       const reqData = {
-        name: categoryForm.categoryName,
+        name: categoryForm.categoryName.trim(),
         bannerUrl: categoryForm.bannerUrl,
         iconUrl: categoryForm.iconUrl,
-        type,
-        isDisable: true,
+        type: isRootCategory ? "ROOT" : "CHILD",
+        active: true,
         isDashboardVisible: categoryForm?.isDashboardVisible,
         priority: categoryForm?.priority,
       };
 
-      if (type === "CHILD") {
-        reqData.parentKey = categoryForm.parentCategory.value;
+      if (!isRootCategory) {
+        reqData.parentKey = selectedParentKey;
 
         reqData.level = 1;
       }
@@ -1587,7 +1587,15 @@ const submitBrandRequest = async (values) => {
 
       fetchAllData([API_CALL_OBJECT["Category List"]]);
     } catch (error) {
-      toast.error(error?.message || "Failed to create category");
+      const errorMessage =
+        typeof error === "string"
+          ? error
+          : error?.message ||
+            error?.error?.message ||
+            error?.data?.message ||
+            error?.response?.data?.message ||
+            "Failed to create category";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -1899,20 +1907,17 @@ const submitBrandRequest = async (values) => {
                   />
                 </div>
 
-                <PermissionGuard
-                  module="categories"
-                  action="create"
-                  allowSeller
-                  hide
-                >
-                  <button
-                    type="button"
-                    className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
-                    onClick={() => setIsCategoryModal(true)}
-                  >
-                    + Add
-                  </button>
-                </PermissionGuard>
+                {!isSellerPanelUser && (
+                  <PermissionGuard module="categories" action="create" hide>
+                    <button
+                      type="button"
+                      className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
+                      onClick={() => setIsCategoryModal(true)}
+                    >
+                      + Add
+                    </button>
+                  </PermissionGuard>
+                )}
 
                 <button
                   type="button"
@@ -2437,7 +2442,7 @@ const submitBrandRequest = async (values) => {
           CATEGORY MODAL
           ========================================================== */}
 
-      <CategorySetup
+      {!isSellerPanelUser && <CategorySetup
         isOpen={isCategoryModal}
         formData={categoryForm}
         setFormData={setCategoryForm}
@@ -2461,7 +2466,7 @@ const submitBrandRequest = async (values) => {
         closeButtonText="Cancel"
         showPublish={false}
         handleNameBlur={handleNameBlur}
-      />
+      />}
 
       {/* ==========================================================
           HSN MODAL

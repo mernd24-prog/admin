@@ -125,10 +125,10 @@ const STATUS_ALIASES = {
 
 const normalizeStatusKey = (status = "") =>
   STATUS_ALIASES[
-    String(status || "")
-      .trim()
-      .toLowerCase()
-      .replace(/[-\s]+/g, "_")
+  String(status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_")
   ] ||
   String(status || "")
     .trim()
@@ -267,10 +267,10 @@ const getReturnItemQuantity = (item = {}, requestStatus = "") =>
         String(requestStatus).toLowerCase(),
       )
         ? firstDefined(
-            item.requestedQuantity,
-            item.requested_quantity,
-            item.quantity,
-          )
+          item.requestedQuantity,
+          item.requested_quantity,
+          item.quantity,
+        )
         : undefined,
       item.approvedQuantity,
       item.approved_quantity,
@@ -581,9 +581,9 @@ const buildSellerLookup = (relations = {}) => {
     );
     remember(
       shipment.sellerId ||
-        shipment.seller_id ||
-        shipment.seller?.id ||
-        shipment.seller?._id,
+      shipment.seller_id ||
+      shipment.seller?.id ||
+      shipment.seller?._id,
       shipment.organizationId || shipment.organization_id,
       {
         sellerName:
@@ -601,8 +601,8 @@ const getOrderTaxRates = (taxBreakup = {}, items = []) => {
     Array.isArray(taxBreakup.items) && taxBreakup.items.length
       ? taxBreakup.items
       : items.map((item) =>
-          normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {}),
-        );
+        normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {}),
+      );
   const rates = sourceItems
     .map((taxItem, index) =>
       firstDefined(
@@ -666,10 +666,10 @@ const groupItemsBySeller = (items = [], relations = {}) => {
 
 const sameSellerGroup = (entry = {}, group = {}) =>
   String(firstDefined(entry.sellerId, entry.seller_id, "")) ===
-    String(group.sellerId || "") &&
+  String(group.sellerId || "") &&
   String(
     firstDefined(entry.organizationId, entry.organization_id, "default") ||
-      "default",
+    "default",
   ) === String(group.organizationId || "default");
 
 const groupItemsBySellerFromItems = (items = []) =>
@@ -735,7 +735,7 @@ const buildSellerSettlements = (items = []) =>
             itemTax.taxableAmount,
             itemTax.taxable_amount,
             lineTotal -
-              money(firstDefined(item.discount_amount, item.discountAmount)),
+            money(firstDefined(item.discount_amount, item.discountAmount)),
           ),
         );
         const taxAmount = money(
@@ -1238,7 +1238,7 @@ const commissionGstBaseNote = (
 const getOrderItemId = (item = {}) =>
   String(
     firstDefined(item.id, item._id, item.order_item_id, item.orderItemId, "") ||
-      "",
+    "",
   );
 
 const getItemProductId = (item = {}) =>
@@ -1486,9 +1486,9 @@ const getCommissionForItem = (item = {}, records = []) => {
         productId && candidate.productIds.includes(String(productId)),
     ).length === 1
       ? candidates.find(
-          (candidate) =>
-            productId && candidate.productIds.includes(String(productId)),
-        )?.record
+        (candidate) =>
+          productId && candidate.productIds.includes(String(productId)),
+      )?.record
       : null) ||
     null
   );
@@ -1625,26 +1625,26 @@ const buildSimpleItemPayoutRows = (
     const gstTcsTaxableBase = useReconciledLine
       ? taxableBase
       : money(
-          firstDefined(
-            metadata.taxableSupplyAmount,
-            metadata.gstTcsTaxableAmount,
-            metadata.gst_tcs_taxable_amount,
-            pricing.gstTcsTaxableAmount,
-            pricing.gst_tcs_taxable_amount,
-            taxableBase,
-          ),
-        );
+        firstDefined(
+          metadata.taxableSupplyAmount,
+          metadata.gstTcsTaxableAmount,
+          metadata.gst_tcs_taxable_amount,
+          pricing.gstTcsTaxableAmount,
+          pricing.gst_tcs_taxable_amount,
+          taxableBase,
+        ),
+      );
     const incomeTaxTdsTaxableBase = useReconciledLine
       ? taxableBase
       : money(
-          firstDefined(
-            metadata.incomeTaxTdsTaxableAmount,
-            metadata.income_tax_tds_taxable_amount,
-            pricing.incomeTaxTdsTaxableAmount,
-            pricing.income_tax_tds_taxable_amount,
-            taxableBase,
-          ),
-        );
+        firstDefined(
+          metadata.incomeTaxTdsTaxableAmount,
+          metadata.income_tax_tds_taxable_amount,
+          pricing.incomeTaxTdsTaxableAmount,
+          pricing.income_tax_tds_taxable_amount,
+          taxableBase,
+        ),
+      );
     const productShare = productTotal > 0 ? lineTotal / productTotal : 0;
     const taxableShare =
       taxableTotal > 0 ? taxableBase / taxableTotal : productShare;
@@ -1692,13 +1692,13 @@ const buildSimpleItemPayoutRows = (
     const discount = discountIncluded
       ? 0
       : money(
-          firstDefined(
-            pricing.marketplaceFundedDiscountAmount,
-            pricing.marketplace_funded_discount_amount,
-            product.marketplaceFundedDiscountAmount,
-            seller.marketplaceFundedDiscount * productShare,
-          ),
-        );
+        firstDefined(
+          pricing.marketplaceFundedDiscountAmount,
+          pricing.marketplace_funded_discount_amount,
+          product.marketplaceFundedDiscountAmount,
+          seller.marketplaceFundedDiscount * productShare,
+        ),
+      );
     const commissionRate = money(
       firstDefined(
         metadata.platformFeeRate,
@@ -1713,16 +1713,16 @@ const buildSimpleItemPayoutRows = (
       useReconciledLine && commissionRate > 0
         ? money((taxableBase * commissionRate) / 100)
         : money(
-            firstDefined(
-              record?.commission_amount,
-              record?.commissionAmount,
-              metadata.platformFeeAmount,
-              metadata.commissionFeeAmount,
-              product.platformFeeAmount,
-              pricing.platformFeeAmount,
-              seller.commissionFee * taxableShare,
-            ),
-          );
+          firstDefined(
+            record?.commission_amount,
+            record?.commissionAmount,
+            metadata.platformFeeAmount,
+            metadata.commissionFeeAmount,
+            product.platformFeeAmount,
+            pricing.platformFeeAmount,
+            seller.commissionFee * taxableShare,
+          ),
+        );
     const commissionGstRate = money(
       firstDefined(
         metadata.platformFeeTaxRate,
@@ -1736,15 +1736,15 @@ const buildSimpleItemPayoutRows = (
     const commissionGst = useReconciledLine
       ? money((commission * commissionGstRate) / 100)
       : money(
-          firstDefined(
-            record?.tax_amount,
-            record?.taxAmount,
-            metadata.platformFeeTaxAmount,
-            product.platformFeeTaxAmount,
-            pricing.platformFeeTaxAmount,
-            seller.platformFeeTax * taxableShare,
-          ),
-        );
+        firstDefined(
+          record?.tax_amount,
+          record?.taxAmount,
+          metadata.platformFeeTaxAmount,
+          product.platformFeeTaxAmount,
+          pricing.platformFeeTaxAmount,
+          seller.platformFeeTax * taxableShare,
+        ),
+      );
     const commissionBase = money(
       firstDefined(
         metadata.sellerCommissionBaseAmount,
@@ -1765,23 +1765,23 @@ const buildSimpleItemPayoutRows = (
     const gstTcs = useReconciledLine
       ? money((taxableBase * money(seller.gstTcsRate)) / 100)
       : money(
-          firstDefined(
-            metadata.gstTcsAmount,
-            pricing.gstTcsAmount,
-            pricing.gst_tcs_amount,
-            seller.gstTcsAmount * taxableShare,
-          ),
-        );
+        firstDefined(
+          metadata.gstTcsAmount,
+          pricing.gstTcsAmount,
+          pricing.gst_tcs_amount,
+          seller.gstTcsAmount * taxableShare,
+        ),
+      );
     const incomeTaxTds = useReconciledLine
       ? money((taxableBase * money(seller.incomeTaxTdsRate)) / 100)
       : money(
-          firstDefined(
-            metadata.incomeTaxTdsAmount,
-            pricing.incomeTaxTdsAmount,
-            pricing.income_tax_tds_amount,
-            seller.incomeTaxTdsAmount * taxableShare,
-          ),
-        );
+        firstDefined(
+          metadata.incomeTaxTdsAmount,
+          pricing.incomeTaxTdsAmount,
+          pricing.income_tax_tds_amount,
+          seller.incomeTaxTdsAmount * taxableShare,
+        ),
+      );
     const netGstTcs = money(gstTcs * (1 - returnRatio));
     const netIncomeTaxTds = money(incomeTaxTds * (1 - returnRatio));
     const netGstTcsTaxableBase = money(gstTcsTaxableBase * (1 - returnRatio));
@@ -1790,13 +1790,13 @@ const buildSimpleItemPayoutRows = (
     );
     const computedOriginalPayout = money(
       productAmount +
-        shipping +
-        discount -
-        shippingDeduction -
-        commission -
-        commissionGst -
-        gstTcs -
-        incomeTaxTds,
+      shipping +
+      discount -
+      shippingDeduction -
+      commission -
+      commissionGst -
+      gstTcs -
+      incomeTaxTds,
     );
     const backendRefundRecovery = money(
       firstDefined(
@@ -1818,19 +1818,19 @@ const buildSimpleItemPayoutRows = (
           ? Math.max(0, money(backendNetPayout - refundRecovery))
           : backendNetPayout
         : Math.max(
-            0,
-            money(
-              productAmount +
-                shipping +
-                discount -
-                shippingDeduction -
-                commission -
-                commissionGst -
-                gstTcs -
-                incomeTaxTds -
-                refundRecovery,
-            ),
-          );
+          0,
+          money(
+            productAmount +
+            shipping +
+            discount -
+            shippingDeduction -
+            commission -
+            commissionGst -
+            gstTcs -
+            incomeTaxTds -
+            refundRecovery,
+          ),
+        );
     const beforeReturn = money(finalPayout + refundRecovery);
     const originalShippingNet = money(shipping - shippingDeduction);
     const nonShippingOriginalPayout = money(
@@ -1877,15 +1877,15 @@ const buildSimpleItemPayoutRows = (
               : isReturned
                 ? "Partially returned"
                 : displayStatus(
-                    firstDefined(
-                      record?.status,
-                      item.payout_status,
-                      item.payoutStatus,
-                      item.delivery_status,
-                      item.deliveryStatus,
-                      "pending",
-                    ),
+                  firstDefined(
+                    record?.status,
+                    item.payout_status,
+                    item.payoutStatus,
+                    item.delivery_status,
+                    item.deliveryStatus,
+                    "pending",
                   ),
+                ),
       orderedQuantity: itemQuantity,
       returnedQuantity,
       cancelledQuantity,
@@ -1894,7 +1894,7 @@ const buildSimpleItemPayoutRows = (
       returnRatio,
       customerRefundAmount: money(
         (returnImpact.refundAmount || 0) +
-          (cancellationImpact.refundAmount || 0),
+        (cancellationImpact.refundAmount || 0),
       ),
       productAmount,
       shipping,
@@ -1920,7 +1920,7 @@ const buildSimpleItemPayoutRows = (
       incomeTaxTdsTaxableBase,
       taxAmount: money(
         money(firstDefined(tax.taxAmount, tax.tax_amount, 0)) +
-          money(firstDefined(tax.cessAmount, tax.cess_amount, 0)),
+        money(firstDefined(tax.cessAmount, tax.cess_amount, 0)),
       ),
       reconciledLegacySnapshot: useReconciledLine,
       netGstTcs,
@@ -2897,12 +2897,12 @@ const OrderSummary = () => {
     Math.max(
       0,
       subtotalAmount -
-        discountAmount +
-        taxPayableAmount +
-        deliveryChargeAmount +
-        customerPlatformFeeAmount +
-        customerPlatformFeeTaxAmount +
-        codChargeAmount,
+      discountAmount +
+      taxPayableAmount +
+      deliveryChargeAmount +
+      customerPlatformFeeAmount +
+      customerPlatformFeeTaxAmount +
+      codChargeAmount,
     ).toFixed(2),
   );
   const customerPayableAmount = Number(
@@ -3004,9 +3004,9 @@ const OrderSummary = () => {
     );
   const displayedOrderStatus =
     hasPendingItemRequest &&
-    ["delivered", "fulfilled"].includes(
-      String(order.status || "").toLowerCase(),
-    )
+      ["delivered", "fulfilled"].includes(
+        String(order.status || "").toLowerCase(),
+      )
       ? "partially_delivered"
       : order.status;
   const invoice = relations.invoice || relations.taxInvoice || null;
@@ -3234,7 +3234,7 @@ const OrderSummary = () => {
     ) {
       toast.error(
         state.cancellationPreviewError ||
-          "Wait for the cancellation impact to be calculated",
+        "Wait for the cancellation impact to be calculated",
       );
       return;
     }
@@ -3252,15 +3252,15 @@ const OrderSummary = () => {
       const res =
         formData.status === "cancelled"
           ? await dispatch(
-              orderCancel({
-                orderId,
-                reason: formData.reason,
-                reasonCode: formData.reasonCode,
-                refundMethod: formData.refundMethod,
-                items: cancellationItems,
-                idempotencyKey: `${isSeller ? "seller" : "admin"}:${orderId}:${Date.now()}`,
-              }),
-            ).unwrap()
+            orderCancel({
+              orderId,
+              reason: formData.reason,
+              reasonCode: formData.reasonCode,
+              refundMethod: formData.refundMethod,
+              items: cancellationItems,
+              idempotencyKey: `${isSeller ? "seller" : "admin"}:${orderId}:${Date.now()}`,
+            }),
+          ).unwrap()
           : await dispatch(updateOrderStatus(payload)).unwrap();
       toast.success(res?.message || "Order updated successfully");
       setState((prev) => ({ ...prev, statusModal: false }));
@@ -3629,8 +3629,8 @@ const OrderSummary = () => {
                         const variantLabel = getOrderItemVariantLabel(item);
                         const displayVariant =
                           variantLabel &&
-                          variantLabel !== "undefined" &&
-                          variantLabel !== "null"
+                            variantLabel !== "undefined" &&
+                            variantLabel !== "null"
                             ? variantLabel
                             : "N/A";
                         const productId = firstDefined(
@@ -3758,20 +3758,20 @@ const OrderSummary = () => {
                 value={
                   isSeller
                     ? String(
-                        firstDefined(
-                          order.payment_provider,
-                          order.paymentProvider,
-                          "",
-                        ),
-                      ).toLowerCase() === "cod"
+                      firstDefined(
+                        order.payment_provider,
+                        order.paymentProvider,
+                        "",
+                      ),
+                    ).toLowerCase() === "cod"
                       ? "COD"
                       : "Prepaid"
                     : displayStatus(
-                        firstDefined(
-                          order.payment_provider,
-                          order.paymentProvider,
-                        ),
-                      )
+                      firstDefined(
+                        order.payment_provider,
+                        order.paymentProvider,
+                      ),
+                    )
                 }
               />
               <InfoRow
@@ -3888,29 +3888,29 @@ const OrderSummary = () => {
                 money(taxBreakup.sgstAmount) > 0 ||
                 money(taxBreakup.igstAmount) > 0 ||
                 money(taxBreakup.cessAmount) > 0) && (
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#65718b]">
-                  {money(taxBreakup.cgstAmount) > 0 && (
-                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                      CGST: {formatIndianNumber(taxBreakup.cgstAmount)}
-                    </span>
-                  )}
-                  {money(taxBreakup.sgstAmount) > 0 && (
-                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                      SGST: {formatIndianNumber(taxBreakup.sgstAmount)}
-                    </span>
-                  )}
-                  {money(taxBreakup.igstAmount) > 0 && (
-                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                      IGST: {formatIndianNumber(taxBreakup.igstAmount)}
-                    </span>
-                  )}
-                  {money(taxBreakup.cessAmount) > 0 && (
-                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                      Cess: {formatIndianNumber(taxBreakup.cessAmount)}
-                    </span>
-                  )}
-                </div>
-              )}
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#65718b]">
+                    {money(taxBreakup.cgstAmount) > 0 && (
+                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
+                        CGST: {formatIndianNumber(taxBreakup.cgstAmount)}
+                      </span>
+                    )}
+                    {money(taxBreakup.sgstAmount) > 0 && (
+                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
+                        SGST: {formatIndianNumber(taxBreakup.sgstAmount)}
+                      </span>
+                    )}
+                    {money(taxBreakup.igstAmount) > 0 && (
+                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
+                        IGST: {formatIndianNumber(taxBreakup.igstAmount)}
+                      </span>
+                    )}
+                    {money(taxBreakup.cessAmount) > 0 && (
+                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
+                        Cess: {formatIndianNumber(taxBreakup.cessAmount)}
+                      </span>
+                    )}
+                  </div>
+                )}
             </div>
             {Array.isArray(taxBreakup.items) && taxBreakup.items.length > 0 && (
               <div className="mt-3">
@@ -4412,13 +4412,13 @@ const OrderSummary = () => {
                                             )}
                                             {getReturnItemVariantText(item)
                                               ? ` · ${getReturnItemVariantText(
-                                                  item,
-                                                )}`
+                                                item,
+                                              )}`
                                               : ""}
                                             {getReturnItemOrderItemId(item)
                                               ? ` · Item ${getReturnItemOrderItemId(
-                                                  item,
-                                                ).slice(0, 8)}`
+                                                item,
+                                              ).slice(0, 8)}`
                                               : ""}
                                           </div>
                                         </div>
@@ -4632,9 +4632,9 @@ const OrderSummary = () => {
                   ? itemIncomeTaxTdsBase
                   : seller.incomeTaxTdsReversal > 0
                     ? firstDefined(
-                        seller.netIncomeTaxTdsTaxableBase,
-                        seller.incomeTaxTdsTaxableBase,
-                      )
+                      seller.netIncomeTaxTdsTaxableBase,
+                      seller.incomeTaxTdsTaxableBase,
+                    )
                     : seller.incomeTaxTdsTaxableBase;
                 const hasRefundAdjustment =
                   itemRefundRecovery > 0 ||
@@ -5058,55 +5058,55 @@ const OrderSummary = () => {
           {["ready_to_ship", "shipped", "out_for_delivery"].includes(
             formData.status,
           ) && (
-            <FormSection
-              title="Shipment Details"
-              subtitle="Enter the tracking information for this shipment."
-            >
-              <div className="space-y-4">
-                <Input
-                  labelName="Tracking Number"
-                  value={formData.trackingNumber}
-                  onChange={(event) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      trackingNumber: event.target.value,
-                    }))
-                  }
-                  name="trackingNumber"
-                  placeholder="AWB / tracking number"
-                  maxLength={200}
-                />
+              <FormSection
+                title="Shipment Details"
+                subtitle="Enter the tracking information for this shipment."
+              >
+                <div className="space-y-4">
+                  <Input
+                    labelName="Tracking Number"
+                    value={formData.trackingNumber}
+                    onChange={(event) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        trackingNumber: event.target.value,
+                      }))
+                    }
+                    name="trackingNumber"
+                    placeholder="AWB / tracking number"
+                    maxLength={200}
+                  />
 
-                <Input
-                  labelName="Carrier / Courier"
-                  value={formData.carrierName}
-                  onChange={(event) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      carrierName: event.target.value,
-                    }))
-                  }
-                  name="carrierName"
-                  placeholder="e.g. Delhivery, BlueDart, FedEx"
-                  maxLength={100}
-                />
+                  <Input
+                    labelName="Carrier / Courier"
+                    value={formData.carrierName}
+                    onChange={(event) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        carrierName: event.target.value,
+                      }))
+                    }
+                    name="carrierName"
+                    placeholder="e.g. Delhivery, BlueDart, FedEx"
+                    maxLength={100}
+                  />
 
-                <Input
-                  labelName="Tracking URL (optional)"
-                  value={formData.carrierUrl}
-                  onChange={(event) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      carrierUrl: event.target.value,
-                    }))
-                  }
-                  name="carrierUrl"
-                  placeholder="https://..."
-                  maxLength={500}
-                />
-              </div>
-            </FormSection>
-          )}
+                  <Input
+                    labelName="Tracking URL (optional)"
+                    value={formData.carrierUrl}
+                    onChange={(event) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        carrierUrl: event.target.value,
+                      }))
+                    }
+                    name="carrierUrl"
+                    placeholder="https://..."
+                    maxLength={500}
+                  />
+                </div>
+              </FormSection>
+            )}
 
           {/* Cancellation Details */}
           {formData.status === "cancelled" && (
@@ -5281,15 +5281,13 @@ const OrderSummary = () => {
                       return (
                         <label
                           key={itemId}
-                          className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
-                            selected
-                              ? "border-red-200 bg-red-50/50"
-                              : "border-gray-200 bg-white hover:bg-gray-50"
-                          } ${
-                            blocked
+                          className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${selected
+                            ? "border-red-200 bg-red-50/50"
+                            : "border-gray-200 bg-white hover:bg-gray-50"
+                            } ${blocked
                               ? "cursor-not-allowed opacity-60"
                               : "cursor-pointer"
-                          }`}
+                            }`}
                         >
                           <input
                             type="checkbox"
@@ -5319,11 +5317,10 @@ const OrderSummary = () => {
                           </span>
 
                           <span
-                            className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${
-                              selected
-                                ? "bg-red-100 text-red-700"
-                                : "bg-gray-100 text-gray-500"
-                            }`}
+                            className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${selected
+                              ? "bg-red-100 text-red-700"
+                              : "bg-gray-100 text-gray-500"
+                              }`}
                           >
                             {selected
                               ? `Cancel all ${remaining}`
@@ -5367,7 +5364,7 @@ const OrderSummary = () => {
                       <div>
                         <span className="text-gray-500">Items</span>
                         <p className="font-semibold">
-                          ₹
+
                           {formatIndianNumber(
                             state.cancellationPreview.itemRefundAmount,
                           )}
@@ -5376,7 +5373,7 @@ const OrderSummary = () => {
                       <div>
                         <span className="text-gray-500">Shipping</span>
                         <p className="font-semibold">
-                          ₹
+
                           {formatIndianNumber(
                             state.cancellationPreview.shippingRefundAmount,
                           )}
@@ -5385,7 +5382,7 @@ const OrderSummary = () => {
                       <div>
                         <span className="text-gray-500">Platform fee</span>
                         <p className="font-semibold">
-                          ₹
+
                           {formatIndianNumber(
                             state.cancellationPreview.platformFeeRefundAmount,
                           )}
@@ -5394,7 +5391,7 @@ const OrderSummary = () => {
                       <div>
                         <span className="text-gray-500">Customer refund</span>
                         <p className="font-semibold text-red-700">
-                          ₹
+
                           {formatIndianNumber(
                             state.cancellationPreview.totalRefundAmount,
                           )}
