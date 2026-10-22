@@ -157,7 +157,7 @@ const OnboardingSupportModal = ({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[17px] font-bold text-[#082f91]">
-              Onboarding Issue.
+              Onboarding Ticket.
             </p>
           </div>
 
@@ -172,12 +172,12 @@ const OnboardingSupportModal = ({
         </div>
 
         <div role="tablist" aria-label="Onboarding support" className="mt-4 flex gap-5 border-b border-[#eadfcb]">
-          {[ ["new", "New Issue"], ["previous", "Previous Issues"] ].map(([id, label]) => (
+          {[ ["new", "New Ticket"], ["previous", "Previous Tickets"] ].map(([id, label]) => (
             <button type="button" role="tab" key={id} aria-selected={tab === id} onClick={() => setTab(id)}
               className={`border-b-2 px-1 py-3 text-sm font-semibold ${tab === id ? "border-[#082f91] text-[#082f91]" : "border-transparent text-[#5f6678]"}`}>{label}</button>
           ))}
         </div>
-        {tab === "new" ? <>
+        {tab === "new" ? <> 
         <label className="mt-5 block text-sm font-semibold text-[#30384d]">
           Message
           <textarea
