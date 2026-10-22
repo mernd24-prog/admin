@@ -123,11 +123,17 @@ const AddHsnModal = ({
                 name="code"
                 type="text"
                 value={formik.values.code}
-                onChange={formik.handleChange}
+                onChange={(event) => {
+                  const digitsOnly = event.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 8);
+                  formik.setFieldValue("code", digitsOnly);
+                }}
                 onBlur={formik.handleBlur}
                 error={formik.touched.code && formik.errors.code}
                 required
                 placeholder="e.g. 84715000"
+                inputMode="numeric"
                 disabled={isEditMode}
               />
 
@@ -142,7 +148,7 @@ const AddHsnModal = ({
                   error={formik.touched.IGST && formik.errors.IGST}
                   required
                   placeholder="0.00"
-                  min="0"
+                  min="0.01"
                   max="100"
                   step="0.01"
                 />
@@ -157,7 +163,7 @@ const AddHsnModal = ({
                   error={formik.touched.CGST && formik.errors.CGST}
                   required
                   placeholder="0.00"
-                  min="0"
+                  min="0.01"
                   max="100"
                   step="0.01"
                 />
@@ -172,7 +178,7 @@ const AddHsnModal = ({
                   error={formik.touched.SGST && formik.errors.SGST}
                   required
                   placeholder="0.00"
-                  min="0"
+                  min="0.01"
                   max="100"
                   step="0.01"
                 />
@@ -188,7 +194,7 @@ const AddHsnModal = ({
                     formik.touched.additionalTax && formik.errors.additionalTax
                   }
                   placeholder="0"
-                  min="0"
+                  min="0.01"
                   max="100"
                   step="0.01"
                 />
@@ -197,6 +203,8 @@ const AddHsnModal = ({
                 label="Description"
                 name="description"
                 type="textarea"
+                minLength={3}
+                maxLength={500}
                 value={formik.values.description}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}

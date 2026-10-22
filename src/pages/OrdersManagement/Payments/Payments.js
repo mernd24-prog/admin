@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormik } from "formik";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -33,6 +34,10 @@ import {
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import { MdCheckCircle, MdVisibility, MdCancel } from "react-icons/md";
 import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
+import {
+  approvePaymentValidationSchema,
+  rejectPaymentValidationSchema,
+} from "../../../_helpers/validationSchemas";
 const PROVIDERS = [
   "razorpay",
   "cod",
@@ -131,8 +136,40 @@ const Payments = () => {
     open: false,
     type: "",
     payment: null,
-    referenceId: "",
-    reason: "",
+  });
+
+  const decisionFormik = useFormik({
+    initialValues: { referenceId: "", reason: "" },
+    validationSchema:
+      decision.type === "approve"
+        ? approvePaymentValidationSchema
+        : rejectPaymentValidationSchema,
+    enableReinitialize: true,
+    onSubmit: async (values) => {
+      if (!decision.payment?.id) return;
+      try {
+        setLoading(true);
+        const action =
+          decision.type === "approve" ? approvePayment : rejectPayment;
+        await dispatch(
+          action({
+            paymentId: decision.payment.id,
+            referenceId: values.referenceId.trim(),
+            reason: values.reason.trim(),
+          }),
+        ).unwrap();
+        toast.success(
+          decision.type === "approve" ? "Payment approved" : "Payment rejected",
+        );
+        setDecision({ open: false, type: "", payment: null });
+        decisionFormik.resetForm();
+        await fetchPayments();
+      } catch (error) {
+        toast.error(error?.message || error || "Failed to update payment");
+      } finally {
+        setLoading(false);
+      }
+    },
   });
 
   const fetchPayments = useCallback(async () => {
@@ -176,45 +213,6 @@ const Payments = () => {
       setDetailLoading(false);
     }
   }, []);
-
-  const submitDecision = useCallback(async () => {
-    if (!decision.payment?.id) return;
-    if (decision.type === "approve" && decision.referenceId.trim().length < 3) {
-      toast.error("A payment collection/reference ID is required to approve");
-      return;
-    }
-    if (decision.type === "reject" && !decision.reason.trim()) {
-      toast.error("Reason is required to reject a payment");
-      return;
-    }
-    try {
-      setLoading(true);
-      const action =
-        decision.type === "approve" ? approvePayment : rejectPayment;
-      await dispatch(
-        action({
-          paymentId: decision.payment.id,
-          referenceId: decision.referenceId,
-          reason: decision.reason,
-        }),
-      ).unwrap();
-      toast.success(
-        decision.type === "approve" ? "Payment approved" : "Payment rejected",
-      );
-      setDecision({
-        open: false,
-        type: "",
-        payment: null,
-        referenceId: "",
-        reason: "",
-      });
-      await fetchPayments();
-    } catch (error) {
-      toast.error(error?.message || error || "Failed to update payment");
-    } finally {
-      setLoading(false);
-    }
-  }, [decision, dispatch, fetchPayments]);
 
   const canManualDecision = (payment) =>
     ["manual_bank_transfer", "manual_upi", "cod"].includes(payment.provider) &&
@@ -429,14 +427,18 @@ const Payments = () => {
               requiredModule: "payments",
               requiredAction: ACTIONS.APPROVE,
               onClick: () =>
-                setDecision({
+                (setDecision({
                   open: true,
                   type: "approve",
                   payment: row,
-                  referenceId:
-                    row.provider_payment_id || row.transaction_reference || "",
-                  reason: "",
                 }),
+                decisionFormik.resetForm({
+                  values: {
+                    referenceId:
+                      row.provider_payment_id || row.transaction_reference || "",
+                    reason: "",
+                  },
+                })),
             });
 
             actions.push({
@@ -451,13 +453,11 @@ const Payments = () => {
               requiredModule: "payments",
               requiredAction: ACTIONS.APPROVE,
               onClick: () =>
-                setDecision({
+                (setDecision({
                   open: true,
                   type: "reject",
                   payment: row,
-                  referenceId: row.provider_payment_id || "",
-                  reason: "",
-                }),
+                }), decisionFormik.resetForm()),
             });
           }
 
@@ -626,18 +626,13 @@ const Payments = () => {
 <DefaultModal
   isOpen={decision.open}
   onClose={() =>
-    setDecision({
-      open: false,
-      type: "",
-      payment: null,
-      referenceId: "",
-      reason: "",
-    })
+    (setDecision({ open: false, type: "", payment: null }),
+    decisionFormik.resetForm())
   }
   title={
     decision.type === "approve" ? "Approve Payment" : "Reject Payment"
   }
-  onSubmit={submitDecision}
+  onSubmit={() => decisionFormik.handleSubmit()}
   submitButtonText={
     decision.type === "approve" ? "Approve Payment" : "Reject Payment"
   }
@@ -657,13 +652,11 @@ const Payments = () => {
           <div>
             <Input
               labelName="Collection / Bank Reference"
-              value={decision.referenceId}
-              onChange={(event) =>
-                setDecision((prev) => ({
-                  ...prev,
-                  referenceId: event.target.value,
-                }))
-              }
+              name="referenceId"
+              value={decisionFormik.values.referenceId}
+              onChange={decisionFormik.handleChange}
+              onBlur={decisionFormik.handleBlur}
+              error={decisionFormik.touched.referenceId && decisionFormik.errors.referenceId}
               placeholder="Enter collection or bank reference"
               required
             />
@@ -679,13 +672,13 @@ const Payments = () => {
                 ? "Rejection Reason"
                 : "Additional Notes (Optional)"
             }
-            value={decision.reason}
-            onChange={(event) =>
-              setDecision((prev) => ({
-                ...prev,
-                reason: event.target.value,
-              }))
-            }
+            name="reason"
+            minLength={3}
+            maxLength={500}
+            value={decisionFormik.values.reason}
+            onChange={decisionFormik.handleChange}
+            onBlur={decisionFormik.handleBlur}
+            error={decisionFormik.touched.reason && decisionFormik.errors.reason}
             placeholder={
               decision.type === "reject"
                 ? "Explain why this payment is being rejected"

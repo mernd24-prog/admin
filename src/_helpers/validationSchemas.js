@@ -98,10 +98,10 @@ const shipmentTrackingNoteSchema = Yup.string().when("status", {
       .trim()
       .required("Add a reason of at least 3 characters.")
       .min(3, "Add a reason of at least 3 characters.")
-      .max(1000, "Note must be at most 1000 characters."),
+      .max(500, "Note must be at most 500 characters."),
   otherwise: (schema) =>
     schema
-      .max(1000, "Note must be at most 1000 characters.")
+      .max(500, "Note must be at most 500 characters.")
       .test(
         "minimum-note-length",
         "Note must be at least 3 characters.",
@@ -185,14 +185,15 @@ const taxRateSchema = (label) =>
     )
     .typeError(`${label} must be a number`)
     .required(`${label} is required`)
-    .min(0, `${label} must be between 0 and 100`)
+    .min(0.01, `${label} must be between 0.01 and 100`)
     .max(100, `${label} must be between 0 and 100`);
 
 export const hsnValidationSchema = Yup.object({
   code: Yup.string()
     .trim()
     .required("HSN Code is required")
-    .matches(/^\d{4,8}$/, "Must be 4-8 digits"),
+    .matches(/^\d{4,8}$/, "Must be 4-8 digits")
+    .matches(/^(?!0+$)\d+$/, "HSN Code cannot be all zeroes"),
   description: Yup.string()
     .trim()
     .required("Description is required")
@@ -209,7 +210,7 @@ export const hsnValidationSchema = Yup.object({
     )
     .typeError("Additional Tax must be a number")
     .notRequired()
-    .min(0, "Additional Tax must be between 0 and 100")
+    .min(0.01, "Additional Tax must be between 0.01 and 100")
     .max(100, "Additional Tax must be between 0 and 100"),
 });
 
@@ -355,6 +356,27 @@ export const payoutReleaseValidationSchema = Yup.object({
     .max(500, "Note must be at most 500 characters"),
 });
 
+export const approvePaymentValidationSchema = Yup.object({
+  referenceId: Yup.string()
+    .trim()
+    .required("Collection or bank reference is required")
+    .min(3, "Reference must be at least 3 characters")
+    .max(150, "Reference must be at most 150 characters"),
+  reason: Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(3, "Additional notes must be at least 3 characters")
+    .max(500, "Additional notes must be at most 500 characters"),
+});
+
+export const rejectPaymentValidationSchema = Yup.object({
+  reason: Yup.string()
+    .trim()
+    .required("Rejection reason is required")
+    .min(3, "Rejection reason must be at least 3 characters")
+    .max(500, "Rejection reason must be at most 500 characters"),
+});
+
 export const rejectReturnValidationSchema = Yup.object({
   reason: Yup.string()
     .trim()
@@ -391,7 +413,7 @@ export const orderNoteValidationSchema = Yup.object({
     .trim()
     .required("Note is required")
     .min(3, "Note must be at least 3 characters")
-    .max(2000, "Note must be no more than 2000 characters"),
+    .max(500, "Note must be no more than 500 characters"),
   visibility: Yup.string()
     .oneOf(["internal", "seller", "buyer"], "Select a valid visibility")
     .required("Visibility is required"),
@@ -415,7 +437,7 @@ export const orderStatusOverrideValidationSchema = Yup.object({
         .max(2000, "Reason must be no more than 2000 characters."),
   }),
   note: Yup.string()
-    .max(2000, "Note must be no more than 2000 characters.")
+    .max(500, "Note must be no more than 500 characters.")
     .min(3, "Note must be at least 3 characters."),
 });
 
@@ -577,12 +599,21 @@ const optionalShippingNumber = (label) =>
     .notRequired()
     .min(0, `${label} cannot be negative`);
 
+const MAX_SHIPPING_AMOUNT = 10000;
+const MAX_SHIPPING_ETA_DAYS = 365;
+
 export const shippingProfileValidationSchema = Yup.object({
   name: Yup.string()
     .trim()
     .required("Profile name is required")
     .min(2, "Profile name must be at least 2 characters")
     .max(100, "Profile name must be at most 100 characters"),
+  description: Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(3, "Description must be at least 3 characters")
+    .max(500, "Description must be at most 500 characters"),
+  organizationId: Yup.string().notRequired(),
   sellerId: Yup.string().required("Select a target seller"),
   shippingMethod: Yup.string()
     .oneOf(["standard", "express", "same_day", "hyperlocal"])
@@ -594,23 +625,76 @@ export const shippingProfileValidationSchema = Yup.object({
     is: "selected_pincodes",
     then: (schema) =>
       schema
-        .of(Yup.string().matches(/^\d{6}$/, "Enter valid 6-digit pincodes"))
+        .test(
+          "valid-indian-pincodes",
+          "Each pincode must contain 6 digits and cannot start with 0",
+          (pincodes = []) =>
+            pincodes.every((pincode) => /^[1-9]\d{5}$/.test(pincode)),
+        )
         .min(1, "Add at least one allowed pincode")
         .required("Add at least one allowed pincode"),
     otherwise: (schema) => schema,
   }),
-  shippingCharge: optionalShippingNumber("Shipping charge"),
-  freeShippingThreshold: optionalShippingNumber("Free shipping threshold"),
-  etaMin: optionalShippingNumber("Minimum ETA").integer(
-    "Minimum ETA must be a whole number",
+  pincodeDraft: Yup.string()
+    .notRequired()
+    .test(
+      "valid-pincode-draft",
+      "Pincode must contain 6 digits and cannot start with 0",
+      (value) => !value || /^[1-9]\d{5}$/.test(value),
+    )
+    .test(
+      "unique-pincode-draft",
+      "This pincode is already added",
+      function (value) {
+        return !value || !(this.parent.allowedPincodes || []).includes(value);
+      },
+    ),
+  codAvailable: Yup.boolean(),
+  shippingCharge: optionalShippingNumber("Shipping charge").max(
+    MAX_SHIPPING_AMOUNT,
+    "Shipping charge cannot exceed ₹10,000",
   ),
+  freeShippingThreshold: optionalShippingNumber("Free shipping threshold").max(
+    MAX_SHIPPING_AMOUNT,
+    "Free shipping threshold cannot exceed ₹10,000",
+  ),
+  etaMin: optionalShippingNumber("Minimum ETA")
+    .integer("Minimum ETA must be a whole number")
+    .max(
+      MAX_SHIPPING_ETA_DAYS,
+      `Minimum ETA cannot exceed ${MAX_SHIPPING_ETA_DAYS} days`,
+    ),
   etaMax: optionalShippingNumber("Maximum ETA")
     .integer("Maximum ETA must be a whole number")
+    .max(
+      MAX_SHIPPING_ETA_DAYS,
+      `Maximum ETA cannot exceed ${MAX_SHIPPING_ETA_DAYS} days`,
+    )
     .when("etaMin", ([etaMin], schema) =>
       etaMin === undefined
         ? schema
         : schema.min(etaMin, "Maximum ETA must be at least the minimum ETA"),
     ),
+  isDefault: Yup.boolean(),
+  active: Yup.boolean(),
+});
+
+export const shippingProfileCloneValidationSchema = Yup.object({
+  templateId: Yup.string().required("Select an admin template"),
+  sellerId: Yup.string().required("Select a seller"),
+  organizationId: Yup.string().notRequired(),
+  name: Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(2, "Profile name must be at least 2 characters")
+    .max(128, "Profile name must be at most 128 characters"),
+  description: Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(3, "Description must be at least 3 characters")
+    .max(500, "Description must be at most 500 characters"),
+  isDefault: Yup.boolean(),
+  active: Yup.boolean(),
 });
 
 const optionalTextWithLength = (label, max) =>

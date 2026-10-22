@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useFormik } from "formik";
 // import ReactSelect from 'react-select';
 import FormInput from "../../../../components/Atoms/FormInput/FormInput";
@@ -51,6 +51,17 @@ const CategorySetup = ({
     onSubmit: handleSubmit,
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      formik.resetForm({ values: formData });
+    }
+  }, [isOpen]);
+
+  const closeForm = () => {
+    formik.resetForm({ values: formData });
+    handleClose?.();
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -138,14 +149,14 @@ const CategorySetup = ({
       {isOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm z-40"
-          onClick={handleClose}
+          onClick={closeForm}
         ></div>
       )}
 
       {/* Category Setup Side Drawer */}
       <DefaultModal
         isOpen={isOpen}
-        onClose={handleClose}
+        onClose={closeForm}
         onSubmit={formik.handleSubmit}
         title={title || (isEditing ? "Edit Category" : "Add New Category")}
         submitButtonText={
