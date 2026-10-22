@@ -107,13 +107,52 @@ const OnboardingSupportModal = ({
   onClose,
   onSubmit,
 }) => {
+  const [tab, setTab] = useState("new");
+  const [issues, setIssues] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    if (open) { setTab("new"); setPage(0); }
+  }, [open]);
+  useEffect(() => {
+    if (!open || tab !== "previous") return undefined;
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const token = sessionStorage.getItem("accessToken") || localStorage.getItem("sellerOnboardingToken");
+        if (!token) throw new Error("Please login again to view your issues.");
+        const response = await axiosProvider.get(ENDPOINTS.support.mine, {
+          params: { category: ONBOARDING_SUPPORT_CATEGORY, limit: 20, offset: page * 20 },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const payload = response?.data;
+        const rows = Array.isArray(payload?.data) ? payload.data : [];
+        if (!cancelled) {
+          setIssues(rows);
+          const total = payload?.meta?.total;
+          setHasMore(total != null ? (page + 1) * 20 < total : rows.length === 20);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err?.message || "Unable to load previous issues.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [open, tab, page, retry]);
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-4">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-lg rounded-[10px] bg-white p-5 shadow-2xl"
+        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[10px] bg-white p-5 shadow-2xl"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -132,6 +171,13 @@ const OnboardingSupportModal = ({
           </button>
         </div>
 
+        <div role="tablist" aria-label="Onboarding support" className="mt-4 flex gap-5 border-b border-[#eadfcb]">
+          {[ ["new", "New Issue"], ["previous", "Previous Issues"] ].map(([id, label]) => (
+            <button type="button" role="tab" key={id} aria-selected={tab === id} onClick={() => setTab(id)}
+              className={`border-b-2 px-1 py-3 text-sm font-semibold ${tab === id ? "border-[#082f91] text-[#082f91]" : "border-transparent text-[#5f6678]"}`}>{label}</button>
+          ))}
+        </div>
+        {tab === "new" ? <>
         <label className="mt-5 block text-sm font-semibold text-[#30384d]">
           Message
           <textarea
@@ -162,6 +208,28 @@ const OnboardingSupportModal = ({
             {submitting ? "Submitting..." : "Submit"}
           </button>
         </div>
+        </> : <div role="tabpanel" className="mt-5 min-h-[230px] space-y-3">
+          {loading ? <p className="py-8 text-center text-sm">Loading previous issues...</p> : error ? <div role="alert" className="py-6 text-center text-sm">
+            <p className="text-red-600">{error}</p>
+            <button type="button" className="admin-btn-secondary mt-3" onClick={() => setRetry((value) => value + 1)}>Retry</button>
+          </div> : <>
+            {issues.length === 0 ? <p className="py-8 text-center text-sm text-[#5f6678]">No previous onboarding issues found.</p> : issues.map((issue) => (
+              <article key={issue.id || issue.queryId} className="rounded-lg border border-[#eadfcb] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="break-all text-sm font-semibold text-[#082f91]">{issue.queryId || "Onboarding issue"}</p>
+                  <span className="rounded-full bg-[#fff5db] px-3 py-1 text-xs font-semibold text-[#7a5610]">{formatLabel(issue.status)}</span>
+                </div>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm text-[#30384d]">{issue.message}</p>
+                {issue.createdAt && <p className="mt-3 text-xs text-[#5f6678]">{new Date(issue.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>}
+              </article>
+            ))}
+            {(page > 0 || hasMore) && <div className="flex items-center justify-between gap-3 pt-2">
+              <button type="button" disabled={page === 0} onClick={() => setPage((value) => value - 1)} className="admin-btn-secondary disabled:opacity-50">Previous</button>
+              <span className="text-sm">Page {page + 1}</span>
+              <button type="button" disabled={!hasMore} onClick={() => setPage((value) => value + 1)} className="admin-btn-secondary disabled:opacity-50">Next</button>
+            </div>}
+          </>}
+        </div>}
       </form>
     </div>
   );
