@@ -49,7 +49,13 @@ import {
 import { MdKeyboardArrowDown } from "react-icons/md";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
-import { shippingProfileValidationSchema } from "../../../_helpers/validationSchemas";
+import FormInput from "../../../components/Atoms/FormInput/FormInput";
+import Input from "../../../components/Atoms/Input/Input";
+import {
+  shippingProfileCloneValidationSchema,
+  shippingProfileValidationSchema,
+} from "../../../_helpers/validationSchemas";
+import { truncateToWordBoundary } from "../../../utils/formatters";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -65,6 +71,9 @@ const SERVICEABILITY_MODES = [
     description: "Select zip codes according to your needs",
   },
 ];
+
+const MAX_SHIPPING_AMOUNT = 10_000;
+const MAX_ETA_DAYS = 365;
 
 const normalizeServiceabilityMode = (value) =>
   value === "custom" ? "selected_pincodes" : value || "all_india";
@@ -89,11 +98,26 @@ const getShippingNumericErrors = (form = {}) => {
     const number = Number(value);
     if (!Number.isFinite(number) || number < 0) {
       errors[key] = `${label} must be a valid non-negative number`;
+    } else if (key.startsWith("eta") && number > MAX_ETA_DAYS) {
+      errors[key] = `${label} cannot exceed ${MAX_ETA_DAYS} days`;
+    } else if (
+      ["shippingCharge", "freeShippingThreshold"].includes(key) &&
+      number > MAX_SHIPPING_AMOUNT
+    ) {
+      errors[key] = `${label} cannot exceed ₹10,000`;
     } else if (key.startsWith("eta") && !Number.isInteger(number)) {
       errors[key] = `${label} must be a whole number of days`;
     }
   }
-  if (!errors.etaMin && !errors.etaMax && form.etaMin !== "" && form.etaMin != null && form.etaMax !== "" && form.etaMax != null && Number(form.etaMin) > Number(form.etaMax)) {
+  if (
+    !errors.etaMin &&
+    !errors.etaMax &&
+    form.etaMin !== "" &&
+    form.etaMin != null &&
+    form.etaMax !== "" &&
+    form.etaMax != null &&
+    Number(form.etaMin) > Number(form.etaMax)
+  ) {
     errors.etaMax = "ETA Max must be greater than or equal to ETA Min";
   }
   return errors;
@@ -110,6 +134,7 @@ const EMPTY_FORM = {
   freeShippingThreshold: "",
   etaMin: "",
   etaMax: "",
+  pincodeDraft: "",
   isDefault: false,
   active: true,
 };
@@ -296,37 +321,70 @@ function ProfileForm({
   organizationOptions = [],
   onSellerSearch,
 }) {
+  const descriptionValue = String(
+    form.description ?? formik?.values.description ?? "",
+  );
+  const numericErrors = getShippingNumericErrors(form);
+  const [shippingAmountLimitReached, setShippingAmountLimitReached] =
+    useState({});
   const patch = (key, val) => {
     setForm((prev) => ({ ...prev, [key]: val }));
-    formik?.setFieldValue(key, val);
+    formik?.setFieldValue(key, val, key !== "description");
   };
-  const numericErrors = getShippingNumericErrors(form);
+  const patchShippingAmount = (key, rawValue) => {
+    let value = rawValue.replace(/[^\d.]/g, "");
+    const decimalIndex = value.indexOf(".");
 
-  const TOAST_ID = "shipping-profile-pincode";
+    if (decimalIndex >= 0) {
+      value = `${value.slice(0, decimalIndex)}.${value
+        .slice(decimalIndex + 1)
+        .replace(/\./g, "")
+        .slice(0, 2)}`;
+    }
+
+    if (value.startsWith(".")) value = value.slice(1);
+    if (value && Number(value) > MAX_SHIPPING_AMOUNT) {
+      setShippingAmountLimitReached((previous) => ({
+        ...previous,
+        [key]: true,
+      }));
+      return;
+    }
+
+    setShippingAmountLimitReached((previous) => ({
+      ...previous,
+      [key]: value !== "" && Number(value) >= MAX_SHIPPING_AMOUNT,
+    }));
+    patch(key, value);
+  };
 
   const [pincodeInput, setPincodeInput] = useState("");
+  const currentPincodeInput = formik?.values.pincodeDraft ?? pincodeInput;
 
   const addPincode = () => {
-    const pincode = pincodeInput.trim();
+    const pincode = currentPincodeInput.trim();
 
     if (!pincode) return;
 
-    if (!/^\d{6}$/.test(pincode)) {
-      toast.error("Please enter a valid 6-digit pincode", {
-        id: TOAST_ID,
-      });
+    formik?.setFieldTouched("pincodeDraft", true, false);
+    formik?.validateField("pincodeDraft");
+
+    if (!/^[1-9]\d{5}$/.test(pincode)) {
+      if (!formik) {
+        toast.error("Pincode must contain 6 digits and cannot start with 0");
+      }
       return;
     }
 
     if (form.allowedPincodes.includes(pincode)) {
-      toast.error("This pincode is already added", {
-        id: TOAST_ID,
-      });
+      if (!formik) toast.error("This pincode is already added");
       return;
     }
 
     patch("allowedPincodes", [...form.allowedPincodes, pincode]);
     setPincodeInput("");
+    formik?.setFieldValue("pincodeDraft", "");
+    formik?.setFieldTouched("pincodeDraft", false, false);
   };
 
   const removePincode = (pincode) => {
@@ -411,24 +469,19 @@ function ProfileForm({
 
           {/* Profile Name & Shipping Method */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <label htmlFor="shipping-profile-name" className="admin-label !mb-0">
-                Profile Name <span className="text-red-500">*</span>
-              </label>
-
-              <input
-                id="shipping-profile-name"
-                className="admin-input"
-                placeholder="e.g. Standard Shipping, Express, Heavy Products"
-                value={form.name}
-                onChange={(e) => patch("name", e.target.value)}
-                onBlur={() => formik?.setFieldTouched("name", true)}
-                name="name"
-              />
-              {formik?.touched.name && formik.errors.name && (
-                <p className="text-xs text-red-600">{formik.errors.name}</p>
-              )}
-            </div>
+            <FormInput
+              label="Profile Name"
+              name="name"
+              maxLength={100}
+              showLengthCount={false}
+              limitMessage="Profile name is limited to 100 characters."
+              value={form.name}
+              onChange={(event) => patch("name", event.target.value)}
+              onBlur={() => formik?.setFieldTouched("name", true)}
+              error={formik?.touched.name && formik.errors.name}
+              placeholder="e.g. Standard Shipping, Express, Heavy Products"
+              required
+            />
 
             <div className="flex min-w-0 flex-col gap-1.5">
               <label htmlFor="shipping-profile-method" className="admin-label !mb-0">Shipping Method</label>
@@ -446,24 +499,47 @@ function ProfileForm({
                   patch("shippingMethod", option?.value || "")
                 }
                 onBlur={() => formik?.setFieldTouched("shippingMethod", true)}
+                error={
+                  formik?.touched.shippingMethod && formik.errors.shippingMethod
+                }
                 isSearchable={false}
                 placeholder="Select shipping method..."
               />
+              {formik?.touched.shippingMethod &&
+                formik.errors.shippingMethod && (
+                  <p className="text-xs text-red-600">
+                    {formik.errors.shippingMethod}
+                  </p>
+                )}
             </div>
           </div>
 
           {/* Description */}
-       <div className="flex min-w-0 flex-col gap-1.5">
-  <label className="admin-label !mb-0">Description</label>
-
-  <textarea
-    className="admin-input min-h-[100px] resize-y"
-    placeholder="Optional description"
-    value={form.description}
-    onChange={(e) => patch("description", e.target.value)}
-    rows={4}
-  />
-</div>
+          <div>
+            <FormInput
+              label="Description"
+              name="description"
+              type="textarea"
+              minLength={3}
+              maxLength={500}
+              showLengthCount
+              limitMessage="Description is limited to 500 characters."
+              value={descriptionValue}
+              onChange={(event) => {
+                const value = event.target.value;
+                setForm((prev) => ({ ...prev, description: value }));
+                formik?.setFieldValue("description", value, true);
+                formik?.setFieldTouched("description", true, false);
+              }}
+              onBlur={() => formik?.setFieldTouched("description", true)}
+              error={
+                formik?.touched.description && formik.errors.description
+              }
+              placeholder="Optional description"
+              rows={4}
+              inputClassName="min-h-[100px] resize-y"
+            />
+          </div>
         </div>
       </FormSection>
 
@@ -536,21 +612,28 @@ function ProfileForm({
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row">
-              <input
+              <Input
                 type="text"
-                value={pincodeInput}
+                name="pincodeDraft"
+                value={currentPincodeInput}
                 onChange={(event) => {
                   const value = event.target.value
                     .replace(/\D/g, "")
                     .slice(0, 6);
 
                   setPincodeInput(value);
+                  formik?.setFieldValue("pincodeDraft", value);
                 }}
+                onBlur={() => formik?.setFieldTouched("pincodeDraft", true)}
                 onKeyDown={handlePincodeKeyDown}
                 placeholder="Enter 6-digit pincode"
-                className="admin-input flex-1"
+                className="min-w-0 flex-1 mb-0"
+                inputClassName="w-full"
                 maxLength={6}
+                showLengthCount={false}
+                limitMessage="Pincodes are limited to 6 digits."
                 inputMode="numeric"
+                error={formik?.touched.pincodeDraft && formik.errors.pincodeDraft}
               />
 
               <button
@@ -561,7 +644,6 @@ function ProfileForm({
                 Add
               </button>
             </div>
-
             {form.allowedPincodes.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
                 {form.allowedPincodes.map((pincode) => (
@@ -603,46 +685,52 @@ function ProfileForm({
         description="Configure shipping charges and free-shipping eligibility."
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <label className="admin-label">Shipping Charge (₹)</label>
+          <FormInput
+            label="Shipping Charge (₹)"
+            name="shippingCharge"
+            type="text"
+            inputMode="decimal"
+            maxLength={8}
+            showLengthCount={false}
+            limitMessage="Shipping charge cannot exceed ₹10,000."
+            limitReached={shippingAmountLimitReached.shippingCharge}
+            placeholder="0"
+            value={form.shippingCharge}
+            onChange={(event) =>
+              patchShippingAmount("shippingCharge", event.target.value)
+            }
+            onBlur={() => formik?.setFieldTouched("shippingCharge", true)}
+            error={
+              numericErrors.shippingCharge ||
+              (formik?.touched.shippingCharge && formik.errors.shippingCharge)
+            }
+            helperText="Set 0 for free shipping"
+          />
 
-            <input
-              className="admin-input"
-              type="number"
-              min="0"
-              placeholder="0"
-              value={form.shippingCharge}
-              onChange={(e) => patch("shippingCharge", e.target.value)}
-            />
-
-            <p className="text-xs text-gray-400">Set 0 for free shipping</p>
-            {formik?.touched.shippingCharge && formik.errors.shippingCharge && (
-              <p className="text-xs text-red-600">
-                {formik.errors.shippingCharge}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="admin-label">Free Shipping Above (₹)</label>
-
-            <input
-              className="admin-input"
-              type="number"
-              min="0"
-              placeholder="Leave blank to disable"
-              value={form.freeShippingThreshold}
-              onChange={(e) => patch("freeShippingThreshold", e.target.value)}
-            />
-
-            <p className="text-xs text-gray-400">Order value threshold</p>
-            {formik?.touched.freeShippingThreshold &&
-              formik.errors.freeShippingThreshold && (
-                <p className="text-xs text-red-600">
-                  {formik.errors.freeShippingThreshold}
-                </p>
-              )}
-          </div>
+          <FormInput
+            label="Free Shipping Above (₹)"
+            name="freeShippingThreshold"
+            type="text"
+            inputMode="decimal"
+            maxLength={8}
+            showLengthCount={false}
+            limitMessage="Free shipping threshold cannot exceed ₹10,000."
+            limitReached={shippingAmountLimitReached.freeShippingThreshold}
+            placeholder="Leave blank to disable"
+            value={form.freeShippingThreshold}
+            onChange={(event) =>
+              patchShippingAmount("freeShippingThreshold", event.target.value)
+            }
+            onBlur={() =>
+              formik?.setFieldTouched("freeShippingThreshold", true)
+            }
+            error={
+              numericErrors.freeShippingThreshold ||
+              (formik?.touched.freeShippingThreshold &&
+                formik.errors.freeShippingThreshold)
+            }
+            helperText="Order value threshold"
+          />
         </div>
       </FormSection>
 
@@ -652,44 +740,47 @@ function ProfileForm({
         description="Define the expected delivery range for this shipping profile."
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <label className="admin-label">ETA Min (days)</label>
+          <FormInput
+            label="ETA Min (days)"
+            name="etaMin"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={3}
+            showLengthCount={false}
+            limitMessage="ETA is limited to 3 digits and 365 days."
+            placeholder="e.g. 2"
+            value={form.etaMin}
+            onChange={(event) =>
+              patch("etaMin", event.target.value.replace(/\D/g, ""))
+            }
+            onBlur={() => formik?.setFieldTouched("etaMin", true)}
+            error={
+              numericErrors.etaMin ||
+              (formik?.touched.etaMin && formik.errors.etaMin)
+            }
+          />
 
-            <input
-              className="admin-input"
-              type="number"
-              min="0"
-              placeholder="e.g. 2"
-              value={form.etaMin}
-              step="1"
-              max={form.etaMax !== "" && form.etaMax != null ? form.etaMax : undefined}
-              aria-invalid={Boolean(numericErrors.etaMin)}
-              onChange={(e) => patch("etaMin", e.target.value)}
-              onBlur={() => formik?.setFieldTouched("etaMin", true)}
-            />
-            {formik?.touched.etaMin && formik.errors.etaMin && (
-              <p className="text-xs text-red-600">{formik.errors.etaMin}</p>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="admin-label">ETA Max (days)</label>
-
-            <input
-              className="admin-input"
-              type="number"
-              placeholder="e.g. 5"
-              value={form.etaMax}
-              step="1"
-              min={form.etaMin !== "" && form.etaMin != null ? Math.max(0, Number(form.etaMin) || 0) : 0}
-              aria-invalid={Boolean(numericErrors.etaMax)}
-              onChange={(e) => patch("etaMax", e.target.value)}
-              onBlur={() => formik?.setFieldTouched("etaMax", true)}
-            />
-            {formik?.touched.etaMax && formik.errors.etaMax && (
-              <p className="text-xs text-red-600">{formik.errors.etaMax}</p>
-            )}
-          </div>
+          <FormInput
+            label="ETA Max (days)"
+            name="etaMax"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={3}
+            showLengthCount={false}
+            limitMessage="ETA is limited to 3 digits and 365 days."
+            placeholder="e.g. 5"
+            value={form.etaMax}
+            onChange={(event) =>
+              patch("etaMax", event.target.value.replace(/\D/g, ""))
+            }
+            onBlur={() => formik?.setFieldTouched("etaMax", true)}
+            error={
+              numericErrors.etaMax ||
+              (formik?.touched.etaMax && formik.errors.etaMax)
+            }
+          />
         </div>
       </FormSection>
 
@@ -879,7 +970,6 @@ export default function ShippingProfiles() {
   });
   const [cloneModal, setCloneModal] = useState({ open: false, template: null });
   const [form, setForm] = useState({ ...EMPTY_FORM });
-  const [cloneForm, setCloneForm] = useState({ ...EMPTY_CLONE_FORM });
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [, setDeleteTemplateTarget] = useState(null);
@@ -897,6 +987,11 @@ export default function ShippingProfiles() {
     initialValues: EMPTY_FORM,
     validationSchema: shippingProfileValidationSchema,
     onSubmit: (values) => handleSave(values),
+  });
+  const cloneFormik = useFormik({
+    initialValues: EMPTY_CLONE_FORM,
+    validationSchema: shippingProfileCloneValidationSchema,
+    onSubmit: (values) => handleCloneTemplate(values),
   });
 
   const { shippingProfilesData, shippingProfileTemplatesData } = useSelector(
@@ -1000,7 +1095,9 @@ export default function ShippingProfiles() {
   }, [filters.organizationId, filters.sellerId, isSeller, setFilter]);
 
   useEffect(() => {
-    const cloneSellerId = isSeller ? sellerSessionId : cloneForm.sellerId;
+    const cloneSellerId = isSeller
+      ? sellerSessionId
+      : cloneFormik.values.sellerId;
     if (!cloneModal.open || !cloneSellerId) {
       setCloneOrganizationOptions([]);
       return undefined;
@@ -1018,7 +1115,7 @@ export default function ShippingProfiles() {
     return () => {
       active = false;
     };
-  }, [cloneForm.sellerId, cloneModal.open, isSeller, sellerSessionId]);
+  }, [cloneFormik.values.sellerId, cloneModal.open, isSeller, sellerSessionId]);
 
   useEffect(() => {
     const formSellerId = isSeller ? sellerSessionId : form.sellerId;
@@ -1231,15 +1328,17 @@ export default function ShippingProfiles() {
     setCloneSellerSearch("");
     if (!isSeller) loadSellerOptions("");
     const selectedTemplate = template || templatesPayload.list[0] || null;
-    setCloneForm({
-      ...EMPTY_CLONE_FORM,
-      templateId: profileId(selectedTemplate || {}) || "",
-      sellerId: sellerId || "",
-      organizationId: activeOrganizationId || "",
-      name: selectedTemplate?.name ? `${selectedTemplate.name}` : "",
-      description: selectedTemplate?.description || "",
-      isDefault: profilesPayload.list.length === 0,
-      active: true,
+    cloneFormik.resetForm({
+      values: {
+        ...EMPTY_CLONE_FORM,
+        templateId: profileId(selectedTemplate || {}) || "",
+        sellerId: sellerId || "",
+        organizationId: activeOrganizationId || "",
+        name: selectedTemplate?.name ? `${selectedTemplate.name}` : "",
+        description: selectedTemplate?.description || "",
+        isDefault: profilesPayload.list.length === 0,
+        active: true,
+      },
     });
     setCloneModal({ open: true, template: selectedTemplate });
   };
@@ -1297,8 +1396,10 @@ export default function ShippingProfiles() {
     const serviceabilityMode = normalizeServiceabilityMode(
       source.serviceabilityMode,
     );
+    const payloadSource = { ...source };
+    delete payloadSource.pincodeDraft;
     return {
-      ...source,
+      ...payloadSource,
       serviceabilityMode,
       allowedPincodes:
         serviceabilityMode === "selected_pincodes"
@@ -1403,19 +1504,15 @@ export default function ShippingProfiles() {
     }
   };
 
-  const handleCloneTemplate = async () => {
+  const handleCloneTemplate = async (values) => {
     if (!canCreateProfile) {
       toast.error("You do not have permission to copy shipping templates");
       return;
     }
-    if (!cloneForm.templateId) {
-      toast.error("Select an admin template to clone");
-      return;
-    }
-    const targetSellerId = isSeller ? activeSellerId : cloneForm.sellerId;
+    const targetSellerId = isSeller ? activeSellerId : values.sellerId;
     const targetOrganizationId = isSeller
       ? activeOrganizationId
-      : cloneForm.organizationId;
+      : values.organizationId;
     if (!targetSellerId) {
       toast.error("Select a seller before cloning a template");
       return;
@@ -1424,13 +1521,13 @@ export default function ShippingProfiles() {
     try {
       await dispatch(
         cloneShippingProfileTemplate({
-          templateId: cloneForm.templateId,
+          templateId: values.templateId,
           sellerId: targetSellerId,
           organizationId: targetOrganizationId || null,
-          name: cloneForm.name || undefined,
-          description: cloneForm.description || undefined,
-          isDefault: Boolean(cloneForm.isDefault),
-          active: cloneForm.active !== false,
+          name: values.name || undefined,
+          description: values.description || undefined,
+          isDefault: Boolean(values.isDefault),
+          active: values.active !== false,
         }),
       ).unwrap();
       toast.success("Template copied to seller shipping profiles");
@@ -1513,17 +1610,22 @@ export default function ShippingProfiles() {
         key: "name",
         label: "Profile",
         sortable: true,
+        headerClassName: "w-[400px]",
+        cellClassName: "w-[400px] max-w-[400px] whitespace-normal pr-4",
         render: (value, row) => (
-          <div className="flex items-start gap-3">
+          <div className="flex min-w-0 w-full max-w-full items-start gap-4">
             <span
               className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md ${row.active !== false ? "bg-[var(--admin-blue-soft)] text-[var(--admin-blue)]" : "bg-gray-100 text-gray-400"}`}
             >
               <MdLocalShipping aria-hidden="true" size={18} />
             </span>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-[var(--admin-ink)]">
-                  {value || "N/A"}
+            <div className="min-w-0 max-w-full flex-1 overflow-hidden">
+              <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+                <span
+                  className="block max-w-[320px] truncate font-semibold text-[var(--admin-ink)]"
+                  title={value || "N/A"}
+                >
+                  {truncateToWordBoundary(value, 45)}
                 </span>
                 {row.isDefault && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-blue-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--admin-blue)]">
@@ -1536,8 +1638,14 @@ export default function ShippingProfiles() {
                   </span>
                 )}
               </div>
-              <div className="mt-0.5 max-w-md text-xs text-[var(--admin-muted)]">
-                {row.description || "Reusable product delivery rules"}
+              <div
+                className="mt-0.5 max-w-[320px] truncate text-xs text-[var(--admin-muted)]"
+                title={row.description || "Reusable product delivery rules"}
+              >
+                {truncateToWordBoundary(
+                  row.description || "Reusable product delivery rules",
+                  64,
+                )}
               </div>
             </div>
           </div>
@@ -1546,39 +1654,53 @@ export default function ShippingProfiles() {
       {
         key: "sellerId",
         label: "Seller",
+        headerClassName: "w-[240px]",
+        cellClassName: "w-[240px] max-w-[240px] whitespace-normal",
         render: (_, row) => {
           const seller = sellerDetails(row);
           return (
-            <SellerIdentity
-              row={row}
-              sellerId={seller.id}
-              storeName={
-                row.organizationId
-                  ? organizationLabel(row.organizationId)
-                  : row.storeName || row.organizationName
-              }
-              loginName={seller.name}
-            />
+            <div
+              className="min-w-0 max-w-full overflow-hidden [&>div>div:first-child]:truncate"
+              title={seller.name || row.storeName || row.organizationName || "Seller"}
+            >
+              <SellerIdentity
+                row={row}
+                sellerId={seller.id}
+                storeName={
+                  row.organizationId
+                    ? organizationLabel(row.organizationId)
+                    : row.storeName || row.organizationName
+                }
+                loginName={seller.name}
+                className="min-w-0 max-w-full"
+              />
+            </div>
           );
         },
       },
       {
         key: "shippingMethod",
         label: "Method",
+        headerClassName: "w-[150px]",
+        cellClassName: "w-[150px] max-w-[150px]",
         render: (value) => (
-          <span className="capitalize">{methodLabel(value)}</span>
+          <span title={methodLabel(value)}>
+            {truncateToWordBoundary(methodLabel(value), 18)}
+          </span>
         ),
       },
       {
         key: "serviceabilityMode",
         label: "Serviceability",
+        headerClassName: "w-[200px]",
+        cellClassName: "w-[200px] max-w-[200px] whitespace-normal",
         render: (value, row) => (
-          <div>
+          <div className="min-w-0">
             <div className="text-sm font-medium text-[var(--admin-ink)]">
-              {modeLabel(value)}
+              {truncateToWordBoundary(modeLabel(value), 24)}
             </div>
             <div className="text-xs text-[var(--admin-muted)]">
-              {coverageLabel(row)}
+              {truncateToWordBoundary(coverageLabel(row), 28)}
             </div>
           </div>
         ),
@@ -1586,8 +1708,10 @@ export default function ShippingProfiles() {
       {
         key: "shippingCharge",
         label: "Charge",
+        headerClassName: "w-[160px]",
+        cellClassName: "w-[160px] max-w-[160px] whitespace-normal",
         render: (value, row) => (
-          <div>
+          <div className="min-w-0">
             <div className="font-medium text-[var(--admin-ink)]">
               {formatMoney(value)}
             </div>
@@ -1602,11 +1726,15 @@ export default function ShippingProfiles() {
       {
         key: "etaMin",
         label: "ETA",
+        headerClassName: "w-[100px]",
+        cellClassName: "w-[100px] max-w-[100px]",
         render: (_, row) => etaLabel(row),
       },
       {
         key: "active",
         label: "Status",
+        headerClassName: "w-[120px]",
+        cellClassName: "w-[120px] max-w-[120px]",
         render: (value) => (
           <StatusBadge status={value === false ? "inactive" : "active"} dot />
         ),
@@ -1633,12 +1761,12 @@ export default function ShippingProfiles() {
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {canCreateProfile && (
+            {/* {canCreateProfile && (
               <button onClick={() => openClone()}>
                 <MdLocalShipping aria-hidden="true" size={17} /> Use Admin
                 Template
               </button>
-            )}
+            )} */}
             {!isSeller && canCreateProfile && (
               <button onClick={openTemplateCreate}>
                 <MdAdd aria-hidden="true" size={17} /> New Template
@@ -1723,6 +1851,7 @@ export default function ShippingProfiles() {
 
       <DataTable
         columns={columns}
+        tableClassName="w-full table-fixed"
         data={profilesPayload.list}
         loading={loading || shippingProfilesData?.loading}
         totalCount={profilesPayload.total || profilesPayload.list.length}
@@ -1863,7 +1992,7 @@ export default function ShippingProfiles() {
         isOpen={cloneModal.open}
         onClose={closeCloneModal}
         title="Copy Admin Template"
-        onSubmit={handleCloneTemplate}
+        onSubmit={cloneFormik.handleSubmit}
         submitButtonText="Copy to Seller Profiles"
         closeButtonText="Cancel"
         loading={saving}
@@ -1905,18 +2034,19 @@ export default function ShippingProfiles() {
 
                   <FilterSelect
                     options={sellerOptions}
+                    error={
+                      cloneFormik.touched.sellerId && cloneFormik.errors.sellerId
+                    }
                     value={
                       sellerOptions.find(
-                        (seller) => seller.value === cloneForm.sellerId,
+                        (seller) => seller.value === cloneFormik.values.sellerId,
                       ) || null
                     }
-                    onChange={(option) =>
-                      setCloneForm((prev) => ({
-                        ...prev,
-                        sellerId: option?.value || "",
-                        organizationId: "",
-                      }))
-                    }
+                    onChange={(option) => {
+                      cloneFormik.setFieldValue("sellerId", option?.value || "");
+                      cloneFormik.setFieldValue("organizationId", "");
+                    }}
+                    onBlur={() => cloneFormik.setFieldTouched("sellerId", true)}
                     isSearchable
                     placeholder="Select seller..."
                     isClearable
@@ -1935,16 +2065,13 @@ export default function ShippingProfiles() {
                     options={cloneOrganizationOptions}
                     value={
                       cloneOrganizationOptions.find(
-                        (option) => option.value === cloneForm.organizationId,
+                        (option) => option.value === cloneFormik.values.organizationId,
                       ) || null
                     }
                     onChange={(option) =>
-                      setCloneForm((prev) => ({
-                        ...prev,
-                        organizationId: option?.value || "",
-                      }))
+                      cloneFormik.setFieldValue("organizationId", option?.value || "")
                     }
-                    isDisabled={!cloneForm.sellerId}
+                    isDisabled={!cloneFormik.values.sellerId}
                     placeholder="Seller-wide default"
                     isSearchable
                     isClearable
@@ -1969,16 +2096,22 @@ export default function ShippingProfiles() {
                 <label className="admin-label">Template Name</label>
 
                 <input
-                  className="admin-input w-full"
-                  value={cloneForm.name}
-                  onChange={(event) =>
-                    setCloneForm((prev) => ({
-                      ...prev,
-                      name: event.target.value,
-                    }))
-                  }
+                  className={`admin-input w-full ${cloneFormik.touched.name && cloneFormik.errors.name ? "admin-input-error" : ""}`}
+                  name="name"
+                  value={cloneFormik.values.name}
+                  onChange={cloneFormik.handleChange}
+                  onBlur={cloneFormik.handleBlur}
+                  maxLength={128}
+                  aria-invalid={Boolean(
+                    cloneFormik.touched.name && cloneFormik.errors.name,
+                  )}
                   placeholder="e.g. Standard Shipping - Delhi NCR"
                 />
+                {cloneFormik.touched.name && cloneFormik.errors.name && (
+                  <p className="text-xs text-red-600">
+                    {cloneFormik.errors.name}
+                  </p>
+                )}
               </div>
 
               {/* Description */}
@@ -1986,16 +2119,24 @@ export default function ShippingProfiles() {
                 <label className="admin-label">Copy Description</label>
 
                 <input
-                  className="admin-input w-full"
-                  value={cloneForm.description}
-                  onChange={(event) =>
-                    setCloneForm((prev) => ({
-                      ...prev,
-                      description: event.target.value,
-                    }))
-                  }
+                  className={`admin-input w-full ${cloneFormik.touched.description && cloneFormik.errors.description ? "admin-input-error" : ""}`}
+                  name="description"
+                  value={cloneFormik.values.description}
+                  onChange={cloneFormik.handleChange}
+                  onBlur={cloneFormik.handleBlur}
+                  maxLength={500}
+                  aria-invalid={Boolean(
+                    cloneFormik.touched.description &&
+                      cloneFormik.errors.description,
+                  )}
                   placeholder="Optional"
                 />
+                {cloneFormik.touched.description &&
+                  cloneFormik.errors.description && (
+                    <p className="text-xs text-red-600">
+                      {cloneFormik.errors.description}
+                    </p>
+                  )}
               </div>
             </div>
           </FormSection>
@@ -2020,12 +2161,9 @@ export default function ShippingProfiles() {
               <input
                 type="checkbox"
                 className="h-4 w-4 accent-[var(--admin-blue)]"
-                checked={Boolean(cloneForm.isDefault)}
+                checked={Boolean(cloneFormik.values.isDefault)}
                 onChange={(event) =>
-                  setCloneForm((prev) => ({
-                    ...prev,
-                    isDefault: event.target.checked,
-                  }))
+                  cloneFormik.setFieldValue("isDefault", event.target.checked)
                 }
               />
             </label>

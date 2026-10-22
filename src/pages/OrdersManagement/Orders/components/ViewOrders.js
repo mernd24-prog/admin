@@ -5026,6 +5026,7 @@ const OrderSummary = () => {
               <FormSelectGroup
                 label="Status"
                 options={statusOptions}
+                required
                 value={
                   statusOptions.find((opt) => opt.value === formData.status) ||
                   null
@@ -5518,6 +5519,8 @@ const OrderSummary = () => {
               <Input
                 type="textarea"
                 labelName="Note"
+                minLength={3}
+                maxLength={500}
                 value={noteFormik.values.note}
                 onChange={noteFormik.handleChange}
                 onBlur={noteFormik.handleBlur}

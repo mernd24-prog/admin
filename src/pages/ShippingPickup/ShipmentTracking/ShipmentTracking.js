@@ -1261,6 +1261,8 @@ const ShipmentTracking = () => {
                   label="Checkpoint Location (optional)"
                   name="location"
                   type="textarea"
+                  minLength={3}
+                  maxLength={200}
                   rows={3}
                   className="!mb-0"
                   placeholder="Hub, city, or delivery area"
@@ -1286,6 +1288,8 @@ const ShipmentTracking = () => {
                 }
                 name="note"
                 type="textarea"
+                minLength={3}
+                maxLength={500}
                 rows={3}
                 className="!mb-0"
                 required={["failed", "rto"].includes(

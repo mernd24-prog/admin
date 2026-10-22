@@ -106,6 +106,10 @@ const Input = ({
   isPasswordVisible,
   rows = 4,
   maxLength,
+  showLengthCount = true,
+  limitMessage,
+  limitReached = false,
+  enforceMaxLength = true,
   minLength,
   disabled = false,
   disable = disabled,
@@ -132,6 +136,9 @@ const Input = ({
   const generatedId = useId();
   const inputId = id || name || generatedId;
   const invalid = Boolean(error || hasError);
+  const reachedMaxLength =
+    Boolean(enforceMaxLength && maxLength && typeof value === "string") &&
+    value.length >= maxLength;
   const [showPassword, setShowPassword] = useState(Boolean(isPasswordVisible));
   const [dragActive, setDragActive] = useState(false);
   const timerRef = useRef();
@@ -232,7 +239,7 @@ const Input = ({
         <textarea
           {...commonProps}
           rows={rows}
-          maxLength={maxLength}
+          maxLength={enforceMaxLength ? maxLength : undefined}
           minLength={minLength}
           onChange={emit}
           className={`${baseStyles} admin-textarea`}
@@ -318,7 +325,7 @@ const Input = ({
         min={type === "percentage" ? 0 : min}
         max={type === "percentage" ? 100 : max}
         step={type === "price" ? "0.01" : step}
-        maxLength={maxLength}
+        maxLength={enforceMaxLength ? maxLength : undefined}
         minLength={minLength}
         onChange={emit}
         className={baseStyles}
@@ -374,6 +381,10 @@ const Input = ({
           <p id={`${inputId}-error`} className="admin-field-error" role="alert">
             {error || errorMessage}
           </p>
+        ) : (limitReached || reachedMaxLength) && limitMessage ? (
+          <p className="admin-field-error" role="status">
+            {limitMessage}
+          </p>
         ) : helperText && !hideExternalLabel ? (
           <p id={`${inputId}-help`} className="admin-field-help">
             {helperText}
@@ -381,7 +392,7 @@ const Input = ({
         ) : (
           <span />
         )}
-        {maxLength && typeof value === "string" && (
+        {showLengthCount && maxLength && typeof value === "string" && (
           <span className="admin-field-count">
             {value.length}/{maxLength}
           </span>
