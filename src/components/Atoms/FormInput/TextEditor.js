@@ -94,21 +94,6 @@ export const TextEditor = React.memo(
       [],
     );
 
-    const handleChange = useCallback(
-      (content, delta, source, editor) => {
-        if (maxLength && editor?.getLength) {
-          const textLength = editor.getLength() - 1;
-
-          if (textLength <= maxLength) {
-            onChange(content);
-          }
-        } else {
-          onChange(content);
-        }
-      },
-      [onChange, maxLength],
-    );
-
     const characterCount = useMemo(() => {
       if (!value || !maxLength) return null;
 
@@ -117,6 +102,11 @@ export const TextEditor = React.memo(
 
       return tempDiv.textContent?.length || 0;
     }, [value, maxLength]);
+
+    const handleChange = useCallback(
+      (content) => onChange(content),
+      [onChange],
+    );
 
     return (
       <div className={`text-editor-wrapper w-full ${className}`}>

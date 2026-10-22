@@ -166,6 +166,7 @@ const CategorySetup = ({
                 label="Category Name"
                 name="categoryName"
                 value={formik.values.categoryName ?? ""}
+                maxLength={50}
                 onChange={handleChange}
                 onBlur={(event) => {
                   formik.handleBlur(event);

@@ -317,7 +317,13 @@ const Brands = () => {
   const validateForm = () => {
     const errs = {};
     if (!formData.name?.trim()) errs.name = "Brand name is required";
-    else if (formData.name.trim().length < 2) errs.name = "Min 2 characters";
+    else if (!/[\p{L}\p{N}]/u.test(formData.name.trim())) {
+      errs.name = "Brand name must contain at least one letter or number";
+    } else if (formData.name.trim().length < 3) {
+      errs.name = "Brand name must contain at least 3 characters";
+    } else if (formData.name.trim().length > 200) {
+      errs.name = "Brand name cannot exceed 200 characters";
+    }
     if (!formData.logo) errs.logo = "Logo is required";
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -776,7 +782,8 @@ const Brands = () => {
                     : "border-gray-300 focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[var(--admin-gold)]/20"
                 }`}
                 placeholder="e.g. Apple, Samsung"
-                maxLength={50}
+                minLength={3}
+                maxLength={200}
               />
 
               {errors.name && (

@@ -19,6 +19,7 @@ import {
 } from "../../../../Redux/adminCoreSlice";
 import {
   transformArray,
+  uploadFile,
   uploadFileMulti,
   uploadVideoFile,
 } from "../../../../_helpers/globalFunctions";
@@ -125,6 +126,118 @@ const SELLER_PANEL_ROLES = new Set([
   "seller-sub-admin",
 ]);
 const MAX_COMMON_PRODUCT_IMAGES = 8;
+const MAX_PRODUCT_MONEY = 999999999.99;
+const MAX_PRODUCT_STOCK = 1000000000;
+const MAX_PRODUCT_MEASUREMENT = 1000000;
+const PRODUCT_SKU_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]{1,62}[A-Za-z0-9]$/;
+const PRODUCT_TAG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const getMediaUrl = (media) =>
+  typeof media === "string"
+    ? media.trim()
+    : String(
+        media?.url ||
+          media?.imageURL ||
+          media?.imageUrl ||
+          media?.secure_url ||
+          media?.src ||
+          "",
+      ).trim();
+const isHttpUrl = (value) => {
+  try {
+    const parsed = new URL(String(value || "").trim());
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+const canLoadImage = (url, timeoutMs = 8000) =>
+  new Promise((resolve) => {
+    if (typeof Image === "undefined") {
+      resolve(true);
+      return;
+    }
+    const image = new Image();
+    let settled = false;
+    const finish = (loaded) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      image.onload = null;
+      image.onerror = null;
+      resolve(loaded);
+    };
+    const timeout = setTimeout(() => finish(false), timeoutMs);
+    image.onload = () =>
+      finish(image.naturalWidth > 0 && image.naturalHeight > 0);
+    image.onerror = () => finish(false);
+    image.src = url;
+    if (image.complete) {
+      finish(image.naturalWidth > 0 && image.naturalHeight > 0);
+    }
+  });
+const isValidDecimal = (
+  value,
+  { min = 0, max = Number.MAX_SAFE_INTEGER, places = 2 } = {},
+) => {
+  if (value === undefined || value === null || value === "") return false;
+  if (typeof value === "string" && value.trim() === "") return false;
+  const text = String(value).trim();
+  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(text)) return false;
+  const number = Number(text);
+  if (!Number.isFinite(number) || number < min || number > max) return false;
+  const decimalPart = text.split(".")[1] || "";
+  return decimalPart.length <= places;
+};
+const isPositiveMeasurement = (value, max = MAX_PRODUCT_MEASUREMENT) =>
+  isValidDecimal(value, {
+    min: Number.MIN_VALUE,
+    max,
+    places: 6,
+  });
+const isFurnitureDimensionAttribute = (field = {}) => {
+  const key = String(field.key || "")
+    .trim()
+    .toLowerCase();
+  const label = String(field.label || "")
+    .trim()
+    .toLowerCase();
+  return ["width", "depth", "height"].some(
+    (dimension) => key === dimension || label.includes(dimension),
+  );
+};
+const isValidNonNegativeInteger = (value, max = MAX_PRODUCT_STOCK) => {
+  if (value === undefined || value === null || value === "") return false;
+  if (typeof value === "string" && value.trim() === "") return false;
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 0 && number <= max;
+};
+const findDuplicate = (values = []) => {
+  const seen = new Set();
+  return values.find((value) => {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase();
+    if (!normalized) return false;
+    if (seen.has(normalized)) return true;
+    seen.add(normalized);
+    return false;
+  });
+};
+const findDuplicateUrls = (values = []) => {
+  const seen = new Set();
+  return values.find((value) => {
+    let normalized;
+    try {
+      normalized = new URL(String(value || "").trim()).href;
+    } catch {
+      normalized = String(value || "").trim();
+    }
+    if (!normalized) return false;
+    if (seen.has(normalized)) return true;
+    seen.add(normalized);
+    return false;
+  });
+};
 const slugifyVariantAxis = (value = "") =>
   String(value || "")
     .trim()
@@ -362,7 +475,10 @@ export default function ProductManagementUI() {
   const [formData, setFormData] = useState(INITIALS_DATA);
   const [commonImageUrl, setCommonImageUrl] = useState("");
   const [commonImagesUploading, setCommonImagesUploading] = useState(false);
+  const [variantBuilderBusy, setVariantBuilderBusy] = useState(false);
+  const [catalogBusy, setCatalogBusy] = useState(false);
   const [productVideoUploading, setProductVideoUploading] = useState(false);
+  const [ogImageUploading, setOgImageUploading] = useState(false);
   const [options, setVariantRows] = useState([
     {
       sku: "",
@@ -394,6 +510,7 @@ export default function ProductManagementUI() {
   const initialPrefillStartedRef = useRef(false);
   const requestedProductIdRef = useRef(null);
   const [saving, setSaving] = useState(false);
+  const [checkingMedia, setCheckingMedia] = useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const initialFormSnapshotRef = useRef(null);
   const pendingNavigationRef = useRef(null);
@@ -645,6 +762,7 @@ export default function ProductManagementUI() {
       resourceType: "category",
       resourceId: category._id || category.id || category.categoryKey,
       approvalStatus: category.approvalStatus,
+      active: category.active !== false,
     };
   };
 
@@ -670,6 +788,12 @@ export default function ProductManagementUI() {
     productFamilyCode: "basic-details",
     variants: "variants-options",
     attributes: "product-details",
+    dimensions: "basic-details",
+    warrantyTerms: "basic-details",
+    returnWindowDays: "basic-details",
+    restockingFee: "basic-details",
+    basicDetails: "basic-details",
+    commonImages: "common-images",
     shipping: "shipping",
     seo: "seo",
     tags: "tags",
@@ -864,8 +988,8 @@ export default function ProductManagementUI() {
               Boolean(productData?.approvedAt),
             markAsFeatured: Boolean(
               productData?.metadata?.featured ??
-                productData?.featured ??
-                productData?.markAsFeatured,
+              productData?.featured ??
+              productData?.markAsFeatured,
             ),
             isDealProduct: Boolean(productData?.metadata?.isDealProduct),
             dealBadge:
@@ -1322,7 +1446,9 @@ export default function ProductManagementUI() {
         setShippingProfilesLoading(false);
       }
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [
     dispatch,
     formData?.sellerId,
@@ -1386,6 +1512,7 @@ export default function ProductManagementUI() {
         resourceId: item?._id || item?.id,
         brandName: item?.name || item?.title || "",
         approvalStatus: item?.approvalStatus,
+        active: item?.active !== false,
       })),
       warrantyTemplateList: prefillList(
         "warrantyTemplates",
@@ -1434,10 +1561,17 @@ export default function ProductManagementUI() {
         "productFamilies",
         getListPayload(adminCoreSelector?.productFamiliesData),
       )
-        .map((item) => String(item?.familyCode || item?.code || "").trim())
-        .filter(Boolean)
-        .filter((value, index, arr) => arr.indexOf(value) === index)
-        .map((code) => ({ value: code, label: code })),
+        .map((item) => ({
+          value: String(item?.familyCode || item?.code || "").trim(),
+          label: String(item?.familyCode || item?.code || "").trim(),
+          active: item?.active !== false && item?.status !== "inactive",
+          approvalStatus: item?.approvalStatus,
+        }))
+        .filter((item) => item.value)
+        .filter(
+          (item, index, items) =>
+            items.findIndex((entry) => entry.value === item.value) === index,
+        ),
       taxList: transformArray(
         selector?.getAllTaxListData?.data?.data?.list || [],
       ),
@@ -1458,6 +1592,7 @@ export default function ProductManagementUI() {
           resourceType: "hsn",
           resourceId: item._id || item.id || code,
           approvalStatus: item.approvalStatus,
+          active: item.active !== false,
         };
       }),
       countryList: transformArray(prefillList("countries")),
@@ -1611,6 +1746,12 @@ export default function ProductManagementUI() {
       newErrors.name = "Product name must be at least 3 characters.";
     } else if (productName.length > 200) {
       newErrors.name = "Product name must not be more than 200 characters.";
+    } else if (!/\p{L}/u.test(productName)) {
+      newErrors.name = "Product name must contain at least one letter.";
+    } else if (/[\u0000-\u001F\u007F-\u009F]/u.test(productName)) {
+      newErrors.name = "Product name contains invalid characters.";
+    } else if (/\s{2,}/u.test(productName)) {
+      newErrors.name = "Product name cannot contain repeated spaces.";
     }
 
     // Description validation
@@ -1628,6 +1769,10 @@ export default function ProductManagementUI() {
     } else if (plainDescription.length > 5000) {
       newErrors.description =
         "Description must not be more than 5000 characters.";
+    }
+    if (String(formData?.shortDescription || "").length > 500) {
+      newErrors.shortDescription =
+        "Short description must be 500 characters or fewer.";
     }
 
     // Seller validation
@@ -1656,6 +1801,22 @@ export default function ProductManagementUI() {
 
     if (!brandValue) {
       newErrors.brand = "Brand is required.";
+    } else if (formattedData?.brandList?.length) {
+      const selectedBrand = formattedData.brandList.find((item) =>
+        [item.value, item.resourceId, item.brandName]
+          .filter(Boolean)
+          .some(
+            (value) => String(value).toLowerCase() === brandValue.toLowerCase(),
+          ),
+      );
+      if (
+        !selectedBrand ||
+        (selectedBrand.active === false &&
+          selectedBrand.approvalStatus !== "pending") ||
+        selectedBrand.approvalStatus === "rejected"
+      ) {
+        newErrors.brand = "Select a current active brand.";
+      }
     }
 
     // Category validation
@@ -1667,6 +1828,19 @@ export default function ProductManagementUI() {
 
     if (!categoryValue) {
       newErrors.category_id = "Category is required.";
+    } else if (createSelectOptions?.length) {
+      const selectedCategory = createSelectOptions.find((item) =>
+        [item.value, item.resourceId, item.categoryKey]
+          .filter(Boolean)
+          .some((value) => String(value) === String(categoryValue)),
+      );
+      if (
+        !selectedCategory ||
+        selectedCategory.active === false ||
+        ["pending", "rejected"].includes(selectedCategory.approvalStatus)
+      ) {
+        newErrors.category_id = "Select a current active category.";
+      }
     }
 
     // HSN code validation
@@ -1676,6 +1850,34 @@ export default function ProductManagementUI() {
 
     if (!hsnValue) {
       newErrors.hsn_code = "HSN Code is required.";
+    } else if (formattedData?.hsnCodeList?.length) {
+      const selectedHsn = formattedData.hsnCodeList.find((item) =>
+        [item.value, item.code, item.resourceId]
+          .filter(Boolean)
+          .some(
+            (value) => String(value).toLowerCase() === hsnValue.toLowerCase(),
+          ),
+      );
+      if (
+        !selectedHsn ||
+        selectedHsn.active === false ||
+        ["pending", "rejected"].includes(selectedHsn.approvalStatus)
+      ) {
+        newErrors.hsn_code = "Select a current active HSN code.";
+      }
+    }
+
+    if (formData?.productFamilyCode) {
+      const family = formattedData?.productFamilyList?.find(
+        (item) => String(item.value) === String(formData.productFamilyCode),
+      );
+      if (
+        (formattedData?.productFamilyList?.length && !family) ||
+        family?.active === false ||
+        ["pending", "rejected"].includes(family?.approvalStatus)
+      ) {
+        newErrors.productFamilyCode = "Select a current active product family.";
+      }
     }
 
     // Variant existence validation
@@ -1699,11 +1901,153 @@ export default function ProductManagementUI() {
       }
     }
 
+    const shipping = formData?.shipping || {};
+    const shippingAmounts = [
+      ["shippingCharge", "Shipping charge"],
+      ["freeShippingMinOrder", "Free shipping minimum order"],
+      ["additionalCost", "Additional shipping cost"],
+      ["handlingCharge", "Handling charge"],
+    ];
+    for (const [key, label] of shippingAmounts) {
+      const value = shipping[key];
+      if (
+        value !== undefined &&
+        value !== null &&
+        value !== "" &&
+        !isValidDecimal(value, { min: 0, max: MAX_PRODUCT_MONEY })
+      ) {
+        newErrors.shipping = `${label} must be a non-negative amount with no more than two decimal places.`;
+        break;
+      }
+    }
+    const etaMin = shipping.estimatedDaysMin;
+    const etaMax = shipping.estimatedDaysMax;
+    const processingDays = shipping.processingDays;
+    if (
+      (etaMin !== undefined &&
+        etaMin !== "" &&
+        !isValidNonNegativeInteger(etaMin)) ||
+      (etaMax !== undefined &&
+        etaMax !== "" &&
+        !isValidNonNegativeInteger(etaMax)) ||
+      (processingDays !== undefined &&
+        processingDays !== "" &&
+        !isValidNonNegativeInteger(processingDays))
+    ) {
+      newErrors.shipping =
+        "Delivery ETA values must be whole non-negative days.";
+    } else if (
+      etaMin !== undefined &&
+      etaMin !== "" &&
+      etaMax !== undefined &&
+      etaMax !== "" &&
+      Number(etaMin) > Number(etaMax)
+    ) {
+      newErrors.shipping = "Minimum delivery ETA cannot exceed maximum ETA.";
+    }
+    if (
+      shipping.shippingProfileId &&
+      !shippingProfilesLoading &&
+      shippingProfileOptions.length
+    ) {
+      const selectedProfile = shippingProfileOptions.find(
+        (item) => String(item.value) === String(shipping.shippingProfileId),
+      );
+      if (
+        !selectedProfile ||
+        selectedProfile.profile?.active === false ||
+        String(selectedProfile.value).startsWith("template:")
+      ) {
+        newErrors.shipping =
+          "Select an active shipping profile available to this seller and organization.";
+      }
+    }
+
+    const dimensions = formData?.dimensions || {};
+    const dimensionValues = ["length", "width", "height", "weight"];
+    const hasEnteredDimension = dimensionValues.some(
+      (key) =>
+        dimensions[key] !== undefined &&
+        dimensions[key] !== null &&
+        dimensions[key] !== "",
+    );
+    for (const key of dimensionValues) {
+      const value = dimensions[key];
+      if (
+        value !== undefined &&
+        value !== null &&
+        value !== "" &&
+        !isValidDecimal(value, {
+          min: Number.MIN_VALUE,
+          max: MAX_PRODUCT_MEASUREMENT,
+          places: 6,
+        })
+      ) {
+        newErrors.dimensions =
+          "Weight and dimensions must be positive valid measurements.";
+        break;
+      }
+    }
+    if (
+      dimensions.weight !== undefined &&
+      dimensions.weight !== null &&
+      dimensions.weight !== "" &&
+      !dimensions.weightUnit
+    ) {
+      newErrors.dimensions = "Select a weight unit when entering weight.";
+    } else if (
+      hasEnteredDimension &&
+      dimensionValues.some(
+        (key) =>
+          key !== "weight" &&
+          dimensions[key] !== undefined &&
+          dimensions[key] !== null &&
+          dimensions[key] !== "",
+      ) &&
+      !dimensions.unit
+    ) {
+      newErrors.dimensions =
+        "Select a dimension unit when entering dimensions.";
+    }
+
+    const commonImages = (
+      Array.isArray(formData?.commonImages) ? formData.commonImages : []
+    ).map(getMediaUrl);
+    const duplicateCommonImage = findDuplicateUrls(commonImages);
+    if (duplicateCommonImage) {
+      newErrors.commonImages = "Remove duplicate product images before saving.";
+    } else if (commonImages.some((image) => !isHttpUrl(image))) {
+      newErrors.commonImages = "Product image URLs must use HTTP or HTTPS.";
+    }
+    const videoUrls = (Array.isArray(formData?.videos) ? formData.videos : [])
+      .map(getMediaUrl)
+      .filter(Boolean);
+    if (videoUrls.length > 1 || videoUrls.some((url) => !isHttpUrl(url))) {
+      newErrors.commonImages = "Use one valid HTTP or HTTPS product video URL.";
+    }
+    if (commonImages.length > MAX_COMMON_PRODUCT_IMAGES) {
+      newErrors.commonImages = `A maximum of ${MAX_COMMON_PRODUCT_IMAGES} product images is allowed.`;
+    }
+    if (
+      commonImagesUploading ||
+      productVideoUploading ||
+      ogImageUploading ||
+      variantBuilderBusy
+    ) {
+      newErrors.commonImages =
+        "Wait for media and option uploads to finish before saving.";
+    }
+    if (catalogBusy) {
+      newErrors.basicDetails =
+        "Wait for catalog updates and uploads to finish before saving.";
+    }
+
     // Return policy validation
     const returnPolicy = formData?.warranty?.returnPolicy || {};
     const warranty = formData?.warranty || {};
     const hasLegacyWarrantyDetails =
-      Number(warranty.period) >= 1 || Boolean(String(warranty.provider || "").trim());
+      Number(warranty.period) >= 1 ||
+      Boolean(String(warranty.provider || "").trim());
     const warrantyEnabled =
       warranty.enabled === true ||
       (warranty.enabled === undefined && hasLegacyWarrantyDetails);
@@ -1723,6 +2067,42 @@ export default function ProductManagementUI() {
       if (!String(warranty.type || "").trim()) {
         newErrors.warrantyType = "Warranty type is required.";
       }
+      if (String(warranty.provider || "").trim().length > 100) {
+        newErrors.warrantyProvider =
+          "Warranty provider must be 100 characters or fewer.";
+      }
+      if (String(warranty.type || "").trim().length > 100) {
+        newErrors.warrantyType =
+          "Warranty type must be 100 characters or fewer.";
+      }
+      if (String(warranty.terms || "").length > 1000) {
+        newErrors.warrantyTerms =
+          "Warranty terms must be 1000 characters or fewer.";
+      }
+    }
+    const restockingFee = returnPolicy?.restockingFee;
+    if (
+      restockingFee !== undefined &&
+      restockingFee !== null &&
+      restockingFee !== "" &&
+      !isValidDecimal(restockingFee, { min: 0, max: MAX_PRODUCT_MONEY })
+    ) {
+      newErrors.restockingFee =
+        "Restocking fee must be a non-negative amount with no more than two decimal places.";
+    }
+    if (
+      !["standard", "replacement_only", "non_returnable"].includes(
+        returnPolicy.type || "standard",
+      ) ||
+      !["refund", "replacement", "refund_or_replacement"].includes(
+        returnPolicy.resolution || "refund_or_replacement",
+      ) ||
+      !["platform", "seller", "customer"].includes(
+        returnPolicy.shippingPaidBy || "seller",
+      )
+    ) {
+      newErrors.returnWindowDays =
+        "Select a valid return policy type, resolution, and shipping responsibility.";
     }
     const isReturnable =
       String(returnPolicy?.type || "").toLowerCase() !== "non_returnable" &&
@@ -1730,10 +2110,12 @@ export default function ProductManagementUI() {
       returnPolicy?.eligible !== false;
 
     if (isReturnable) {
-      const returnWindowDays = Number(returnPolicy?.returnWindowDays ?? 0);
+      const returnWindowDays = Number(
+        returnPolicy?.returnWindowDays ?? returnPolicy?.days ?? 0,
+      );
 
       if (
-        !Number.isFinite(returnWindowDays) ||
+        !Number.isInteger(returnWindowDays) ||
         returnWindowDays < 1 ||
         returnWindowDays > 365
       ) {
@@ -1757,6 +2139,60 @@ export default function ProductManagementUI() {
         return counts;
       }, new Map());
 
+      const optionNames = variantAxes.map((axis) =>
+        String(axis?.name || "").trim(),
+      );
+      if (
+        optionNames.some((name) => name.length < 2 || name.length > 50) ||
+        findDuplicate(optionNames)
+      ) {
+        newErrors.variants = {
+          ...(newErrors.variants || {}),
+          _form: "Option names must be unique and 2–50 characters long.",
+        };
+      }
+      const invalidOptionValue = variantAxes.some((axis) => {
+        const values = Array.isArray(axis?.values) ? axis.values : [];
+        return (
+          values.some(
+            (value) =>
+              String(value || "").trim().length < 1 ||
+              String(value).trim().length > 80,
+          ) || Boolean(findDuplicate(values))
+        );
+      });
+      if (invalidOptionValue) {
+        newErrors.variants = {
+          ...(newErrors.variants || {}),
+          _form: "Option values must be unique and 1–80 characters long.",
+        };
+      }
+
+      const defaultCount = variantsData.filter(
+        (variant) => variant?.isDefault === true,
+      ).length;
+      if (defaultCount !== 1) {
+        newErrors.variants = {
+          ...(newErrors.variants || {}),
+          _form: "Choose exactly one default variant.",
+        };
+      }
+      const productWillBeActive =
+        !formData?.isDisable &&
+        (formData?.status === "active" ||
+          formData?.approvalStatus === "approved" ||
+          formData?.isApproved === true);
+      if (
+        productWillBeActive &&
+        !variantsData.some((variant) => variant?.status === "active")
+      ) {
+        newErrors.variants = {
+          ...(newErrors.variants || {}),
+          _form:
+            "At least one variant must be active before activating the product.",
+        };
+      }
+
       const variantErrors = variantsData.reduce((result, variant, index) => {
         const fieldErrors = {};
 
@@ -1779,13 +2215,157 @@ export default function ProductManagementUI() {
 
         if (!String(variant?.sku || "").trim()) {
           fieldErrors.sku = "SKU is required.";
+        } else if (!PRODUCT_SKU_PATTERN.test(String(variant.sku).trim())) {
+          fieldErrors.sku =
+            "Use 3–64 letters, numbers, hyphens, underscores, periods, or slashes; begin and end with a letter or number.";
         } else if (
           skuCounts.get(String(variant.sku).trim().toLowerCase()) > 1
         ) {
           fieldErrors.sku = "SKU must be unique across variants.";
         }
 
-        const attributeErrors = variantAxes.reduce((axisErrors, axis) => {
+        if (
+          !isValidDecimal(variant?.price, { min: 0.01, max: MAX_PRODUCT_MONEY })
+        ) {
+          fieldErrors.price =
+            "Price must be positive, no more than 999999999.99, and have at most two decimal places.";
+        }
+        if (
+          !isValidDecimal(variant?.mrp, { min: 0.01, max: MAX_PRODUCT_MONEY })
+        ) {
+          fieldErrors.mrp =
+            "MRP must be positive, no more than 999999999.99, and have at most two decimal places.";
+        }
+        if (!isValidNonNegativeInteger(variant?.stock)) {
+          fieldErrors.stock =
+            "Stock must be a whole number from 0 to 1000000000.";
+        }
+        const reservedValue = variant?.reservedStock ?? 0;
+        if (
+          !isValidNonNegativeInteger(reservedValue) ||
+          Number(reservedValue) > Number(variant?.stock ?? 0)
+        ) {
+          fieldErrors.reservedStock =
+            "Reserved stock must be a whole number no greater than stock.";
+        }
+        if (
+          hasSalePrice &&
+          !isValidDecimal(variant?.salePrice, {
+            min: 0.01,
+            max: MAX_PRODUCT_MONEY,
+          })
+        ) {
+          fieldErrors.salePrice =
+            "Sale price must be positive, no more than 999999999.99, and have at most two decimal places.";
+        }
+        const variantTitle = String(variant?.title || "").trim();
+        if (variantTitle.length > 100) {
+          fieldErrors.title = "Variant title must be 100 characters or fewer.";
+        } else if (/[\u0000-\u001F\u007F-\u009F]/u.test(variantTitle)) {
+          fieldErrors.title = "Variant title contains invalid characters.";
+        }
+        if (String(variant?.shortDescription || "").trim().length > 500) {
+          fieldErrors.shortDescription =
+            "Variant short description must be 500 characters or fewer.";
+        }
+        const variantDescription = String(variant?.description || "").trim();
+        if (
+          variantDescription &&
+          (variantDescription.length < 10 || variantDescription.length > 5000)
+        ) {
+          fieldErrors.description =
+            "Variant description must be between 10 and 5000 characters.";
+        }
+        const barcode = String(variant?.barcode || "").trim();
+        if (barcode && !/^\d{8,14}$/.test(barcode)) {
+          fieldErrors.barcode = "Barcode must contain 8–14 digits.";
+        }
+        if (
+          !["active", "inactive", "out_of_stock"].includes(
+            variant?.status || "active",
+          )
+        ) {
+          fieldErrors.status = "Select a valid variant status.";
+        }
+        if (
+          variant?.weight !== undefined &&
+          variant?.weight !== null &&
+          variant?.weight !== ""
+        ) {
+          if (
+            !isValidDecimal(variant.weight, {
+              min: Number.MIN_VALUE,
+              max: MAX_PRODUCT_MEASUREMENT,
+              places: 6,
+            })
+          ) {
+            fieldErrors.weight =
+              "Variant weight must be a positive measurement.";
+          } else if (!variant.weightUnit) {
+            fieldErrors.weight = "Select a unit for variant weight.";
+          }
+        }
+        const variantDimensions = variant?.dimensions || {};
+        const dimensionKeys = ["length", "width", "height"];
+        const hasVariantDimension = dimensionKeys.some(
+          (key) =>
+            variantDimensions[key] !== undefined &&
+            variantDimensions[key] !== null &&
+            variantDimensions[key] !== "",
+        );
+        if (
+          dimensionKeys.some((key) => {
+            const value = variantDimensions[key];
+            return (
+              value !== undefined &&
+              value !== null &&
+              value !== "" &&
+              !isValidDecimal(value, {
+                min: Number.MIN_VALUE,
+                max: MAX_PRODUCT_MEASUREMENT,
+                places: 6,
+              })
+            );
+          })
+        ) {
+          fieldErrors.dimensions =
+            "Variant dimensions must be positive measurements.";
+        } else if (hasVariantDimension && !variantDimensions.unit) {
+          fieldErrors.dimensions = "Select a unit for variant dimensions.";
+        }
+
+        const variantImages = (
+          Array.isArray(variant?.images) ? variant.images : []
+        ).map(getMediaUrl);
+        if (variantImages.length > 5) {
+          fieldErrors.images =
+            "A maximum of five images is allowed per variant.";
+        } else if (findDuplicateUrls(variantImages)) {
+          fieldErrors.images = "Remove duplicate images from this variant.";
+        } else if (variantImages.some((image) => !isHttpUrl(image))) {
+          fieldErrors.images = "Variant image URLs must use HTTP or HTTPS.";
+        } else if (!variantImages.length) {
+          fieldErrors.images = "Add at least one image to this variant.";
+        }
+
+        const attributeErrors = Object.entries(
+          variant?.attributes || {},
+        ).reduce((axisErrors, [key, value]) => {
+          const normalizedKey = String(key || "").trim();
+          const normalizedValue = String(value ?? "").trim();
+          if (normalizedKey.length < 2 || normalizedKey.length > 50) {
+            axisErrors[normalizedKey || "_key"] =
+              "Attribute names must be 2–50 characters.";
+          } else if (
+            normalizedValue.length < 1 ||
+            normalizedValue.length > 80
+          ) {
+            axisErrors[normalizedKey] =
+              "Attribute values must be 1–80 characters.";
+          }
+          return axisErrors;
+        }, {});
+        variantAxes.reduce((axisErrors, axis) => {
           const axisKey = getVariantAxisKey(axis);
           const value = getVariantAxisValue(variant, axis);
           if (axis.required && !String(value || "").trim()) {
@@ -1802,7 +2382,7 @@ export default function ProductManagementUI() {
               `${value} is not an allowed ${axis.name || axisKey} value.`;
           }
           return axisErrors;
-        }, {});
+        }, attributeErrors);
         const combinationKey = getVariantCombinationKey(variant, variantAxes);
         if (combinationKey && combinationCounts.get(combinationKey) > 1) {
           attributeErrors._combination =
@@ -1836,6 +2416,12 @@ export default function ProductManagementUI() {
           fieldErrors.gstRate = "Enter a valid GST rate.";
         } else if (hasGstRate && (gstRate < 0 || gstRate > 100)) {
           fieldErrors.gstRate = "GST rate must be between 0 and 100.";
+        } else if (
+          hasGstRate &&
+          !isValidDecimal(variant?.gstRate, { min: 0, max: 100, places: 2 })
+        ) {
+          fieldErrors.gstRate =
+            "GST rate can have no more than two decimal places.";
         }
 
         if (Object.keys(fieldErrors).length) {
@@ -1851,6 +2437,9 @@ export default function ProductManagementUI() {
           ...variantErrors,
         };
       }
+    } else if (!Array.isArray(variantsData) || variantsData.length === 0) {
+      newErrors.commonImages =
+        "Add at least one variant or product image before saving.";
     }
 
     // Category attribute validation
@@ -1861,15 +2450,210 @@ export default function ProductManagementUI() {
         const isEmpty =
           value === undefined ||
           value === null ||
-          value === "" ||
+          (typeof value === "string" && value.trim() === "") ||
           (Array.isArray(value) && value.length === 0);
         if (field.required && isEmpty) {
           newErrors.attributes = {
             ...(newErrors.attributes || {}),
             [field.key]: `${field.label || field.key} is required.`,
           };
+          return;
+        }
+        if (isEmpty) {
+          if (
+            field.type === "multi_select" &&
+            Number(field.minSelections || 0) > 0
+          ) {
+            newErrors.attributes = {
+              ...(newErrors.attributes || {}),
+              [field.key]: `Select at least ${field.minSelections} option(s).`,
+            };
+          }
+          return;
+        }
+
+        let message = "";
+        if (["text", "select"].includes(field.type)) {
+          const text = String(value);
+          const minLength = Number(field.minLength || 0);
+          const maxLength = Number(field.maxLength ?? 5000);
+          if (text.length < minLength || text.length > maxLength) {
+            message = `Enter between ${minLength} and ${maxLength} characters.`;
+          } else if (field.pattern) {
+            try {
+              if (!new RegExp(field.pattern).test(text))
+                message = "Enter a value in the required format.";
+            } catch {
+              message =
+                "This attribute has an invalid validation pattern. Contact an administrator.";
+            }
+          }
+        } else if (field.type === "number") {
+          const isDimensionField = isFurnitureDimensionAttribute(field);
+          if (isDimensionField) {
+            if (!isPositiveMeasurement(value)) {
+              message = `${field.label || field.key} must be a positive number greater than 0. Example: 12.5.`;
+            }
+          } else {
+            const numericValue = Number(value);
+            if (!Number.isFinite(numericValue)) {
+              message = "Enter a valid number.";
+            } else if (
+              field.min !== undefined &&
+              field.min !== null &&
+              field.min !== "" &&
+              numericValue < Number(field.min)
+            ) {
+              message = `Value must be at least ${field.min}.`;
+            } else if (
+              field.max !== undefined &&
+              field.max !== null &&
+              field.max !== "" &&
+              numericValue > Number(field.max)
+            ) {
+              message = `Value must be no more than ${field.max}.`;
+            } else if (
+              field.precision !== undefined &&
+              field.precision !== null &&
+              (String(value).split(".")[1] || "").length >
+                Number(field.precision)
+            ) {
+              message = `Use no more than ${field.precision} decimal places.`;
+            }
+          }
+        } else if (field.type === "date") {
+          const date = new Date(value);
+          if (Number.isNaN(date.getTime())) {
+            message = "Enter a valid date.";
+          } else if (field.min && date < new Date(field.min)) {
+            message = `Date must be on or after ${field.min}.`;
+          } else if (field.max && date > new Date(field.max)) {
+            message = `Date must be on or before ${field.max}.`;
+          }
+        } else if (field.type === "boolean" && typeof value !== "boolean") {
+          message = "Enter a valid true or false value.";
+        } else if (field.type === "multi_select") {
+          if (!Array.isArray(value)) {
+            message = "Select one or more valid options.";
+          } else if (
+            field.minSelections !== undefined &&
+            field.minSelections !== null &&
+            value.length < Number(field.minSelections)
+          ) {
+            message = `Select at least ${field.minSelections} option(s).`;
+          } else if (
+            field.maxSelections !== undefined &&
+            field.maxSelections !== null &&
+            value.length > Number(field.maxSelections)
+          ) {
+            message = `Select no more than ${field.maxSelections} option(s).`;
+          } else if (findDuplicate(value)) {
+            message = "Remove duplicate selections.";
+          }
+        }
+        if (
+          !message &&
+          ["select", "multi_select"].includes(field.type) &&
+          Array.isArray(field.options) &&
+          field.options.length
+        ) {
+          const selectedValues = Array.isArray(value) ? value : [value];
+          if (
+            selectedValues.some(
+              (item) =>
+                !field.options.some(
+                  (allowed) => String(allowed) === String(item),
+                ),
+            )
+          ) {
+            message = "Select only the available options.";
+          }
+        }
+        if (message) {
+          newErrors.attributes = {
+            ...(newErrors.attributes || {}),
+            [field.key]: message,
+          };
         }
       });
+    } else {
+      const attributes = formData?.attributes || {};
+      const normalizedKeys = Object.keys(attributes).map((key) =>
+        key.trim().toLowerCase(),
+      );
+      if (new Set(normalizedKeys).size !== normalizedKeys.length) {
+        newErrors.attributes = {
+          _form: "Manual attribute keys must be unique.",
+        };
+      }
+      Object.entries(attributes).forEach(([key, value]) => {
+        if (key.trim().length < 2 || key.trim().length > 50) {
+          newErrors.attributes = {
+            ...(newErrors.attributes || {}),
+            [key]: "Attribute key must be 2–50 characters.",
+          };
+        }
+        if (typeof value === "string" && value.trim().length > 500) {
+          newErrors.attributes = {
+            ...(newErrors.attributes || {}),
+            [key]: "Attribute value must be 500 characters or fewer.",
+          };
+        }
+      });
+    }
+
+    const seo = formData?.seo || {};
+    const seoErrors = {};
+    if (String(seo.metaTitle || "").trim().length > 70)
+      seoErrors.metaTitle = "Meta title must be 70 characters or fewer.";
+    if (String(seo.metaDescription || "").trim().length > 160)
+      seoErrors.metaDescription =
+        "Meta description must be 160 characters or fewer.";
+    if (String(seo.ogTitle || "").trim().length > 70)
+      seoErrors.ogTitle = "Open Graph title must be 70 characters or fewer.";
+    if (String(seo.ogDescription || "").trim().length > 160)
+      seoErrors.ogDescription =
+        "Open Graph description must be 160 characters or fewer.";
+    if (seo.canonicalUrl && !isHttpUrl(seo.canonicalUrl))
+      seoErrors.canonicalUrl = "Canonical URL must use HTTP or HTTPS.";
+    if (seo.ogImage && !isHttpUrl(seo.ogImage))
+      seoErrors.ogImage = "Pasted image URLs must be valid HTTP/HTTPS URLs.";
+    if (ogImageUploading)
+      seoErrors.ogImage =
+        "Wait for the OG image upload to finish before saving.";
+    const keywords = Array.isArray(seo.keywords) ? seo.keywords : [];
+    if (keywords.length > 20)
+      seoErrors.keywords = "Use no more than 20 SEO keywords.";
+    else if (
+      keywords.some(
+        (keyword) =>
+          String(keyword || "").trim().length < 2 ||
+          String(keyword).trim().length > 60,
+      )
+    ) {
+      seoErrors.keywords = "Each SEO keyword must be 2–60 characters.";
+    } else if (findDuplicate(keywords)) {
+      seoErrors.keywords = "SEO keywords must be unique, ignoring letter case.";
+    }
+    if (Object.keys(seoErrors).length) newErrors.seo = seoErrors;
+
+    const tags = Array.isArray(formData?.tags) ? formData.tags : [];
+    if (tags.length > 20) {
+      newErrors.tags = "Use no more than 20 tags.";
+    } else if (
+      tags.some((tag) => {
+        const normalized = String(tag || "").trim();
+        return (
+          normalized.length < 2 ||
+          normalized.length > 40 ||
+          !PRODUCT_TAG_PATTERN.test(normalized)
+        );
+      })
+    ) {
+      newErrors.tags =
+        "Tags must be 2–40 lowercase letters or numbers separated by single hyphens.";
+    } else if (findDuplicate(tags)) {
+      newErrors.tags = "Tags must be unique, ignoring letter case.";
     }
 
     setError(newErrors);
@@ -2693,7 +3477,163 @@ export default function ProductManagementUI() {
             err?.error?.message ||
             err?.data?.message ||
             "Failed to save product.";
-      toast.error(message);
+      const formatGstRateError = (rawMessage) => {
+        if (/decimal|precision/i.test(rawMessage)) {
+          return "GST rate can have no more than two decimal places.";
+        }
+        if (/number|numeric|valid/i.test(rawMessage)) {
+          return "Enter a valid GST rate.";
+        }
+        return "GST rate must be between 0 and 100.";
+      };
+      const apiFields =
+        err?.details?.fields ||
+        err?.data?.details?.fields ||
+        err?.response?.data?.details?.fields ||
+        err?.payload?.details?.fields ||
+        [];
+      const mappedErrors = {};
+      let gstRateErrorMessage = "";
+      const setVariantApiError = (index, field, fieldMessage) => {
+        mappedErrors.variants = mappedErrors.variants || {};
+        mappedErrors.variants[index] = {
+          ...(mappedErrors.variants[index] || {}),
+          [field]: fieldMessage,
+        };
+      };
+      apiFields.forEach((detail) => {
+        const field = String(detail?.field || "")
+          .replace(/^body\./, "")
+          .replace(/\[(\d+)\]/g, ".$1");
+        const fieldMessage = String(detail?.message || message);
+        const variantMatch = field.match(/variants\.(\d+)\.([\w]+)/i);
+        if (variantMatch) {
+          const variantIndex = Number(variantMatch[1]);
+          const variantField = variantMatch[2];
+          const friendlyMessage =
+            variantField.toLowerCase() === "gstrate"
+              ? formatGstRateError(fieldMessage)
+              : fieldMessage;
+          if (variantField.toLowerCase() === "gstrate") {
+            gstRateErrorMessage = friendlyMessage;
+          }
+          setVariantApiError(variantIndex, variantField, friendlyMessage);
+        } else if (/sku/i.test(field) || /\bsku\b/i.test(fieldMessage)) {
+          const skuMatch = fieldMessage.match(/sku\s*['\"]?([^'\"\s]+)['\"]?/i);
+          const matchingIndex = skuMatch
+            ? variantsData.findIndex(
+                (variant) =>
+                  String(variant.sku || "").toLowerCase() ===
+                  skuMatch[1].toLowerCase(),
+              )
+            : -1;
+          setVariantApiError(
+            matchingIndex >= 0 ? matchingIndex : 0,
+            "sku",
+            fieldMessage,
+          );
+        } else if (
+          /attributes?/i.test(field) ||
+          /attribute\s+['\"]?([^'\" ]+)/i.test(fieldMessage)
+        ) {
+          const attributeMatch =
+            field.match(/attributes?\.([^\.]+)/i) ||
+            fieldMessage.match(/attribute\s+['\"]?([^'\" ]+)/i);
+          if (attributeMatch) {
+            mappedErrors.attributes = {
+              ...(mappedErrors.attributes || {}),
+              [attributeMatch[1].replace(/[ '\"].*$/, "")]: fieldMessage,
+            };
+          } else {
+            mappedErrors.attributes = { _form: fieldMessage };
+          }
+        } else if (
+          /shipping|eta|pincode|delivery/i.test(`${field} ${fieldMessage}`)
+        ) {
+          mappedErrors.shipping = fieldMessage;
+        } else if (/image|media|video/i.test(`${field} ${fieldMessage}`)) {
+          mappedErrors.commonImages = fieldMessage;
+        } else if (/tag/i.test(`${field} ${fieldMessage}`)) {
+          mappedErrors.tags = fieldMessage;
+        } else if (
+          /seo|keyword|canonical|open graph/i.test(`${field} ${fieldMessage}`)
+        ) {
+          mappedErrors.seo = {
+            ...(mappedErrors.seo || {}),
+            [field.split(".").pop() || "keywords"]: fieldMessage,
+          };
+        } else if (/category/i.test(`${field} ${fieldMessage}`)) {
+          mappedErrors.category_id = fieldMessage;
+        } else if (/brand/i.test(`${field} ${fieldMessage}`)) {
+          mappedErrors.brand = fieldMessage;
+        } else if (/hsn/i.test(`${field} ${fieldMessage}`)) {
+          mappedErrors.hsn_code = fieldMessage;
+        } else if (/family/i.test(`${field} ${fieldMessage}`)) {
+          mappedErrors.productFamilyCode = fieldMessage;
+        } else if (/warranty.*terms|terms/i.test(`${field} ${fieldMessage}`)) {
+          mappedErrors.warrantyTerms = fieldMessage;
+        } else if (
+          /dimension|measurement|weight unit/i.test(`${field} ${fieldMessage}`)
+        ) {
+          mappedErrors.dimensions = fieldMessage;
+        } else if (/warranty|return/i.test(`${field} ${fieldMessage}`)) {
+          mappedErrors.warrantyPeriod = fieldMessage;
+        } else if (/description/i.test(`${field} ${fieldMessage}`)) {
+          mappedErrors.description = fieldMessage;
+        } else if (/title|product name/i.test(`${field} ${fieldMessage}`)) {
+          mappedErrors.name = fieldMessage;
+        } else if (
+          /variant|stock|price|barcode|default/i.test(
+            `${field} ${fieldMessage}`,
+          )
+        ) {
+          mappedErrors.variants = {
+            ...(mappedErrors.variants || {}),
+            _form: fieldMessage,
+          };
+        }
+      });
+      if (!Object.keys(mappedErrors).length && /sku/i.test(message)) {
+        const skuMatch = message.match(/sku\s*['\"]?([^'\"\s]+)['\"]?/i);
+        const matchingIndex = skuMatch
+          ? variantsData.findIndex(
+              (variant) =>
+                String(variant.sku || "").toLowerCase() ===
+                skuMatch[1].toLowerCase(),
+            )
+          : -1;
+        setVariantApiError(
+          matchingIndex >= 0 ? matchingIndex : 0,
+          "sku",
+          message,
+        );
+      } else if (!Object.keys(mappedErrors).length) {
+        const normalizedMessage = message.replace(/\[(\d+)\]/g, ".$1");
+        const variantMatch = normalizedMessage.match(
+          /variants\.(\d+)\.([\w]+)/i,
+        );
+        if (variantMatch && variantMatch[2].toLowerCase() === "gstrate") {
+          const friendlyMessage = formatGstRateError(message);
+          gstRateErrorMessage = friendlyMessage;
+          setVariantApiError(
+            Number(variantMatch[1]),
+            variantMatch[2],
+            friendlyMessage,
+          );
+        } else if (/image|media|video/i.test(message))
+          mappedErrors.commonImages = message;
+        else if (/shipping|delivery|pincode/i.test(message))
+          mappedErrors.shipping = message;
+        else if (/attribute/i.test(message))
+          mappedErrors.attributes = { _form: message };
+        else if (/variant|price|stock|barcode|default/i.test(message))
+          mappedErrors.variants = { _form: message };
+      }
+      if (Object.keys(mappedErrors).length) {
+        setError(mappedErrors);
+        pendingValidationScrollRef.current = true;
+      }
+      toast.error(gstRateErrorMessage || message);
     } finally {
       setSaving(false);
     }
@@ -2748,6 +3688,16 @@ export default function ProductManagementUI() {
 
     setError((prev) => {
       if (!prev || typeof prev !== "object") return prev;
+
+      if (field === "seo.ogImage" && prev.seo?.ogImage) {
+        const seoErrors = { ...prev.seo };
+        delete seoErrors.ogImage;
+        const nextErrors = { ...prev };
+        if (Object.keys(seoErrors).length) nextErrors.seo = seoErrors;
+        else delete nextErrors.seo;
+        return Object.keys(nextErrors).length ? nextErrors : null;
+      }
+
       if (field !== "warranty.returnPolicy.returnWindowDays") return prev;
 
       const nextErrors = { ...prev };
@@ -2869,10 +3819,16 @@ export default function ProductManagementUI() {
     const errors = {};
 
     if (!key) errors.key = "Attribute key is required.";
-    else if (existingKeys.some((k) => k.toLowerCase() === key.toLowerCase())) {
+    else if (key.length < 2 || key.length > 50) {
+      errors.key = "Attribute key must be 2–50 characters.";
+    } else if (
+      existingKeys.some((k) => k.toLowerCase() === key.toLowerCase())
+    ) {
       errors.key = "This attribute key already exists.";
     }
     if (!value) errors.value = "Attribute value is required.";
+    else if (value.length > 500)
+      errors.value = "Attribute value must be 500 characters or fewer.";
 
     if (Object.keys(errors).length > 0) {
       setManualAttrErrors(errors);
@@ -2993,6 +3949,30 @@ export default function ProductManagementUI() {
       setCommonImagesUploading(false);
     }
   };
+
+  const uploadOgImage = useCallback(
+    async (file) => {
+      if (!file) return;
+
+      setOgImageUploading(true);
+      try {
+        const imageUrl = await uploadFile(file, "PRODUCT");
+        handleNestedChange("seo.ogImage", imageUrl);
+        toast.success("OG image uploaded");
+      } catch (uploadError) {
+        toast.error(
+          uploadError?.message || uploadError || "OG image upload failed",
+        );
+      } finally {
+        setOgImageUploading(false);
+      }
+    },
+    [handleNestedChange],
+  );
+
+  const removeOgImage = useCallback(() => {
+    handleNestedChange("seo.ogImage", "");
+  }, [handleNestedChange]);
 
   // const addCommonProductImageUrl = () => {
   //   const url = commonImageUrl.trim();
@@ -3143,6 +4123,7 @@ export default function ProductManagementUI() {
             handleInputReactQuillChange={handleProductDetailChange}
             userData={userData}
             hasVariantPricing
+            onBusyChange={setCatalogBusy}
           />
         ),
       },
@@ -3158,6 +4139,14 @@ export default function ProductManagementUI() {
               <h3>Attributes</h3>
               <p>Manage the product attributes controlled by its category.</p>
             </div>
+            {error?.attributes?._form && (
+              <p
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+                role="alert"
+              >
+                {error.attributes._form}
+              </p>
+            )}
             {/* <div className="pb-4 border-b border-gray-100 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-gray-900">Attributes</h3>
@@ -3178,6 +4167,7 @@ export default function ProductManagementUI() {
                       <input
                         className={`admin-input${manualAttrErrors.key ? " admin-input-error" : ""}`}
                         value={newAttrKey}
+                        maxLength={50}
                         onChange={(e) => {
                           setNewAttrKey(e.target.value);
                           if (manualAttrErrors.key)
@@ -3205,6 +4195,7 @@ export default function ProductManagementUI() {
                       <input
                         className={`admin-input${manualAttrErrors.value ? " admin-input-error" : ""}`}
                         value={newAttrValue}
+                        maxLength={500}
                         onChange={(e) => {
                           setNewAttrValue(e.target.value);
                           if (manualAttrErrors.value)
@@ -3276,6 +4267,7 @@ export default function ProductManagementUI() {
                               <input
                                 className={`admin-input${rowError ? " admin-input-error" : ""}`}
                                 value={formData.attributes[key] || ""}
+                                maxLength={500}
                                 onChange={(e) =>
                                   updateManualAttributeValue(
                                     key,
@@ -3337,11 +4329,6 @@ export default function ProductManagementUI() {
                 edit each variant.
               </p>
             </div>
-            {error?.variants?._form && (
-              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error.variants._form}
-              </div>
-            )}
             <VariantBuilder
               variants={variantsData}
               options={variantAxes}
@@ -3356,6 +4343,7 @@ export default function ProductManagementUI() {
               onSubmitOption={handleProductOptionSubmission}
               errors={error?.variants}
               onClearError={handleVariantErrorClear}
+              onUploadingChange={setVariantBuilderBusy}
             />
           </div>
         ),
@@ -3380,6 +4368,11 @@ export default function ProductManagementUI() {
                   Images {(formData.commonImages || []).length}/
                   {MAX_COMMON_PRODUCT_IMAGES}
                 </span>
+                {error?.commonImages && (
+                  <p className="mb-2 text-xs text-red-600" role="alert">
+                    {error.commonImages}
+                  </p>
+                )}
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,112px))] gap-3">
                   {(formData.commonImages || []).map((image, imageIndex) => (
                     <div
@@ -3542,7 +4535,9 @@ export default function ProductManagementUI() {
 
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="text-xs font-semibold text-gray-700">Shipping profiles</span>
+                <span className="text-xs font-semibold text-gray-700">
+                  Shipping profiles
+                </span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -3550,7 +4545,10 @@ export default function ProductManagementUI() {
                       // window.open copies sessionStorage from its opener when
                       // the new browsing context is created. Detach the opener
                       // immediately afterward to prevent reverse tab access.
-                      const profileTab = window.open("/app/shipping-profiles", "_blank");
+                      const profileTab = window.open(
+                        "/app/shipping-profiles",
+                        "_blank",
+                      );
                       if (profileTab) profileTab.opener = null;
                     }}
                     className="inline-flex items-center gap-1 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] hover:bg-[var(--admin-gold-soft)]"
@@ -3559,16 +4557,22 @@ export default function ProductManagementUI() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShippingProfilesRefresh(value => value + 1)}
+                    onClick={() =>
+                      setShippingProfilesRefresh((value) => value + 1)
+                    }
                     disabled={shippingProfilesLoading}
                     aria-label="Refresh shipping profiles and templates"
                     className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                   >
-                    <FiRefreshCw aria-hidden="true" className={shippingProfilesLoading ? "animate-spin" : ""} />
+                    <FiRefreshCw
+                      aria-hidden="true"
+                      className={shippingProfilesLoading ? "animate-spin" : ""}
+                    />
                     {shippingProfilesLoading ? "Refreshing…" : "Refresh"}
                   </button>
                 </div>
               </div>
+
               {/* Selected Profile Actions */}
               <div className="flex items-start justify-end gap-2">
                 {formData?.shipping?.shippingProfileId && (
@@ -3711,7 +4715,8 @@ export default function ProductManagementUI() {
               {shippingProfileOptions.filter(
                 (option) => option.type === "profile",
               ).length === 0 &&
-                formData?.sellerId && !shippingProfilesLoading && (
+                formData?.sellerId &&
+                !shippingProfilesLoading && (
                   <p className="text-xs text-gray-400">
                     No active shipping profiles found. Create a profile above,
                     then refresh to load it.
@@ -3951,6 +4956,10 @@ export default function ProductManagementUI() {
               seo={formData?.seo || {}}
               onChange={handleNestedChange}
               slug={formData?.slug || ""}
+              errors={error?.seo || {}}
+              onOgImageUpload={uploadOgImage}
+              onOgImageRemove={removeOgImage}
+              ogImageUploading={ogImageUploading}
             />
           </div>
         ),
@@ -3976,6 +4985,7 @@ export default function ProductManagementUI() {
                 onChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
                 placeholder="Add tag…"
                 maxTags={20}
+                error={typeof error?.tags === "string" ? error.tags : ""}
               />
             </div>
 
@@ -4189,6 +5199,7 @@ export default function ProductManagementUI() {
       commonImageUrl,
       commonImagesUploading,
       productVideoUploading,
+      ogImageUploading,
       allowedPincodeInput,
       addProductPincode,
       removeProductPincode,
@@ -4261,7 +5272,8 @@ export default function ProductManagementUI() {
     return blockers;
   }, [createSelectOptions, formattedData, formData]);
 
-  const handleValidateAndSubmit = useCallback(() => {
+  const handleValidateAndSubmit = useCallback(async () => {
+    if (saving || checkingMedia) return;
     const isBasicFormValid = validateForm();
     if (!isBasicFormValid) return;
     if (flowGateErrors.length) {
@@ -4274,6 +5286,63 @@ export default function ProductManagementUI() {
       );
       return;
     }
+
+    const imageUrls = [
+      ...(Array.isArray(formData?.commonImages) ? formData.commonImages : []),
+      ...(Array.isArray(variantsData)
+        ? variantsData.flatMap((variant) =>
+            Array.isArray(variant?.images) ? variant.images : [],
+          )
+        : []),
+    ]
+      .map(getMediaUrl)
+      .filter(Boolean);
+    const uniqueImageUrls = Array.from(new Set(imageUrls));
+    setCheckingMedia(true);
+    let failedImageUrls;
+    try {
+      const imageResults = await Promise.all(
+        uniqueImageUrls.map(async (url) => [url, await canLoadImage(url)]),
+      );
+      failedImageUrls = new Set(
+        imageResults.filter(([, loaded]) => !loaded).map(([url]) => url),
+      );
+    } catch {
+      failedImageUrls = new Set(uniqueImageUrls);
+    } finally {
+      setCheckingMedia(false);
+    }
+    if (failedImageUrls.size) {
+      const validationErrors = {};
+      const failedCommonImage = (formData?.commonImages || []).some((image) =>
+        failedImageUrls.has(getMediaUrl(image)),
+      );
+      if (failedCommonImage) {
+        validationErrors.commonImages =
+          "One or more product images could not be loaded. Replace or remove them before saving.";
+      }
+      const failedVariants = {};
+      (variantsData || []).forEach((variant, index) => {
+        if (
+          (variant?.images || []).some((image) =>
+            failedImageUrls.has(getMediaUrl(image)),
+          )
+        ) {
+          failedVariants[index] = {
+            images:
+              "One or more variant images could not be loaded. Replace or remove them before saving.",
+          };
+        }
+      });
+      if (Object.keys(failedVariants).length)
+        validationErrors.variants = failedVariants;
+      setError(validationErrors);
+      pendingValidationScrollRef.current = true;
+      toast.error(
+        "Replace or remove images that could not be loaded before saving.",
+      );
+      return;
+    }
     setError((prev) => {
       if (!prev?.flow) return prev;
       const next = { ...prev };
@@ -4281,7 +5350,21 @@ export default function ProductManagementUI() {
       return next;
     });
     handleSaveSubmit();
-  }, [flowGateErrors, handleSaveSubmit]);
+  }, [
+    saving,
+    checkingMedia,
+    formData,
+    variantsData,
+    flowGateErrors,
+    handleSaveSubmit,
+    catalogBusy,
+    commonImagesUploading,
+    productVideoUploading,
+    ogImageUploading,
+    variantBuilderBusy,
+    shippingProfilesLoading,
+    shippingProfileOptions,
+  ]);
 
   const handleProductModeration = useCallback(
     async (decision, rejectionReason = "") => {
@@ -4322,6 +5405,7 @@ export default function ProductManagementUI() {
       <Loader
         loading={
           saving ||
+          checkingMedia ||
           (isEditMode
             ? !prefilledProductId && productLoading && !productLoadFailed
             : loading)
@@ -4406,7 +5490,7 @@ export default function ProductManagementUI() {
             handleSaveSubmit={handleValidateAndSubmit}
             formData={formData}
             handleToggleProductSetting={handleToggleProductSetting}
-            saving={saving}
+            saving={saving || checkingMedia}
             canManageApproval={!isSellerPanelUser}
             isEditMode={isEditMode}
             onApprove={() => handleProductModeration("active")}

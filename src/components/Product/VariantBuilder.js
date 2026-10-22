@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 
 const MAX_VARIANT_IMAGES = 5;
+const MAX_PRODUCT_MONEY = 999999999.99;
+const MAX_PRODUCT_STOCK = 1000000000;
 
 const sanitizeDecimalInput = (value, { max = null, decimals = 2 } = {}) => {
   let next = String(value ?? "")
@@ -133,6 +135,7 @@ const VariantBuilder = ({
   onSubmitOption,
   errors = {},
   onClearError,
+  onUploadingChange,
 }) => {
   const productStatuses = useDropdownOptions("product-statuses");
   const [optionSearch, setOptionSearch] = useState("");
@@ -152,6 +155,10 @@ const VariantBuilder = ({
   const optionSearchRef = useRef(null);
   const dragOptionIdx = useRef(null);
   const dragVariantIdx = useRef(null);
+
+  useEffect(() => {
+    onUploadingChange?.(uploadingVariants.size > 0 || submittingOption);
+  }, [uploadingVariants, submittingOption, onUploadingChange]);
 
   useEffect(() => {
     onOptionSearch?.(optionSearch);
@@ -192,17 +199,20 @@ const VariantBuilder = ({
     setShowOptionDropdown(false);
   };
   const submitNewOption = async () => {
-    const values = Array.from(
-      new Set(
-        optionSubmission.values
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean),
-      ),
-    );
-    if (!optionSubmission.name.trim() || !values.length) {
+    const values = optionSubmission.values
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const normalizedValues = values.map((value) => value.toLowerCase());
+    if (
+      optionSubmission.name.trim().length < 2 ||
+      optionSubmission.name.trim().length > 50 ||
+      !values.length ||
+      values.some((value) => value.length > 80) ||
+      new Set(normalizedValues).size !== normalizedValues.length
+    ) {
       toast.error(
-        "Enter an option name and at least one comma-separated value",
+        "Enter an option name (2–50 characters) and unique values (1–80 characters each)",
       );
       return;
     }
@@ -669,6 +679,7 @@ const VariantBuilder = ({
             <input
               type="text"
               className="product-variant-search-input min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-gray-800 shadow-none placeholder:text-gray-500 focus:border-0 focus:outline-none focus:ring-0"
+              maxLength={50}
               placeholder="Search option master (Color, Size, RAM…)"
               value={optionSearch}
               onChange={(e) => {
@@ -750,6 +761,7 @@ const VariantBuilder = ({
                 <FieldLabel>Option name *</FieldLabel>
                 <SmallInput
                   value={optionSubmission.name}
+                  maxLength={50}
                   onChange={(event) =>
                     setOptionSubmission((previous) => ({
                       ...previous,
@@ -783,12 +795,18 @@ const VariantBuilder = ({
               <FieldLabel>Initial values *</FieldLabel>
               <SmallInput
                 value={optionSubmission.values}
-                onChange={(event) =>
+                maxLength={1000}
+                onChange={(event) => {
+                  const values = event.target.value
+                    .slice(0, 1000)
+                    .split(",")
+                    .map((value) => value.slice(0, 80))
+                    .join(",");
                   setOptionSubmission((previous) => ({
                     ...previous,
-                    values: event.target.value,
-                  }))
-                }
+                    values,
+                  }));
+                }}
                 placeholder="Short, Long, Three Quarter"
               />
               <p className="mt-1 text-[10px] text-gray-500">
@@ -874,9 +892,10 @@ const VariantBuilder = ({
                       inputMode="decimal"
                       placeholder={placeholder}
                       value={bulkValues[field] ?? ""}
+                      maxLength={12}
                       onChange={(e) => {
                         const nextValue = sanitizeDecimalInput(e.target.value, {
-                          max: field === "gstRate" ? 100 : null,
+                          max: MAX_PRODUCT_MONEY,
                           decimals: 2,
                         });
 
@@ -939,7 +958,7 @@ const VariantBuilder = ({
 
           {errors &&
             typeof errors === "object" &&
-            Object.keys(errors).some((key) => key !== "_form") && (
+            (errors._form || Object.keys(errors).some((key) => key !== "_form")) && (
               <div
                 className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
                 role="alert"
@@ -949,6 +968,7 @@ const VariantBuilder = ({
                 <p className="font-semibold">
                   Fix the following variant details before saving:
                 </p>
+                {errors._form && <p className="mt-1">{errors._form}</p>}
                 <ul className="mt-1 list-disc space-y-0.5 pl-4">
                   {Object.entries(errors)
                     .filter(([key]) => key !== "_form")
@@ -1196,46 +1216,47 @@ const VariantBuilder = ({
                             const attributeError =
                               variantErrors.attributes?.[axisKey];
                             return (
-                              <div className="space-y-1" key={axisKey}>
-                                <FieldLabel>
-                                  {option.name}
-                                  {option.required ? " *" : ""}
-                                </FieldLabel>
-                                <select
-                                  name={`variants.${idx}.attributes.${axisKey}`}
-                                  data-error-field={
-                                    attributeError ? "variants" : undefined
+                              <div
+                                className="space-y-1"
+                                key={axisKey}
+                                data-error-field={
+                                  attributeError ? "variants" : undefined
+                                }
+                              >
+                                <FilterSelect
+                                  label={option.name}
+                                  required={option.required}
+                                  inputId={`variant-${idx}-attribute-${axisKey}`}
+                                  options={(option.values || []).map((value) => ({
+                                    value: String(value),
+                                    label: String(value),
+                                  }))}
+                                  value={
+                                    (option.values || []).some(
+                                      (value) =>
+                                        String(value) === String(selectedValue),
+                                    )
+                                      ? {
+                                          value: String(selectedValue),
+                                          label: String(selectedValue),
+                                        }
+                                      : null
                                   }
-                                  aria-invalid={Boolean(attributeError)}
-                                  className={`w-full rounded-md border bg-white px-2 py-1.5 text-xs text-gray-800 focus:outline-none focus:ring-1 ${attributeError ? "border-red-400 focus:ring-red-200" : "border-gray-200 focus:border-[var(--admin-blue)] focus:ring-[var(--admin-blue)]/20"}`}
-                                  value={selectedValue}
-                                  onChange={(event) =>
+                                  onChange={(selected) =>
                                     updateVariantAttribute(
                                       idx,
                                       option,
-                                      event.target.value,
+                                      selected?.value || "",
                                     )
                                   }
-                                >
-                                  <option value="">
-                                    {option.required
+                                  error={attributeError || ""}
+                                  placeholder={
+                                    option.required
                                       ? "Select value"
-                                      : "Not applicable"}
-                                  </option>
-                                  {(option.values || []).map((value) => (
-                                    <option key={value} value={value}>
-                                      {value}
-                                    </option>
-                                  ))}
-                                </select>
-                                {attributeError && (
-                                  <p
-                                    className="text-[10px] text-red-600"
-                                    role="alert"
-                                  >
-                                    {attributeError}
-                                  </p>
-                                )}
+                                      : "Not applicable"
+                                  }
+                                  isClearable={!option.required}
+                                />
                               </div>
                             );
                           })}
@@ -1267,6 +1288,7 @@ const VariantBuilder = ({
                             updateVariant(idx, "sku", e.target.value)
                           }
                           placeholder="SKU"
+                          maxLength={64}
                         />
                         {variantErrors.sku && (
                           <p className="text-[10px] text-red-600" role="alert">
@@ -1290,6 +1312,7 @@ const VariantBuilder = ({
                             const nextValue = sanitizeDecimalInput(
                               e.target.value,
                               {
+                                max: MAX_PRODUCT_MONEY,
                                 decimals: 2,
                               },
                             );
@@ -1301,6 +1324,7 @@ const VariantBuilder = ({
                             );
                           }}
                           placeholder=""
+                          maxLength={12}
                         />
                         {variantErrors.price && (
                           <p className="text-[10px] text-red-600" role="alert">
@@ -1324,6 +1348,7 @@ const VariantBuilder = ({
                             const nextValue = sanitizeDecimalInput(
                               e.target.value,
                               {
+                                max: MAX_PRODUCT_MONEY,
                                 decimals: 2,
                               },
                             );
@@ -1335,6 +1360,7 @@ const VariantBuilder = ({
                             );
                           }}
                           placeholder=""
+                          maxLength={12}
                         />
                         {variantErrors.mrp && (
                           <p className="text-[10px] text-red-600" role="alert">
@@ -1358,6 +1384,7 @@ const VariantBuilder = ({
                             const nextValue = sanitizeDecimalInput(
                               e.target.value,
                               {
+                                max: MAX_PRODUCT_MONEY,
                                 decimals: 2,
                               },
                             );
@@ -1369,6 +1396,7 @@ const VariantBuilder = ({
                             );
                           }}
                           placeholder=""
+                          maxLength={12}
                         />
                         {variantErrors.salePrice && (
                           <p className="text-[10px] text-red-600" role="alert">
@@ -1387,6 +1415,7 @@ const VariantBuilder = ({
                           type="text"
                           inputMode="decimal"
                           value={variant.gstRate ?? ""}
+                          maxLength={6}
                           onKeyDown={blockInvalidNumberKeys}
                           onChange={(e) => {
                             const nextValue = sanitizeDecimalInput(
@@ -1414,20 +1443,26 @@ const VariantBuilder = ({
                           inputMode="numeric"
                           pattern="[0-9]*"
                           min={0}
+                          max={MAX_PRODUCT_STOCK}
+                          maxLength={10}
+                          aria-invalid={Boolean(variantErrors.stock)}
                           value={variant.stock ?? ""}
                           onChange={(e) => {
-                            const digitsOnly = e.target.value.replace(
-                              /\D/g,
-                              "",
-                            );
+                            const digitsOnly = e.target.value
+                              .replace(/\D/g, "")
+                              .slice(0, 10);
 
                             updateVariant(
                               idx,
                               "stock",
-                              digitsOnly === "" ? "" : Number(digitsOnly),
+                              digitsOnly === ""
+                                ? ""
+                                : Math.min(Number(digitsOnly), MAX_PRODUCT_STOCK),
                             );
                           }}
                         />
+                        {variantErrors.stock && <p className="text-[10px] text-red-600" role="alert">{variantErrors.stock}</p>}
+                        {variantErrors.reservedStock && <p className="text-[10px] text-red-600" role="alert">{variantErrors.reservedStock}</p>}
 
                         <p className="text-[10px] text-gray-400">
                           Managed in Inventory later too.
@@ -1465,11 +1500,14 @@ const VariantBuilder = ({
                         <FieldLabel>Variant Title Detail</FieldLabel>
                         <SmallInput
                           value={variant.title || ""}
+                          maxLength={100}
+                          error={variantErrors.title}
                           onChange={(e) =>
                             updateVariant(idx, "title", e.target.value)
                           }
                           placeholder="e.g. 20 L / Coral (added after product title)"
                         />
+                        {variantErrors.title && <p className="text-[10px] text-red-600" role="alert">{variantErrors.title}</p>}
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Sort Order</FieldLabel>
@@ -1500,6 +1538,7 @@ const VariantBuilder = ({
                           className="min-h-[72px] w-full resize-y rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-800 placeholder-gray-300 focus:border-[var(--admin-blue)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]/20"
                           value={variant.shortDescription || ""}
                           maxLength={500}
+                          aria-invalid={Boolean(variantErrors.shortDescription)}
                           onChange={(e) =>
                             updateVariant(
                               idx,
@@ -1509,18 +1548,26 @@ const VariantBuilder = ({
                           }
                           placeholder="Optional variant detail. Added to the product short description."
                         />
+                        {variantErrors.shortDescription && <p className="text-[10px] text-red-600" role="alert">{variantErrors.shortDescription}</p>}
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Additional Full Description</FieldLabel>
                         <textarea
                           className="min-h-[72px] w-full resize-y rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-800 placeholder-gray-300 focus:border-[var(--admin-blue)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]/20"
                           value={variant.description || ""}
+                          maxLength={5000}
+                          aria-invalid={Boolean(variantErrors.description)}
                           onChange={(e) =>
                             updateVariant(idx, "description", e.target.value)
                           }
                           placeholder="Optional variant detail. Added after the main product description."
                         />
+                        {variantErrors.description && <p className="text-[10px] text-red-600" role="alert">{variantErrors.description}</p>}
                       </div>
+
+                      {variantErrors.images && (
+                        <p className="text-[10px] text-red-600" role="alert">{variantErrors.images}</p>
+                      )}
                     </div>
 
                     {/* Images section */}

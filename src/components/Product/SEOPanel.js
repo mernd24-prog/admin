@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import ImageUpload from "../Atoms/ImageGallery/ImageUpload";
 import {
   FiGlobe,
   FiMonitor,
@@ -6,6 +7,15 @@ import {
   FiMoreVertical,
   FiHash,
 } from "react-icons/fi";
+
+const isHttpUrl = (value) => {
+  try {
+    const url = new URL(String(value || "").trim());
+    return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+};
 
 const CharCount = ({ value = "", max }) => {
   const len = String(value).length;
@@ -25,13 +35,29 @@ const CharCount = ({ value = "", max }) => {
  *  onChange - (field, value) => void
  *  slug     - string (product slug, read-only)
  */
-const SEOPanel = ({ seo = {}, onChange, slug = "" }) => {
+const SEOPanel = ({
+  seo = {},
+  onChange,
+  slug = "",
+  errors = {},
+  onOgImageUpload,
+  onOgImageRemove,
+  ogImageUploading = false,
+}) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [keywordInput, setKeywordInput] = useState("");
   const [previewMode, setPreviewMode] = useState("desktop");
+  const [ogImagePasteError, setOgImagePasteError] = useState("");
+  const ogImageError = errors.ogImage || ogImagePasteError;
   const keywords = Array.isArray(seo.keywords) ? seo.keywords : [];
   const maxKeywords = 20;
   const keywordsAtMax = keywords.length >= maxKeywords;
+
+  useEffect(() => {
+    if (errors.ogTitle || errors.ogDescription || errors.ogImage) {
+      setShowAdvanced(true);
+    }
+  }, [errors.ogTitle, errors.ogDescription, errors.ogImage]);
 
   const handleKeywordAdd = (e) => {
     if (e.key === "Enter" || e.key === ",") {
@@ -40,7 +66,8 @@ const SEOPanel = ({ seo = {}, onChange, slug = "" }) => {
       const keyword = keywordInput.trim();
       if (
         keyword &&
-        !keywords.includes(keyword) &&
+        !keywords.some((item) => String(item).trim().toLowerCase() === keyword.toLowerCase()) &&
+        keyword.length <= 60 &&
         keywords.length < maxKeywords
       ) {
         onChange("seo.keywords", [...keywords, keyword]);
@@ -204,7 +231,9 @@ const SEOPanel = ({ seo = {}, onChange, slug = "" }) => {
           value={seo.metaTitle || ""}
           onChange={(e) => onChange("seo.metaTitle", e.target.value)}
           maxLength={70}
+          aria-invalid={Boolean(errors.metaTitle)}
         />
+        {errors.metaTitle && <p className="text-xs text-red-600" role="alert">{errors.metaTitle}</p>}
       </div>
 
       {/* Meta description */}
@@ -222,7 +251,9 @@ const SEOPanel = ({ seo = {}, onChange, slug = "" }) => {
           value={seo.metaDescription || ""}
           onChange={(e) => onChange("seo.metaDescription", e.target.value)}
           maxLength={160}
+          aria-invalid={Boolean(errors.metaDescription)}
         />
+        {errors.metaDescription && <p className="text-xs text-red-600" role="alert">{errors.metaDescription}</p>}
       </div>
 
       {/* Keywords */}
@@ -238,7 +269,10 @@ const SEOPanel = ({ seo = {}, onChange, slug = "" }) => {
           disabled={keywordsAtMax}
           onChange={(e) => setKeywordInput(e.target.value)}
           onKeyDown={handleKeywordAdd}
+          maxLength={60}
+          aria-invalid={Boolean(errors.keywords)}
         />
+        {errors.keywords && <p className="text-xs text-red-600" role="alert">{errors.keywords}</p>}
 
         <div className="flex min-h-[34px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-2">
           {keywords.length ? (
@@ -292,7 +326,9 @@ const SEOPanel = ({ seo = {}, onChange, slug = "" }) => {
           placeholder="https://yourstore.com/products/product-slug"
           value={seo.canonicalUrl || ""}
           onChange={(e) => onChange("seo.canonicalUrl", e.target.value)}
+          aria-invalid={Boolean(errors.canonicalUrl)}
         />
+        {errors.canonicalUrl && <p className="text-xs text-red-600" role="alert">{errors.canonicalUrl}</p>}
         <p className="text-xs text-gray-400">
           Leave blank to use the default product URL
         </p>
@@ -333,7 +369,10 @@ const SEOPanel = ({ seo = {}, onChange, slug = "" }) => {
                 placeholder="Title for Facebook/Twitter (defaults to meta title)"
                 value={seo.ogTitle || ""}
                 onChange={(e) => onChange("seo.ogTitle", e.target.value)}
+                maxLength={70}
+                aria-invalid={Boolean(errors.ogTitle)}
               />
+              {errors.ogTitle && <p className="text-xs text-red-600" role="alert">{errors.ogTitle}</p>}
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">
@@ -345,19 +384,49 @@ const SEOPanel = ({ seo = {}, onChange, slug = "" }) => {
                 placeholder="Description for social sharing"
                 value={seo.ogDescription || ""}
                 onChange={(e) => onChange("seo.ogDescription", e.target.value)}
+                maxLength={160}
+                aria-invalid={Boolean(errors.ogDescription)}
               />
+              {errors.ogDescription && <p className="text-xs text-red-600" role="alert">{errors.ogDescription}</p>}
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">
-                OG Image URL
-              </label>
-              <input
-                type="url"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
-                placeholder="https://cdn.yourstore.com/og-image.jpg"
-                value={seo.ogImage || ""}
-                onChange={(e) => onChange("seo.ogImage", e.target.value)}
+            <div className="space-y-3">
+              <ImageUpload
+                id="product-og-image-upload"
+                label="OG Image"
+                subtext="Upload an image or paste a valid HTTP/HTTPS image URL below."
+                file={seo.ogImage || ""}
+                onChange={onOgImageUpload}
+                onRemove={onOgImageRemove}
+                isLoading={ogImageUploading}
+                loadingText="Uploading OG image..."
               />
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  OG Image URL
+                </label>
+                <input
+                  type="url"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
+                  placeholder="https://cdn.yourstore.com/og-image.jpg"
+                  value={seo.ogImage || ""}
+                  onPaste={(event) => {
+                    const pastedUrl = event.clipboardData?.getData("text")?.trim();
+                    if (!pastedUrl) return;
+                    if (!isHttpUrl(pastedUrl)) {
+                      event.preventDefault();
+                      setOgImagePasteError("Pasted image URLs must be valid HTTP/HTTPS URLs.");
+                      return;
+                    }
+                    setOgImagePasteError("");
+                  }}
+                  onChange={(e) => {
+                    setOgImagePasteError("");
+                    onChange("seo.ogImage", e.target.value);
+                  }}
+                  aria-invalid={Boolean(ogImageError)}
+                />
+                {ogImageError && <p className="text-xs text-red-600" role="alert">{ogImageError}</p>}
+              </div>
             </div>
           </div>
         )}
