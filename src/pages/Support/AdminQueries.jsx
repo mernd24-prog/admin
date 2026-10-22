@@ -374,7 +374,7 @@ const AdminQueries = () => {
       <PageHeader
         title="Customer & Seller Queries"
         subtitle="Customer and seller support queries are listed separately."
-        breadcrumbs={[ { label: "Queries" }]}
+        breadcrumbs={[{ label: "Queries" }]}
       />
 
       <Tabs
@@ -440,20 +440,20 @@ const AdminQueries = () => {
             icon: <MdVisibility aria-hidden="true" />,
             onClick: () => openQuery(row),
           },
-          ...(row.status !== "resolved"
-            ? [
-                {
-                  label: "Mark as Resolved",
-                  icon: (
-                    <MdCheckCircle
-                      aria-hidden="true"
-                      className="text-green-600"
-                    />
-                  ),
-                  onClick: () => markResolved(row),
-                },
-              ]
-            : []),
+          // ...(row.status !== "resolved"
+          //   ? [
+          //       {
+          //         label: "Mark as Resolved",
+          //         icon: (
+          //           <MdCheckCircle
+          //             aria-hidden="true"
+          //             className="text-green-600"
+          //           />
+          //         ),
+          //         onClick: () => markResolved(row),
+          //       },
+          //     ]
+          //   : []),
           {
             label: "Delete Query",
             icon: <MdDelete aria-hidden="true" className="text-red-600" />,
@@ -649,7 +649,7 @@ const AdminQueries = () => {
                     isClearable={false}
                   />
 
-                  {statusForm.status !== "resolved" ? (
+                  {/* {statusForm.status !== "resolved" ? (
                     <div className="flex items-end">
                       <button
                         type="button"
@@ -663,7 +663,7 @@ const AdminQueries = () => {
                         Mark as Resolved
                       </button>
                     </div>
-                  ) : null}
+                  ) : null} */}
                 </div>
 
                 {/* Admin Note */}
