@@ -1,8 +1,9 @@
-import React from 'react';
-import FilterSelect from '../../../../components/Atoms/FilterSelect/FilterSelect';
-import Input from '../../../../components/Atoms/Input/Input';
+import React from "react";
+import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
+import Input from "../../../../components/Atoms/Input/Input";
 
-const valueName = (record = {}) => record.name || record.label || record.value || '';
+const valueName = (record = {}) =>
+  record.name || record.label || record.value || "";
 
 const optionList = (field, optionValues = {}) => {
   if (field.platformOptionId && optionValues[field.platformOptionId]) {
@@ -16,10 +17,19 @@ const optionList = (field, optionValues = {}) => {
         item,
       }));
   }
-  return (field.options || []).map((option) => ({ value: option, label: option }));
+  return (field.options || []).map((option) => ({
+    value: option,
+    label: option,
+  }));
 };
 
-const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, errors = {}, optionValues = {} }) => {
+const DynamicAttributesTab = ({
+  attributeSchema = [],
+  formData,
+  setFormData,
+  errors = {},
+  optionValues = {},
+}) => {
   const attributes = formData?.attributes || {};
 
   const updateAttribute = (key, value) => {
@@ -35,7 +45,9 @@ const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, err
   if (!attributeSchema.length) {
     return (
       <div className="bg-white">
-        <p className="text-sm text-gray-400 italic">Select a category to load product attributes.</p>
+        <p className="text-sm text-gray-400 italic">
+          Select a category to load product attributes.
+        </p>
       </div>
     );
   }
@@ -45,9 +57,21 @@ const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, err
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
         {attributeSchema.map((field) => {
           const value = attributes[field.key];
-          const label = `${field.label || field.key}${field.unit ? ` (${field.unit})` : ''}`;
+          const label = `${field.label || field.key}${field.unit ? ` (${field.unit})` : ""}`;
+          const isMeasurementField =
+            ["width", "depth", "height"].includes(
+              String(field.key || "")
+                .trim()
+                .toLowerCase(),
+            ) ||
+            ["width", "depth", "height"].some((dimension) =>
+              String(field.label || "")
+                .trim()
+                .toLowerCase()
+                .includes(dimension),
+            );
 
-          if (field.type === 'select') {
+          if (field.type === "select") {
             const options = optionList(field, optionValues);
             return (
               <FilterSelect
@@ -57,13 +81,15 @@ const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, err
                 required={field.required}
                 options={options}
                 value={options.find((item) => item.value === value) || null}
-                onChange={(selected) => updateAttribute(field.key, selected?.value || '')}
+                onChange={(selected) =>
+                  updateAttribute(field.key, selected?.value || "")
+                }
                 error={errors?.attributes?.[field.key]}
               />
             );
           }
 
-          if (field.type === 'multi_select') {
+          if (field.type === "multi_select") {
             const options = optionList(field, optionValues);
             const selectedValues = Array.isArray(value) ? value : [];
             return (
@@ -74,27 +100,40 @@ const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, err
                 required={field.required}
                 isMulti
                 options={options}
-                value={options.filter((item) => selectedValues.includes(item.value))}
-                onChange={(selected) => updateAttribute(field.key, (selected || []).map((item) => item.value))}
+                value={options.filter((item) =>
+                  selectedValues.includes(item.value),
+                )}
+                onChange={(selected) =>
+                  updateAttribute(
+                    field.key,
+                    (selected || []).map((item) => item.value),
+                  )
+                }
                 error={errors?.attributes?.[field.key]}
               />
             );
           }
 
-          if (field.type === 'boolean') {
+          if (field.type === "boolean") {
             return (
               <div key={field.key}>
-                <label className={`flex items-center gap-3 rounded-lg border bg-gray-50 p-3 text-sm cursor-pointer hover:bg-gray-100 transition-colors ${errors?.attributes?.[field.key] ? 'border-red-400' : 'border-gray-200'}`}>
+                <label
+                  className={`flex items-center gap-3 rounded-lg border bg-gray-50 p-3 text-sm cursor-pointer hover:bg-gray-100 transition-colors ${errors?.attributes?.[field.key] ? "border-red-400" : "border-gray-200"}`}
+                >
                   <input
                     name={`attribute_${field.key}`}
                     type="checkbox"
                     className="w-4 h-4 accent-[var(--admin-blue)] flex-shrink-0"
                     checked={Boolean(value)}
-                    onChange={(event) => updateAttribute(field.key, event.target.checked)}
+                    onChange={(event) =>
+                      updateAttribute(field.key, event.target.checked)
+                    }
                     aria-invalid={Boolean(errors?.attributes?.[field.key])}
                   />
                   <span className="text-gray-700 font-medium">{label}</span>
-                  {field.required && <span className="text-red-500 ml-0.5">*</span>}
+                  {field.required && (
+                    <span className="text-red-500 ml-0.5">*</span>
+                  )}
                 </label>
                 {errors?.attributes?.[field.key] && (
                   <p className="mt-1 text-xs text-red-600" role="alert">
@@ -110,9 +149,56 @@ const DynamicAttributesTab = ({ attributeSchema = [], formData, setFormData, err
               key={field.key}
               labelName={label}
               name={`attribute_${field.key}`}
-              type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-              value={value || ''}
-              onChange={(event) => updateAttribute(field.key, event.target.value)}
+              type={
+                field.type === "number"
+                  ? "number"
+                  : field.type === "date"
+                    ? "date"
+                    : "text"
+              }
+              value={value || ""}
+              min={
+                field.type === "number" || field.type === "date"
+                  ? isMeasurementField
+                    ? 0.000001
+                    : field.min
+                  : undefined
+              }
+              max={
+                field.type === "number" || field.type === "date"
+                  ? field.max
+                  : undefined
+              }
+              step={
+                field.type === "number"
+                  ? isMeasurementField
+                    ? "0.01"
+                    : field.precision !== undefined
+                      ? 10 ** -Number(field.precision)
+                      : undefined
+                  : undefined
+              }
+              inputMode={
+                field.type === "number"
+                  ? isMeasurementField
+                    ? "decimal"
+                    : "numeric"
+                  : undefined
+              }
+              pattern={
+                field.type === "text"
+                  ? field.pattern
+                  : isMeasurementField
+                    ? "^(?:\\d+(?:\\.\\d+)?|\\.\\d+)$"
+                    : undefined
+              }
+              minLength={field.type === "text" ? field.minLength : undefined}
+              maxLength={
+                field.type === "text" ? (field.maxLength ?? 5000) : undefined
+              }
+              onChange={(event) =>
+                updateAttribute(field.key, event.target.value)
+              }
               required={field.required}
               error={errors?.attributes?.[field.key]}
             />

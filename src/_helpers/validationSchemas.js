@@ -770,17 +770,21 @@ export const codCollectionValidationSchema = Yup.object({
 });
 
 export const brandValidationSchema = Yup.object({
+  _id: Yup.string().optional(),
   name: Yup.string()
     .trim()
-    .required("Brand name is required")
-    .min(2, "Brand name must be at least 2 characters")
-    .max(200, "Brand name must be no more than 200 characters"),
+    .required("Brand name is required.")
+    .min(3, "Brand name must contain at least 3 characters.")
+    .max(200, "Brand name cannot exceed 200 characters.")
+    .matches(/[\p{L}\p{N}]/u, "Brand name must contain at least one letter or number."),
 
   logo: Yup.string().required("Please upload a brand logo"),
 
   description: Yup.string()
-    .min(3, "Description must be at least 3 characters")
-    .max(1000, "Description must be no more than 1000 characters"),
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .notRequired()
+    .min(3, "Description must be at least 3 characters.")
+    .max(1000, "Description cannot exceed 1000 characters."),
 });
 export const bonusRuleValidationSchema = Yup.object({
   ruleName: Yup.string().trim().required("Bonus rule name is required"),

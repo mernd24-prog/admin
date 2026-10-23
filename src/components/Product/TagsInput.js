@@ -17,6 +17,7 @@ const TagsInput = ({
   suggestions = [],
   placeholder = "Add tag…",
   maxTags = 20,
+  error = "",
 }) => {
   const [input, setInput] = useState("");
   const [focused, setFocused] = useState(false);
@@ -39,7 +40,7 @@ const TagsInput = ({
 
   const addTag = (raw) => {
     const trimmed = normalise(raw || input);
-    if (!trimmed || tags.includes(trimmed) || tags.length >= maxTags) return;
+    if (!trimmed || tags.some((tag) => String(tag).toLowerCase() === trimmed.toLowerCase()) || tags.length >= maxTags) return;
     onChange([...tags, trimmed]);
     setInput("");
   };
@@ -63,11 +64,13 @@ const TagsInput = ({
         <input
           ref={inputRef}
           type="text"
-          className="admin-input w-full"
+          className={`admin-input w-full ${error ? "border-red-400 focus:border-red-500" : ""}`}
           placeholder={atMax ? `Max ${maxTags} tags reached` : placeholder}
           value={input}
           disabled={atMax}
           onChange={(e) => setInput(e.target.value)}
+          maxLength={40}
+          aria-invalid={Boolean(error)}
           onKeyDown={handleKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
@@ -90,6 +93,7 @@ const TagsInput = ({
           </div>
         )}
       </div>
+      {error && <p className="text-xs text-red-600" role="alert">{error}</p>}
 
       {/* ── Tags container box (like Allowed Pincodes box) ── */}
       <div className="flex min-h-[34px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-2">

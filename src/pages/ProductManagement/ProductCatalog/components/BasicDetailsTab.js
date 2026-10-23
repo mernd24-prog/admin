@@ -89,6 +89,21 @@ const getErrorMessage = (error, fallback) =>
       error?.response?.data?.message ||
       fallback;
 
+const preventNegativeNumericKey = (event) => {
+  if (event.key === "Subtract" || /[-−]/u.test(event.key || "")) {
+    event.preventDefault();
+  }
+};
+
+const preventNegativeNumericPaste = (event) => {
+  if (/[-−]/u.test(event.clipboardData?.getData("text") || "")) {
+    event.preventDefault();
+  }
+};
+
+const isNegativeNumericValue = (value) =>
+  /[-−]/u.test(String(value ?? "")) || (value !== "" && Number(value) < 0);
+
 const getSessionUser = () => {
   if (typeof window === "undefined") return null;
 
@@ -118,6 +133,7 @@ export default function BasicDetailsTab({
   userData,
   hasVariantPricing = false,
   handleInputReactQuillChange,
+  onBusyChange,
 }) {
   const dispatch = useDispatch();
 
@@ -591,7 +607,9 @@ export default function BasicDetailsTab({
           resourceId: option.id || option.value,
         })),
       ).filter((option) =>
-        String(option.label || "").toLowerCase().includes(search.toLowerCase()),
+        String(option.label || "")
+          .toLowerCase()
+          .includes(search.toLowerCase()),
       );
     },
     [categoryOptions, mergeCatalogOptions],
@@ -913,8 +931,26 @@ export default function BasicDetailsTab({
 
   const [categoryForm, setCategoryForm] = useState(INITIAL_FORM_CATEGORY);
 
-
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    onBusyChange?.(
+      brandSubmitting ||
+        brandLogoUploading ||
+        Boolean(refreshingCatalog) ||
+        isLoading ||
+        sellerLoading ||
+        organizationLoading,
+    );
+  }, [
+    brandSubmitting,
+    brandLogoUploading,
+    refreshingCatalog,
+    isLoading,
+    sellerLoading,
+    organizationLoading,
+    onBusyChange,
+  ]);
 
   /*
    * ------------------------------------------------------------
@@ -970,31 +1006,105 @@ export default function BasicDetailsTab({
     }
   };
 
+  const DisabledPolicyState = ({ type, title, description }) => (
+    <div className="relative flex min-h-[250px] flex-col items-center justify-center overflow-hidden px-4 py-8 text-center">
+      {/* Subtle background */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FFF7EA]/50 blur-2xl"
+      />
+
+      {/* Icon */}
+      <div className="relative mb-3 flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full border border-[#F5E4C5] bg-[#FFF7EA] shadow-sm">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/70">
+          {type === "return" ? (
+            <svg
+              viewBox="0 0 64 64"
+              fill="none"
+              aria-hidden="true"
+              className="h-10 w-10"
+            >
+              <path
+                d="M16 20 32 11 48 20 32 29 16 20Z"
+                stroke="#102F70"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M16 20V43L32 52V29M48 20V31M32 29V52"
+                stroke="#102F70"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M45 38H53C60 38 62 48 56 52C51 56 44 53 43 48M45 38L50 33M45 38L50 43"
+                stroke="#D6A323"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          ) : (
+            <svg
+              viewBox="0 0 64 64"
+              fill="none"
+              aria-hidden="true"
+              className="h-10 w-10"
+            >
+              <path
+                d="M32 7 51 15V29C51 42 43 51 32 57C21 51 13 42 13 29V15L32 7Z"
+                stroke="#102F70"
+                strokeWidth="3"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M23 32L29 38L42 24"
+                stroke="#D6A323"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </div>
+      </div>
+
+      {/* Heading */}
+      <h4 className="relative m-0 text-base font-semibold leading-6 text-[#102F70] sm:text-lg">
+        {title}
+      </h4>
+
+      {/* Description */}
+      <p className="relative mt-1.5 max-w-md text-xs leading-5 text-[#6489BD] sm:text-sm">
+        {description}
+      </p>
+    </div>
+  );
+
   /*
    * ------------------------------------------------------------
    * Brand
    * ------------------------------------------------------------
    */
 
+  const formik = useFormik({
+    initialValues: {
+      _id: brandSubmission._id || "",
+      name: brandSubmission.name || "",
+      logo: brandSubmission.logo || "",
+      thumbnails: brandSubmission.thumbnails || "",
+      description: brandSubmission.description || "",
+    },
+    enableReinitialize: true,
+    validationSchema: brandValidationSchema,
+    validateOnBlur: true,
+    validateOnChange: true,
 
-const formik = useFormik({
-  initialValues: {
-    name: brandSubmission.name || "",
-    logo: brandSubmission.logo || "",
-    thumbnails: brandSubmission.thumbnails || "",
-    description: brandSubmission.description || "",
-  },
-  enableReinitialize: true,
-  validationSchema: brandValidationSchema,
-  validateOnBlur: true,
-  validateOnChange: false,
-
-  onSubmit: async (values) => {
-    setBrandSubmission(values);
-    await submitBrandRequest(values);
-  },
-});
-
+    onSubmit: async (values) => {
+      setBrandSubmission(values);
+      await submitBrandRequest(values);
+    },
+  });
 
   const handleBrandLogoUpload = async (file) => {
     if (!file) return;
@@ -1023,6 +1133,7 @@ const formik = useFormik({
 
       setBrandSubmission((current) => ({
         ...current,
+        ...formik.values,
         logo: logoUrl,
       }));
 
@@ -1034,111 +1145,110 @@ const formik = useFormik({
     }
   };
 
-const submitBrandRequest = async (values) => {
-  if (brandLogoUploading) {
-    return toast.error("Please wait for logo upload to finish");
-  }
-
-  setBrandSubmitting(true);
-
-  try {
-    const submissionData = {
-      ...values,
-      name: values.name.trim(),
-    };
-
-    if (isSellerPanelUser) {
-      const response = await dispatch(
-        submissionData._id
-          ? resubmitBrandForApproval({
-              ...submissionData,
-              _id: submissionData._id,
-            })
-          : submitBrandForApproval(submissionData),
-      ).unwrap();
-
-      const createdBrand = response?.data || {};
-
-      const brandName = createdBrand.name || submissionData.name;
-
-      setMyBrandSubmissions((current) => [
-        {
-          ...submissionData,
-          ...createdBrand,
-          name: brandName,
-          approvalStatus: createdBrand.approvalStatus || "pending",
-        },
-        ...current.filter(
-          (brand) =>
-            String(brand._id || "") !==
-            String(createdBrand._id || submissionData._id || ""),
-        ),
-      ]);
-
-      handleSelectChange(
-        {
-          value: brandName,
-          label: `${brandName} (Pending approval)`,
-          brandName,
-          resourceId: createdBrand._id || createdBrand.id,
-          approvalStatus: createdBrand.approvalStatus || "pending",
-          isPendingBrand: true,
-          submittedBySellerId: createdBrand.submittedBySellerId,
-        },
-        "BRAND_ID",
-      );
-
-      toast.success(
-        submissionData._id
-          ? "Brand resubmitted for approval"
-          : "Brand submitted for approval",
-      );
-    } else {
-      const response = await dispatch(
-        createBrand({
-          ...submissionData,
-          active: true,
-        }),
-      ).unwrap();
-
-      const createdBrand = response?.data || {};
-
-      const brandName = createdBrand.name || submissionData.name;
-
-      handleSelectChange(
-        {
-          value: brandName,
-          label: brandName,
-          brandName,
-          resourceId: createdBrand._id || createdBrand.id,
-          approvalStatus: createdBrand.approvalStatus || "approved",
-        },
-        "BRAND_ID",
-      );
-
-      toast.success("Brand created and selected");
+  const submitBrandRequest = async (values) => {
+    if (brandLogoUploading) {
+      return toast.error("Please wait for logo upload to finish");
     }
 
-    setBrandSubmission({
-      name: "",
-      logo: "",
-      thumbnails: "",
-      description: "",
-    });
+    setBrandSubmitting(true);
 
-    setIsBrandModal(false);
+    try {
+      const submissionData = {
+        ...values,
+        name: values.name.trim(),
+      };
 
-    await Promise.allSettled([
-      loadMyBrandSubmissions(),
-      Promise.resolve(fetchAllData?.()),
-    ]);
-  } catch (error) {
-    toast.error(getErrorMessage(error, "Could not submit brand"));
-  } finally {
-    setBrandSubmitting(false);
-  }
-};
+      if (isSellerPanelUser) {
+        const response = await dispatch(
+          submissionData._id
+            ? resubmitBrandForApproval({
+                ...submissionData,
+                _id: submissionData._id,
+              })
+            : submitBrandForApproval(submissionData),
+        ).unwrap();
 
+        const createdBrand = response?.data || {};
+
+        const brandName = createdBrand.name || submissionData.name;
+
+        setMyBrandSubmissions((current) => [
+          {
+            ...submissionData,
+            ...createdBrand,
+            name: brandName,
+            approvalStatus: createdBrand.approvalStatus || "pending",
+          },
+          ...current.filter(
+            (brand) =>
+              String(brand._id || "") !==
+              String(createdBrand._id || submissionData._id || ""),
+          ),
+        ]);
+
+        handleSelectChange(
+          {
+            value: brandName,
+            label: `${brandName} (Pending approval)`,
+            brandName,
+            resourceId: createdBrand._id || createdBrand.id,
+            approvalStatus: createdBrand.approvalStatus || "pending",
+            isPendingBrand: true,
+            submittedBySellerId: createdBrand.submittedBySellerId,
+          },
+          "BRAND_ID",
+        );
+
+        toast.success(
+          submissionData._id
+            ? "Brand resubmitted for approval"
+            : "Brand submitted for approval",
+        );
+      } else {
+        const response = await dispatch(
+          createBrand({
+            ...submissionData,
+            active: true,
+          }),
+        ).unwrap();
+
+        const createdBrand = response?.data || {};
+
+        const brandName = createdBrand.name || submissionData.name;
+
+        handleSelectChange(
+          {
+            value: brandName,
+            label: brandName,
+            brandName,
+            resourceId: createdBrand._id || createdBrand.id,
+            approvalStatus: createdBrand.approvalStatus || "approved",
+          },
+          "BRAND_ID",
+        );
+
+        toast.success("Brand created and selected");
+      }
+
+      setBrandSubmission({
+        name: "",
+        logo: "",
+        thumbnails: "",
+        description: "",
+      });
+
+      setIsBrandModal(false);
+
+      await Promise.allSettled([
+        loadMyBrandSubmissions(),
+        Promise.resolve(fetchAllData?.()),
+      ]);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not submit brand"));
+    } finally {
+      setBrandSubmitting(false);
+    }
+  };
 
   const brandOptions = useMemo(() => {
     const approvedNames = new Set(
@@ -1737,6 +1847,21 @@ const submitBrandRequest = async (values) => {
           </p>
         </div>
 
+        {(errors?.basicDetails ||
+          errors?.dimensions ||
+          errors?.restockingFee ||
+          errors?.shortDescription) && (
+          <div
+            className="mb-4 space-y-1 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+            role="alert"
+          >
+            {errors.basicDetails && <p>{errors.basicDetails}</p>}
+            {errors.dimensions && <p>{errors.dimensions}</p>}
+            {errors.restockingFee && <p>{errors.restockingFee}</p>}
+            {errors.shortDescription && <p>{errors.shortDescription}</p>}
+          </div>
+        )}
+
         <div className="space-y-5">
           <div className="grid w-full grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
             {/* =====================================================
@@ -1828,6 +1953,7 @@ const submitBrandRequest = async (values) => {
                 value={formData.name}
                 onChange={handleChange}
                 onBlur={handleNameBlur}
+                maxLength={200}
                 required
                 helpText="Name of the product as it will be displayed"
                 error={errors?.name}
@@ -2095,6 +2221,7 @@ const submitBrandRequest = async (values) => {
                   handleInputReactQuillChange?.("description", content)
                 }
                 required
+                maxLength={5000}
                 placeholder="Enter detailed product description"
                 error={errors?.description}
                 height="220px"
@@ -2110,23 +2237,33 @@ const submitBrandRequest = async (values) => {
               <div className="product-form-section-header flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3>Warranty information</h3>
-                  <p>Enable this only when the product includes warranty coverage.</p>
+                  <p>
+                    Enable this only when the product includes warranty
+                    coverage.
+                  </p>
                 </div>
-                <div className="shrink-0 rounded-full border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2">
+                <div className="shrink-0">
                   <Input
                     className="!mb-0"
-                    labelName="Warranty offered"
+                    labelName="Warranty Applicable"
                     name="warranty.enabled"
                     type="switch"
                     value={warrantyEnabled}
                     onChange={(eventOrValue) => {
-                      const checked = typeof eventOrValue === "boolean"
-                        ? eventOrValue
-                        : Boolean(eventOrValue?.target?.checked);
+                      const checked =
+                        typeof eventOrValue === "boolean"
+                          ? eventOrValue
+                          : Boolean(eventOrValue?.target?.checked);
                       handleNestedChange("warranty.enabled", checked);
                       if (!checked) {
-                        ["period", "periodUnit", "provider", "type", "terms"].forEach(
-                          (field) => handleNestedChange(`warranty.${field}`, ""),
+                        [
+                          "period",
+                          "periodUnit",
+                          "provider",
+                          "type",
+                          "terms",
+                        ].forEach((field) =>
+                          handleNestedChange(`warranty.${field}`, ""),
                         );
                       }
                     }}
@@ -2135,7 +2272,8 @@ const submitBrandRequest = async (values) => {
               </div>
 
               {warrantyEnabled ? (
-              <><div className="mb-4 grid gap-4 md:grid-cols-2">
+                <>
+                  <div className="mb-4 grid gap-4 md:grid-cols-2">
                     <Input
                       labelName="Warranty Period"
                       name="warranty.period"
@@ -2143,9 +2281,15 @@ const submitBrandRequest = async (values) => {
                       min={1}
                       max={365}
                       value={formData.warranty?.period ?? ""}
-                      onChange={(event) =>
-                        handleNestedChange("warranty.period", event.target.value)
-                      }
+                      onKeyDown={preventNegativeNumericKey}
+                      onPaste={preventNegativeNumericPaste}
+                      onChange={(event) => {
+                        if (isNegativeNumericValue(event.target.value)) return;
+                        handleNestedChange(
+                          "warranty.period",
+                          event.target.value,
+                        );
+                      }}
                       placeholder="Example: 12"
                       helperText="Use a value between 1 and 365."
                       error={errors?.warrantyPeriod}
@@ -2171,56 +2315,68 @@ const submitBrandRequest = async (values) => {
                       isClearable
                       error={errors?.warrantyPeriodUnit}
                     />
-                <FilterSelect
-                  label="Warranty Provider"
-                  value={
-                    warrantyProviders.options.find(
-                      (option) => option.value === formData.warranty?.provider,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    handleNestedChange("warranty.provider", option?.value || "")
-                  }
-                  options={warrantyProviders.options}
-                  placeholder="Select warranty provider"
-                  isLoading={warrantyProviders.loading}
-                  isClearable
-                  error={errors?.warrantyProvider}
-                />
+                    <FilterSelect
+                      label="Warranty Provider"
+                      value={
+                        warrantyProviders.options.find(
+                          (option) =>
+                            option.value === formData.warranty?.provider,
+                        ) || null
+                      }
+                      onChange={(option) =>
+                        handleNestedChange(
+                          "warranty.provider",
+                          option?.value || "",
+                        )
+                      }
+                      options={warrantyProviders.options}
+                      placeholder="Select warranty provider"
+                      isLoading={warrantyProviders.loading}
+                      isClearable
+                      error={errors?.warrantyProvider}
+                    />
 
-                <FilterSelect
-                  label="Warranty Type"
-                  value={
-                    warrantyTypes.options.find(
-                      (option) => option.value === formData.warranty?.type,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    handleNestedChange("warranty.type", option?.value || "")
-                  }
-                  options={warrantyTypes.options}
-                  placeholder="Select warranty type"
-                  isLoading={warrantyTypes.loading}
-                  isClearable
-                  error={errors?.warrantyType}
-                />
-              </div>
+                    <FilterSelect
+                      label="Warranty Type"
+                      value={
+                        warrantyTypes.options.find(
+                          (option) => option.value === formData.warranty?.type,
+                        ) || null
+                      }
+                      onChange={(option) =>
+                        handleNestedChange("warranty.type", option?.value || "")
+                      }
+                      options={warrantyTypes.options}
+                      placeholder="Select warranty type"
+                      isLoading={warrantyTypes.loading}
+                      isClearable
+                      error={errors?.warrantyType}
+                    />
+                  </div>
 
-              <TextEditor
-                label="Warranty description and rules"
-                value={formData.warranty?.terms || ""}
-                onChange={(content) =>
-                  handleNestedChange("warranty.terms", content)
-                }
-                height="220px"
-                className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
-                placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
-              />
-              </>
+                  <TextEditor
+                    label="Warranty description and rules"
+                    value={formData.warranty?.terms || ""}
+                    onChange={(content) =>
+                      handleNestedChange("warranty.terms", content)
+                    }
+                    maxLength={1000}
+                    height="220px"
+                    className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
+                    placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
+                  />
+                  {errors?.warrantyTerms && (
+                    <p className="mt-1 text-xs text-red-600" role="alert">
+                      {errors.warrantyTerms}
+                    </p>
+                  )}
+                </>
               ) : (
-                <p className="text-sm text-[var(--admin-text-muted)]">
-                  No warranty will be advertised or available for registration. Return policy is configured separately below.
-                </p>
+                <DisabledPolicyState
+                  type="warranty"
+                  title="Warranty is not offered"
+                  description="Turn on to add warranty details."
+                />
               )}
             </section>
 
@@ -2234,14 +2390,13 @@ const submitBrandRequest = async (values) => {
                   <h3>Product Return Policy</h3>
 
                   <p className="max-w-2xl">
-                    Set return window, resolution, shipping responsibility, and
-                    verification requirements. Saved policy applies to new
-                    orders and remains unchanged for existing orders.
+                    Configure return rules for new orders. Existing orders
+                    remain unchanged.
                   </p>
                 </div>
 
                 <div className="shrink-0">
-                  <div className="flex items-center justify-end rounded-full border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-2">
+                  <div className="flex items-center justify-end">
                     <Input
                       className="!mb-0"
                       labelName="Returnable"
@@ -2282,157 +2437,166 @@ const submitBrandRequest = async (values) => {
                   </div>
                 </div>
               </div>
+              {isReturnable ? (
+                <div className="grid gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+                  <Input
+                    labelName="Return Window Days"
+                    name="warranty.returnPolicy.returnWindowDays"
+                    type="number"
+                    min={1}
+                    max={365}
+                    disabled={!isReturnable}
+                    value={
+                      formData.warranty?.returnPolicy?.returnWindowDays ?? ""
+                    }
+                    onKeyDown={preventNegativeNumericKey}
+                    onPaste={preventNegativeNumericPaste}
+                    error={errors?.returnWindowDays}
+                    helperText={
+                      isReturnable
+                        ? "Use a return window between 1 and 365 days."
+                        : "Enable Returnable to set the return window."
+                    }
+                    onChange={(event) => {
+                      if (isNegativeNumericValue(event.target.value)) return;
+                      const value =
+                        event.target.value === ""
+                          ? ""
+                          : Number(event.target.value);
 
-              <div className="grid gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
-                <Input
-                  labelName="Return Window Days"
-                  name="warranty.returnPolicy.returnWindowDays"
-                  type="number"
-                  min={1}
-                  max={365}
-                  disabled={!isReturnable}
-                  value={
-                    formData.warranty?.returnPolicy?.returnWindowDays ?? ""
-                  }
-                  error={errors?.returnWindowDays}
-                  helperText={
-                    isReturnable
-                      ? "Use a return window between 1 and 365 days."
-                      : "Enable Returnable to set the return window."
-                  }
-                  onChange={(event) => {
-                    const value =
-                      event.target.value === ""
-                        ? ""
-                        : Number(event.target.value);
+                      const nextValue = Number.isNaN(value) ? 0 : value;
 
-                    const nextValue = Number.isNaN(value) ? 0 : value;
+                      handleNestedChange(
+                        "warranty.returnPolicy.returnWindowDays",
+                        nextValue,
+                      );
 
-                    handleNestedChange(
-                      "warranty.returnPolicy.returnWindowDays",
-                      nextValue,
-                    );
+                      handleNestedChange(
+                        "warranty.returnPolicy.days",
+                        nextValue,
+                      );
+                    }}
+                  />
 
-                    handleNestedChange("warranty.returnPolicy.days", nextValue);
-                  }}
-                />
+                  <Input
+                    labelName="Allowed Resolution"
+                    name="warranty.returnPolicy.resolution"
+                    type="select"
+                    value={
+                      formData.warranty?.returnPolicy?.resolution ||
+                      "refund_or_replacement"
+                    }
+                    onChange={(option) =>
+                      handleNestedChange(
+                        "warranty.returnPolicy.resolution",
+                        option?.value || "refund_or_replacement",
+                      )
+                    }
+                    options={[
+                      {
+                        value: "refund_or_replacement",
+                        label: "Refund or replacement",
+                      },
+                      {
+                        value: "refund",
+                        label: "Refund only",
+                      },
+                      {
+                        value: "replacement",
+                        label: "Replacement only",
+                      },
+                    ]}
+                  />
 
-                <Input
-                  labelName="Allowed Resolution"
-                  name="warranty.returnPolicy.resolution"
-                  type="select"
-                  value={
-                    formData.warranty?.returnPolicy?.resolution ||
-                    "refund_or_replacement"
-                  }
-                  onChange={(option) =>
-                    handleNestedChange(
-                      "warranty.returnPolicy.resolution",
-                      option?.value || "refund_or_replacement",
-                    )
-                  }
-                  options={[
-                    {
-                      value: "refund_or_replacement",
-                      label: "Refund or replacement",
-                    },
-                    {
-                      value: "refund",
-                      label: "Refund only",
-                    },
-                    {
-                      value: "replacement",
-                      label: "Replacement only",
-                    },
-                  ]}
-                />
+                  <Input
+                    labelName="Return Shipping Paid By"
+                    name="warranty.returnPolicy.shippingPaidBy"
+                    type="select"
+                    disabled={isSellerPanelUser}
+                    value={
+                      isSellerPanelUser
+                        ? "seller"
+                        : formData.warranty?.returnPolicy?.shippingPaidBy ||
+                          "seller"
+                    }
+                    onChange={(option) =>
+                      handleNestedChange(
+                        "warranty.returnPolicy.shippingPaidBy",
+                        option?.value || "seller",
+                      )
+                    }
+                    options={
+                      isSellerPanelUser
+                        ? [
+                            {
+                              value: "seller",
+                              label: "Seller",
+                            },
+                          ]
+                        : [
+                            {
+                              value: "platform",
+                              label: "Platform",
+                            },
+                            {
+                              value: "seller",
+                              label: "Seller",
+                            },
+                            {
+                              value: "customer",
+                              label: "Customer",
+                            },
+                          ]
+                    }
+                    helperText={
+                      isSellerPanelUser
+                        ? "Seller handles delivery and return shipping."
+                        : undefined
+                    }
+                  />
 
-                <Input
-                  labelName="Return Shipping Paid By"
-                  name="warranty.returnPolicy.shippingPaidBy"
-                  type="select"
-                  disabled={isSellerPanelUser}
-                  value={
-                    isSellerPanelUser
-                      ? "seller"
-                      : formData.warranty?.returnPolicy?.shippingPaidBy ||
-                        "seller"
-                  }
-                  onChange={(option) =>
-                    handleNestedChange(
-                      "warranty.returnPolicy.shippingPaidBy",
-                      option?.value || "seller",
-                    )
-                  }
-                  options={
-                    isSellerPanelUser
-                      ? [
-                          {
-                            value: "seller",
-                            label: "Seller",
-                          },
-                        ]
-                      : [
-                          {
-                            value: "platform",
-                            label: "Platform",
-                          },
-                          {
-                            value: "seller",
-                            label: "Seller",
-                          },
-                          {
-                            value: "customer",
-                            label: "Customer",
-                          },
-                        ]
-                  }
-                  helperText={
-                    isSellerPanelUser
-                      ? "Seller handles delivery and return shipping."
-                      : undefined
-                  }
-                />
+                  {/* <div className="md:col-span-2 xl:col-span-3">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:gap-x-12">
+                      <Input
+                        labelName="Require Return Images"
+                        name="warranty.returnPolicy.requiresImages"
+                        type="switch"
+                        value={Boolean(
+                          formData.warranty?.returnPolicy?.requiresImages,
+                        )}
+                        onChange={(event) =>
+                          handleNestedChange(
+                            "warranty.returnPolicy.requiresImages",
+                            event.target.checked,
+                          )
+                        }
+                      />
 
-                <div className="md:col-span-2 xl:col-span-3">
-                  <p className="mb-3 border-[var(--admin-line)] pt-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    Return requirements
-                  </p>
-
-                  <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:gap-x-12">
-                    <Input
-                      labelName="Require Return Images"
-                      name="warranty.returnPolicy.requiresImages"
-                      type="switch"
-                      value={Boolean(
-                        formData.warranty?.returnPolicy?.requiresImages,
-                      )}
-                      onChange={(event) =>
-                        handleNestedChange(
-                          "warranty.returnPolicy.requiresImages",
-                          event.target.checked,
-                        )
-                      }
-                    />
-
-                    <Input
-                      labelName="Require Inspection / QC"
-                      name="warranty.returnPolicy.inspectionRequired"
-                      type="switch"
-                      value={
-                        formData.warranty?.returnPolicy?.inspectionRequired !==
-                        false
-                      }
-                      onChange={(event) =>
-                        handleNestedChange(
-                          "warranty.returnPolicy.inspectionRequired",
-                          event.target.checked,
-                        )
-                      }
-                    />
-                  </div>
+                      <Input
+                        labelName="Require Inspection / QC"
+                        name="warranty.returnPolicy.inspectionRequired"
+                        type="switch"
+                        value={
+                          formData.warranty?.returnPolicy
+                            ?.inspectionRequired !== false
+                        }
+                        onChange={(event) =>
+                          handleNestedChange(
+                            "warranty.returnPolicy.inspectionRequired",
+                            event.target.checked,
+                          )
+                        }
+                      />
+                    </div>
+                  </div> */}
                 </div>
-              </div>
+              ) : (
+                <DisabledPolicyState
+                  type="return"
+                  title="Returns are currently disabled"
+                  description="Turn on to configure return rules."
+                />
+              )}
             </section>
           </div>
         </div>
@@ -2484,174 +2648,150 @@ const submitBrandRequest = async (values) => {
           BRAND MODAL
           ========================================================== */}
 
-   
-<DefaultModal
-  title={brandSubmission._id ? "Resubmit Brand" : "Add New Brand"}
-  isOpen={isBrandModal}
-  onClose={() => {
-    setIsBrandModal(false);
-    formik.resetForm();
-  }}
-  onSubmit={formik.handleSubmit}
-  submitButtonText={
-    brandSubmitting
-      ? "Saving..."
-      : brandLogoUploading
-        ? "Uploading..."
-        : brandSubmission._id
-          ? "Resubmit"
-          : isSellerPanelUser
-            ? "Submit for Approval"
-            : "Create Brand"
-  }
-  closeButtonText="Cancel"
-  loading={brandSubmitting || brandLogoUploading}
-  isButtonView
->
-  <div className="space-y-5">
-     <FormSection
-      title="Brand Information"
-      description={
-        isSellerPanelUser
-          ? "New brands require admin approval before they can be used on products."
-          : "Create a new brand that will be available for this product."
-      }
-    >
-      <div className="space-y-4">
-        <div>
-          <FormInput
-            label="Brand Name"
-            name="name"
-            type="text"
-            value={formik.values.name}
-            onChange={(event) => {
-              formik.handleChange(event);
-              setBrandSubmission((current) => ({
-                ...current,
-                name: event.target.value,
-              }));
-            }}
-            onBlur={formik.handleBlur}
-            placeholder="Enter brand name"
-            required
-          />
+      <DefaultModal
+        title={brandSubmission._id ? "Resubmit Brand" : "Add New Brand"}
+        isOpen={isBrandModal}
+        onClose={() => {
+          setBrandSubmission((current) => ({ ...current, ...formik.values }));
+          setIsBrandModal(false);
+          formik.resetForm();
+        }}
+        onSubmit={formik.handleSubmit}
+        submitButtonText={
+          brandSubmitting
+            ? "Saving..."
+            : brandLogoUploading
+              ? "Uploading..."
+              : brandSubmission._id
+                ? "Resubmit"
+                : isSellerPanelUser
+                  ? "Submit for Approval"
+                  : "Create Brand"
+        }
+        closeButtonText="Cancel"
+        loading={brandSubmitting || brandLogoUploading}
+        isButtonView
+      >
+        <div className="space-y-5">
+          <FormSection
+            title="Brand Information"
+            description={
+              isSellerPanelUser
+                ? "New brands require admin approval before they can be used on products."
+                : "Create a new brand that will be available for this product."
+            }
+          >
+            <div className="space-y-4">
+              <div>
+                <FormInput
+                  label="Brand Name"
+                  name="name"
+                  type="text"
+                  value={formik.values.name}
+                  maxLength={200}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.name ? formik.errors.name : ""}
+                  placeholder="Enter brand name"
+                  required
+                />
+              </div>
 
-          {formik.touched.name && formik.errors.name && (
-            <p className="mt-1 text-xs text-red-500">
-              {formik.errors.name}
-            </p>
+              <div>
+                <FormInput
+                  label="Description"
+                  name="description"
+                  type="textarea"
+                  value={formik.values.description}
+                  maxLength={1000}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={
+                    formik.touched.description ? formik.errors.description : ""
+                  }
+                  placeholder="Enter brand details (optional)"
+                  rows={4}
+                />
+              </div>
+
+              <div>
+                <ImageUpload
+                  label="Brand Logo"
+                  file={formik.values.logo}
+                  onChange={handleBrandLogoUpload}
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  isDisabled={brandLogoUploading || brandSubmitting}
+                  isLoading={brandLogoUploading}
+                  onRemove={() => {
+                    formik.setFieldValue("logo", "");
+                    formik.setFieldTouched("logo", true, false);
+
+                    setBrandSubmission((current) => ({
+                      ...current,
+                      ...formik.values,
+                      logo: "",
+                    }));
+                  }}
+                  required
+                />
+
+                {formik.touched.logo && formik.errors.logo && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {formik.errors.logo}
+                  </p>
+                )}
+
+                <p className="mt-1 text-[11px] text-gray-400">
+                  {brandLogoUploading
+                    ? "Uploading logo..."
+                    : "JPG, PNG, or WEBP up to 5MB"}
+                </p>
+              </div>
+            </div>
+          </FormSection>
+
+          {myBrandSubmissions.filter(
+            (brand) => brand.approvalStatus === "rejected",
+          ).length > 0 && (
+            <FormSection
+              title="Rejected Submissions"
+              description="Select a rejected brand to make changes and resubmit it."
+            >
+              <div className="space-y-2">
+                {myBrandSubmissions
+                  .filter((brand) => brand.approvalStatus === "rejected")
+                  .map((brand) => (
+                    <button
+                      key={brand._id}
+                      type="button"
+                      className="w-full rounded-md border border-red-200 bg-red-50 p-3 text-left text-xs text-red-700 transition-colors hover:bg-red-100"
+                      onClick={() => {
+                        const values = {
+                          _id: brand._id,
+                          name: brand.name || "",
+                          logo: brand.logo || "",
+                          thumbnails: brand.thumbnails || "",
+                          description: brand.description || "",
+                        };
+
+                        setBrandSubmission(values);
+                        formik.setValues(values);
+                        formik.setTouched({});
+                        formik.setErrors({});
+                      }}
+                    >
+                      <span className="font-semibold">{brand.name}</span>
+
+                      <span className="mt-1 block text-red-600">
+                        {brand.rejectionReason || "Needs changes"}
+                      </span>
+                    </button>
+                  ))}
+              </div>
+            </FormSection>
           )}
         </div>
-
-        <div>
-          <FormInput
-            label="Description"
-            name="description"
-            type="textarea"
-            value={formik.values.description}
-            onChange={(event) => {
-              formik.handleChange(event);
-              setBrandSubmission((current) => ({
-                ...current,
-                description: event.target.value,
-              }));
-            }}
-            onBlur={formik.handleBlur}
-            placeholder="Enter brand details (optional)"
-            rows={4}
-          />
-
-          {formik.touched.description &&
-            formik.errors.description && (
-              <p className="mt-1 text-xs text-red-500">
-                {formik.errors.description}
-              </p>
-            )}
-        </div>
-
-        <div>
-      <ImageUpload
-        label="Brand Logo"
-        file={formik.values.logo}
-        onChange={handleBrandLogoUpload}
-        accept="image/png,image/jpeg,image/jpg,image/webp"
-        isDisabled={brandLogoUploading || brandSubmitting}
-        isLoading={brandLogoUploading}
-        onRemove={() => {
-          formik.setFieldValue("logo", "");
-          formik.setFieldTouched("logo", true, false);
-
-          setBrandSubmission((current) => ({
-            ...current,
-            logo: "",
-          }));
-        }}
-        required
-      />
-
-      {formik.touched.logo && formik.errors.logo && (
-        <p className="mt-1 text-xs text-red-500">
-          {formik.errors.logo}
-        </p>
-      )}
-
-      <p className="mt-1 text-[11px] text-gray-400">
-        {brandLogoUploading
-          ? "Uploading logo..."
-          : "JPG, PNG, or WEBP up to 5MB"}
-      </p>
-    </div>
-      </div>
-    </FormSection>
-
-
-    
-
-    {myBrandSubmissions.filter(
-      (brand) => brand.approvalStatus === "rejected",
-    ).length > 0 && (
-      <FormSection
-        title="Rejected Submissions"
-        description="Select a rejected brand to make changes and resubmit it."
-      >
-        <div className="space-y-2">
-          {myBrandSubmissions
-            .filter((brand) => brand.approvalStatus === "rejected")
-            .map((brand) => (
-              <button
-                key={brand._id}
-                type="button"
-                className="w-full rounded-md border border-red-200 bg-red-50 p-3 text-left text-xs text-red-700 transition-colors hover:bg-red-100"
-                onClick={() => {
-                  const values = {
-                    _id: brand._id,
-                    name: brand.name || "",
-                    logo: brand.logo || "",
-                    thumbnails: brand.thumbnails || "",
-                    description: brand.description || "",
-                  };
-
-                  setBrandSubmission(values);
-                  formik.setValues(values);
-                  formik.setTouched({});
-                  formik.setErrors({});
-                }}
-              >
-                <span className="font-semibold">
-                  {brand.name}
-                </span>
-
-                <span className="mt-1 block text-red-600">
-                  {brand.rejectionReason || "Needs changes"}
-                </span>
-              </button>
-            ))}
-        </div>
-      </FormSection>
-    )}
-  </div>
-</DefaultModal>
-
+      </DefaultModal>
     </>
   );
 }
