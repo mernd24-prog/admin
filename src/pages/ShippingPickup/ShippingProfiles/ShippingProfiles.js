@@ -2120,7 +2120,7 @@ export default function ShippingProfiles() {
                 minLength={3}
                 maxLength={500}
                 showLengthCount
-                limitMessage="Description must be at most 500 characters"
+                limitMessage="Description is limited to 500 characters"
                 rows={4}
                 inputClassName="min-h-[100px] resize-y"
                 error={
