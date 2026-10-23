@@ -1,3 +1,4 @@
+import { validateProductName } from "./productNameValidation";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BasicDetailsTab from "./BasicDetailsTab";
@@ -1750,22 +1751,8 @@ export default function ProductManagementUI() {
   const validateForm = () => {
     const newErrors = {};
 
-    // Product name validation
-    const productName = String(formData?.name || "").trim();
-
-    if (!productName) {
-      newErrors.name = "Product name is required.";
-    } else if (productName.length < 3) {
-      newErrors.name = "Product name must be at least 3 characters.";
-    } else if (productName.length > 200) {
-      newErrors.name = "Product name must not be more than 200 characters.";
-    } else if (!/\p{L}/u.test(productName)) {
-      newErrors.name = "Product name must contain at least one letter.";
-    } else if (/[\u0000-\u001F\u007F-\u009F]/u.test(productName)) {
-      newErrors.name = "Product name contains invalid characters.";
-    } else if (/\s{2,}/u.test(productName)) {
-      newErrors.name = "Product name cannot contain repeated spaces.";
-    }
+    const productNameError = validateProductName(formData?.name);
+    if (productNameError) newErrors.name = productNameError;
 
     // Description validation
     const description = formData?.description || "";
@@ -2696,7 +2683,7 @@ export default function ProductManagementUI() {
 
     if (Object.keys(newErrors).length > 0) {
       pendingValidationScrollRef.current = true;
-      toast.error("Please correct the highlighted fields before saving.");
+      toast.error("Please Fill the highlighted fields before saving.");
     }
 
     return Object.keys(newErrors).length === 0;
@@ -2855,7 +2842,8 @@ export default function ProductManagementUI() {
   }, [formData.basePrice, formData.discount, taxData]);
 
   const handleChange = useCallback((e) => {
-    const { name, value } = e.target;
+    const { name, value: rawValue } = e.target;
+    const value = name === "name" ? rawValue.trimStart() : rawValue;
 
     // Update form data
     if (name.includes(".")) {
@@ -2880,16 +2868,9 @@ export default function ProductManagementUI() {
       const updatedErrors = { ...prev };
 
       if (name === "name") {
-        if (!value.trim()) {
-          updatedErrors.name = "Product name is required.";
-        } else if (value.trim().length < 3) {
-          updatedErrors.name = "Product name must be at least 3 characters.";
-        } else if (value.trim().length > 200) {
-          updatedErrors.name =
-            "Product name must not be more than 200 characters.";
-        } else {
-          delete updatedErrors.name;
-        }
+        const message = validateProductName(value);
+        if (message) updatedErrors.name = message;
+        else delete updatedErrors.name;
       }
 
       return updatedErrors;
@@ -3379,7 +3360,7 @@ export default function ProductManagementUI() {
       ...(updatedFormData.warehouseId
         ? { warehouseId: updatedFormData.warehouseId }
         : {}),
-      title: updatedFormData.name || updatedFormData.title,
+      title: String(updatedFormData.name || updatedFormData.title || "").trim(),
       description: updatedFormData.description,
       gstInclusive: true,
       category:
