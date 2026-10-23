@@ -12,7 +12,7 @@ const TabNavigation = ({ tabs, activeTab, scrollToSection }) => (
               onClick={() => scrollToSection(tab.id)}
               className={`flex w-full items-center gap-2.5 px-3 py-3 text-left transition-colors duration-300 ease-in-out ${
                 isActive
-                  ? "border-r-2 border-[var(--admin-blue)] bg-[var(--admin-blue-soft)]"
+                  ? " bg-[var(--admin-blue-soft)]"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
               }`}
             >
@@ -30,9 +30,7 @@ const TabNavigation = ({ tabs, activeTab, scrollToSection }) => (
 
               <p
                 className={`text-xs font-medium leading-tight transition-colors duration-300 ease-in-out ${
-                  isActive
-                    ? "text-[var(--admin-blue)]"
-                    : "text-gray-700"
+                  isActive ? "text-[var(--admin-blue)]" : "text-gray-700"
                 }`}
               >
                 {tab.title}

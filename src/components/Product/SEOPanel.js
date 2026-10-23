@@ -21,7 +21,9 @@ const CharCount = ({ value = "", max }) => {
   const len = String(value).length;
   const isOver = len > max;
   return (
-    <span className={`text-xs ${isOver ? "text-red-500" : "text-gray-400"}`}>
+    <span
+      className={`text-xs text-end ${isOver ? "text-red-500" : "text-gray-400"}`}
+    >
       {len}/{max}
     </span>
   );
@@ -66,7 +68,9 @@ const SEOPanel = ({
       const keyword = keywordInput.trim();
       if (
         keyword &&
-        !keywords.some((item) => String(item).trim().toLowerCase() === keyword.toLowerCase()) &&
+        !keywords.some(
+          (item) => String(item).trim().toLowerCase() === keyword.toLowerCase(),
+        ) &&
         keyword.length <= 60 &&
         keywords.length < maxKeywords
       ) {
@@ -222,7 +226,6 @@ const SEOPanel = ({
           <label className="text-sm font-medium text-gray-700">
             Meta Title
           </label>
-          <CharCount value={seo.metaTitle} max={70} />
         </div>
         <input
           type="text"
@@ -233,7 +236,12 @@ const SEOPanel = ({
           maxLength={70}
           aria-invalid={Boolean(errors.metaTitle)}
         />
-        {errors.metaTitle && <p className="text-xs text-red-600" role="alert">{errors.metaTitle}</p>}
+        {errors.metaTitle && (
+          <p className="text-xs text-red-600" role="alert">
+            {errors.metaTitle}
+          </p>
+        )}
+        <CharCount value={seo.metaTitle} max={70} />
       </div>
 
       {/* Meta description */}
@@ -253,7 +261,11 @@ const SEOPanel = ({
           maxLength={160}
           aria-invalid={Boolean(errors.metaDescription)}
         />
-        {errors.metaDescription && <p className="text-xs text-red-600" role="alert">{errors.metaDescription}</p>}
+        {errors.metaDescription && (
+          <p className="text-xs text-red-600" role="alert">
+            {errors.metaDescription}
+          </p>
+        )}
       </div>
 
       {/* Keywords */}
@@ -263,7 +275,9 @@ const SEOPanel = ({
           type="text"
           className="admin-input w-full"
           placeholder={
-            keywordsAtMax ? `Max ${maxKeywords} keywords reached` : "Add keyword..."
+            keywordsAtMax
+              ? `Max ${maxKeywords} keywords reached`
+              : "Add keyword..."
           }
           value={keywordInput}
           disabled={keywordsAtMax}
@@ -272,7 +286,11 @@ const SEOPanel = ({
           maxLength={60}
           aria-invalid={Boolean(errors.keywords)}
         />
-        {errors.keywords && <p className="text-xs text-red-600" role="alert">{errors.keywords}</p>}
+        {errors.keywords && (
+          <p className="text-xs text-red-600" role="alert">
+            {errors.keywords}
+          </p>
+        )}
 
         <div className="flex min-h-[34px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-2">
           {keywords.length ? (
@@ -294,7 +312,9 @@ const SEOPanel = ({
               </span>
             ))
           ) : (
-            <span className="text-xs text-gray-400">No keywords added yet.</span>
+            <span className="text-xs text-gray-400">
+              No keywords added yet.
+            </span>
           )}
         </div>
 
@@ -328,7 +348,11 @@ const SEOPanel = ({
           onChange={(e) => onChange("seo.canonicalUrl", e.target.value)}
           aria-invalid={Boolean(errors.canonicalUrl)}
         />
-        {errors.canonicalUrl && <p className="text-xs text-red-600" role="alert">{errors.canonicalUrl}</p>}
+        {errors.canonicalUrl && (
+          <p className="text-xs text-red-600" role="alert">
+            {errors.canonicalUrl}
+          </p>
+        )}
         <p className="text-xs text-gray-400">
           Leave blank to use the default product URL
         </p>
@@ -360,34 +384,71 @@ const SEOPanel = ({
         {showAdvanced && (
           <div className="mt-3 space-y-4 pl-4 border-l-2 border-gray-100">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">
-                OG Title
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  OG Title
+                </label>
+                <CharCount value={seo.ogTitle} max={70} />
+              </div>
+
               <input
                 type="text"
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
-                placeholder="Title for Facebook/Twitter (defaults to meta title)"
+                placeholder="Title for Facebook/Twitter (max 70 characters)"
                 value={seo.ogTitle || ""}
-                onChange={(e) => onChange("seo.ogTitle", e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  if (value.length > 70) return;
+
+                  onChange("seo.ogTitle", value);
+                }}
                 maxLength={70}
-                aria-invalid={Boolean(errors.ogTitle)}
+                aria-invalid={
+                  Boolean(errors.ogTitle) || (seo.ogTitle || "").length >= 70
+                }
               />
-              {errors.ogTitle && <p className="text-xs text-red-600" role="alert">{errors.ogTitle}</p>}
+
+              {(errors.ogTitle || (seo.ogTitle || "").length >= 70) && (
+                <p className="text-xs text-red-600" role="alert">
+                  {errors.ogTitle || "OG Title cannot exceed 70 characters."}
+                </p>
+              )}
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">
-                OG Description
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  OG Description
+                </label>
+                <CharCount value={seo.ogDescription} max={160} />
+              </div>
+
               <textarea
                 rows={2}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
-                placeholder="Description for social sharing"
+                placeholder="Description for social sharing (max 160 characters)"
                 value={seo.ogDescription || ""}
-                onChange={(e) => onChange("seo.ogDescription", e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  if (value.length > 160) return;
+
+                  onChange("seo.ogDescription", value);
+                }}
                 maxLength={160}
-                aria-invalid={Boolean(errors.ogDescription)}
+                aria-invalid={
+                  Boolean(errors.ogDescription) ||
+                  (seo.ogDescription || "").length >= 160
+                }
               />
-              {errors.ogDescription && <p className="text-xs text-red-600" role="alert">{errors.ogDescription}</p>}
+
+              {(errors.ogDescription ||
+                (seo.ogDescription || "").length >= 160) && (
+                <p className="text-xs text-red-600" role="alert">
+                  {errors.ogDescription ||
+                    "OG Description cannot exceed 160 characters."}
+                </p>
+              )}
             </div>
             <div className="space-y-3">
               <ImageUpload
@@ -410,11 +471,15 @@ const SEOPanel = ({
                   placeholder="https://cdn.yourstore.com/og-image.jpg"
                   value={seo.ogImage || ""}
                   onPaste={(event) => {
-                    const pastedUrl = event.clipboardData?.getData("text")?.trim();
+                    const pastedUrl = event.clipboardData
+                      ?.getData("text")
+                      ?.trim();
                     if (!pastedUrl) return;
                     if (!isHttpUrl(pastedUrl)) {
                       event.preventDefault();
-                      setOgImagePasteError("Pasted image URLs must be valid HTTP/HTTPS URLs.");
+                      setOgImagePasteError(
+                        "Pasted image URLs must be valid HTTP/HTTPS URLs.",
+                      );
                       return;
                     }
                     setOgImagePasteError("");
@@ -425,7 +490,11 @@ const SEOPanel = ({
                   }}
                   aria-invalid={Boolean(ogImageError)}
                 />
-                {ogImageError && <p className="text-xs text-red-600" role="alert">{ogImageError}</p>}
+                {ogImageError && (
+                  <p className="text-xs text-red-600" role="alert">
+                    {ogImageError}
+                  </p>
+                )}
               </div>
             </div>
           </div>
