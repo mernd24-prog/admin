@@ -29,6 +29,7 @@ import {
   updateHsn,
   enableDisableHsn,
   softDeleteHsn,
+  reviewHsnSubmission,
 } from "../../../Redux/productSlice";
 
 import AddHsnModal from "../../ProductManagement/ProductCatalog/components/Modals/AddHsnModal";
@@ -110,9 +111,23 @@ const COLUMNS = [
     ),
   },
   {
-    key: "isDisable",
+    key: "approvalStatus",
     label: "Status",
-    render: (v) => <StatusBadge status={v ? "inactive" : "active"} dot />,
+    render: (v, row) => (
+      <StatusBadge
+        status={
+          v === "pending"
+            ? "pending"
+            : v === "rejected"
+              ? "rejected"
+              : row.isDisable || row.active === false
+                ? "inactive"
+                : "active"
+        }
+        label={v === "pending" ? "Pending Approval" : undefined}
+        dot
+      />
+    ),
   },
 ];
 
@@ -298,6 +313,25 @@ const HsnCode = () => {
     [dispatch],
   );
 
+  const handleApprove = useCallback(
+    async (row) => {
+      try {
+        const res = await dispatch(
+          reviewHsnSubmission({
+            _id: row._id,
+            code: row.code,
+            action: "approve",
+          }),
+        ).unwrap();
+        toast.success(res?.message || "HSN code approved");
+        setIsRefresh((value) => !value);
+      } catch (err) {
+        toast.error(err?.message || "Failed to approve HSN code");
+      }
+    },
+    [dispatch],
+  );
+
   /* ==================== DELETE ==================== */
 
   const handleDeleteConfirm = async () => {
@@ -325,6 +359,15 @@ const HsnCode = () => {
 
   const rowActions = useCallback(
     (row) => [
+      ...(row.approvalStatus === "pending"
+        ? [
+            {
+              label: "Approve",
+              icon: <MdCheckCircle size={16} className="text-green-600" />,
+              onClick: () => handleApprove(row),
+            },
+          ]
+        : []),
       {
         label: "Edit",
         icon: <MdEdit size={16} className="text-blue-600" />,
@@ -363,7 +406,7 @@ const HsnCode = () => {
         danger: true,
       },
     ],
-    [handleToggleStatus],
+    [handleApprove, handleToggleStatus],
   );
 
   /* ==================== RENDER ==================== */

@@ -106,8 +106,11 @@ const API_CALL_OBJECT = {
   },
 };
 
+const generateProductVariantSku = () =>
+  `SKU-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
+
 const DEFAULT_PRODUCT_VARIANT = {
-  sku: "",
+  sku: generateProductVariantSku(),
   title: "Default",
   price: "",
   mrp: "",
@@ -859,6 +862,15 @@ export default function ProductManagementUI() {
       if (firstAttributeKey) {
         nestedFieldSelector = `[name="attribute_${firstAttributeKey}"]`;
       }
+    } else if (
+      firstField === "seo" &&
+      errors?.seo &&
+      typeof errors.seo === "object"
+    ) {
+      const firstSeoField = Object.keys(errors.seo)[0];
+      if (firstSeoField) {
+        nestedFieldSelector = `[data-error-field="seo.${firstSeoField}"]`;
+      }
     }
 
     const sectionId = FIELD_TO_SECTION[firstField] || "basic-details";
@@ -1058,7 +1070,7 @@ export default function ProductManagementUI() {
             setVariantsData([
               {
                 ...DEFAULT_PRODUCT_VARIANT,
-                sku: productData?.sku || "",
+                sku: productData?.sku || generateProductVariantSku(),
                 title:
                   productData?.color && productData.color !== "default"
                     ? productData.color
@@ -1592,6 +1604,7 @@ export default function ProductManagementUI() {
           resourceType: "hsn",
           resourceId: item._id || item.id || code,
           approvalStatus: item.approvalStatus,
+          submittedBySellerId: item.submittedBySellerId,
           active: item.active !== false,
         };
       }),
@@ -1802,20 +1815,30 @@ export default function ProductManagementUI() {
     if (!brandValue) {
       newErrors.brand = "Brand is required.";
     } else if (formattedData?.brandList?.length) {
-      const selectedBrand = formattedData.brandList.find((item) =>
-        [item.value, item.resourceId, item.brandName]
-          .filter(Boolean)
-          .some(
-            (value) => String(value).toLowerCase() === brandValue.toLowerCase(),
-          ),
-      );
+      const selectedBrand =
+        formattedData.brandList.find((item) =>
+          [item.value, item.resourceId, item.brandName]
+            .filter(Boolean)
+            .some(
+              (value) =>
+                String(value).toLowerCase() === brandValue.toLowerCase(),
+            ),
+        ) ||
+        (formData?.brandApprovalStatus
+          ? {
+              approvalStatus: formData.brandApprovalStatus,
+              active: formData.brandActive,
+            }
+          : null);
       if (
         !selectedBrand ||
+        selectedBrand.approvalStatus === "rejected" ||
         (selectedBrand.active === false &&
-          selectedBrand.approvalStatus !== "pending") ||
-        selectedBrand.approvalStatus === "rejected"
+          !(isSellerPanelUser && selectedBrand.approvalStatus === "pending")) ||
+        (!isSellerPanelUser && selectedBrand.approvalStatus === "pending")
       ) {
-        newErrors.brand = "Select a current active brand.";
+        newErrors.brand =
+          "Select an approved brand or your own pending submission.";
       }
     }
 
@@ -1851,19 +1874,30 @@ export default function ProductManagementUI() {
     if (!hsnValue) {
       newErrors.hsn_code = "HSN Code is required.";
     } else if (formattedData?.hsnCodeList?.length) {
-      const selectedHsn = formattedData.hsnCodeList.find((item) =>
-        [item.value, item.code, item.resourceId]
-          .filter(Boolean)
-          .some(
-            (value) => String(value).toLowerCase() === hsnValue.toLowerCase(),
-          ),
-      );
+      const selectedHsn =
+        formattedData.hsnCodeList.find((item) =>
+          [item.value, item.code, item.resourceId]
+            .filter(Boolean)
+            .some(
+              (value) =>
+                String(value).toLowerCase() === hsnValue.toLowerCase(),
+            ),
+        ) ||
+        (formData?.hsnApprovalStatus
+          ? {
+              approvalStatus: formData.hsnApprovalStatus,
+              active: formData.hsnActive,
+            }
+          : null);
       if (
         !selectedHsn ||
-        selectedHsn.active === false ||
-        ["pending", "rejected"].includes(selectedHsn.approvalStatus)
+        selectedHsn.approvalStatus === "rejected" ||
+        (selectedHsn.active === false &&
+          !(isSellerPanelUser && selectedHsn.approvalStatus === "pending")) ||
+        (!isSellerPanelUser && selectedHsn.approvalStatus === "pending")
       ) {
-        newErrors.hsn_code = "Select a current active HSN code.";
+        newErrors.hsn_code =
+          "Select an approved HSN code or your own pending submission.";
       }
     }
 
@@ -2622,7 +2656,9 @@ export default function ProductManagementUI() {
       seoErrors.ogImage =
         "Wait for the OG image upload to finish before saving.";
     const keywords = Array.isArray(seo.keywords) ? seo.keywords : [];
-    if (keywords.length > 20)
+    if (!keywords.length)
+      seoErrors.keywords = "Add at least one SEO keyword.";
+    else if (keywords.length > 20)
       seoErrors.keywords = "Use no more than 20 SEO keywords.";
     else if (
       keywords.some(
@@ -2961,6 +2997,8 @@ export default function ProductManagementUI() {
             selectedOption?.label ||
             selectedOption?.value ||
             "",
+          brandApprovalStatus: selectedOption?.approvalStatus || "approved",
+          brandActive: selectedOption?.active !== false,
         }));
         break;
 
@@ -3004,6 +3042,8 @@ export default function ProductManagementUI() {
           ...prev,
           hsn_code: selectedOption?.value || "",
           hsnCode: selectedOption?.code || selectedOption?.value || "",
+          hsnApprovalStatus: selectedOption?.approvalStatus || "approved",
+          hsnActive: selectedOption?.active !== false,
         }));
         const hsnCodeData = prefillList(
           "hsnCodes",
@@ -3165,9 +3205,7 @@ export default function ProductManagementUI() {
           option.sku || option.salePrice || option.mrp || option.stock,
       )
       .map((option, index) => ({
-        sku:
-          option.sku ||
-          `${updatedFormData.sku || updatedFormData.name || "SKU"}-${index + 1}`,
+        sku: option.sku || generateProductVariantSku(),
         price: Number(option.salePrice || 0),
         mrp: Number(option.mrp || 0),
         stock: Number(option.stock || 0),
@@ -3181,9 +3219,7 @@ export default function ProductManagementUI() {
     ).map((variant, index) => ({
       ...variant,
       attributes: normalizeVariantAttributes(variant, variableOptionAxes),
-      sku:
-        variant.sku ||
-        `${updatedFormData.sku || updatedFormData.name || "SKU"}-${index + 1}`,
+      sku: variant.sku || generateProductVariantSku(),
       price: Number(variant.price || variant.salePrice || 0),
       mrp: Number(variant.mrp || variant.price || variant.salePrice || 0),
       salePrice:
@@ -3462,7 +3498,12 @@ export default function ProductManagementUI() {
               stock: "",
             },
           ]);
-          setVariantsData([DEFAULT_PRODUCT_VARIANT]);
+          setVariantsData([
+            {
+              ...DEFAULT_PRODUCT_VARIANT,
+              sku: generateProductVariantSku(),
+            },
+          ]);
           setVariantAxes([]);
         }
         disableLeaveGuard();
@@ -3494,6 +3535,7 @@ export default function ProductManagementUI() {
         [];
       const mappedErrors = {};
       let gstRateErrorMessage = "";
+      let friendlyApiMessage = "";
       const setVariantApiError = (index, field, fieldMessage) => {
         mappedErrors.variants = mappedErrors.variants || {};
         mappedErrors.variants[index] = {
@@ -3505,7 +3547,15 @@ export default function ProductManagementUI() {
         const field = String(detail?.field || "")
           .replace(/^body\./, "")
           .replace(/\[(\d+)\]/g, ".$1");
-        const fieldMessage = String(detail?.message || message);
+        const rawFieldMessage = String(detail?.message || message);
+        const fieldMessage =
+          /seo\.keywords/i.test(field) &&
+          /required|does not contain|at least|array\.min/i.test(rawFieldMessage)
+            ? "Add at least one SEO keyword."
+            : rawFieldMessage;
+        if (fieldMessage !== rawFieldMessage) {
+          friendlyApiMessage = fieldMessage;
+        }
         const variantMatch = field.match(/variants\.(\d+)\.([\w]+)/i);
         if (variantMatch) {
           const variantIndex = Number(variantMatch[1]);
@@ -3620,6 +3670,13 @@ export default function ProductManagementUI() {
             variantMatch[2],
             friendlyMessage,
           );
+        } else if (
+          /seo\.keywords|seo keywords|does not contain 1 required value/i.test(
+            message,
+          )
+        ) {
+          friendlyApiMessage = "Add at least one SEO keyword.";
+          mappedErrors.seo = { keywords: friendlyApiMessage };
         } else if (/image|media|video/i.test(message))
           mappedErrors.commonImages = message;
         else if (/shipping|delivery|pincode/i.test(message))
@@ -3633,7 +3690,7 @@ export default function ProductManagementUI() {
         setError(mappedErrors);
         pendingValidationScrollRef.current = true;
       }
-      toast.error(gstRateErrorMessage || message);
+      toast.error(gstRateErrorMessage || friendlyApiMessage || message);
     } finally {
       setSaving(false);
     }

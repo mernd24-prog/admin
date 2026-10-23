@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import ImageUpload from "../Atoms/ImageGallery/ImageUpload";
+import Input from "../Atoms/Input/Input";
 import {
   FiGlobe,
   FiMonitor,
@@ -59,20 +60,26 @@ const SEOPanel = ({
     }
   }, [errors.ogTitle, errors.ogDescription, errors.ogImage]);
 
+  const addKeyword = () => {
+    const keyword = keywordInput.trim();
+    if (
+      keyword.length >= 2 &&
+      !keywords.some(
+        (item) =>
+          String(item).trim().toLowerCase() === keyword.toLowerCase(),
+      ) &&
+      keyword.length <= 60 &&
+      keywords.length < maxKeywords
+    ) {
+      onChange("seo.keywords", [...keywords, keyword]);
+      setKeywordInput("");
+    }
+  };
+
   const handleKeywordAdd = (e) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
-
-      const keyword = keywordInput.trim();
-      if (
-        keyword &&
-        !keywords.some((item) => String(item).trim().toLowerCase() === keyword.toLowerCase()) &&
-        keyword.length <= 60 &&
-        keywords.length < maxKeywords
-      ) {
-        onChange("seo.keywords", [...keywords, keyword]);
-        setKeywordInput("");
-      }
+      addKeyword();
     }
   };
 
@@ -257,22 +264,28 @@ const SEOPanel = ({
       </div>
 
       {/* Keywords */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700">Keywords</label>
-        <input
+      <div className="space-y-2" data-error-field="seo.keywords">
+        <Input
+          labelName="Keywords *"
+          name="seo.keywords"
           type="text"
-          className="admin-input w-full"
+          className="!mb-0"
           placeholder={
-            keywordsAtMax ? `Max ${maxKeywords} keywords reached` : "Add keyword..."
+            keywordsAtMax
+              ? `Max ${maxKeywords} keywords reached`
+              : "Type a keyword and press Enter"
           }
           value={keywordInput}
           disabled={keywordsAtMax}
           onChange={(e) => setKeywordInput(e.target.value)}
           onKeyDown={handleKeywordAdd}
+          onBlur={addKeyword}
           maxLength={60}
-          aria-invalid={Boolean(errors.keywords)}
+          showLengthCount={false}
+          aria-required="true"
+          error={errors.keywords}
+          helperText="Required — type a keyword, then press Enter or comma to add it."
         />
-        {errors.keywords && <p className="text-xs text-red-600" role="alert">{errors.keywords}</p>}
 
         <div className="flex min-h-[34px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-2">
           {keywords.length ? (

@@ -1738,20 +1738,30 @@ export default function BasicDetailsTab({
       const newOption = {
         value: hsnValue,
         code: hsnValue,
-        label: createdHsn.description
+        label: `${createdHsn.description
           ? `${hsnValue} - ${createdHsn.description}`
-          : hsnValue,
+          : hsnValue}${
+          createdHsn.approvalStatus === "pending"
+            ? " (Pending approval)"
+            : ""
+        }`,
         description: createdHsn.description || basePayload.description,
         resourceType: "hsn",
         resourceId: createdHsn._id || createdHsn.id || hsnValue,
         approvalStatus: createdHsn.approvalStatus,
+        submittedBySellerId: createdHsn.submittedBySellerId,
+        active: createdHsn.active !== false,
       };
 
       setLocalHsnOptions((current) => [newOption, ...current]);
 
       handleSelectChange(newOption, "hsn_code");
 
-      toast.success("HSN Code created successfully");
+      toast.success(
+        createdHsn.approvalStatus === "pending"
+          ? "HSN code submitted for admin approval"
+          : "HSN code created successfully",
+      );
 
       setIsHsnAddModal(false);
 

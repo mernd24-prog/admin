@@ -18,6 +18,8 @@ import {
 const MAX_VARIANT_IMAGES = 5;
 const MAX_PRODUCT_MONEY = 999999999.99;
 const MAX_PRODUCT_STOCK = 1000000000;
+const generateVariantSku = () =>
+  `SKU-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
 
 const sanitizeDecimalInput = (value, { max = null, decimals = 2 } = {}) => {
   let next = String(value ?? "")
@@ -309,7 +311,7 @@ const VariantBuilder = ({
         if (existing) return existing;
         return {
           ...DEFAULT_VARIANT,
-          sku: `SKU-${Date.now()}-${idx + 1}`,
+          sku: generateVariantSku(),
           title: Object.values(attributes).join(" / "),
           attributes,
           isDefault: idx === 0,
@@ -355,7 +357,7 @@ const VariantBuilder = ({
   const duplicateVariant = (idx) => {
     const copy = {
       ...variants[idx],
-      sku: `${variants[idx].sku || "SKU"}-copy`,
+      sku: generateVariantSku(),
       isDefault: false,
     };
     const next = [...variants];
@@ -877,7 +879,7 @@ const VariantBuilder = ({
             {[
               { field: "price", label: "Price (₹)", placeholder: "0" },
               { field: "mrp", label: "MRP (₹)", placeholder: "0" },
-              { field: "salePrice", label: "Sale Price (₹)", placeholder: "0" },
+              { field: "salePrice", label: "Special Price (₹)", placeholder: "0" },
               // { field: "gstRate", label: "GST (%)", placeholder: "18" },
             ].map(({ field, label, placeholder }) => (
               <div key={field} className="space-y-2">
@@ -1284,10 +1286,10 @@ const VariantBuilder = ({
                           }
                           error={variantErrors.sku}
                           value={variant.sku || ""}
-                          onChange={(e) =>
-                            updateVariant(idx, "sku", e.target.value)
-                          }
-                          placeholder="SKU"
+                          readOnly
+                          disabled
+                          placeholder="Generated automatically"
+                          title="SKU is generated automatically and cannot be edited"
                           maxLength={64}
                         />
                         {variantErrors.sku && (
@@ -1698,7 +1700,7 @@ const VariantBuilder = ({
             ...variants,
             {
               ...DEFAULT_VARIANT,
-              sku: `SKU-${Date.now()}`,
+              sku: generateVariantSku(),
               isDefault: variants.length === 0,
               sortOrder: variants.length,
             },

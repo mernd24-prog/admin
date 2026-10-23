@@ -35,7 +35,7 @@ const PermissionNotAllowed = ({
         </h1>
 
         <h2 className="text-2xl font-bold text-gray-700 mb-4">Access Denied</h2>
-
+{/* 
         <p className="text-gray-600 text-base mb-6 leading-relaxed">
           {customMessage || (
             <>
@@ -51,7 +51,7 @@ const PermissionNotAllowed = ({
               to request access.
             </>
           )}
-        </p>
+        </p> */}
 
         {showGoBackButton && (
           <div className="flex justify-center">
