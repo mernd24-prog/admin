@@ -107,9 +107,9 @@ const DefaultModal = ({
         aria-label={title}
       >
         {/* Header */}
-        <div className="admin-card-header flex shrink-0 items-center justify-between bg-white px-4 sm:px-6 py-3 sm:py-4">
+        <div className="admin-card-header relative block shrink-0 bg-white px-4 py-3 sm:px-6 sm:py-4">
           <h2
-            className={`text-lg font-semibold text-[var(--admin-ink)] ${titleClassName}`}
+            className={`w-full min-w-0 break-words pr-10 text-lg font-semibold text-[var(--admin-ink)] [overflow-wrap:anywhere] ${titleClassName}`}
           >
             {title}
           </h2>
@@ -118,7 +118,7 @@ const DefaultModal = ({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="text-gray-500 hover:text-gray-700 p-1"
+            className="absolute right-4 top-3 flex h-8 w-8 items-center justify-center rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 sm:right-6 sm:top-4"
             aria-label="Close modal"
           >
             <RxCross2 size={20} className="sm:w-5 sm:h-5 w-4 h-4" />

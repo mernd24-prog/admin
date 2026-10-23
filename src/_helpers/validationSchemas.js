@@ -687,7 +687,7 @@ export const shippingProfileCloneValidationSchema = Yup.object({
     .transform((value) => (value?.trim() ? value.trim() : undefined))
     .notRequired()
     .min(2, "Profile name must be at least 2 characters")
-    .max(128, "Profile name must be at most 128 characters"),
+    .max(100, "Profile name must be at most 100 characters"),
   description: Yup.string()
     .transform((value) => (value?.trim() ? value.trim() : undefined))
     .notRequired()

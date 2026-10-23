@@ -1261,6 +1261,7 @@ const ShipmentTracking = () => {
                   label="Checkpoint Location (optional)"
                   name="location"
                   type="textarea"
+                  limitMessage = "Checkpoint Location limited to 200 characters"
                   minLength={3}
                   maxLength={200}
                   rows={3}
@@ -1287,6 +1288,7 @@ const ShipmentTracking = () => {
                     : "Note (optional)"
                 }
                 name="note"
+                limitMessage = "Note limited to 500 characters"
                 type="textarea"
                 minLength={3}
                 maxLength={500}
