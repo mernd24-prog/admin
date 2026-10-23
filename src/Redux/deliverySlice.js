@@ -87,7 +87,7 @@ export const getShippingProfiles = createApiThunkPrivate(
   ENDPOINTS.shippingProfiles.list,
   "GET",
   true,
-  { transformParams: pickQuery(["sellerId", "organizationId", "active", "search", "limit", "offset"]) }
+  { transformParams: pickQuery(["sellerId", "organizationId", "active", "search", "sortBy", "sortDir", "limit", "offset"]) }
 );
 
 export const createShippingProfile = createApiThunkPrivate(

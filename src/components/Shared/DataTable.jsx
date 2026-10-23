@@ -597,7 +597,7 @@ const DataTable = ({
               ))}
 
               {rowActions && (
-                <th className="w-16 whitespace-nowrap px-4 py-3 text-right text-xs font-semibold text-[var(--admin-navy)]">
+                <th className="w-24 whitespace-nowrap px-4 py-3 pr-8 text-right text-xs font-semibold text-[var(--admin-navy)]">
                   ACTIONS
                 </th>
               )}
@@ -728,7 +728,7 @@ const DataTable = ({
                   ))}
 
                   {rowActions && (
-                    <td className="px-4 py-3 align-middle">
+                    <td className="w-24 px-4 py-3 pr-8 align-middle">
                       <div className="flex h-full items-center justify-end">
                         <RowActionsMenu
                           actions={rowActions(row)}

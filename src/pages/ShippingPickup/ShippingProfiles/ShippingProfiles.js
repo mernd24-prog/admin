@@ -353,7 +353,7 @@ function ProfileForm({
 
     setShippingAmountLimitReached((previous) => ({
       ...previous,
-      [key]: value !== "" && Number(value) >= MAX_SHIPPING_AMOUNT,
+      [key]: false,
     }));
     patch(key, value);
   };
@@ -544,137 +544,142 @@ function ProfileForm({
       </FormSection>
 
       {/* Serviceability */}
-      <FormSection
-        title="Serviceability"
-        description="Choose where this shipping profile can be used."
-      >
-        <div className="space-y-2">
-          {SERVICEABILITY_MODES.map((mode) => {
-            const isSelected = form.serviceabilityMode === mode.value;
+   <FormSection
+  title="Serviceability"
+  description="Choose where this shipping profile can be used."
+>
+  <div className="space-y-3">
+    {SERVICEABILITY_MODES.map((mode) => {
+      const isSelected = form.serviceabilityMode === mode.value;
+      const isPincodeMode = mode.value === "selected_pincodes";
 
-            return (
-              <label
-                key={mode.value}
-                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
-                  isSelected
-                    ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]/5"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="serviceabilityMode"
-                  value={mode.value}
-                  checked={isSelected}
-                  onChange={() => {
-                    patch("serviceabilityMode", mode.value);
-                  }}
-                  className="sr-only"
-                />
+      return (
+        <div
+          key={mode.value}
+          className="overflow-hidden rounded-lg border border-[var(--admin-field-line)] bg-white transition-all"
+        >
+          <label className="flex cursor-pointer items-start gap-3 p-4">
+            <input
+              type="radio"
+              name="serviceabilityMode"
+              value={mode.value}
+              checked={isSelected}
+              onChange={() => patch("serviceabilityMode", mode.value)}
+              className="sr-only"
+            />
 
-                <span
-                  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                    isSelected
-                      ? "border-[var(--admin-blue)]"
-                      : "border-gray-400 bg-white"
-                  }`}
-                  aria-hidden="true"
-                >
-                  {isSelected && (
-                    <span className="h-2 w-2 rounded-full bg-[var(--admin-blue)]" />
-                  )}
-                </span>
+          <span
+  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+    isSelected
+      ? "border-[var(--admin-gold)]"
+      : "border-[var(--admin-field-line)] bg-white"
+  }`}
+  aria-hidden="true"
+>
+  {isSelected && (
+    <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
+  )}
+</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-800">
+                {mode.label}
+              </p>
 
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">
-                    {mode.label}
-                  </p>
-
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    {mode.description}
-                  </p>
-                </div>
-              </label>
-            );
-          })}
-        </div>
-
-        {form.serviceabilityMode === "selected_pincodes" && (
-          <div className="mt-4  rounded-lg border border-gray-100 bg-gray-50 p-3">
-            <div className="mb-3">
-              <label className="admin-label">
-                Allowed Pincodes <span className="text-red-500">*</span>
-              </label>
-
-              <p className="mt-1 text-xs text-gray-500">
-                Add the 6-digit pincodes where this profile is available.
+              <p className="mt-1 text-xs leading-5 text-gray-500">
+                {mode.description}
               </p>
             </div>
+          </label>
 
-           <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-  <Input
-    type="text"
-    name="pincodeDraft"
-    value={currentPincodeInput}
-    onChange={(event) => {
-      const value = event.target.value.replace(/\D/g, "").slice(0, 6);
+          {isSelected && isPincodeMode && (
+            <div className="border-t border-gray-100 bg-gray-50/80 px-4 py-4">
+              <div className="mb-3">
+                <label className="admin-label">
+                  Allowed Pincodes <span className="text-red-500">*</span>
+                </label>
 
-      setPincodeInput(value);
-      formik?.setFieldValue("pincodeDraft", value);
-    }}
-    onBlur={() => formik?.setFieldTouched("pincodeDraft", true)}
-    onKeyDown={handlePincodeKeyDown}
-    placeholder="Enter 6-digit pincode"
-    className="mb-0 min-w-0 flex-1"
-    inputClassName="w-full"
-    maxLength={6}
-    showLengthCount={false}
-    inputMode="numeric"
-    error={formik?.touched.pincodeDraft && formik.errors.pincodeDraft}
-  />
+                <p className="mt-1 text-xs text-gray-500">
+                  Add the 6-digit pincodes where this profile is available.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                <Input
+                  type="text"
+                  name="pincodeDraft"
+                  value={currentPincodeInput}
+                  onChange={(event) => {
+                    const value = event.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 6);
+
+                    setPincodeInput(value);
+                    formik?.setFieldValue("pincodeDraft", value);
+                  }}
+                  onBlur={() =>
+                    formik?.setFieldTouched("pincodeDraft", true)
+                  }
+                  onKeyDown={handlePincodeKeyDown}
+                  placeholder="Enter 6-digit pincode"
+                  className="mb-0 min-w-0 flex-1"
+                  inputClassName="w-full"
+                  maxLength={6}
+                  showLengthCount={false}
+                  inputMode="numeric"
+                  error={
+                    formik?.touched.pincodeDraft &&
+                    formik.errors.pincodeDraft
+                  }
+                />
+
+                <button
+                  type="button"
+                  onClick={addPincode}
+                  className="admin-btn-primary h-8 shrink-0 whitespace-nowrap px-4"
+                >
+                  Add
+                </button>
+              </div>
+
+              {form.allowedPincodes.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
+                  {form.allowedPincodes.map((pincode) => (
+                   <span
+  key={pincode}
+  className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-gray-500"
+>
+  {pincode}
 
   <button
     type="button"
-    onClick={addPincode}
-    className="admin-btn-primary h-8 shrink-0 whitespace-nowrap px-4"
+    onClick={() => removePincode(pincode)}
+    className="ml-1 inline-flex h-4 w-4 shrink-0 -translate-y-0.5 items-center justify-center text-sm leading-none transition-colors hover:text-gray-800"
+    aria-label={`Remove ${pincode}`}
   >
-    Add
+    ×
   </button>
-</div>
-            {form.allowedPincodes.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
-                {form.allowedPincodes.map((pincode) => (
-                  <span
-                    key={pincode}
-                    className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
-                  >
-                    {pincode}
-
-                    <button
-                      type="button"
-                      onClick={() => removePincode(pincode)}
-                      className="ml-1 text-sm leading-none transition-colors hover:text-red-500"
-                      aria-label={`Remove ${pincode}`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <p className="mt-2 text-xs text-gray-400">
-              {form.allowedPincodes.length} pincode(s) selected
-            </p>
-            {formik?.touched.allowedPincodes &&
-              formik.errors.allowedPincodes && (
-                <p className="mt-1 text-xs text-red-600">
-                  {formik.errors.allowedPincodes}
-                </p>
+</span>
+                  ))}
+                </div>
               )}
-          </div>
-        )}
-      </FormSection>
+
+              <p className="mt-2 text-xs text-gray-500">
+                {form.allowedPincodes.length} pincode(s) selected
+              </p>
+
+              {formik?.touched.allowedPincodes &&
+                formik.errors.allowedPincodes && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {formik.errors.allowedPincodes}
+                  </p>
+                )}
+            </div>
+          )}
+        </div>
+      );
+    })}
+  </div>
+</FormSection>
 
       {/* Charges */}
       <FormSection
@@ -847,6 +852,18 @@ const unwrapProfiles = (payload = {}) => {
   };
 };
 
+const profileCreatedAt = (profile = {}) => {
+  const timestamp = Date.parse(
+    profile.createdAt || profile.created_at || profile.createdOn || profile.created_on || "",
+  );
+  if (Number.isFinite(timestamp)) return timestamp;
+
+  const id = String(profile._id || profile.id || "");
+  return /^[a-f\d]{24}$/i.test(id)
+    ? Number.parseInt(id.slice(0, 8), 16) * 1000
+    : 0;
+};
+
 const unwrapTemplates = (payload = {}) => {
   const data = payload?.data?.data || payload?.data || payload || {};
   const templates = Array.isArray(data)
@@ -1002,6 +1019,35 @@ export default function ShippingProfiles() {
     () => unwrapTemplates(shippingProfileTemplatesData),
     [shippingProfileTemplatesData],
   );
+  const visibleProfiles = useMemo(() => {
+    return profilesPayload.list
+      .map((profile, index) => ({
+        profile,
+        index,
+        createdAt: profileCreatedAt(profile),
+      }))
+      .sort((a, b) => {
+        const defaultFirst =
+          Number(Boolean(b.profile.isDefault)) -
+          Number(Boolean(a.profile.isDefault));
+        if (defaultFirst) return defaultFirst;
+
+        if (
+          sortKey === "created_at" &&
+          sortDir === "desc" &&
+          a.createdAt &&
+          b.createdAt &&
+          a.createdAt !== b.createdAt
+        ) {
+          return b.createdAt - a.createdAt;
+        }
+        if (sortKey === "created_at" && sortDir === "desc") {
+          return b.index - a.index;
+        }
+        return a.index - b.index;
+      })
+      .map(({ profile }) => profile);
+  }, [profilesPayload.list, sortDir, sortKey]);
 
   // const templateOptions = useMemo(() =>
   //   templatesPayload.list.map((template) => ({
@@ -1150,6 +1196,8 @@ export default function ShippingProfiles() {
       const params = {
         limit: pageSize,
         offset: (page - 1) * pageSize,
+        sortBy: sortKey,
+        sortDir,
       };
       if (search) params.search = search;
       if (activeSellerId) params.sellerId = activeSellerId;
@@ -1176,6 +1224,8 @@ export default function ShippingProfiles() {
     page,
     pageSize,
     search,
+    sortDir,
+    sortKey,
   ]);
 
   useEffect(() => {
@@ -1450,7 +1500,11 @@ export default function ShippingProfiles() {
         toast.success("Shipping profile updated");
       }
       closeModal();
-      fetchProfiles();
+      if (modal.mode === "create" && page !== 1) {
+        setPage(1);
+      } else {
+        fetchProfiles();
+      }
     } catch (err) {
       toast.error(err?.message || err || "Failed to save shipping profile");
     } finally {
@@ -1529,7 +1583,11 @@ export default function ShippingProfiles() {
       ).unwrap();
       toast.success("Template copied to seller shipping profiles");
       closeCloneModal();
-      fetchProfiles();
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        fetchProfiles();
+      }
     } catch (err) {
       toast.error(err?.message || err || "Failed to clone template");
     } finally {
@@ -1631,7 +1689,7 @@ export default function ShippingProfiles() {
                 )}
                 {row.sourceTemplateId && (
                   <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                    Template copy v{row.sourceTemplateVersion || 1}
+                    Template copy
                   </span>
                 )}
               </div>
@@ -1849,7 +1907,7 @@ export default function ShippingProfiles() {
       <DataTable
         columns={columns}
         tableClassName="w-full table-fixed"
-        data={profilesPayload.list}
+        data={visibleProfiles}
         loading={loading || shippingProfilesData?.loading}
         totalCount={profilesPayload.total || profilesPayload.list.length}
         page={page}

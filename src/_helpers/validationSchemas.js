@@ -140,11 +140,11 @@ export const shipmentTrackingActionValidationSchema = Yup.object({
       schema
         .trim()
         .required("Tracking reference is required.")
-        .min(5, "Tracking reference must be 5–50 characters.")
-        .max(50, "Tracking reference must be 5–50 characters.")
+        .min(5, "Tracking reference must be 5–100 characters.")
+        .max(100, "Tracking reference must be 5–100 characters.")
         .matches(
-          /^[A-Za-z0-9_/-]+$/,
-          "Allowed: letters, numbers, -, _, and / only.",
+          /^[A-Za-z0-9\/-]+$/,
+          "Use letters, numbers, hyphens, and forward slashes only.",
         ),
     otherwise: (schema) => schema,
   }),
@@ -160,22 +160,28 @@ export const shipmentTrackingActionValidationSchema = Yup.object({
         ),
     otherwise: (schema) => schema,
   }),
-  trackingUrl: Yup.string()
-    .trim()
-    .max(2048, "Tracking URL must be at most 2048 characters.")
-    .test(
-      "valid-tracking-url",
-      "Enter a valid http:// or https:// tracking URL.",
-      (value) => {
-        if (!value) return true;
-        try {
-          const parsedUrl = new URL(value);
-          return ["http:", "https:"].includes(parsedUrl.protocol);
-        } catch {
-          return false;
-        }
-      },
-    ),
+ trackingUrl: Yup.string()
+  .transform((value) => (typeof value === "string" ? value.trim() : value))
+  .max(2048, "Tracking URL cannot exceed 2048 characters.")
+  .test(
+    "valid-tracking-url",
+    "Please enter a valid URL starting with http:// or https://.",
+    (value) => {
+      if (!value) return true;
+
+      try {
+        const parsedUrl = new URL(value);
+
+        return (
+          ["http:", "https:"].includes(parsedUrl.protocol) &&
+          Boolean(parsedUrl.hostname) &&
+          parsedUrl.hostname.includes(".")
+        );
+      } catch {
+        return false;
+      }
+    },
+  ),
 });
 
 const taxRateSchema = (label) =>
