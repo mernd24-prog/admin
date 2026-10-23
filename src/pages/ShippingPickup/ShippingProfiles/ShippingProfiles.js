@@ -600,7 +600,7 @@ function ProfileForm({
         </div>
 
         {form.serviceabilityMode === "selected_pincodes" && (
-          <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-3">
+          <div className="mt-4  rounded-lg border border-gray-100 bg-gray-50 p-3">
             <div className="mb-3">
               <label className="admin-label">
                 Allowed Pincodes <span className="text-red-500">*</span>
@@ -611,39 +611,36 @@ function ProfileForm({
               </p>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                type="text"
-                name="pincodeDraft"
-                value={currentPincodeInput}
-                onChange={(event) => {
-                  const value = event.target.value
-                    .replace(/\D/g, "")
-                    .slice(0, 6);
+           <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+  <Input
+    type="text"
+    name="pincodeDraft"
+    value={currentPincodeInput}
+    onChange={(event) => {
+      const value = event.target.value.replace(/\D/g, "").slice(0, 6);
 
-                  setPincodeInput(value);
-                  formik?.setFieldValue("pincodeDraft", value);
-                }}
-                onBlur={() => formik?.setFieldTouched("pincodeDraft", true)}
-                onKeyDown={handlePincodeKeyDown}
-                placeholder="Enter 6-digit pincode"
-                className="min-w-0 flex-1 mb-0"
-                inputClassName="w-full"
-                maxLength={6}
-                showLengthCount={false}
-                limitMessage="Pincodes are limited to 6 digits."
-                inputMode="numeric"
-                error={formik?.touched.pincodeDraft && formik.errors.pincodeDraft}
-              />
+      setPincodeInput(value);
+      formik?.setFieldValue("pincodeDraft", value);
+    }}
+    onBlur={() => formik?.setFieldTouched("pincodeDraft", true)}
+    onKeyDown={handlePincodeKeyDown}
+    placeholder="Enter 6-digit pincode"
+    className="mb-0 min-w-0 flex-1"
+    inputClassName="w-full"
+    maxLength={6}
+    showLengthCount={false}
+    inputMode="numeric"
+    error={formik?.touched.pincodeDraft && formik.errors.pincodeDraft}
+  />
 
-              <button
-                type="button"
-                onClick={addPincode}
-                className="admin-btn-primary whitespace-nowrap px-4"
-              >
-                Add
-              </button>
-            </div>
+  <button
+    type="button"
+    onClick={addPincode}
+    className="admin-btn-primary h-8 shrink-0 whitespace-nowrap px-4"
+  >
+    Add
+  </button>
+</div>
             {form.allowedPincodes.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
                 {form.allowedPincodes.map((pincode) => (
@@ -1938,31 +1935,39 @@ export default function ShippingProfiles() {
         }
       />
 
-      <DefaultModal
-        isOpen={modal.open}
-        onClose={closeModal}
-        title={
-          modal.mode === "create"
-            ? "Create Shipping Profile"
-            : `Edit - ${modal.profile?.name}`
-        }
-        onSubmit={profileFormik.handleSubmit}
-        submitButtonText={
-          modal.mode === "create" ? "Create Profile" : "Save Changes"
-        }
-        closeButtonText="Cancel"
-        loading={saving}
-      >
-        <ProfileForm
-          form={form}
-          setForm={setForm}
-          formik={profileFormik}
-          isSeller={isSeller}
-          sellerOptions={sellerOptions}
-          organizationOptions={formOrganizationOptions}
-          onSellerSearch={loadSellerOptions}
-        />
-      </DefaultModal>
+   <DefaultModal
+  isOpen={modal.open}
+  onClose={closeModal}
+  title={
+    modal.mode === "create" ? (
+      "Create Shipping Profile"
+    ) : (
+      <div className="flex min-w-0 flex-col">
+        <span className="text-lg leading-6">Edit Profile</span>
+        <span className="mt-1 inline-flex w-fit max-w-full break-all py-0.5 text-xs font-medium leading-5 text-gray-600">
+          {modal.profile?.name || "Untitled Profile"}
+        </span>
+      </div>
+    )
+  }
+  titleClassName="min-w-0 flex-1"
+  onSubmit={profileFormik.handleSubmit}
+  submitButtonText={
+    modal.mode === "create" ? "Create Profile" : "Save Changes"
+  }
+  closeButtonText="Cancel"
+  loading={saving}
+>
+  <ProfileForm
+    form={form}
+    setForm={setForm}
+    formik={profileFormik}
+    isSeller={isSeller}
+    sellerOptions={sellerOptions}
+    organizationOptions={formOrganizationOptions}
+    onSellerSearch={loadSellerOptions}
+  />
+</DefaultModal>
 
       <DefaultModal
         isOpen={templateModal.open}
@@ -2092,52 +2097,38 @@ export default function ShippingProfiles() {
           >
             <div className="space-y-4">
               {/* Template Name */}
-              <div className="space-y-1.5">
-                <label className="admin-label">Template Name</label>
+              <FormInput
+                label="Profile Name"
+                name="name"
+                value={cloneFormik.values.name}
+                onChange={cloneFormik.handleChange}
+                onBlur={cloneFormik.handleBlur}
+                maxLength={100}
+                showLengthCount={false}
+                limitMessage="Profile name limited to 100 characters"
+                error={cloneFormik.touched.name && cloneFormik.errors.name}
+                placeholder="e.g. Standard Shipping - Delhi NCR"
+              />
 
-                <input
-                  className={`admin-input w-full ${cloneFormik.touched.name && cloneFormik.errors.name ? "admin-input-error" : ""}`}
-                  name="name"
-                  value={cloneFormik.values.name}
-                  onChange={cloneFormik.handleChange}
-                  onBlur={cloneFormik.handleBlur}
-                  maxLength={128}
-                  aria-invalid={Boolean(
-                    cloneFormik.touched.name && cloneFormik.errors.name,
-                  )}
-                  placeholder="e.g. Standard Shipping - Delhi NCR"
-                />
-                {cloneFormik.touched.name && cloneFormik.errors.name && (
-                  <p className="text-xs text-red-600">
-                    {cloneFormik.errors.name}
-                  </p>
-                )}
-              </div>
-
-              {/* Description */}
-              <div className="space-y-1.5">
-                <label className="admin-label">Copy Description</label>
-
-                <input
-                  className={`admin-input w-full ${cloneFormik.touched.description && cloneFormik.errors.description ? "admin-input-error" : ""}`}
-                  name="description"
-                  value={cloneFormik.values.description}
-                  onChange={cloneFormik.handleChange}
-                  onBlur={cloneFormik.handleBlur}
-                  maxLength={500}
-                  aria-invalid={Boolean(
-                    cloneFormik.touched.description &&
-                      cloneFormik.errors.description,
-                  )}
-                  placeholder="Optional"
-                />
-                {cloneFormik.touched.description &&
-                  cloneFormik.errors.description && (
-                    <p className="text-xs text-red-600">
-                      {cloneFormik.errors.description}
-                    </p>
-                  )}
-              </div>
+              <FormInput
+                label="Description"
+                name="description"
+                type="textarea"
+                value={cloneFormik.values.description}
+                onChange={cloneFormik.handleChange}
+                onBlur={cloneFormik.handleBlur}
+                minLength={3}
+                maxLength={500}
+                showLengthCount
+                limitMessage="Description must be at most 500 characters"
+                rows={4}
+                inputClassName="min-h-[100px] resize-y"
+                error={
+                  cloneFormik.touched.description &&
+                  cloneFormik.errors.description
+                }
+                placeholder="Optional description"
+              />
             </div>
           </FormSection>
 

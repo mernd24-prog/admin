@@ -96,6 +96,7 @@ const Input = ({
   defaultValue,
   onChange,
   onBlur,
+  onFocus,
   required = false,
   errorMessage,
   hasError,
@@ -141,6 +142,7 @@ const Input = ({
     value.length >= maxLength;
   const [showPassword, setShowPassword] = useState(Boolean(isPasswordVisible));
   const [dragActive, setDragActive] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const timerRef = useRef();
 
   useEffect(() => {
@@ -186,7 +188,14 @@ const Input = ({
     required,
     disabled: disable || loading,
     readOnly,
-    onBlur,
+    onFocus: (event) => {
+      setIsFocused(true);
+      onFocus?.(event);
+    },
+    onBlur: (event) => {
+      setIsFocused(false);
+      onBlur?.(event);
+    },
     "aria-invalid": invalid,
     "aria-describedby": describedBy,
   };
@@ -381,7 +390,10 @@ const Input = ({
           <p id={`${inputId}-error`} className="admin-field-error" role="alert">
             {error || errorMessage}
           </p>
-        ) : (limitReached || reachedMaxLength) && limitMessage ? (
+        ) :
+        isFocused &&
+        (limitReached || reachedMaxLength) &&
+        limitMessage ? (
           <p className="admin-field-error" role="status">
             {limitMessage}
           </p>
