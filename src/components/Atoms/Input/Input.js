@@ -137,12 +137,10 @@ const Input = ({
   const generatedId = useId();
   const inputId = id || name || generatedId;
   const invalid = Boolean(error || hasError);
-  const reachedMaxLength =
-    Boolean(enforceMaxLength && maxLength && typeof value === "string") &&
-    value.length >= maxLength;
   const [showPassword, setShowPassword] = useState(Boolean(isPasswordVisible));
   const [dragActive, setDragActive] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [maxLengthAttempted, setMaxLengthAttempted] = useState(false);
   const timerRef = useRef();
 
   useEffect(() => {
@@ -164,6 +162,61 @@ const Input = ({
   const togglePassword = () => {
     setShowPassword((visible) => !visible);
     togglePasswordVisibility?.();
+  };
+
+  const exceedsMaxLength = (input, insertedText) => {
+    if (!enforceMaxLength || !maxLength || typeof insertedText !== "string") {
+      return false;
+    }
+    const currentValue = String(input.value ?? value ?? "");
+    const selectionStart = input.selectionStart ?? currentValue.length;
+    const selectionEnd = input.selectionEnd ?? selectionStart;
+    return (
+      currentValue.length - (selectionEnd - selectionStart) + insertedText.length >
+      maxLength
+    );
+  };
+
+  const handleBeforeInput = (event) => {
+    if (
+      event.nativeEvent?.inputType?.startsWith("insert") &&
+      exceedsMaxLength(event.currentTarget, event.nativeEvent.data)
+    ) {
+      event.preventDefault();
+      setMaxLengthAttempted(true);
+    }
+    rest.onBeforeInput?.(event);
+  };
+
+  const handleKeyDown = (event) => {
+    if (
+      event.key?.length === 1 &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      exceedsMaxLength(event.currentTarget, event.key)
+    ) {
+      event.preventDefault();
+      setMaxLengthAttempted(true);
+    }
+    rest.onKeyDown?.(event);
+  };
+
+  const handlePaste = (event) => {
+    const pastedText = event.clipboardData?.getData("text") || "";
+    if (exceedsMaxLength(event.currentTarget, pastedText)) {
+      event.preventDefault();
+      setMaxLengthAttempted(true);
+    }
+    rest.onPaste?.(event);
+  };
+
+  const handleChange = (eventOrValue) => {
+    const nextValue = eventOrValue?.target?.value;
+    if (typeof nextValue === "string" && nextValue.length < maxLength) {
+      setMaxLengthAttempted(false);
+    }
+    emit(eventOrValue);
   };
 
   const baseStyles = `admin-input ${invalid ? "admin-input-error" : ""} ${success ? "admin-input-success" : ""} ${inputClassName}`;
@@ -194,8 +247,12 @@ const Input = ({
     },
     onBlur: (event) => {
       setIsFocused(false);
+      setMaxLengthAttempted(false);
       onBlur?.(event);
     },
+    onBeforeInput: handleBeforeInput,
+    onKeyDown: handleKeyDown,
+    onPaste: handlePaste,
     "aria-invalid": invalid,
     "aria-describedby": describedBy,
   };
@@ -250,7 +307,7 @@ const Input = ({
           rows={rows}
           maxLength={enforceMaxLength ? maxLength : undefined}
           minLength={minLength}
-          onChange={emit}
+          onChange={handleChange}
           className={`${baseStyles} admin-textarea`}
         />
       );
@@ -329,14 +386,13 @@ const Input = ({
     return (
       <input
         {...commonProps}
-        {...rest}
         type={type === "password" ? passwordType : simpleType}
         min={type === "percentage" ? 0 : min}
         max={type === "percentage" ? 100 : max}
         step={type === "price" ? "0.01" : step}
         maxLength={enforceMaxLength ? maxLength : undefined}
         minLength={minLength}
-        onChange={emit}
+        onChange={handleChange}
         className={baseStyles}
       />
     );
@@ -392,7 +448,7 @@ const Input = ({
           </p>
         ) :
         isFocused &&
-        (limitReached || reachedMaxLength) &&
+        (limitReached || maxLengthAttempted) &&
         limitMessage ? (
           <p className="admin-field-error" role="status">
             {limitMessage}

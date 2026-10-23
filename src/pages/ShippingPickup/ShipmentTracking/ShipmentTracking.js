@@ -5,7 +5,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
 import { useFormik } from "formik";
 
 import { toast } from "sonner";
@@ -20,7 +19,7 @@ import {
   MdTimeline,
   MdVisibility,
 } from "react-icons/md";
-import Loader, { ButtonLoader } from "../../../components/Loader/Loader";
+import { ButtonLoader } from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   DataTable,
@@ -35,7 +34,6 @@ import {
   getShipment,
   getShipments,
 } from "../../../Redux/deliverySlice";
-import { cancelSellerOrder } from "../../../Redux/sellerOrdersSlice";
 import { usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
@@ -43,8 +41,9 @@ import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
-import { ExportButton } from "../../../components/Atoms/buttons/exportImport";
 import { shipmentTrackingActionValidationSchema } from "../../../_helpers/validationSchemas";
+import { axiosPrivate } from "../../../_helpers/axiosProvider";
+import { ENDPOINTS } from "../../../_helpers/endpoints";
 
 const STATUS_OPTIONS = [
   "initiated",
@@ -102,12 +101,16 @@ const FULFILLMENT_TRANSITIONS = {
 //   },
 // ];
 const unwrapList = (payload = {}) => {
-  const data = payload?.data?.data;
+  const data = payload?.data?.data || payload?.data || payload;
   if (Array.isArray(data)) return { list: data, total: data.length };
   return {
     list: data?.list || data?.items || [],
     total: Number(
-      data?.total || data?.list?.length || data?.items?.length || 0,
+      data?.total ??
+        payload?.meta?.total ??
+        data?.list?.length ??
+        data?.items?.length ??
+        0,
     ),
   };
 };
@@ -177,28 +180,6 @@ const toDateTimeLocal = (value) => {
   return local.toISOString().slice(0, 16);
 };
 
-const ActionButton = ({
-  children,
-  onClick,
-  disabledReason = "",
-  disabled = false,
-  title = "",
-}) => {
-  const isDisabled = disabled || Boolean(disabledReason);
-  return (
-    <button
-      type="button"
-      className="admin-btn-secondary !px-2 !py-1"
-      onClick={onClick}
-      disabled={isDisabled}
-      title={disabledReason || title}
-      aria-disabled={isDisabled}
-    >
-      {children}
-    </button>
-  );
-};
-
 const ShipmentFact = ({ icon, label, children }) => (
   <div className="flex min-w-0 items-start gap-3 rounded-xl border border-gray-100 bg-white p-3">
     <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
@@ -220,6 +201,7 @@ const ShipmentTracking = () => {
   const { isSeller } = usePermission();
   const selector = useSelector((state) => state.delivery);
   const shipmentPayload = unwrapList(selector.shipmentsData);
+  const [exporting, setExporting] = useState(false);
   const initialOrderId = getInitialQuery("orderId");
   const list = useListPage({
     defaultPageSize: 20,
@@ -232,19 +214,64 @@ const ShipmentTracking = () => {
     },
   });
 
-  const handleExport = () => {
-    const shipmentRows = shipmentPayload?.list || [];
-
-    if (!shipmentRows.length) {
-      toast.info("No shipment data available to export.");
-      return;
-    }
-
+  const handleExport = async () => {
+    const query = toQueryParams();
+    setExporting(true);
     try {
-      const excelColumns = columns.map((column) => ({
-        key: column.key,
-        label: column.label,
-      }));
+      const pageLimit = 100;
+      const shipmentRows = [];
+      const seenIds = new Set();
+      let offset = 0;
+      let total = shipmentPayload.total;
+
+      while (true) {
+        const response = await axiosPrivate.get(ENDPOINTS.delivery.shipments, {
+          params: {
+            ...query,
+            page: undefined,
+            limit: pageLimit,
+            offset,
+          },
+        });
+        const pageResult = unwrapList(response.data);
+        const pageRows = pageResult.list;
+        if (pageResult.total) total = pageResult.total;
+        if (!pageRows.length) break;
+
+        pageRows.forEach((row) => {
+          const id = row?.id || row?._id;
+          if (id && seenIds.has(String(id))) return;
+          if (id) seenIds.add(String(id));
+          shipmentRows.push(row);
+        });
+
+        offset += pageRows.length;
+        if (pageRows.length < pageLimit) break;
+        if (total && offset >= total) break;
+      }
+
+      if (!shipmentRows.length) {
+        toast.info("No shipment data available to export.");
+        return;
+      }
+
+      const excelColumns = [
+        ...columns.map((column) => ({
+          key: column.key,
+          label: column.label,
+        })),
+        { key: "shipment_id", label: "Shipment ID" },
+        { key: "awb_number", label: "AWB / Tracking Number" },
+        { key: "tracking_url", label: "Tracking URL" },
+        { key: "recipient_name", label: "Recipient Name" },
+        { key: "recipient_phone", label: "Recipient Phone" },
+        { key: "delivery_address", label: "Delivery Address" },
+        { key: "shipped_at", label: "Shipped At" },
+        { key: "delivered_at", label: "Delivered At" },
+        { key: "payment_provider", label: "Payment Provider" },
+        { key: "payment_status", label: "Payment Status" },
+        { key: "shipping_mode", label: "Shipping Mode" },
+      ];
 
       const data = shipmentRows.map((row) => {
         const exportRow = {};
@@ -288,6 +315,59 @@ const ShipmentTracking = () => {
             return;
           }
 
+          if (key === "shipment_id") {
+            exportRow[key] = row?.id || row?._id || "";
+            return;
+          }
+
+          if (key === "awb_number") {
+            exportRow[key] = row?.awb_number || row?.tracking_number || "";
+            return;
+          }
+
+          if (key === "recipient_name") {
+            exportRow[key] = row?.ship_to_snapshot?.fullName || "";
+            return;
+          }
+
+          if (key === "recipient_phone") {
+            exportRow[key] = row?.ship_to_snapshot?.phone || "";
+            return;
+          }
+
+          if (key === "delivery_address") {
+            const address = row?.ship_to_snapshot || {};
+            exportRow[key] = [
+              address.line1,
+              address.line2,
+              address.city,
+              address.state,
+              address.postalCode,
+              address.country,
+            ]
+              .filter(Boolean)
+              .join(", ");
+            return;
+          }
+
+          if (key === "shipped_at" || key === "delivered_at") {
+            const value = row?.[key] || row?.[key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())];
+            exportRow[key] = formatDateTime12Hour(value, "");
+            return;
+          }
+
+          if (key === "expected_delivery_at") {
+            const value =
+              row?.status === "delivered"
+                ? row?.delivered_at ||
+                  row?.deliveredAt ||
+                  row?.expected_delivery_at ||
+                  row?.expectedDeliveryAt
+                : row?.expected_delivery_at || row?.expectedDeliveryAt;
+            exportRow[key] = formatDateTime12Hour(value, "N/A");
+            return;
+          }
+
           const value = row?.[key];
           exportRow[key] = value === null || value === undefined ? "" : value;
         });
@@ -315,6 +395,8 @@ const ShipmentTracking = () => {
     } catch (error) {
       console.error("Shipment export error:", error);
       toast.error("Failed to export shipment report.");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -340,7 +422,7 @@ const ShipmentTracking = () => {
         setFilter("orderNumber", realOrderNum);
       }
     }
-  }, [shipmentPayload.list, initialOrderId, initialShipmentId, setFilter]);
+  }, [shipmentPayload.list, initialOrderId, setFilter]);
 
   const [organizationOptions, setOrganizationOptions] = useState([]);
   const FILTER_FIELDS = isSeller
@@ -499,12 +581,6 @@ const ShipmentTracking = () => {
     expectedDeliveryAt: "",
   });
   const [trackingSubmitAttempted, setTrackingSubmitAttempted] = useState(false);
-  const [cancellationAction, setCancellationAction] = useState({
-    open: false,
-    reasonCode: "seller_unavailable",
-    reason: "",
-  });
-  const [lastCancellation, setLastCancellation] = useState(null);
   const selectedPaymentStatus = String(
     selectedShipment?.payment_status || selectedShipment?.paymentStatus || "",
   ).toLowerCase();
@@ -581,6 +657,8 @@ const ShipmentTracking = () => {
   });
   const trackingFormikResetRef = useRef(trackingFormik.resetForm);
   trackingFormikResetRef.current = trackingFormik.resetForm;
+  const trackingFormikSetFieldValueRef = useRef(trackingFormik.setFieldValue);
+  trackingFormikSetFieldValueRef.current = trackingFormik.setFieldValue;
   const updateTrackingField = (field, value) => {
     trackingFormik.setFieldValue(field, value);
     setTrackingAction((prev) => ({ ...prev, [field]: value }));
@@ -603,13 +681,9 @@ const ShipmentTracking = () => {
     if (Object.keys(validationErrors).length > 0) return;
     await trackingFormik.submitForm();
   };
-  const filterFields = useMemo(
-    () =>
-      isSeller
-        ? FILTER_FIELDS.filter((field) => field.key !== "sellerId")
-        : FILTER_FIELDS,
-    [filters.sellerId, isSeller, organizationOptions],
-  );
+  const filterFields = isSeller
+    ? FILTER_FIELDS.filter((field) => field.key !== "sellerId")
+    : FILTER_FIELDS;
 
   const fetchShipments = useCallback(async () => {
     try {
@@ -705,60 +779,13 @@ const ShipmentTracking = () => {
         ...prev,
         status: nextStatus,
       }));
-      trackingFormik.setFieldValue("status", nextStatus, false);
+      trackingFormikSetFieldValueRef.current("status", nextStatus, false);
       await fetchShipments();
       return nextShipment;
     },
-    [dispatch, fetchShipments, trackingFormik.setFieldValue],
+    [dispatch, fetchShipments],
   );
 
-  const handleSellerCancellation = useCallback(async () => {
-    if (!selectedShipment?.order_id) return;
-    const reason = cancellationAction.reason.trim();
-    if (reason.length < 3) {
-      toast.error("Enter a cancellation reason of at least 3 characters.");
-      return;
-    }
-    try {
-      setLoading(true);
-      const response = await dispatch(
-        cancelSellerOrder({
-          orderId: selectedShipment.order_id,
-          reasonCode: cancellationAction.reasonCode,
-          reason,
-          refundMethod: "auto",
-        }),
-      ).unwrap();
-      const cancellation = unwrapResult(response);
-      setLastCancellation(cancellation);
-      setCancellationAction({
-        open: false,
-        reasonCode: "seller_unavailable",
-        reason: "",
-      });
-      toast.success(
-        cancellation?.refund_status === "manual_review"
-          ? "Items cancelled. Customer refund is awaiting admin review."
-          : "Seller items cancelled successfully.",
-      );
-      await refreshSelectedShipment(selectedShipment.id);
-    } catch (requestError) {
-      toast.error(
-        requestError?.message ||
-          requestError ||
-          "Failed to cancel seller items",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    cancellationAction,
-    dispatch,
-    refreshSelectedShipment,
-    selectedShipment?.id,
-    selectedShipment?.order_id,
-  ]);
-  const navigate = useNavigate();
   const columns = useMemo(() => {
     const baseColumns = [
       {
@@ -958,7 +985,7 @@ const ShipmentTracking = () => {
     return isSeller
       ? baseColumns.filter((column) => column.key !== "seller_id")
       : baseColumns;
-  }, [isSeller, openDetail, sellerOptions, navigate]);
+  }, [isSeller, sellerOptions]);
 
   return (
     <div>
@@ -986,6 +1013,7 @@ const ShipmentTracking = () => {
         exportConfig={{
           onClick: handleExport,
           disabled: loading || !shipmentPayload.list.length,
+          loading: exporting,
         }}
         error={error}
         filterBar={
@@ -1187,39 +1215,6 @@ const ShipmentTracking = () => {
   </div>
 </div>
   <div className="space-y-4 p-4">
-    {/* Cancellation Confirmation */}
-    {lastCancellation &&
-      String(lastCancellation.order_id || lastCancellation.orderId) ===
-        String(selectedShipment?.order_id) && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-3">
-          <div className="font-semibold text-green-800">
-            Seller items cancelled
-          </div>
-
-          <div className="mt-1 text-xs leading-5 text-green-700">
-            Inventory processing:{" "}
-            {displayStatus(lastCancellation.inventory_status)}
-            {" · "}
-            Customer refund:{" "}
-            {displayStatus(lastCancellation.refund_status)}
-          </div>
-
-          <button
-            type="button"
-            className="mt-2 text-xs font-semibold text-green-800 underline underline-offset-2"
-            onClick={() =>
-              navigate(
-                `/app/cancellations?orderId=${encodeURIComponent(
-                  selectedShipment.order_id,
-                )}`,
-              )
-            }
-          >
-            View cancellation
-          </button>
-        </div>
-      )}
-
     {trackingActionOptions.length > 0 ? (
       <div className="space-y-4">
         {/* Next Shipment Status */}
@@ -1393,8 +1388,11 @@ const ShipmentTracking = () => {
                 required
                 className="!mb-0"
                 value={trackingAction.awbNumber}
-                pattern="[A-Za-z0-9_/-]{5,50}"
-                title="Use 5–50 letters, numbers, hyphens, underscores, or slashes. Spaces are not allowed."
+                showLengthCount = {false}
+                maxLength={100}
+                limitMessage="Tracking reference must be 5–100 characters."
+                pattern="[A-Za-z0-9/-]{5,100}"
+                title="Use 5–100 letters, numbers, hyphens, or forward slashes. Spaces are not allowed."
                 autoCapitalize="characters"
                 spellCheck={false}
                         error={
@@ -1404,7 +1402,13 @@ const ShipmentTracking = () => {
                 onChange={(event) =>
                   updateTrackingField("awbNumber", event.target.value)
                 }
-                onBlur={trackingFormik.handleBlur}
+                onBlur={(event) => {
+                  const trimmedValue = event.target.value.trim();
+                  if (trimmedValue !== event.target.value) {
+                    updateTrackingField("awbNumber", trimmedValue);
+                  }
+                  trackingFormik.handleBlur(event);
+                }}
               />
 
               <FormInput
@@ -1432,6 +1436,9 @@ const ShipmentTracking = () => {
                 label="Tracking URL (optional)"
                 name="trackingUrl"
                 type="url"
+                showLengthCount = {false}
+                maxLength={2048}
+                limitMessage="Tracking URL cannot exceed 2048 characters."
                 className="!mb-0"
                 placeholder="https://..."
                 value={trackingAction.trackingUrl}
@@ -1449,24 +1456,6 @@ const ShipmentTracking = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          {isSeller &&
-            ["initiated", "manifested", "failed"].includes(
-              selectedShipment?.status,
-            ) && (
-              <button
-                type="button"
-                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
-                onClick={() =>
-                  setCancellationAction((prev) => ({
-                    ...prev,
-                    open: true,
-                  }))
-                }
-              >
-                Cancel Seller Items
-              </button>
-            )}
-
           <button
             type="button"
             className="admin-btn-primary inline-flex min-h-10 items-center justify-center gap-2 !px-4 !py-2"
@@ -1495,37 +1484,6 @@ const ShipmentTracking = () => {
               Shipment processing is locked until online payment is
               captured or COD is authorized.
             </p>
-          </div>
-        ) : isSeller &&
-          selectedShipment?.status === "cancelled" &&
-          String(
-            lastCancellation?.order_id ||
-              lastCancellation?.orderId ||
-              "",
-          ) !== String(selectedShipment?.order_id || "") ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-semibold text-amber-800">
-                Cancellation Pending Confirmation
-              </p>
-              <p className="mt-1 text-xs leading-5 text-gray-500">
-                Complete the cancellation workflow to release inventory
-                and create the customer refund review.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50"
-              onClick={() =>
-                setCancellationAction((prev) => ({
-                  ...prev,
-                  open: true,
-                }))
-              }
-            >
-              Complete Cancellation
-            </button>
           </div>
         ) : (
           <p className="leading-5 text-gray-600">
@@ -1662,83 +1620,7 @@ const ShipmentTracking = () => {
         </div>
       </DefaultModal>
 
-      <DefaultModal
-        isOpen={cancellationAction.open}
-        onClose={() =>
-          setCancellationAction({
-            open: false,
-            reasonCode: "seller_unavailable",
-            reason: "",
-          })
-        }
-        title="Cancel seller items"
-        isButtonView={false}
-      >
-        <div className="space-y-4 p-1 text-sm">
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">
-            This cancels only your active items in this order. Inventory will be
-            released and any customer refund will be sent to admin review.
-          </div>
-          <label className="grid gap-1.5 text-xs font-semibold text-gray-600">
-            Reason category
-            <select
-              className="rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-normal text-gray-800"
-              value={cancellationAction.reasonCode}
-              onChange={(event) =>
-                setCancellationAction((prev) => ({
-                  ...prev,
-                  reasonCode: event.target.value,
-                }))
-              }
-            >
-              <option value="seller_unavailable">Item unavailable</option>
-              <option value="inventory_unavailable">
-                Inventory unavailable
-              </option>
-              <option value="pricing_issue">Pricing issue</option>
-              <option value="delivery_delay">Unable to deliver on time</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
-          <label className="grid gap-1.5 text-xs font-semibold text-gray-600">
-            Cancellation reason <span className="text-red-500">Required</span>
-            <textarea
-              className="min-h-24 resize-y rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-500"
-              placeholder="Explain why these items cannot be fulfilled"
-              value={cancellationAction.reason}
-              onChange={(event) =>
-                setCancellationAction((prev) => ({
-                  ...prev,
-                  reason: event.target.value,
-                }))
-              }
-            />
-          </label>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              className="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700"
-              onClick={() =>
-                setCancellationAction({
-                  open: false,
-                  reasonCode: "seller_unavailable",
-                  reason: "",
-                })
-              }
-            >
-              Keep shipment
-            </button>
-            <button
-              type="button"
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-              disabled={loading || cancellationAction.reason.trim().length < 3}
-              onClick={handleSellerCancellation}
-            >
-              {loading ? "Cancelling..." : "Confirm cancellation"}
-            </button>
-          </div>
-        </div>
-      </DefaultModal>
+
     </div>
   );
 };
