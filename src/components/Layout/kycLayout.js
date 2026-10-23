@@ -100,6 +100,25 @@ const getInitials = (name = "") => {
 
 const ONBOARDING_SUPPORT_CATEGORY = "ONBOARDING_ISSUE";
 
+const isSupportTicketLocked = (issue) => ["resolved", "closed"].includes(String(issue.status || "").toLowerCase());
+
+const getOnboardingConversation = (issue) => {
+  const history = issue.statusHistory || issue.metadata?.statusHistory || [];
+  const replies = issue.messages || issue.metadata?.messages || [];
+  const entries = history.map((entry, index) => ({
+    key: `status-${index}`, sender: "Support", message: entry.note || "",
+    status: entry.status, timestamp: entry.changedAt,
+  }));
+  replies.forEach((entry, index) => entries.push({
+    key: `reply-${index}`, sender: ["seller", "customer"].includes(entry.senderType) ? "Seller" : "Support",
+    message: entry.message || "", timestamp: entry.createdAt,
+  }));
+  if (issue.adminNotes && !entries.some((entry) => entry.sender === "Support" && entry.message.trim() === issue.adminNotes.trim())) {
+    entries.push({ key: "latest-note", sender: "Support", message: issue.adminNotes, timestamp: issue.lastStatusChangedAt || issue.updatedAt });
+  }
+  return entries.sort((a, b) => (Date.parse(a.timestamp) || 0) - (Date.parse(b.timestamp) || 0));
+};
+
 const OnboardingSupportModal = ({
   open,
   message,
@@ -115,6 +134,8 @@ const OnboardingSupportModal = ({
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [replyDrafts, setReplyDrafts] = useState({});
+  const [replyingTo, setReplyingTo] = useState(null);
   useEffect(() => {
     if (open) { setTab("new"); setPage(0); }
   }, [open]);
@@ -147,6 +168,28 @@ const OnboardingSupportModal = ({
     load();
     return () => { cancelled = true; };
   }, [open, tab, page, retry]);
+  const sendReply = async (issue) => {
+    const queryId = issue.queryId;
+    const text = String(replyDrafts[queryId] || "").trim();
+    if (!text || replyingTo || isSupportTicketLocked(issue)) return;
+    setReplyingTo(queryId);
+    try {
+      const token = sessionStorage.getItem("accessToken") || localStorage.getItem("sellerOnboardingToken");
+      if (!token) throw new Error("Please login again to reply.");
+      const response = await axiosProvider.post(ENDPOINTS.support.reply(queryId), { message: text }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const updated = response?.data?.data;
+      if (updated) setIssues((current) => current.map((item) => item.queryId === queryId ? updated : item));
+      setReplyDrafts((current) => ({ ...current, [queryId]: "" }));
+      setRetry((value) => value + 1);
+      toast.success("Reply sent");
+    } catch (err) {
+      toast.error(err?.message || "Unable to send reply.");
+    } finally {
+      setReplyingTo(null);
+    }
+  };
   if (!open) return null;
 
   return (
@@ -220,6 +263,9 @@ const OnboardingSupportModal = ({
           </button>
         </div>
         </> : <div role="tabpanel" className="mt-5 min-h-[230px] space-y-3">
+          <div className="flex justify-end">
+            <button type="button" className="admin-btn-secondary" disabled={loading || Boolean(replyingTo)} onClick={() => setRetry((value) => value + 1)}>Refresh replies</button>
+          </div>
           {loading ? <p className="py-8 text-center text-sm">Loading previous issues...</p> : error ? <div role="alert" className="py-6 text-center text-sm">
             <p className="text-red-600">{error}</p>
             <button type="button" className="admin-btn-secondary mt-3" onClick={() => setRetry((value) => value + 1)}>Retry</button>
@@ -228,10 +274,31 @@ const OnboardingSupportModal = ({
               <article key={issue.id || issue.queryId} className="rounded-lg border border-[#eadfcb] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="break-all text-sm font-semibold text-[#082f91]">{issue.queryId || "Onboarding issue"}</p>
-                  <span className="rounded-full bg-[#fff5db] px-3 py-1 text-xs font-semibold text-[#7a5610]">{formatLabel(issue.status)}</span>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${String(issue.status || "").toLowerCase() === "resolved" ? "bg-green-100 text-green-800" : "bg-[#fff5db] text-[#7a5610]"}`}>{formatLabel(issue.status)}</span>
                 </div>
+                <p className="mt-3 text-xs font-semibold text-[#5f6678]">Seller — Original message</p>
                 <p className="mt-2 whitespace-pre-wrap break-words text-sm text-[#30384d]">{issue.message}</p>
                 {issue.createdAt && <p className="mt-3 text-xs text-[#5f6678]">{new Date(issue.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>}
+                <div className="mt-4 space-y-3 border-t border-[#eadfcb] pt-3">
+                  {getOnboardingConversation(issue).map((entry) => (
+                    <div key={entry.key} className={`rounded-md border-l-4 p-3 text-sm ${entry.sender === "Seller" ? "border-gray-300 bg-gray-50" : "border-blue-400 bg-blue-50"}`}>
+                      <p className="font-semibold">{entry.sender}{entry.status ? ` — ${formatLabel(entry.status)}` : ""}</p>
+                      {entry.message && <p className="mt-1 whitespace-pre-wrap break-words">{entry.message}</p>}
+                      {entry.timestamp && <p className="mt-1 text-xs text-[#5f6678]">{new Date(entry.timestamp).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>}
+                    </div>
+                  ))}
+                  {isSupportTicketLocked(issue) ? <p role="status" className="rounded-md bg-green-50 p-3 text-sm text-green-800">This ticket is {formatLabel(issue.status)}. Replies are disabled. Please create a new ticket for further help.</p> : <>
+                  <label className="block text-sm font-semibold">
+                    Reply to this ticket
+                    <textarea className="mt-2 min-h-[80px] w-full rounded-md border p-2 font-normal" maxLength={5000}
+                      value={replyDrafts[issue.queryId] || ""} disabled={Boolean(replyingTo)}
+                      onChange={(event) => setReplyDrafts((current) => ({ ...current, [issue.queryId]: event.target.value }))} />
+                  </label>
+                  <button type="button" className="admin-btn-primary" disabled={Boolean(replyingTo) || !String(replyDrafts[issue.queryId] || "").trim()} onClick={() => sendReply(issue)}>
+                    {replyingTo === issue.queryId ? "Sending..." : "Send Reply"}
+                  </button>
+                  </>}
+                </div>
               </article>
             ))}
             {(page > 0 || hasMore) && <div className="flex items-center justify-between gap-3 pt-2">

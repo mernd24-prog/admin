@@ -1114,14 +1114,14 @@ export default function BasicDetailsTab({
     const extension = file.name?.split(".").pop()?.toLowerCase();
 
     if (
-      !allowedTypes.includes(file.type) &&
+      (file.type && !allowedTypes.includes(file.type)) ||
       !["png", "jpg", "jpeg", "webp"].includes(extension)
     ) {
       toast.error("Only JPG, PNG, or WEBP images allowed");
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (!file.size || file.size > 5 * 1024 * 1024) {
       toast.error("Brand logo must be 5MB or less");
       return;
     }
@@ -1146,7 +1146,7 @@ export default function BasicDetailsTab({
   };
 
   const submitBrandRequest = async (values) => {
-    if (brandLogoUploading) {
+    if (brandLogoUploading || brandSubmitting) {
       return toast.error("Please wait for logo upload to finish");
     }
 
@@ -1155,7 +1155,8 @@ export default function BasicDetailsTab({
     try {
       const submissionData = {
         ...values,
-        name: values.name.trim(),
+        name: values.name.trim().replace(/ +/g, " "),
+        description: values.description?.trim() || "",
       };
 
       if (isSellerPanelUser) {
@@ -1201,7 +1202,7 @@ export default function BasicDetailsTab({
 
         toast.success(
           submissionData._id
-            ? "Brand resubmitted for approval"
+            ? "Brand updated and pending approval"
             : "Brand submitted for approval",
         );
       } else {
@@ -1806,9 +1807,7 @@ export default function BasicDetailsTab({
   const handleNameBlur = (e) => {
     const { name, value } = e.target;
 
-    if (!value.trim()) return;
-
-    const titled = toTitleCase(value);
+    const titled = toTitleCase(value.trim());
 
     if (titled !== value) {
       handleChange({
@@ -1953,6 +1952,7 @@ export default function BasicDetailsTab({
                 value={formData.name}
                 onChange={handleChange}
                 onBlur={handleNameBlur}
+                minLength={3}
                 maxLength={200}
                 required
                 helpText="Name of the product as it will be displayed"
@@ -2649,7 +2649,7 @@ export default function BasicDetailsTab({
           ========================================================== */}
 
       <DefaultModal
-        title={brandSubmission._id ? "Resubmit Brand" : "Add New Brand"}
+        title={brandSubmission._id ? "Edit Brand Submission" : "Add New Brand"}
         isOpen={isBrandModal}
         onClose={() => {
           setBrandSubmission((current) => ({ ...current, ...formik.values }));
@@ -2663,7 +2663,7 @@ export default function BasicDetailsTab({
             : brandLogoUploading
               ? "Uploading..."
               : brandSubmission._id
-                ? "Resubmit"
+                ? "Save for Approval"
                 : isSellerPanelUser
                   ? "Submit for Approval"
                   : "Create Brand"
@@ -2688,9 +2688,15 @@ export default function BasicDetailsTab({
                   name="name"
                   type="text"
                   value={formik.values.name}
-                  maxLength={200}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
+                  maxLength={50}
+                  onChange={(event) => {
+                    formik.setFieldTouched("name", true, false);
+                    formik.setFieldValue("name", event.target.value.trimStart().replace(/ +/g, " "));
+                  }}
+                  onBlur={() => {
+                    formik.setFieldValue("name", formik.values.name.trim().replace(/ +/g, " "));
+                    formik.setFieldTouched("name", true);
+                  }}
                   error={formik.touched.name ? formik.errors.name : ""}
                   placeholder="Enter brand name"
                   required
@@ -2751,15 +2757,15 @@ export default function BasicDetailsTab({
           </FormSection>
 
           {myBrandSubmissions.filter(
-            (brand) => brand.approvalStatus === "rejected",
+            (brand) => ["pending", "rejected"].includes(brand.approvalStatus),
           ).length > 0 && (
             <FormSection
-              title="Rejected Submissions"
-              description="Select a rejected brand to make changes and resubmit it."
+              title="Your Brand Submissions"
+              description="Select your pending or rejected brand to edit it. Changes still require admin approval."
             >
               <div className="space-y-2">
                 {myBrandSubmissions
-                  .filter((brand) => brand.approvalStatus === "rejected")
+                  .filter((brand) => ["pending", "rejected"].includes(brand.approvalStatus))
                   .map((brand) => (
                     <button
                       key={brand._id}
@@ -2783,7 +2789,7 @@ export default function BasicDetailsTab({
                       <span className="font-semibold">{brand.name}</span>
 
                       <span className="mt-1 block text-red-600">
-                        {brand.rejectionReason || "Needs changes"}
+                        {brand.approvalStatus === "pending" ? "Pending approval — click to edit" : brand.rejectionReason || "Needs changes"}
                       </span>
                     </button>
                   ))}

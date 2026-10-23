@@ -783,7 +783,7 @@ const Brands = () => {
                 }`}
                 placeholder="e.g. Apple, Samsung"
                 minLength={3}
-                maxLength={200}
+                maxLength={50}
               />
 
               {errors.name && (
