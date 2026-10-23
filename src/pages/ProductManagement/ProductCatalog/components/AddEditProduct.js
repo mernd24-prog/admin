@@ -38,6 +38,10 @@ import {
   FiSearch,
   FiCheck,
   FiX,
+  FiTruck,
+  FiMapPin,
+  FiCheckCircle,
+  FiInfo,
 } from "react-icons/fi";
 import { toast } from "sonner";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -4542,6 +4546,7 @@ export default function ProductManagementUI() {
           </section>
         ),
       },
+
       {
         id: "shipping",
         title: "Shipping",
@@ -4549,21 +4554,56 @@ export default function ProductManagementUI() {
         icon: <BsMenuApp />,
         component: (
           <div className="space-y-6">
-            {/* Header */}
-            <div className="product-form-section-header">
-              <h3>Shipping</h3>
-              <p>
-                Use a saved profile, copy a template, or set product-level
-                delivery pincodes.
-              </p>
+            {/* Header with Actions */}
+            <div className="product-form-section-header flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3>Shipping</h3>
+                <p>
+                  Use a saved profile, copy a template, or set product-level
+                  delivery pincodes.
+                </p>
+              </div>
+
+              <div className="flex shrink-0 items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const profileTab = window.open(
+                      "/app/shipping-profiles",
+                      "_blank",
+                    );
+
+                    if (profileTab) profileTab.opener = null;
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] hover:bg-[var(--admin-gold-soft)]"
+                >
+                  <FiPlus aria-hidden="true" />
+                  Create profile
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShippingProfilesRefresh((value) => value + 1)
+                  }
+                  disabled={shippingProfilesLoading}
+                  aria-label="Refresh shipping profiles and templates"
+                  className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <FiRefreshCw
+                    aria-hidden="true"
+                    className={shippingProfilesLoading ? "animate-spin" : ""}
+                  />
+                </button>
+              </div>
             </div>
 
+            {/* Free Shipping Notice */}
             {formData?.shipping?.freeShipping && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                 <p className="text-sm font-semibold text-emerald-800">
                   Free shipping is enabled
                 </p>
-
                 <p className="mt-0.5 text-xs text-emerald-700">
                   Shipping charge is ₹0, but pincode deliverability still
                   applies.
@@ -4571,48 +4611,9 @@ export default function ProductManagementUI() {
               </div>
             )}
 
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="text-xs font-semibold text-gray-700">
-                  Shipping profiles
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // window.open copies sessionStorage from its opener when
-                      // the new browsing context is created. Detach the opener
-                      // immediately afterward to prevent reverse tab access.
-                      const profileTab = window.open(
-                        "/app/shipping-profiles",
-                        "_blank",
-                      );
-                      if (profileTab) profileTab.opener = null;
-                    }}
-                    className="inline-flex items-center gap-1 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] hover:bg-[var(--admin-gold-soft)]"
-                  >
-                    <FiPlus aria-hidden="true" /> Create profile
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShippingProfilesRefresh((value) => value + 1)
-                    }
-                    disabled={shippingProfilesLoading}
-                    aria-label="Refresh shipping profiles and templates"
-                    className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    <FiRefreshCw
-                      aria-hidden="true"
-                      className={shippingProfilesLoading ? "animate-spin" : ""}
-                    />
-                    {shippingProfilesLoading ? "Refreshing…" : "Refresh"}
-                  </button>
-                </div>
-              </div>
-
+            <div className="">
               {/* Selected Profile Actions */}
-              <div className="flex items-start justify-end gap-2">
+              <div className="flex items-start justify-end  gap-2">
                 {formData?.shipping?.shippingProfileId && (
                   <div className="flex items-center gap-3 whitespace-nowrap">
                     <button
@@ -4624,6 +4625,7 @@ export default function ProductManagementUI() {
                           )}`,
                           "_blank",
                         );
+
                         if (profileTab) profileTab.opener = null;
                       }}
                       className="text-xs font-semibold text-[var(--admin-blue)] hover:underline"
@@ -4655,11 +4657,9 @@ export default function ProductManagementUI() {
                   .filter((opt) => opt.type === "profile")
                   .map((opt) => ({
                     ...opt,
-
                     value: String(
                       opt.value || opt.profile?._id || opt.profile?.id || "",
                     ),
-
                     label: `${
                       opt.label || opt.profile?.name || "Shipping Profile"
                     }${opt.profile?.isDefault ? " (Default)" : ""}`,
@@ -4669,11 +4669,9 @@ export default function ProductManagementUI() {
                     .filter((opt) => opt.type === "profile")
                     .map((opt) => ({
                       ...opt,
-
                       value: String(
                         opt.value || opt.profile?._id || opt.profile?.id || "",
                       ),
-
                       label: `${
                         opt.label || opt.profile?.name || "Shipping Profile"
                       }${opt.profile?.isDefault ? " (Default)" : ""}`,
@@ -4689,7 +4687,6 @@ export default function ProductManagementUI() {
 
                   patchShipping({
                     shippingProfileId: profileId,
-
                     ...(profileId
                       ? {
                           serviceabilityMode: "all_pincodes",
@@ -4713,11 +4710,7 @@ export default function ProductManagementUI() {
                 shippingProfileOptions.some(
                   (option) => option.type === "template",
                 ) && (
-                  <div className="pt-1">
-                    <p className="mb-2 text-xs text-gray-500">
-                      Copy an admin template to editable product settings.
-                    </p>
-
+                  <div className="my-4">
                     <FilterSelect
                       options={shippingProfileOptions.filter(
                         (option) => option.type === "template",
@@ -4755,12 +4748,10 @@ export default function ProductManagementUI() {
               ).length === 0 &&
                 formData?.sellerId &&
                 !shippingProfilesLoading && (
-                  <p className="text-xs text-gray-400">
-                    No active shipping profiles found. Create a profile above,
-                    then refresh to load it.
-                  </p>
+                  <p className=" text-xs text-gray-400"></p>
                 )}
 
+              {/* Selected Shipping Profile Details */}
               {/* Selected Shipping Profile Details */}
               {formData?.shipping?.shippingProfileId &&
                 (() => {
@@ -4779,201 +4770,248 @@ export default function ProductManagementUI() {
 
                   if (!p) return null;
 
+                  const profileDetails = [
+                    {
+                      label: "Shipping method",
+                      value: p.shippingMethod || "Not specified",
+                    },
+                    {
+                      label: "Delivery coverage",
+                      value:
+                        p.serviceabilityMode === "all_india"
+                          ? "All India"
+                          : p.serviceabilityMode?.replace(/_/g, " ") ||
+                            "Not specified",
+                    },
+                    {
+                      label: "Shipping charge",
+                      value:
+                        Number(p.shippingCharge) === 0
+                          ? "Free"
+                          : `₹${Number(p.shippingCharge || 0).toFixed(2)}`,
+                    },
+                    ...(p.etaMin || p.etaMax
+                      ? [
+                          {
+                            label: "Estimated delivery",
+                            value: `${[p.etaMin, p.etaMax]
+                              .filter(
+                                (value) =>
+                                  value !== null &&
+                                  value !== undefined &&
+                                  value !== "",
+                              )
+                              .join("–")} days`,
+                          },
+                        ]
+                      : []),
+                  ];
+
+                  const allowedPincodes = Array.isArray(p.allowedPincodes)
+                    ? p.allowedPincodes
+                    : [];
+
                   return (
-                    <div className="space-y-3 pt-1">
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                        {[
-                          {
-                            label: "Method",
-                            value: p.shippingMethod,
-                          },
-                          {
-                            label: "Mode",
-                            value: p.serviceabilityMode?.replace(/_/g, " "),
-                          },
-                          {
-                            label: "Charge",
-                            value:
-                              p.shippingCharge === 0
-                                ? "Free"
-                                : `₹${Number(p.shippingCharge).toFixed(0)}`,
-                          },
-                          ...(p.etaMin || p.etaMax
-                            ? [
-                                {
-                                  label: "ETA",
-                                  value:
-                                    [p.etaMin, p.etaMax]
-                                      .filter(Boolean)
-                                      .join("–") + " days",
-                                },
-                              ]
-                            : []),
-                        ].map(({ label, value }) => (
-                          <div
-                            key={label}
-                            className="rounded-lg border border-[var(--admin-blue)]/20 bg-white px-2 py-1.5"
-                          >
-                            <p className="text-[10px] uppercase tracking-wide text-gray-400">
-                              {label}
-                            </p>
+                    <div className="mt-4 space-y-3">
+                      {/* Profile Summary */}
+                      <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--admin-line)] bg-[var(--admin-gold-soft)]/30 px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--admin-gold)]/30 bg-white text-[var(--admin-gold-dark)]">
+                              <FiTruck aria-hidden="true" />
+                            </span>
 
-                            <p className="mt-0.5 text-xs font-semibold text-gray-700">
-                              {value}
+                            <div>
+                              <p className="text-sm font-semibold text-gray-800">
+                                Selected shipping profile
+                              </p>
+                              <p className="mt-0.5 text-xs text-gray-500">
+                                Shipping settings applied to this product
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            Applied
+                          </span>
+                        </div>
+
+                        {/* Profile Information */}
+                        <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-4 sm:p-4">
+                          {profileDetails.map(({ label, value }) => (
+                            <div
+                              key={label}
+                              className="min-w-0 rounded-lg border border-gray-200 bg-gray-50/70 px-3 py-2.5"
+                            >
+                              <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                                {label}
+                              </p>
+
+                              <p className="mt-1 break-words text-xs font-semibold capitalize text-gray-800">
+                                {value}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Delivery Coverage */}
+                        <div className="mx-3 mb-3 rounded-lg border border-gray-200 p-3 sm:mx-4 sm:mb-4">
+                          <div className="mb-2 flex items-center gap-2">
+                            <FiMapPin
+                              aria-hidden="true"
+                              className="text-[var(--admin-gold-dark)]"
+                            />
+
+                            <p className="text-xs font-semibold text-gray-800">
+                              Delivery coverage
                             </p>
                           </div>
-                        ))}
-                      </div>
 
-                      {/* Delivery Coverage */}
-                      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                          Delivery coverage
-                        </p>
+                          {p.serviceabilityMode === "all_india" ? (
+                            <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
+                              <FiCheckCircle
+                                aria-hidden="true"
+                                className="mt-0.5 shrink-0 text-emerald-600"
+                              />
+                              <div>
+                                <p className="text-xs font-semibold text-emerald-800">
+                                  All India delivery
+                                </p>
+                                <p className="mt-0.5 text-[11px] text-emerald-700">
+                                  Delivery is available across India, subject to
+                                  checkout serviceability.
+                                </p>
+                              </div>
+                            </div>
+                          ) : allowedPincodes.length > 0 ? (
+                            <>
+                              <p className="mb-2 text-xs text-gray-500">
+                                Delivery is restricted to the configured
+                                pincodes below.
+                              </p>
 
-                        {p.serviceabilityMode === "all_india" ? (
-                          <p className="text-xs font-semibold text-emerald-700">
-                            All India pincodes
-                          </p>
-                        ) : (p.allowedPincodes || []).length ? (
-                          <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
-                            {(p.allowedPincodes || []).map((pincode) => (
-                              <span
-                                key={pincode}
-                                className="rounded-full border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-medium text-blue-700"
-                              >
-                                {pincode}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-gray-600">
-                            No pincodes configured
-                          </p>
-                        )}
+                              <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">
+                                {allowedPincodes.map((pincode) => (
+                                  <span
+                                    key={pincode}
+                                    className="inline-flex items-center rounded-md border border-[var(--admin-gold)]/30 bg-[var(--admin-gold-soft)]/30 px-2.5 py-1 text-xs font-medium text-gray-700"
+                                  >
+                                    {pincode}
+                                  </span>
+                                ))}
+                              </div>
+                            </>
+                          ) : (
+                            <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                              No specific pincodes are configured for this
+                              profile.
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
                 })()}
-
-              {/* Profile Active Message */}
-              {formData?.shipping?.shippingProfileId && (
-                <p className="text-xs text-[var(--admin-blue)]">
-                  Manual shipping fields are hidden while this profile is
-                  active. Remove the profile to edit product-level shipping
-                  manually.
-                </p>
-              )}
             </div>
 
             {/* Product Delivery Pincodes */}
-            <div className="space-y-4 border-t border-[var(--admin-line)] pt-5">
-              <div>
-                <p className="text-sm font-semibold text-gray-800">
-                  Product delivery pincodes
-                </p>
+            {/* Product Delivery Pincodes */}
+            {!formData?.shipping?.shippingProfileId && (
+              <div className="space-y-4 border-t border-[var(--admin-line)] pt-5">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    Product delivery pincodes
+                  </p>
 
-                <p className="mt-0.5 text-xs text-gray-500">
-                  Choose where this product can be delivered. These rules also
-                  apply when shipping is free.
-                </p>
-              </div>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Choose where this product can be delivered. These rules also
+                    apply when shipping is free.
+                  </p>
+                </div>
 
-              {/* Profile Active */}
-              {formData?.shipping?.shippingProfileId && (
-                <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-                  Product-level serviceability is automatically All India and
-                  its pincode list is cleared. The selected profile provides the
-                  actual checkout delivery rules. Remove the profile to add
-                  product-specific allowed pincodes.
-                </p>
-              )}
+                {/* <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                  Leave the list empty to deliver across All India. Add one or
+                  more pincodes only when this product must be restricted to
+                  specific delivery locations.
+                </div> */}
 
-              {/* Manual Product Pincodes */}
-              {!formData?.shipping?.shippingProfileId && (
-                <>
-                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-                    Leave the list empty to deliver across All India. Add one or
-                    more pincodes only when this product must be restricted to
-                    specific delivery locations.
+                <div className="space-y-2">
+                  <label className="admin-label">
+                    Allowed pincodes{" "}
+                    <span className="font-normal text-gray-400">
+                      (optional)
+                    </span>
+                  </label>
+
+                  <div className="flex gap-2">
+                    <input
+                      className="admin-input flex-1"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="Enter 6-digit pincode"
+                      value={allowedPincodeInput}
+                      onChange={(event) =>
+                        setAllowedPincodeInput(
+                          event.target.value.replace(/\D/g, "").slice(0, 6),
+                        )
+                      }
+                      onKeyDown={handleProductPincodeKeyDown}
+                    />
+
+                    <button
+                      type="button"
+                      className="admin-btn-primary whitespace-nowrap px-4"
+                      onClick={addProductPincode}
+                    >
+                      Add
+                    </button>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="admin-label">
-                      Allowed pincodes{" "}
-                      <span className="font-normal text-gray-400">
-                        (optional)
-                      </span>
-                    </label>
-
-                    <div className="flex gap-2">
-                      <input
-                        className="admin-input flex-1"
-                        inputMode="numeric"
-                        maxLength={6}
-                        placeholder="Enter 6-digit pincode"
-                        value={allowedPincodeInput}
-                        onChange={(event) =>
-                          setAllowedPincodeInput(
-                            event.target.value.replace(/\D/g, "").slice(0, 6),
-                          )
-                        }
-                        onKeyDown={handleProductPincodeKeyDown}
-                      />
-
-                      <button
-                        type="button"
-                        className="admin-btn-primary whitespace-nowrap px-4"
-                        onClick={addProductPincode}
-                      >
-                        Add
-                      </button>
-                    </div>
-
-                    <div className="flex min-h-[44px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
-                      {normalizePincodeList(
+                  <div className="flex min-h-[44px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
+                    {normalizePincodeList(
+                      formData?.shipping?.allowPincodes ||
+                        formData?.shipping?.serviceablePincodes,
+                    ).length ? (
+                      normalizePincodeList(
                         formData?.shipping?.allowPincodes ||
                           formData?.shipping?.serviceablePincodes,
-                      ).length ? (
-                        normalizePincodeList(
-                          formData?.shipping?.allowPincodes ||
-                            formData?.shipping?.serviceablePincodes,
-                        ).map((pincode) => (
-                          <span
-                            key={pincode}
-                            className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
+                      ).map((pincode) => (
+                        <span
+                          key={pincode}
+                          className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
+                        >
+                          {pincode}
+
+                          <button
+                            type="button"
+                            onClick={() => removeProductPincode(pincode)}
+                            className="ml-1 text-sm leading-none hover:text-red-500"
+                            aria-label={`Remove pincode ${pincode}`}
                           >
-                            {pincode}
-
-                            <button
-                              type="button"
-                              onClick={() => removeProductPincode(pincode)}
-                              className="ml-1 text-sm leading-none hover:text-red-500"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-gray-400">
-                          No pincodes added — delivery defaults to All India.
+                            ×
+                          </button>
                         </span>
-                      )}
-                    </div>
+                      ))
+                    ) : (
+                      <span className="text-xs text-gray-400">
+                        No pincodes added — delivery defaults to All India.
+                      </span>
+                    )}
                   </div>
-                </>
-              )}
+                </div>
 
-              {/* Shipping Error */}
-              {error?.shipping && (
-                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
-                  {error.shipping}
-                </p>
-              )}
-            </div>
+                {error?.shipping && (
+                  <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                    {error.shipping}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         ),
       },
+
       ,
       ,
       {

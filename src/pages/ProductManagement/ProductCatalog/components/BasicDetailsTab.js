@@ -2290,18 +2290,20 @@ export default function BasicDetailsTab({
                       type="number"
                       min={1}
                       max={365}
+                      maxLength={3}
                       value={formData.warranty?.period ?? ""}
                       onKeyDown={preventNegativeNumericKey}
                       onPaste={preventNegativeNumericPaste}
                       onChange={(event) => {
-                        if (isNegativeNumericValue(event.target.value)) return;
-                        handleNestedChange(
-                          "warranty.period",
-                          event.target.value,
-                        );
+                        const value = event.target.value;
+
+                        if (isNegativeNumericValue(value)) return;
+                        if (value.length > 3) return;
+
+                        handleNestedChange("warranty.period", value);
                       }}
                       placeholder="Example: 12"
-                      helperText="Use a value between 1 and 365."
+                      helperText="Enter a value between 1 and 365 (maximum 3 digits)."
                       error={errors?.warrantyPeriod}
                     />
 
@@ -2616,31 +2618,33 @@ export default function BasicDetailsTab({
           CATEGORY MODAL
           ========================================================== */}
 
-      {!isSellerPanelUser && <CategorySetup
-        isOpen={isCategoryModal}
-        formData={categoryForm}
-        setFormData={setCategoryForm}
-        handleFileUpload={handleFileUploadCategory}
-        handleChange={handleInputCategoryChange}
-        parentCategories={createSelectOptions}
-        handleClose={() => {
-          setIsCategoryModal(false);
+      {!isSellerPanelUser && (
+        <CategorySetup
+          isOpen={isCategoryModal}
+          formData={categoryForm}
+          setFormData={setCategoryForm}
+          handleFileUpload={handleFileUploadCategory}
+          handleChange={handleInputCategoryChange}
+          parentCategories={createSelectOptions}
+          handleClose={() => {
+            setIsCategoryModal(false);
 
-          setCategoryForm(INITIAL_FORM_CATEGORY);
-        }}
-        handleSubmit={() => validateCategoryForm() && handleCategorySubmit()}
-        handleSelectChange={handleSelectCategoryChange}
-        handleDashboardVisible={handleDashboardVisible}
-        handleIsPublish={() => {}}
-        isPublish={false}
-        isEditing={false}
-        errors={formErrors}
-        title="Add Category"
-        submitButtonText="Create"
-        closeButtonText="Cancel"
-        showPublish={false}
-        handleNameBlur={handleNameBlur}
-      />}
+            setCategoryForm(INITIAL_FORM_CATEGORY);
+          }}
+          handleSubmit={() => validateCategoryForm() && handleCategorySubmit()}
+          handleSelectChange={handleSelectCategoryChange}
+          handleDashboardVisible={handleDashboardVisible}
+          handleIsPublish={() => {}}
+          isPublish={false}
+          isEditing={false}
+          errors={formErrors}
+          title="Add Category"
+          submitButtonText="Create"
+          closeButtonText="Cancel"
+          showPublish={false}
+          handleNameBlur={handleNameBlur}
+        />
+      )}
 
       {/* ==========================================================
           HSN MODAL

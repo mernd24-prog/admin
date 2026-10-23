@@ -212,7 +212,7 @@ const OnboardingScreen = ({ step, children, metaOverride = {} }) => {
             <LuClipboardList className="my-auto mx-2 text-lg" />
             {meta.badge}
           </span>
-          <h1 className="mt-3 text-[24px]  font-inter font-bold  text-[#082f91] sm:text-[30px]">
+          <h1 className="mt-3 text-[24px]  font-inter font-bold  text-[#082f91] sm:text-[26px]">
             {meta.title}
           </h1>
           <p className="mt-1 max-w-2xl text-[14px] font-medium font-inter  text-[#182D50B2]/70">
@@ -302,7 +302,11 @@ const ReviewSection = ({ number, title, onEdit, children }) => (
 const ReviewInput = ({ label, value, className = "", masked = false }) => (
   <div className={className}>
     <label className="admin-label font-inter">{label}</label>
-    <input className={`${REVIEW_INPUT_CLASS} ${masked ? "!font-mono !text-[13px] !tracking-normal" : ""}`} value={value || "-"} readOnly />
+    <input
+      className={`${REVIEW_INPUT_CLASS} ${masked ? "!font-mono !text-[13px] !tracking-normal" : ""}`}
+      value={value || "-"}
+      readOnly
+    />
   </div>
 );
 
@@ -521,7 +525,8 @@ const hasCompleteReviewDetails = (state = {}) => {
     ) &&
     hasText(
       organization.aadhaarNumber ||
-    state.kyc?.aadhaarNumber || state.kyc?.aadhaar_number ||
+        state.kyc?.aadhaarNumber ||
+        state.kyc?.aadhaar_number ||
         sellerProfile.aadhaarNumber,
     ) &&
     hasText(pickupAddress.line1) &&
@@ -548,7 +553,11 @@ const hasCompleteReviewDetails = (state = {}) => {
 const isSellerReviewLocked = (state = {}) => {
   if (!state) return false;
   // Saving KYC or bank details does not submit the final onboarding review.
-  if (!state.onboardingSubmittedAt && !state.sellerProfile?.onboardingSubmittedAt) return false;
+  if (
+    !state.onboardingSubmittedAt &&
+    !state.sellerProfile?.onboardingSubmittedAt
+  )
+    return false;
   if (!hasCompleteReviewDetails(state)) return false;
   const organization = state.organization || {};
   const sellerProfile = state.sellerProfile || {};
@@ -749,19 +758,55 @@ const getGstValidationError = (value = "") => {
   const gst = String(value || "")
     .trim()
     .toUpperCase();
-  if (!gst) return "GST number is required";
-  if (gst.length !== 15)
-    return `GST number must be exactly 15 characters, like ${GST_EXAMPLE}`;
-  if (!/^[0-9]{2}/.test(gst))
-    return "GST number must start with 2 digit state code";
-  if (!/^[0-9]{2}[A-Z]{5}/.test(gst))
-    return "GST PAN section must have 5 letters after state code";
-  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}/.test(gst))
-    return "GST PAN section must have 4 digits after the 5 letters";
-  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]/.test(gst))
-    return "GST PAN section must end with 1 letter";
-  if (!GST_REGEX.test(gst))
-    return `GST number format should be like ${GST_EXAMPLE}`;
+
+  if (!gst) {
+    return "Please enter your GST number.";
+  }
+
+  if (gst.length !== 15) {
+    return `GST number must be exactly 15 characters, like ${GST_EXAMPLE}.`;
+  }
+
+  // Characters 1–2: State code
+  if (!/^[0-9]{2}/.test(gst)) {
+    return "The first 2 characters of your GST number must be digits (0–9).";
+  }
+
+  // Characters 3–7: PAN letters
+  if (!/^[0-9]{2}[A-Z]{5}/.test(gst)) {
+    return "Characters 3–7 of your GST number must be letters (A–Z).";
+  }
+
+  // Characters 8–11: PAN digits
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}/.test(gst)) {
+    return "Characters 8–11 of your GST number must be digits (0–9).";
+  }
+
+  // Character 12: PAN's final letter
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]/.test(gst)) {
+    return "The 12th character of your GST number must be a letter (A–Z).";
+  }
+
+  // Character 13: Entity registration code
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]/.test(gst)) {
+    return "The 13th character must be a letter or digit (A–Z or 0–9).";
+  }
+
+  // Character 14: Default character
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z/.test(gst)) {
+    return "The 14th character of your GST number must be Z.";
+  }
+
+  // Character 15: Check character
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]/.test(gst)) {
+    return "The last character of your GST number must be a letter or digit (A–Z or 0–9).";
+  }
+
+  // Complete GST number format
+  if (!GST_REGEX.test(gst)) {
+    return `Please enter a valid GST number, like ${GST_EXAMPLE}.`;
+  }
+
   return "";
 };
 
@@ -1052,7 +1097,9 @@ const SellerOnboarding = () => {
   const loading = Boolean(seller?.loading);
   const flowState = seller?.flowState;
   const accessToken =
-    typeof window !== "undefined" ? sessionStorage.getItem("accessToken") : null;
+    typeof window !== "undefined"
+      ? sessionStorage.getItem("accessToken")
+      : null;
 
   const [pageLoading, setPageLoading] = useState(false);
   const [kycSubmittedApi, setKycSubmittedApi] = useState(false);
@@ -1208,14 +1255,20 @@ const SellerOnboarding = () => {
   const aadhaarNumber = kycForm.aadhaarNumber.trim();
   const storedKyc = flowState?.kyc || {};
   const isAadhaarVerified =
-    (aadhaarVerification.verified && aadhaarVerification.number === aadhaarNumber) ||
-    ((storedKyc.aadhaarVerified === true || storedKyc.aadhaar_verified === true) &&
-      String(storedKyc.aadhaarNumber || storedKyc.aadhaar_number || "").trim() === aadhaarNumber);
+    (aadhaarVerification.verified &&
+      aadhaarVerification.number === aadhaarNumber) ||
+    ((storedKyc.aadhaarVerified === true ||
+      storedKyc.aadhaar_verified === true) &&
+      String(
+        storedKyc.aadhaarNumber || storedKyc.aadhaar_number || "",
+      ).trim() === aadhaarNumber);
   const panNumber = kycForm.panNumber.trim();
   const isPanVerified =
     (panVerification.verified && panVerification.number === panNumber) ||
     ((storedKyc.panVerified === true || storedKyc.pan_verified === true) &&
-      String(storedKyc.panNumber || storedKyc.pan_number || "").trim().toUpperCase() === panNumber);
+      String(storedKyc.panNumber || storedKyc.pan_number || "")
+        .trim()
+        .toUpperCase() === panNumber);
 
   const canAccess = useMemo(
     () => !!onboardingToken || !!accessToken,
@@ -1502,12 +1555,17 @@ const SellerOnboarding = () => {
         setKycForm((prev) => ({
           ...prev,
           panNumber:
-            prev.panNumber || kyc?.panNumber || kyc?.pan_number || sellerProfile?.panNumber || "",
+            prev.panNumber ||
+            kyc?.panNumber ||
+            kyc?.pan_number ||
+            sellerProfile?.panNumber ||
+            "",
           gstNumber:
             prev.gstNumber || kyc?.gstNumber || sellerProfile?.gstNumber || "",
           aadhaarNumber:
             prev.aadhaarNumber ||
-            kyc?.aadhaarNumber || kyc?.aadhaar_number ||
+            kyc?.aadhaarNumber ||
+            kyc?.aadhaar_number ||
             sellerProfile?.aadhaarNumber ||
             "",
           legalName:
@@ -1729,12 +1787,17 @@ const SellerOnboarding = () => {
     setKycForm((prev) => ({
       ...prev,
       panNumber:
-        prev.panNumber || kyc?.panNumber || kyc?.pan_number || sellerProfile?.panNumber || "",
+        prev.panNumber ||
+        kyc?.panNumber ||
+        kyc?.pan_number ||
+        sellerProfile?.panNumber ||
+        "",
       gstNumber:
         prev.gstNumber || kyc?.gstNumber || sellerProfile?.gstNumber || "",
       aadhaarNumber:
         prev.aadhaarNumber ||
-        kyc?.aadhaarNumber || kyc?.aadhaar_number ||
+        kyc?.aadhaarNumber ||
+        kyc?.aadhaar_number ||
         sellerProfile?.aadhaarNumber ||
         "",
       legalName:
@@ -1856,8 +1919,18 @@ const SellerOnboarding = () => {
       source?.aadhaar_number || source?.aadhaarNumber || kycForm.aadhaarNumber;
 
     if (!verified || !number) {
-      if (source?.aadhaarVerified === false || source?.aadhaar_verified === false) {
-        setAadhaarVerification({ verified: false, number: "", referenceId: "", verifiedAt: "", testMode: false, message: "" });
+      if (
+        source?.aadhaarVerified === false ||
+        source?.aadhaar_verified === false
+      ) {
+        setAadhaarVerification({
+          verified: false,
+          number: "",
+          referenceId: "",
+          verifiedAt: "",
+          testMode: false,
+          message: "",
+        });
       }
       return;
     }
@@ -1881,7 +1954,12 @@ const SellerOnboarding = () => {
 
     if (!verified || !number) {
       if (source?.panVerified === false || source?.pan_verified === false) {
-        setPanVerification({ verified: false, number: "", verifiedAt: "", message: "" });
+        setPanVerification({
+          verified: false,
+          number: "",
+          verifiedAt: "",
+          message: "",
+        });
       }
       return;
     }
@@ -1896,9 +1974,14 @@ const SellerOnboarding = () => {
 
   useEffect(() => {
     if (!flowState || !draftLoaded) return;
-    const rejection = flowState.kycStatus === "rejected"
-      ? String(flowState.kyc?.reviewedAt || flowState.organization?.updatedAt || "rejected")
-      : null;
+    const rejection =
+      flowState.kycStatus === "rejected"
+        ? String(
+            flowState.kyc?.reviewedAt ||
+              flowState.organization?.updatedAt ||
+              "rejected",
+          )
+        : null;
     const newRejection = rejection && rejection !== lastRejectionRef.current;
     lastRejectionRef.current = rejection;
     // Restore once; later status fetches must not move a seller out of an edited step.
@@ -1906,9 +1989,15 @@ const SellerOnboarding = () => {
     stepRestoredRef.current = true;
     const restoreStep = (nextStep) => {
       let savedStep;
-      try { savedStep = JSON.parse(localStorage.getItem(draftKey) || "null")?.step; } catch {}
-      const canResumeDraft = !newRejection && nextStep < 5 &&
-        Number.isInteger(savedStep) && savedStep >= 1 && savedStep <= nextStep;
+      try {
+        savedStep = JSON.parse(localStorage.getItem(draftKey) || "null")?.step;
+      } catch {}
+      const canResumeDraft =
+        !newRejection &&
+        nextStep < 5 &&
+        Number.isInteger(savedStep) &&
+        savedStep >= 1 &&
+        savedStep <= nextStep;
       setStep(canResumeDraft ? savedStep : nextStep);
     };
     const sellerProfile = flowState?.sellerProfile || {};
@@ -2246,7 +2335,8 @@ const SellerOnboarding = () => {
     if (!AADHAAR_REGEX.test(number)) {
       setKycErrors((prev) => ({
         ...prev,
-        aadhaarNumber: "Enter a 12-digit Aadhaar number; all digits cannot be the same.",
+        aadhaarNumber:
+          "Enter a 12-digit Aadhaar number; all digits cannot be the same.",
       }));
       return;
     }
@@ -2843,7 +2933,8 @@ const SellerOnboarding = () => {
           .sort((left, right) => {
             if (left.field === right.field) return 0;
             const position = left.field.compareDocumentPosition(right.field);
-            return position & document.defaultView.Node.DOCUMENT_POSITION_FOLLOWING
+            return position &
+              document.defaultView.Node.DOCUMENT_POSITION_FOLLOWING
               ? -1
               : 1;
           });
@@ -2921,7 +3012,8 @@ const SellerOnboarding = () => {
     if (!kycForm.aadhaarNumber.trim()) {
       errors.aadhaarNumber = "Aadhaar number is required";
     } else if (!AADHAAR_REGEX.test(kycForm.aadhaarNumber.trim())) {
-      errors.aadhaarNumber = "Enter a 12-digit Aadhaar number; all digits cannot be the same.";
+      errors.aadhaarNumber =
+        "Enter a 12-digit Aadhaar number; all digits cannot be the same.";
     } else if (!isAadhaarVerified) {
       errors.aadhaarNumber = "Verify Aadhaar OTP before continuing.";
     }
@@ -3452,7 +3544,9 @@ const SellerOnboarding = () => {
           includeGstCertificate: true,
           includeBusinessType: true,
         });
-        const kycResponse = await dispatch(submitSellerKyc(kycPayload)).unwrap();
+        const kycResponse = await dispatch(
+          submitSellerKyc(kycPayload),
+        ).unwrap();
         const uploadedDocuments = unwrapKycDocuments(kycResponse);
         if (!uploadedDocuments.bankProofUrl) {
           throw new Error("Bank proof could not be saved. Please try again.");
@@ -3536,10 +3630,12 @@ const SellerOnboarding = () => {
       const payload = buildProfilePayload({ includeBankDetails: true });
       await dispatch(updateSellerOnboardingProfile(payload)).unwrap();
       await saveOrganizationFromOnboarding();
-      await dispatch(updateSellerOnboardingProfile({
-        ...payload,
-        submitOnboarding: true,
-      })).unwrap();
+      await dispatch(
+        updateSellerOnboardingProfile({
+          ...payload,
+          submitOnboarding: true,
+        }),
+      ).unwrap();
       await dispatch(fetchAuthStatus({ token: onboardingToken })).unwrap();
       localStorage.removeItem(draftKey);
       setStep(5);
@@ -3822,12 +3918,12 @@ const SellerOnboarding = () => {
                       <label className="font-inter text-base font-medium text-[#484555]">
                         PAN Number <span className="text-red-500">*</span>
                       </label>
-                      {isPanVerified ? (
+                      {/* {isPanVerified ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-semibold text-green-700">
                           <CheckCircle2 size={14} />
                           Verified
                         </span>
-                      ) : null}
+                      ) : null} */}
                     </div>
 
                     <div className="flex flex-col gap-2 sm:flex-row">
@@ -3863,11 +3959,11 @@ const SellerOnboarding = () => {
                     {kycErrors.panNumber && (
                       <p className={ERROR_CLASS}>{kycErrors.panNumber}</p>
                     )}
-                    {!isPanVerified && PAN_REGEX.test(panNumber) && (
+                    {/* {!isPanVerified && PAN_REGEX.test(panNumber) && (
                       <p className="mt-1 text-xs text-[#6b7280]">
                         Verify PAN before final KYC submission.
                       </p>
-                    )}
+                    )} */}
                   </div>
 
                   {/* Aadhaar Number */}
@@ -3876,12 +3972,12 @@ const SellerOnboarding = () => {
                       <label className="font-inter text-base font-medium text-[#484555]">
                         Aadhaar Number <span className="text-red-500">*</span>
                       </label>
-                      {isAadhaarVerified ? (
+                      {/* {isAadhaarVerified ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-semibold text-green-700">
                           <CheckCircle2 size={14} />
                           Verified
                         </span>
-                      ) : null}
+                      ) : null} */}
                     </div>
 
                     <div className="flex flex-col gap-2 sm:flex-row">
