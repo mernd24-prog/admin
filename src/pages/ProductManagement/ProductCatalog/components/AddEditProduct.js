@@ -1,6 +1,7 @@
 import { validateProductName } from "./productNameValidation";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useFormik } from "formik";
 import BasicDetailsTab from "./BasicDetailsTab";
 import ProductSettingsPanel from "./ProductSettingsPanel";
 import { useDispatch, useSelector } from "react-redux";
@@ -65,6 +66,7 @@ import {
   normalizeRole,
 } from "../../../../_helpers/authStorage";
 import { isSellerPanel } from "../../../../_helpers/panelConfig";
+import { productSeoValidationSchema } from "../../../../_helpers/validationSchemas";
 
 const API_CALLS = [
   {
@@ -466,6 +468,35 @@ export default function ProductManagementUI() {
   const [error, setError] = useState(null);
   let { INITIALS_DATA } = selectJson;
   const [formData, setFormData] = useState(INITIALS_DATA);
+  const seoFormik = useFormik({
+    initialValues: {
+      metaTitle: "",
+      metaDescription: "",
+      keywords: [],
+      canonicalUrl: "",
+      ogTitle: "",
+      ogDescription: "",
+      ogImage: "",
+      ...(formData?.seo || {}),
+    },
+    validationSchema: productSeoValidationSchema,
+    onSubmit: () => {},
+  });
+  useEffect(() => {
+    seoFormik.setValues(
+      {
+        metaTitle: "",
+        metaDescription: "",
+        keywords: [],
+        canonicalUrl: "",
+        ogTitle: "",
+        ogDescription: "",
+        ogImage: "",
+        ...(formData?.seo || {}),
+      },
+      false,
+    );
+  }, [formData?.seo]);
   const [commonImageUrl, setCommonImageUrl] = useState("");
   const [commonImagesUploading, setCommonImagesUploading] = useState(false);
   const [variantBuilderBusy, setVariantBuilderBusy] = useState(false);
@@ -2611,42 +2642,6 @@ export default function ProductManagementUI() {
       });
     }
 
-    const seo = formData?.seo || {};
-    const seoErrors = {};
-    if (String(seo.metaTitle || "").trim().length > 70)
-      seoErrors.metaTitle = "Meta title must be 70 characters or fewer.";
-    if (String(seo.metaDescription || "").trim().length > 160)
-      seoErrors.metaDescription =
-        "Meta description must be 160 characters or fewer.";
-    if (String(seo.ogTitle || "").trim().length > 70)
-      seoErrors.ogTitle = "Open Graph title must be 70 characters or fewer.";
-    if (String(seo.ogDescription || "").trim().length > 160)
-      seoErrors.ogDescription =
-        "Open Graph description must be 160 characters or fewer.";
-    if (seo.canonicalUrl && !isHttpUrl(seo.canonicalUrl))
-      seoErrors.canonicalUrl = "Canonical URL must use HTTP or HTTPS.";
-    if (seo.ogImage && !isHttpUrl(seo.ogImage))
-      seoErrors.ogImage = "Pasted image URLs must be valid HTTP/HTTPS URLs.";
-    if (ogImageUploading)
-      seoErrors.ogImage =
-        "Wait for the OG image upload to finish before saving.";
-    const keywords = Array.isArray(seo.keywords) ? seo.keywords : [];
-    if (!keywords.length) seoErrors.keywords = "Add at least one SEO keyword.";
-    else if (keywords.length > 20)
-      seoErrors.keywords = "Use no more than 20 SEO keywords.";
-    else if (
-      keywords.some(
-        (keyword) =>
-          String(keyword || "").trim().length < 2 ||
-          String(keyword).trim().length > 60,
-      )
-    ) {
-      seoErrors.keywords = "Each SEO keyword must be 2–60 characters.";
-    } else if (findDuplicate(keywords)) {
-      seoErrors.keywords = "SEO keywords must be unique, ignoring letter case.";
-    }
-    if (Object.keys(seoErrors).length) newErrors.seo = seoErrors;
-
     const tags = Array.isArray(formData?.tags) ? formData.tags : [];
     if (tags.length > 20) {
       newErrors.tags = "Use no more than 20 tags.";
@@ -3714,9 +3709,9 @@ export default function ProductManagementUI() {
     setError((prev) => {
       if (!prev || typeof prev !== "object") return prev;
 
-      if (field === "seo.ogImage" && prev.seo?.ogImage) {
+      if (field.startsWith("seo.") && prev.seo?.[field.slice(4)]) {
         const seoErrors = { ...prev.seo };
-        delete seoErrors.ogImage;
+        delete seoErrors[field.slice(4)];
         const nextErrors = { ...prev };
         if (Object.keys(seoErrors).length) nextErrors.seo = seoErrors;
         else delete nextErrors.seo;
@@ -5012,7 +5007,8 @@ export default function ProductManagementUI() {
               </p>
             </div>
             <SEOPanel
-              seo={formData?.seo || {}}
+              seo={seoFormik.values}
+              formik={seoFormik}
               onChange={handleNestedChange}
               slug={formData?.slug || ""}
               errors={error?.seo || {}}
@@ -5334,6 +5330,30 @@ export default function ProductManagementUI() {
   const handleValidateAndSubmit = useCallback(async () => {
     if (saving || checkingMedia) return;
     const isBasicFormValid = validateForm();
+
+    const seoErrors = await seoFormik.validateForm();
+    if (ogImageUploading) {
+      seoErrors.ogImage =
+        "Wait for the OG image upload to finish before saving.";
+    }
+    seoFormik.setTouched(
+      Object.keys(seoFormik.values).reduce((touched, field) => {
+        touched[field] = true;
+        return touched;
+      }, {}),
+      false,
+    );
+
+    if (Object.keys(seoErrors).length) {
+      setError((previous) => ({
+        ...(previous || {}),
+        seo: seoErrors,
+      }));
+      pendingValidationScrollRef.current = true;
+      toast.error("Please correct the highlighted SEO fields before saving.");
+      return;
+    }
+
     if (!isBasicFormValid) return;
     if (flowGateErrors.length) {
       setError((prev) => ({
@@ -5420,6 +5440,7 @@ export default function ProductManagementUI() {
     commonImagesUploading,
     productVideoUploading,
     ogImageUploading,
+    seoFormik,
     variantBuilderBusy,
     shippingProfilesLoading,
     shippingProfileOptions,

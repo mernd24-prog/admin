@@ -746,6 +746,7 @@ function ProfileForm({
             label="ETA Min (days)"
             name="etaMin"
             type="text"
+            required
             inputMode="numeric"
             pattern="[0-9]*"
             maxLength={3}
@@ -767,6 +768,7 @@ function ProfileForm({
             label="ETA Max (days)"
             name="etaMax"
             type="text"
+            required
             inputMode="numeric"
             pattern="[0-9]*"
             maxLength={3}

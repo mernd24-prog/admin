@@ -184,6 +184,8 @@ const toInputDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+const getLocalToday = () => toInputDate(new Date());
+
 const parseInputDate = (value) => {
   if (!value) return null;
   const [year, month, day] = String(value).split("-").map(Number);
@@ -538,7 +540,7 @@ export const DateRangeFilter = ({
   const endKey = field.endKey || "endDate";
   const startValue = values?.[startKey] ?? value?.startDate ?? "";
   const endValue = values?.[endKey] ?? value?.endDate ?? "";
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalToday();
   const maxDate = field.disableFuture ? today : field.maxDate;
   const [open, setOpen] = useState(false);
   const [draftDates, setDraftDates] = useState({
@@ -565,9 +567,14 @@ export const DateRangeFilter = ({
       draftDates.fromDate <= draftDates.toDate
         ? draftDates
         : { fromDate: draftDates.toDate, toDate: draftDates.fromDate };
-    onChange(startKey, nextDates.fromDate);
-    onChange(endKey, nextDates.toDate);
-    onApplyOverride?.(nextDates.fromDate, nextDates.toDate);
+    if (onApplyOverride) {
+      // Range consumers can update both dates in one state transition. Calling
+      // onChange twice here can make the second update restore a stale start.
+      onApplyOverride(nextDates.fromDate, nextDates.toDate);
+    } else {
+      onChange(startKey, nextDates.fromDate);
+      onChange(endKey, nextDates.toDate);
+    }
     setOpen(false);
   };
 
@@ -589,13 +596,23 @@ export const DateRangeFilter = ({
     if (!selectedDate) return;
     setViewDate(selectedDate);
     setDraftDates((current) => {
-      if (!current.fromDate || current.toDate) {
+      // A new selection always begins at the clicked date. This lets users
+      // replace both ends of an already-applied range, including selecting
+      // dates earlier than the old start date.
+      if (!current.fromDate || !current.toDate) {
+        if (!current.fromDate) {
+          return { fromDate: valueToSelect, toDate: "" };
+        }
+        if (valueToSelect < current.fromDate) {
+          return { fromDate: valueToSelect, toDate: current.fromDate };
+        }
+        return { ...current, toDate: valueToSelect };
+      }
+
+      if (current.fromDate && current.toDate) {
         return { fromDate: valueToSelect, toDate: "" };
       }
-      if (valueToSelect < current.fromDate) {
-        return { fromDate: valueToSelect, toDate: current.fromDate };
-      }
-      return { ...current, toDate: valueToSelect };
+      return current;
     });
   };
 
@@ -845,7 +862,7 @@ const FilterField = ({ field, value, onChange, values }) => {
 
   /* ─────────────── Date ─────────────── */
   if (field.type === "date") {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalToday();
 
     const maxDate = field.maxDate ?? today;
 
@@ -1037,7 +1054,7 @@ const FilterBar = ({
   }
 
   return (
-    <div className="relative z-20 border-b border-[var(--admin-line)] bg-[#FFFDF8] px-3 py-3 sm:px-4">
+    <div className="relative border-b border-[var(--admin-line)] bg-[#FFFDF8] px-3 py-3 sm:px-4">
       <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
           <MdFilterList aria-hidden="true" size={16} />

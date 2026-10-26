@@ -419,6 +419,7 @@ export const ReportShell = ({
   exportCsvSections,
   exportExcelSheets,
   showFilters = true,
+  showExport = true,
 }) => {
   const [exporting, setExporting] = useState(false);
   const dateRangeLabel =
@@ -509,18 +510,23 @@ export const ReportShell = ({
                       filters.setDateRange(filters.fromDate, value);
                     }
                   }}
+                  onApply={(fromDate, toDate) =>
+                    filters.setDateRange(fromDate, toDate)
+                  }
                   loading={loading}
                 />
               </div>
               <div className="flex gap-2">
-                <ExportButton
-                  onClick={handleExport}
-                  label={
-                    loading ? "Loading" : exporting ? "Exporting" : "Export "
-                  }
-                  loading={exporting || loading}
-                  disabled={loading}
-                />
+                {showExport && (
+                  <ExportButton
+                    onClick={handleExport}
+                    label={
+                      loading ? "Loading" : exporting ? "Exporting" : "Export "
+                    }
+                    loading={exporting || loading}
+                    disabled={loading}
+                  />
+                )}
 
                 <button
                   type="button"
@@ -2863,13 +2869,13 @@ export const InventoryAnalytics = () => {
               render: (value) => formatNumber(value),
             },
 
-            {
-              key: "reservedStock",
+            // {
+            //   key: "reservedStock",
 
-              label: "Reserved",
+            //   label: "Reserved",
 
-              render: (value) => formatNumber(value),
-            },
+            //   render: (value) => formatNumber(value),
+            // },
 
             {
               key: "availableStock",
@@ -3266,6 +3272,22 @@ export const AnalyticsDashboard = () => {
     },
   ];
 
+  const analyticsExportSummary = [
+    { metric: "Total Revenue", value: totalRevenue },
+    { metric: "Total Orders", value: totalOrders },
+    {
+      metric: useProductFallback ? "Product Views" : "Return Requests",
+      value: useProductFallback ? totalProductViews : returnCount,
+    },
+    { metric: "Pending Payouts", value: pendingPayout },
+  ];
+  const analyticsExportProducts = fallbackProductRows.map((product) => ({
+    product: product.title,
+    purchases: product.purchases,
+    revenue: product.revenue,
+    views: product.views || product.impressions,
+  }));
+
   return (
     <ReportShell
       title="Analytics Dashboard"
@@ -3283,6 +3305,7 @@ export const AnalyticsDashboard = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
+      showExport={false}
     >
       <SummaryColumnChart
         title={
