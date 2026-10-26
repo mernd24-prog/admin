@@ -1,14 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormik } from "formik";
 import { toast } from "sonner";
-import {
-  MdAdd,
-  MdInfoOutline,
-  MdSend,
-  MdSupportAgent,
-  MdVisibility,
-} from "react-icons/md";
+import { MdAdd, MdSend, MdVisibility } from "react-icons/md";
 
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
+import FormInput from "../../components/Atoms/FormInput/FormInput";
 import {
   DataTable,
   FormSection,
@@ -29,6 +25,8 @@ import {
 import { formatDateTime12Hour } from "../../utils/formatters";
 import { QueryDetailsSkeleton } from "../../components/Loader/SkeletonLoader";
 import { TextEditor } from "../../components/Atoms/FormInput/TextEditor";
+import { ButtonLoader } from "../../components/Loader/Loader";
+import { sellerHelpSupportValidationSchema } from "../../_helpers/validationSchemas";
 
 const initialForm = {
   category: SELLER_QUERY_CATEGORIES[0]?.value || "",
@@ -118,7 +116,6 @@ const getConversationItems = (query = {}) => {
 
   return items.sort((first, second) => {
     const firstTime = new Date(first.timestamp || 0).getTime();
-
     const secondTime = new Date(second.timestamp || 0).getTime();
 
     return firstTime - secondTime;
@@ -127,10 +124,8 @@ const getConversationItems = (query = {}) => {
 
 const SellerHelpSupport = () => {
   const [showQueryForm, setShowQueryForm] = useState(false);
-  const [form, setForm] = useState(initialForm);
-
   const [submitting, setSubmitting] = useState(false);
-  const [showValidation, setShowValidation] = useState(false);
+
   const [queries, setQueries] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -145,13 +140,7 @@ const SellerHelpSupport = () => {
   const [replyMessage, setReplyMessage] = useState("");
   const [replySubmitting, setReplySubmitting] = useState(false);
 
-  /* Fetch Queries                                                              */
-  const getPlainText = (html = "") =>
-    String(html)
-      .replace(/<[^>]*>/g, " ")
-      .replace(/&nbsp;/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+  /* Fetch Queries */
 
   const fetchQueries = useCallback(async () => {
     try {
@@ -181,82 +170,58 @@ const SellerHelpSupport = () => {
     fetchQueries();
   }, [fetchQueries]);
 
-  /* Validation                                                                 */
+  /* Plain-text helper for rich-text message validation */
 
-  const validationError = useMemo(() => {
-    if (!form.category) {
-      return "Select a query category first.";
-    }
+  const getPlainText = (html = "") =>
+    String(html)
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
-    if (form.category === "ORDER_ISSUE" && !form.orderNumber.trim()) {
-      return "Order number is required.";
-    }
+  /* Formik Validation and Submission */
 
-    if (form.category === "PRODUCT_LISTING_ISSUE" && !form.product.trim()) {
-      return "Product number or ID is required.";
-    }
-    if (form.category === "OTHER" && !form.otherCategory.trim()) {
-      return "Issue category / type is required.";
-    }
-    if (form.subject.trim().length < 5) {
-      return "Subject must be at least 5 characters.";
-    }
+  const formik = useFormik({
+    initialValues: initialForm,
+    validationSchema: sellerHelpSupportValidationSchema,
 
-    if (getPlainText(form.message).length < 10) {
-      return "Message must be at least 10 characters.";
-    }
+    onSubmit: async (values, { resetForm }) => {
+      try {
+        setSubmitting(true);
 
-    return "";
-  }, [form]);
+        await axiosProvider.post(ENDPOINTS.support.create, {
+          category: values.category,
+          otherCategory:
+            values.category === "OTHER"
+              ? values.otherCategory.trim() || undefined
+              : undefined,
+          orderNumber: values.orderNumber.trim() || undefined,
+          product: values.product.trim() || undefined,
+          subject: values.subject.trim(),
+          message: values.message.trim(),
+        });
 
-  /* Submit Query                                                               */
+        toast.success("Support query submitted");
 
-  const submitQuery = async (event) => {
-    event.preventDefault();
+        resetForm();
+        setPage(1);
 
-    setShowValidation(true);
+        await fetchQueries();
 
-    if (validationError) {
-      toast.error(validationError);
-      return;
-    }
+        setShowQueryForm(false);
+      } catch (requestError) {
+        toast.error(
+          requestError?.response?.data?.message ||
+            requestError?.message ||
+            "Failed to submit support query",
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
-    try {
-      setSubmitting(true);
-
-      await axiosProvider.post(ENDPOINTS.support.create, {
-        category: form.category,
-        otherCategory:
-          form.category === "OTHER"
-            ? form.otherCategory.trim() || undefined
-            : undefined,
-        orderNumber: form.orderNumber.trim() || undefined,
-        product: form.product.trim() || undefined,
-        subject: form.subject.trim(),
-        message: form.message.trim(),
-      });
-
-      toast.success("Support query submitted");
-
-      setForm(initialForm);
-      setShowValidation(false);
-      setPage(1);
-
-      await fetchQueries();
-
-      setShowQueryForm(false);
-    } catch (requestError) {
-      toast.error(
-        requestError?.response?.data?.message ||
-          requestError?.message ||
-          "Failed to submit support query",
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  /* View Details                                                               */
+  /* View Details */
 
   const handleViewDetails = useCallback(async (query) => {
     if (!query?.queryId) {
@@ -281,7 +246,7 @@ const SellerHelpSupport = () => {
     }
   }, []);
 
-  /* Submit Reply                                                               */
+  /* Submit Reply */
 
   const submitReply = useCallback(async () => {
     if (!selectedQuery?.queryId) return;
@@ -302,7 +267,6 @@ const SellerHelpSupport = () => {
       );
 
       setSelectedQuery(response?.data?.data || selectedQuery);
-
       setReplyMessage("");
 
       toast.success("Reply sent");
@@ -315,7 +279,7 @@ const SellerHelpSupport = () => {
     }
   }, [fetchQueries, replyMessage, selectedQuery]);
 
-  /* Table Columns                                                              */
+  /* Table Columns */
 
   const columns = useMemo(
     () => [
@@ -328,7 +292,6 @@ const SellerHelpSupport = () => {
           </span>
         ),
       },
-
       {
         key: "category",
         label: "Category",
@@ -338,7 +301,6 @@ const SellerHelpSupport = () => {
           </span>
         ),
       },
-
       {
         key: "subject",
         label: "Subject",
@@ -348,7 +310,6 @@ const SellerHelpSupport = () => {
           </span>
         ),
       },
-
       {
         key: "status",
         label: "Status",
@@ -356,38 +317,36 @@ const SellerHelpSupport = () => {
           <StatusBadge status={value} label={statusLabel(value)} dot />
         ),
       },
-
       {
         key: "createdAt",
         label: "Created Date",
         render: (value) => formatDateTime12Hour(value),
       },
-
-      {
-        key: "_actions",
-        label: "Actions",
-        render: (_, row) => (
-          <button
-            type="button"
-            onClick={() => handleViewDetails(row)}
-            className="admin-btn-secondary inline-flex min-h-[34px] items-center gap-1.5 px-3 py-1.5 text-xs transition-all"
-          >
-            <MdVisibility size={15} />
-            View Details
-          </button>
-        ),
-      },
+      // {
+      //   key: "_actions",
+      //   label: "Actions",
+      //   render: (_, row) => (
+      //     <button
+      //       type="button"
+      //       onClick={() => handleViewDetails(row)}
+      //       className="admin-btn-secondary inline-flex min-h-[34px] items-center gap-1.5 px-3 py-1.5 text-xs transition-all"
+      //     >
+      //       <MdVisibility size={15} />
+      //       View Details
+      //     </button>
+      //   ),
+      // },
     ],
     [handleViewDetails],
   );
 
-  /* Form Reset                                                                 */
+  /* Form Reset */
 
   const resetForm = () => {
-    setForm(initialForm);
+    formik.resetForm();
   };
 
-  /* Render                                                                     */
+  /* Render */
 
   return (
     <div className="admin-page support-query-page space-y-5">
@@ -417,7 +376,10 @@ const SellerHelpSupport = () => {
             <button
               type="button"
               className="admin-btn-primary inline-flex items-center gap-2"
-              onClick={() => setShowQueryForm(true)}
+              onClick={() => {
+                resetForm();
+                setShowQueryForm(true);
+              }}
             >
               <MdAdd size={18} />
               Add Query
@@ -428,226 +390,130 @@ const SellerHelpSupport = () => {
 
       {showQueryForm ? (
         <form
-          onSubmit={submitQuery}
+          onSubmit={formik.handleSubmit}
+          noValidate
           className="admin-card support-query-form flex flex-col overflow-hidden"
         >
-          {/* Category Section                                                 */}
+          {/* Category Section */}
 
           <section
             className="support-query-category"
             aria-labelledby="support-category-heading"
           >
-            {/* <div className="support-query-category__header flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)]">
-                <MdSupportAgent size={19} />
-              </div>
-              <div>
-                <h2
-                  id="support-category-heading"
-                  className="text-sm font-semibold text-[var(--admin-navy)]"
-                >
-                  Select Query Category
-                </h2>
-                <p className="mt-0.5 text-xs text-[var(--admin-muted)]">
-                  Choose the category that best matches your issue.
-                </p>
-              </div>
-            </div> */}
-
             <div className="m-4">
               <Tabs
                 tabs={SELLER_QUERY_CATEGORIES}
-                activeTab={form.category}
-                onChange={(category) =>
-                  setForm({
+                activeTab={formik.values.category}
+                onChange={(category) => {
+                  formik.setValues({
                     ...initialForm,
                     category,
-                  })
-                }
+                  });
+                  formik.setTouched({});
+                }}
               />
+
+              {formik.touched.category && formik.errors.category && (
+                <p className="admin-field-error mt-2" role="alert">
+                  {formik.errors.category}
+                </p>
+              )}
             </div>
           </section>
 
-          {/* ---------------------------------------------------------------- */}
-          {/* Query Form                                                       */}
-          {/* ---------------------------------------------------------------- */}
+          {/* Query Form */}
 
           <section className="support-query-details">
-            {/* <div className="support-query-details__header border-b border-[var(--admin-line)] px-5 py-4">
-              <div className="flex items-start gap-3 sm:items-center">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--admin-gold-soft)] text-[var(--admin-gold-dark)]">
-                  <MdInfoOutline size={20} />
-                </div>
-
-                <div>
-                  <h2 className="text-base font-semibold text-[var(--admin-navy)]">
-                    Submit Query Details
-                  </h2>
-
-                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                    Provide enough information so the support team can resolve
-                    your issue quickly.
-                  </p>
-                </div>
-              </div>
-            </div> */}
-
             <div className="support-query-details__body flex flex-col gap-4 p-5 sm:gap-[18px] sm:p-6">
               {/* Other Category */}
-              {form.category === "OTHER" && (
-                <div>
-                  <label className="block text-sm font-semibold text-[var(--admin-ink)]">
-                    Issue Category / Type
-                    <span className="ml-1 text-[var(--admin-gold-dark)]">
-                      *
-                    </span>
-                  </label>
 
-                  <input
-                    type="text"
-                    className="admin-input mt-1.5"
-                    value={form.otherCategory}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        otherCategory: event.target.value,
-                      }))
-                    }
-                    maxLength={100}
-                    placeholder="e.g. Technical Issue, Feature Request"
-                  />
-
-                  {showValidation && !form.otherCategory.trim() && (
-                    <p className="mt-1 text-xs text-red-500">
-                      Issue category / type is required.
-                    </p>
-                  )}
-
-                  <div className="mt-1 flex justify-between">
-                    <span className="text-[11px] text-[var(--admin-muted)]">
-                      {form.otherCategory.length}/100
-                    </span>
-                  </div>
-                </div>
+              {formik.values.category === "OTHER" && (
+                <FormInput
+                  label="Issue Category / Type"
+                  name="otherCategory"
+                  type="text"
+                  value={formik.values.otherCategory}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={
+                    formik.touched.otherCategory && formik.errors.otherCategory
+                  }
+                  required
+                  maxLength={100}
+                  placeholder="e.g. Technical Issue, Feature Request"
+                />
               )}
 
-              {/* Reference fields */}
-              {form.category === "ORDER_ISSUE" && (
-                <div>
-                  <label className="block text-sm font-semibold text-[var(--admin-ink)]">
-                    Order ID
-                    <span className="ml-1 text-[var(--admin-gold-dark)]">
-                      *
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    className="admin-input mt-1.5"
-                    value={form.orderNumber}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        orderNumber: event.target.value,
-                      }))
-                    }
-                    placeholder="Enter order ID"
-                  />
-                  {showValidation && !form.orderNumber.trim() && (
-                    <p className="mt-1 text-xs text-red-500">
-                      Order number is required.
-                    </p>
-                  )}
-                </div>
+              {/* Order ID */}
+
+              {formik.values.category === "ORDER_ISSUE" && (
+                <FormInput
+                  label="Order ID"
+                  name="orderNumber"
+                  type="text"
+                  value={formik.values.orderNumber}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={
+                    formik.touched.orderNumber && formik.errors.orderNumber
+                  }
+                  required
+                  placeholder="Enter order ID"
+                />
               )}
 
-              {form.category === "PRODUCT_LISTING_ISSUE" && (
-                <div>
-                  <label className="block text-sm font-semibold text-[var(--admin-ink)]">
-                    Product ID
-                    <span className="ml-1 text-[var(--admin-gold-dark)]">
-                      *
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    className="admin-input mt-1.5"
-                    value={form.product}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        product: event.target.value,
-                      }))
-                    }
-                    placeholder="Enter product ID"
-                  />
-                  {showValidation && !form.product.trim() && (
-                    <p className="mt-1 text-xs text-red-500">
-                      Product number or ID is required.
-                    </p>
-                  )}
-                </div>
+              {/* Product ID */}
+
+              {formik.values.category === "PRODUCT_LISTING_ISSUE" && (
+                <FormInput
+                  label="Product ID"
+                  name="product"
+                  type="text"
+                  value={formik.values.product}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.product && formik.errors.product}
+                  required
+                  placeholder="Enter product ID"
+                />
               )}
 
               {/* Subject */}
-              <div>
-                <label className="block text-sm font-semibold text-[var(--admin-ink)]">
-                  Subject
-                  <span className="ml-1 text-[var(--admin-gold-dark)]">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="admin-input mt-1.5"
-                  value={form.subject}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      subject: event.target.value,
-                    }))
-                  }
-                  maxLength={220}
-                  placeholder="Briefly describe your issue"
-                />
 
-                {showValidation && form.subject.trim().length < 5 && (
-                  <p className="mt-1 text-xs text-red-500">
-                    Subject is required and must be at least 5 characters.
-                  </p>
-                )}
-
-                <div className="mt-1 flex justify-between">
-                  <span className="text-[11px] text-[var(--admin-muted)]">
-                    {form.subject.length}/220
-                  </span>
-                </div>
-              </div>
+              <FormInput
+                label="Subject"
+                name="subject"
+                type="text"
+                value={formik.values.subject}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.subject && formik.errors.subject}
+                required
+                maxLength={220}
+                limitMessage="Maximum 220 characters allowed."
+                placeholder="Briefly describe your issue"
+              />
 
               {/* Message */}
-              <div>
-                <TextEditor
-                  label="Message"
-                  value={form.message || ""}
-                  onChange={(content) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      message: content,
-                    }))
-                  }
-                  required
-                  showErrorBorder={false}
-                  error={
-                    showValidation && getPlainText(form.message).length < 10
-                      ? "Message is required and must be at least 10 characters."
-                      : ""
-                  }
-                  placeholder="Explain what happened and include relevant references or screenshots."
-                  maxLength={5000}
-                  height="190px"
-                  className="[&_.ql-container]:h-[190px] [&_.ql-editor]:min-h-[150px]"
-                />
-              </div>
+
+              <TextEditor
+                label="Message"
+                value={formik.values.message || ""}
+                onChange={(content) => formik.setFieldValue("message", content)}
+                onBlur={() => formik.setFieldTouched("message", true)}
+                required
+                showErrorBorder={false}
+                error={formik.touched.message ? formik.errors.message : ""}
+                placeholder="Explain what happened and include relevant references or screenshots."
+                maxLength={5000}
+                limitMessage="Maximum 5000 characters allowed."
+                height="190px"
+                className="[&_.ql-container]:h-[190px] [&_.ql-editor]:min-h-[150px]"
+              />
 
               {/* Actions */}
-              <div className="flex flex-col-reverse gap-2  sm:flex-row sm:justify-end">
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   className="admin-btn-secondary"
@@ -663,11 +529,11 @@ const SellerHelpSupport = () => {
                 <button
                   type="submit"
                   className="admin-btn-primary inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={submitting || !form.category}
+                  disabled={submitting || !formik.values.category}
                 >
                   {submitting ? (
                     <>
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                      <ButtonLoader />
                       Submitting...
                     </>
                   ) : (
@@ -682,9 +548,7 @@ const SellerHelpSupport = () => {
           </section>
         </form>
       ) : (
-        /* ------------------------------------------------------------------ */
-        /* Query List                                                         */
-        /* ------------------------------------------------------------------ */
+        /* Query List */
 
         <div className="admin-card overflow-hidden">
           <DataTable
@@ -707,13 +571,24 @@ const SellerHelpSupport = () => {
             searchPlaceholder="Search your support queries"
             rowKey="queryId"
             emptyText="No support queries submitted yet."
+            rowActions={(row) => [
+              {
+                label: "View Details",
+                icon: (
+                  <MdVisibility
+                    aria-hidden="true"
+                    size={16}
+                    className="text-[var(--admin-blue)]"
+                  />
+                ),
+                onClick: () => handleViewDetails(row),
+              },
+            ]}
           />
         </div>
       )}
 
-      {/* -------------------------------------------------------------------- */}
-      {/* Query Details Modal                                                  */}
-      {/* -------------------------------------------------------------------- */}
+      {/* Query Details Modal */}
 
       <DefaultModal
         isOpen={Boolean(selectedQuery)}
@@ -735,6 +610,7 @@ const SellerHelpSupport = () => {
         ) : selectedQuery ? (
           <div className="space-y-5">
             {/* Requester Information */}
+
             <FormSection
               title="Requester Information"
               subtitle="User details associated with this support query."
@@ -768,6 +644,7 @@ const SellerHelpSupport = () => {
             </FormSection>
 
             {/* Query Information */}
+
             <FormSection
               title="Query Information"
               subtitle="Review the category and subject of this support request."
@@ -797,6 +674,7 @@ const SellerHelpSupport = () => {
             </FormSection>
 
             {/* Conversation */}
+
             <FormSection
               title="Ticket Conversation"
               subtitle="Review the conversation and previous responses."
@@ -881,33 +759,50 @@ const SellerHelpSupport = () => {
             </FormSection>
 
             {/* Reply */}
+
             <FormSection
               title="Add Reply"
               subtitle="Send a follow-up message to support."
             >
               <div className="space-y-3">
-                <textarea
-                  className="min-h-[110px] w-full resize-y rounded-lg border border-[var(--admin-field-line)] bg-[var(--admin-field)] px-3 py-2.5 text-sm leading-6 text-[var(--admin-ink)] outline-none transition placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-gold)] focus:ring-2 focus:ring-[rgba(203,156,45,0.15)] disabled:cursor-not-allowed disabled:opacity-60"
+                <TextEditor
+                  label="Message"
                   value={replyMessage}
-                  onChange={(event) => setReplyMessage(event.target.value)}
+                  onChange={(content) => setReplyMessage(content)}
+                  onBlur={() => {}}
+                  required
+                  showErrorBorder={false}
+                  placeholder="Type your reply to the support team..."
                   maxLength={5000}
-                  placeholder="Type your follow-up message for support..."
-                  disabled={replySubmitting}
+                  limitMessage="Maximum 5000 characters allowed."
+                  height="190px"
+                  className="[&_.ql-container]:h-[190px] [&_.ql-editor]:min-h-[150px]"
                 />
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-[11px] text-[var(--admin-muted)]">
-                    {replyMessage.length}/5000
+                    {
+                      replyMessage
+                        .replace(/<[^>]*>/g, " ")
+                        .replace(/&nbsp;/g, " ")
+                        .trim().length
+                    }
+                    /5000
                   </span>
 
                   <button
                     type="button"
                     className="admin-btn-primary inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={submitReply}
-                    disabled={replySubmitting || !replyMessage.trim()}
+                    disabled={
+                      replySubmitting ||
+                      !replyMessage
+                        .replace(/<[^>]*>/g, " ")
+                        .replace(/&nbsp;/g, " ")
+                        .trim()
+                    }
                   >
                     <MdSend size={16} />
-
                     {replySubmitting ? "Sending..." : "Send Reply"}
                   </button>
                 </div>
@@ -920,9 +815,7 @@ const SellerHelpSupport = () => {
   );
 };
 
-/* -------------------------------------------------------------------------- */
-/* Info Component                                                             */
-/* -------------------------------------------------------------------------- */
+/* Info Component */
 
 const Info = ({ label, value }) => (
   <div>

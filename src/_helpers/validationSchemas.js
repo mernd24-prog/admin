@@ -160,28 +160,30 @@ export const shipmentTrackingActionValidationSchema = Yup.object({
         ),
     otherwise: (schema) => schema,
   }),
- trackingUrl: Yup.string()
-  .transform((value) => (typeof value === "string" ? value.trim() : value))
-  .max(2048, "Tracking URL cannot exceed 2048 characters.")
-  .test(
-    "valid-tracking-url",
-    "Please enter a valid URL starting with http:// or https://.",
-    (value) => {
-      if (!value) return true;
 
-      try {
-        const parsedUrl = new URL(value);
+  trackingUrl: Yup.string()
+    .transform((value) => (typeof value === "string" ? value.trim() : value))
+    .max(2048, "Tracking URL cannot exceed 2048 characters.")
+    .test(
+      "valid-tracking-url",
+      "Please enter a valid URL starting with http:// or https://.",
+      (value) => {
+        if (!value) return true;
 
-        return (
-          ["http:", "https:"].includes(parsedUrl.protocol) &&
-          Boolean(parsedUrl.hostname) &&
-          parsedUrl.hostname.includes(".")
-        );
-      } catch {
-        return false;
-      }
-    },
-  ),
+        try {
+          const parsedUrl = new URL(value);
+
+          return (
+            ["http:", "https:"].includes(parsedUrl.protocol) &&
+            Boolean(parsedUrl.hostname) &&
+            (parsedUrl.hostname.includes(".") ||
+              parsedUrl.hostname === "localhost")
+          );
+        } catch {
+          return false;
+        }
+      },
+    ),
 });
 
 const taxRateSchema = (label) =>
@@ -520,68 +522,49 @@ const cmsOptionalTextList = (label, maxItems = 100) =>
     .max(maxItems, `${label} can contain no more than ${maxItems} items`);
 
 export const productSeoValidationSchema = Yup.object({
-  metaTitle: Yup.string().nullable().max(
-    70,
-    "Meta title must be 70 characters or fewer.",
-  ),
-  metaDescription: Yup.string().nullable().max(
-    160,
-    "Meta description must be 160 characters or fewer.",
-  ),
-  keywords: Yup.array()
-    .of(
-      Yup.string()
-        .trim()
-        .min(2, "Each SEO keyword must be 2–60 characters.")
-        .max(60, "Each SEO keyword must be 2–60 characters."),
-    )
-    .required("Add at least one SEO keyword.")
-    .min(1, "Add at least one SEO keyword.")
-    .max(20, "Use no more than 20 SEO keywords.")
-    .test(
-      "unique-keywords",
-      "SEO keywords must be unique, ignoring letter case.",
-      (keywords = []) => {
-        const normalized = keywords.map((keyword) =>
-          String(keyword || "").trim().toLowerCase(),
+  metaTitle: Yup.string()
+    .nullable()
+    .max(70, "Meta title must be 70 characters or fewer."),
+  metaDescription: Yup.string()
+    .nullable()
+    .max(160, "Meta description must be 160 characters or fewer."),
+
+  canonicalUrl: Yup.string()
+    .nullable()
+    .test("http-url", "Canonical URL must use HTTP or HTTPS.", (value) => {
+      if (!value) return true;
+      try {
+        const url = new URL(value.trim());
+        return (
+          ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname)
         );
-        return new Set(normalized).size === normalized.length;
+      } catch {
+        return false;
+      }
+    }),
+  ogTitle: Yup.string()
+    .nullable()
+    .max(70, "Open Graph title must be 70 characters or fewer."),
+  ogDescription: Yup.string()
+    .nullable()
+    .max(160, "Open Graph description must be 160 characters or fewer."),
+  ogImage: Yup.string()
+    .nullable()
+    .test(
+      "http-url",
+      "Pasted image URLs must be valid HTTP/HTTPS URLs.",
+      (value) => {
+        if (!value) return true;
+        try {
+          const url = new URL(value.trim());
+          return (
+            ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname)
+          );
+        } catch {
+          return false;
+        }
       },
     ),
-  canonicalUrl: Yup.string().nullable().test(
-    "http-url",
-    "Canonical URL must use HTTP or HTTPS.",
-    (value) => {
-      if (!value) return true;
-      try {
-        const url = new URL(value.trim());
-        return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname);
-      } catch {
-        return false;
-      }
-    },
-  ),
-  ogTitle: Yup.string().nullable().max(
-    70,
-    "Open Graph title must be 70 characters or fewer.",
-  ),
-  ogDescription: Yup.string().nullable().max(
-    160,
-    "Open Graph description must be 160 characters or fewer.",
-  ),
-  ogImage: Yup.string().nullable().test(
-    "http-url",
-    "Pasted image URLs must be valid HTTP/HTTPS URLs.",
-    (value) => {
-      if (!value) return true;
-      try {
-        const url = new URL(value.trim());
-        return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname);
-      } catch {
-        return false;
-      }
-    },
-  ),
 });
 
 export const contentPageValidationSchema = Yup.object({
@@ -730,24 +713,24 @@ export const shippingProfileValidationSchema = Yup.object({
     "Free shipping threshold cannot exceed ₹10,000",
   ),
   etaMin: optionalShippingNumber("Minimum ETA")
-  .integer("Minimum ETA must be a whole number")
-  .required("Minimum ETA is required")
-  .max(
-    MAX_SHIPPING_ETA_DAYS,
-    `Minimum ETA cannot exceed ${MAX_SHIPPING_ETA_DAYS} days`,
-  ),
-etaMax: optionalShippingNumber("Maximum ETA")
-  .integer("Maximum ETA must be a whole number")
-  .required("Maximum ETA is required")
-  .max(
-    MAX_SHIPPING_ETA_DAYS,
-    `Maximum ETA cannot exceed ${MAX_SHIPPING_ETA_DAYS} days`,
-  )
-  .when("etaMin", ([etaMin], schema) =>
-    etaMin === undefined
-      ? schema
-      : schema.min(etaMin, "Maximum ETA must be at least the minimum ETA"),
-  ),
+    .integer("Minimum ETA must be a whole number")
+    .required("Minimum ETA is required")
+    .max(
+      MAX_SHIPPING_ETA_DAYS,
+      `Minimum ETA cannot exceed ${MAX_SHIPPING_ETA_DAYS} days`,
+    ),
+  etaMax: optionalShippingNumber("Maximum ETA")
+    .integer("Maximum ETA must be a whole number")
+    .required("Maximum ETA is required")
+    .max(
+      MAX_SHIPPING_ETA_DAYS,
+      `Maximum ETA cannot exceed ${MAX_SHIPPING_ETA_DAYS} days`,
+    )
+    .when("etaMin", ([etaMin], schema) =>
+      etaMin === undefined
+        ? schema
+        : schema.min(etaMin, "Maximum ETA must be at least the minimum ETA"),
+    ),
   isDefault: Yup.boolean(),
   active: Yup.boolean(),
 });
@@ -845,11 +828,16 @@ export const codCollectionValidationSchema = Yup.object({
 export const brandValidationSchema = Yup.object({
   _id: Yup.string().optional(),
   name: Yup.string()
-    .transform((value) => typeof value === "string" ? value.trim().replace(/ +/g, " ") : value)
+    .transform((value) =>
+      typeof value === "string" ? value.trim().replace(/ +/g, " ") : value,
+    )
     .required("Brand name is required.")
     .min(2, "Brand name must contain at least 2 characters.")
     .max(50, "Brand name cannot exceed 50 characters.")
-    .matches(/^[\p{L}\p{N}][\p{L}\p{M}\p{N} &.'’\-]*$/u, "Start with a letter or number. Only letters, numbers, spaces and & - . apostrophes are allowed."),
+    .matches(
+      /^[\p{L}\p{N}][\p{L}\p{M}\p{N} &.'’\-]*$/u,
+      "Start with a letter or number. Only letters, numbers, spaces and & - . apostrophes are allowed.",
+    ),
 
   logo: Yup.string().required("Please upload a brand logo"),
 
@@ -1068,13 +1056,11 @@ export const negativeBalanceRecoverySchema = Yup.object({
     .required("Please select a recovery action"),
 
   referenceId: Yup.string().when("resolveAction", {
-  is: "collected_from_seller",
-  then: (schema) =>
-    schema
-      .trim()
-      .required("Payment reference ID is required"),
-  otherwise: (schema) => schema.notRequired(),
-}),
+    is: "collected_from_seller",
+    then: (schema) =>
+      schema.trim().required("Payment reference ID is required"),
+    otherwise: (schema) => schema.notRequired(),
+  }),
 
   note: Yup.string()
     .trim()
@@ -1091,4 +1077,60 @@ export const negativeBalanceRecoverySchema = Yup.object({
           .min(3, "Payment note must be at least 3 characters")
           .max(1000, "Payment note must be no more than 1000 characters"),
     }),
+});
+
+export const sellerHelpSupportValidationSchema = Yup.object({
+  category: Yup.string().required("Select a query category first."),
+
+  otherCategory: Yup.string().when("category", {
+    is: "OTHER",
+    then: (schema) =>
+      schema
+        .trim()
+        .required("Issue category / type is required.")
+        .max(100, "Issue category / type must be at most 100 characters."),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+
+  orderNumber: Yup.string().when("category", {
+    is: "ORDER_ISSUE",
+    then: (schema) => schema.trim().required("Order number is required."),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+
+  product: Yup.string().when("category", {
+    is: "PRODUCT_LISTING_ISSUE",
+    then: (schema) =>
+      schema.trim().required("Product number or ID is required."),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+
+  subject: Yup.string()
+    .trim()
+    .required("Subject is required.")
+    .min(5, "Subject must be at least 5 characters.")
+    .max(220, "Subject must be at most 220 characters."),
+
+  message: Yup.string()
+    .required("Message is required.")
+    .test(
+      "minimum-plain-text-length",
+      "Message must be at least 10 characters.",
+      (value) =>
+        String(value || "")
+          .replace(/<[^>]*>/g, " ")
+          .replace(/&nbsp;/g, " ")
+          .replace(/\s+/g, " ")
+          .trim().length >= 10,
+    )
+    .test(
+      "maximum-plain-text-length",
+      "Message must be at most 5000 characters.",
+      (value) =>
+        String(value || "")
+          .replace(/<[^>]*>/g, " ")
+          .replace(/&nbsp;/g, " ")
+          .replace(/\s+/g, " ")
+          .trim().length <= 5000,
+    ),
 });
