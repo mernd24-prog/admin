@@ -38,6 +38,42 @@ const customStyles = (error, controlHeight, mutedValue) => ({
           : "",
     },
   }),
+  control: (provided, state) => ({
+    ...provided,
+
+    backgroundColor: state.isDisabled
+      ? "var(--admin-field-disabled, #f3f4f6)"
+      : "var(--admin-field)",
+
+    borderColor: error
+      ? "var(--admin-danger)"
+      : state.isDisabled
+        ? "var(--admin-field-line)"
+        : state.isFocused
+          ? ""
+          : "var(--admin-field-line)",
+
+    boxShadow: error ? "none" : state.isFocused ? "" : "none",
+
+    borderRadius: "0.375rem",
+
+    // Keep the height consistent before and after selection
+    height: controlHeight ? `${controlHeight}px` : "36px",
+    minHeight: controlHeight ? `${controlHeight}px` : "36px",
+    maxHeight: controlHeight ? `${controlHeight}px` : "36px",
+
+    boxSizing: "border-box",
+    cursor: state.isDisabled ? "not-allowed" : "pointer",
+    opacity: state.isDisabled ? 0.7 : 1,
+
+    "&:hover": {
+      borderColor: error
+        ? "var(--admin-danger)"
+        : state.isDisabled
+          ? "var(--admin-field-line)"
+          : "",
+    },
+  }),
 
   valueContainer: (provided) => ({
     ...provided,

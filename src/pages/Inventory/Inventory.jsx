@@ -54,6 +54,7 @@ import {
   ImportButton,
   RefreshButton,
 } from "../../components/Atoms/buttons/exportImport";
+import { useFormik } from "formik";
 
 const STOCK_FILTER_OPTIONS = [
   { value: "", label: "All Stock" },
@@ -62,11 +63,11 @@ const STOCK_FILTER_OPTIONS = [
   { value: "low_stock", label: "Low Stock" },
 ];
 
-const ADJUST_TYPES = [
-  { value: "add", label: "Add Stock", icon: MdAdd },
-  { value: "remove", label: "Remove Stock", icon: MdRemove },
-  { value: "set", label: "Set Exact", icon: MdSave },
-];
+// const ADJUST_TYPES = [
+//   { value: "add", label: "Add Stock", icon: MdAdd },
+//   { value: "remove", label: "Remove Stock", icon: MdRemove },
+//   { value: "set", label: "Set Exact", icon: MdSave },
+// ];
 
 const STOCK_HISTORY_PAGE_SIZE = 10;
 
@@ -200,9 +201,6 @@ const variantTitle = (row = {}) => (
     <p className="font-semibold text-[var(--admin-ink)]">
       {row.variantName || "Default variant"}
     </p>
-    {/* <p className="text-xs text-[var(--admin-muted)]">
-      {row.variantSku || row.sku || "No SKU"}
-    </p> */}
   </div>
 );
 
@@ -415,39 +413,43 @@ const importValuesMatch = (actual, expected, column) => {
 };
 
 const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
-  const [form, setForm] = useState({
-    adjustmentType: "set",
-    quantity: "",
-    reason: "",
-    note: "",
-  });
-
-  useEffect(() => {
-    if (!open) return;
-
-    setForm({
+  const formik = useFormik({
+    initialValues: {
       adjustmentType: "set",
       quantity: target?.currentStock ?? target?.stock ?? "",
       reason: "",
       note: "",
-    });
-  }, [open, target]);
+    },
+    enableReinitialize: true,
 
-  const submit = () => {
-    const quantity = Number(form.quantity);
+    validate: (values) => {
+      const errors = {};
+      const quantity = values.quantity;
 
-    if (!Number.isFinite(quantity) || quantity < 0) {
-      toast.error("Stock quantity must be a non-negative number");
-      return;
-    }
+      if (quantity === "" || quantity === null || quantity === undefined) {
+        errors.quantity = "Quantity is required.";
+      } else if (!Number.isInteger(Number(quantity)) || Number(quantity) < 0) {
+        errors.quantity = "Quantity must be a non-negative whole number.";
+      }
 
-    onConfirm({
-      adjustmentType: form.adjustmentType,
-      quantity,
-      reason: form.reason,
-      note: form.note,
-    });
-  };
+      if (!String(values.reason || "").trim()) {
+        errors.reason = "Reason is required.";
+      } else if (String(values.reason).trim().length > 100) {
+        errors.reason = "Reason cannot exceed 100 characters.";
+      }
+
+      return errors;
+    },
+
+    onSubmit: (values) => {
+      onConfirm({
+        adjustmentType: values.adjustmentType,
+        quantity: Number(values.quantity),
+        reason: values.reason.trim(),
+        note: values.note.trim(),
+      });
+    },
+  });
 
   return (
     <DefaultModal
@@ -455,45 +457,11 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
       onClose={onClose}
       title="Adjust Variant Inventory"
       subtitle={`${target?.productName || ""} · ${target?.variantName || ""}`}
-      onSubmit={submit}
+      onSubmit={formik.handleSubmit}
       loading={loading}
       submitButtonText="Update Stock"
     >
-      <div className="space-y-5">
-        {/* Adjustment Type */}
-        <FormSection
-          title="Adjustment Type"
-          subtitle="Choose how you want to update the available stock."
-        >
-          <div className="grid grid-cols-3 gap-2">
-            {ADJUST_TYPES.map(({ value, label, icon: Icon }) => {
-              const isActive = form.adjustmentType === value;
-
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() =>
-                    setForm((previous) => ({
-                      ...previous,
-                      adjustmentType: value,
-                    }))
-                  }
-                  className={`flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition ${
-                    isActive
-                      ? "bg-[var(--admin-blue)] text-white shadow-sm"
-                      : "bg-[var(--admin-soft)] text-[var(--admin-muted)] hover:bg-[var(--admin-blue)]/10 hover:text-[var(--admin-blue)]"
-                  }`}
-                >
-                  <Icon aria-hidden="true" size={15} />
-                  <span>{label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </FormSection>
-
-        {/* Stock Details */}
+      <form onSubmit={formik.handleSubmit} className="space-y-5" noValidate>
         <FormSection
           title="Stock Details"
           subtitle="Enter the quantity and reason for this inventory adjustment."
@@ -501,45 +469,45 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
           <div className="space-y-4">
             <FormInput
               label="Quantity"
+              name="quantity"
               type="number"
               min={0}
-              value={form.quantity}
-              onChange={(event) =>
-                setForm((previous) => ({
-                  ...previous,
-                  quantity: event.target.value,
-                }))
-              }
+              required
+              value={formik.values.quantity}
+              onChange={(event) => {
+                const value = event.target.value;
+
+                // Prevent negative values and decimal quantities.
+                if (
+                  value !== "" &&
+                  (!/^\d+$/.test(value) || Number(value) < 0)
+                ) {
+                  return;
+                }
+
+                formik.setFieldValue("quantity", value);
+              }}
+              onBlur={formik.handleBlur}
+              error={formik.touched.quantity && formik.errors.quantity}
               placeholder="Enter quantity"
             />
 
             <FormInput
               label="Reason"
-              value={form.reason}
-              onChange={(event) =>
-                setForm((previous) => ({
-                  ...previous,
-                  reason: event.target.value,
-                }))
-              }
+              name="reason"
+              required
+              maxLength={100}
+              showLengthCount={false}
+              limitMessage="Reason cannot exceed 100 characters."
+              value={formik.values.reason}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.reason && formik.errors.reason}
               placeholder="Cycle count, restock, damage, correction"
-            />
-
-            <FormInput
-              label="Note"
-              type="textarea"
-              value={form.note}
-              onChange={(event) =>
-                setForm((previous) => ({
-                  ...previous,
-                  note: event.target.value,
-                }))
-              }
-              placeholder="Add an optional internal note"
             />
           </div>
         </FormSection>
-      </div>
+      </form>
     </DefaultModal>
   );
 };
@@ -726,17 +694,17 @@ const Inventory = () => {
       return detailRows;
     }
 
-    return detailRows.filter((row) =>
-      [
-        row.productName,
-        row.productSku,
-        row.variantName,
-        row.variantSku,
-        row.sku,
-      ]
+    const isSkuSearch = searchValue.startsWith("sku-");
+
+    return detailRows.filter((row) => {
+      const searchableFields = isSkuSearch
+        ? [row.variantSku, row.sku]
+        : [row.productName, row.variantName, row.variantSku, row.sku];
+
+      return searchableFields
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(searchValue)),
-    );
+        .some((value) => String(value).toLowerCase().includes(searchValue));
+    });
   }, [detailRows, variantSearch]);
 
   const pagedDetailRows = useMemo(() => {
@@ -1142,199 +1110,6 @@ const Inventory = () => {
     }
   };
 
-  // const handleExport = () => {
-  //   if (!detailRows.length) {
-  //     toast.info("No inventory variants available to export");
-  //     return;
-  //   }
-
-  //   const exportRows = detailRows.map((row) => ({
-  //     productId: row.productId,
-  //     productName: row.productName,
-  //     productSku: row.productSku,
-  //     variantId: row.variantId,
-  //     variantSku: row.variantSku,
-  //     variantName: row.variantName,
-  //     currentStock: row.originalStock,
-  //     newStock: row.currentStock,
-  //   }));
-
-  //   exportToExcel(exportRows, {
-  //     filename: `${normalizeText(detail?.product?.sku || "product")}-inventory-template.xlsx`,
-  //     sheetName: "Product Inventory",
-  //     columns: IMPORT_COLUMNS.map((key) => ({
-  //       label: key,
-  //       key,
-  //     })),
-  //   });
-  // };
-
-  // const handleImport = async (event) => {
-  //   const file = event.target.files?.[0];
-  //   if (!file) return;
-
-  //   try {
-  //     setImporting(true);
-  //     setImportError("");
-  //     setImportInfo("");
-  //     setImportSuccess("");
-
-  //     const imported = await parseImportFile(file);
-
-  //     if (!imported.length) {
-  //       throw new Error("The selected file did not contain any rows");
-  //     }
-
-  //     const importedColumns = Object.keys(imported[0] || {});
-
-  //     const missingColumns = IMPORT_COLUMNS.filter(
-  //       (column) => !importedColumns.includes(column),
-  //     );
-
-  //     const unknownColumns = importedColumns.filter(
-  //       (column) => !IMPORT_COLUMNS.includes(column),
-  //     );
-
-  //     if (missingColumns.length) {
-  //       throw new Error(
-  //         buildImportValidationError(
-  //           `Missing required column(s): ${missingColumns.join(", ")}.`,
-  //         ),
-  //       );
-  //     }
-
-  //     if (unknownColumns.length) {
-  //       throw new Error(
-  //         buildImportValidationError(
-  //           `Unknown column(s) found: ${unknownColumns.join(", ")}.`,
-  //         ),
-  //       );
-  //     }
-
-  //     const catalogByIdentity = new Map(
-  //       detailRows.map((row) => [getVariantIdentity(row), row]),
-  //     );
-
-  //     const catalogByProductAndSku = new Map(
-  //       detailRows.map((row) => [
-  //         `${normalizeText(row.productId)}::${normalizeText(row.variantSku)}`,
-  //         row,
-  //       ]),
-  //     );
-
-  //     const importedUpdates = new Map();
-
-  //     imported.forEach((item, index) => {
-  //       const rowNumber = index + 2;
-
-  //       const productIdValue = normalizeText(item.productId);
-  //       const variantIdValue = normalizeText(item.variantId);
-  //       const variantSkuValue = normalizeText(item.variantSku);
-
-  //       if (!productIdValue || (!variantIdValue && !variantSkuValue)) {
-  //         throw new Error(
-  //           buildImportValidationError(
-  //             `Row ${rowNumber}: productId and variantId/variantSku are required.`,
-  //           ),
-  //         );
-  //       }
-
-  //       const identity = [productIdValue, variantIdValue, variantSkuValue].join(
-  //         "::",
-  //       );
-
-  //       const fallbackIdentity = `${productIdValue}::${variantSkuValue}`;
-
-  //       const catalogRow = variantIdValue
-  //         ? catalogByIdentity.get(identity)
-  //         : catalogByProductAndSku.get(fallbackIdentity);
-
-  //       if (!catalogRow) {
-  //         throw new Error(
-  //           buildImportValidationError(
-  //             `Row ${rowNumber}: product or variant identity was changed or no longer exists.`,
-  //           ),
-  //         );
-  //       }
-
-  //       if (importedUpdates.has(catalogRow.id)) {
-  //         throw new Error(
-  //           buildImportValidationError(
-  //             `Row ${rowNumber}: duplicate product or variant row found.`,
-  //           ),
-  //         );
-  //       }
-
-  //       const editedColumns = READ_ONLY_IMPORT_COLUMNS.filter(
-  //         (column) =>
-  //           !importValuesMatch(
-  //             item[column],
-  //             getExpectedImportValue(catalogRow, column),
-  //             column,
-  //           ),
-  //       );
-
-  //       if (editedColumns.length) {
-  //         throw new Error(
-  //           buildImportValidationError(
-  //             `Row ${rowNumber}: ${editedColumns.join(", ")} cannot be changed.`,
-  //           ),
-  //         );
-  //       }
-
-  //       const newStock = Number(item.newStock);
-
-  //       if (!Number.isInteger(newStock) || newStock < 0) {
-  //         throw new Error(
-  //           `Row ${rowNumber}: newStock must be a non-negative whole number.`,
-  //         );
-  //       }
-
-  //       importedUpdates.set(catalogRow.id, newStock);
-  //     });
-
-  //     const nextRows = detailRows.map((row) =>
-  //       importedUpdates.has(row.id)
-  //         ? {
-  //             ...row,
-  //             currentStock: importedUpdates.get(row.id),
-  //           }
-  //         : row,
-  //     );
-
-  //     setDetailRows(nextRows);
-
-  //     const changedCount = nextRows.filter(
-  //       (row) => importedUpdates.has(row.id) && isPendingStock(row),
-  //     ).length;
-
-  //     if (!changedCount) {
-  //       setImportInfo(
-  //         "The file was imported successfully, but there are no new stock changes to save.",
-  //       );
-  //       return;
-  //     }
-
-  //     setImportSuccess(
-  //       `${changedCount} inventory ${
-  //         changedCount === 1 ? "change is" : "changes are"
-  //       } ready to save.`,
-  //     );
-  //   } catch (importErrorValue) {
-  //     setImportError(
-  //       getErrorMessage(importErrorValue, "Failed to import inventory Excel"),
-  //     );
-  //     setImportInfo("");
-  //     setImportSuccess("");
-  //   } finally {
-  //     setImporting(false);
-
-  //     if (fileInputRef.current) {
-  //       fileInputRef.current.value = "";
-  //     }
-  //   }
-  // };
-
   const openImageGallery = useCallback((variant) => {
     const images = getVariantImagesList(variant);
 
@@ -1714,116 +1489,48 @@ const Inventory = () => {
       </summary>
 
       <div className="space-y-3 px-4 pb-4">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {/* Export instructions */}
-          <section className="rounded-lg border border-[#e8ddc8] bg-white p-3.5">
-            <h4 className="mb-2.5 border-b border-[#eee2d0] pb-2.5 font-bold text-[var(--admin-ink)]">
-              How to Export &amp; Edit Template
-            </h4>
-
-            <ol className="space-y-2 text-[11px] leading-5">
-              <li className="flex items-start gap-2">
-                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-800">
-                  1
-                </span>
-                <span>
-                  Export the latest Excel template. Every product variant is a
-                  separate row.
-                </span>
-              </li>
-
-              <li className="flex items-start gap-2">
-                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-800">
-                  2
-                </span>
-                <span>
-                  Edit only{" "}
-                  <code className="rounded border border-indigo-200 bg-indigo-50 px-1 py-0.5 text-[10px] font-semibold text-indigo-800">
-                    newStock
-                  </code>{" "}
-                  using a whole number of 0 or more.
-                </span>
-              </li>
-
-              <li className="flex items-start gap-2">
-                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-800">
-                  3
-                </span>
-                <span>
-                  Import the file. Product IDs, SKUs, names, current stock, and
-                  every other column are read-only and are validated.
-                </span>
-              </li>
-            </ol>
-          </section>
-
-          {/* Import instructions */}
-          <section className="rounded-lg border border-[#e8ddc8] bg-white p-3.5">
-            <h4 className="mb-2.5 border-b border-[#eee2d0] pb-2.5 font-bold text-[var(--admin-ink)]">
-              How to Import &amp; Apply Stock
-            </h4>
-
-            <ol className="space-y-2 text-[11px] leading-5">
-              <li className="flex items-start gap-2">
-                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800">
-                  1
-                </span>
-                <span>
-                  Export the latest Excel template. Every product variant is a
-                  separate row.
-                </span>
-              </li>
-
-              <li className="flex items-start gap-2">
-                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800">
-                  2
-                </span>
-                <span>
-                  Edit only{" "}
-                  <code className="rounded border border-emerald-200 bg-emerald-50 px-1 py-0.5 text-[10px] font-semibold text-emerald-800">
-                    newStock
-                  </code>{" "}
-                  using a whole number of 0 or more.
-                </span>
-              </li>
-
-              <li className="flex items-start gap-2">
-                <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800">
-                  3
-                </span>
-                <span>
-                  Import the file. Product IDs, SKUs, names, current stock, and
-                  every other column are read-only and are validated.
-                </span>
-              </li>
-            </ol>
-          </section>
-        </div>
-
-        {/* Existing validation note */}
-        <section className="rounded-lg border border-amber-300 bg-[#fffdf2] p-3">
-          <h4 className="mb-2 flex items-center gap-2 font-bold text-gray-900">
-            <span className="text-amber-500" aria-hidden="true">
-              ⚠
-            </span>
-            Important Validation Notes
+        <section className="rounded-lg border border-[#e8ddc8] bg-white p-4">
+          <h4 className="mb-3 font-bold text-[var(--admin-ink)]">
+            How to Import &amp; Export Stock
           </h4>
 
-          <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
-            <p className="flex items-start gap-2 leading-5">
-              <span className="text-amber-500" aria-hidden="true">
-                ●
+          <ol className="space-y-3 text-[11px] leading-5">
+            <li className="flex items-start gap-2">
+              <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-800">
+                1
               </span>
-              <span>Rows with unchanged stock are skipped.</span>
-            </p>
+              <span>
+                Click <strong>Export</strong> to download the Excel file
+                containing your product variants and current stock.
+              </span>
+            </li>
 
-            <p className="flex items-start gap-2 leading-5">
-              <span className="text-amber-500" aria-hidden="true">
-                ●
+            <li className="flex items-start gap-2">
+              <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-800">
+                2
               </span>
-              <span>Stock cannot be lower than already reserved stock.</span>
-            </p>
-          </div>
+              <span>
+                Open the exported file, update only{" "}
+                <code className="rounded border border-indigo-200 bg-indigo-50 px-1 py-0.5 font-semibold text-indigo-800">
+                  newStock
+                </code>
+                , save the same file, and click <strong>Import</strong> to
+                upload it.
+              </span>
+            </li>
+          </ol>
+        </section>
+
+        <section className="flex items-start gap-2 rounded-lg border border-amber-300 bg-[#fffdf2] p-3">
+          <span className="text-amber-500" aria-hidden="true">
+            ⚠
+          </span>
+          <p className="leading-5">
+            <strong className="text-gray-900">Important:</strong> Keep the
+            exported file structure unchanged. Edit only the{" "}
+            <strong>newStock</strong> column. Unchanged stock values are
+            skipped, and stock cannot be lower than the reserved quantity.
+          </p>
         </section>
       </div>
     </details>

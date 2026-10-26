@@ -746,17 +746,17 @@ const DebouncedTextFilter = ({ field, value, onChange, id, wrapperClass }) => {
       {field.label && (
         <label
           htmlFor={id}
-          className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-700"
+          className="px-0.5  text-[10px] font-medium uppercase tracking-wide text-gray-700"
         >
           {field.label}
         </label>
       )}
 
-      <div className="relative">
+      <div className="relative ">
         {field.type === "search" && (
           <MdSearch
             size={14}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-muted)]"
+            className="pointer-events-none  absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-muted)]"
           />
         )}
 
@@ -768,14 +768,14 @@ const DebouncedTextFilter = ({ field, value, onChange, id, wrapperClass }) => {
           placeholder={field.placeholder || `Search ${field.label || ""}…`}
           className={`admin-input min-h-9 w-full text-sm ${
             field.type === "search" ? "!pl-9" : ""
-          }`}
+          } ${inputValue && field.showClear !== false ? "!pr-9" : ""}`}
         />
 
         {inputValue && field.showClear !== false && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+            className="absolute right-2 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-gray-300 transition-colors hover:text-gray-500 focus:outline-none"
             aria-label={`Clear ${field.label || "search"}`}
           >
             <MdClear size={16} />

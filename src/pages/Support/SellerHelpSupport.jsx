@@ -525,11 +525,6 @@ const SellerHelpSupport = () => {
 
                   <div className="mt-1 flex justify-between">
                     <span className="text-[11px] text-[var(--admin-muted)]">
-                      Specify the type of issue so the support team can
-                      understand it clearly.
-                    </span>
-
-                    <span className="text-[11px] text-[var(--admin-muted)]">
                       {form.otherCategory.length}/100
                     </span>
                   </div>
@@ -562,9 +557,6 @@ const SellerHelpSupport = () => {
                       Order number is required.
                     </p>
                   )}
-                  <p className="mt-1 text-[11px] text-[var(--admin-muted)]">
-                    Enter the order related to the issue.
-                  </p>
                 </div>
               )}
 
@@ -593,9 +585,6 @@ const SellerHelpSupport = () => {
                       Product number or ID is required.
                     </p>
                   )}
-                  <p className="mt-1 text-[11px] text-[var(--admin-muted)]">
-                    Enter the product related to the issue.
-                  </p>
                 </div>
               )}
 
@@ -626,10 +615,6 @@ const SellerHelpSupport = () => {
                 )}
 
                 <div className="mt-1 flex justify-between">
-                  <span className="text-[11px] text-[var(--admin-muted)]">
-                    Keep the subject short and clear.
-                  </span>
-
                   <span className="text-[11px] text-[var(--admin-muted)]">
                     {form.subject.length}/220
                   </span>
@@ -755,10 +740,7 @@ const SellerHelpSupport = () => {
               subtitle="User details associated with this support query."
             >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Info
-                  label="User"
-                  value={selectedQuery.userName || "N/A"}
-                />
+                <Info label="User" value={selectedQuery.userName || "N/A"} />
 
                 <Info
                   label="User Type"
@@ -799,11 +781,17 @@ const SellerHelpSupport = () => {
                 <Info label="Subject" value={selectedQuery.subject || "N/A"} />
 
                 {selectedQuery.orderNumber && (
-                  <Info label="Order Number" value={selectedQuery.orderNumber} />
+                  <Info
+                    label="Order Number"
+                    value={selectedQuery.orderNumber}
+                  />
                 )}
 
                 {selectedQuery.product && (
-                  <Info label="Product Number / ID" value={selectedQuery.product} />
+                  <Info
+                    label="Product Number / ID"
+                    value={selectedQuery.product}
+                  />
                 )}
               </div>
             </FormSection>
@@ -867,7 +855,9 @@ const SellerHelpSupport = () => {
 
                         <div
                           className={`mt-2 text-[13px] leading-5 ${
-                            isAdminMessage ? "text-[#30364B]" : "text-[var(--admin-ink)]"
+                            isAdminMessage
+                              ? "text-[#30364B]"
+                              : "text-[var(--admin-ink)]"
                           } [&_img]:my-2 [&_img]:max-h-[300px] [&_img]:rounded-lg`}
                           dangerouslySetInnerHTML={{
                             __html: item.message || "<p>No note added.</p>",
@@ -876,7 +866,9 @@ const SellerHelpSupport = () => {
 
                         <p
                           className={`mt-1.5 text-[10px] ${
-                            isAdminMessage ? "text-[#777F95]" : "text-[var(--admin-muted)]"
+                            isAdminMessage
+                              ? "text-[#777F95]"
+                              : "text-[var(--admin-muted)]"
                           }`}
                         >
                           {formatDateTime12Hour(item.timestamp)}

@@ -1197,7 +1197,7 @@ const ProductCatalog = () => {
             onRefresh={fetchProductsList}
             refreshLoading={loading}
             selectedRow={selectedRow}
-            placeholder="Search product name, SKU, Brand..."
+            placeholder="Search product name, SKU..."
             setSelectedRow={setSelectedRow}
             filters={filters}
             setFilters={setFilters}

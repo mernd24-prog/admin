@@ -235,216 +235,220 @@ const SpecialPriceGuide = () => {
   return (
     <div className="overflow-hidden rounded-xl border border-[#e5decb] bg-gradient-to-b from-[#fbf8f1] via-white to-white shadow-xs">
       {/* Top Banner: Guideline Rule + Example + Toggle Button */}
-     <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4">
-  {/* Left: Rule Description */}
-  <div className="flex items-start gap-3">
-    <div className="min-w-0">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-bold text-[#1f1b5f]">
-          Special Price Guidelines
-        </h3>
+      <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4">
+        {/* Left: Rule Description */}
+        <div className="flex items-start gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-bold text-[#1f1b5f]">
+                Special Price Guidelines
+              </h3>
 
-        <span className="inline-flex items-center rounded-full border border-[#f5dc97] bg-[#fff3d2] px-2.5 py-1 text-[11px] font-semibold text-[#8c6300]">
-          50% – 99.9% of Selling Price
-        </span>
+              <span className="inline-flex items-center rounded-full border border-[#f5dc97] bg-[#fff3d2] px-2.5 py-1 text-[11px] font-semibold text-[#8c6300]">
+                50% – 99.9% of Selling Price
+              </span>
+            </div>
+
+            <p className="mt-1 text-xs leading-5 text-gray-600">
+              Special promotional price must be <strong>at least 50%</strong> of
+              the selling price and <strong>strictly lower</strong> than selling
+              price.
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Example Box & Quick Guide Toggle */}
+        <div className="flex flex-wrap items-center gap-2.5 sm:shrink-0">
+          <div className="flex h-9 items-center gap-2 rounded-lg border border-[#e5decb] bg-white/95 px-3 text-xs shadow-2xs">
+            <span className="font-medium text-gray-500">Example:</span>
+            <span className="font-semibold text-gray-800">
+              Selling Price ₹1,999
+            </span>
+            <span className="text-gray-400">→</span>
+            <span className="font-bold text-emerald-700">
+              Valid: ₹999.50 to ₹1,998.99
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setGuideOpen((prev) => !prev)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#dcd4c3] bg-white px-3 text-sm font-medium text-[#1f1b5f] shadow-2xs transition-colors hover:border-[#1f1b5f]/50 hover:bg-[#faf7f0] focus:outline-none"
+            aria-expanded={guideOpen}
+          >
+            <FileSpreadsheet size={15} className="text-[#1f1b5f]" />
+            <span>Import & Export Guide</span>
+            {guideOpen ? (
+              <ChevronUp size={15} className="text-[#1f1b5f]" />
+            ) : (
+              <ChevronDown size={15} className="text-[#1f1b5f]" />
+            )}
+          </button>
+        </div>
       </div>
-
-      <p className="mt-1 text-xs leading-5 text-gray-600">
-        Special promotional price must be <strong>at least 50%</strong> of the
-        selling price and <strong>strictly lower</strong> than selling price.
-      </p>
-    </div>
-  </div>
-
-  {/* Right: Example Box & Quick Guide Toggle */}
-  <div className="flex flex-wrap items-center gap-2.5 sm:shrink-0">
-  <div className="flex h-9 items-center gap-2 rounded-lg border border-[#e5decb] bg-white/95 px-3 text-xs shadow-2xs">
-    <span className="font-medium text-gray-500">Example:</span>
-    <span className="font-semibold text-gray-800">
-      Selling Price ₹1,999
-    </span>
-    <span className="text-gray-400">→</span>
-    <span className="font-bold text-emerald-700">
-      Valid: ₹999.50 to ₹1,998.99
-    </span>
-  </div>
-
-  <button
-    type="button"
-    onClick={() => setGuideOpen((prev) => !prev)}
-    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#dcd4c3] bg-white px-3 text-sm font-medium text-[#1f1b5f] shadow-2xs transition-colors hover:border-[#1f1b5f]/50 hover:bg-[#faf7f0] focus:outline-none"
-    aria-expanded={guideOpen}
-  >
-    <FileSpreadsheet size={15} className="text-[#1f1b5f]" />
-    <span>Import & Export Guide</span>
-    {guideOpen ? (
-      <ChevronUp size={15} className="text-[#1f1b5f]" />
-    ) : (
-      <ChevronDown size={15} className="text-[#1f1b5f]" />
-    )}
-  </button>
-</div>
-</div>
 
       {/* Collapsible Detail Section: Step-by-Step Workflow */}
       {guideOpen && (
-       <div className="space-y-3.5 border-t border-[#eae3d5] bg-[#faf8f4]/60 p-4">
-  {/* Two-Column Steps Card Grid */}
-  <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
-    {/* Step Card 1: Export */}
-    <div className="rounded-lg border border-[#e8e2d5] bg-white p-3.5 shadow-2xs">
-      <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#eef0f8] text-[#1f1b5f]">
-          <Download size={15} />
+        <div className="space-y-3.5 border-t border-[#eae3d5] bg-[#faf8f4]/60 p-4">
+          {/* Two-Column Steps Card Grid */}
+          <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+            {/* Step Card 1: Export */}
+            <div className="rounded-lg border border-[#e8e2d5] bg-white p-3.5 shadow-2xs">
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#eef0f8] text-[#1f1b5f]">
+                  <Download size={15} />
+                </div>
+                <h4 className="text-sm font-bold text-gray-900">
+                  How to Export & Edit Template
+                </h4>
+              </div>
+
+              <ol className="mt-3 space-y-2.5 text-xs leading-5 text-gray-600">
+                <li className="flex items-start gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e8ebf7] text-[11px] font-bold text-[#1f1b5f]">
+                    1
+                  </span>
+                  <span>
+                    Click the <strong>"Export Template"</strong> button in the
+                    top action bar.
+                  </span>
+                </li>
+
+                <li className="flex items-start gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e8ebf7] text-[11px] font-bold text-[#1f1b5f]">
+                    2
+                  </span>
+                  <span>
+                    Download and open the Excel file (
+                    <code className="rounded bg-gray-100 px-1 py-0.5 text-[11px] text-gray-800">
+                      .xlsx
+                    </code>
+                    ) with all variant details.
+                  </span>
+                </li>
+
+                <li className="flex items-start gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e8ebf7] text-[11px] font-bold text-[#1f1b5f]">
+                    3
+                  </span>
+                  <span>
+                    Edit <strong>only</strong> the{" "}
+                    <code className="rounded border border-[#d6cfec] bg-[#f0edf7] px-1.5 py-0.5 text-[11px] font-semibold text-[#1f1b5f]">
+                      newSpecialPrice
+                    </code>{" "}
+                    column for desired variants.
+                  </span>
+                </li>
+              </ol>
+            </div>
+
+            {/* Step Card 2: Import */}
+            <div className="rounded-lg border border-[#e8e2d5] bg-white p-3.5 shadow-2xs">
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 text-emerald-600">
+                  <Upload size={15} />
+                </div>
+                <h4 className="text-sm font-bold text-gray-900">
+                  How to Import & Apply Prices
+                </h4>
+              </div>
+
+              <ol className="mt-3 space-y-2.5 text-xs leading-5 text-gray-600">
+                <li className="flex items-start gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-800">
+                    1
+                  </span>
+                  <span>
+                    Fill in{" "}
+                    <code className="rounded bg-emerald-50 px-1 py-0.5 text-[11px] font-semibold text-emerald-800">
+                      newSpecialPrice
+                    </code>{" "}
+                    values in the sheet.
+                  </span>
+                </li>
+
+                <li className="flex items-start gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-800">
+                    2
+                  </span>
+                  <span>
+                    Save file as{" "}
+                    <strong className="text-gray-800">
+                      .xlsx, .xls, or .csv
+                    </strong>
+                    .
+                  </span>
+                </li>
+
+                <li className="flex items-start gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-800">
+                    3
+                  </span>
+                  <span>
+                    Click <strong>"Import Excel"</strong> and select your
+                    prepared file.
+                  </span>
+                </li>
+
+                <li className="flex items-start gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-800">
+                    4
+                  </span>
+                  <span>
+                    Review loaded prices in the table below and click{" "}
+                    <strong className="text-[#8c6300]">"Save Changes"</strong>{" "}
+                    to apply.
+                  </span>
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          {/* Validation Checklist / Important Notes Callout */}
+          <div className="rounded-lg border border-amber-200/90 bg-amber-50/80 p-3.5 text-xs">
+            <div className="flex items-center gap-2 font-bold text-sm text-amber-900">
+              <AlertTriangle size={15} className="shrink-0 text-amber-600" />
+              <span>Important Validation Notes</span>
+            </div>
+
+            <div className="mt-2 grid grid-cols-1 gap-2 text-gray-700 sm:grid-cols-2">
+              <div className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                <span className="leading-5">
+                  Do <strong>not</strong> modify column headers or IDs
+                  (productId, variantId, SKU).
+                </span>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                <span className="leading-5">
+                  Special price must be <strong>≥ 50%</strong> and{" "}
+                  <strong>&lt; 100%</strong> of selling price.
+                </span>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                <span className="leading-5">
+                  Leave{" "}
+                  <code className="rounded bg-amber-100/90 px-1 py-0.5 text-[11px]">
+                    newSpecialPrice
+                  </code>{" "}
+                  empty to keep existing price unchanged.
+                </span>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                <span className="leading-5">
+                  Always export a fresh template before importing to sync latest
+                  prices.
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
-        <h4 className="text-sm font-bold text-gray-900">
-          How to Export & Edit Template
-        </h4>
-      </div>
-
-      <ol className="mt-3 space-y-2.5 text-xs leading-5 text-gray-600">
-        <li className="flex items-start gap-2">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e8ebf7] text-[11px] font-bold text-[#1f1b5f]">
-            1
-          </span>
-          <span>
-            Click the <strong>"Export Template"</strong> button in the top
-            action bar.
-          </span>
-        </li>
-
-        <li className="flex items-start gap-2">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e8ebf7] text-[11px] font-bold text-[#1f1b5f]">
-            2
-          </span>
-          <span>
-            Download and open the Excel file (
-            <code className="rounded bg-gray-100 px-1 py-0.5 text-[11px] text-gray-800">
-              .xlsx
-            </code>
-            ) with all variant details.
-          </span>
-        </li>
-
-        <li className="flex items-start gap-2">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e8ebf7] text-[11px] font-bold text-[#1f1b5f]">
-            3
-          </span>
-          <span>
-            Edit <strong>only</strong> the{" "}
-            <code className="rounded border border-[#d6cfec] bg-[#f0edf7] px-1.5 py-0.5 text-[11px] font-semibold text-[#1f1b5f]">
-              newSpecialPrice
-            </code>{" "}
-            column for desired variants.
-          </span>
-        </li>
-      </ol>
-    </div>
-
-    {/* Step Card 2: Import */}
-    <div className="rounded-lg border border-[#e8e2d5] bg-white p-3.5 shadow-2xs">
-      <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 text-emerald-600">
-          <Upload size={15} />
-        </div>
-        <h4 className="text-sm font-bold text-gray-900">
-          How to Import & Apply Prices
-        </h4>
-      </div>
-
-      <ol className="mt-3 space-y-2.5 text-xs leading-5 text-gray-600">
-        <li className="flex items-start gap-2">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-800">
-            1
-          </span>
-          <span>
-            Fill in{" "}
-            <code className="rounded bg-emerald-50 px-1 py-0.5 text-[11px] font-semibold text-emerald-800">
-              newSpecialPrice
-            </code>{" "}
-            values in the sheet.
-          </span>
-        </li>
-
-        <li className="flex items-start gap-2">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-800">
-            2
-          </span>
-          <span>
-            Save file as{" "}
-            <strong className="text-gray-800">.xlsx, .xls, or .csv</strong>.
-          </span>
-        </li>
-
-        <li className="flex items-start gap-2">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-800">
-            3
-          </span>
-          <span>
-            Click <strong>"Import Excel"</strong> and select your prepared
-            file.
-          </span>
-        </li>
-
-        <li className="flex items-start gap-2">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-800">
-            4
-          </span>
-          <span>
-            Review loaded prices in the table below and click{" "}
-            <strong className="text-[#8c6300]">"Save Changes"</strong> to
-            apply.
-          </span>
-        </li>
-      </ol>
-    </div>
-  </div>
-
-  {/* Validation Checklist / Important Notes Callout */}
-  <div className="rounded-lg border border-amber-200/90 bg-amber-50/80 p-3.5 text-xs">
-    <div className="flex items-center gap-2 font-bold text-sm text-amber-900">
-      <AlertTriangle size={15} className="shrink-0 text-amber-600" />
-      <span>Important Validation Notes</span>
-    </div>
-
-    <div className="mt-2 grid grid-cols-1 gap-2 text-gray-700 sm:grid-cols-2">
-      <div className="flex items-start gap-2">
-        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-        <span className="leading-5">
-          Do <strong>not</strong> modify column headers or IDs (productId,
-          variantId, SKU).
-        </span>
-      </div>
-
-      <div className="flex items-start gap-2">
-        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-        <span className="leading-5">
-          Special price must be <strong>≥ 50%</strong> and{" "}
-          <strong>&lt; 100%</strong> of selling price.
-        </span>
-      </div>
-
-      <div className="flex items-start gap-2">
-        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-        <span className="leading-5">
-          Leave{" "}
-          <code className="rounded bg-amber-100/90 px-1 py-0.5 text-[11px]">
-            newSpecialPrice
-          </code>{" "}
-          empty to keep existing price unchanged.
-        </span>
-      </div>
-
-      <div className="flex items-start gap-2">
-        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-        <span className="leading-5">
-          Always export a fresh template before importing to sync latest
-          prices.
-        </span>
-      </div>
-    </div>
-  </div>
-</div>
       )}
     </div>
   );
@@ -1348,7 +1352,9 @@ const SellerSpecialPriceManager = () => {
         render: (_, row) => {
           const { isPending, hasError } = getRowFlags(row);
           if (hasError) {
-            return <StatusBadge status="invalid_price" label="Invalid Price" dot />;
+            return (
+              <StatusBadge status="invalid_price" label="Invalid Price" dot />
+            );
           }
           if (isPending) {
             return <StatusBadge status="modified" label="Modified" dot />;

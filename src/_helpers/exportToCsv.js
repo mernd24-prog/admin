@@ -127,13 +127,22 @@ export const exportToExcelWorkbook = (
       (column) => column.exportable !== false,
     );
 
-    const headers = exportColumns.map((column) => column.label || column.key);
+    // Add serial number as the first column
+    const headers = [
+      "S.NO",
+      ...exportColumns.map((column) => column.label || column.key),
+    ];
 
     const normalizedRows = normalizeExportRows(data, columns);
 
-    const dataRows = normalizedRows.map((row) =>
-      headers.map((header) => row[header] ?? ""),
-    );
+    // Generate sequential serial numbers starting from 1
+    const dataRows = normalizedRows.map((row, index) => [
+      index + 1,
+      ...exportColumns.map((column) => {
+        const header = column.label || column.key;
+        return row[header] ?? "";
+      }),
+    ]);
 
     // Row 1: Header
     // Row 2: Blank spacer
@@ -207,17 +216,20 @@ export const exportToExcelWorkbook = (
 
     // =====================================
     // CUSTOM CELL STYLES
-    // Preserve custom status colors while
-    // keeping all data center-aligned.
+    // Preserve custom status colors and
+    // account for the S.NO column offset.
     // =====================================
     Object.entries(cellStyles).forEach(([columnLabel, stylesByValue]) => {
-      const columnIndex = exportColumns.findIndex(
+      const exportColumnIndex = exportColumns.findIndex(
         (column) => (column.label || column.key) === columnLabel,
       );
 
-      if (columnIndex < 0) return;
+      if (exportColumnIndex < 0) return;
 
-      data.forEach((row, rowIndex) => {
+      // +1 because S.NO occupies column index 0
+      const columnIndex = exportColumnIndex + 1;
+
+      normalizedRows.forEach((row, rowIndex) => {
         const cellRef = XLSX.utils.encode_cell({
           r: rowIndex + 2,
           c: columnIndex,
@@ -226,7 +238,7 @@ export const exportToExcelWorkbook = (
         const cell = worksheet[cellRef];
         if (!cell) return;
 
-        const value = getExportValue(row, exportColumns[columnIndex]);
+        const value = getExportValue(row, exportColumns[exportColumnIndex]);
 
         const customStyle = stylesByValue[value];
         if (!customStyle) return;
@@ -315,7 +327,7 @@ export const exportToExcelWorkbook = (
         ref: XLSX.utils.encode_range({
           s: { r: 0, c: 0 },
           e: {
-            r: dataRows.length + 2,
+            r: dataRows.length + 1,
             c: headers.length - 1,
           },
         }),

@@ -292,21 +292,6 @@ const getSessionUser = () => {
     return null;
   }
 };
-// const DEAL_BADGE_OPTIONS = [
-//   "Today's Deal",
-//   "Flash Sale",
-//   "Hot Deal",
-//   "Limited Offer",
-//   "Best Deal",
-//   "Festival Offer",
-//   "Mega Sale",
-// ];
-// const DEAL_SOURCE_OPTIONS = [
-//   { value: "admin_direct", label: "Admin Direct" },
-//   { value: "seller_request", label: "Seller Request" },
-//   { value: "marketing_campaign", label: "Marketing Campaign" },
-//   { value: "seasonal_campaign", label: "Seasonal Campaign" },
-// ];
 
 const hasValue = (value) =>
   value !== undefined && value !== null && value !== "";
@@ -1870,8 +1855,7 @@ export default function ProductManagementUI() {
           [item.value, item.code, item.resourceId]
             .filter(Boolean)
             .some(
-              (value) =>
-                String(value).toLowerCase() === hsnValue.toLowerCase(),
+              (value) => String(value).toLowerCase() === hsnValue.toLowerCase(),
             ),
         ) ||
         (formData?.hsnApprovalStatus
@@ -2647,8 +2631,7 @@ export default function ProductManagementUI() {
       seoErrors.ogImage =
         "Wait for the OG image upload to finish before saving.";
     const keywords = Array.isArray(seo.keywords) ? seo.keywords : [];
-    if (!keywords.length)
-      seoErrors.keywords = "Add at least one SEO keyword.";
+    if (!keywords.length) seoErrors.keywords = "Add at least one SEO keyword.";
     else if (keywords.length > 20)
       seoErrors.keywords = "Use no more than 20 SEO keywords.";
     else if (

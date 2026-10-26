@@ -879,7 +879,11 @@ const VariantBuilder = ({
             {[
               { field: "price", label: "Price (₹)", placeholder: "0" },
               { field: "mrp", label: "MRP (₹)", placeholder: "0" },
-              { field: "salePrice", label: "Special Price (₹)", placeholder: "0" },
+              {
+                field: "salePrice",
+                label: "Special Price (₹)",
+                placeholder: "0",
+              },
               // { field: "gstRate", label: "GST (%)", placeholder: "18" },
             ].map(({ field, label, placeholder }) => (
               <div key={field} className="space-y-2">
@@ -960,7 +964,8 @@ const VariantBuilder = ({
 
           {errors &&
             typeof errors === "object" &&
-            (errors._form || Object.keys(errors).some((key) => key !== "_form")) && (
+            (errors._form ||
+              Object.keys(errors).some((key) => key !== "_form")) && (
               <div
                 className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
                 role="alert"
@@ -1229,10 +1234,12 @@ const VariantBuilder = ({
                                   label={option.name}
                                   required={option.required}
                                   inputId={`variant-${idx}-attribute-${axisKey}`}
-                                  options={(option.values || []).map((value) => ({
-                                    value: String(value),
-                                    label: String(value),
-                                  }))}
+                                  options={(option.values || []).map(
+                                    (value) => ({
+                                      value: String(value),
+                                      label: String(value),
+                                    }),
+                                  )}
                                   value={
                                     (option.values || []).some(
                                       (value) =>
@@ -1459,12 +1466,23 @@ const VariantBuilder = ({
                               "stock",
                               digitsOnly === ""
                                 ? ""
-                                : Math.min(Number(digitsOnly), MAX_PRODUCT_STOCK),
+                                : Math.min(
+                                    Number(digitsOnly),
+                                    MAX_PRODUCT_STOCK,
+                                  ),
                             );
                           }}
                         />
-                        {variantErrors.stock && <p className="text-[10px] text-red-600" role="alert">{variantErrors.stock}</p>}
-                        {variantErrors.reservedStock && <p className="text-[10px] text-red-600" role="alert">{variantErrors.reservedStock}</p>}
+                        {variantErrors.stock && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.stock}
+                          </p>
+                        )}
+                        {variantErrors.reservedStock && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.reservedStock}
+                          </p>
+                        )}
 
                         <p className="text-[10px] text-gray-400">
                           Managed in Inventory later too.
@@ -1509,7 +1527,11 @@ const VariantBuilder = ({
                           }
                           placeholder="e.g. 20 L / Coral (added after product title)"
                         />
-                        {variantErrors.title && <p className="text-[10px] text-red-600" role="alert">{variantErrors.title}</p>}
+                        {variantErrors.title && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.title}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Sort Order</FieldLabel>
@@ -1550,7 +1572,11 @@ const VariantBuilder = ({
                           }
                           placeholder="Optional variant detail. Added to the product short description."
                         />
-                        {variantErrors.shortDescription && <p className="text-[10px] text-red-600" role="alert">{variantErrors.shortDescription}</p>}
+                        {variantErrors.shortDescription && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.shortDescription}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Additional Full Description</FieldLabel>
@@ -1564,11 +1590,17 @@ const VariantBuilder = ({
                           }
                           placeholder="Optional variant detail. Added after the main product description."
                         />
-                        {variantErrors.description && <p className="text-[10px] text-red-600" role="alert">{variantErrors.description}</p>}
+                        {variantErrors.description && (
+                          <p className="text-[10px] text-red-600" role="alert">
+                            {variantErrors.description}
+                          </p>
+                        )}
                       </div>
 
                       {variantErrors.images && (
-                        <p className="text-[10px] text-red-600" role="alert">{variantErrors.images}</p>
+                        <p className="text-[10px] text-red-600" role="alert">
+                          {variantErrors.images}
+                        </p>
                       )}
                     </div>
 

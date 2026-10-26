@@ -2339,14 +2339,15 @@ export const ProductAnalytics = () => {
             {
               key: "title",
               label: "Product",
-
               render: (value) => (
-                <span className="font-semibold block max-w-2xl text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">
-                  {value}
+                <span
+                  title={value || "-"}
+                  className="font-semibold block max-w-sm  truncate break-words text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]"
+                >
+                  {value || "-"}
                 </span>
               ),
             },
-
             {
               key: "sku",
               label: "SKU",

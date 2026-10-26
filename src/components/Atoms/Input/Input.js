@@ -172,7 +172,9 @@ const Input = ({
     const selectionStart = input.selectionStart ?? currentValue.length;
     const selectionEnd = input.selectionEnd ?? selectionStart;
     return (
-      currentValue.length - (selectionEnd - selectionStart) + insertedText.length >
+      currentValue.length -
+        (selectionEnd - selectionStart) +
+        insertedText.length >
       maxLength
     );
   };
@@ -188,7 +190,19 @@ const Input = ({
     rest.onBeforeInput?.(event);
   };
 
+  const isNegativeNumberInput = () =>
+    type === "number" ||
+    type === "percentage" ||
+    ((!type || type === "text") &&
+      (rest.inputMode === "numeric" || rest.inputMode === "decimal"));
+
   const handleKeyDown = (event) => {
+    // Prevent negative sign for inputs without a type and numeric inputs.
+    if (isNegativeNumberInput() && event.key === "-") {
+      event.preventDefault();
+      return;
+    }
+
     if (
       event.key?.length === 1 &&
       !event.ctrlKey &&
@@ -199,15 +213,23 @@ const Input = ({
       event.preventDefault();
       setMaxLengthAttempted(true);
     }
+
     rest.onKeyDown?.(event);
   };
 
   const handlePaste = (event) => {
     const pastedText = event.clipboardData?.getData("text") || "";
+
+    if (isNegativeNumberInput() && pastedText.trim().startsWith("-")) {
+      event.preventDefault();
+      return;
+    }
+
     if (exceedsMaxLength(event.currentTarget, pastedText)) {
       event.preventDefault();
       setMaxLengthAttempted(true);
     }
+
     rest.onPaste?.(event);
   };
 
@@ -446,10 +468,9 @@ const Input = ({
           <p id={`${inputId}-error`} className="admin-field-error" role="alert">
             {error || errorMessage}
           </p>
-        ) :
-        isFocused &&
-        (limitReached || maxLengthAttempted) &&
-        limitMessage ? (
+        ) : isFocused &&
+          (limitReached || maxLengthAttempted) &&
+          limitMessage ? (
           <p className="admin-field-error" role="status">
             {limitMessage}
           </p>
