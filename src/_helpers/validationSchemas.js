@@ -519,6 +519,71 @@ const cmsOptionalTextList = (label, maxItems = 100) =>
     .of(cmsOptionalText(label, 2, 100))
     .max(maxItems, `${label} can contain no more than ${maxItems} items`);
 
+export const productSeoValidationSchema = Yup.object({
+  metaTitle: Yup.string().nullable().max(
+    70,
+    "Meta title must be 70 characters or fewer.",
+  ),
+  metaDescription: Yup.string().nullable().max(
+    160,
+    "Meta description must be 160 characters or fewer.",
+  ),
+  keywords: Yup.array()
+    .of(
+      Yup.string()
+        .trim()
+        .min(2, "Each SEO keyword must be 2–60 characters.")
+        .max(60, "Each SEO keyword must be 2–60 characters."),
+    )
+    .required("Add at least one SEO keyword.")
+    .min(1, "Add at least one SEO keyword.")
+    .max(20, "Use no more than 20 SEO keywords.")
+    .test(
+      "unique-keywords",
+      "SEO keywords must be unique, ignoring letter case.",
+      (keywords = []) => {
+        const normalized = keywords.map((keyword) =>
+          String(keyword || "").trim().toLowerCase(),
+        );
+        return new Set(normalized).size === normalized.length;
+      },
+    ),
+  canonicalUrl: Yup.string().nullable().test(
+    "http-url",
+    "Canonical URL must use HTTP or HTTPS.",
+    (value) => {
+      if (!value) return true;
+      try {
+        const url = new URL(value.trim());
+        return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname);
+      } catch {
+        return false;
+      }
+    },
+  ),
+  ogTitle: Yup.string().nullable().max(
+    70,
+    "Open Graph title must be 70 characters or fewer.",
+  ),
+  ogDescription: Yup.string().nullable().max(
+    160,
+    "Open Graph description must be 160 characters or fewer.",
+  ),
+  ogImage: Yup.string().nullable().test(
+    "http-url",
+    "Pasted image URLs must be valid HTTP/HTTPS URLs.",
+    (value) => {
+      if (!value) return true;
+      try {
+        const url = new URL(value.trim());
+        return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname);
+      } catch {
+        return false;
+      }
+    },
+  ),
+});
+
 export const contentPageValidationSchema = Yup.object({
   title: cmsRequiredText("Title", 2, 100),
   slug: cmsRequiredText("Slug", 2, 150),
@@ -665,22 +730,24 @@ export const shippingProfileValidationSchema = Yup.object({
     "Free shipping threshold cannot exceed ₹10,000",
   ),
   etaMin: optionalShippingNumber("Minimum ETA")
-    .integer("Minimum ETA must be a whole number")
-    .max(
-      MAX_SHIPPING_ETA_DAYS,
-      `Minimum ETA cannot exceed ${MAX_SHIPPING_ETA_DAYS} days`,
-    ),
-  etaMax: optionalShippingNumber("Maximum ETA")
-    .integer("Maximum ETA must be a whole number")
-    .max(
-      MAX_SHIPPING_ETA_DAYS,
-      `Maximum ETA cannot exceed ${MAX_SHIPPING_ETA_DAYS} days`,
-    )
-    .when("etaMin", ([etaMin], schema) =>
-      etaMin === undefined
-        ? schema
-        : schema.min(etaMin, "Maximum ETA must be at least the minimum ETA"),
-    ),
+  .integer("Minimum ETA must be a whole number")
+  .required("Minimum ETA is required")
+  .max(
+    MAX_SHIPPING_ETA_DAYS,
+    `Minimum ETA cannot exceed ${MAX_SHIPPING_ETA_DAYS} days`,
+  ),
+etaMax: optionalShippingNumber("Maximum ETA")
+  .integer("Maximum ETA must be a whole number")
+  .required("Maximum ETA is required")
+  .max(
+    MAX_SHIPPING_ETA_DAYS,
+    `Maximum ETA cannot exceed ${MAX_SHIPPING_ETA_DAYS} days`,
+  )
+  .when("etaMin", ([etaMin], schema) =>
+    etaMin === undefined
+      ? schema
+      : schema.min(etaMin, "Maximum ETA must be at least the minimum ETA"),
+  ),
   isDefault: Yup.boolean(),
   active: Yup.boolean(),
 });

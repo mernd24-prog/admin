@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import ImageUpload from "../Atoms/ImageGallery/ImageUpload";
-import Input from "../Atoms/Input/Input";
+import FormInput from "../Atoms/FormInput/FormInput";
 import {
   FiGlobe,
   FiMonitor,
@@ -18,18 +18,6 @@ const isHttpUrl = (value) => {
   }
 };
 
-const CharCount = ({ value = "", max }) => {
-  const len = String(value).length;
-  const isOver = len > max;
-  return (
-    <span
-      className={`text-xs text-end ${isOver ? "text-red-500" : "text-gray-400"}`}
-    >
-      {len}/{max}
-    </span>
-  );
-};
-
 /**
  * SEO metadata panel.
  *
@@ -39,14 +27,25 @@ const CharCount = ({ value = "", max }) => {
  *  slug     - string (product slug, read-only)
  */
 const SEOPanel = ({
-  seo = {},
+  seo: seoProp = {},
   onChange,
+  formik,
   slug = "",
-  errors = {},
+  errors: externalErrors = {},
   onOgImageUpload,
   onOgImageRemove,
   ogImageUploading = false,
 }) => {
+  const seo = formik?.values || seoProp;
+  const formikErrors = formik?.errors || {};
+  const errors = {
+    ...externalErrors,
+    ...Object.fromEntries(
+      Object.entries(formikErrors).filter(
+        ([field]) => formik?.touched?.[field] || formik?.submitCount > 0,
+      ),
+    ),
+  };
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [keywordInput, setKeywordInput] = useState("");
   const [previewMode, setPreviewMode] = useState("desktop");
@@ -55,6 +54,21 @@ const SEOPanel = ({
   const keywords = Array.isArray(seo.keywords) ? seo.keywords : [];
   const maxKeywords = 20;
   const keywordsAtMax = keywords.length >= maxKeywords;
+  const keywordError =
+    typeof errors.keywords === "string"
+      ? errors.keywords
+      : Array.isArray(errors.keywords)
+        ? errors.keywords.find((error) => typeof error === "string") || ""
+        : "";
+
+  const updateSeoField = (field, value) => {
+    onChange(`seo.${field}`, value);
+    formik?.setFieldValue(field, value);
+  };
+
+  const touchSeoField = (field) => {
+    formik?.setFieldTouched(field, true);
+  };
 
   useEffect(() => {
     if (errors.ogTitle || errors.ogDescription || errors.ogImage) {
@@ -73,7 +87,7 @@ const SEOPanel = ({
       keyword.length <= 60 &&
       keywords.length < maxKeywords
     ) {
-      onChange("seo.keywords", [...keywords, keyword]);
+      updateSeoField("keywords", [...keywords, keyword]);
       setKeywordInput("");
     }
   };
@@ -84,22 +98,22 @@ const SEOPanel = ({
 
       const keyword = keywordInput.trim();
       if (
-        keyword &&
+        keyword.length >= 2 &&
         !keywords.some(
           (item) => String(item).trim().toLowerCase() === keyword.toLowerCase(),
         ) &&
         keyword.length <= 60 &&
         keywords.length < maxKeywords
       ) {
-        onChange("seo.keywords", [...keywords, keyword]);
+        updateSeoField("keywords", [...keywords, keyword]);
         setKeywordInput("");
       }
     }
   };
 
   const removeKeyword = (kw) => {
-    onChange(
-      "seo.keywords",
+    updateSeoField(
+      "keywords",
       keywords.filter((k) => k !== kw),
     );
   };
@@ -239,57 +253,49 @@ const SEOPanel = ({
 
       {/* Meta title */}
       <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700">
-            Meta Title
-          </label>
-        </div>
-        <input
+        <FormInput
+          label="Meta Title"
+          name="metaTitle"
           type="text"
-          className="admin-input product-flat-gold-focus !h-[42px]"
+          className="!mb-0"
+          inputClassName="product-flat-gold-focus !h-[42px]"
           placeholder="Compelling title for search engines (max 70 chars)"
           value={seo.metaTitle || ""}
-          onChange={(e) => onChange("seo.metaTitle", e.target.value)}
+          onChange={(e) => updateSeoField("metaTitle", e.target.value)}
+          onBlur={() => touchSeoField("metaTitle")}
           maxLength={70}
-          aria-invalid={Boolean(errors.metaTitle)}
+          showLengthCount
+          limitMessage="Meta title must be 70 characters or fewer."
+          error={errors.metaTitle}
         />
-        {errors.metaTitle && (
-          <p className="text-xs text-red-600" role="alert">
-            {errors.metaTitle}
-          </p>
-        )}
-        <CharCount value={seo.metaTitle} max={70} />
       </div>
 
       {/* Meta description */}
       <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700">
-            Meta Description
-          </label>
-          <CharCount value={seo.metaDescription} max={160} />
-        </div>
-        <textarea
+        <label className="text-sm font-medium text-gray-700">Meta Description</label>
+        <FormInput
+          label=""
+          name="metaDescription"
+          type="textarea"
           rows={3}
-          className="admin-input product-flat-gold-focus !h-[64px] resize-none !pt-4"
+          className="!mb-0"
+          inputClassName="product-flat-gold-focus !h-[64px] resize-none !pt-4"
           placeholder="Summary shown in search results (max 160 chars)"
           value={seo.metaDescription || ""}
-          onChange={(e) => onChange("seo.metaDescription", e.target.value)}
+          onChange={(e) => updateSeoField("metaDescription", e.target.value)}
+          onBlur={() => touchSeoField("metaDescription")}
           maxLength={160}
-          aria-invalid={Boolean(errors.metaDescription)}
+          showLengthCount
+          limitMessage="Meta description must be 160 characters or fewer."
+          error={errors.metaDescription}
         />
-        {errors.metaDescription && (
-          <p className="text-xs text-red-600" role="alert">
-            {errors.metaDescription}
-          </p>
-        )}
       </div>
 
       {/* Keywords */}
       <div className="space-y-2" data-error-field="seo.keywords">
-        <Input
+        <FormInput
           labelName="Keywords *"
-          name="seo.keywords"
+          name="keywords"
           type="text"
           className="!mb-0"
           placeholder={
@@ -301,19 +307,16 @@ const SEOPanel = ({
           disabled={keywordsAtMax}
           onChange={(e) => setKeywordInput(e.target.value)}
           onKeyDown={handleKeywordAdd}
-          onBlur={addKeyword}
+          onBlur={() => {
+            addKeyword();
+            touchSeoField("keywords");
+          }}
           maxLength={60}
           showLengthCount={false}
           aria-required="true"
-          error={errors.keywords}
+          error={keywordError}
           helperText="Required — type a keyword, then press Enter or comma to add it."
         />
-        {errors.keywords && (
-          <p className="text-xs text-red-600" role="alert">
-            {errors.keywords}
-          </p>
-        )}
-
         <div className="flex min-h-[34px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-2">
           {keywords.length ? (
             keywords.map((kw) => (
@@ -359,22 +362,18 @@ const SEOPanel = ({
 
       {/* Canonical URL */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700">
-          Canonical URL
-        </label>
-        <input
+        <FormInput
+          label="Canonical URL"
+          name="canonicalUrl"
           type="url"
-          className="admin-input product-flat-gold-focus !h-[42px]"
+          className="!mb-0"
+          inputClassName="product-flat-gold-focus !h-[42px]"
           placeholder="https://yourstore.com/products/product-slug"
           value={seo.canonicalUrl || ""}
-          onChange={(e) => onChange("seo.canonicalUrl", e.target.value)}
-          aria-invalid={Boolean(errors.canonicalUrl)}
+          onChange={(e) => updateSeoField("canonicalUrl", e.target.value)}
+          onBlur={() => touchSeoField("canonicalUrl")}
+          error={errors.canonicalUrl}
         />
-        {errors.canonicalUrl && (
-          <p className="text-xs text-red-600" role="alert">
-            {errors.canonicalUrl}
-          </p>
-        )}
         <p className="text-xs text-gray-400">
           Leave blank to use the default product URL
         </p>
@@ -407,70 +406,48 @@ const SEOPanel = ({
           <div className="mt-3 space-y-4 pl-4 border-l-2 border-gray-100">
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">
-                  OG Title
-                </label>
-                <CharCount value={seo.ogTitle} max={70} />
+                <label className="text-sm font-medium text-gray-700">OG Title</label>
               </div>
 
-              <input
+              <FormInput
+                label=""
+                name="ogTitle"
                 type="text"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
+                className="!mb-0"
+                inputClassName="product-flat-gold-focus"
                 placeholder="Title for Facebook/Twitter (max 70 characters)"
                 value={seo.ogTitle || ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-
-                  if (value.length > 70) return;
-
-                  onChange("seo.ogTitle", value);
-                }}
+                onChange={(e) => updateSeoField("ogTitle", e.target.value)}
+                onBlur={() => touchSeoField("ogTitle")}
                 maxLength={70}
-                aria-invalid={
-                  Boolean(errors.ogTitle) || (seo.ogTitle || "").length >= 70
-                }
+                showLengthCount
+                limitMessage="Open Graph title must be 70 characters or fewer."
+                error={errors.ogTitle}
               />
-
-              {(errors.ogTitle || (seo.ogTitle || "").length >= 70) && (
-                <p className="text-xs text-red-600" role="alert">
-                  {errors.ogTitle || "OG Title cannot exceed 70 characters."}
-                </p>
-              )}
             </div>
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700">
                   OG Description
                 </label>
-                <CharCount value={seo.ogDescription} max={160} />
               </div>
 
-              <textarea
+              <FormInput
+                label=""
+                name="ogDescription"
+                type="textarea"
                 rows={2}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)] resize-none"
+                className="!mb-0"
+                inputClassName="product-flat-gold-focus resize-none"
                 placeholder="Description for social sharing (max 160 characters)"
                 value={seo.ogDescription || ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-
-                  if (value.length > 160) return;
-
-                  onChange("seo.ogDescription", value);
-                }}
+                onChange={(e) => updateSeoField("ogDescription", e.target.value)}
+                onBlur={() => touchSeoField("ogDescription")}
                 maxLength={160}
-                aria-invalid={
-                  Boolean(errors.ogDescription) ||
-                  (seo.ogDescription || "").length >= 160
-                }
+                showLengthCount
+                limitMessage="Open Graph description must be 160 characters or fewer."
+                error={errors.ogDescription}
               />
-
-              {(errors.ogDescription ||
-                (seo.ogDescription || "").length >= 160) && (
-                <p className="text-xs text-red-600" role="alert">
-                  {errors.ogDescription ||
-                    "OG Description cannot exceed 160 characters."}
-                </p>
-              )}
             </div>
             <div className="space-y-3">
               <ImageUpload
@@ -484,12 +461,12 @@ const SEOPanel = ({
                 loadingText="Uploading OG image..."
               />
               <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">
-                  OG Image URL
-                </label>
-                <input
+                <FormInput
+                  label="OG Image URL"
+                  name="ogImage"
                   type="url"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]"
+                  className="!mb-0"
+                  inputClassName="product-flat-gold-focus"
                   placeholder="https://cdn.yourstore.com/og-image.jpg"
                   value={seo.ogImage || ""}
                   onPaste={(event) => {
@@ -508,15 +485,11 @@ const SEOPanel = ({
                   }}
                   onChange={(e) => {
                     setOgImagePasteError("");
-                    onChange("seo.ogImage", e.target.value);
+                    updateSeoField("ogImage", e.target.value);
                   }}
-                  aria-invalid={Boolean(ogImageError)}
+                  onBlur={() => touchSeoField("ogImage")}
+                  error={ogImageError}
                 />
-                {ogImageError && (
-                  <p className="text-xs text-red-600" role="alert">
-                    {ogImageError}
-                  </p>
-                )}
               </div>
             </div>
           </div>
