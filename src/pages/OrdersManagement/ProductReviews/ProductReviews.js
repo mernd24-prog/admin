@@ -13,6 +13,8 @@ import {
   MdVisibility,
   MdStar,
   MdStarBorder,
+  MdChevronLeft,
+  MdChevronRight,
 } from "react-icons/md";
 import {
   PageHeader,
@@ -223,13 +225,38 @@ const RatingStars = ({ value = 0, showValue = true }) => {
   );
 };
 
-const ReviewDetailsModal = ({ review, onClose }) => {
+const ReviewDetailsModal = ({ review, onClose, onModerate }) => {
+  const [activeImage, setActiveImage] = useState("");
+  const [internalNote, setInternalNote] = useState("");
+
   if (!review) return null;
 
   const reviewText = review.reviewText || review.comment || review.review || "";
 
   const buyerName = displayBuyerName(review);
+  const productName = getProductName(review) || "Product";
+  const productImage =
+    review.productImage ||
+    review.product?.image ||
+    review.product?.imageUrl ||
+    review.product?.thumbnail ||
+    review.product?.thumbnailUrl ||
+    review.product?.images?.find(Boolean) ||
+    review.product?.commonImages?.find(Boolean) ||
+    "";
+  const reviewMedia = Array.isArray(review.media)
+    ? review.media.map((item) => (typeof item === "string" ? item : item?.url || item?.imageUrl || item?.src || "")).filter(Boolean)
+    : [];
+  const selectedImage = activeImage || reviewMedia[0] || "";
+  const activeImageIndex = reviewMedia.indexOf(selectedImage);
+  const showAdjacentImage = (direction) => {
+    if (reviewMedia.length < 2) return;
+    const nextIndex = (activeImageIndex + direction + reviewMedia.length) % reviewMedia.length;
+    setActiveImage(reviewMedia[nextIndex]);
+  };
   const rating = Number(review.rating || 0);
+  const statusLabel = String(review.status || "pending").replace(/_/g, " ");
+  const isVerifiedPurchase = Boolean(review.orderId && !String(review.orderId).startsWith("admin:"));
   const reviewedAt = review.createdAt
     ? formatDateTime12Hour(review.createdAt, "—")
     : "—";
@@ -248,25 +275,25 @@ const ReviewDetailsModal = ({ review, onClose }) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="review-details-title"
-        className="flex h-[750px] max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl"
+        className="relative flex h-[min(900px,96vh)] max-h-[96vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-[#fbfaf7] shadow-2xl"
       >
         {/* Header */}
-        <div className="relative flex items-center justify-between gap-4 border-b border-gray-100 px-5 py-5 sm:px-7">
+        <div className="relative flex items-center justify-between gap-4 border-b border-[#eee8dd] bg-white px-5 py-3 sm:px-7">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#F0DDA8] bg-[#FFF8E8] text-[#9A700C]">
-              <MdRateReview aria-hidden="true" size={23} />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#F0DDA8] bg-[#FFF8E8] text-[#9A700C]">
+              <MdRateReview aria-hidden="true" size={20} />
             </div>
 
             <div className="min-w-0">
-              <h2
-                id="review-details-title"
-                className="text-lg font-bold tracking-tight text-gray-900"
-              >
-                Review Details
-              </h2>
-              <p className="mt-1 text-xs text-gray-500">
-                Customer feedback and review information
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 id="review-details-title" className="text-lg font-bold tracking-tight text-gray-900">
+                  Review details
+                </h2>
+                <span className="rounded-full bg-[#fff2d6] px-2.5 py-1 text-xs font-semibold capitalize text-[#9a6500]">
+                  {statusLabel} review
+                </span>
+              </div>
+              <p className="truncate text-xs text-gray-600">{productName} · Review #{getReviewId(review).slice(-6)}</p>
             </div>
           </div>
 
@@ -274,74 +301,89 @@ const ReviewDetailsModal = ({ review, onClose }) => {
             type="button"
             onClick={onClose}
             aria-label="Close review details"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 transition duration-200 hover:border-gray-300 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#D6A323]/40"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition duration-200 hover:border-gray-300 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#D6A323]/40"
           >
             <MdClose aria-hidden="true" size={21} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto bg-gray-50/60 px-5 py-6 sm:px-7">
-          {review.title && (
-            <section>
-              <div className="mb-2 flex items-center gap-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                  Review Title
-                </p>
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto md:grid-cols-[minmax(250px,0.72fr)_minmax(0,1.28fr)] md:overflow-hidden">
+          <section className="flex min-h-[420px] flex-col border-b border-[#eee8dd] p-4 sm:p-5 md:min-h-0 md:border-b-0 md:border-r">
+            <div className="mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-wide text-gray-600">
+              <span>Review photos · {reviewMedia.length}</span>
+              <span>{reviewMedia.length ? `${activeImageIndex + 1} / ${reviewMedia.length}` : "0 / 0"}</span>
+            </div>
+            <div className="relative flex min-h-[240px] max-h-[48vh] flex-[0_1_48vh] items-center justify-center overflow-hidden rounded-xl bg-[#e9e6df] md:min-h-0">
+              {selectedImage ? (
+                <>
+                  <img src={selectedImage} alt={`${productName} review photo ${activeImageIndex + 1}`} className="h-full w-full object-contain" />
+                  {reviewMedia.length > 1 && (
+                    <>
+                      <button type="button" onClick={() => showAdjacentImage(-1)} aria-label="Previous review photo" className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-gray-700 shadow-sm"><MdChevronLeft size={24} /></button>
+                      <button type="button" onClick={() => showAdjacentImage(1)} aria-label="Next review photo" className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-gray-700 shadow-sm"><MdChevronRight size={24} /></button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <span className="text-xs text-gray-500">No review photos</span>
+              )}
+            </div>
+            {reviewMedia.length > 0 && (
+              <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                {reviewMedia.map((image, index) => (
+                  <button key={`${image}-${index}`} type="button" onClick={() => setActiveImage(image)} aria-label={`Show review photo ${index + 1}`} className={`h-[72px] w-[72px] shrink-0 overflow-hidden rounded-lg border-2 ${image === selectedImage ? "border-amber-500" : "border-transparent"}`}>
+                    <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  </button>
+                ))}
               </div>
+            )}
+            <p className="mt-2 text-[11px] leading-5 text-gray-600">Photos uploaded by the customer. Check that they match the product before approving.</p>
+          </section>
 
-              <div className="rounded-xl border border-gray-200 bg-white px-4 py-3.5 shadow-sm">
-                <h3 className="break-words text-sm font-semibold leading-6 text-gray-900">
-                  {review.title}
-                </h3>
+          <section className="min-h-0 space-y-3 overflow-y-auto p-4 sm:p-5">
+            <div className="flex items-center gap-2 rounded-xl border border-[#eee8dd] bg-white p-2.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-800">{buyerName.charAt(0).toUpperCase()}</div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-gray-900">{buyerName}</p>
+                <p className="truncate text-xs text-gray-600">{reviewedAt} · Order #{String(review.orderId || "").slice(-6)}</p>
               </div>
-            </section>
-          )}
-
-          <section>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                  Customer Review
-                </p>
-              </div>
-
-              <span className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium tabular-nums text-gray-500">
-                {reviewText.length} characters
-              </span>
+              {isVerifiedPurchase && <span className="rounded-full bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700">✓ Verified purchase</span>}
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-              <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
-                <span className="h-2 w-2 rounded-full bg-[#D6A323]" />
-                <span className="text-xs font-medium text-gray-500">
-                  Full review message
-                </span>
-              </div>
+            {review.buyer?.email && <p className="-mt-2 px-1 text-xs text-gray-500">{review.buyer.email}</p>}
+            <div className="flex items-center gap-2 text-lg text-amber-500">{Array.from({ length: 5 }, (_, index) => <span key={index} className={index < rating ? "" : "text-gray-300"}>★</span>)}<span className="text-sm font-semibold text-gray-800">{rating.toFixed(1)}</span></div>
+            <h3 className="text-lg font-bold text-gray-900">{review.title || "Customer review"}</h3>
 
-              <div className="max-h-[45vh] overflow-y-auto p-4 sm:p-5">
-                {reviewText ? (
-                  <p className="whitespace-pre-wrap break-words text-sm leading-7 text-gray-700">
-                    {reviewText}
-                  </p>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <MdRateReview
-                      aria-hidden="true"
-                      size={30}
-                      className="mb-2 text-gray-300"
-                    />
-                    <p className="text-sm font-medium text-gray-600">
-                      No review text available
-                    </p>
-                    <p className="mt-1 text-xs text-gray-400">
-                      The customer did not provide a written review.
-                    </p>
-                  </div>
-                )}
+            <div className="rounded-xl border border-[#eee8dd] bg-white p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-xs font-bold uppercase tracking-wide text-gray-700">Customer review</span>
+                <span className="rounded-full border border-[#eee8dd] px-2.5 py-1 text-[11px] text-gray-600">{reviewText.length} characters</span>
               </div>
+              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-800">{reviewText || "No review text provided."}</p>
+            </div>
+
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-600">Moderation</p>
+              <label className="mb-1 block text-sm font-medium text-gray-800" htmlFor="review-internal-note">Internal note <span className="text-xs font-normal text-gray-500">(local draft only)</span></label>
+              <textarea id="review-internal-note" value={internalNote} onChange={(event) => setInternalNote(event.target.value)} rows={3} placeholder="Add a note for your team..." className="w-full resize-y rounded-lg border border-[#e8e1d5] bg-white px-3 py-2.5 text-sm text-gray-800 outline-none placeholder:text-gray-500 focus:border-amber-400" />
+              {review.rejectionReason && <p className="mt-1 text-xs text-red-700">Existing note: {review.rejectionReason}</p>}
             </div>
           </section>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#eee8dd] bg-white px-4 py-3 sm:px-5">
+          <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold capitalize text-gray-700">{statusLabel}</span>
+          <div className="flex flex-wrap justify-end gap-2">
+            {review.status === "published" ? (
+              <button type="button" onClick={() => onModerate(review, "hidden")} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50">Hide from store</button>
+            ) : (
+              <>
+                <button type="button" onClick={() => onModerate(review, "rejected")} className="rounded-lg border border-red-500 bg-white px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50">Reject</button>
+                <button type="button" onClick={() => onModerate(review, "published")} className="rounded-lg bg-[#DDAA16] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#c9960c]">Approve review</button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -673,6 +715,7 @@ const ProductReviews = () => {
         status === "published" ? "Review approved" : "Review updated",
       );
 
+      setReviewDetailsTarget(null);
       fetchReviews();
     } catch (err) {
       toast.error(err?.message || "Failed to update review");
@@ -788,19 +831,29 @@ const ProductReviews = () => {
       label: "Product",
       render: (v, row) => {
         const productImage =
-          row.productImage || row.product?.image || row.image;
+          row.productImage ||
+          row.product?.image ||
+          row.product?.imageUrl ||
+          row.product?.thumbnail ||
+          row.product?.thumbnailUrl ||
+          row.product?.images?.find(Boolean) ||
+          row.product?.commonImages?.find(Boolean) ||
+          row.image ||
+          row.imageUrl ||
+          row.thumbnail ||
+          row.thumbnailUrl ||
+          row.images?.find(Boolean) ||
+          row.commonImages?.find(Boolean);
         const productName = getProductName(row) || "Product";
 
         return (
           <div className="flex min-w-0 items-center gap-2.5">
-            {productImage && (
-              <span
-                role="img"
-                aria-label={productName}
-                className="h-9 w-9 flex-shrink-0 rounded-md border border-gray-200 bg-cover bg-center"
-                style={{ backgroundImage: cssImageUrl(productImage) }}
-              />
-            )}
+            <span
+              role="img"
+              aria-label={`${productName} image`}
+              className="h-9 w-9 flex-shrink-0 rounded-md border border-gray-200 bg-cover bg-center bg-gray-50"
+              style={productImage ? { backgroundImage: cssImageUrl(productImage) } : undefined}
+            />
 
             <div className="min-w-0">
               <span
@@ -920,18 +973,16 @@ const ProductReviews = () => {
                 : reviewText || "No review text"}
             </p>
 
-            {isLongReview && (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setReviewDetailsTarget(row);
-                }}
-                className="mt-1 text-xs font-semibold text-[#2F6BFF] transition hover:text-[#1F1B5F] hover:underline"
-              >
-                Show more
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setReviewDetailsTarget(row);
+              }}
+              className="mt-1 text-xs font-semibold text-[#2F6BFF] transition hover:text-[#1F1B5F] hover:underline"
+            >
+              {isLongReview ? "Show more" : "View details"}
+            </button>
           </div>
         );
       },
@@ -1318,6 +1369,7 @@ const ProductReviews = () => {
       <ReviewDetailsModal
         review={reviewDetailsTarget}
         onClose={() => setReviewDetailsTarget(null)}
+        onModerate={handleReviewStatus}
       />
     </div>
   );
