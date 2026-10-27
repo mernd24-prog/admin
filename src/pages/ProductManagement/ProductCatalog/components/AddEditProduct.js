@@ -2643,7 +2643,9 @@ export default function ProductManagementUI() {
     }
 
     const tags = Array.isArray(formData?.tags) ? formData.tags : [];
-    if (tags.length > 20) {
+    if (tags.length === 0) {
+      newErrors.tags = "Add at least one tag.";
+    } else if (tags.length > 20) {
       newErrors.tags = "Use no more than 20 tags.";
     } else if (
       tags.some((tag) => {
@@ -3515,6 +3517,9 @@ export default function ProductManagementUI() {
           /seo\.keywords/i.test(field) &&
           /required|does not contain|at least|array\.min/i.test(rawFieldMessage)
             ? "Add at least one SEO keyword."
+            : /^tags$/i.test(field) &&
+              /does not contain|required|at least|array\.min/i.test(rawFieldMessage)
+            ? "Add at least one tag."
             : rawFieldMessage;
         if (fieldMessage !== rawFieldMessage) {
           friendlyApiMessage = fieldMessage;
@@ -3566,7 +3571,7 @@ export default function ProductManagementUI() {
           mappedErrors.shipping = fieldMessage;
         } else if (/image|media|video/i.test(`${field} ${fieldMessage}`)) {
           mappedErrors.commonImages = fieldMessage;
-        } else if (/tag/i.test(`${field} ${fieldMessage}`)) {
+        } else if (/^tags$/i.test(field) || /tag/i.test(`${field} ${fieldMessage}`)) {
           mappedErrors.tags = fieldMessage;
         } else if (
           /seo|keyword|canonical|open graph/i.test(`${field} ${fieldMessage}`)
@@ -3634,9 +3639,7 @@ export default function ProductManagementUI() {
             friendlyMessage,
           );
         } else if (
-          /seo\.keywords|seo keywords|does not contain 1 required value/i.test(
-            message,
-          )
+          /seo\.keywords|seo keywords/i.test(message)
         ) {
           friendlyApiMessage = "Add at least one SEO keyword.";
           mappedErrors.seo = { keywords: friendlyApiMessage };
