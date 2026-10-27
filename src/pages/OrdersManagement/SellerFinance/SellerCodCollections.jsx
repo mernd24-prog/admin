@@ -55,7 +55,7 @@ export default function SellerCodCollections() {
   const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState({
     page: 1,
-    pageSize: 100,
+    pageSize: 10,
   });
   const emptyForm = {
     open: false,

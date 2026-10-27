@@ -48,7 +48,7 @@ export default function CodCollections() {
 
   const [pagination, setPagination] = useState({
     page: 1,
-    pageSize: 100,
+    pageSize: 10,
   });
 
   const [refreshKey, setRefreshKey] = useState(0);

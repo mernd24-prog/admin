@@ -47,7 +47,7 @@ import {
 
 const DEFAULT_STATE = {
   page: 1,
-  pageSize: 20,
+  pageSize: 10,
   search: "",
   sortKey: "createdAt",
   sortDir: "desc",
