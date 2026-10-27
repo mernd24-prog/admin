@@ -82,7 +82,7 @@ const Row = ({ label, value }) => (
       {label}
     </p>
 
-    <p className="break-words text-sm font-semibold leading-5 text-gray-800">
+    <p className="break-words text-sm  line-clamp-1 font-semibold leading-5 text-gray-800">
       {formatLabel(formatDisplayValue(value))}
     </p>
   </div>
@@ -573,7 +573,7 @@ const ProductAdminDetails = () => {
           </div>
 
           {/* Product information */}
-          <div className="flex min-w-0 flex-col justify-center px-5 py-5 sm:px-7 lg:px-8">
+          <div className="flex min-w-0 flex-col justify-center px-5 py-5 sm:px-7 lg:px-8  ">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               {product.status && (
                 <ProductStatusBadge
@@ -581,16 +581,10 @@ const ProductAdminDetails = () => {
                   revisionStatus={product.revisionStatus}
                 />
               )}
-
-              {/* {product.productType && (
-                <span className="inline-flex items-center rounded-full border border-[var(--admin-gold)]/25 bg-[var(--admin-gold)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--admin-gold-dark)]">
-                  {formatLabel(product.productType)}
-                </span>
-              )} */}
             </div>
 
             <h1
-              className="max-w-4xl text-xl font-bold leading-7 tracking-tight text-[var(--admin-navy)] sm:text-md lg:text-[18px] lg:leading-8"
+              className="min-w-0 w-full max-w-3xl break-words [overflow-wrap:anywhere] line-clamp-2 text-xl font-bold leading-7 tracking-tight text-[var(--admin-navy)] sm:text-lg lg:text-[18px] lg:leading-7"
               title={product.title || "Product Details"}
             >
               {product.title || "Product Details"}

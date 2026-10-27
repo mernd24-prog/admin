@@ -86,12 +86,7 @@ const displayBuyerName = (review = {}) => {
 };
 
 const getProductId = (row = {}) =>
-  row.productId ||
-  row.product?._id ||
-  row.product?.id ||
-  row._id ||
-  row.id ||
-  "";
+  row.productId || row.product?._id || row.product?.id || "";
 
 const getMetaTotal = (payload = {}, source = {}, list = []) =>
   Number(
@@ -124,13 +119,6 @@ const getProductReviewSummaryPayload = (state = {}) => {
   };
 };
 
-/**
- * Extract individual review rows from the detail thunk's Redux state.
- *
- * The exact reducer property should match the fulfilled reducer in
- * adminCoreSlice.js. The candidate keys below support common naming
- * conventions. If your slice uses another key, add it to candidateKeys.
- */
 const getProductReviewDetailPayload = (state = {}) => {
   const candidateKeys = [
     "productReviewSummaryReviewsData",
@@ -150,7 +138,6 @@ const getProductReviewDetailPayload = (state = {}) => {
     }
   }
 
-  // Fallback for a differently named detail reducer property.
   if (!payload) {
     const matchingEntry = Object.entries(state || {}).find(
       ([key, value]) =>
@@ -236,11 +223,138 @@ const RatingStars = ({ value = 0, showValue = true }) => {
   );
 };
 
+const ReviewDetailsModal = ({ review, onClose }) => {
+  if (!review) return null;
+
+  const reviewText = review.reviewText || review.comment || review.review || "";
+
+  const buyerName = displayBuyerName(review);
+  const rating = Number(review.rating || 0);
+  const reviewedAt = review.createdAt
+    ? formatDateTime12Hour(review.createdAt, "—")
+    : "—";
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="review-details-title"
+        className="flex h-[750px] max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl"
+      >
+        {/* Header */}
+        <div className="relative flex items-center justify-between gap-4 border-b border-gray-100 px-5 py-5 sm:px-7">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#F0DDA8] bg-[#FFF8E8] text-[#9A700C]">
+              <MdRateReview aria-hidden="true" size={23} />
+            </div>
+
+            <div className="min-w-0">
+              <h2
+                id="review-details-title"
+                className="text-lg font-bold tracking-tight text-gray-900"
+              >
+                Review Details
+              </h2>
+              <p className="mt-1 text-xs text-gray-500">
+                Customer feedback and review information
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close review details"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 transition duration-200 hover:border-gray-300 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#D6A323]/40"
+          >
+            <MdClose aria-hidden="true" size={21} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto bg-gray-50/60 px-5 py-6 sm:px-7">
+          {review.title && (
+            <section>
+              <div className="mb-2 flex items-center gap-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                  Review Title
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-white px-4 py-3.5 shadow-sm">
+                <h3 className="break-words text-sm font-semibold leading-6 text-gray-900">
+                  {review.title}
+                </h3>
+              </div>
+            </section>
+          )}
+
+          <section>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                  Customer Review
+                </p>
+              </div>
+
+              <span className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium tabular-nums text-gray-500">
+                {reviewText.length} characters
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+              <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
+                <span className="h-2 w-2 rounded-full bg-[#D6A323]" />
+                <span className="text-xs font-medium text-gray-500">
+                  Full review message
+                </span>
+              </div>
+
+              <div className="max-h-[45vh] overflow-y-auto p-4 sm:p-5">
+                {reviewText ? (
+                  <p className="whitespace-pre-wrap break-words text-sm leading-7 text-gray-700">
+                    {reviewText}
+                  </p>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <MdRateReview
+                      aria-hidden="true"
+                      size={30}
+                      className="mb-2 text-gray-300"
+                    />
+                    <p className="text-sm font-medium text-gray-600">
+                      No review text available
+                    </p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      The customer did not provide a written review.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ProductReviews = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const reviewsData = useSelector((state) => state.adminCore);
+
+  const [reviewDetailsTarget, setReviewDetailsTarget] = useState(null);
 
   const list = useListPage({
     defaultPageSize: 20,
@@ -259,13 +373,10 @@ const ProductReviews = () => {
   });
 
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
-
   const [userData, setUserData] = useState(() => getSessionUserData());
-
   const [productOptions, setProductOptions] = useState([]);
   const [selectedSellerId, setSelectedSellerId] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
@@ -273,11 +384,7 @@ const ProductReviews = () => {
   const isSellerPanelUser = SELLER_PANEL_ROLES.has(userData?.role);
   const sellerView = isSellerPanel();
   const sellerScoped = isSellerPanelUser || sellerView;
-
-  // Must be declared before filterFields and any other dependent values.
   const isDetailMode = Boolean(selectedProductId);
-
-  // Sellers should not be able to select another seller.
   const showSellerFilter = !sellerScoped;
 
   const summaryPayload = getProductReviewSummaryPayload(reviewsData);
@@ -305,7 +412,6 @@ const ProductReviews = () => {
             },
           ]
         : []),
-
       ...(!isDetailMode
         ? [
             {
@@ -443,13 +549,9 @@ const ProductReviews = () => {
             "Unnamed product",
         }));
 
-        if (mounted) {
-          setProductOptions(mapped);
-        }
+        if (mounted) setProductOptions(mapped);
       } catch {
-        if (mounted) {
-          setProductOptions([]);
-        }
+        if (mounted) setProductOptions([]);
       }
     };
 
@@ -516,7 +618,6 @@ const ProductReviews = () => {
 
   const handleDelete = async () => {
     const reviewId = getReviewId(deleteConfirm.review || {});
-
     if (!reviewId) return;
 
     try {
@@ -555,7 +656,6 @@ const ProductReviews = () => {
 
   const handleReviewStatus = async (row, status) => {
     const reviewId = getReviewId(row);
-
     if (!reviewId) return;
 
     setBulkLoading(true);
@@ -584,7 +684,10 @@ const ProductReviews = () => {
   const openProductReviews = (row) => {
     const productId = getProductId(row);
 
-    if (!productId) return;
+    if (!productId) {
+      toast.error("Product ID not found");
+      return;
+    }
 
     list.setPage(1);
     list.setFilter("product", String(productId));
@@ -795,19 +898,43 @@ const ProductReviews = () => {
     {
       key: "reviewText",
       label: "Review",
-      render: (v, row) => (
-        <div className="min-w-[260px] max-w-[460px]">
-          {row.title && (
-            <p className="truncate text-xs font-semibold text-gray-800">
-              {row.title}
-            </p>
-          )}
+      render: (v, row) => {
+        const reviewText = v || row.comment || row.review || "";
+        const previewLength = 140;
+        const isLongReview = reviewText.length > previewLength;
 
-          <p className="line-clamp-2 whitespace-normal text-xs leading-5 text-gray-600">
-            {v || row.comment || "No review text"}
-          </p>
-        </div>
-      ),
+        return (
+          <div className="min-w-[260px] max-w-[460px] py-1">
+            {row.title && (
+              <p
+                className="mb-1 truncate text-xs font-semibold text-gray-800"
+                title={row.title}
+              >
+                {row.title}
+              </p>
+            )}
+
+            <p className="whitespace-normal break-words text-xs leading-5 text-gray-600">
+              {isLongReview
+                ? `${reviewText.slice(0, previewLength).trimEnd()}…`
+                : reviewText || "No review text"}
+            </p>
+
+            {isLongReview && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setReviewDetailsTarget(row);
+                }}
+                className="mt-1 text-xs font-semibold text-[#2F6BFF] transition hover:text-[#1F1B5F] hover:underline"
+              >
+                Show more
+              </button>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "status",
@@ -833,6 +960,7 @@ const ProductReviews = () => {
     list.clearSearch();
     list.clearSelection();
     setSelectedProductId("");
+    setReviewDetailsTarget(null);
     navigate("/app/product-reviews");
   };
 
@@ -854,7 +982,7 @@ const ProductReviews = () => {
         actions={
           !sellerScoped ? (
             <PermissionGuard module="reviews" action={ACTIONS.CREATE} hide>
-              <button onClick={() => setAddOpen(true)}>
+              <button type="button" onClick={() => setAddOpen(true)}>
                 <MdAdd aria-hidden="true" size={18} />
                 Add Review
               </button>
@@ -1184,6 +1312,12 @@ const ProductReviews = () => {
         confirmLabel="Delete Selected"
         onConfirm={handleBulkDelete}
         onCancel={() => setBulkDeleteConfirm(false)}
+      />
+
+      {/* FIX: Render the modal when Show more is clicked. */}
+      <ReviewDetailsModal
+        review={reviewDetailsTarget}
+        onClose={() => setReviewDetailsTarget(null)}
       />
     </div>
   );

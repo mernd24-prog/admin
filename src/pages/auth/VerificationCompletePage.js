@@ -16,9 +16,10 @@ const VerificationCompletePage = () => {
   useAuthPageMeta("Verification Complete", "Your seller account is verified.");
 
   return (
-    <section className="mx-auto w-full max-w-[791px] overflow-hidden    font-inter text-center">
-      <div className="flex min-h-[250px] flex-col items-center justify-center  px-5 py-10">
-        <span className="flex h-[80px] w-[80px] items-center justify-center rounded-full bg-[#43B947] text-white">
+    <section className="mx-auto flex w-full max-w-[791px] flex-col items-center px-4 font-inter text-center">
+      {/* Verification Header */}
+      <div className="flex w-full flex-col items-center pt-[14px] pb-[40px]">
+        <span className="flex h-[80px] w-[80px] shrink-0 items-center justify-center rounded-full bg-[#43B947] text-white">
           <BadgeCheck size={45} strokeWidth={2.6} />
         </span>
 
@@ -32,19 +33,18 @@ const VerificationCompletePage = () => {
         </span>
       </div>
 
-      <div className="flex min-h-[286px] flex-col items-center rounded-xl border border-[#CE9F2D] bg-white px-6 pb-7 pt-8">
-        <div>
-          <h2 className="text-[24px] font-extrabold leading-[32px] text-[#2D2D2D] sm:text-[26px]">
-            {verificationComplete.subtitleTitle}
-          </h2>
+      {/* Verification Content Card */}
+      <div className="flex min-h-[253px] w-full flex-col items-center rounded-xl border border-[#CE9F2D] bg-white px-5 py-8 sm:px-6">
+        <h2 className="text-[24px] font-extrabold leading-[32px] text-[#2D2D2D] sm:text-[26px]">
+          {verificationComplete.subtitleTitle}
+        </h2>
 
-          <p className="mx-auto mt-3 max-w-[560px] text-[14px] font-medium leading-[18px] text-[#182D50B2] sm:text-[15px]">
-            {verificationComplete.description}
-          </p>
-        </div>
+        <p className="mx-auto mt-3 max-w-[560px] text-[14px] font-medium leading-[18px] text-[#182D50B2] sm:text-[15px]">
+          {verificationComplete.description}
+        </p>
 
-        <div className="mt-[78px] flex w-full flex-col items-center">
-          <p className="text-[14px] font-medium leading-[20px] text-[#2D2D2D] sm:text-[15px]">
+        <div className="mt-8 flex w-full flex-col items-center">
+          <p className="mb-3 text-[14px] font-medium leading-[20px] text-[#2D2D2D] sm:text-[15px]">
             {verificationComplete.nextStepLabel}
           </p>
 
@@ -53,7 +53,7 @@ const VerificationCompletePage = () => {
             onClick={() => {
               navigate(AUTH_ROUTES.ONBOARDING);
             }}
-            className="mt-4 flex h-[40px] w-full max-w-[421px] items-center justify-center rounded-[8px] bg-[#D8A72C] px-6 text-[13px] font-bold text-white focus-visible:outline-none"
+            className="flex h-[40px] w-full max-w-[421px] items-center justify-center rounded-[8px] bg-[#D8A72C] px-6 text-[13px] font-bold text-white focus-visible:outline-none"
           >
             {verificationComplete.buttonLabel}
           </button>
