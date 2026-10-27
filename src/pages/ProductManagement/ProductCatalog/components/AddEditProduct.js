@@ -3639,7 +3639,7 @@ export default function ProductManagementUI() {
             friendlyMessage,
           );
         } else if (
-          /seo\.keywords|seo keywords/i.test(message)
+          /seo[\s._-]*keywords?|at least one seo keyword/i.test(message)
         ) {
           friendlyApiMessage = "Add at least one SEO keyword.";
           mappedErrors.seo = { keywords: friendlyApiMessage };

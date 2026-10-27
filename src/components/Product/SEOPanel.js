@@ -294,9 +294,10 @@ const SEOPanel = ({
       {/* Keywords */}
       <div className="space-y-2" data-error-field="seo.keywords">
         <FormInput
-          labelName="Keywords *"
+          labelName="Keywords"
           name="keywords"
           type="text"
+          required
           className="!mb-0"
           placeholder={
             keywordsAtMax

@@ -141,6 +141,10 @@ export default function CodCollections() {
 
       try {
         setLoading(true);
+        const isRecordingRemittance =
+          decision.row.status === "verified";
+        const markRemitted =
+          isRecordingRemittance || values.markRemitted;
 
         await axiosProvider.post(
           ENDPOINTS.payments.verifyCodCollection(
@@ -150,12 +154,12 @@ export default function CodCollections() {
             collectedAmount: Number(values.collectedAmount),
             referenceId: values.referenceId.trim(),
             notes: values.notes.trim(),
-            markRemitted: values.markRemitted,
+            markRemitted,
           },
         );
 
         toast.success(
-          values.markRemitted
+          markRemitted
             ? "COD remittance verified"
             : "COD collection verified",
         );
@@ -194,7 +198,7 @@ export default function CodCollections() {
         "",
       referenceId: decision.row?.reference_id || "",
       notes: decision.row?.notes || "",
-      markRemitted: false,
+      markRemitted: decision.row?.status === "verified",
     },
     enableReinitialize: true,
     validationSchema: codCollectionValidationSchema,
@@ -392,6 +396,25 @@ export default function CodCollections() {
             });
           }
 
+          if (
+            row.status === "verified" &&
+            row.collected_by === "seller"
+          ) {
+            actions.push({
+              label: "Record Remittance",
+              icon: (
+                <MdCheckCircle
+                  aria-hidden="true"
+                  size={16}
+                  className="text-emerald-600"
+                />
+              ),
+              requiredModule: "payments",
+              requiredAction: ACTIONS.UPDATE,
+              onClick: () => openVerifyModal(row),
+            });
+          }
+
           return actions;
         }}
         page={pagination.page}
@@ -408,7 +431,6 @@ export default function CodCollections() {
             pageSize,
           })
         }
-        onPageSizeChange={(pageSize) => setPagination({ page: 1, pageSize })}
         onSearch={(value) => {
           setSearch(value);
           setPagination((current) => ({ ...current, page: 1 }));
@@ -423,12 +445,18 @@ export default function CodCollections() {
       <DefaultModal
         isOpen={decision.open}
         onClose={closeVerifyModal}
-        title="Verify COD Collection"
+        title={
+          decision.row?.status === "verified"
+            ? "Record COD Remittance"
+            : "Verify COD Collection"
+        }
         onSubmit={() => formik.submitForm()}
         submitButtonText={
           formik.isSubmitting
             ? "Verifying..."
-            : "Verify Collection"
+            : formik.values.markRemitted
+              ? "Verify & Clear Seller Liability"
+              : "Verify Collection Only"
         }
         closeButtonText="Cancel"
         isButtonView={true}
@@ -438,7 +466,11 @@ export default function CodCollections() {
 
           <FormSection
             title="Collection Information"
-            description="Verify the cash collected for this COD order."
+            description={
+              decision.row?.status === "verified"
+                ? "Confirm that the platform has now received this previously verified COD amount."
+                : "Verify the cash collected for this COD order."
+            }
           >
             <div className="space-y-4">
               {/* Expected COD Amount */}
@@ -525,25 +557,40 @@ export default function CodCollections() {
 
           {decision.row?.collected_by === "seller" && (
             <FormSection
-              title="Remittance Confirmation"
-              description="Confirm whether the platform has received the collected cash from the seller."
+              title="Has the platform received this money?"
+              description="Collection verification and seller remittance are separate accounting events."
             >
-              <FormToggleRow
-                title="Mark as Remitted"
-                description="Platform has actually received the full cash amount from the seller."
-                isToggle={formik.values.markRemitted}
-                handleClick={() =>
-                  formik.setFieldValue(
-                    "markRemitted",
-                    !formik.values.markRemitted,
-                  )
-                }
-              />
+              {decision.row?.status !== "verified" && (
+                <FormToggleRow
+                  title="Yes, payment received from seller"
+                  description="Enable only when the full COD amount has reached the platform account. This clears the seller's COD liability."
+                  isToggle={formik.values.markRemitted}
+                  handleClick={() =>
+                    formik.setFieldValue(
+                      "markRemitted",
+                      !formik.values.markRemitted,
+                    )
+                  }
+                />
+              )}
 
-              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
-                <p className="text-xs leading-5 text-amber-700">
-                  Leave this disabled when you are only verifying
-                  that the seller collected cash from the customer.
+              <div
+                className={`mt-3 rounded-md border px-3 py-2.5 ${
+                  formik.values.markRemitted
+                    ? "border-emerald-200 bg-emerald-50"
+                    : "border-amber-200 bg-amber-50"
+                }`}
+              >
+                <p
+                  className={`text-xs font-medium leading-5 ${
+                    formik.values.markRemitted
+                      ? "text-emerald-700"
+                      : "text-amber-700"
+                  }`}
+                >
+                  {formik.values.markRemitted
+                    ? `The seller's ${money(formik.values.collectedAmount)} liability will be cleared.`
+                    : `The seller will continue to owe ${money(formik.values.collectedAmount)} until remittance is confirmed.`}
                 </p>
               </div>
             </FormSection>

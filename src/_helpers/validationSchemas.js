@@ -522,6 +522,15 @@ const cmsOptionalTextList = (label, maxItems = 100) =>
     .max(maxItems, `${label} can contain no more than ${maxItems} items`);
 
 export const productSeoValidationSchema = Yup.object({
+  keywords: Yup.array()
+    .of(
+      Yup.string()
+        .trim()
+        .min(2, "Each SEO keyword must be at least 2 characters.")
+        .max(60, "Each SEO keyword must be 60 characters or fewer."),
+    )
+    .min(1, "Add at least one SEO keyword.")
+    .max(20, "Use no more than 20 SEO keywords."),
   metaTitle: Yup.string()
     .nullable()
     .max(70, "Meta title must be 70 characters or fewer."),
