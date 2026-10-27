@@ -3495,10 +3495,14 @@ const SellerOnboarding = () => {
     else if (!PERSON_NAME_REGEX.test(bankForm.accountHolderName.trim()))
       errors.accountHolderName =
         "Account holder name can contain only letters and spaces";
+
     if (!bankForm.accountNumber.trim()) {
       errors.accountNumber = "Account number is required";
     } else if (!BANK_ACCOUNT_REGEX.test(bankForm.accountNumber.trim())) {
-      errors.accountNumber = "Account number must be 9 to 18 digits";
+      errors.accountNumber =
+        "Enter a valid account number (9–18 digits), e.g. 123456789012";
+    } else if (/^0+$/.test(bankForm.accountNumber.trim())) {
+      errors.accountNumber = "Account number cannot contain only zeros";
     }
     if (!bankForm.ifscCode.trim()) {
       errors.ifscCode = "IFSC code is required";

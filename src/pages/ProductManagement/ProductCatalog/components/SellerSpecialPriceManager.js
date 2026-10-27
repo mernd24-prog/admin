@@ -1445,7 +1445,7 @@ const SellerSpecialPriceManager = () => {
                 )}
               </div>
               <div>
-                <h2 className="text-base font-bold text-gray-900">
+                <h2 className="text-base font-semibold text-black max-w-3xl line-clamp-2">
                   {detailProduct.title || detailProduct.name || "Product"}
                 </h2>
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
