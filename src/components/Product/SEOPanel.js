@@ -81,8 +81,7 @@ const SEOPanel = ({
     if (
       keyword.length >= 2 &&
       !keywords.some(
-        (item) =>
-          String(item).trim().toLowerCase() === keyword.toLowerCase(),
+        (item) => String(item).trim().toLowerCase() === keyword.toLowerCase(),
       ) &&
       keyword.length <= 60 &&
       keywords.length < maxKeywords
@@ -272,9 +271,8 @@ const SEOPanel = ({
 
       {/* Meta description */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700">Meta Description</label>
         <FormInput
-          label=""
+          label="Meta Description"
           name="metaDescription"
           type="textarea"
           rows={3}
@@ -407,7 +405,9 @@ const SEOPanel = ({
           <div className="mt-3 space-y-4 pl-4 border-l-2 border-gray-100">
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">OG Title</label>
+                <label className="text-sm font-medium text-gray-700">
+                  OG Title
+                </label>
               </div>
 
               <FormInput
@@ -442,7 +442,9 @@ const SEOPanel = ({
                 inputClassName="product-flat-gold-focus resize-none"
                 placeholder="Description for social sharing (max 160 characters)"
                 value={seo.ogDescription || ""}
-                onChange={(e) => updateSeoField("ogDescription", e.target.value)}
+                onChange={(e) =>
+                  updateSeoField("ogDescription", e.target.value)
+                }
                 onBlur={() => touchSeoField("ogDescription")}
                 maxLength={160}
                 showLengthCount

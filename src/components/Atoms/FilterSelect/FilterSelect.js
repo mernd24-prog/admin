@@ -3,131 +3,132 @@ import AsyncSelect from "react-select/async";
 import CreatableSelect from "react-select/creatable";
 import { ChevronDown } from "lucide-react";
 
-const customStyles = (error, controlHeight, mutedValue) => ({
-  control: (provided, state) => ({
-    ...provided,
+const customStyles = (
+  error,
+  controlHeight,
+  mutedValue,
+  wrapMultiValues,
+  isMulti,
+) => {
+  const shouldWrap = Boolean(wrapMultiValues || isMulti);
 
-    // Disabled state
-    backgroundColor: state.isDisabled
-      ? "var(--admin-field-disabled, #f3f4f6)"
-      : "var(--admin-field)",
+  return {
+    control: (provided, state) => ({
+      ...provided,
 
-    borderColor: error
-      ? "var(--admin-danger)"
-      : state.isDisabled
-        ? "var(--admin-field-line)"
-        : state.isFocused
-          ? ""
-          : "var(--admin-field-line)",
+      backgroundColor: state.isDisabled
+        ? "var(--admin-field-disabled, #f3f4f6)"
+        : "var(--admin-field)",
 
-    boxShadow: error ? "none" : state.isFocused ? "" : "none",
-
-    borderRadius: "0.375rem",
-    minHeight: controlHeight ? `${controlHeight}px` : "36px",
-    ...(controlHeight ? { height: `${controlHeight}px` } : {}),
-
-    cursor: state.isDisabled ? "not-allowed" : "pointer",
-
-    opacity: state.isDisabled ? 0.7 : 1,
-
-    "&:hover": {
       borderColor: error
         ? "var(--admin-danger)"
         : state.isDisabled
           ? "var(--admin-field-line)"
-          : "",
-    },
-  }),
-  control: (provided, state) => ({
-    ...provided,
+          : state.isFocused
+            ? ""
+            : "var(--admin-field-line)",
 
-    backgroundColor: state.isDisabled
-      ? "var(--admin-field-disabled, #f3f4f6)"
-      : "var(--admin-field)",
+      boxShadow: error ? "none" : state.isFocused ? "" : "none",
 
-    borderColor: error
-      ? "var(--admin-danger)"
-      : state.isDisabled
-        ? "var(--admin-field-line)"
-        : state.isFocused
-          ? ""
-          : "var(--admin-field-line)",
+      borderRadius: "0.375rem",
 
-    boxShadow: error ? "none" : state.isFocused ? "" : "none",
+      // Keep height consistent for single select, but allow auto expansion when wrapping multi values
+      minHeight: controlHeight ? `${controlHeight}px` : "36px",
+      height: shouldWrap
+        ? "auto"
+        : controlHeight
+          ? `${controlHeight}px`
+          : "36px",
+      maxHeight: shouldWrap
+        ? "none"
+        : controlHeight
+          ? `${controlHeight}px`
+          : "36px",
 
-    borderRadius: "0.375rem",
+      boxSizing: "border-box",
+      cursor: state.isDisabled ? "not-allowed" : "pointer",
+      opacity: state.isDisabled ? 0.7 : 1,
 
-    // Keep the height consistent before and after selection
-    height: controlHeight ? `${controlHeight}px` : "36px",
-    minHeight: controlHeight ? `${controlHeight}px` : "36px",
-    maxHeight: controlHeight ? `${controlHeight}px` : "36px",
+      "&:hover": {
+        borderColor: error
+          ? "var(--admin-danger)"
+          : state.isDisabled
+            ? "var(--admin-field-line)"
+            : "",
+      },
+    }),
 
-    boxSizing: "border-box",
-    cursor: state.isDisabled ? "not-allowed" : "pointer",
-    opacity: state.isDisabled ? 0.7 : 1,
+    valueContainer: (provided) => ({
+      ...provided,
+      padding: shouldWrap ? "3px 6px" : "2px 8px",
+      gap: shouldWrap ? "4px" : undefined,
+      display: "flex",
+      alignItems: "center",
+      flexWrap: shouldWrap ? "wrap" : "nowrap",
+    }),
 
-    "&:hover": {
-      borderColor: error
-        ? "var(--admin-danger)"
-        : state.isDisabled
-          ? "var(--admin-field-line)"
-          : "",
-    },
-  }),
+    placeholder: (provided, state) => ({
+      ...provided,
+      color: state.isDisabled ? "#9ca3af" : "var(--admin-muted)",
+      fontSize: "0.875rem",
+      paddingLeft: "2px",
+    }),
 
-  valueContainer: (provided) => ({
-    ...provided,
-    padding: "2px 8px",
-  }),
+    singleValue: (provided, state) => ({
+      ...provided,
+      color: state.isDisabled
+        ? "#9ca3af"
+        : mutedValue
+          ? "var(--admin-muted)"
+          : "var(--admin-ink)",
+      fontSize: "0.875rem",
+      paddingLeft: "2px",
+    }),
 
-  placeholder: (provided, state) => ({
-    ...provided,
-    color: state.isDisabled ? "#9ca3af" : "var(--admin-muted)",
-    fontSize: "0.875rem",
-    paddingLeft: "2px",
-  }),
+    input: (provided) => ({
+      ...provided,
+      margin: 0,
+      paddingBottom: 0,
+      paddingTop: 0,
+    }),
 
-  singleValue: (provided, state) => ({
-    ...provided,
-    color: state.isDisabled
-      ? "#9ca3af"
-      : mutedValue
-        ? "var(--admin-muted)"
-        : "var(--admin-ink)",
-    fontSize: "0.875rem",
-    paddingLeft: "2px",
-  }),
+    multiValue: (provided) => ({
+      ...provided,
+      minWidth: 0,
+      maxWidth: "100%",
+      margin: "2px",
+      borderRadius: "4px",
+    }),
 
-  input: (provided) => ({
-    ...provided,
-    margin: 0,
-    paddingBottom: 0,
-    paddingTop: 0,
-  }),
+    multiValueLabel: (provided) => ({
+      ...provided,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      fontSize: "12px",
+    }),
 
-  multiValue: (provided) => ({
-    ...provided,
-    minWidth: 0,
-    maxWidth: "100%",
-  }),
+    multiValueRemove: (provided) => ({
+      ...provided,
+      cursor: "pointer",
+      ":hover": {
+        backgroundColor: "rgba(239, 68, 68, 0.15)",
+        color: "var(--admin-danger, #ef4444)",
+      },
+    }),
 
-  multiValueLabel: (provided) => ({
-    ...provided,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  }),
+    dropdownIndicator: (provided, state) => ({
+      ...provided,
+      padding: "0 8px 0 4px",
+      color: state.isDisabled ? "#9ca3af" : provided.color,
+    }),
 
-  dropdownIndicator: (provided, state) => ({
-    ...provided,
-    padding: "0 8px 0 4px",
-    color: state.isDisabled ? "#9ca3af" : provided.color,
-  }),
-
-  indicatorsContainer: (provided) => ({
-    ...provided,
-    flexShrink: 0,
-  }),
+    indicatorsContainer: (provided) => ({
+      ...provided,
+      flexShrink: 0,
+      alignSelf: shouldWrap ? "flex-start" : "center",
+      paddingTop: shouldWrap ? "4px" : 0,
+    }),
 
   indicatorSeparator: () => ({
     display: "none",
@@ -178,11 +179,12 @@ const customStyles = (error, controlHeight, mutedValue) => ({
     },
   }),
 
-  menuPortal: (provided) => ({
-    ...provided,
-    zIndex: 100200,
-  }),
-});
+    menuPortal: (provided) => ({
+      ...provided,
+      zIndex: 100200,
+    }),
+  };
+};
 
 /**
  * Custom dropdown arrow
@@ -250,6 +252,7 @@ const FilterSelect = ({
   cacheOptions = true,
   formatOptionLabel,
   controlHeight,
+  wrapMultiValues = false,
   mutedValue = false,
   noOptionsMessage = isCreatable
     ? ({ inputValue }) =>
@@ -278,7 +281,13 @@ const FilterSelect = ({
 
       <div className="relative text-sm min-w-0">
         <SelectComponent
-          styles={customStyles(error, controlHeight, mutedValue)}
+          styles={customStyles(
+            error,
+            controlHeight,
+            mutedValue,
+            wrapMultiValues,
+            isMulti,
+          )}
           className="capitalize"
           classNamePrefix="admin-filter-select"
           inputId={inputId}
