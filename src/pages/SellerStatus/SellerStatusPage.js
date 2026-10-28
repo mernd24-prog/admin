@@ -104,6 +104,7 @@ const SellerStatusPage = ({ statusOverride, flowState: routeFlowState }) => {
   const { seller } = useSelector((state) => state);
   const flowState = seller?.flowState || routeFlowState;
   const [refreshing, setRefreshing] = useState(false);
+  const [statusLoaded, setStatusLoaded] = useState(false);
   const statusKey = statusOverride || status || "pending";
   const hasAnyToken =
     !!localStorage.getItem("sellerOnboardingToken") ||
@@ -114,6 +115,8 @@ const SellerStatusPage = ({ statusOverride, flowState: routeFlowState }) => {
     () => getVerificationCase(flowState),
     [flowState],
   );
+  const isRejectedStatus =
+    VERIFICATION_REJECTED_CASES.includes(verificationCase);
 
   const refreshStatus = useCallback(
     async ({ notify = false } = {}) => {
@@ -121,17 +124,20 @@ const SellerStatusPage = ({ statusOverride, flowState: routeFlowState }) => {
         !localStorage.getItem("sellerOnboardingToken") &&
         !sessionStorage.getItem("accessToken")
       ) {
+        setStatusLoaded(true);
         return;
       }
       setRefreshing(true);
       const result = await dispatch(fetchAuthStatus());
       setRefreshing(false);
+      setStatusLoaded(true);
 
       if (fetchAuthStatus.fulfilled.match(result)) {
         const nextRoute = getSellerStatusRoute(result.payload);
         if (
           statusKey !== "complete" &&
           nextRoute &&
+          window.location.pathname === location.pathname &&
           nextRoute !== location.pathname
         ) {
           navigate(nextRoute, { replace: true });
@@ -150,7 +156,20 @@ const SellerStatusPage = ({ statusOverride, flowState: routeFlowState }) => {
 
   useEffect(() => {
     refreshStatus();
-  }, [refreshStatus]);
+    // Refresh once on mount. The callback also changes after navigation/status
+    // updates; re-running it would cause a redirect/refetch loop on this page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (statusKey === "complete") return undefined;
+
+    const intervalId = window.setInterval(() => {
+      refreshStatus();
+    }, 15000);
+
+    return () => window.clearInterval(intervalId);
+  }, [refreshStatus, statusKey]);
 
   if (!hasAnyToken) {
     return <Navigate to={AUTH_ROUTES.LOGIN} replace />;
@@ -162,6 +181,7 @@ const SellerStatusPage = ({ statusOverride, flowState: routeFlowState }) => {
 
   const expectedRoute = flowState ? getSellerStatusRoute(flowState) : null;
   if (
+    statusLoaded &&
     statusKey !== "complete" &&
     expectedRoute &&
     expectedRoute !== location.pathname
@@ -170,6 +190,30 @@ const SellerStatusPage = ({ statusOverride, flowState: routeFlowState }) => {
   }
 
   if (statusKey === "complete") {
+    if (isRejectedStatus) {
+      const reason = getRejectionReason(flowState, verificationCase);
+      const editTarget =
+        verificationCase === "bank_rejected"
+          ? `${AUTH_ROUTES.ONBOARDING}?edit=bank`
+          : `${AUTH_ROUTES.ONBOARDING}?edit=kyc`;
+
+      return (
+        <SellerStatusScreen
+          variant="rejected"
+          title="Verification Requires Updates"
+          subtitleTitle="Please Update Your Details"
+          description={
+            reason ||
+            "Your submitted details need correction before your seller account can be approved."
+          }
+          progressTitle="Verification Requires Updates"
+          progressDescription="Your application needs corrections before it can be approved. Update the requested details and submit them for review again."
+          buttonLabel="Update Details"
+          onButtonClick={() => navigate(editTarget)}
+        />
+      );
+    }
+
     return (
       <SellerStatusScreen
         variant="underReview"
@@ -223,11 +267,35 @@ const SellerStatusPage = ({ statusOverride, flowState: routeFlowState }) => {
           reason ||
           "Your submitted details need correction before your seller account can be approved."
         }
+        progressTitle="Verification Requires Updates"
+        progressDescription="Your application needs corrections before it can be approved. Update the requested details and submit them for review again."
         buttonLabel={
           VERIFICATION_REJECTED_CASES.includes(verificationCase)
             ? "Update Details"
             : "Back To Onboarding"
         }
+        onButtonClick={() => navigate(editTarget)}
+      />
+    );
+  }
+
+  if (isRejectedStatus) {
+    const reason = getRejectionReason(flowState, verificationCase);
+    const editTarget =
+      verificationCase === "bank_rejected"
+        ? `${AUTH_ROUTES.ONBOARDING}?edit=bank`
+        : `${AUTH_ROUTES.ONBOARDING}?edit=kyc`;
+
+    return (
+      <SellerStatusScreen
+        variant="rejected"
+        title="Verification Requires Updates"
+        subtitleTitle="Please Update Your Details"
+        description={
+          reason ||
+          "Your submitted details need correction before your seller account can be approved."
+        }
+        buttonLabel="Update Details"
         onButtonClick={() => navigate(editTarget)}
       />
     );

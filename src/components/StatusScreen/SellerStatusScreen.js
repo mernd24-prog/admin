@@ -72,6 +72,8 @@ const SellerStatusScreen = ({
   disabled = false,
   className = "",
   contentClassName = "",
+  progressTitle = "We're Reviewing Your Account",
+  progressDescription = "Your application is currently under review. This usually takes 24–48 hours.",
 }) => {
   const baseContent =
     statusContent[variant] || statusContent.verificationComplete;
@@ -93,11 +95,10 @@ const SellerStatusScreen = ({
     <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <h1 className="font-inter text-[28px] font-extrabold leading-[36px] text-[#2d2f35]">
-          We're Reviewing Your Account
+          {progressTitle}
         </h1>
         <p className="mt-3 max-w-3xl font-inter text-[14px] font-medium leading-[22px] text-[#182D50B2]">
-          Your application is currently under review. This usually takes 24–48
-          hours.
+          {progressDescription}
         </p>
       </div>
       <div className="min-w-[185px]">

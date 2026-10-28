@@ -100,14 +100,14 @@ const DATE_FIELD_CLASS =
   "admin-input h-[46px] text-[14px] font-medium text-[#111827] placeholder:font-normal placeholder:text-[#9a96a6]";
 const STEP_ONE_REQUIRED = <span className="text-[var(--admin-danger)]">*</span>;
 const SECONDARY_BUTTON_CLASS =
-  "admin-btn-secondary w-full min-w-[220px] text-[14px] sm:w-auto";
-const PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
+  "admin-btn-secondary min-w-0 flex-[0.7] text-[14px] sm:w-auto sm:flex-none sm:min-w-[220px]";
+const PRIMARY_BUTTON_CLASS = "admin-btn-primary min-w-0 flex-[1.3] text-[14px]";
 const ONBOARDING_CARD_CLASS = "admin-card w-full px-5 py-4 sm:px-8 md:px-10";
 const REVIEW_INPUT_CLASS =
   "admin-input h-[35px] text-[13px] placeholder:text-[13px] truncate";
 const REVIEW_SECONDARY_BUTTON_CLASS =
-  "admin-btn-secondary w-full text-[14px] sm:w-[260px]";
-const REVIEW_PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
+  "admin-btn-secondary min-w-0 flex-[0.7] text-[14px] sm:w-[260px] sm:flex-none";
+const REVIEW_PRIMARY_BUTTON_CLASS = "admin-btn-primary min-w-0 flex-[1.3] text-[14px]";
 
 const ONBOARDING_STEP_META = {
   0: {
@@ -274,7 +274,7 @@ const OnboardingGridDivider = ({ number, title }) => (
 );
 
 const OnboardingActions = ({ children }) => (
-  <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[#eee7dd] pt-6 sm:flex-row sm:justify-end">
+  <div className="mt-8 flex flex-row items-center gap-3 border-t border-[#eee7dd] pt-6 sm:justify-end">
     {children}
   </div>
 );
@@ -1355,11 +1355,14 @@ const SellerOnboarding = () => {
     [accessToken, onboardingToken],
   );
   const reviewLockedStatusRoute = useMemo(() => {
+    // An explicit edit link from the rejected status page must remain editable
+    // after reload, even if another status source still reports review locked.
+    if (editSection === "kyc" || editSection === "bank") return null;
     if (isSellerReviewLocked(flowState)) return getSellerStatusRoute(flowState);
     if (isSellerReviewLocked(targetOrganization))
       return AUTH_ROUTES.SELLER_STATUS_PENDING;
     return null;
-  }, [flowState, targetOrganization]);
+  }, [editSection, flowState, targetOrganization]);
   const draftKey = useMemo(
     () => getSellerOnboardingDraftKey(onboardingToken || accessToken),
     [accessToken, onboardingToken],
@@ -2080,6 +2083,14 @@ const SellerOnboarding = () => {
         savedStep <= nextStep;
       setStep(canResumeDraft ? savedStep : nextStep);
     };
+    if (editSection === "kyc") {
+      restoreStep(1);
+      return;
+    }
+    if (editSection === "bank") {
+      restoreStep(3);
+      return;
+    }
     const sellerProfile = flowState?.sellerProfile || {};
     const pickupAddress = sellerProfile?.pickupAddress || {};
     const hasStoredBusinessProfile =
@@ -3815,7 +3826,7 @@ const SellerOnboarding = () => {
     }
   };
 
-  if (step === 5) {
+  if (step === 5 && editSection !== "kyc" && editSection !== "bank") {
     return <Navigate to={getSellerStatusRoute(flowState)} replace />;
   }
 
@@ -4411,7 +4422,7 @@ const SellerOnboarding = () => {
                     title="Business Documents"
                   />
 
-                  <div className="md:col-span-2">
+                  <div className="col-span-full grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <DocumentUploadField
                       id="gstCertificateFile"
                       label="Upload GST Certificate"
@@ -4424,9 +4435,7 @@ const SellerOnboarding = () => {
                       onChange={onGstCertificateFileChange}
                       emptyText="Drag GST certificate here"
                     />
-                  </div>
 
-                  <div className="md:col-span-2">
                     <DocumentUploadField
                       id="addressProofFile"
                       label="Upload Address Proof"
@@ -4439,9 +4448,7 @@ const SellerOnboarding = () => {
                       onChange={onKycDocumentFileChange("addressProofFile")}
                       emptyText="Drag address proof here (must match your GST Certificate address)"
                     />
-                  </div>
 
-                  <div className="md:col-span-2">
                     <DocumentUploadField
                       id="udyogAadhaarDocumentFile"
                       label="Upload Udhyog Aadhaar Document"
