@@ -1550,7 +1550,9 @@ export default function ProductManagementUI() {
       shippingMethod: shipping.shippingMethod ?? template?.shippingMethod,
       serviceabilityMode: shipping.serviceabilityMode ?? template?.serviceabilityMode,
       codAvailable: shipping.codAvailable ?? template?.codAvailable,
-      allowedPincodes: shipping.allowedPincodes || shipping.allowPincodes || shipping.serviceablePincodes || template?.allowedPincodes,
+      allowedPincodes: getShippingPincodes(shipping).length
+        ? getShippingPincodes(shipping)
+        : normalizePincodeList(template?.allowedPincodes),
     };
     return {
       value: `template:${templateId || template?.id || template?._id || "saved"}`,
