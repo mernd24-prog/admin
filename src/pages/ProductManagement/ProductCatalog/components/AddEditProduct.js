@@ -5,6 +5,7 @@ import { useFormik } from "formik";
 import BasicDetailsTab from "./BasicDetailsTab";
 import ProductSettingsPanel from "./ProductSettingsPanel";
 import { useDispatch, useSelector } from "react-redux";
+
 import {
   createProducts,
   getProductPrefill,
@@ -28,7 +29,7 @@ import {
 import Loader from "../../../../components/Loader/Loader";
 import { getAllStateList } from "../../../../Redux/stateSlice";
 import { getAllCityList } from "../../../../Redux/citySlice";
-import { GrDocument } from "react-icons/gr";
+
 import {
   FiRefreshCw,
   FiTrash2,
@@ -43,6 +44,7 @@ import {
   FiMapPin,
   FiCheckCircle,
   FiInfo,
+  FiFileText,
 } from "react-icons/fi";
 import { toast } from "sonner";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -50,7 +52,6 @@ import TabNavigation from "./TabNavigation";
 import ConfirmModal from "../../../../components/Shared/ConfirmModal";
 import Breadcrumb from "./Breadcrumb";
 import selectJson from "../../../../_helpers/SelectJson.json";
-import { BsMenuApp } from "react-icons/bs";
 import DynamicAttributesTab from "./DynamicAttributesTab";
 import VariantBuilder from "../../../../components/Product/VariantBuilder";
 import SEOPanel from "../../../../components/Product/SEOPanel";
@@ -59,6 +60,7 @@ import { getSelectedSellerOrganizationId } from "../../../../_helpers/sellerOrga
 import { getShippingProfiles } from "../../../../Redux/deliverySlice";
 import { getShippingProfileTemplates } from "../../../../Redux/deliverySlice";
 import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
+import FormInput from "../../../../components/Atoms/FormInput/FormInput";
 import {
   extractRole,
   getStoredRole,
@@ -67,6 +69,10 @@ import {
 } from "../../../../_helpers/authStorage";
 import { isSellerPanel } from "../../../../_helpers/panelConfig";
 import { productSeoValidationSchema } from "../../../../_helpers/validationSchemas";
+import { LuSlidersHorizontal } from "react-icons/lu";
+import { IoLayers, IoSearch } from "react-icons/io5";
+import { FaTags, FaTruck } from "react-icons/fa";
+import { IoMdImages } from "react-icons/io";
 
 const API_CALLS = [
   {
@@ -333,7 +339,7 @@ const normalizePincodeList = (value) => {
 };
 
 const isValidIndianPincode = (value) =>
-  /^\d{6}$/.test(String(value || "").trim());
+  /^[1-9]\d{5}$/.test(String(value || "").trim());
 
 const inferWarrantyDuration = (template = {}) => {
   const metadata = template?.metadata || {};
@@ -2457,11 +2463,13 @@ export default function ProductManagementUI() {
         }
 
         if (!hasSalePrice) {
-          fieldErrors.salePrice = "Sale price is required.";
+          fieldErrors.salePrice = "Special price is required.";
         } else if (salePrice <= 0) {
-          fieldErrors.salePrice = "Sale price must be greater than 0.";
-        } else if (salePrice > price) {
-          fieldErrors.salePrice = "Sale price cannot be greater than price.";
+          fieldErrors.salePrice = "Special price must be greater than 0.";
+        } else if (price > 0 && salePrice >= price) {
+          fieldErrors.salePrice = "Special price cannot equal or exceed the price.";
+        } else if (price > 0 && salePrice < price / 2) {
+          fieldErrors.salePrice = "Special price must be at least half of the price.";
         }
 
         // Variant GST is optional. Older products and products whose tax is
@@ -3533,9 +3541,11 @@ export default function ProductManagementUI() {
           /required|does not contain|at least|array\.min/i.test(rawFieldMessage)
             ? "Add at least one SEO keyword."
             : /^tags$/i.test(field) &&
-              /does not contain|required|at least|array\.min/i.test(rawFieldMessage)
-            ? "Add at least one tag."
-            : rawFieldMessage;
+                /does not contain|required|at least|array\.min/i.test(
+                  rawFieldMessage,
+                )
+              ? "Add at least one tag."
+              : rawFieldMessage;
         if (fieldMessage !== rawFieldMessage) {
           friendlyApiMessage = fieldMessage;
         }
@@ -3586,7 +3596,10 @@ export default function ProductManagementUI() {
           mappedErrors.shipping = fieldMessage;
         } else if (/image|media|video/i.test(`${field} ${fieldMessage}`)) {
           mappedErrors.commonImages = fieldMessage;
-        } else if (/^tags$/i.test(field) || /tag/i.test(`${field} ${fieldMessage}`)) {
+        } else if (
+          /^tags$/i.test(field) ||
+          /tag/i.test(`${field} ${fieldMessage}`)
+        ) {
           mappedErrors.tags = fieldMessage;
         } else if (
           /seo|keyword|canonical|open graph/i.test(`${field} ${fieldMessage}`)
@@ -3798,6 +3811,10 @@ export default function ProductManagementUI() {
   const addProductPincode = useCallback(() => {
     const value = allowedPincodeInput.trim();
     if (!value) return;
+    if (value === "000000" || /^0+$/.test(value)) {
+      toast.error("Pincode cannot be 000000");
+      return;
+    }
     if (!isValidIndianPincode(value)) {
       toast.error("Please enter a valid 6-digit pincode");
       return;
@@ -4136,7 +4153,7 @@ export default function ProductManagementUI() {
         id: "basic-details",
         title: "Basic details",
         description: "Manage the product's basic information.",
-        icon: <GrDocument />,
+        icon: <FiFileText />,
         component: (
           <BasicDetailsTab
             formData={formData}
@@ -4170,7 +4187,7 @@ export default function ProductManagementUI() {
         id: "product-details",
         title: "Attributes",
         description: "Manage category-based product attributes.",
-        icon: <GrDocument />,
+        icon: <LuSlidersHorizontal />,
         component: (
           <div ref={refs["product-details"]} className="space-y-4">
             <div className="product-form-section-header">
@@ -4185,27 +4202,18 @@ export default function ProductManagementUI() {
                 {error.attributes._form}
               </p>
             )}
-            {/* <div className="pb-4 border-b border-gray-100 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900">Attributes</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Choose dynamic (category-driven) attributes or enter manual key/value attributes.</p>
-            </div>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input type="checkbox" className="h-4 w-4 accent-[var(--admin-blue)]" checked={useManualAttributes} onChange={() => setUseManualAttributes((v) => !v)} />
-              <span className="text-sm">Manual attributes</span>
-            </label>
-          </div> */}
 
             {useManualAttributes ? (
               <div className="space-y-4">
                 <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
                     <div>
-                      <label className="admin-label">Key</label>
-                      <input
-                        className={`admin-input${manualAttrErrors.key ? " admin-input-error" : ""}`}
+                      <FormInput
+                        label="Key"
+                        name="newAttrKey"
                         value={newAttrKey}
                         maxLength={50}
+                        showLengthCount={false}
                         onChange={(e) => {
                           setNewAttrKey(e.target.value);
                           if (manualAttrErrors.key)
@@ -4216,24 +4224,17 @@ export default function ProductManagementUI() {
                         }}
                         onKeyDown={handleManualAttrKeyDown}
                         placeholder="eg. material"
-                        aria-invalid={Boolean(manualAttrErrors.key)}
+                        error={manualAttrErrors.key}
+                        className="!mb-0"
                       />
-                      {manualAttrErrors.key && (
-                        <p
-                          className="admin-field-error flex items-center gap-1"
-                          role="alert"
-                        >
-                          <FiAlertCircle className="shrink-0" />{" "}
-                          {manualAttrErrors.key}
-                        </p>
-                      )}
                     </div>
                     <div>
-                      <label className="admin-label">Value</label>
-                      <input
-                        className={`admin-input${manualAttrErrors.value ? " admin-input-error" : ""}`}
+                      <FormInput
+                        label="Value"
+                        name="newAttrValue"
                         value={newAttrValue}
                         maxLength={500}
+                        showLengthCount={false}
                         onChange={(e) => {
                           setNewAttrValue(e.target.value);
                           if (manualAttrErrors.value)
@@ -4244,17 +4245,9 @@ export default function ProductManagementUI() {
                         }}
                         onKeyDown={handleManualAttrKeyDown}
                         placeholder="eg. cotton"
-                        aria-invalid={Boolean(manualAttrErrors.value)}
+                        error={manualAttrErrors.value}
+                        className="!mb-0"
                       />
-                      {manualAttrErrors.value && (
-                        <p
-                          className="admin-field-error flex items-center gap-1"
-                          role="alert"
-                        >
-                          <FiAlertCircle className="shrink-0" />{" "}
-                          {manualAttrErrors.value}
-                        </p>
-                      )}
                     </div>
                     <div>
                       <label className="admin-label invisible sm:block hidden">
@@ -4302,26 +4295,20 @@ export default function ProductManagementUI() {
                               {key}
                             </div>
                             <div className="flex-1">
-                              <input
-                                className={`admin-input${rowError ? " admin-input-error" : ""}`}
+                              <FormInput
+                                name={`attribute-${key}`}
                                 value={formData.attributes[key] || ""}
                                 maxLength={500}
+                                showLengthCount={false}
                                 onChange={(e) =>
                                   updateManualAttributeValue(
                                     key,
                                     e.target.value,
                                   )
                                 }
+                                error={rowError}
+                                className="!mb-0"
                               />
-                              {rowError && (
-                                <p
-                                  className="admin-field-error flex items-center gap-1"
-                                  role="alert"
-                                >
-                                  <FiAlertCircle className="shrink-0" />{" "}
-                                  {rowError}
-                                </p>
-                              )}
                             </div>
                             <button
                               type="button"
@@ -4357,7 +4344,7 @@ export default function ProductManagementUI() {
         title: "Variants & options",
         description:
           "Customize the product variants, including size, color, etc.",
-        icon: <BsMenuApp />,
+        icon: <IoLayers />,
         component: (
           <div className="space-y-5">
             <div className="product-form-section-header">
@@ -4391,7 +4378,7 @@ export default function ProductManagementUI() {
         title: "Media",
         description:
           "Images and one product video shown on the customer product page.",
-        icon: <BsMenuApp />,
+        icon: <IoMdImages />,
         component: (
           <section ref={refs["common-images"]} className="space-y-5">
             <div className="product-form-section-header">
@@ -4466,25 +4453,6 @@ export default function ProductManagementUI() {
                   )}
                 </div>
               </div>
-              {/* 
-              {(formData.commonImages || []).length < MAX_COMMON_PRODUCT_IMAGES && (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    type="url"
-                    className="admin-input flex-1"
-                    placeholder="Or paste a common image URL"
-                    value={commonImageUrl}
-                    onChange={(event) => setCommonImageUrl(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        addCommonProductImageUrl();
-                      }
-                    }}
-                  />
-                  <button type="button" className="admin-btn" onClick={addCommonProductImageUrl}>Add image</button>
-                </div>
-              )} */}
 
               <div className="order-1 min-w-0">
                 <span className="mb-2 inline-flex rounded-full bg-[var(--admin-gold-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--admin-gold-dark)]">
@@ -4547,7 +4515,7 @@ export default function ProductManagementUI() {
         id: "shipping",
         title: "Shipping",
         description: "Product delivery and serviceability.",
-        icon: <BsMenuApp />,
+        icon: <FaTruck />,
         component: (
           <div className="space-y-6">
             {/* Header with Actions */}
@@ -4721,7 +4689,7 @@ export default function ProductManagementUI() {
                       }}
                       placeholder="Copy Settings From A Template"
                       isSearchable
-                      isClearable={false}
+                      isClearable={true}
                     />
                   </div>
                 )}
@@ -4940,13 +4908,20 @@ export default function ProductManagementUI() {
                     </span>
                   </label>
 
-                  <div className="flex gap-2">
-                    <input
-                      className="admin-input flex-1"
+                  <div className="flex items-start gap-2">
+                    <FormInput
+                      name="allowedPincode"
+                      className="flex-1 !mb-0"
                       inputMode="numeric"
                       maxLength={6}
+                      showLengthCount={false}
                       placeholder="Enter 6-digit pincode"
                       value={allowedPincodeInput}
+                      error={
+                        allowedPincodeInput === "000000"
+                          ? "Pincode cannot be 000000"
+                          : ""
+                      }
                       onChange={(event) =>
                         setAllowedPincodeInput(
                           event.target.value.replace(/\D/g, "").slice(0, 6),
@@ -5014,7 +4989,7 @@ export default function ProductManagementUI() {
         id: "seo",
         title: "SEO",
         description: "Search engine metadata and social sharing settings.",
-        icon: <GrDocument />,
+        icon: <IoSearch />,
         component: (
           <div className="space-y-5">
             <div className="product-form-section-header">
@@ -5041,7 +5016,7 @@ export default function ProductManagementUI() {
         id: "tags",
         title: "Tags & Discovery",
         description: "Tags and discoverability settings.",
-        icon: <BsMenuApp />,
+        icon: <FaTags />,
         component: (
           <div className="space-y-6">
             <div className="product-form-section-header">
@@ -5055,7 +5030,37 @@ export default function ProductManagementUI() {
               </p>
               <TagsInput
                 tags={Array.isArray(formData?.tags) ? formData.tags : []}
-                onChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
+                onChange={(tags) => {
+                  setFormData((prev) => ({ ...prev, tags }));
+                  if (error?.tags) {
+                    setError((prev) => {
+                      if (!prev?.tags) return prev;
+                      const next = { ...prev };
+                      if (!tags || tags.length === 0) {
+                        next.tags = "Add at least one tag.";
+                      } else if (tags.length > 20) {
+                        next.tags = "Use no more than 20 tags.";
+                      } else if (
+                        tags.some((tag) => {
+                          const normalized = String(tag || "").trim();
+                          return (
+                            normalized.length < 2 ||
+                            normalized.length > 40 ||
+                            !PRODUCT_TAG_PATTERN.test(normalized)
+                          );
+                        })
+                      ) {
+                        next.tags =
+                          "Tags must be 2–40 lowercase letters or numbers separated by single hyphens.";
+                      } else if (findDuplicate(tags)) {
+                        next.tags = "Tags must be unique, ignoring letter case.";
+                      } else {
+                        delete next.tags;
+                      }
+                      return next;
+                    });
+                  }
+                }}
                 placeholder="Add tag…"
                 maxTags={20}
                 error={typeof error?.tags === "string" ? error.tags : ""}
@@ -5133,23 +5138,18 @@ export default function ProductManagementUI() {
                     </div>
                   )}
 
-                  <div className="relative">
-                    <FiSearch
-                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={16}
-                    />
-
-                    <input
-                      type="search"
-                      value={collectionSearch}
-                      onChange={(event) =>
-                        setCollectionSearch(event.target.value)
-                      }
-                      placeholder="Search collections by name, type, or tag…"
-                      className="admin-input !pl-9"
-                      aria-label="Search collections"
-                    />
-                  </div>
+                  <FormInput
+                    type="search"
+                    name="collectionSearch"
+                    value={collectionSearch}
+                    onChange={(event) =>
+                      setCollectionSearch(event.target.value)
+                    }
+                    placeholder="Search collections by name, type, or tag…"
+                    icon={<FiSearch size={16} />}
+                    aria-label="Search collections"
+                    className="!mb-0"
+                  />
 
                   {filteredCollectionOptions.length ? (
                     <div className="grid max-h-96 gap-3.5 overflow-y-auto pr-1 sm:grid-cols-2">

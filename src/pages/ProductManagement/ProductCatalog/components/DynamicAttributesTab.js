@@ -95,6 +95,7 @@ const DynamicAttributesTab = ({
             return (
               <FilterSelect
                 key={field.key}
+                wrapMultiValues
                 name={`attribute_${field.key}`}
                 label={label}
                 required={field.required}
@@ -116,9 +117,15 @@ const DynamicAttributesTab = ({
 
           if (field.type === "boolean") {
             return (
-              <div key={field.key}>
+              <div key={field.key} className="flex flex-col justify-end h-full">
                 <label
-                  className={`flex items-center gap-3 rounded-lg border bg-gray-50 p-3 text-sm cursor-pointer hover:bg-gray-100 transition-colors ${errors?.attributes?.[field.key] ? "border-red-400" : "border-gray-200"}`}
+                  className="admin-label invisible select-none md:block hidden"
+                  aria-hidden="true"
+                >
+                  &nbsp;
+                </label>
+                <label
+                  className={`flex h-[36px] items-center gap-3 rounded-lg border bg-gray-50 px-3 text-sm cursor-pointer hover:bg-gray-100 transition-colors ${errors?.attributes?.[field.key] ? "border-red-400" : "border-gray-200"}`}
                 >
                   <input
                     name={`attribute_${field.key}`}

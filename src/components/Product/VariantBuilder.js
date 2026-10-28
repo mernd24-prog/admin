@@ -445,9 +445,36 @@ const VariantBuilder = ({
   };
 
   const applyToAll = (field, value) => {
-    if (value === "" || value === undefined) return;
-    onChange(variants.map((v) => ({ ...v, [field]: Number(value) })));
+    if (value === "" || value === undefined) return false;
+    const numVal = Number(value);
+
+    // Special price validation
+    if (field === "salePrice") {
+      if (numVal <= 0) {
+        toast.error("Special price must be greater than 0.");
+        return false;
+      }
+      const hasExceed = variants.some((v) => {
+        const vPrice = Number(v.price || 0);
+        return vPrice > 0 && numVal >= vPrice;
+      });
+      if (hasExceed) {
+        toast.error("Special price cannot equal or exceed the price.");
+        return false;
+      }
+      const belowHalf = variants.some((v) => {
+        const vPrice = Number(v.price || 0);
+        return vPrice > 0 && numVal < vPrice / 2;
+      });
+      if (belowHalf) {
+        toast.error("Special price must be at least half of the price.");
+        return false;
+      }
+    }
+
+    onChange(variants.map((v) => ({ ...v, [field]: numVal })));
     toast.success(`Applied to all ${variants.length} variants`);
+    return true;
   };
 
   const totalCombinations =
@@ -914,12 +941,13 @@ const VariantBuilder = ({
                         blockInvalidNumberKeys(e);
 
                         if (e.key === "Enter") {
-                          applyToAll(field, bulkValues[field]);
-
-                          setBulkValues((prev) => ({
-                            ...prev,
-                            [field]: "",
-                          }));
+                          const applied = applyToAll(field, bulkValues[field]);
+                          if (applied) {
+                            setBulkValues((prev) => ({
+                              ...prev,
+                              [field]: "",
+                            }));
+                          }
                         }
                       }}
                     />
@@ -928,11 +956,13 @@ const VariantBuilder = ({
                   <button
                     type="button"
                     onClick={() => {
-                      applyToAll(field, bulkValues[field]);
-                      setBulkValues((prev) => ({
-                        ...prev,
-                        [field]: "",
-                      }));
+                      const applied = applyToAll(field, bulkValues[field]);
+                      if (applied) {
+                        setBulkValues((prev) => ({
+                          ...prev,
+                          [field]: "",
+                        }));
+                      }
                     }}
                     className="flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-2.5 py-1 text-sm font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold)] hover:text-[var(--admin-navy)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
                   >
@@ -1485,7 +1515,7 @@ const VariantBuilder = ({
                         )}
 
                         <p className="text-[10px] text-gray-400">
-                          Managed in Inventory later too.
+                          Managed this in Inventory as well.
                         </p>
                       </div>
 
@@ -1750,7 +1780,7 @@ const VariantBuilder = ({
         </p>
       )}
 
-      {variants.length > 0 && (
+      {/* {variants.length > 0 && (
         <div className="flex items-center justify-center gap-2 text-[11px] text-[var(--admin-muted)]">
           <span className="inline-flex items-center gap-1">
             <Circle className="h-3 w-3 fill-current" />
@@ -1778,7 +1808,7 @@ const VariantBuilder = ({
             Remove
           </span>
         </div>
-      )}
+      )} */}
 
       {pendingDeleteVariant && (
         <div
