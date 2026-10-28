@@ -922,6 +922,7 @@ const FilterBar = ({
   loading = false,
   activeCount = 0,
   listPage,
+  gridClassName = "",
 }) => {
   const resolvedFilters = useMemo(
     () => (filters.length ? filters : fields || []),
@@ -1086,7 +1087,9 @@ const FilterBar = ({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div
+        className={`grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 ${gridClassName}`}
+      >
         {normalizedFilters.map((field) => (
           <FilterField
             key={field.key}

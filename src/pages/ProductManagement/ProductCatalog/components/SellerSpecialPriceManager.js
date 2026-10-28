@@ -56,6 +56,7 @@ import {
 } from "../../../../_helpers/exportToCsv";
 import { toast } from "../../../../utils/toast";
 import { truncateToWordBoundary } from "../../../../utils/formatters";
+import FormInput from "../../../../components/Atoms/FormInput/FormInput";
 
 const getErrorMessage = (error, fallback) => {
   if (typeof error === "string" && error.trim()) return error;
@@ -727,7 +728,7 @@ const SellerSpecialPriceManager = () => {
           return {
             ...row,
             // Keep the input empty when the user clears it
-            specialPrice: value === "" ? "" : normalizeSpecialPriceValue(value),
+            specialPrice: value,
           };
         }
 
@@ -1315,28 +1316,34 @@ const SellerSpecialPriceManager = () => {
         label: "Update Special Price",
         render: (value, row) => {
           const { hasError, minimumSpecialPrice } = getRowFlags(row);
+
           return (
-            <div>
-              <div className="relative flex items-center">
-                <span className="absolute left-2.5 text-xs font-medium text-gray-400">
-                  ₹
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={value ?? ""}
-                  onChange={(e) => handleRowChange(row.id, e.target.value)}
-                  placeholder="Enter price"
-                  className={`w-36 rounded-lg border py-1.5 pl-6 pr-2 text-sm font-mono transition-colors ${
-                    hasError
-                      ? "border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                      : "border-gray-300 bg-white focus:border-[var(--admin-blue)] focus:ring-1 focus:ring-[var(--admin-blue)]"
-                  }`}
-                />
-              </div>
+            <div
+              className={`mt-2 flex w-36 flex-col ${hasError ? "" : "justify-center"}`}
+            >
+              <FormInput
+                type="number"
+                name={`specialPrice-${row.id}`}
+                value={value ?? ""}
+                onChange={(e) => handleRowChange(row.id, e.target.value)}
+                placeholder="Enter price"
+                min={0}
+                step="0.01"
+                className={`!w-36 !rounded-lg !py-1.5 !pr-2 !text-sm !font-mono transition-colors ${
+                  hasError
+                    ? "border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                    : "border-gray-300 focus:border-[var(--admin-blue)] focus:ring-1 focus:ring-[var(--admin-blue)]"
+                }`}
+              />
+
               {hasError && (
-                <p className="mt-1 text-[10px] font-medium text-red-600">
+                <p
+                  className=" text-[10px] leading-3 font-medium text-red-600"
+                  aria-live="polite"
+                  title={`Must be at least ${formatMoney(
+                    minimumSpecialPrice,
+                  )} and below ${formatMoney(row.sellingPrice)}`}
+                >
                   {`Must be at least ${formatMoney(
                     minimumSpecialPrice,
                   )} and below ${formatMoney(row.sellingPrice)}`}

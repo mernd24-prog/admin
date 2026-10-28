@@ -155,11 +155,27 @@ body {
   background: var(--admin-gold) !important;
   box-shadow: 0 8px 16px rgba(214, 163, 35, 0.18);
 }
-
 .button-primary:hover {
   background: var(--admin-gold-dark) !important;
   border-color: var(--admin-gold-dark) !important;
   color: var(--admin-navy) !important;
+}
+.button-primary-white {
+  min-height: 36px !important;
+  padding: 9px 18px !important;
+  border: 1px solid var(--admin-gold) !important;
+  border-radius: 6px !important;
+  color: white !important;
+  cursor: pointer !important;
+  font-weight: 600 !important;
+  transition: 0.2s ease !important;
+  background: var(--admin-gold) !important;
+  box-shadow: 0 8px 16px rgba(214, 163, 35, 0.18);
+}
+.button-primary-white:hover {
+  background: var(--admin-gold-dark) !important;
+  border-color: var(--admin-gold-dark) !important;
+  color: white !important;
 }
 
 .button-primary.my-organizations-primary-btn,

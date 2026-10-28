@@ -511,14 +511,12 @@ const analyticsTabs = [
       key: "fromDate",
       label: "From Date",
       type: "date",
-      width: "w-40",
       disableFuture: true,
     },
     {
       key: "toDate",
       label: "To Date",
       type: "date",
-      width: "w-40",
       disableFuture: true,
     },
   ];
@@ -815,6 +813,7 @@ const analyticsTabs = [
             onClear={resetFilters}
             loading={tableLoading}
             activeCount={activeFilters}
+            gridClassName="xl:grid-cols-[repeat(auto-fit,225px)]"
           />
         }
       />
