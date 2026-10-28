@@ -446,7 +446,18 @@ export const orderStatusOverrideValidationSchema = Yup.object({
   }),
   note: Yup.string()
     .max(500, "Note must be no more than 500 characters.")
-    .min(3, "Note must be at least 3 characters."),
+    .min(10, "Note must be at least 10 characters."),
+
+  cancelItems: Yup.object().when("status", {
+    is: "cancelled",
+    then: (schema) =>
+      schema.test(
+        "at-least-one-product",
+        "Please select at least one product to cancel.",
+        (value) => Object.keys(value || {}).length > 0,
+      ),
+    otherwise: (schema) => schema.notRequired(),
+  }),
 });
 
 const cmsOptionalText = (label, min = 2, max = 120) =>

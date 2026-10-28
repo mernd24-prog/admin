@@ -22,7 +22,7 @@ import {
   updateOrderStatus,
 } from "../../../../Redux/orderSlice";
 import { getProfile } from "../../../../Redux/userSlice";
-import Loader from "../../../../components/Loader/Loader";
+import Loader, { InlineLoader } from "../../../../components/Loader/Loader";
 import DefaultModal from "../../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../../components/Atoms/Input/Input";
 import PermissionGuard from "../../../../components/Atoms/PermissionGuard/PermissionGuard";
@@ -35,6 +35,8 @@ import { ENDPOINTS } from "../../../../_helpers/endpoints";
 import { downloadApiFile } from "../../../../_helpers/downloadApi";
 import { usePermission } from "../../../../_helpers/usePermission";
 import useRealtimeRefresh from "../../../../hooks/useRealtimeRefresh";
+import { ShieldCheck } from "lucide-react";
+import { ChevronDown, Package } from "lucide-react";
 import {
   formatDateTime12Hour,
   formatIndianNumber,
@@ -46,6 +48,9 @@ import {
   orderNoteValidationSchema,
   orderStatusOverrideValidationSchema,
 } from "../../../../_helpers/validationSchemas";
+import FormInput from "../../../../components/Atoms/FormInput/FormInput";
+
+
 
 const CANCELLABLE_SHIPMENT_STATUSES = new Set([
   "initiated",
@@ -2648,6 +2653,7 @@ const EmptyMiniCard = ({ title, note }) => (
 );
 const OrderSummary = () => {
   const navigate = useNavigate();
+
   const dispatch = useDispatch();
   const { id } = useParams();
   const realtimeRevision = useRealtimeRefresh(
@@ -2689,7 +2695,9 @@ const OrderSummary = () => {
     carrierName: "",
     carrierUrl: "",
   });
+  const [isProductsExpanded, setIsProductsExpanded] = useState(true);
 
+const selectedCount = Object.keys(formData.cancelItems).length;
   const setLoading = useCallback((loading) => {
     setState((prev) => ({ ...prev, isLoading: loading }));
   }, []);
@@ -3322,7 +3330,7 @@ const OrderSummary = () => {
   });
 
   const statusFormik = useFormik({
-    initialValues: { status: "", reason: "", note: "" },
+    initialValues: { status: "", reason: "", note: "" ,  cancelItems: {}},
     validationSchema: orderStatusOverrideValidationSchema,
     validateOnChange: false,
     validateOnBlur: false,
@@ -4986,490 +4994,593 @@ const OrderSummary = () => {
         </div>
       </div>
 
-      <DefaultModal
-        isOpen={state.statusModal}
-        onClose={closeStatusModal}
-        title={isSeller ? "Cancel My Items" : "Administrative Status Override"}
-        onSubmit={statusFormik.handleSubmit}
-        loading={state.isLoading}
-        submitButtonText={
-          formData.status === "cancelled"
-            ? "Confirm cancellation"
-            : "Update status"
-        }
-        closeButtonText="Close"
-        submitDisabled={
-          formData.status === "cancelled" &&
-          (state.cancellationPreviewLoading ||
-            (!state.cancellationPreviewUnavailable &&
-              (Boolean(state.cancellationPreviewError) ||
-                !state.cancellationPreview)))
-        }
+   <DefaultModal
+  isOpen={state.statusModal}  
+  onClose={closeStatusModal}
+  title={isSeller ? "Cancel Items" : "Administrative Status Override"}
+  onSubmit={statusFormik.handleSubmit}
+  loading={state.isLoading}
+  submitButtonText={
+    formData.status === "cancelled"
+      ? "Confirm cancellation"
+      : "Update status"
+  }
+  closeButtonText="Close"
+ submitDisabled={
+  formData.status === "cancelled" &&
+  state.cancellationPreviewLoading
+}
+>
+  <div className="space-y-5 py-2">
+    {/* Admin Warning */}
+    {!isSeller && (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <p className="text-xs leading-5 text-amber-900">
+          Use this only for exceptional order corrections. Delivery changes
+          must be made through Shipment Management.
+        </p>
+      </div>
+    )}
+
+    {/* Status */}
+    {!isSeller && (
+      <FormSection
+        title="Order Status"
+        subtitle="Select the status you want to apply to this order."
       >
-        <div className="space-y-5 py-2">
-          {/* Admin Warning */}
-          {!isSeller && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-              <p className="text-xs leading-5 text-amber-900">
-                Use this only for exceptional order corrections. Delivery
-                changes must be made through Shipment Management.
-              </p>
-            </div>
-          )}
+        <FormSelectGroup
+          label="Status"
+          options={statusOptions}
+          required
+          value={
+            statusOptions.find((opt) => opt.value === formData.status) || null
+          }
+          onChange={(option) => {
+            const status = option?.value || "";
 
-          {/* Status */}
-          {!isSeller && (
-            <FormSection
-              title="Order Status"
-              subtitle="Select the status you want to apply to this order."
-            >
-              <FormSelectGroup
-                label="Status"
-                options={statusOptions}
-                required
-                value={
-                  statusOptions.find((opt) => opt.value === formData.status) ||
-                  null
-                }
-                onChange={(option) => {
-                  const status = option?.value || "";
-                  statusFormik.setFieldValue(
-                    "status",
-                    status,
-                    statusFormik.submitCount > 0,
-                  );
+            statusFormik.setFieldValue(
+              "status",
+              status,
+              statusFormik.submitCount > 0,
+            );
 
-                  setFormData((prev) => ({
-                    ...prev,
-                    status,
-                    // Require an explicit selection for destructive actions.
-                    cancelItems: {},
-                  }));
-                }}
-                placeholder="Select Status"
-                isSearchable={false}
-                error={
-                  statusFormik.submitCount > 0 && statusFormik.errors.status
-                }
-              />
-            </FormSection>
-          )}
+            setFormData((prev) => ({
+              ...prev,
+              status,
+              // Require an explicit selection for destructive actions.
+              cancelItems: {},
+            }));
+          }}
+          placeholder="Select Status"
+          isSearchable={false}
+          error={statusFormik.submitCount > 0 && statusFormik.errors.status}
+        />
+      </FormSection>
+    )}
 
-          {/* Shipment Details */}
-          {["ready_to_ship", "shipped", "out_for_delivery"].includes(
-            formData.status,
-          ) && (
-              <FormSection
-                title="Shipment Details"
-                subtitle="Enter the tracking information for this shipment."
-              >
-                <div className="space-y-4">
-                  <Input
-                    labelName="Tracking Number"
-                    value={formData.trackingNumber}
-                    onChange={(event) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        trackingNumber: event.target.value,
-                      }))
-                    }
-                    name="trackingNumber"
-                    placeholder="AWB / tracking number"
-                    maxLength={200}
-                  />
+    {/* Shipment Details */}
+    {["ready_to_ship", "shipped", "out_for_delivery"].includes(
+      formData.status,
+    ) && (
+      <FormSection
+        title="Shipment Details"
+        subtitle="Enter the tracking information for this shipment."
+      >
+        <div className="space-y-4">
+          <Input
+            labelName="Tracking Number"
+            value={formData.trackingNumber}
+            onChange={(event) =>
+              setFormData((prev) => ({
+                ...prev,
+                trackingNumber: event.target.value,
+              }))
+            }
+            name="trackingNumber"
+            placeholder="AWB / tracking number"
+            maxLength={200}
+          />
 
-                  <Input
-                    labelName="Carrier / Courier"
-                    value={formData.carrierName}
-                    onChange={(event) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        carrierName: event.target.value,
-                      }))
-                    }
-                    name="carrierName"
-                    placeholder="e.g. Delhivery, BlueDart, FedEx"
-                    maxLength={100}
-                  />
+          <Input
+            labelName="Carrier / Courier"
+            value={formData.carrierName}
+            onChange={(event) =>
+              setFormData((prev) => ({
+                ...prev,
+                carrierName: event.target.value,
+              }))
+            }
+            name="carrierName"
+            placeholder="e.g. Delhivery, BlueDart, FedEx"
+            maxLength={100}
+          />
 
-                  <Input
-                    labelName="Tracking URL (optional)"
-                    value={formData.carrierUrl}
-                    onChange={(event) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        carrierUrl: event.target.value,
-                      }))
-                    }
-                    name="carrierUrl"
-                    placeholder="https://..."
-                    maxLength={500}
-                  />
-                </div>
-              </FormSection>
-            )}
-
-          {/* Cancellation Details */}
-          {formData.status === "cancelled" && (
-            <FormSection
-              title="Cancellation Details"
-              subtitle="Select the cancellation reason, refund handling, and items to cancel."
-            >
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormSelectGroup
-                    label="Reason Type"
-                    options={[
-                      { value: "other", label: "Other" },
-                      {
-                        value: "seller_unavailable",
-                        label: "Seller unavailable",
-                      },
-                      {
-                        value: "inventory_unavailable",
-                        label: "Inventory unavailable",
-                      },
-                      {
-                        value: "delivery_delay",
-                        label: "Delivery delay",
-                      },
-                      {
-                        value: "pricing_issue",
-                        label: "Pricing issue",
-                      },
-                      {
-                        value: "address_issue",
-                        label: "Address issue",
-                      },
-                      {
-                        value: "payment_issue",
-                        label: "Payment issue",
-                      },
-                      {
-                        value: "item_damaged",
-                        label: "Item damaged before dispatch",
-                      },
-                      {
-                        value: "quality_check_failed",
-                        label: "Quality check failed",
-                      },
-                      {
-                        value: "warehouse_unavailable",
-                        label: "Warehouse unable to fulfil",
-                      },
-                      {
-                        value: "catalog_issue",
-                        label: "Incorrect catalogue or listing",
-                      },
-                      {
-                        value: "delivery_restricted",
-                        label: "Restricted delivery location",
-                      },
-                      {
-                        value: "compliance_hold",
-                        label: "Compliance or fraud hold",
-                      },
-                      {
-                        value: "customer_support_request",
-                        label: "Customer requested through support",
-                      },
-                    ]}
-                    value={{
-                      value: formData.reasonCode,
-                      label:
-                        {
-                          other: "Other",
-                          seller_unavailable: "Seller unavailable",
-                          inventory_unavailable: "Inventory unavailable",
-                          delivery_delay: "Delivery delay",
-                          pricing_issue: "Pricing issue",
-                          address_issue: "Address issue",
-                          payment_issue: "Payment issue",
-                          item_damaged: "Item damaged before dispatch",
-                          quality_check_failed: "Quality check failed",
-                          warehouse_unavailable: "Warehouse unable to fulfil",
-                          catalog_issue: "Incorrect catalogue or listing",
-                          delivery_restricted: "Restricted delivery location",
-                          compliance_hold: "Compliance or fraud hold",
-                          customer_support_request:
-                            "Customer requested through support",
-                        }[formData.reasonCode] || "Other",
-                    }}
-                    onChange={(option) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        reasonCode: option?.value || "other",
-                      }))
-                    }
-                    placeholder="Select reason"
-                    isSearchable={false}
-                  />
-
-                  {isSeller ? (
-                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-                      <p className="font-semibold">
-                        Refund managed by the platform
-                      </p>
-                      <p className="mt-1 text-xs">
-                        The customer refund route is selected from the payment
-                        method and platform policy. Sellers cannot redirect or
-                        manually complete refunds.
-                      </p>
-                    </div>
-                  ) : (
-                    <FormSelectGroup
-                      label="Refund Handling"
-                      options={[
-                        { value: "auto", label: "Automatic" },
-                        { value: "original_source", label: "Original source" },
-                        { value: "wallet", label: "Wallet" },
-                        { value: "manual", label: "Manual review" },
-                      ]}
-                      value={{
-                        value: formData.refundMethod,
-                        label:
-                          {
-                            auto: "Automatic",
-                            original_source: "Original source",
-                            wallet: "Wallet",
-                            manual: "Manual review",
-                          }[formData.refundMethod] || "Automatic",
-                      }}
-                      onChange={(option) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          refundMethod: option?.value || "auto",
-                        }))
-                      }
-                      placeholder="Select refund method"
-                      isSearchable={false}
-                    />
-                  )}
-                </div>
-
-                {/* Products */}
-                <div>
-                  <div className="mb-3">
-                    <p className="text-sm font-semibold text-gray-800">
-                      Products to Cancel
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Select the products that should be cancelled from this
-                      order.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    {items.map((item) => {
-                      const itemId = String(item.id);
-
-                      const pending = Number(
-                        pendingCancellationQuantityByItem.get(itemId) || 0,
-                      );
-                      const remaining =
-                        Number(item.quantity || 0) -
-                        Number(item.cancelled_quantity || 0) -
-                        pending;
-                      const shipmentCancellable =
-                        isItemShipmentCancellable(item);
-                      const blocked = remaining <= 0 || !shipmentCancellable;
-
-                      const selected = Object.prototype.hasOwnProperty.call(
-                        formData.cancelItems,
-                        itemId,
-                      );
-
-                      return (
-                        <label
-                          key={itemId}
-                          className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${selected
-                            ? "border-red-200 bg-red-50/50"
-                            : "border-gray-200 bg-white hover:bg-gray-50"
-                            } ${blocked
-                              ? "cursor-not-allowed opacity-60"
-                              : "cursor-pointer"
-                            }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            disabled={blocked}
-                            onChange={(event) =>
-                              setFormData((prev) => {
-                                const next = { ...prev.cancelItems };
-
-                                if (event.target.checked) {
-                                  next[itemId] = remaining;
-                                } else {
-                                  delete next[itemId];
-                                }
-
-                                return {
-                                  ...prev,
-                                  cancelItems: next,
-                                };
-                              })
-                            }
-                            className="h-4 w-4 accent-red-600"
-                          />
-
-                          <span className="min-w-0 flex-1 truncate text-gray-800">
-                            {firstDefined(item.product_title, item.product_id)}
-                          </span>
-
-                          <span
-                            className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${selected
-                              ? "bg-red-100 text-red-700"
-                              : "bg-gray-100 text-gray-500"
-                              }`}
-                          >
-                            {selected
-                              ? `Cancel all ${remaining}`
-                              : !shipmentCancellable
-                                ? "Handed to courier"
-                                : pending > 0
-                                  ? "Cancellation pending"
-                                  : `${remaining} available`}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <p className="text-sm font-semibold text-gray-800">
-                    Cancellation impact
-                  </p>
-                  {state.cancellationPreviewLoading ? (
-                    <p className="mt-2 text-xs text-gray-500">
-                      Calculating from current order values…
-                    </p>
-                  ) : state.cancellationPreviewUnavailable ? (
-                    <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                      <p className="font-semibold">
-                        Preview temporarily unavailable
-                      </p>
-                      <p className="mt-1">
-                        The cancellation will still be validated and calculated
-                        by the server when you confirm. No estimated amount is
-                        being assumed.
-                      </p>
-                    </div>
-                  ) : state.cancellationPreviewError ? (
-                    <p className="mt-2 text-xs text-red-600">
-                      {state.cancellationPreviewError}
-                    </p>
-                  ) : state.cancellationPreview ? (
-                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
-                      <div>
-                        <span className="text-gray-500">Items</span>
-                        <p className="font-semibold">
-
-                          {formatIndianNumber(
-                            state.cancellationPreview.itemRefundAmount,
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Shipping</span>
-                        <p className="font-semibold">
-
-                          {formatIndianNumber(
-                            state.cancellationPreview.shippingRefundAmount,
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Platform fee</span>
-                        <p className="font-semibold">
-
-                          {formatIndianNumber(
-                            state.cancellationPreview.platformFeeRefundAmount,
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Customer refund</span>
-                        <p className="font-semibold text-red-700">
-
-                          {formatIndianNumber(
-                            state.cancellationPreview.totalRefundAmount,
-                          )}
-                        </p>
-                      </div>
-                      <div className="col-span-2 sm:col-span-4">
-                        <span className="text-gray-500">Handling: </span>
-                        <span className="font-semibold">
-                          {formatLabel(
-                            state.cancellationPreview.refundHandling,
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-xs text-gray-500">
-                      Select at least one cancellable product.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </FormSection>
-          )}
-
-          {/* Notes */}
-          <FormSection
-            title="Notes"
-            subtitle="Add a reason or internal note for this status update."
-          >
-            <div className="space-y-4">
-              <Input
-                type="textarea"
-                labelName="Reason"
-                value={formData.reason}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  statusFormik.setFieldValue(
-                    "reason",
-                    value,
-                    statusFormik.submitCount > 0,
-                  );
-
-                  setFormData((prev) => ({
-                    ...prev,
-                    reason: value,
-                  }));
-                }}
-                onBlur={statusFormik.handleBlur}
-                name="reason"
-                placeholder="Reason or operational note"
-                error={
-                  statusFormik.submitCount > 0 && statusFormik.errors.reason
-                }
-              />
-
-              <Input
-                type="textarea"
-                labelName="Note"
-                value={formData.note}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  statusFormik.setFieldValue(
-                    "note",
-                    value,
-                    statusFormik.submitCount > 0,
-                  );
-                  setFormData((prev) => ({ ...prev, note: value }));
-                }}
-                onBlur={statusFormik.handleBlur}
-                name="note"
-                placeholder="Enter order note"
-                error={statusFormik.submitCount > 0 && statusFormik.errors.note}
-              />
-            </div>
-          </FormSection>
+          <Input
+            labelName="Tracking URL (optional)"
+            value={formData.carrierUrl}
+            onChange={(event) =>
+              setFormData((prev) => ({
+                ...prev,
+                carrierUrl: event.target.value,
+              }))
+            }
+            name="carrierUrl"
+            placeholder="https://..."
+            maxLength={500}
+          />
         </div>
-      </DefaultModal>
+      </FormSection>
+    )}
+
+    {/* Cancellation Details */}
+    {formData.status === "cancelled" && (
+      <FormSection
+        title="Cancellation Details"
+        subtitle="Select the cancellation reason, refund handling, and items to cancel."
+      >
+        <div className="space-y-5">
+          {/* Refund Managed by Platform - Full Width */}
+          {isSeller && (
+            <div className="flex w-full items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                <ShieldCheck size={18} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-blue-900">
+                  Refund managed by the platform
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-blue-800">
+                  The customer refund route is selected based on the payment
+                  method and platform policy. Sellers cannot redirect or
+                  manually complete refunds.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Reason Type and Refund Handling */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className={isSeller ? "sm:col-span-2" : ""}>
+              <FormSelectGroup
+                label="Reason Type"
+                options={[
+                  { value: "other", label: "Other" },
+                  {
+                    value: "seller_unavailable",
+                    label: "Seller unavailable",
+                  },
+                  {
+                    value: "inventory_unavailable",
+                    label: "Inventory unavailable",
+                  },
+                  {
+                    value: "delivery_delay",
+                    label: "Delivery delay",
+                  },
+                  {
+                    value: "pricing_issue",
+                    label: "Pricing issue",
+                  },
+                  {
+                    value: "address_issue",
+                    label: "Address issue",
+                  },
+                  {
+                    value: "payment_issue",
+                    label: "Payment issue",
+                  },
+                  {
+                    value: "item_damaged",
+                    label: "Item damaged before dispatch",
+                  },
+                  {
+                    value: "quality_check_failed",
+                    label: "Quality check failed",
+                  },
+                  {
+                    value: "warehouse_unavailable",
+                    label: "Warehouse unable to fulfil",
+                  },
+                  {
+                    value: "catalog_issue",
+                    label: "Incorrect catalogue or listing",
+                  },
+                  {
+                    value: "delivery_restricted",
+                    label: "Restricted delivery location",
+                  },
+                  {
+                    value: "compliance_hold",
+                    label: "Compliance or fraud hold",
+                  },
+                  {
+                    value: "customer_support_request",
+                    label: "Customer requested through support",
+                  },
+                ]}
+                value={{
+                  value: formData.reasonCode,
+                  label:
+                    {
+                      other: "Other",
+                      seller_unavailable: "Seller unavailable",
+                      inventory_unavailable: "Inventory unavailable",
+                      delivery_delay: "Delivery delay",
+                      pricing_issue: "Pricing issue",
+                      address_issue: "Address issue",
+                      payment_issue: "Payment issue",
+                      item_damaged: "Item damaged before dispatch",
+                      quality_check_failed: "Quality check failed",
+                      warehouse_unavailable: "Warehouse unable to fulfil",
+                      catalog_issue: "Incorrect catalogue or listing",
+                      delivery_restricted: "Restricted delivery location",
+                      compliance_hold: "Compliance or fraud hold",
+                      customer_support_request:
+                        "Customer requested through support",
+                    }[formData.reasonCode] || "Other",
+                }}
+                onChange={(option) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    reasonCode: option?.value || "other",
+                  }))
+                }
+                placeholder="Select reason"
+                isSearchable={false}
+              />
+            </div>
+
+            {/* Refund Handling - Admin Only */}
+            {!isSeller && (
+              <FormSelectGroup
+                label="Refund Handling"
+                options={[
+                  { value: "auto", label: "Automatic" },
+                  { value: "original_source", label: "Original source" },
+                  { value: "wallet", label: "Wallet" },
+                  { value: "manual", label: "Manual review" },
+                ]}
+                value={{
+                  value: formData.refundMethod,
+                  label:
+                    {
+                      auto: "Automatic",
+                      original_source: "Original source",
+                      wallet: "Wallet",
+                      manual: "Manual review",
+                    }[formData.refundMethod] || "Automatic",
+                }}
+                onChange={(option) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    refundMethod: option?.value || "auto",
+
+                  }))
+                }
+                placeholder="Select refund method"
+                isSearchable={false}
+              />
+            )}
+          </div>
+
+          {/* Products to Cancel */}
+      <div>
+  <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+  {/* Collapsible Header */}
+  <button
+    type="button"
+    onClick={() => setIsProductsExpanded((prev) => !prev)}
+    aria-expanded={isProductsExpanded}
+    className="flex w-full items-center justify-between gap-3 rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
+  >
+    <div className="flex min-w-0 items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+        <Package size={18} />
+      </div>
+
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-gray-800">
+          Products to Cancel
+          <span className="ml-1 text-[var(--admin-danger)]">*</span>
+        </p>
+
+        <p className="mt-1 text-xs text-gray-500">
+          {selectedCount > 0
+            ? `${selectedCount} product${selectedCount > 1 ? "s" : ""} selected`
+            : "Select at least one product to cancel"}
+        </p>
+      </div>
+    </div>
+
+    <div className="flex shrink-0 items-center gap-3">
+      <span
+        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+          selectedCount > 0
+            ? "bg-red-50 text-red-700"
+            : "bg-gray-100 text-gray-500"
+        }`}
+      >
+        {selectedCount} selected
+      </span>
+
+      <ChevronDown
+        size={18}
+        className={`text-gray-500 transition-transform duration-200 ${
+          isProductsExpanded ? "rotate-180" : ""
+        }`}
+      />
+    </div>
+  </button>
+
+  {/* Collapsible Product List */}
+  {isProductsExpanded && (
+    <div className="border-t border-gray-200 p-4">
+      <div className="mb-3">
+        <p className="text-xs text-gray-500">
+          Choose the products you want to cancel from this order.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {items.map((item) => {
+          const itemId = String(item.id);
+
+          const pending = Number(
+            pendingCancellationQuantityByItem.get(itemId) || 0,
+          );
+
+          const remaining =
+            Number(item.quantity || 0) -
+            Number(item.cancelled_quantity || 0) -
+            pending;
+
+          const shipmentCancellable = isItemShipmentCancellable(item);
+          const blocked = remaining <= 0 || !shipmentCancellable;
+
+          const selected = Object.prototype.hasOwnProperty.call(
+            formData.cancelItems,
+            itemId,
+          );
+
+          return (
+            <label
+              key={itemId}
+              className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                selected
+                  ? "border-red-200 bg-red-50/50"
+                  : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+              } ${
+                blocked
+                  ? "cursor-not-allowed opacity-60"
+                  : "cursor-pointer"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selected}
+                disabled={blocked}
+                onChange={(event) => {
+                  const next = { ...formData.cancelItems };
+
+                  if (event.target.checked) {
+                    next[itemId] = remaining;
+                  } else {
+                    delete next[itemId];
+                  }
+
+                  setFormData((prev) => ({
+                    ...prev,
+                    cancelItems: next,
+                  }));
+
+                  statusFormik.setFieldValue(
+                    "cancelItems",
+                    next,
+                    statusFormik.submitCount > 0,
+                  );
+                }}
+                className="h-4 w-4 shrink-0 accent-red-600"
+              />
+
+              <span className="min-w-0 flex-1 break-words text-gray-800">
+                {firstDefined(item.product_title, item.product_id)}
+              </span>
+
+              <span
+                className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${
+                  selected
+                    ? "bg-red-100 text-red-700"
+                    : "bg-gray-100 text-gray-500"
+                }`}
+              >
+                {selected
+                  ? `Cancel all ${remaining}`
+                  : !shipmentCancellable
+                    ? "Handed to courier"
+                    : pending > 0
+                      ? "Cancellation Pending"
+                      : `${remaining} available`}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  )}
+
+  {/* Validation Error */}
+  {statusFormik.submitCount > 0 &&
+    statusFormik.errors.cancelItems && (
+      <p
+        className="border-t border-gray-100 px-4 py-3 text-xs text-[var(--admin-danger)]"
+        role="alert"
+      >
+        {statusFormik.errors.cancelItems}
+      </p>
+    )}
+</div>
+
+</div>
+
+        {/* Cancellation Impact */}
+<div className="rounded-lg border border-red-200 bg-red-50/50 p-4">
+  <p className="text-sm font-semibold text-red-800">
+    Cancellation impact
+  </p>
+
+  {state.cancellationPreviewLoading ? (
+    <div className="mt-3 ">
+      <InlineLoader/>
+    </div>
+  ) : state.cancellationPreviewUnavailable ? (
+    <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+      <p className="font-semibold">
+        Preview temporarily unavailable
+      </p>
+
+      <p className="mt-1">
+        The cancellation will still be validated and calculated by
+        the server when you confirm. No estimated amount is being
+        assumed.
+      </p>
+    </div>
+  ) : state.cancellationPreviewError ? (
+    <p className="mt-2 text-xs text-[var(--admin-danger)]">
+      {state.cancellationPreviewError}
+    </p>
+  ) : state.cancellationPreview ? (
+    <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+      <div>
+        <span className="text-gray-500">Items</span>
+        <p className="font-semibold">
+          {formatIndianNumber(
+            state.cancellationPreview.itemRefundAmount,
+          )}
+        </p>
+      </div>
+
+      <div>
+        <span className="text-gray-500">Shipping</span>
+        <p className="font-semibold">
+          {formatIndianNumber(
+            state.cancellationPreview.shippingRefundAmount,
+          )}
+        </p>
+      </div>
+
+      <div>
+        <span className="text-gray-500">Platform fee</span>
+        <p className="font-semibold">
+          {formatIndianNumber(
+            state.cancellationPreview.platformFeeRefundAmount,
+          )}
+        </p>
+      </div>
+
+      <div>
+        <span className="text-gray-500">Customer refund</span>
+        <p className="font-semibold text-[var(--admin-danger)]">
+          {formatIndianNumber(
+            state.cancellationPreview.totalRefundAmount,
+          )}
+        </p>
+      </div>
+
+      <div className="col-span-2 sm:col-span-4">
+        <span className="text-gray-500">Handling: </span>
+        <span className="font-semibold">
+          {formatLabel(
+            state.cancellationPreview.refundHandling,
+          )}
+        </span>
+      </div>
+    </div>
+  ) : (
+    <p className="mt-2 text-xs text-red-400">
+     Cancellation impact details will appear here once you select at least one product.
+    </p>
+  )}
+</div>
+        </div>
+      </FormSection>
+    )}
+
+    {/* Notes */}
+    <FormSection
+      title="Notes"
+      subtitle="Add a reason or internal note for this status update."
+    >
+     <div className="space-y-4">
+  <FormInput
+    type="textarea"
+    label="Reason"
+    name="reason"
+    maxLength={500}
+    minLength={10}
+    limitMessage = "Reason must be between 10 and 500 characters."
+    required
+    value={formData.reason}
+    onChange={(event) => {
+      const value = event.target.value;
+
+      statusFormik.setFieldValue(
+        "reason",
+        value,
+        statusFormik.submitCount > 0,
+      );
+
+      setFormData((prev) => ({
+        ...prev,
+        reason: value,
+      }));
+    }}
+    onBlur={statusFormik.handleBlur}
+    placeholder="Reason or operational note"
+    error={
+  statusFormik.submitCount > 0 &&
+  (formData.status !== "cancelled" || selectedCount > 0)
+    ? statusFormik.errors.reason
+    : ""
+}
+  />
+
+  <FormInput
+    type="textarea"
+    label="Note"
+    name="note"
+    maxLength={500}
+    minLength={10}
+    limitMessage = "Note must be between 10 and 500 characters."
+  
+    value={formData.note}
+    onChange={(event) => {
+      const value = event.target.value;
+
+      statusFormik.setFieldValue(
+        "note",
+        value,
+        statusFormik.submitCount > 0,
+      );
+
+      setFormData((prev) => ({
+        ...prev,
+        note: value,
+      }));
+    }}
+    onBlur={statusFormik.handleBlur}
+    placeholder="Enter order note"
+    error={
+      statusFormik.submitCount > 0
+        ? statusFormik.errors.note
+        : ""
+    }
+  />
+</div>
+    </FormSection>
+  </div>
+</DefaultModal>
 
       <DefaultModal
         isOpen={state.noteModal}
@@ -5525,6 +5636,7 @@ const OrderSummary = () => {
                 name="note"
                 placeholder="Enter order note"
                 required
+                limitMessage="Note must be between 3 and 500 characters." 
               />
             </div>
           </FormSection>

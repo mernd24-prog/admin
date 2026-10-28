@@ -13,10 +13,10 @@ const Tabs = ({ tabs = [], activeTab, onChange }) => {
             key={tab.value}
             type="button"
             onClick={() => onChange?.(tab.value)}
-            className={`rounded-md px-4 py-2 text-sm font-semibold transition-all duration-200 focus:outline-none ${
+            className={`rounded-md border px-4 py-1.5 text-sm font-semibold whitespace-nowrap transition-colors duration-200 focus:outline-none ${
               isActive
-                ? "bg-[var(--admin-navy)] text-white shadow-sm ring-1 ring-[var(--admin-navy-dark)]"
-                : "bg-transparent text-[var(--admin-navy)] hover:bg-white hover:text-[var(--admin-navy-dark)]"
+                ? "border-[var(--admin-navy)] bg-[var(--admin-navy)] text-white"
+                : "border-transparent bg-transparent text-[var(--admin-navy)] hover:bg-white hover:text-[var(--admin-navy-dark)]"
             }`}
           >
             {tab.label}
@@ -25,8 +25,8 @@ const Tabs = ({ tabs = [], activeTab, onChange }) => {
               <span
                 className={`ml-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors ${
                   isActive
-                    ? "bg-white/20 text-white"
-                    : "border border-[var(--admin-navy)]/15 bg-white text-[var(--admin-navy)] shadow-xs"
+                    ? "border-transparent bg-white/20 text-white"
+                    : "border-[var(--admin-navy)]/15 bg-white text-[var(--admin-navy)]"
                 }`}
               >
                 {tab.count}

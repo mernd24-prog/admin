@@ -141,7 +141,7 @@ const DefaultModal = ({
               onClick={onClose}
               label={closeButtonText}
               isDisable={loading}
-              className="flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none "
             />
 
             {isButtonView && (
@@ -149,7 +149,7 @@ const DefaultModal = ({
                 onClick={onSubmit}
                 loading={loading}
                 isDisable={loading || submitDisabled}
-                className="flex-1 sm:flex-none button-primary"
+                className="flex-1 sm:flex-none button-primary-white"
               >
                 {submitButtonText}
               </Button>

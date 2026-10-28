@@ -7,6 +7,7 @@ import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import FormInput from "../../components/Atoms/FormInput/FormInput";
 import {
   DataTable,
+  FilterBar,
   FormSection,
   PageHeader,
   StatusBadge,
@@ -133,6 +134,7 @@ const SellerHelpSupport = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
+  const [dateFilters, setDateFilters] = useState({ fromDate: "", toDate: "" });
 
   const [selectedQuery, setSelectedQuery] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -151,6 +153,10 @@ const SellerHelpSupport = () => {
           search: search || undefined,
           limit: pageSize,
           offset: (page - 1) * pageSize,
+          fromDate: dateFilters.fromDate || undefined,
+          toDate: dateFilters.toDate
+            ? `${dateFilters.toDate}T23:59:59.999`
+            : undefined,
         },
       });
 
@@ -164,7 +170,7 @@ const SellerHelpSupport = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search]);
+  }, [dateFilters.fromDate, dateFilters.toDate, page, pageSize, search]);
 
   useEffect(() => {
     fetchQueries();
@@ -567,6 +573,35 @@ const SellerHelpSupport = () => {
               setSearch(value);
               setPage(1);
             }}
+            filterBar={
+              <FilterBar
+                filters={[
+                  {
+                    key: "fromDate",
+                    type: "date",
+                    label: "From Date",
+                    disableFuture: true,
+                  },
+                  {
+                    key: "toDate",
+                    type: "date",
+                    label: "To Date",
+                    disableFuture: true,
+                  },
+                ]}
+                values={dateFilters}
+                onChange={(key, value) => {
+                  setDateFilters((current) => ({ ...current, [key]: value }));
+                  setPage(1);
+                }}
+                onClear={() => {
+                  setDateFilters({ fromDate: "", toDate: "" });
+                  setPage(1);
+                }}
+                loading={loading}
+                activeCount={Number(Boolean(dateFilters.fromDate || dateFilters.toDate))}
+              />
+            }
             onRefresh={fetchQueries}
             searchPlaceholder="Search your support queries"
             rowKey="queryId"
