@@ -764,29 +764,76 @@ export default function BasicDetailsTab({
    */
 
   const selectedCategoryOption = useMemo(() => {
-    const currentCategory = String(
-      formData.category_id ||
-        formData.categoryId ||
-        formData.category ||
-        formData.category_key ||
-        "",
+    const referencesOf = (value) => {
+      if (value === undefined || value === null || value === "") return [];
+      if (typeof value !== "object") return [String(value)];
+      return [
+        value.value,
+        value._id,
+        value.id,
+        value.categoryId,
+        value.category_id,
+        value.categoryKey,
+        value.category_key,
+        value.slug,
+      ]
+        .filter((reference) => reference !== undefined && reference !== null)
+        .map(String);
+    };
+
+    const currentReferences = new Set(
+      [
+        formData.category_id,
+        formData.categoryId,
+        formData.category,
+        formData.category_key,
+        formData.categoryKey,
+      ].flatMap(referencesOf),
     );
 
-    if (!currentCategory) return null;
+    if (!currentReferences.size) return null;
 
-    return (
-      categoryOptions.find(
-        (opt) =>
-          String(opt.value) === currentCategory ||
-          String(opt.categoryKey || "") === currentCategory,
-      ) || null
+    const matchedOption = categoryOptions.find((option) =>
+      [
+        option.value,
+        option.categoryKey,
+        option.resourceId,
+        option._id,
+        option.id,
+      ]
+        .flatMap(referencesOf)
+        .some((reference) => currentReferences.has(reference)),
     );
+
+    if (matchedOption) return matchedOption;
+
+    // Retain the saved selection while the async category list is loading.
+    const categoryRecord =
+      formData.category && typeof formData.category === "object"
+        ? formData.category
+        : {};
+    const fallbackValue = Array.from(currentReferences)[0];
+    return {
+      value: fallbackValue,
+      categoryKey:
+        categoryRecord.categoryKey || formData.category_key || fallbackValue,
+      resourceId:
+        categoryRecord._id || categoryRecord.id || formData.categoryId || null,
+      label:
+        categoryRecord.label ||
+        categoryRecord.name ||
+        categoryRecord.title ||
+        formData.categoryName ||
+        "Loading selected category…",
+    };
   }, [
     categoryOptions,
     formData.category_id,
     formData.categoryId,
     formData.category,
     formData.category_key,
+    formData.categoryKey,
+    formData.categoryName,
   ]);
 
   /*
