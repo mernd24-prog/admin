@@ -11,10 +11,8 @@ import { hsnValidationSchema } from "../../../../../_helpers/validationSchemas";
 const INITIAL_VALUES = {
   code: "",
   description: "",
-  IGST: "",
-  CGST: "",
-  SGST: "",
-  additionalTax: "",
+  gstRate: "",
+  cessRate: "",
   isDisable: false,
 };
 
@@ -48,7 +46,18 @@ const AddHsnModal = ({
     enableReinitialize: true,
     onSubmit: async (values, { resetForm: resetFormikForm }) => {
       try {
-        const created = await handleSubmit(values);
+        const gstRate = Number(values.gstRate || 0);
+        const cessRate = Number(values.cessRate || 0);
+        const created = await handleSubmit({
+          ...values,
+          gstRate,
+          cessRate,
+          // Keep legacy consumers working while all API calls use gstRate/cessRate.
+          IGST: gstRate,
+          CGST: gstRate / 2,
+          SGST: gstRate / 2,
+          additionalTax: cessRate,
+        });
         if (created) resetFormikForm();
       } catch (error) {
         console.error(
@@ -69,15 +78,19 @@ const AddHsnModal = ({
   /* ---------- Populate form when editing ---------- */
   useEffect(() => {
     if (isOpen && initialData && isEditMode) {
+      const gstRate =
+        initialData.gstRate ??
+        initialData.IGST ??
+        Number(initialData.CGST || 0) + Number(initialData.SGST || 0);
+      const cessRate = initialData.cessRate ?? initialData.additionalTax ?? 0;
+
       formik.setValues({
         ...INITIAL_VALUES,
         _id: initialData._id || "",
         code: initialData.code || "",
         description: initialData.description || "",
-        IGST: initialData.IGST ?? "",
-        CGST: initialData.CGST ?? "",
-        SGST: initialData.SGST ?? "",
-        additionalTax: initialData.additionalTax ?? "",
+        gstRate,
+        cessRate,
         isDisable: initialData.isDisable || false,
       });
     }
@@ -139,65 +152,49 @@ const AddHsnModal = ({
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormInput
-                  label="IGST %"
-                  name="IGST"
+                  label="GST Rate %"
+                  name="gstRate"
                   type="number"
-                  value={formik.values.IGST}
+                  value={formik.values.gstRate}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  error={formik.touched.IGST && formik.errors.IGST}
+                  error={formik.touched.gstRate && formik.errors.gstRate}
                   required
                   placeholder="0.00"
-                  min="0.01"
+                  min="0"
                   max="100"
                   step="0.01"
                 />
 
                 <FormInput
-                  label="CGST %"
-                  name="CGST"
+                  label="Compensation Cess %"
+                  name="cessRate"
                   type="number"
-                  value={formik.values.CGST}
+                  value={formik.values.cessRate}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  error={formik.touched.CGST && formik.errors.CGST}
-                  required
-                  placeholder="0.00"
-                  min="0.01"
-                  max="100"
-                  step="0.01"
-                />
-
-                <FormInput
-                  label="SGST %"
-                  name="SGST"
-                  type="number"
-                  value={formik.values.SGST}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.SGST && formik.errors.SGST}
-                  required
-                  placeholder="0.00"
-                  min="0.01"
-                  max="100"
-                  step="0.01"
-                />
-
-                <FormInput
-                  label="Additional Tax %"
-                  name="additionalTax"
-                  type="number"
-                  value={formik.values.additionalTax}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={
-                    formik.touched.additionalTax && formik.errors.additionalTax
-                  }
+                  error={formik.touched.cessRate && formik.errors.cessRate}
                   placeholder="0"
-                  min="0.01"
+                  min="0"
                   max="100"
                   step="0.01"
                 />
+              </div>
+              <div className="rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-gray-700">
+                <p className="font-medium text-[var(--admin-navy)]">
+                  Tax split preview
+                </p>
+                <p className="mt-1">
+                  Inter-state: IGST {Number(formik.values.gstRate || 0)}%
+                  <span className="mx-2 text-gray-300">|</span>
+                  Intra-state: CGST{" "}
+                  {Number(formik.values.gstRate || 0) / 2}% + SGST{" "}
+                  {Number(formik.values.gstRate || 0) / 2}%
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  The applicable split is selected automatically from the place
+                  of supply.
+                </p>
               </div>
               <FormInput
                 label="Description"

@@ -140,7 +140,7 @@ export default function FinanceOverview() {
   const journey = [
     [
       "Delivered",
-      wallet.deliveredAmount || balances.deliveredBalance,
+      wallet.deliveredAmount ?? balances.deliveredBalance,
       counts.delivered || 0,
       "Order items delivered",
       "",

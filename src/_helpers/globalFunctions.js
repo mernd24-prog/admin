@@ -257,10 +257,11 @@ export const transformArray = (data) => {
     Array.isArray(data) &&
     data.map((item) => {
       const code = item?.code || item?.batchCode || "";
-      const igst = item?.IGST ?? 0;
-      const cgst = item?.CGST ?? 0;
-      const sgst = item?.SGST ?? 0;
-      const additionalTax = item?.additionalTax ?? 0;
+      const gstRate =
+        item?.gstRate ??
+        item?.IGST ??
+        Number(item?.CGST || 0) + Number(item?.SGST || 0);
+      const cessRate = item?.cessRate ?? item?.additionalTax ?? 0;
 
       return {
         value: item?._id || item?.id,
@@ -272,7 +273,7 @@ export const transformArray = (data) => {
             item?.replace_policy ||
             item?.duration ||
             item?.batchCode ||
-            `${code} | IGST: ${igst}% | CGST: ${cgst}% | SGST: ${sgst}% | Add. Tax: ${additionalTax}%`,
+            `${code} | GST: ${gstRate}%${Number(cessRate) ? ` | Cess: ${cessRate}%` : ""}`,
       };
     })
   );

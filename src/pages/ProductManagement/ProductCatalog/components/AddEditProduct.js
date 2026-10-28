@@ -647,11 +647,13 @@ export default function ProductManagementUI() {
   }, [formData]);
 
   const calculatePriceWithTax = (product, basePrice) => {
-    const igst = product?.IGST ?? 0;
-    const additionalTax = product?.additionalTax ?? 0;
-    const sgst = product?.SGST ?? 0;
-    const cgst = product?.CGST ?? 0;
-    const totalTaxRate = igst + additionalTax + sgst + cgst;
+    const gstRate = Number(
+      product?.gstRate ??
+        product?.IGST ??
+        Number(product?.CGST || 0) + Number(product?.SGST || 0),
+    );
+    const cessRate = Number(product?.cessRate ?? product?.additionalTax ?? 0);
+    const totalTaxRate = gstRate + cessRate;
     const taxAmount = (basePrice * totalTaxRate) / 100;
     const priceWithTax = Number(basePrice) + Number(taxAmount);
     return priceWithTax;
@@ -1003,6 +1005,18 @@ export default function ProductManagementUI() {
             ...INITIALS_DATA,
             ...productData,
             name: productData?.title || productData?.name || "",
+            brandName:
+              productData?.brandName ||
+              productData?.brandRef?.name ||
+              (typeof productData?.brand === "object"
+                ? productData.brand.name || productData.brand.label || ""
+                : ""),
+            brandApprovalStatus:
+              productData?.brandApprovalStatus ||
+              productData?.brandRef?.approvalStatus ||
+              null,
+            brandActive:
+              productData?.brandActive ?? productData?.brandRef?.active ?? null,
             category_id: resolvedCategoryId,
             categoryId: resolvedCategoryId,
             category: resolvedCategoryKey,

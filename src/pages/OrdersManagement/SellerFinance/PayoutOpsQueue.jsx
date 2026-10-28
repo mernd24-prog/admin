@@ -188,6 +188,14 @@ const metadataOf = (row = {}) => {
   }
 };
 const razorpayXOf = (row = {}) => metadataOf(row).razorpayX || {};
+const replacementPayoutIdOf = (row = {}) =>
+  metadataOf(row).replacementPayoutId || null;
+const razorpayXStatusOf = (row = {}) =>
+  String(
+    razorpayXOf(row).status || metadataOf(row).providerStatus || "",
+  ).toLowerCase();
+const isSafeRazorpayXRetry = (row = {}) =>
+  ["reversed", "rejected", "cancelled"].includes(razorpayXStatusOf(row));
 const hasRazorpayXProviderPayout = (row = {}) =>
   Boolean(
     razorpayXOf(row).payoutId ||
@@ -202,6 +210,8 @@ const payoutMethodText = (row = {}) => {
       : "—";
 };
 const payoutDurationText = (row = {}) => {
+  if (replacementPayoutIdOf(row))
+    return `Replaced by payout ${replacementPayoutIdOf(row)}`;
   const rx = razorpayXOf(row);
   if (rx.status === "processed" || row.status === "completed")
     return "Completed by provider";
@@ -580,7 +590,17 @@ const PayoutOpsQueue = () => {
         cellClassName: "whitespace-normal",
         render: (value, row) => (
           <div className="min-w-0 max-w-[250px]">
-            <StatusBadge status={value} dot />
+            <StatusBadge
+              status={replacementPayoutIdOf(row) ? "superseded" : value}
+              label={replacementPayoutIdOf(row) ? "Superseded" : undefined}
+              dot
+            />
+            {replacementPayoutIdOf(row) && (
+              <div className="mt-1 break-words text-xs leading-4 text-gray-500">
+                Replacement: {replacementPayoutIdOf(row)}. Further retries are
+                blocked.
+              </div>
+            )}
             {payoutFailureReason(row) && (
               <div className="mt-1 break-words whitespace-normal text-xs leading-4 text-red-600">
                 {payoutFailureReason(row)}
@@ -638,8 +658,11 @@ const PayoutOpsQueue = () => {
           ? "Approve to Wallet"
           : "Approve Offline Payout";
       const providerPayoutExists = hasRazorpayXProviderPayout(row);
+      const replacementPayoutId = replacementPayoutIdOf(row);
 
       const items = [];
+
+      if (replacementPayoutId) return items;
 
       if (status === "pending") {
         items.push({
@@ -680,14 +703,30 @@ const PayoutOpsQueue = () => {
       }
 
       if (status === "failed") {
-        items.push({
-          label: "Retry",
-          icon: (
-            <MdReplay aria-hidden="true" size={16} className="text-blue-600" />
-          ),
-          disabled: loading,
-          onClick: () => openAction("retry", row),
-        });
+        if (isRazorpayX && providerPayoutExists) {
+          items.push({
+            label: "Sync Status",
+            icon: (
+              <MdSync aria-hidden="true" size={16} className="text-blue-600" />
+            ),
+            disabled: loading,
+            onClick: () => handleSyncRazorpayX(row),
+          });
+        }
+        if (!isRazorpayX || !providerPayoutExists || isSafeRazorpayXRetry(row)) {
+          items.push({
+            label: "Retry",
+            icon: (
+              <MdReplay
+                aria-hidden="true"
+                size={16}
+                className="text-blue-600"
+              />
+            ),
+            disabled: loading,
+            onClick: () => openAction("retry", row),
+          });
+        }
       }
 
       if (status === "processing") {

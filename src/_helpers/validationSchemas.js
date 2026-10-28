@@ -186,15 +186,19 @@ export const shipmentTrackingActionValidationSchema = Yup.object({
     ),
 });
 
-const taxRateSchema = (label) =>
-  Yup.number()
+const taxRateSchema = (label, required = true) => {
+  const schema = Yup.number()
     .transform((value, originalValue) =>
       originalValue === "" ? undefined : value,
     )
     .typeError(`${label} must be a number`)
-    .required(`${label} is required`)
-    .min(0.01, `${label} must be between 0.01 and 100`)
+    .min(0, `${label} must be between 0 and 100`)
     .max(100, `${label} must be between 0 and 100`);
+
+  return required
+    ? schema.required(`${label} is required`)
+    : schema.notRequired();
+};
 
 export const hsnValidationSchema = Yup.object({
   code: Yup.string()
@@ -209,17 +213,8 @@ export const hsnValidationSchema = Yup.object({
 
     .min(3, "Description must be at least 3 characters")
     .max(100, "Description must be no more than 100 characters"),
-  IGST: taxRateSchema("IGST"),
-  CGST: taxRateSchema("CGST"),
-  SGST: taxRateSchema("SGST"),
-  additionalTax: Yup.number()
-    .transform((value, originalValue) =>
-      originalValue === "" ? undefined : value,
-    )
-    .typeError("Additional Tax must be a number")
-    .notRequired()
-    .min(0.01, "Additional Tax must be between 0.01 and 100")
-    .max(100, "Additional Tax must be between 0 and 100"),
+  gstRate: taxRateSchema("GST rate"),
+  cessRate: taxRateSchema("Compensation cess", false),
 });
 
 export const taxValidationSchema = Yup.object({

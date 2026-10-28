@@ -7,40 +7,6 @@ const customStyles = (error, controlHeight, mutedValue) => ({
   control: (provided, state) => ({
     ...provided,
 
-    // Disabled state
-    backgroundColor: state.isDisabled
-      ? "var(--admin-field-disabled, #f3f4f6)"
-      : "var(--admin-field)",
-
-    borderColor: error
-      ? "var(--admin-danger)"
-      : state.isDisabled
-        ? "var(--admin-field-line)"
-        : state.isFocused
-          ? ""
-          : "var(--admin-field-line)",
-
-    boxShadow: error ? "none" : state.isFocused ? "" : "none",
-
-    borderRadius: "0.375rem",
-    minHeight: controlHeight ? `${controlHeight}px` : "36px",
-    ...(controlHeight ? { height: `${controlHeight}px` } : {}),
-
-    cursor: state.isDisabled ? "not-allowed" : "pointer",
-
-    opacity: state.isDisabled ? 0.7 : 1,
-
-    "&:hover": {
-      borderColor: error
-        ? "var(--admin-danger)"
-        : state.isDisabled
-          ? "var(--admin-field-line)"
-          : "",
-    },
-  }),
-  control: (provided, state) => ({
-    ...provided,
-
     backgroundColor: state.isDisabled
       ? "var(--admin-field-disabled, #f3f4f6)"
       : "var(--admin-field)",
@@ -78,6 +44,8 @@ const customStyles = (error, controlHeight, mutedValue) => ({
   valueContainer: (provided) => ({
     ...provided,
     padding: "2px 8px",
+    minWidth: 0,
+    overflow: "hidden",
   }),
 
   placeholder: (provided, state) => ({
@@ -96,6 +64,10 @@ const customStyles = (error, controlHeight, mutedValue) => ({
         : "var(--admin-ink)",
     fontSize: "0.875rem",
     paddingLeft: "2px",
+    maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   }),
 
   input: (provided) => ({
@@ -151,7 +123,7 @@ const customStyles = (error, controlHeight, mutedValue) => ({
     fontSize: "13px",
     padding: "8px 12px",
     whiteSpace: "normal",
-    wordBreak: "break-word",
+    overflowWrap: "anywhere",
   }),
 
   menuList: (provided) => ({
@@ -216,8 +188,6 @@ export const ThreeDotLoadingIndicator = () => (
     <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" />
   </span>
 );
-
-const NoLoadingIndicator = () => null;
 
 const CustomLoadingIndicator = (props) => (
   <components.LoadingIndicator {...props}>

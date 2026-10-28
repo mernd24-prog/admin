@@ -717,21 +717,45 @@ export default function BasicDetailsTab({
     }
   };
 
-  const formatCatalogOption = (option) => (
-    <div className="flex items-center justify-between gap-2">
-      <span>{option.label}</span>
+  const formatCatalogOption = (option, { context } = {}) => {
+    if (context === "value") {
+      return (
+        <span className="block min-w-0 truncate" title={option.label}>
+          {option.label}
+        </span>
+      );
+    }
 
-      {!isSellerPanelUser && option.approvalStatus === "pending" && (
-        <button
-          type="button"
-          className="rounded bg-green-600 px-2 py-1 text-xs font-semibold text-white hover:bg-green-700"
-          onMouseDown={(event) => approvePendingOption(event, option)}
+    const isPending = option.approvalStatus === "pending";
+    const menuLabel = isPending
+      ? String(option.label || "").replace(
+          /\s*\(\s*Pending approval\s*\)\s*$/i,
+          "",
+        )
+      : option.label;
+
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          className="min-w-0 flex-1 text-left leading-5"
+          title={option.label}
         >
-          Approve
-        </button>
-      )}
-    </div>
-  );
+          {menuLabel}
+        </span>
+
+        {!isSellerPanelUser && isPending && (
+          <button
+            type="button"
+            className="inline-flex min-w-[72px] shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold leading-none text-white transition-colors hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-1"
+            aria-label={`Approve ${option.label}`}
+            onMouseDown={(event) => approvePendingOption(event, option)}
+          >
+            Approve
+          </button>
+        )}
+      </div>
+    );
+  };
 
   /*
    * ------------------------------------------------------------
@@ -1361,6 +1385,11 @@ export default function BasicDetailsTab({
         : rawBrand;
 
     if (!currentBrand) return null;
+    const fallbackLabel =
+      savedBrandName ||
+      (/^[a-f\d]{24}$/i.test(String(currentBrand))
+        ? "Brand unavailable — select another brand"
+        : currentBrand);
 
     return (
       brandOptions.find(
@@ -1387,12 +1416,11 @@ export default function BasicDetailsTab({
               rawBrand.label ||
               rawBrand.brandName ||
               rawBrand.name ||
-              savedBrandName ||
-              currentBrand,
+              fallbackLabel,
           }
         : {
             value: currentBrand,
-            label: savedBrandName || currentBrand,
+            label: fallbackLabel,
             brandName: savedBrandName || undefined,
           })
     );
@@ -1719,12 +1747,16 @@ export default function BasicDetailsTab({
    */
 
   const handleHsnSubmit = async (values) => {
+    const gstRate = Number(values.gstRate ?? values.IGST ?? 0);
+    const cessRate = Number(values.cessRate ?? values.additionalTax ?? 0);
     const basePayload = {
       code: values.code.trim(),
-      IGST: Number(values.IGST),
-      CGST: Number(values.CGST),
-      SGST: Number(values.SGST),
-      additionalTax: Number(values.additionalTax),
+      gstRate,
+      cessRate,
+      IGST: gstRate,
+      CGST: gstRate / 2,
+      SGST: gstRate / 2,
+      additionalTax: cessRate,
       description: values.description?.trim() || "",
       active: true,
     };
@@ -1747,6 +1779,8 @@ export default function BasicDetailsTab({
             : ""
         }`,
         description: createdHsn.description || basePayload.description,
+        gstRate: Number(createdHsn.gstRate ?? basePayload.gstRate),
+        cessRate: Number(createdHsn.cessRate ?? basePayload.cessRate),
         resourceType: "hsn",
         resourceId: createdHsn._id || createdHsn.id || hsnValue,
         approvalStatus: createdHsn.approvalStatus,

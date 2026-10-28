@@ -66,39 +66,31 @@ const COLUMNS = [
     ),
   },
   {
-    key: "IGST",
-    label: "IGST %",
+    key: "gstRate",
+    label: "GST Rate",
     headerClassName: "text-center",
     cellClassName: "text-center",
-    render: (v) => (
-      <span className="block w-full text-center text-sm">{v ?? "—"}%</span>
+    render: (v, row) => (
+      <div className="text-center text-sm">
+        <span className="font-semibold text-gray-800">
+          {v ?? row.IGST ?? 0}%
+        </span>
+        <span className="mt-0.5 block text-xs text-gray-500">
+          CGST {(Number(v ?? row.IGST ?? 0) / 2).toFixed(2)}% + SGST{" "}
+          {(Number(v ?? row.IGST ?? 0) / 2).toFixed(2)}%
+        </span>
+      </div>
     ),
   },
   {
-    key: "CGST",
-    label: "CGST %",
+    key: "cessRate",
+    label: "Cess",
     headerClassName: "text-center",
     cellClassName: "text-center",
-    render: (v) => (
-      <span className="block w-full text-center text-sm">{v ?? "—"}%</span>
-    ),
-  },
-  {
-    key: "SGST",
-    label: "SGST %",
-    headerClassName: "text-center",
-    cellClassName: "text-center",
-    render: (v) => (
-      <span className="block w-full text-center text-sm">{v ?? "—"}%</span>
-    ),
-  },
-  {
-    key: "additionalTax",
-    label: "Additional %",
-    headerClassName: "text-center",
-    cellClassName: "text-center",
-    render: (v) => (
-      <span className="block w-full text-center text-sm">{v ?? 0}%</span>
+    render: (v, row) => (
+      <span className="block w-full text-center text-sm">
+        {v ?? row.additionalTax ?? 0}%
+      </span>
     ),
   },
   {
@@ -247,12 +239,16 @@ const HsnCode = () => {
   /* ==================== CREATE / UPDATE ==================== */
 
   const handleHsnSubmit = async (values) => {
+    const gstRate = Number(values.gstRate ?? values.IGST ?? 0);
+    const cessRate = Number(values.cessRate ?? values.additionalTax ?? 0);
     const payload = {
       code: values.code.trim(),
-      IGST: Number(values.IGST),
-      CGST: Number(values.CGST),
-      SGST: Number(values.SGST),
-      additionalTax: Number(values.additionalTax || 0),
+      gstRate,
+      cessRate,
+      IGST: gstRate,
+      CGST: gstRate / 2,
+      SGST: gstRate / 2,
+      additionalTax: cessRate,
       description: values.description?.trim() || "",
       isDisable: values.isDisable,
     };
@@ -375,10 +371,11 @@ const HsnCode = () => {
           setEditData({
             _id: row._id,
             code: row.code || "",
-            IGST: row.IGST ?? "",
-            CGST: row.CGST ?? "",
-            SGST: row.SGST ?? "",
-            additionalTax: row.additionalTax ?? "0",
+            gstRate:
+              row.gstRate ??
+              row.IGST ??
+              Number(row.CGST || 0) + Number(row.SGST || 0),
+            cessRate: row.cessRate ?? row.additionalTax ?? 0,
             description: row.description || "",
             isDisable: row.isDisable || false,
           });
