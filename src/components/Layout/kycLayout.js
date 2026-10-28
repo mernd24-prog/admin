@@ -146,7 +146,7 @@ const OnboardingSupportModal = ({
       setLoading(true);
       setError("");
       try {
-        const token = sessionStorage.getItem("accessToken") || localStorage.getItem("sellerOnboardingToken");
+        const token = localStorage.getItem("sellerOnboardingToken") || sessionStorage.getItem("accessToken");
         if (!token) throw new Error("Please login again to view your issues.");
         const response = await axiosProvider.get(ENDPOINTS.support.mine, {
           params: { category: ONBOARDING_SUPPORT_CATEGORY, limit: 20, offset: page * 20 },
@@ -174,7 +174,7 @@ const OnboardingSupportModal = ({
     if (!text || replyingTo || isSupportTicketLocked(issue)) return;
     setReplyingTo(queryId);
     try {
-      const token = sessionStorage.getItem("accessToken") || localStorage.getItem("sellerOnboardingToken");
+      const token = localStorage.getItem("sellerOnboardingToken") || sessionStorage.getItem("accessToken");
       if (!token) throw new Error("Please login again to reply.");
       const response = await axiosProvider.post(ENDPOINTS.support.reply(queryId), { message: text }, {
         headers: { Authorization: `Bearer ${token}` },
@@ -196,9 +196,9 @@ const OnboardingSupportModal = ({
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-4">
       <form
         onSubmit={onSubmit}
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[10px] bg-white p-5 shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-[10px] bg-white p-5 shadow-2xl"
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex shrink-0 items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eef2ff] text-[#082f91]">
               <Headphones size={20} aria-hidden="true" />
@@ -218,7 +218,7 @@ const OnboardingSupportModal = ({
           </button>
         </div>
 
-        <div role="tablist" aria-label="Onboarding support" className="mt-4 flex gap-5 border-b border-[#eadfcb]">
+        <div role="tablist" aria-label="Onboarding support" className="mt-4 flex shrink-0 gap-5 border-b border-[#eadfcb]">
           {[ ["new", "Create Ticket"], ["previous", "Ticket History"] ].map(([id, label]) => (
             <button type="button" role="tab" key={id} aria-selected={tab === id} onClick={() => setTab(id)}
               className={`border-b-2 px-1 py-3 text-sm font-semibold ${tab === id ? "border-[#082f91] text-[#082f91]" : "border-transparent text-[#5f6678]"}`}>{label}</button>
@@ -262,7 +262,7 @@ const OnboardingSupportModal = ({
             {submitting ? "Submitting..." : "Submit Ticket"}
           </button>
         </div>
-        </> : <div role="tabpanel" className="mt-5 min-h-[230px] space-y-3">
+        </> : <div role="tabpanel" className="mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto">
           <div className="flex justify-end">
             <button type="button" className="admin-btn-secondary" disabled={loading || Boolean(replyingTo)} onClick={() => setRetry((value) => value + 1)}>Refresh replies</button>
           </div>
@@ -552,7 +552,7 @@ const KYCStatusLayout = ({
         onSubmit={submitOnboardingSupport}
       />
 
-      <aside className="sidebar-scrollbar w-full lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
+      <aside className="sidebar-scrollbar min-h-screen w-full bg-[#FCF5E8] lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
         <div className="flex h-full flex-col">
           <div className="bg-[#FCF5E8] pb-5 sm:pb-7 lg:pb-10">
             <div className="flex h-[118px] items-center justify-center px-4 sm:h-[140px] lg:h-[165px]">
