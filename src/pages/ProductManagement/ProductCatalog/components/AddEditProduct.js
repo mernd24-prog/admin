@@ -57,8 +57,7 @@ import VariantBuilder from "../../../../components/Product/VariantBuilder";
 import SEOPanel from "../../../../components/Product/SEOPanel";
 import TagsInput from "../../../../components/Product/TagsInput";
 import { getSelectedSellerOrganizationId } from "../../../../_helpers/sellerOrganizationContext";
-import { getShippingProfiles } from "../../../../Redux/deliverySlice";
-import { getShippingProfileTemplates } from "../../../../Redux/deliverySlice";
+import { getShippingProfile, getShippingProfiles, getShippingProfileTemplates } from "../../../../Redux/deliverySlice";
 import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
 import FormInput from "../../../../components/Atoms/FormInput/FormInput";
 import {
@@ -338,6 +337,14 @@ const normalizePincodeList = (value) => {
   );
 };
 
+const getShippingPincodes = (shipping = {}) =>
+  normalizePincodeList([
+    ...(Array.isArray(shipping.allowPincodes) ? shipping.allowPincodes : []),
+    ...(Array.isArray(shipping.serviceablePincodes) ? shipping.serviceablePincodes : []),
+    ...(Array.isArray(shipping.allowedPincodes) ? shipping.allowedPincodes : []),
+    ...(Array.isArray(shipping.pincodes) ? shipping.pincodes : []),
+  ]);
+
 const isValidIndianPincode = (value) =>
   /^[1-9]\d{5}$/.test(String(value || "").trim());
 
@@ -550,9 +557,10 @@ export default function ProductManagementUI() {
   const [shippingProfileOptions, setShippingProfileOptions] = useState([]);
   const [shippingProfilesRefresh, setShippingProfilesRefresh] = useState(0);
   const [shippingProfilesLoading, setShippingProfilesLoading] = useState(false);
+  const [shippingProfileDetail, setShippingProfileDetail] = useState(null);
+  const [shippingTemplateCatalog, setShippingTemplateCatalog] = useState([]);
   const [allowedPincodeInput, setAllowedPincodeInput] = useState("");
-  const [selectedShippingTemplate, setSelectedShippingTemplate] =
-    useState(null);
+  const [selectedShippingTemplate, setSelectedShippingTemplate] = useState(null);
   const [collectionSearch, setCollectionSearch] = useState("");
 
   const hasUnsavedChanges = useMemo(() => {
@@ -1054,6 +1062,8 @@ export default function ProductManagementUI() {
             attributes: productData?.attributes || {},
             shipping: {
               ...(productData?.shipping || {}),
+              allowPincodes: getShippingPincodes(productData?.shipping),
+              serviceablePincodes: getShippingPincodes(productData?.shipping),
               codAvailable:
                 productData?.shipping?.codAvailable ??
                 productData?.metadata?.codAvailable ??
@@ -1451,7 +1461,9 @@ export default function ProductManagementUI() {
           .then((res) => {
             const list =
               res?.data?.profiles ||
-              res?.data?.data?.profiles ||
+              res?.data?.data?.items ||
+              res?.data?.items ||
+              res?.data?.list ||
               res?.normalized?.data?.profiles ||
               res?.profiles ||
               [];
@@ -1479,6 +1491,7 @@ export default function ProductManagementUI() {
           const list = Array.isArray(data)
             ? data
             : data.templates || data.items || data.list || [];
+          if (!cancelled) setShippingTemplateCatalog(list);
           return list.map((template) => ({
             value: `template:${template.id}`,
             label: `Template: ${template.name}`,
@@ -1510,6 +1523,76 @@ export default function ProductManagementUI() {
     userData,
     shippingProfilesRefresh,
   ]);
+
+  // Rebuild the copied-template selector value and summary from saved product
+  // fields, even when the original template is no longer in the list.
+  const restoredShippingTemplate = useMemo(() => {
+    const shipping = formData?.shipping || {};
+    const templateId = shipping.copiedFromShippingTemplateId;
+    const hasCopiedTemplateMarker = Boolean(
+      templateId || shipping.copiedFromShippingTemplateName,
+    );
+    if (!hasCopiedTemplateMarker || shipping.shippingProfileId) return null;
+    const template = shippingTemplateCatalog.find((item) =>
+      templateId
+        ? String(item.id || item._id) === String(templateId)
+        : item.name === shipping.copiedFromShippingTemplateName,
+    );
+    const restoredTemplate = {
+      ...(template || {}),
+      id: templateId || template?.id || template?._id,
+      name: shipping.copiedFromShippingTemplateName || template?.name || "Copied shipping template",
+      shippingCharge: shipping.shippingCharge ?? shipping.additionalCost ?? template?.shippingCharge,
+      handlingCharge: shipping.handlingCharge ?? template?.handlingCharge,
+      freeShippingThreshold: shipping.freeShippingMinOrder ?? template?.freeShippingThreshold,
+      etaMin: shipping.estimatedDaysMin ?? shipping.processingDays ?? template?.etaMin,
+      etaMax: shipping.estimatedDaysMax ?? template?.etaMax,
+      shippingMethod: shipping.shippingMethod ?? template?.shippingMethod,
+      serviceabilityMode: shipping.serviceabilityMode ?? template?.serviceabilityMode,
+      codAvailable: shipping.codAvailable ?? template?.codAvailable,
+      allowedPincodes: shipping.allowedPincodes || shipping.allowPincodes || shipping.serviceablePincodes || template?.allowedPincodes,
+    };
+    return {
+      value: `template:${templateId || template?.id || template?._id || "saved"}`,
+      label: `Copied: ${restoredTemplate.name}`,
+      profile: restoredTemplate,
+      type: "template",
+    };
+  }, [formData?.shipping, shippingTemplateCatalog]);
+
+  // A product may reference an inactive/legacy profile that is excluded from
+  // the active profile list. Fetch its detail so edit mode can still prefill
+  // the selector and show the settings already attached to the product.
+  useEffect(() => {
+    const profileId = formData?.shipping?.shippingProfileId;
+    if (!profileId || String(profileId).startsWith("template:")) {
+      setShippingProfileDetail(null);
+      return undefined;
+    }
+    const listed = shippingProfileOptions.find(
+      (option) => option.type === "profile" && String(option.value) === String(profileId),
+    );
+    if (listed?.profile) {
+      if (shippingProfileDetail !== listed.profile) setShippingProfileDetail(listed.profile);
+      return undefined;
+    }
+    if (String(shippingProfileDetail?.id || shippingProfileDetail?._id || "") === String(profileId)) return undefined;
+    let cancelled = false;
+    dispatch(getShippingProfile({ profileId }))
+      .unwrap()
+      .then((res) => {
+        if (cancelled) return;
+        const profile = res?.data?.profile || res?.data?.data?.profile || res?.data?.data || res?.data || res?.profile;
+        if (profile) {
+          setShippingProfileDetail(profile);
+          setShippingProfileOptions((options) => options.some((option) => String(option.value) === String(profileId))
+            ? options
+            : [...options, { value: profile.id || profile._id || profileId, label: profile.name || "Shipping Profile", profile, type: "profile" }]);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [dispatch, formData?.shipping?.shippingProfileId, shippingProfileOptions, shippingProfileDetail]);
 
   const handleOptionSearch = useCallback(
     (query) => {
@@ -3276,8 +3359,7 @@ export default function ProductManagementUI() {
       })(),
     });
     const manualDeliveryPincodes = normalizePincodeList(
-      updatedFormData.shipping?.allowPincodes ||
-        updatedFormData.shipping?.serviceablePincodes,
+      getShippingPincodes(updatedFormData.shipping),
     );
     const shipping = compactObject(
       selectedShippingProfile
@@ -3354,6 +3436,10 @@ export default function ProductManagementUI() {
 
             shippingProfileId:
               updatedFormData.shipping?.shippingProfileId || null,
+            copiedFromShippingTemplateId:
+              updatedFormData.shipping?.copiedFromShippingTemplateId || undefined,
+            copiedFromShippingTemplateName:
+              updatedFormData.shipping?.copiedFromShippingTemplateName || undefined,
           },
     );
 
@@ -3819,10 +3905,7 @@ export default function ProductManagementUI() {
       toast.error("Please enter a valid 6-digit pincode");
       return;
     }
-    const current = normalizePincodeList(
-      formData?.shipping?.allowPincodes ||
-        formData?.shipping?.serviceablePincodes,
-    );
+    const current = getShippingPincodes(formData?.shipping);
     if (current.includes(value)) {
       toast.error("This pincode is already added");
       return;
@@ -3844,10 +3927,9 @@ export default function ProductManagementUI() {
 
   const removeProductPincode = useCallback(
     (pincode) => {
-      const next = normalizePincodeList(
-        formData?.shipping?.allowPincodes ||
-          formData?.shipping?.serviceablePincodes,
-      ).filter((item) => item !== pincode);
+      const next = getShippingPincodes(formData?.shipping).filter(
+        (item) => item !== pincode,
+      );
       patchShipping({
         serviceabilityMode: next.length ? "allowlist" : "all_pincodes",
         allowPincodes: next,
@@ -4648,9 +4730,14 @@ export default function ProductManagementUI() {
                 }
                 onChange={(selected) => {
                   const profileId = selected?.value || null;
-
                   patchShipping({
                     shippingProfileId: profileId,
+                    ...(profileId
+                      ? {
+                          copiedFromShippingTemplateId: undefined,
+                          copiedFromShippingTemplateName: undefined,
+                        }
+                      : {}),
                     ...(profileId
                       ? {
                           serviceabilityMode: "all_pincodes",
@@ -4671,26 +4758,35 @@ export default function ProductManagementUI() {
 
               {/* Shipping Templates */}
               {!formData?.shipping?.shippingProfileId &&
-                shippingProfileOptions.some(
-                  (option) => option.type === "template",
-                ) && (
+                (shippingProfileOptions.some((option) => option.type === "template") || restoredShippingTemplate || selectedShippingTemplate) && (
                   <div className="my-4">
                     <FilterSelect
                       options={shippingProfileOptions.filter(
                         (option) => option.type === "template",
                       )}
-                      value={selectedShippingTemplate}
+                      value={restoredShippingTemplate || selectedShippingTemplate}
                       onChange={(selected) => {
                         setSelectedShippingTemplate(selected);
 
                         if (selected) {
                           copyShippingTemplateToProduct(selected);
+                        } else {
+                          patchShipping({
+                            copiedFromShippingTemplateId: undefined,
+                            copiedFromShippingTemplateName: undefined,
+                          });
+                          setSelectedShippingTemplate(null);
                         }
                       }}
                       placeholder="Copy Settings From A Template"
                       isSearchable
                       isClearable={true}
                     />
+                    {restoredShippingTemplate && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Saved template: {restoredShippingTemplate.profile.name}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -4700,7 +4796,7 @@ export default function ProductManagementUI() {
               ).length === 0 &&
                 !formData?.sellerId &&
                 !formData?.shipping?.shippingProfileId &&
-                !selectedShippingTemplate && (
+                !restoredShippingTemplate && !selectedShippingTemplate && (
                   <p className="text-xs text-[var(--admin-gold-dark)]">
                     Select a seller to view saved profiles.
                   </p>
@@ -4730,7 +4826,7 @@ export default function ProductManagementUI() {
                       ) === String(formData.shipping.shippingProfileId || ""),
                   );
 
-                  const p = selected?.profile;
+                  const p = selected?.profile || shippingProfileDetail;
 
                   if (!p) return null;
 
@@ -4877,6 +4973,34 @@ export default function ProductManagementUI() {
                     </div>
                   );
                 })()}
+              {!formData?.shipping?.shippingProfileId && (restoredShippingTemplate || selectedShippingTemplate)?.profile && (() => {
+                const p = (restoredShippingTemplate || selectedShippingTemplate).profile;
+                const days = [p.etaMin, p.etaMax].filter((value) => value !== null && value !== undefined && value !== "").join("–");
+                const amount = Number(p.shippingCharge || 0);
+                const details = [
+                  ["Shipping method", p.shippingMethod || "Standard"],
+                  ["Shipping charge", amount === 0 ? "Free" : `₹${amount.toFixed(2)}`],
+                  ["Estimated delivery", days ? `${days} days` : "Not specified"],
+                  ["Handling charge", p.handlingCharge == null ? "₹0.00" : `₹${Number(p.handlingCharge).toFixed(2)}`],
+                  ["Free shipping threshold", p.freeShippingThreshold == null ? "None" : `₹${Number(p.freeShippingThreshold).toFixed(2)}`],
+                  ["Cash on delivery", p.codAvailable === false ? "Unavailable" : "Available"],
+                  ["Delivery coverage", p.serviceabilityMode === "all_india" ? "All India" : (p.serviceabilityMode || "Configured pincodes").replace(/_/g, " ")],
+                ];
+                return (
+                  <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-4">
+                    <p className="text-sm font-semibold text-gray-800">Copied settings: {p.name || "Shipping template"}</p>
+                    <p className="mt-0.5 text-xs text-gray-600">These settings were copied into product delivery settings and can be adjusted below.</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {details.map(([label, value]) => (
+                        <div key={label} className="rounded-lg border border-blue-100 bg-white px-3 py-2">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">{label}</p>
+                          <p className="mt-1 text-xs font-semibold capitalize text-gray-800">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Product Delivery Pincodes */}
@@ -4940,14 +5064,8 @@ export default function ProductManagementUI() {
                   </div>
 
                   <div className="flex min-h-[44px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
-                    {normalizePincodeList(
-                      formData?.shipping?.allowPincodes ||
-                        formData?.shipping?.serviceablePincodes,
-                    ).length ? (
-                      normalizePincodeList(
-                        formData?.shipping?.allowPincodes ||
-                          formData?.shipping?.serviceablePincodes,
-                      ).map((pincode) => (
+                    {getShippingPincodes(formData?.shipping).length ? (
+                      getShippingPincodes(formData?.shipping).map((pincode) => (
                         <span
                           key={pincode}
                           className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
