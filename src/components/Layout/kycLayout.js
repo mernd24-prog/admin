@@ -146,7 +146,7 @@ const OnboardingSupportModal = ({
       setLoading(true);
       setError("");
       try {
-        const token = sessionStorage.getItem("accessToken") || localStorage.getItem("sellerOnboardingToken");
+        const token = localStorage.getItem("sellerOnboardingToken") || sessionStorage.getItem("accessToken");
         if (!token) throw new Error("Please login again to view your issues.");
         const response = await axiosProvider.get(ENDPOINTS.support.mine, {
           params: { category: ONBOARDING_SUPPORT_CATEGORY, limit: 20, offset: page * 20 },
@@ -174,7 +174,7 @@ const OnboardingSupportModal = ({
     if (!text || replyingTo || isSupportTicketLocked(issue)) return;
     setReplyingTo(queryId);
     try {
-      const token = sessionStorage.getItem("accessToken") || localStorage.getItem("sellerOnboardingToken");
+      const token = localStorage.getItem("sellerOnboardingToken") || sessionStorage.getItem("accessToken");
       if (!token) throw new Error("Please login again to reply.");
       const response = await axiosProvider.post(ENDPOINTS.support.reply(queryId), { message: text }, {
         headers: { Authorization: `Bearer ${token}` },
@@ -196,9 +196,9 @@ const OnboardingSupportModal = ({
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-4">
       <form
         onSubmit={onSubmit}
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[10px] bg-white p-5 shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-[10px] bg-white p-5 shadow-2xl"
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex shrink-0 items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eef2ff] text-[#082f91]">
               <Headphones size={20} aria-hidden="true" />
@@ -218,7 +218,7 @@ const OnboardingSupportModal = ({
           </button>
         </div>
 
-        <div role="tablist" aria-label="Onboarding support" className="mt-4 flex gap-5 border-b border-[#eadfcb]">
+        <div role="tablist" aria-label="Onboarding support" className="mt-4 flex shrink-0 gap-5 border-b border-[#eadfcb]">
           {[ ["new", "Create Ticket"], ["previous", "Ticket History"] ].map(([id, label]) => (
             <button type="button" role="tab" key={id} aria-selected={tab === id} onClick={() => setTab(id)}
               className={`border-b-2 px-1 py-3 text-sm font-semibold ${tab === id ? "border-[#082f91] text-[#082f91]" : "border-transparent text-[#5f6678]"}`}>{label}</button>
@@ -262,7 +262,7 @@ const OnboardingSupportModal = ({
             {submitting ? "Submitting..." : "Submit Ticket"}
           </button>
         </div>
-        </> : <div role="tabpanel" className="mt-5 min-h-[230px] space-y-3">
+        </> : <div role="tabpanel" className="mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto">
           <div className="flex justify-end">
             <button type="button" className="admin-btn-secondary" disabled={loading || Boolean(replyingTo)} onClick={() => setRetry((value) => value + 1)}>Refresh replies</button>
           </div>
@@ -552,8 +552,8 @@ const KYCStatusLayout = ({
         onSubmit={submitOnboardingSupport}
       />
 
-      <aside className="sidebar-scrollbar w-full lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
-        <div className="flex h-full flex-col">
+      <aside className="sidebar-scrollbar hidden w-full bg-[#FCF5E8] lg:sticky lg:top-0 lg:block lg:h-screen lg:min-h-screen lg:self-start lg:overflow-y-auto">
+        <div className="flex flex-col lg:h-full">
           <div className="bg-[#FCF5E8] pb-5 sm:pb-7 lg:pb-10">
             <div className="flex h-[118px] items-center justify-center px-4 sm:h-[140px] lg:h-[165px]">
               <BrandLogo
@@ -571,10 +571,10 @@ const KYCStatusLayout = ({
             </div>
             */}
 
-            <div className="px-4 pt-4 sm:px-6 sm:pt-5 lg:px-[31px] lg:pt-[22px]">
+            <div className="px-4 pt-2 sm:px-6 sm:pt-3 lg:px-[31px] lg:pt-[22px]">
               <nav
                 ref={stepsNavRef}
-                className="sidebar-scrollbar relative flex gap-3 overflow-x-auto pb-3 lg:flex lg:flex-col lg:gap-[34px] lg:overflow-visible lg:pb-0"
+                className="sidebar-scrollbar relative flex w-full gap-2 overflow-x-auto pb-2 lg:flex lg:flex-col lg:gap-[34px] lg:overflow-visible lg:pb-0"
               >
                 <span className="absolute left-[25px] top-[20px] hidden h-[310px] w-[2.5px] rounded-full bg-[#E49E1C] lg:block" />
 
@@ -582,7 +582,7 @@ const KYCStatusLayout = ({
                   <div
                     key={item.id}
                     ref={item.id === currentSection ? activeStepRef : null}
-                    className="relative z-10 min-w-[205px] sm:min-w-[225px] lg:min-w-0"
+                    className="relative z-10 min-w-[148px] max-w-[148px] shrink-0 sm:min-w-[180px] sm:max-w-[180px] lg:min-w-0 lg:max-w-none"
                   >
                     <button
                       type="button"
@@ -650,7 +650,7 @@ const KYCStatusLayout = ({
       </aside>
 
       <main className="min-w-0 bg-[#FCF5E8]">
-        <header className="sticky top-0 z-30 flex min-h-[64px] items-center justify-between gap-[10px] bg-[#FCF5E8] px-4 py-4 text-[#111827] sm:px-6 lg:h-[75px] lg:px-[48px] lg:pb-[17px] lg:pt-[18px]">
+        <header className="sticky top-0 z-30 flex min-h-[64px] items-center justify-between gap-[10px] bg-[#FCF5E8] px-4 py-2 text-[#111827] sm:px-6 lg:h-[75px] lg:px-[48px] lg:pb-[17px] lg:pt-[18px]">
           <div className="flex min-w-0 items-center gap-2 text-[12px] font-semibold leading-[16px] text-[#111827] sm:text-[14px] lg:text-[16px]">
             <span>Onboarding</span>
             <span className="mx-1 sm:mx-[10px]">›</span>
@@ -711,7 +711,7 @@ const KYCStatusLayout = ({
         <div className="kyc-content-wrapper">
           <div
             ref={contentRef}
-            className="kyc-content-scroll bg-[#F7F8FC] px-4 py-6 sm:px-8 lg:px-10"
+            className="kyc-content-scroll bg-[#F7F8FC] px-3 py-4 sm:px-8 sm:py-6 lg:px-10"
           >
             {children}
           </div>

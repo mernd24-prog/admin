@@ -3360,7 +3360,8 @@ export default function ProductManagementUI() {
         : {}),
       title: String(updatedFormData.name || updatedFormData.title || "").trim(),
       description: updatedFormData.description,
-      gstInclusive: true,
+      // Keep product prices GST-inclusive when creating or editing products.
+      gstInclusive: updatedFormData.gstInclusive !== false,
       category:
         updatedFormData.category_key ||
         updatedFormData.category ||

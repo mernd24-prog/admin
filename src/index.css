@@ -1966,9 +1966,9 @@ label {
 
 .kyc-content-wrapper {
   position: relative;
-  height: calc(100vh - 64px);
-  overflow: hidden;
-  border-top-left-radius: 32px;
+  min-height: calc(100vh - 64px);
+  overflow: visible;
+  border-top-left-radius: 16px;
   background: #f7f8fc;
 }
 
@@ -1978,7 +1978,7 @@ label {
   inset: 0;
   z-index: 20;
   pointer-events: none;
-  border-top-left-radius: 32px;
+  border-top-left-radius: 16px;
   box-shadow:
     inset 8px 8px 18px -10px rgba(55, 45, 35, 0.28),
     inset 8px 0 18px -12px rgba(55, 45, 35, 0.22),
@@ -1989,13 +1989,26 @@ label {
   position: relative;
   z-index: 1;
   width: 100%;
-  height: 100%;
-  overflow-y: auto;
+  min-height: inherit;
+  overflow: visible;
 }
 
 @media (min-width: 1024px) {
   .kyc-content-wrapper {
     height: calc(100vh - 75px);
+    min-height: 0;
+    overflow: hidden;
+    border-top-left-radius: 32px;
+  }
+
+  .kyc-content-wrapper::before {
+    border-top-left-radius: 32px;
+  }
+
+  .kyc-content-scroll {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
   }
 }
 .admin-filter-select__control--is-focused {

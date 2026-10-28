@@ -49,7 +49,10 @@ const BANK_NAME_REGEX = /^[A-Za-z][A-Za-z .&'-]{1,119}$/;
 const BRANCH_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9 .,&'/-]{1,119}$/;
 const BUSINESS_NAME_REGEX = /^[A-Za-z][A-Za-z ]{1,179}$/;
 const UDYOG_AADHAAR_REGEX = /^UDYAM-[A-Z0-9-]{1,14}$/;
-const POSTAL_CODE_REGEX = /^[0-9]{6}$/;
+const POSTAL_CODE_REGEX = /^[1-9][0-9]{5}$/;
+const ADDRESS_LINE_REGEX = /^(?=.*\p{L})[\p{L}\p{N}][\p{L}\p{N} ,.'#()/\-]*$/u;
+const ADDRESS_LINE_2_REGEX = /^(?=.*\p{L})[\p{L}\p{N} ,.'#()/\-]+$/u;
+const ADDRESS_LINE_MAX_LENGTH = 120;
 const PERSON_NAME_MAX_LENGTH = 30;
 const BUSINESS_NAME_MAX_LENGTH = 30;
 const BANK_NAME_MIN_LENGTH = 2;
@@ -97,14 +100,14 @@ const DATE_FIELD_CLASS =
   "admin-input h-[46px] text-[14px] font-medium text-[#111827] placeholder:font-normal placeholder:text-[#9a96a6]";
 const STEP_ONE_REQUIRED = <span className="text-[var(--admin-danger)]">*</span>;
 const SECONDARY_BUTTON_CLASS =
-  "admin-btn-secondary w-full min-w-[220px] text-[14px] sm:w-auto";
-const PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
+  "admin-btn-secondary min-w-0 flex-[0.7] text-[14px] sm:w-auto sm:flex-none sm:min-w-[220px]";
+const PRIMARY_BUTTON_CLASS = "admin-btn-primary min-w-0 flex-[1.3] text-[14px]";
 const ONBOARDING_CARD_CLASS = "admin-card w-full px-5 py-4 sm:px-8 md:px-10";
 const REVIEW_INPUT_CLASS =
   "admin-input h-[35px] text-[13px] placeholder:text-[13px] truncate";
 const REVIEW_SECONDARY_BUTTON_CLASS =
-  "admin-btn-secondary w-full text-[14px] sm:w-[260px]";
-const REVIEW_PRIMARY_BUTTON_CLASS = "admin-btn-primary w-full text-[14px]";
+  "admin-btn-secondary min-w-0 flex-[0.7] text-[14px] sm:w-[260px] sm:flex-none";
+const REVIEW_PRIMARY_BUTTON_CLASS = "admin-btn-primary min-w-0 flex-[1.3] text-[14px]";
 
 const ONBOARDING_STEP_META = {
   0: {
@@ -209,7 +212,7 @@ const OnboardingScreen = ({ step, children, metaOverride = {} }) => {
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <span className="inline-flex rounded-[4px] font-inter bg-[#FBEBD7] px-3 py-2 text-[12px]  font-bold uppercase tracking-[0.08em] text-[#DB971A]">
-            <LuClipboardList className="my-auto mx-2 text-lg" />
+            <LuClipboardList className="my-auto mr-2 text-lg" />
             {meta.badge}
           </span>
           <h1 className="mt-3 text-[24px]  font-inter font-bold  text-[#082f91] sm:text-[26px]">
@@ -271,7 +274,7 @@ const OnboardingGridDivider = ({ number, title }) => (
 );
 
 const OnboardingActions = ({ children }) => (
-  <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[#eee7dd] pt-6 sm:flex-row sm:justify-end">
+  <div className="mt-8 flex flex-row items-center gap-3 border-t border-[#eee7dd] pt-6 sm:justify-end">
     {children}
   </div>
 );
@@ -310,7 +313,7 @@ const ReviewInput = ({ label, value, className = "", masked = false }) => (
   </div>
 );
 
-const ReviewFileInput = ({ label, value, className = "" }) => (
+const ReviewFileInput = ({ label, value, previewUrl = "", onPreview, className = "" }) => (
   <div className={className}>
     <label className="mb-[6px] block text-[12px] font-medium leading-[16px] text-[#484555]">
       {label}
@@ -321,9 +324,69 @@ const ReviewFileInput = ({ label, value, className = "" }) => (
     >
       <FileText size={16} className="shrink-0 text-[#484555]" />
       <span className="w-0 flex-1 truncate">{value || "-"}</span>
+      {previewUrl && onPreview && isPreviewableImageUrl(previewUrl) && (
+        <button
+          type="button"
+          onClick={onPreview}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#082f91] transition hover:bg-[#eef2ff]"
+          title={`View ${label}`}
+          aria-label={`View ${label}`}
+        >
+          <LuView size={17} />
+        </button>
+      )}
     </div>
   </div>
 );
+
+const ReviewImagePreviewModal = ({ document: documentData, onClose }) => {
+  useEffect(() => {
+    if (!documentData) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [documentData, onClose]);
+
+  if (!documentData || typeof window === "undefined" || !window.document?.body) {
+    return null;
+  }
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/75 p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${documentData.label} preview`}
+    >
+      <div
+        className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+          <h2 className="font-semibold text-[#082f91]">{documentData.label}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
+            aria-label="Close image preview"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="flex min-h-[240px] flex-1 items-center justify-center overflow-auto bg-slate-100 p-4">
+          <img
+            src={documentData.url}
+            alt={documentData.label}
+            className="max-h-[78vh] max-w-full object-contain"
+          />
+        </div>
+      </div>
+    </div>,
+    window.document.body,
+  );
+};
 
 const parseApiError = (error, fallbackMessage) => {
   if (!error) return { message: fallbackMessage, details: [] };
@@ -357,7 +420,23 @@ const parseApiError = (error, fallbackMessage) => {
 const getBackendDetailField = (detail = {}) => {
   const path = Array.isArray(detail.path) ? detail.path : [];
   const rawField = detail.field || path[path.length - 1] || "";
-  const field = rawField.replace(/^body\./, "");
+  const normalizedField = String(rawField).replace(/^body\./, "");
+  const field = normalizedField.split(".").pop();
+  const fullPath = [...path, ...normalizedField.split(".")];
+  const addressFieldMap = {
+    line1: "Line1",
+    line2: "Line2",
+    city: "City",
+    state: "State",
+    country: "Country",
+    postalCode: "PostalCode",
+  };
+  if (fullPath.includes("businessAddress") && addressFieldMap[field]) {
+    return `businessAddress${addressFieldMap[field]}`;
+  }
+  if (fullPath.includes("pickupAddress") && addressFieldMap[field]) {
+    return `pickup${addressFieldMap[field]}`;
+  }
   return (
     {
       gstin: "gstNumber",
@@ -1107,6 +1186,7 @@ const SellerOnboarding = () => {
   const [kycErrors, setKycErrors] = useState({});
   const [profileErrors, setProfileErrors] = useState({});
   const [showBankProofGuidance, setShowBankProofGuidance] = useState(false);
+  const [reviewImagePreview, setReviewImagePreview] = useState(null);
   const [aadhaarOtpModalOpen, setAadhaarOtpModalOpen] = useState(false);
   const [aadhaarOtp, setAadhaarOtp] = useState("");
   const [aadhaarOtpSending, setAadhaarOtpSending] = useState(false);
@@ -1275,11 +1355,14 @@ const SellerOnboarding = () => {
     [accessToken, onboardingToken],
   );
   const reviewLockedStatusRoute = useMemo(() => {
+    // An explicit edit link from the rejected status page must remain editable
+    // after reload, even if another status source still reports review locked.
+    if (editSection === "kyc" || editSection === "bank") return null;
     if (isSellerReviewLocked(flowState)) return getSellerStatusRoute(flowState);
     if (isSellerReviewLocked(targetOrganization))
       return AUTH_ROUTES.SELLER_STATUS_PENDING;
     return null;
-  }, [flowState, targetOrganization]);
+  }, [editSection, flowState, targetOrganization]);
   const draftKey = useMemo(
     () => getSellerOnboardingDraftKey(onboardingToken || accessToken),
     [accessToken, onboardingToken],
@@ -2000,6 +2083,14 @@ const SellerOnboarding = () => {
         savedStep <= nextStep;
       setStep(canResumeDraft ? savedStep : nextStep);
     };
+    if (editSection === "kyc") {
+      restoreStep(1);
+      return;
+    }
+    if (editSection === "bank") {
+      restoreStep(3);
+      return;
+    }
     const sellerProfile = flowState?.sellerProfile || {};
     const pickupAddress = sellerProfile?.pickupAddress || {};
     const hasStoredBusinessProfile =
@@ -3357,11 +3448,19 @@ const SellerOnboarding = () => {
       !URL_REGEX.test(profileForm.businessWebsite.trim())
     )
       errors.businessWebsite = "Website must start with http:// or https://";
-    if (!profileForm.pickupLine1.trim())
+    const pickupLine1 = profileForm.pickupLine1.trim();
+    if (!pickupLine1)
       errors.pickupLine1 = "Pickup address line 1 is required";
-    else if (profileForm.pickupLine1.trim().length < 5)
-      errors.pickupLine1 =
-        "Pickup address line 1 must be at least 5 characters";
+    else if (pickupLine1.length < 5 || pickupLine1.length > ADDRESS_LINE_MAX_LENGTH)
+      errors.pickupLine1 = "Pickup address line 1 must be 5–120 characters";
+    else if (!ADDRESS_LINE_REGEX.test(pickupLine1))
+      errors.pickupLine1 = "Use letters, numbers, spaces, and common address punctuation";
+
+    const pickupLine2 = profileForm.pickupLine2.trim();
+    if (pickupLine2.length > ADDRESS_LINE_MAX_LENGTH)
+      errors.pickupLine2 = "Pickup address line 2 must be 120 characters or fewer";
+    else if (pickupLine2 && !ADDRESS_LINE_2_REGEX.test(pickupLine2))
+      errors.pickupLine2 = "Enter a valid address with at least one letter";
 
     if (!profileForm.pickupCountry.trim())
       errors.pickupCountry = "Pickup country is required";
@@ -3372,12 +3471,20 @@ const SellerOnboarding = () => {
     if (!profileForm.pickupPostalCode.trim())
       errors.pickupPostalCode = "Pickup postal code is required";
     else if (!POSTAL_CODE_REGEX.test(profileForm.pickupPostalCode.trim()))
-      errors.pickupPostalCode = "Pickup postal code must be 6 digits";
-    if (!profileForm.businessAddressLine1.trim())
+      errors.pickupPostalCode = "Enter a valid 6-digit Indian PIN code";
+    const businessAddressLine1 = profileForm.businessAddressLine1.trim();
+    if (!businessAddressLine1)
       errors.businessAddressLine1 = "Business address line 1 is required";
-    else if (profileForm.businessAddressLine1.trim().length < 5)
-      errors.businessAddressLine1 =
-        "Business address line 1 must be at least 5 characters";
+    else if (businessAddressLine1.length < 5 || businessAddressLine1.length > ADDRESS_LINE_MAX_LENGTH)
+      errors.businessAddressLine1 = "Business address line 1 must be 5–120 characters";
+    else if (!ADDRESS_LINE_REGEX.test(businessAddressLine1))
+      errors.businessAddressLine1 = "Use letters, numbers, spaces, and common address punctuation";
+
+    const businessAddressLine2 = profileForm.businessAddressLine2.trim();
+    if (businessAddressLine2.length > ADDRESS_LINE_MAX_LENGTH)
+      errors.businessAddressLine2 = "Business address line 2 must be 120 characters or fewer";
+    else if (businessAddressLine2 && !ADDRESS_LINE_2_REGEX.test(businessAddressLine2))
+      errors.businessAddressLine2 = "Enter a valid address with at least one letter";
 
     if (!profileForm.businessAddressCountry.trim())
       errors.businessAddressCountry = "Business country is required";
@@ -3391,7 +3498,7 @@ const SellerOnboarding = () => {
       !POSTAL_CODE_REGEX.test(profileForm.businessAddressPostalCode.trim())
     ) {
       errors.businessAddressPostalCode =
-        "Business postal code must be 6 digits";
+        "Enter a valid 6-digit Indian PIN code";
     }
     if (fieldName) {
       setProfileErrors((prev) => ({
@@ -3573,8 +3680,33 @@ const SellerOnboarding = () => {
         !parsed.details?.length &&
         /gstin|gst/i.test(parsed.message) &&
         /linked|already|duplicate/i.test(parsed.message);
+      const addressField = (parsed.details || [])
+        .map(getBackendDetailField)
+        .find((field) =>
+          [
+            "businessAddressLine1",
+            "businessAddressLine2",
+            "businessAddressCity",
+            "businessAddressState",
+            "businessAddressCountry",
+            "businessAddressPostalCode",
+            "pickupLine1",
+            "pickupLine2",
+            "pickupCity",
+            "pickupState",
+            "pickupCountry",
+            "pickupPostalCode",
+          ].includes(field),
+        );
 
-      if (hasGstFieldError || isGstinConflictMessage) {
+      if (addressField) {
+        setStep(2);
+        setTimeout(() => {
+          const input = document.querySelector(`[name="${addressField}"]`);
+          input?.scrollIntoView({ behavior: "smooth", block: "center" });
+          input?.focus();
+        }, 150);
+      } else if (hasGstFieldError || isGstinConflictMessage) {
         if (isGstinConflictMessage) {
           setProfileErrors((prev) => ({ ...prev, gstNumber: parsed.message }));
         }
@@ -3694,12 +3826,16 @@ const SellerOnboarding = () => {
     }
   };
 
-  if (step === 5) {
+  if (step === 5 && editSection !== "kyc" && editSection !== "bank") {
     return <Navigate to={getSellerStatusRoute(flowState)} replace />;
   }
 
   return (
     <>
+      <ReviewImagePreviewModal
+        document={reviewImagePreview}
+        onClose={() => setReviewImagePreview(null)}
+      />
       <BankProofGuidanceModal
         open={showBankProofGuidance}
         onClose={() => setShowBankProofGuidance(false)}
@@ -4286,7 +4422,7 @@ const SellerOnboarding = () => {
                     title="Business Documents"
                   />
 
-                  <div className="md:col-span-2">
+                  <div className="col-span-full grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <DocumentUploadField
                       id="gstCertificateFile"
                       label="Upload GST Certificate"
@@ -4299,9 +4435,7 @@ const SellerOnboarding = () => {
                       onChange={onGstCertificateFileChange}
                       emptyText="Drag GST certificate here"
                     />
-                  </div>
 
-                  <div className="md:col-span-2">
                     <DocumentUploadField
                       id="addressProofFile"
                       label="Upload Address Proof"
@@ -4314,9 +4448,7 @@ const SellerOnboarding = () => {
                       onChange={onKycDocumentFileChange("addressProofFile")}
                       emptyText="Drag address proof here (must match your GST Certificate address)"
                     />
-                  </div>
 
-                  <div className="md:col-span-2">
                     <DocumentUploadField
                       id="udyogAadhaarDocumentFile"
                       label="Upload Udhyog Aadhaar Document"
@@ -4341,6 +4473,7 @@ const SellerOnboarding = () => {
                       className={STEP_ONE_INPUT_CLASS}
                       value={profileForm.businessAddressLine1}
                       onChange={onProfileChange}
+                      maxLength={ADDRESS_LINE_MAX_LENGTH}
                       required
                     />
                     {profileErrors.businessAddressLine1 && (
@@ -4360,7 +4493,13 @@ const SellerOnboarding = () => {
                       className={STEP_ONE_INPUT_CLASS}
                       value={profileForm.businessAddressLine2}
                       onChange={onProfileChange}
+                      maxLength={ADDRESS_LINE_MAX_LENGTH}
                     />
+                    {profileErrors.businessAddressLine2 && (
+                      <p className={ERROR_CLASS}>
+                        {profileErrors.businessAddressLine2}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -4441,8 +4580,9 @@ const SellerOnboarding = () => {
                       value={profileForm.businessAddressPostalCode}
                       onChange={onProfileChange}
                       inputMode="numeric"
-                      pattern="[0-9]{6}"
+                      pattern="[1-9][0-9]{5}"
                       maxLength={6}
+                      title="Enter a valid 6-digit Indian PIN code"
                       required
                     />
                     {profileErrors.businessAddressPostalCode && (
@@ -4464,6 +4604,7 @@ const SellerOnboarding = () => {
                       className={STEP_ONE_INPUT_CLASS}
                       value={profileForm.pickupLine1}
                       onChange={onProfileChange}
+                      maxLength={ADDRESS_LINE_MAX_LENGTH}
                       required
                     />
                     {profileErrors.pickupLine1 && (
@@ -4481,7 +4622,11 @@ const SellerOnboarding = () => {
                       className={STEP_ONE_INPUT_CLASS}
                       value={profileForm.pickupLine2}
                       onChange={onProfileChange}
+                      maxLength={ADDRESS_LINE_MAX_LENGTH}
                     />
+                    {profileErrors.pickupLine2 && (
+                      <p className={ERROR_CLASS}>{profileErrors.pickupLine2}</p>
+                    )}
                   </div>
 
                   <div>
@@ -4555,8 +4700,9 @@ const SellerOnboarding = () => {
                       value={profileForm.pickupPostalCode}
                       onChange={onProfileChange}
                       inputMode="numeric"
-                      pattern="[0-9]{6}"
+                      pattern="[1-9][0-9]{5}"
                       maxLength={6}
+                      title="Enter a valid 6-digit Indian PIN code"
                       required
                     />
                     {profileErrors.pickupPostalCode && (
@@ -4800,6 +4946,11 @@ const SellerOnboarding = () => {
                         kycForm.panDocumentFile?.name ||
                         getFileNameFromUrl(documentUrls.panDocumentUrl, "-")
                       }
+                      previewUrl={documentUrls.panDocumentUrl}
+                      onPreview={() => setReviewImagePreview({
+                        label: "PAN Card Softcopy",
+                        url: documentUrls.panDocumentUrl,
+                      })}
                     />
                     <ReviewFileInput
                       label="Aadhaar Front Softcopy"
@@ -4807,6 +4958,11 @@ const SellerOnboarding = () => {
                         kycForm.aadhaarFrontFile?.name ||
                         getFileNameFromUrl(documentUrls.aadhaarFrontUrl, "-")
                       }
+                      previewUrl={documentUrls.aadhaarFrontUrl}
+                      onPreview={() => setReviewImagePreview({
+                        label: "Aadhaar Front Softcopy",
+                        url: documentUrls.aadhaarFrontUrl,
+                      })}
                     />
                     <ReviewFileInput
                       label="Aadhaar Back Softcopy"
@@ -4814,6 +4970,11 @@ const SellerOnboarding = () => {
                         kycForm.aadhaarBackFile?.name ||
                         getFileNameFromUrl(documentUrls.aadhaarBackUrl, "-")
                       }
+                      previewUrl={documentUrls.aadhaarBackUrl}
+                      onPreview={() => setReviewImagePreview({
+                        label: "Aadhaar Back Softcopy",
+                        url: documentUrls.aadhaarBackUrl,
+                      })}
                     />
                   </div>
                 </ReviewSection>
@@ -4888,6 +5049,11 @@ const SellerOnboarding = () => {
                         kycForm.panDocumentFile?.name ||
                         getFileNameFromUrl(documentUrls.panDocumentUrl, "-")
                       }
+                      previewUrl={documentUrls.panDocumentUrl}
+                      onPreview={() => setReviewImagePreview({
+                        label: "PAN Card Softcopy",
+                        url: documentUrls.panDocumentUrl,
+                      })}
                     />
                     <ReviewFileInput
                       label="GST Certificate Softcopy"
@@ -4895,6 +5061,11 @@ const SellerOnboarding = () => {
                         profileForm.gstCertificateFile?.name ||
                         getFileNameFromUrl(documentUrls.gstCertificateUrl, "-")
                       }
+                      previewUrl={documentUrls.gstCertificateUrl}
+                      onPreview={() => setReviewImagePreview({
+                        label: "GST Certificate Softcopy",
+                        url: documentUrls.gstCertificateUrl,
+                      })}
                     />
                     {(profileForm.udyogAadhaarDocumentFile?.name ||
                       documentUrls.udyogAadhaarDocumentUrl) && (
@@ -4907,6 +5078,11 @@ const SellerOnboarding = () => {
                             "-",
                           )
                         }
+                        previewUrl={documentUrls.udyogAadhaarDocumentUrl}
+                        onPreview={() => setReviewImagePreview({
+                          label: "Udhyog Aadhaar Document",
+                          url: documentUrls.udyogAadhaarDocumentUrl,
+                        })}
                       />
                     )}
                   </div>
@@ -4980,6 +5156,11 @@ const SellerOnboarding = () => {
                         kycForm.bankProofFile?.name ||
                         getFileNameFromUrl(documentUrls.bankProofUrl, "-")
                       }
+                      previewUrl={documentUrls.bankProofUrl}
+                      onPreview={() => setReviewImagePreview({
+                        label: "Bank Proof / Cancelled Cheque",
+                        url: documentUrls.bankProofUrl,
+                      })}
                       className="md:col-span-2"
                     />
                   </div>
