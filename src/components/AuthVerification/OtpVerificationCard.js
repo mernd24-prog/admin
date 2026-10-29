@@ -22,15 +22,21 @@ const OtpVerificationCard = ({
   onResendOtp,
   phone,
   maskedPhone,
+  email,
 }) => {
   const displayPhone = maskedPhone || maskPhoneNumber(phone);
+  const [emailLocalPart, emailDomain] = String(email || "").split("@");
+  const displayEmail = emailLocalPart && emailDomain
+    ? `${emailLocalPart.slice(0, 2)}${"*".repeat(Math.max(emailLocalPart.length - 2, 1))}@${emailDomain}`
+    : email;
+  const isEmailDelivery = Boolean(email);
 
   return (
     <div className="relative z-10  mx-auto flex w-full max-w-full flex-col items-center justify-center">
       <p className="text-center font-[Inter] text-[16px] font-medium leading-[30px] tracking-[0%] text-[#2E2E2E]">
-        Phone Number :{" "}
+        {isEmailDelivery ? "Email Address: " : "Phone Number : "}
         <span className="font-semibold text-[#3E4094]">
-          {displayPhone || "Registered mobile number"}
+          {isEmailDelivery ? displayEmail : displayPhone || "Registered mobile number"}
         </span>
       </p>
 
