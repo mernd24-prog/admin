@@ -103,7 +103,7 @@ const EmailInput = React.memo(
             {label}
 
             {required && (
-              <LuAsterisk className="mt-[2px] text-[10px]  text-[#B42318]" />
+              <LuAsterisk className="mt-[2px] text-[10px] text-red-500" />
             )}
           </label>
         )}

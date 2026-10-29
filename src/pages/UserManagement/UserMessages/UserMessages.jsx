@@ -33,7 +33,6 @@ import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal"
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
-import { RefreshButton } from "../../../components/Atoms/buttons/exportImport";
 
 const CHANNEL_OPTIONS = [
   { value: "in_app", label: "In-App" },
@@ -67,7 +66,6 @@ const extractEntityFromText = (text = "") => {
   const orderNumMatch = str.match(/\b(ORD-[A-Za-z0-9-]+)\b/i);
   if (orderNumMatch) return { orderId: orderNumMatch[1] };
 
-  // 2. UUID matching (36-character standard UUID)
   const uuidMatch = str.match(
     /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i,
   );
@@ -177,6 +175,7 @@ const getNotificationDetailRoute = (notification = {}, isSeller = false) => {
     notification.order_id,
     extracted.orderId,
   );
+
   const invoiceId = firstValue(
     meta.invoiceId,
     meta.invoice_id,
@@ -185,6 +184,7 @@ const getNotificationDetailRoute = (notification = {}, isSeller = false) => {
     notification.invoice_id,
     extracted.invoiceId,
   );
+
   const shipmentId = firstValue(
     meta.shipmentId,
     meta.shipment_id,
@@ -192,6 +192,7 @@ const getNotificationDetailRoute = (notification = {}, isSeller = false) => {
     notification.shipment_id,
     extracted.shipmentId,
   );
+
   const payoutId = firstValue(
     meta.payoutId,
     meta.payout_id,
@@ -199,6 +200,7 @@ const getNotificationDetailRoute = (notification = {}, isSeller = false) => {
     notification.payout_id,
     extracted.payoutId,
   );
+
   const productId = firstValue(
     meta.productId,
     meta.product_id,
@@ -206,6 +208,7 @@ const getNotificationDetailRoute = (notification = {}, isSeller = false) => {
     notification.product_id,
     extracted.productId,
   );
+
   const returnId = firstValue(
     meta.returnId,
     meta.return_id,
@@ -213,12 +216,14 @@ const getNotificationDetailRoute = (notification = {}, isSeller = false) => {
     notification.return_id,
     extracted.returnId,
   );
+
   const creditNoteId = firstValue(
     meta.creditNoteId,
     meta.credit_note_id,
     notification.creditNoteId,
     notification.credit_note_id,
   );
+
   const dealId = firstValue(
     meta.dealId,
     meta.deal_id,
@@ -226,27 +231,52 @@ const getNotificationDetailRoute = (notification = {}, isSeller = false) => {
     notification.deal_id,
   );
 
-  if (invoiceId) return `/app/tax-invoices/${encodeURIComponent(invoiceId)}`;
-  if (creditNoteId)
+  if (invoiceId) {
+    return `/app/tax-invoices/${encodeURIComponent(invoiceId)}`;
+  }
+
+  if (creditNoteId) {
     return `/app/credit-notes?creditNoteId=${encodeURIComponent(creditNoteId)}`;
-  if (payoutId)
+  }
+
+  if (payoutId) {
     return isSeller
       ? `/app/seller-payouts?payoutId=${encodeURIComponent(payoutId)}`
       : `/app/payout-ops-queue?payoutId=${encodeURIComponent(payoutId)}`;
-  if (returnId) return `/app/returns?returnId=${encodeURIComponent(returnId)}`;
-  if (productId) return `/app/products/edit/${encodeURIComponent(productId)}`;
+  }
+
+  if (returnId) {
+    return `/app/returns?returnId=${encodeURIComponent(returnId)}`;
+  }
+
+  if (productId) {
+    return `/app/products/edit/${encodeURIComponent(productId)}`;
+  }
+
   if (shipmentId) {
-    const params = new URLSearchParams({ shipmentId: String(shipmentId) });
-    if (orderId) params.set("orderId", String(orderId));
+    const params = new URLSearchParams({
+      shipmentId: String(shipmentId),
+    });
+
+    if (orderId) {
+      params.set("orderId", String(orderId));
+    }
+
     return `/app/shipment-tracking?${params.toString()}`;
   }
-  if (dealId)
-    return `/app/deal-management?dealId=${encodeURIComponent(dealId)}`;
-  if (orderId) return `/app/orders/view/${encodeURIComponent(orderId)}`;
 
-  // Module listing fallback
-  if (extracted.topic === "payout")
+  if (dealId) {
+    return `/app/deal-management?dealId=${encodeURIComponent(dealId)}`;
+  }
+
+  if (orderId) {
+    return `/app/orders/view/${encodeURIComponent(orderId)}`;
+  }
+
+  if (extracted.topic === "payout") {
     return isSeller ? "/app/seller-payouts" : "/app/payout-ops-queue";
+  }
+
   if (extracted.topic === "invoice") return "/app/tax-invoices";
   if (extracted.topic === "shipment") return "/app/shipment-tracking";
   if (extracted.topic === "product") return "/app/products";
@@ -264,6 +294,18 @@ const FILTER_FIELDS = [
     width: "w-36",
     options: CHANNEL_OPTIONS,
   },
+  {
+    key: "fromDate",
+    type: "date",
+    label: "From Date",
+    disableFuture: true,
+  },
+  {
+    key: "toDate",
+    type: "date",
+    label: "To Date",
+    disableFuture: true,
+  },
 ];
 
 const EMPTY_FORM = {
@@ -274,13 +316,21 @@ const EMPTY_FORM = {
   message: "",
 };
 
+const INITIAL_FILTERS = {
+  type: "",
+  fromDate: "",
+  toDate: "",
+};
+
 const UserMessages = () => {
   const { isSeller } = usePermission();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
   const readNotificationIds = useSelector(
     (state) => state.notifications.readNotificationIds || [],
   );
+
   const notificationReadBaselineAt = useSelector(
     (state) => state.notifications.notificationReadBaselineAt || 0,
   );
@@ -346,12 +396,15 @@ const UserMessages = () => {
             readNotificationIds,
             notificationReadBaselineAt,
           );
+
           if (v === "failed" || v === "error") {
             return <StatusBadge status="failed" dot />;
           }
+
           if (unread) {
             return <StatusBadge status="unread" label="New" dot animate />;
           }
+
           return (
             <StatusBadge
               status="seen"
@@ -367,7 +420,7 @@ const UserMessages = () => {
         label: "Sent At",
         sortable: true,
         render: (v) => (
-          <span className="text-xs text-gray-500 whitespace-nowrap">
+          <span className="whitespace-nowrap text-xs text-gray-500">
             {v ? formatDateTime12Hour(new Date(v)) : "—"}
           </span>
         ),
@@ -382,7 +435,9 @@ const UserMessages = () => {
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
   });
+
   const { toQueryParams } = list;
+
   const [notifications, setNotifications] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -391,48 +446,88 @@ const UserMessages = () => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [sending, setSending] = useState(false);
 
+  // Keep channel and date filters in one controlled state.
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
+
+  const handleFilterChange = useCallback(
+    (key, value) => {
+      setFilters((current) => ({
+        ...current,
+        [key]: value,
+      }));
+
+      list.setPage(1);
+    },
+    [list.setPage],
+  );
+
+  const handleClearFilters = useCallback(() => {
+    setFilters({ ...INITIAL_FILTERS });
+    list.setPage(1);
+  }, [list.setPage]);
+
   const fetchNotifications = useCallback(
     async ({ silent = false } = {}) => {
       if (!silent) {
         setLoading(true);
         setError("");
       }
+
       try {
-        const params = toQueryParams();
+        const queryParams = toQueryParams();
+
         const endpoint = isSeller
           ? ENDPOINTS.notifications.mine
           : ENDPOINTS.notifications.admin;
-        const res = await axiosProvider.get(endpoint, {
-          params: {
-            page: params.page,
-            limit: params.limit,
-            type: params.type || undefined,
-            search: params.search || undefined,
-          },
-        });
+
+        const params = {
+          page: queryParams.page,
+          limit: queryParams.limit,
+          type: filters.type || undefined,
+          search: queryParams.search || undefined,
+          fromDate: filters.fromDate || undefined,
+          toDate: filters.toDate
+            ? `${filters.toDate}T23:59:59.999`
+            : undefined,
+        };
+
+        const res = await axiosProvider.get(endpoint, { params });
+
         const data = res?.data?.data;
+
         const items = Array.isArray(data)
           ? data
           : data?.items || data?.list || data?.notifications || [];
+
         const totalCount = Number(
           res?.data?.pagination?.total ??
             res?.data?.meta?.total ??
             items.length,
         );
+
         setNotifications(items);
         setTotal(totalCount);
       } catch (err) {
         const msg =
           err?.response?.data?.message || "Failed to load notifications";
+
         if (!silent) {
           setError(msg);
           toast.error(msg);
         }
       } finally {
-        if (!silent) setLoading(false);
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
-    [isSeller, toQueryParams],
+    [
+      isSeller,
+      toQueryParams,
+      filters.type,
+      filters.fromDate,
+      filters.toDate,
+    ],
   );
 
   useEffect(() => {
@@ -444,11 +539,12 @@ const UserMessages = () => {
       () => fetchNotifications({ silent: true }),
       15_000,
     );
+
     return () => window.clearInterval(intervalId);
   }, [fetchNotifications]);
 
   const handleMarkAllAsSeen = useCallback(() => {
-    notifications.forEach((n) => markAsSeen(n));
+    notifications.forEach((notification) => markAsSeen(notification));
     dispatch(setNotificationsSeenAt(Date.now()));
     toast.success("All notifications marked as seen");
   }, [dispatch, markAsSeen, notifications]);
@@ -458,11 +554,17 @@ const UserMessages = () => {
       toast.error("Sending notifications is admin-only");
       return;
     }
-    if (!form.userId.trim())
+
+    if (!form.userId.trim()) {
       return toast.error("Recipient User ID is required");
-    if (!form.template) return toast.error("Template is required");
+    }
+
+    if (!form.template) {
+      return toast.error("Template is required");
+    }
 
     setSending(true);
+
     try {
       await axiosProvider.post(ENDPOINTS.notifications.send, {
         userId: form.userId.trim(),
@@ -471,6 +573,7 @@ const UserMessages = () => {
         subject: form.subject.trim() || undefined,
         payload: form.message ? { message: form.message.trim() } : {},
       });
+
       toast.success("Notification sent");
       setModalOpen(false);
       setForm(EMPTY_FORM);
@@ -484,8 +587,12 @@ const UserMessages = () => {
     }
   };
 
-  const hasUnread = notifications.some((n) =>
-    isNotificationUnread(n, readNotificationIds, notificationReadBaselineAt),
+  const hasUnread = notifications.some((notification) =>
+    isNotificationUnread(
+      notification,
+      readNotificationIds,
+      notificationReadBaselineAt,
+    ),
   );
 
   return (
@@ -506,20 +613,23 @@ const UserMessages = () => {
             {hasUnread && (
               <button
                 type="button"
-                className="admin-btn-secondary text-xs flex items-center gap-1.5"
+                className="admin-btn-secondary flex items-center gap-1.5 text-xs"
                 onClick={handleMarkAllAsSeen}
               >
-                <MdDoneAll aria-hidden="true" size={16} /> Mark All as Seen
+                <MdDoneAll aria-hidden="true" size={16} />
+                Mark All as Seen
               </button>
             )}
+
             {!isSeller && (
               <PermissionGuard
                 module="notifications"
                 action={ACTIONS.CREATE}
                 hide
               >
-                <button onClick={() => setModalOpen(true)}>
-                  <MdSend aria-hidden="true" size={16} /> Send Notification
+                <button type="button" onClick={() => setModalOpen(true)}>
+                  <MdSend aria-hidden="true" size={16} />
+                  Send Notification
                 </button>
               </PermissionGuard>
             )}
@@ -540,8 +650,8 @@ const UserMessages = () => {
         onSearch={list.setSearch}
         onSort={list.setSort}
         sortKey={list.sortKey}
-        onRefresh={fetchNotifications}
         sortDir={list.sortDir}
+        onRefresh={fetchNotifications}
         searchPlaceholder="Search notifications…"
         emptyText="No notifications sent yet."
         emptyIcon={
@@ -569,6 +679,7 @@ const UserMessages = () => {
             readNotificationIds,
             notificationReadBaselineAt,
           );
+
           return unread
             ? "bg-white font-semibold hover:bg-blue-50/40 cursor-pointer transition-colors"
             : "opacity-60 bg-gray-50/50 text-gray-500 font-normal hover:bg-gray-100/60 hover:opacity-85 cursor-pointer transition-all";
@@ -576,12 +687,20 @@ const UserMessages = () => {
         filterBar={
           <FilterBar
             filters={FILTER_FIELDS}
-            listPage={list}
+            values={filters}
+            onChange={handleFilterChange}
+            onClear={handleClearFilters}
             loading={loading}
+            activeCount={
+              Number(Boolean(filters.type)) +
+              Number(Boolean(filters.fromDate)) +
+              Number(Boolean(filters.toDate))
+            }
           />
         }
         rowActions={(row) => {
           const detailRoute = getNotificationDetailRoute(row, isSeller);
+
           const unread = isNotificationUnread(
             row,
             readNotificationIds,
@@ -637,7 +756,6 @@ const UserMessages = () => {
         isButtonView={true}
       >
         <div className="space-y-5">
-          {/* ==================== Recipient Information ==================== */}
           <FormSection
             title="Recipient Information"
             description="Select the user who should receive this notification."
@@ -659,7 +777,6 @@ const UserMessages = () => {
             </div>
           </FormSection>
 
-          {/* ==================== Notification Settings ==================== */}
           <FormSection
             title="Notification Settings"
             description="Choose the channel and template for this notification."
@@ -669,8 +786,9 @@ const UserMessages = () => {
                 label="Channel"
                 options={CHANNEL_OPTIONS}
                 value={
-                  CHANNEL_OPTIONS.find((item) => item.value === form.channel) ||
-                  null
+                  CHANNEL_OPTIONS.find(
+                    (item) => item.value === form.channel,
+                  ) || null
                 }
                 onChange={(selectedOption) =>
                   setForm((prev) => ({
@@ -700,7 +818,6 @@ const UserMessages = () => {
             </div>
           </FormSection>
 
-          {/* ==================== Notification Content ==================== */}
           <FormSection
             title="Notification Content"
             description="Add the subject and message for the notification."
@@ -720,7 +837,7 @@ const UserMessages = () => {
               />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Message
                 </label>
 
