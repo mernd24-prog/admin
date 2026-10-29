@@ -41,6 +41,7 @@ const RegisterPage = () => {
             <EmailInput
               id="firstName"
               name="firstName"
+              required
               label="First Name"
               value={auth.formFields.firstName}
               placeholder="e.g. John"
@@ -55,6 +56,7 @@ const RegisterPage = () => {
             <EmailInput
               id="lastName"
               name="lastName"
+              required
               label="Last Name"
               value={auth.formFields.lastName}
               placeholder="e.g. Doe"
@@ -72,6 +74,7 @@ const RegisterPage = () => {
               name="registerEmail"
               label="Email Address"
               type="text"
+              required
               inputMode="email"
               maxLength={254}
               autoComplete="email"
@@ -88,6 +91,7 @@ const RegisterPage = () => {
               id="phone"
               name="phone"
               type="tel"
+              required
               onlyNumber={true}
               maxLength={10}
               inputMode="numeric"
@@ -104,6 +108,7 @@ const RegisterPage = () => {
             <PasswordInput
               id="registerPassword"
               name="registerPassword"
+              required
               label="Password"
               value={auth.formFields.registerPassword}
               maxLength={16}
@@ -126,6 +131,7 @@ const RegisterPage = () => {
               id="confirmRegisterPassword"
               name="confirmRegisterPassword"
               label="Confirm Password"
+              required
               value={auth.formFields.confirmRegisterPassword}
               maxLength={16}
               helperText={

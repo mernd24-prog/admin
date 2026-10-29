@@ -1818,12 +1818,12 @@ export default function BasicDetailsTab({
       const newOption = {
         value: hsnValue,
         code: hsnValue,
-        label: `${createdHsn.description
-          ? `${hsnValue} - ${createdHsn.description}`
-          : hsnValue}${
-          createdHsn.approvalStatus === "pending"
-            ? " (Pending approval)"
-            : ""
+        label: `${
+          createdHsn.description
+            ? `${hsnValue} - ${createdHsn.description}`
+            : hsnValue
+        }${
+          createdHsn.approvalStatus === "pending" ? " (Pending approval)" : ""
         }`,
         description: createdHsn.description || basePayload.description,
         gstRate: Number(createdHsn.gstRate ?? basePayload.gstRate),
@@ -2605,7 +2605,8 @@ export default function BasicDetailsTab({
                     labelName="Return Shipping Paid By"
                     name="warranty.returnPolicy.shippingPaidBy"
                     type="select"
-                    disabled={isSellerPanelUser}
+                    disabled={true}
+                    className="cursor-not-allowed "
                     value={
                       isSellerPanelUser
                         ? "seller"
@@ -2786,10 +2787,16 @@ export default function BasicDetailsTab({
                   maxLength={50}
                   onChange={(event) => {
                     formik.setFieldTouched("name", true, false);
-                    formik.setFieldValue("name", event.target.value.trimStart().replace(/ +/g, " "));
+                    formik.setFieldValue(
+                      "name",
+                      event.target.value.trimStart().replace(/ +/g, " "),
+                    );
                   }}
                   onBlur={() => {
-                    formik.setFieldValue("name", formik.values.name.trim().replace(/ +/g, " "));
+                    formik.setFieldValue(
+                      "name",
+                      formik.values.name.trim().replace(/ +/g, " "),
+                    );
                     formik.setFieldTouched("name", true);
                   }}
                   error={formik.touched.name ? formik.errors.name : ""}
@@ -2851,8 +2858,8 @@ export default function BasicDetailsTab({
             </div>
           </FormSection>
 
-          {myBrandSubmissions.filter(
-            (brand) => ["pending", "rejected"].includes(brand.approvalStatus),
+          {myBrandSubmissions.filter((brand) =>
+            ["pending", "rejected"].includes(brand.approvalStatus),
           ).length > 0 && (
             <FormSection
               title="Your Brand Submissions"
@@ -2860,7 +2867,9 @@ export default function BasicDetailsTab({
             >
               <div className="space-y-2">
                 {myBrandSubmissions
-                  .filter((brand) => ["pending", "rejected"].includes(brand.approvalStatus))
+                  .filter((brand) =>
+                    ["pending", "rejected"].includes(brand.approvalStatus),
+                  )
                   .map((brand) => (
                     <button
                       key={brand._id}
@@ -2884,7 +2893,9 @@ export default function BasicDetailsTab({
                       <span className="font-semibold">{brand.name}</span>
 
                       <span className="mt-1 block text-red-600">
-                        {brand.approvalStatus === "pending" ? "Pending approval — click to edit" : brand.rejectionReason || "Needs changes"}
+                        {brand.approvalStatus === "pending"
+                          ? "Pending approval — click to edit"
+                          : brand.rejectionReason || "Needs changes"}
                       </span>
                     </button>
                   ))}

@@ -34,7 +34,7 @@ const PasswordInput = React.memo(
           >
             {label}
             {required && (
-              <LuAsterisk className="mt-[2px] text-[#B42318]" size={10} />
+              <LuAsterisk className="mt-[2px] text-red-500" size={10} />
             )}
           </label>
         )}

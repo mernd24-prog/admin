@@ -1171,15 +1171,15 @@ const SellerSpecialPriceManager = () => {
             },
           ]
         : []),
-      {
-        key: "category",
-        label: "Category",
-        render: (_, row) => (
-          <span className="block max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap text-xs text-gray-600">
-            {row.category?.name || row.categoryName || row.category || "-"}
-          </span>
-        ),
-      },
+      // {
+      //   key: "category",
+      //   label: "Category",
+      //   render: (_, row) => (
+      //     <span className="block max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap text-xs text-gray-600">
+      //       {row.category?.name || row.categoryName || row.category || "-"}
+      //     </span>
+      //   ),
+      // },
       {
         key: "variants",
         label: "Variants",

@@ -207,11 +207,11 @@ const ShipmentTracking = () => {
     defaultPageSize: 20,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
-    defaultFilters: {
-      orderNumber: getInitialQuery("orderNumber") || getInitialQuery("orderId"),
-      sellerId: getInitialQuery("sellerId"),
-      search: initialShipmentId,
-    },
+   defaultFilters: {
+  orderNumber: getInitialQuery("orderNumber"),
+  sellerId: getInitialQuery("sellerId"),
+  search: initialShipmentId,
+},
   });
 
   const handleExport = async () => {
@@ -404,26 +404,56 @@ const ShipmentTracking = () => {
 
   const hasResolvedInitialRef = useRef(false);
 
-  useEffect(() => {
-    if (hasResolvedInitialRef.current) return;
-    if (
-      !initialShipmentId &&
-      initialOrderId &&
-      shipmentPayload.list.length > 0
-    ) {
-      const match =
-        shipmentPayload.list.find(
-          (item) =>
-            item.order_id === initialOrderId || item.orderId === initialOrderId,
-        ) || shipmentPayload.list[0];
-      const realOrderNum = match?.orderNumber || match?.order_number;
-      if (realOrderNum) {
-        hasResolvedInitialRef.current = true;
-        setFilter("orderNumber", realOrderNum);
-      }
-    }
-  }, [shipmentPayload.list, initialOrderId, setFilter]);
+useEffect(() => {
+  if (
+    hasResolvedInitialRef.current ||
+    initialShipmentId ||
+    !initialOrderId ||
+    !shipmentPayload.list.length
+  ) {
+    return;
+  }
 
+  const match = shipmentPayload.list.find((item) => {
+    const orderId =
+      item?.order_id ??
+      item?.orderId ??
+      item?.order?._id ??
+      item?.order?.id ??
+      item?.orderSnapshot?._id ??
+      item?.orderSnapshot?.id ??
+      item?.order_snapshot?._id ??
+      item?.order_snapshot?.id;
+
+    return (
+      orderId != null &&
+      String(orderId) === String(initialOrderId)
+    );
+  });
+
+  // Do not select the first shipment when no matching order is found.
+  if (!match) return;
+
+  const realOrderNumber =
+    match.orderNumber ??
+    match.order_number ??
+    match.order?.orderNumber ??
+    match.order?.order_number ??
+    match.orderSnapshot?.orderNumber ??
+    match.orderSnapshot?.order_number ??
+    match.order_snapshot?.orderNumber ??
+    match.order_snapshot?.order_number;
+
+  if (!realOrderNumber) return;
+
+  hasResolvedInitialRef.current = true;
+  setFilter("orderNumber", realOrderNumber);
+}, [
+  shipmentPayload.list,
+  initialOrderId,
+  initialShipmentId,
+  setFilter,
+]);
   const [organizationOptions, setOrganizationOptions] = useState([]);
   const FILTER_FIELDS = isSeller
     ? [

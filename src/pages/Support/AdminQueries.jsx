@@ -1,11 +1,13 @@
+
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { MdCheckCircle, MdDelete, MdVisibility } from "react-icons/md";
+import { MdDelete, MdVisibility } from "react-icons/md";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   BulkActionBar,
   ConfirmModal,
   DataTable,
+  FilterBar,
   FormSection,
   PageHeader,
   StatusBadge,
@@ -44,6 +46,7 @@ const getStatusHistory = (query = {}) =>
 const getConversationItems = (query = {}) => {
   const userLabel =
     query.userType === "seller" ? "Seller message" : "Customer message";
+
   const items = [
     {
       key: "user-message",
@@ -68,6 +71,7 @@ const getConversationItems = (query = {}) => {
         : item.senderType === "customer"
           ? "Customer"
           : "Support";
+
     items.push({
       key: `reply-${item.createdAt || index}`,
       type: item.senderType === "admin" ? "admin" : "user",
@@ -90,6 +94,7 @@ const getConversationItems = (query = {}) => {
   });
 
   const hasLatestNote = String(query.adminNotes || "").trim();
+
   const latestNoteAlreadyIncluded = items.some(
     (item) => item.type === "admin" && item.message.trim() === hasLatestNote,
   );
@@ -108,6 +113,7 @@ const getConversationItems = (query = {}) => {
   return items.sort((first, second) => {
     const firstTime = new Date(first.timestamp || 0).getTime();
     const secondTime = new Date(second.timestamp || 0).getTime();
+
     return firstTime - secondTime;
   });
 };
@@ -118,64 +124,114 @@ const AdminQueries = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [dateFilters, setDateFilters] = useState({
+    fromDate: "",
+    toDate: "",
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [selectedQuery, setSelectedQuery] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [statusForm, setStatusForm] = useState({ status: "", adminNotes: "" });
+  const [statusForm, setStatusForm] = useState({
+    status: "",
+    adminNotes: "",
+  });
   const [savingStatus, setSavingStatus] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
   const isSeller = isSellerPanel();
 
   const fetchQueries = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
+
       const response = await axiosProvider.get(ENDPOINTS.support.adminList, {
         params: {
           user_type: activeTab,
           search: search || undefined,
           limit: pageSize,
           offset: (page - 1) * pageSize,
+          fromDate: dateFilters.fromDate || undefined,
+          toDate: dateFilters.toDate
+            ? `${dateFilters.toDate}T23:59:59.999`
+            : undefined,
         },
       });
+
       const payload = response?.data || {};
       const list = Array.isArray(payload?.data) ? payload.data : [];
+
       setQueries(list);
+
       setSelectedKeys((keys) =>
         keys.filter((key) => list.some((query) => query.queryId === key)),
       );
+
       setTotal(getPaginationTotal(payload, list.length));
     } catch (requestError) {
-      const message = requestError?.message || "Failed to load support queries";
+      const message =
+        requestError?.message || "Failed to load support queries";
+
       setError(message);
       toast.error(message);
     } finally {
       setLoading(false);
     }
-  }, [activeTab, page, pageSize, search]);
+  }, [
+    activeTab,
+    dateFilters.fromDate,
+    dateFilters.toDate,
+    page,
+    pageSize,
+    search,
+  ]);
 
   useEffect(() => {
     fetchQueries();
   }, [fetchQueries]);
 
+  const handleDateFilterChange = useCallback((key, value) => {
+    setDateFilters((current) => ({
+      ...current,
+      [key]: value,
+    }));
+
+    setPage(1);
+  }, []);
+
+  const clearDateFilters = useCallback(() => {
+    setDateFilters({
+      fromDate: "",
+      toDate: "",
+    });
+
+    setPage(1);
+  }, []);
+
   const openQuery = useCallback(async (query) => {
     setSelectedQuery(query);
+
     setStatusForm({
       status: query.status || "pending",
       adminNotes: "",
     });
+
     try {
       setDetailLoading(true);
+
       const response = await axiosProvider.get(
         ENDPOINTS.support.adminDetail(query.queryId),
       );
+
       const detail = response?.data?.data || query;
+
       setSelectedQuery(detail);
+
       setStatusForm({
         status: detail.status || "pending",
         adminNotes: "",
@@ -189,19 +245,26 @@ const AdminQueries = () => {
 
   const updateStatus = useCallback(async () => {
     if (!selectedQuery?.queryId) return;
+
     try {
       setSavingStatus(true);
+
       const response = await axiosProvider.patch(
         ENDPOINTS.support.adminStatus(selectedQuery.queryId),
         statusForm,
       );
+
       const updated = response?.data?.data || selectedQuery;
+
       setSelectedQuery(updated);
+
       setStatusForm({
         status: updated.status || "pending",
         adminNotes: "",
       });
+
       toast.success("Query status updated");
+
       await fetchQueries();
     } catch (requestError) {
       toast.error(requestError?.message || "Failed to update query status");
@@ -213,8 +276,10 @@ const AdminQueries = () => {
   const markResolved = useCallback(
     async (query, adminNotes = query?.adminNotes || "") => {
       if (!query?.queryId || query.status === "resolved") return;
+
       try {
         setSavingStatus(true);
+
         const response = await axiosProvider.patch(
           ENDPOINTS.support.adminStatus(query.queryId),
           {
@@ -222,15 +287,20 @@ const AdminQueries = () => {
             adminNotes,
           },
         );
+
         const updated = response?.data?.data || query;
+
         if (selectedQuery?.queryId === query.queryId) {
           setSelectedQuery(updated);
+
           setStatusForm({
             status: updated.status || "resolved",
             adminNotes: "",
           });
         }
+
         toast.success("Query marked as resolved");
+
         await fetchQueries();
       } catch (requestError) {
         toast.error(
@@ -245,19 +315,26 @@ const AdminQueries = () => {
 
   const deleteQuery = useCallback(async () => {
     if (!deleteTarget?.queryId) return;
+
     try {
       setDeleteLoading(true);
+
       await axiosProvider.delete(
         ENDPOINTS.support.adminDelete(deleteTarget.queryId),
       );
+
       toast.success("Query deleted");
+
       if (selectedQuery?.queryId === deleteTarget.queryId) {
         setSelectedQuery(null);
       }
+
       setSelectedKeys((keys) =>
         keys.filter((key) => key !== deleteTarget.queryId),
       );
+
       setDeleteTarget(null);
+
       await fetchQueries();
     } catch (requestError) {
       toast.error(requestError?.message || "Failed to delete query");
@@ -268,28 +345,41 @@ const AdminQueries = () => {
 
   const deleteSelectedQueries = useCallback(async () => {
     if (!selectedKeys.length) return;
+
     try {
       setDeleteLoading(true);
+
       const response = await axiosProvider.delete(
         ENDPOINTS.support.adminBulkDelete,
-        { data: { queryIds: selectedKeys } },
+        {
+          data: {
+            queryIds: selectedKeys,
+          },
+        },
       );
+
       const deletedCount =
         response?.data?.data?.deletedCount || selectedKeys.length;
+
       toast.success(
         `${deletedCount} quer${deletedCount === 1 ? "y" : "ies"} deleted`,
       );
+
       if (
         selectedQuery?.queryId &&
         selectedKeys.includes(selectedQuery.queryId)
       ) {
         setSelectedQuery(null);
       }
+
       setBulkDeleteOpen(false);
       setSelectedKeys([]);
+
       await fetchQueries();
     } catch (requestError) {
-      toast.error(requestError?.message || "Failed to delete selected queries");
+      toast.error(
+        requestError?.message || "Failed to delete selected queries",
+      );
     } finally {
       setDeleteLoading(false);
     }
@@ -301,31 +391,31 @@ const AdminQueries = () => {
         key: "queryId",
         label: "Query ID",
         render: (value) => (
-          <span className="font-semibold text-[var(--admin-ink)]">{value}</span>
+          <span className="font-semibold text-[var(--admin-ink)]">
+            {value}
+          </span>
         ),
       },
       {
         key: "userName",
         label: "User Name",
-        render: (value, row) => {
-          return (
-            <div>
-              {isSeller ? (
-                <span className="font-medium text-[var(--admin-ink)]">
-                  {value || "N/A"}
-                </span>
-              ) : (
-                <UserLink userId={row.userId} userName={value} />
-              )}
+        render: (value, row) => (
+          <div>
+            {isSeller ? (
+              <span className="font-medium text-[var(--admin-ink)]">
+                {value || "N/A"}
+              </span>
+            ) : (
+              <UserLink userId={row.userId} userName={value} />
+            )}
 
-              {row.userEmail ? (
-                <div className="text-xs text-[var(--admin-muted)]">
-                  {row.userEmail}
-                </div>
-              ) : null}
-            </div>
-          );
-        },
+            {row.userEmail ? (
+              <div className="text-xs text-[var(--admin-muted)]">
+                {row.userEmail}
+              </div>
+            ) : null}
+          </div>
+        ),
       },
       {
         key: "userType",
@@ -384,7 +474,11 @@ const AdminQueries = () => {
           setActiveTab(key);
           setPage(1);
           setSearch("");
-          setSelectedKeys([]);
+          setDateFilters({
+            fromDate: "",
+            toDate: "",
+          });
+          setSelectedKeys([]);  
         }}
       />
 
@@ -409,6 +503,32 @@ const AdminQueries = () => {
         searchPlaceholder={`Search ${activeTab} queries`}
         rowKey="queryId"
         emptyText={`No ${activeTab} queries found.`}
+        filterBar={
+          <FilterBar
+            filters={[
+              {
+                key: "fromDate",
+                type: "date",
+                label: "From Date",
+                disableFuture: true,
+              },
+              {
+                key: "toDate",
+                type: "date",
+                label: "To Date",
+                disableFuture: true,
+              },
+            ]}
+            values={dateFilters}
+            onChange={handleDateFilterChange}
+            onClear={clearDateFilters}
+            loading={loading}
+            activeCount={
+              Number(Boolean(dateFilters.fromDate)) +
+              Number(Boolean(dateFilters.toDate))
+            }
+          />
+        }
         onRowClick={openQuery}
         selectable
         selectedKeys={selectedKeys}
@@ -419,7 +539,9 @@ const AdminQueries = () => {
             totalCount={queries.length}
             onClear={() => setSelectedKeys([])}
             onSelectAll={() =>
-              setSelectedKeys(queries.map((row) => row.queryId).filter(Boolean))
+              setSelectedKeys(
+                queries.map((row) => row.queryId).filter(Boolean),
+              )
             }
             module="queries"
             loading={loading || deleteLoading}
@@ -462,6 +584,7 @@ const AdminQueries = () => {
           },
         ]}
       />
+
       <DefaultModal
         isOpen={Boolean(selectedQuery)}
         onClose={() => setSelectedQuery(null)}
@@ -538,7 +661,7 @@ const AdminQueries = () => {
               title="Ticket Conversation"
               subtitle="Review the conversation and previous responses."
             >
-              <div className="h-[400px] overflow-y-auto space-y-2.5 pr-2">
+              <div className="h-[400px] space-y-2.5 overflow-y-auto pr-2">
                 {getConversationItems(selectedQuery).map((item) => {
                   const isAdminMessage = item.type === "admin";
 
@@ -688,7 +811,9 @@ const AdminQueries = () => {
       <ConfirmModal
         isOpen={Boolean(deleteTarget)}
         title="Delete Query"
-        message={`Are you sure you want to delete ${deleteTarget?.queryId || "this query"}? This cannot be undone.`}
+        message={`Are you sure you want to delete ${
+          deleteTarget?.queryId || "this query"
+        }? This cannot be undone.`}
         variant="danger"
         confirmLabel="Delete"
         loading={deleteLoading}
@@ -699,7 +824,9 @@ const AdminQueries = () => {
       <ConfirmModal
         isOpen={bulkDeleteOpen}
         title="Delete Selected Queries"
-        message={`Are you sure you want to delete ${selectedKeys.length} selected quer${selectedKeys.length === 1 ? "y" : "ies"}? This cannot be undone.`}
+        message={`Are you sure you want to delete ${
+          selectedKeys.length
+        } selected quer${selectedKeys.length === 1 ? "y" : "ies"}? This cannot be undone.`}
         variant="danger"
         confirmLabel="Delete Selected"
         loading={deleteLoading}
