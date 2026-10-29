@@ -253,7 +253,7 @@ const OnboardingSection = ({ number, title, children }) => (
       <h2 className="whitespace-nowrap font-inter text-[18px] my-auto font-semibold text-[#042586]">
         {title}
       </h2>
-      <span className="h-px flex-1 max-w-lg bg-[#E49E1C]" />
+      <span className="h-px min-w-0 flex-1 bg-[#E49E1C]" />
     </div>
     {children}
   </section>
@@ -268,7 +268,7 @@ const OnboardingGridDivider = ({ number, title }) => (
       <h2 className="whitespace-nowrap font-inter text-[18px] my-auto font-semibold text-[#042586]">
         {title}
       </h2>
-      <span className="h-px flex-1 max-w-lg bg-[#E49E1C]" />
+      <span className="h-px min-w-0 flex-1 bg-[#E49E1C]" />
     </div>
   </div>
 );
@@ -323,7 +323,7 @@ const ReviewFileInput = ({ label, value, previewUrl = "", onPreview, className =
       title={value || "-"}
     >
       <FileText size={16} className="shrink-0 text-[#484555]" />
-      <span className="w-0 flex-1 truncate">{value || "-"}</span>
+      <span className="w-0 flex-1 truncate !text-[#667085]">{value || "-"}</span>
       {previewUrl && onPreview && isPreviewableImageUrl(previewUrl) && (
         <button
           type="button"
@@ -2926,7 +2926,7 @@ const SellerOnboarding = () => {
     } else if (name === "udyogAadhaarNumber") {
       nextValue = onlyUdyogAadhaarCharacters(value);
     } else if (name === "supportPhone") {
-      nextValue = onlyDigits(value, 15);
+      nextValue = onlyDigits(value, 10);
     } else if (
       name === "pickupPostalCode" ||
       name === "businessAddressPostalCode"
@@ -3435,8 +3435,8 @@ const SellerOnboarding = () => {
       errors.supportEmail = "Please enter a valid business official email";
     if (!supportPhone)
       errors.supportPhone = "Business phone number is required";
-    else if (!/^[0-9]{10,15}$/.test(supportPhone))
-      errors.supportPhone = "Business phone number must be 10 digits";
+    else if (!/^[6-9][0-9]{9}$/.test(supportPhone))
+      errors.supportPhone = "Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9";
     if (
       !isBlankUdyogAadhaarNumber(profileForm.udyogAadhaarNumber) &&
       !UDYOG_AADHAAR_REGEX.test(profileForm.udyogAadhaarNumber.trim())
@@ -4350,7 +4350,7 @@ const SellerOnboarding = () => {
                       value={profileForm.supportPhone}
                       onChange={onProfileChange}
                       inputMode="numeric"
-                      pattern="[0-9]*"
+                      pattern="[6-9][0-9]{9}"
                       maxLength={10}
                       required
                     />

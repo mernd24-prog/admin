@@ -28,7 +28,7 @@ const RegisterVerifyOtpPage = () => {
       <Loader loading={auth.isBusy} />
       <FormLayout
         title="Verify Your Account"
-        subTitle="We've sent a verification code to your registered mobile number. Please enter the code below to confirm your identity and continue the verification process."
+        subTitle="We've sent a verification code to your registered email address. Please enter the code below to confirm your identity and continue the verification process."
         subTitleClassName=" text-center font-inter !text-[19px] font-normal !leading-[35px] tracking-[0%] text-[#484555]"
         onSubmit={auth.handleRegisterOtpSubmit}
         showLogo={false}
@@ -49,7 +49,7 @@ const RegisterVerifyOtpPage = () => {
           resendCooldown={auth.resendCooldown}
           resendOtpLabel={auth.resendOtpLabel}
           onResendOtp={auth.handleResendOtp}
-          phone={auth.formFields.phone}
+          email={auth.formFields.registerEmail}
         />
       </FormLayout>
     </div>
