@@ -15,6 +15,9 @@ const VARIANTS = {
   enabled: "bg-green-50 text-green-700 border-green-200",
   disabled: "bg-gray-50 text-gray-500 border-gray-200",
   pending: "bg-amber-50 text-amber-700 border-amber-200",
+  recovery_in_process: "bg-blue-50 text-blue-700 border-blue-200",
+  partially_recovered: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  recovered: "bg-emerald-50 text-emerald-700 border-emerald-200",
   modified: "bg-amber-50 text-amber-700 border-amber-200",
   invalid_price: "bg-red-50 text-red-700 border-red-200",
   ready: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -224,6 +227,9 @@ const DISPLAY_LABELS = {
   in_progress: "In Progress",
   not_submitted: "Not Submitted",
   initiated: "Initiated",
+  recovery_in_process: "Recovery In Process",
+  partially_recovered: "Partially Recovered",
+  recovered: "Recovered",
 };
 
 const ORDER_VARIANTS = {

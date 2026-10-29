@@ -49,6 +49,7 @@ export default function FinanceOverview() {
   const items = Array.isArray(wallet.items) ? wallet.items : [];
   const payouts = wallet.payouts || {};
   const codReconciliation = wallet.codReconciliation || {};
+  const codSummary = wallet.codSummary || {};
 
   const dateRange = useFinanceDateRange();
   const { dateFilters } = dateRange;
@@ -235,6 +236,36 @@ export default function FinanceOverview() {
           owed={owed}
           payable={balances.effectiveAvailablePayout}
           currency={currency}
+        />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Cards
+          label="COD cash confirmed"
+          value={financeMoney(codSummary.collectedAmount, currency)}
+          description="Physical customer cash confirmed as retained by the seller."
+          icon={<MdPayments aria-hidden="true" size={18} />}
+          iconBg="#e8eefc"
+          iconColor="#3157a4"
+          onClick={() => navigate("/app/seller-cod-collections")}
+        />
+        <Cards
+          label="Recovered from payouts"
+          value={financeMoney(codSummary.recoveredAmount, currency)}
+          description={`Finalized recovery. ${financeMoney(codSummary.reservedAmount, currency)} is currently reserved in payouts.`}
+          icon={<MdCheckCircle aria-hidden="true" size={18} />}
+          iconBg="#cce8c9"
+          iconColor="#1d9b50"
+          onClick={() => navigate("/app/seller-payouts")}
+        />
+        <Cards
+          label="COD still owed"
+          value={financeMoney(codSummary.outstandingAmount, currency)}
+          description="Remaining amount that will carry forward into future payouts."
+          icon={<MdWarningAmber aria-hidden="true" size={18} />}
+          iconBg="#ffd4d2"
+          iconColor="#c7333c"
+          onClick={() => navigate("/app/seller-cod-collections")}
         />
       </div>
 
@@ -498,9 +529,9 @@ export default function FinanceOverview() {
                 </strong>
                 <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
                   This was recorded automatically from delivered COD orders.
-                  Confirm retained cash, report remittance, or dispute an
-                  incorrect entry. It reduces available or future earnings until
-                  resolved.
+                  Confirm retained COD cash and track automatic payout
+                  recovery. It reduces available or future earnings until fully
+                  recovered.
                 </p>
               </div>
 

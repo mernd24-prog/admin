@@ -805,39 +805,7 @@ export const scheduleReturnValidationSchema = Yup.object({
 });
 
 export const codCollectionValidationSchema = Yup.object({
-  collectedAmount: Yup.number()
-    .transform((value, originalValue) =>
-      typeof originalValue === "string" && originalValue.trim() === ""
-        ? undefined
-        : value,
-    )
-    .typeError("Enter a valid collected amount")
-    .required("Collected amount is required")
-    .min(0, "Collected amount cannot be negative")
-    .test(
-      "valid-amount",
-      "Only numbers and up to 2 decimal places are allowed",
-      (_, context) => {
-        const value = context.originalValue;
-
-        if (value === "" || value === undefined || value === null) {
-          return true;
-        }
-
-        return /^\d+(\.\d{1,2})?$/.test(String(value).trim());
-      },
-    ),
-  referenceId: Yup.string()
-    .trim()
-    .required("Collection reference is required")
-    .min(3, "Collection reference must be at least 3 characters")
-    .max(100, "Collection reference must be no more than 100 characters"),
-
-  notes: Yup.string()
-    .max(500, "Notes must be no more than 500 characters")
-    .min(3, "Notes must be at least 3 characters"),
-
-  markRemitted: Yup.boolean().required("Remittance status is required"),
+  notes: optionalTextWithLength("Verification note", 1000),
 });
 
 export const brandValidationSchema = Yup.object({

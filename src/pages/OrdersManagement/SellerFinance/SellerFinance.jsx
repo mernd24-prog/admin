@@ -1028,15 +1028,14 @@ const SellerFinance = () => {
     const selectedCommissions =
       processModal.mode === "order"
         ? commissions.filter(
-            (commission) =>
+            (commission) => {
+              const decision = payoutDecision(commission);
+              return (
               String(commission.order_id || commission.orderId) ===
                 String(processModal.orderId) &&
-              ["eligible", "available"].includes(
-                String(
-                  commission.lifecycleStatus || commission.releaseStatus || "",
-                ).toLowerCase(),
-              ) &&
-              !commission.payout_id,
+              decision.allowed
+              );
+            },
           )
         : [];
     if (processModal.mode === "order" && !processModal.orderId) {
@@ -1693,12 +1692,12 @@ const SellerFinance = () => {
               />
             }
             rowActions={(seller) => [
-              {
-                label: "Create Payout",
-                hidden: seller.eligible <= 0,
-                disabled: submitting,
-                onClick: () => handleSellerEligiblePayout(seller),
-              },
+              // {
+              //   label: "Create Payout",
+              //   hidden: seller.eligible <= 0,
+              //   disabled: submitting,
+              //   onClick: () => handleSellerEligiblePayout(seller),
+              // },
               {
                 label: "View Store",
                 onClick: () => {
@@ -1871,37 +1870,26 @@ const SellerFinance = () => {
           rowActions={
             !isSeller
               ? (row) => {
-                  const status = String(
-                    row.lifecycleStatus || row.releaseStatus || "",
-                  ).toLowerCase();
-                  const hasPayout = Boolean(row.payout_id || row.payoutId);
-                  const canPayout =
-                    ["eligible", "available"].includes(status) && !hasPayout;
+                  const decision = payoutDecision(row);
 
                   return [
                     {
                       label: "Payout This Order",
-                      hidden: !canPayout,
+                      hidden: !decision.allowed,
                       disabled: submitting,
                       onClick: () => openOrderPayoutModal(row),
                     },
-                    ...(hasPayout
+                    ...(!decision.allowed
                       ? [
                           {
-                            label: "Already in payout",
+                            label: decision.label === "Already in payout"
+                              ? "Already in payout"
+                              : "Wait until eligible",
                             disabled: true,
                             onClick: () => {},
                           },
                         ]
-                      : !canPayout
-                        ? [
-                            {
-                              label: "Wait until eligible",
-                              disabled: true,
-                              onClick: () => {},
-                            },
-                          ]
-                        : []),
+                      : []),
                   ];
                 }
               : undefined
@@ -2108,38 +2096,26 @@ const SellerFinance = () => {
             rowActions={
               !isSeller
                 ? (row) => {
-                    const status = String(
-                      row.lifecycleStatus || row.releaseStatus || "",
-                    ).toLowerCase();
-
-                    const canPayout =
-                      ["eligible", "available"].includes(status) &&
-                      !row.payout_id;
+                    const decision = payoutDecision(row);
 
                     return [
                       {
                         label: "Payout This Order",
-                        hidden: !canPayout,
+                        hidden: !decision.allowed,
                         disabled: submitting,
                         onClick: () => openOrderPayoutModal(row),
                       },
-                      ...(row.payout_id
+                      ...(!decision.allowed
                         ? [
                             {
-                              label: "Already in payout",
+                              label: decision.label === "Already in payout"
+                                ? "Already in payout"
+                                : "Wait until eligible",
                               disabled: true,
                               onClick: () => {},
                             },
                           ]
-                        : !canPayout
-                          ? [
-                              {
-                                label: "Wait until eligible",
-                                disabled: true,
-                                onClick: () => {},
-                              },
-                            ]
-                          : []),
+                        : []),
                     ];
                   }
                 : undefined

@@ -411,6 +411,11 @@ const NegativeBalances = () => {
                 {formatIndianNumber(row.recoveredAmount)} already recovered
               </div>
             )}
+            {Number(row.reservedAmount || 0) > 0 && (
+              <div className="mt-1 text-xs text-amber-700">
+                {formatIndianNumber(row.reservedAmount)} reserved in a payout
+              </div>
+            )}
           </div>
         ),
       },

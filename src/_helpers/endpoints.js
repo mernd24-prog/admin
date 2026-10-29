@@ -244,6 +244,8 @@ export const ENDPOINTS = {
     myCodCollections: "/payments/cod-collections/mine",
     submitCodCollection: (shipmentId) =>
       `/payments/cod-collections/shipments/${shipmentId}/submit`,
+    confirmCodCollection: (shipmentId) =>
+      `/payments/cod-collections/shipments/${shipmentId}/confirm`,
     verifyCodCollection: (collectionId) =>
       `/payments/cod-collections/${collectionId}/verify`,
   },

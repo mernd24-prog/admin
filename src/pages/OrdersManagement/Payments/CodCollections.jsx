@@ -1,625 +1,96 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-
-import { useFormik } from "formik";
 import { MdCheckCircle } from "react-icons/md";
 import { toast } from "sonner";
-
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
-
-import {
-  DataTable,
-  OrderLink,
-  SellerIdentity,
-  PageHeader,
-  StatusBadge,
-} from "../../../components/Shared";
-
+import { DataTable, OrderLink, SellerIdentity, PageHeader, StatusBadge } from "../../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { ACTIONS } from "../../../_helpers/usePermission";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
-
-import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 
-import { truncateToWordBoundary } from "../../../utils/formatters";
-import { codCollectionValidationSchema } from "../../../_helpers/validationSchemas";
-
-const money = (value) =>
-  `₹${Number(value || 0).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
+const money = (value) => `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const label = (value) => String(value || "-").replace(/_/g, " ");
-
-const INITIAL_FORM_VALUES = {
-  collectedAmount: "",
-  referenceId: "",
-  notes: "",
-  markRemitted: false,
-};
 
 export default function CodCollections() {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 10,
-  });
-
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 10 });
   const [refreshKey, setRefreshKey] = useState(0);
   const [sellerMap, setSellerMap] = useState({});
+  const [decision, setDecision] = useState({ open: false, row: null, notes: "" });
 
-  const [decision, setDecision] = useState({
-    open: false,
-    row: null,
-  });
+  const load = useCallback(async (page = pagination.page, pageSize = pagination.pageSize) => {
+    try {
+      setLoading(true);
+      const response = await axiosProvider.get(ENDPOINTS.payments.codCollections, { params: { page, limit: pageSize } });
+      const data = response?.data?.data;
+      setItems(Array.isArray(data) ? data : data?.items || data?.list || []);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Unable to load COD collections");
+    } finally { setLoading(false); }
+  }, [pagination.page, pagination.pageSize]);
 
-  // Keep the existing client-side search behavior.
+  useEffect(() => { load(pagination.page, pagination.pageSize); }, [load, pagination.page, pagination.pageSize, refreshKey]);
+  useEffect(() => { dropdownApi.getSellers({ limit: 100 }).then((sellers) => {
+    const map = {}; (sellers || []).forEach((seller) => { if (seller?.value) map[seller.value] = seller.label; }); setSellerMap(map);
+  }).catch(() => {}); }, []);
+
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase().replace(/^#/, "");
-
     if (!term) return items;
-
-    return items.filter((row) =>
-      [
-        row.id,
-        row.order_id,
-        row.orderId,
-        row.order_number,
-        row.orderNumber,
-        row.shipment_id,
-        row.shipmentId,
-        row.awb_number,
-        row.tracking_number,
-        row.sellerName,
-        row.storeName,
-        row.organizationName,
-        row.seller?.name,
-        row.seller?.displayName,
-        row.seller?.email,
-        sellerMap[row.seller_id || row.sellerId],
-        row.collection_mode,
-        row.collected_by,
-        row.status,
-        row.reference_id,
-      ].some((value) =>
-        String(value ?? "")
-          .toLowerCase()
-          .replace(/_/g, " ")
-          .includes(term),
-      ),
-    );
+    return items.filter((row) => [row.id, row.order_id, row.order_number, row.shipment_id, row.awb_number,
+      row.sellerName, row.storeName, sellerMap[row.seller_id], row.collection_mode, row.status, row.recovery_status]
+      .some((value) => String(value ?? "").toLowerCase().replace(/_/g, " ").includes(term)));
   }, [items, search, sellerMap]);
 
-  /* ==================== Load COD Collections ==================== */
+  const verify = useCallback(async () => {
+    if (!decision.row?.id) return;
+    try {
+      setLoading(true);
+      await axiosProvider.post(ENDPOINTS.payments.verifyCodCollection(decision.row.id), { notes: decision.notes.trim() || null });
+      toast.success("COD collection verified; payout recovery remains active");
+      setDecision({ open: false, row: null, notes: "" });
+      setRefreshKey((value) => value + 1);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Unable to verify COD collection");
+    } finally { setLoading(false); }
+  }, [decision]);
 
-  const load = useCallback(
-    async (page = pagination.page, pageSize = pagination.pageSize) => {
-      try {
-        setLoading(true);
+  const columns = useMemo(() => [
+    { key: "order_number", label: "Order / Shipment", render: (_, row) => <div><OrderLink orderId={row.order_id} orderNumber={row.order_number} /><div className="text-xs text-gray-500">{row.awb_number || "AWB not assigned"}</div></div> },
+    { key: "seller_id", label: "Seller", render: (value, row) => <SellerIdentity row={row} sellerId={value} storeName={row.storeName || row.organizationName || sellerMap[value]} loginName={row.sellerName || row.seller?.name || row.seller?.email} /> },
+    { key: "expected_amount", label: "COD cash", render: (value) => money(value) },
+    { key: "status", label: "Collection", render: (value) => <StatusBadge status={value} label={label(value)} /> },
+    { key: "recovered_amount", label: "Recovered", render: (value) => money(value) },
+    { key: "remaining_amount", label: "Still owed", render: (value) => <span className={Number(value) > 0 ? "font-semibold text-red-700" : "text-emerald-700"}>{money(value)}</span> },
+    { key: "recovery_status", label: "Recovery", render: (value) => <StatusBadge status={value} label={label(value)} /> },
+  ], [sellerMap]);
 
-        const response = await axiosProvider.get(
-          ENDPOINTS.payments.codCollections,
-          {
-            params: {
-              page,
-              limit: pageSize,
-            },
-          },
-        );
-
-        const data = response?.data?.data;
-
-        // Supports the common response shapes:
-        // { data: { items: [...] } }
-        // { data: { list: [...] } }
-        // { data: [...] }
-        const records = Array.isArray(data)
-          ? data
-          : data?.items || data?.list || [];
-
-        setItems(Array.isArray(records) ? records : []);
-      } catch (error) {
-        toast.error(
-          error?.response?.data?.message || "Unable to load COD collections",
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [pagination.page, pagination.pageSize],
-  );
-
-  /*
-   * Fetch whenever the page, page size, or refresh key changes.
-   * This is the only automatic loading effect.
-   */
-  useEffect(() => {
-    load(pagination.page, pagination.pageSize);
-  }, [load, pagination.page, pagination.pageSize, refreshKey]);
-
-  /* ==================== Load Seller Names ==================== */
-
-  useEffect(() => {
-    const loadSellerNames = async () => {
-      try {
-        const sellers = await dropdownApi.getSellers({
-          limit: 100,
-        });
-
-        const map = {};
-
-        (sellers || []).forEach((seller) => {
-          if (seller?.value) {
-            map[seller.value] = seller.label;
-          }
-        });
-
-        setSellerMap(map);
-      } catch (error) {
-        console.error("Unable to load seller names", error);
-      }
-    };
-
-    loadSellerNames();
-  }, []);
-
-  /* ==================== Pagination Handlers ==================== */
-
-  const handlePageChange = useCallback((page) => {
-    setPagination((current) => {
-      if (current.page === page) return current;
-
-      return {
-        ...current,
-        page,
-      };
-    });
-  }, []);
-
-  const handlePageSizeChange = useCallback((pageSize) => {
-    setPagination((current) => {
-      if (current.pageSize === pageSize && current.page === 1) {
-        return current;
-      }
-
-      return {
-        page: 1,
-        pageSize,
-      };
-    });
-  }, []);
-
-  const handleRefresh = useCallback(() => {
-    setRefreshKey((current) => current + 1);
-  }, []);
-
-  /* ==================== Verify COD Collection ==================== */
-
-  const verify = useCallback(
-    async (values, { setSubmitting }) => {
-      if (!decision.row?.id) {
-        toast.error("COD collection record not found");
-        setSubmitting(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const isRecordingRemittance =
-          decision.row.status === "verified";
-        const markRemitted =
-          isRecordingRemittance || values.markRemitted;
-
-        await axiosProvider.post(
-          ENDPOINTS.payments.verifyCodCollection(decision.row.id),
-          {
-            collectedAmount: Number(values.collectedAmount),
-            referenceId: values.referenceId.trim(),
-            notes: values.notes.trim(),
-            markRemitted,
-          },
-        );
-
-        toast.success(
-          markRemitted
-            ? "COD remittance verified"
-            : "COD collection verified",
-        );
-
-        setDecision({
-          open: false,
-          row: null,
-        });
-
-        /*
-         * Reset pagination and trigger a refresh.
-         * If the page changes, the effect fetches the first page.
-         * If already on page 1, refreshKey still triggers a fetch.
-         * Both state changes are batched, preventing duplicate requests.
-         */
-        setPagination((current) => ({
-          ...current,
-          page: 1,
-        }));
-
-        setRefreshKey((current) => current + 1);
-      } catch (error) {
-        toast.error(
-          error?.response?.data?.message || "Unable to verify COD collection",
-        );
-      } finally {
-        setLoading(false);
-        setSubmitting(false);
-      }
-    },
-    [decision.row],
-  );
-
-  /* ==================== Formik Configuration ==================== */
-
-  const formik = useFormik({
-    initialValues: {
-      ...INITIAL_FORM_VALUES,
-      collectedAmount:
-        decision.row?.collected_amount ?? decision.row?.expected_amount ?? "",
-      referenceId: decision.row?.reference_id || "",
-      notes: decision.row?.notes || "",
-      markRemitted: decision.row?.status === "verified",
-    },
-    enableReinitialize: true,
-    validationSchema: codCollectionValidationSchema,
-    onSubmit: verify,
-  });
-
-  /* ==================== Modal Handlers ==================== */
-
-  const openVerifyModal = (row) => {
-    setDecision({
-      open: true,
-      row,
-    });
-  };
-
-  const closeVerifyModal = () => {
-    if (formik.isSubmitting) return;
-
-    setDecision({
-      open: false,
-      row: null,
-    });
-
-    formik.resetForm();
-  };
-
-  /* ==================== Table Columns ==================== */
-
-  const columns = useMemo(
-    () => [
-      {
-        key: "order_number",
-        label: "Order / Shipment",
-        render: (_, row) => (
-          <div>
-            <OrderLink
-              orderId={row.order_id || row.orderId}
-              orderNumber={row.order_number || row.orderNumber}
-            />
-
-            <div className="text-xs text-gray-500">
-              {row.awb_number || "AWB not assigned"}
-            </div>
+  return <div>
+    <PageHeader title="COD Collections" subtitle="Verify seller-retained COD cash. Verification confirms collection but never clears the amount owed; payouts recover it automatically." breadcrumbs={[{ label: "Payments & Finance" }, { label: "COD Collections" }]} />
+    <DataTable columns={columns} data={filteredItems} searchPlaceholder="Search Shipment..." loading={loading}
+      totalCount={filteredItems.length} page={pagination.page} pageSize={pagination.pageSize}
+      onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+      onPageSizeChange={(pageSize) => setPagination({ page: 1, pageSize })}
+      onSearch={(value) => { setSearch(value); setPagination((current) => ({ ...current, page: 1 })); }}
+      onSort={() => {}} onRefresh={() => setRefreshKey((value) => value + 1)} requiredModule="payments"
+      rowActions={(row) => ["confirmed", "submitted"].includes(row.status) ? [{ label: "Verify collection",
+        icon: <MdCheckCircle size={16} className="text-blue-600" />, requiredModule: "payments", requiredAction: ACTIONS.APPROVE,
+        onClick: () => setDecision({ open: true, row, notes: row.notes || "" }) }] : []} />
+    <DefaultModal isOpen={decision.open} onClose={() => !loading && setDecision({ open: false, row: null, notes: "" })}
+      title="Verify COD collection" onSubmit={verify} submitButtonText={loading ? "Verifying..." : "Verify collection"}>
+      <div className="space-y-5">
+        <FormSection title="Seller-retained cash" description="Verify that delivery and the seller's full-amount confirmation are present. This action does not clear the liability.">
+          <div className="space-y-4">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3"><div className="text-xs font-medium uppercase text-gray-500">Expected and confirmed COD</div><div className="mt-1 text-lg font-semibold">{money(decision.row?.expected_amount)}</div></div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">After verification, {money(decision.row?.remaining_amount ?? decision.row?.expected_amount)} remains owed and will be recovered from payouts.</div>
+            <FormInput label="Internal verification note (optional)" name="notes" type="textarea" value={decision.notes} onChange={(event) => setDecision((current) => ({ ...current, notes: event.target.value }))} placeholder="Add audit context" />
           </div>
-        ),
-      },
-
-      {
-        key: "seller_id",
-        label: "Seller",
-        render: (value, row) => (
-          <SellerIdentity
-            row={row}
-            sellerId={value}
-            storeName={
-              row.storeName || row.organizationName || sellerMap[value]
-            }
-            loginName={row.sellerName || row.seller?.name || row.seller?.email}
-          />
-        ),
-      },
-
-      {
-        key: "collection_mode",
-        label: "Collection",
-        render: (value, row) => (
-          <div>
-            <div className="capitalize">{label(value)}</div>
-
-            <div className="text-xs text-gray-500">
-              By: {label(row.collected_by)}
-            </div>
-          </div>
-        ),
-      },
-
-      {
-        key: "expected_amount",
-        label: "Expected / Collected",
-        render: (value, row) => (
-          <div>
-            <div>{money(value)}</div>
-
-            <div className="text-xs text-gray-500">
-              {money(row.collected_amount)}
-            </div>
-          </div>
-        ),
-      },
-
-      {
-        key: "status",
-        label: "Status",
-        render: (value, row) => (
-          <div>
-            <StatusBadge status={value} label={label(value)} />
-
-            <div className="mt-1 text-[10px] text-gray-500">
-              Liability: {label(row.liability_status)}
-            </div>
-
-            {row.is_overdue && (
-              <div className="mt-1 text-[10px] font-semibold uppercase text-red-600">
-                Seller response overdue
-              </div>
-            )}
-          </div>
-        ),
-      },
-
-      {
-        key: "reference_id",
-        label: "Reference",
-        render: (value) => {
-          const reference = value || "-";
-
-          return (
-            <span title={reference}>
-              {truncateToWordBoundary(reference, 30)}
-            </span>
-          );
-        },
-      },
-    ],
-    [sellerMap],
-  );
-
-  /* ==================== Render ==================== */
-
-  return (
-    <div>
-      <PageHeader
-        title="COD Collections"
-        subtitle="COD liabilities are booked automatically at delivery. Review seller responses, disputes, and remittances."
-        breadcrumbs={[
-          { label: "Payments & Finance" },
-          { label: "COD Collections" },
-        ]}
-      />
-
-      {items.some((row) => row.is_overdue || row.status === "disputed") && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <strong>COD reconciliation needs attention</strong>
-
-          <p className="mt-1 text-xs leading-5">
-            Overdue and disputed entries remain in the seller liability balance
-            until an admin verifies or records remittance.
-          </p>
-        </div>
-      )}
-
-      <DataTable
-        columns={columns}
-        data={filteredItems}
-        searchPlaceholder="Search Shipment..."
-        loading={loading}
-        totalCount={filteredItems.length}
-        rowActions={(row) => {
-          const actions = [];
-
-          if (["pending", "submitted", "disputed"].includes(row.status)) {
-            actions.push({
-              label: "Verify",
-              icon: (
-                <MdCheckCircle
-                  aria-hidden="true"
-                  size={16}
-                  className="text-blue-600"
-                />
-              ),
-              requiredModule: "payments",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openVerifyModal(row),
-            });
-          }
-
-          if (
-            row.status === "verified" &&
-            row.collected_by === "seller"
-          ) {
-            actions.push({
-              label: "Record Remittance",
-              icon: (
-                <MdCheckCircle
-                  aria-hidden="true"
-                  size={16}
-                  className="text-emerald-600"
-                />
-              ),
-              requiredModule: "payments",
-              requiredAction: ACTIONS.UPDATE,
-              onClick: () => openVerifyModal(row),
-            });
-          }
-
-          return actions;
-        }}
-        page={pagination.page}
-        pageSize={pagination.pageSize}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
-        onSort={() => {}}
-        onRefresh={handleRefresh}
-        requiredModule="payments"
-      />
-
-      {/* ==================== Verify COD Collection Modal ==================== */}
-
-      <DefaultModal
-        isOpen={decision.open}
-        onClose={closeVerifyModal}
-        title={
-          decision.row?.status === "verified"
-            ? "Record COD Remittance"
-            : "Verify COD Collection"
-        }
-        onSubmit={() => formik.submitForm()}
-        submitButtonText={
-          formik.isSubmitting
-            ? "Verifying..."
-            : formik.values.markRemitted
-              ? "Verify & Clear Seller Liability"
-              : "Verify Collection Only"
-        }
-        closeButtonText="Cancel"
-        isButtonView={true}
-      >
-        <div className="space-y-5">
-          {/* ==================== Collection Information ==================== */}
-
-          <FormSection
-            title="Collection Information"
-            description={
-              decision.row?.status === "verified"
-                ? "Confirm that the platform has now received this previously verified COD amount."
-                : "Verify the cash collected for this COD order."
-            }
-          >
-            <div className="space-y-4">
-              <div className="rounded-lg border border-[var(--admin-line)] bg-gray-50 px-4 py-3">
-                <div className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                  Expected COD Amount
-                </div>
-
-                <div className="mt-1 text-lg font-semibold text-[var(--admin-ink)]">
-                  {money(decision.row?.expected_amount)}
-                </div>
-              </div>
-
-              <FormInput
-                name="collectedAmount"
-                label="Collected Amount"
-                type="text"
-                required
-                value={formik.values.collectedAmount}
-                onChange={(e) => {
-                  const value = e.target.value;
-
-                  if (/^\d*\.?\d{0,2}$/.test(value)) {
-                    formik.setFieldValue("collectedAmount", value);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (
-                    ["e", "E", "+", "-", "@"].includes(e.key) ||
-                    (!/[0-9.]/.test(e.key) &&
-                      e.key.length === 1 &&
-                      !e.ctrlKey &&
-                      !e.metaKey)
-                  ) {
-                    e.preventDefault();
-                  }
-                }}
-                onBlur={formik.handleBlur}
-                error={
-                  formik.touched.collectedAmount &&
-                  formik.errors.collectedAmount
-                }
-                placeholder="Enter collected amount"
-              />
-
-              <FormInput
-                label="Collection / Remittance Reference"
-                name="referenceId"
-                value={formik.values.referenceId}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={formik.touched.referenceId && formik.errors.referenceId}
-                placeholder="Enter collection or remittance reference"
-                required
-              />
-
-              <FormInput
-                label="Notes"
-                name="notes"
-                type="textarea"
-                value={formik.values.notes}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={formik.touched.notes && formik.errors.notes}
-                placeholder="Add any additional notes..."
-              />
-            </div>
-          </FormSection>
-
-          {/* ==================== Remittance Settings ==================== */}
-
-          {decision.row?.collected_by === "seller" && (
-            <FormSection
-              title="Has the platform received this money?"
-              description="Collection verification and seller remittance are separate accounting events."
-            >
-              {decision.row?.status !== "verified" && (
-                <FormToggleRow
-                  title="Yes, payment received from seller"
-                  description="Enable only when the full COD amount has reached the platform account. This clears the seller's COD liability."
-                  isToggle={formik.values.markRemitted}
-                  handleClick={() =>
-                    formik.setFieldValue(
-                      "markRemitted",
-                      !formik.values.markRemitted,
-                    )
-                  }
-                />
-              )}
-
-              <div
-                className={`mt-3 rounded-md border px-3 py-2.5 ${
-                  formik.values.markRemitted
-                    ? "border-emerald-200 bg-emerald-50"
-                    : "border-amber-200 bg-amber-50"
-                }`}
-              >
-                <p
-                  className={`text-xs font-medium leading-5 ${
-                    formik.values.markRemitted
-                      ? "text-emerald-700"
-                      : "text-amber-700"
-                  }`}
-                >
-                  {formik.values.markRemitted
-                    ? `The seller's ${money(formik.values.collectedAmount)} liability will be cleared.`
-                    : `The seller will continue to owe ${money(formik.values.collectedAmount)} until remittance is confirmed.`}
-                </p>
-              </div>
-            </FormSection>
-          )}
-        </div>
-      </DefaultModal>
-    </div>
-  );
+        </FormSection>
+      </div>
+    </DefaultModal>
+  </div>;
 }

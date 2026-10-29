@@ -297,7 +297,7 @@ const PayoutOpsQueue = () => {
       }
       setConfirmAction({
         open: true,
-        title: `${ACTION_TITLES[action.type] || "Update Payout"}?`,
+        title: `${action.title || ACTION_TITLES[action.type] || "Update Payout"}?`,
         message: `This will move ${action.payout?.sellerName || action.payout?.seller?.displayName || "the seller"}'s payout to the next lifecycle state.`,
       });
     },
@@ -359,11 +359,13 @@ const PayoutOpsQueue = () => {
     (type, payout) => {
       const existingMethod = valueOf(payout, "paymentMethod", "payment_method");
       const paymentMethod = existingMethod || defaultPayoutMethod;
+      const isCancelledReopen =
+        type === "retry" && String(payout?.status || "").toLowerCase() === "cancelled";
       setAction({
         ...EMPTY_ACTION,
         open: true,
         type,
-        title: ACTION_TITLES[type] || "Update Payout",
+        title: isCancelledReopen ? "Reopen for Payout" : ACTION_TITLES[type] || "Update Payout",
         payout,
         paymentMethod,
         paymentReference: paymentMethod === "razorpayx" ? "" : "",
@@ -434,7 +436,7 @@ const PayoutOpsQueue = () => {
     }
     setConfirmAction({
       open: true,
-      title: `${ACTION_TITLES[action.type] || "Update Payout"}?`,
+      title: `${action.title || ACTION_TITLES[action.type] || "Update Payout"}?`,
       message: `This will move ${action.payout?.sellerName || action.payout?.seller?.displayName || "the seller"}'s payout to the next lifecycle state.`,
     });
   };
@@ -1101,8 +1103,16 @@ const PayoutOpsQueue = () => {
     {/* Retry */}
     {action.type === "retry" && (
       <FormSection
-        title="Retry Details"
-        description="Review the payment reference and method before retrying."
+        title={
+          String(action.payout?.status || "").toLowerCase() === "cancelled"
+            ? "Reopen Payout Details"
+            : "Retry Details"
+        }
+        description={
+          String(action.payout?.status || "").toLowerCase() === "cancelled"
+            ? "A new payout will be created from the eligible earnings; the cancelled payout remains as history."
+            : "Review the payment reference and method before retrying."
+        }
       >
         <div className="space-y-4">
           <Input
