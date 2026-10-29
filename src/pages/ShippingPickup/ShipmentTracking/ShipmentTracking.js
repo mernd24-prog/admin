@@ -351,7 +351,11 @@ const ShipmentTracking = () => {
           }
 
           if (key === "shipped_at" || key === "delivered_at") {
-            const value = row?.[key] || row?.[key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())];
+            const value =
+              row?.[key] ||
+              row?.[
+                key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+              ];
             exportRow[key] = formatDateTime12Hour(value, "");
             return;
           }
@@ -425,120 +429,70 @@ const ShipmentTracking = () => {
   }, [shipmentPayload.list, initialOrderId, setFilter]);
 
   const [organizationOptions, setOrganizationOptions] = useState([]);
-  const FILTER_FIELDS = isSeller
-    ? [
-        { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
 
-        {
-          key: "shipmentType",
-          type: "select",
-          label: "Type",
-          options: [
-            { value: "forward", label: "Forward" },
-            { value: "return", label: "Return" },
-          ],
-        },
-        {
-          key: "status",
-          type: "select",
-          label: "Status",
-          options: STATUS_OPTIONS.map((value) => ({
-            value,
-            label: shipmentStepLabel(value),
-          })),
-        },
-        // { key: "fromDate", type: "date", label: "From" },
-        // { key: "toDate", type: "date", label: "To" },
-      ]
-    : [
-        { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
-        { key: "returnId", type: "text", label: "Return #", width: "w-44" },
-        {
-          key: "shipmentType",
-          type: "select",
-          label: "Type",
-          options: [
-            { value: "forward", label: "Forward" },
-            { value: "return", label: "Return" },
-          ],
-        },
-        // {
-        //   key: "direction",
-        //   type: "select",
-        //   label: "Direction",
-        //   options: [
-        //     { value: "forward", label: "Forward" },
-        //     { value: "reverse", label: "Reverse" },
-        //   ],
-        // },
-        {
-          key: "sellerId",
-          type: "asyncDropdown",
-          label: "Seller",
-          width: "w-52",
-          load: (search) =>
-            dropdownApi.getSellers({
-              keyWord: search,
-              searchFields: "full_name,email,businessName",
-            }),
-        },
-           {
-          key: "organizationId",
-          type: "select",
-          label: "Organization",
-          width: "w-56",
-          placeholder: filters.sellerId
-            ? "All Organizations"
-            : "First Select The Seller",
-          disabled: !filters.sellerId,
-          options: filters.sellerId
-            ? organizationOptions.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))
-            : [],
-        },
-        { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
-        { key: "returnId", type: "text", label: "Return #", width: "w-44" },
-        {
-          key: "shipmentType",
-          type: "select",
-          label: "Type",
-          options: [
-            { value: "forward", label: "Forward" },
-            { value: "return", label: "Return" },
-          ],
-        },
-        // {
-        //   key: "direction",
-        //   type: "select",
-        //   label: "Direction",
-        //   options: [
-        //     { value: "forward", label: "Forward" },
-        //     { value: "reverse", label: "Reverse" },
-        //   ],
-        // },
- 
-     
-        {
-          key: "awbNumber",
-          type: "text",
-          label: "AWB / Tracking",
-          width: "w-44",
-        },
-        { key: "courierName", type: "text", label: "Courier", width: "w-40" },
-        {
-          key: "status",
-          type: "select",
-          label: "Status",
-          options: STATUS_OPTIONS.map((value) => ({
-            value,
-            label: shipmentStepLabel(value),
-          })),
-        },
-        { key: "fromDate", type: "date", label: "From" },
-        { key: "toDate", type: "date", label: "To" },
-      ];
+  const FILTER_FIELDS = [
+    { key: "orderNumber", type: "text", label: "Order #", width: "w-48" },
+    { key: "returnId", type: "text", label: "Return #", width: "w-44" },
+    {
+      key: "shipmentType",
+      type: "select",
+      label: "Type",
+      options: [
+        { value: "forward", label: "Forward" },
+        { value: "return", label: "Return" },
+      ],
+    },
+    {
+      key: "sellerId",
+      type: "asyncDropdown",
+      label: "Seller",
+      width: "w-52",
+      load: (search) =>
+        dropdownApi.getSellers({
+          keyWord: search,
+          searchFields: "full_name,email,businessName",
+        }),
+    },
+    {
+      key: "organizationId",
+      type: "select",
+      label: "Organization",
+      width: "w-56",
+      placeholder: filters.sellerId
+        ? "All Organizations"
+        : "First Select The Seller",
+      disabled: !filters.sellerId,
+      options: filters.sellerId
+        ? organizationOptions.map((option) => ({
+            value: option.value,
+            label: option.label,
+          }))
+        : [],
+    },
+    {
+      key: "awbNumber",
+      type: "text",
+      label: "AWB / Tracking",
+      width: "w-44",
+    },
+    {
+      key: "courierName",
+      type: "text",
+      label: "Courier",
+      width: "w-40",
+    },
+    {
+      key: "status",
+      type: "select",
+      label: "Status",
+      options: STATUS_OPTIONS.map((value) => ({
+        value,
+        label: shipmentStepLabel(value),
+      })),
+    },
+    { key: "fromDate", type: "date", label: "From" },
+    { key: "toDate", type: "date", label: "To" },
+  ];
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -923,19 +877,7 @@ const ShipmentTracking = () => {
           );
         },
       },
-      {
-        key: "shipment_type",
-        label: "Type",
-        headerClassName: "text-center",
-        render: (value, row) => (
-          <span className="flex w-full justify-center">
-            <StatusBadge
-              status={displayStatus(value || row.direction || "forward")}
-              dot
-            />
-          </span>
-        ),
-      },
+
       {
         key: "courier_name",
         label: "Delivery Method",
@@ -1189,315 +1131,326 @@ const ShipmentTracking = () => {
             )}
           </section>
 
-       <section className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white">
-  {/* Section Header */}
- <div className="flex items-start gap-3 border-b border-gray-200 bg-gray-50/70 p-4">
-  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-    <MdLocalShipping aria-hidden="true" size={19} />
-  </span>
+          <section className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white">
+            {/* Section Header */}
+            <div className="flex items-start gap-3 border-b border-gray-200 bg-gray-50/70 p-4">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                <MdLocalShipping aria-hidden="true" size={19} />
+              </span>
 
-  <div className="min-w-0 flex-1">
-    <div className="flex flex-wrap items-center gap-2">
-      <h3 className="font-semibold text-gray-900">
-        Seller delivery action
-      </h3>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-semibold text-gray-900">
+                    Seller delivery action
+                  </h3>
 
-      {/* <StatusBadge
+                  {/* <StatusBadge
         status={selectedShipment?.status || "initiated"}
         dot
       /> */}
-    </div>
+                </div>
 
-    <p className="mt-1 max-w-xl text-xs leading-5 text-gray-500">
-      Select the next valid shipment stage and provide the relevant
-      details. Update time is recorded automatically.
-    </p>
-  </div>
-</div>
-  <div className="space-y-4 p-4">
-    {trackingActionOptions.length > 0 ? (
-      <div className="space-y-4">
-        {/* Next Shipment Status */}
-        <div>
-          <FilterSelect
-            label="Next Status"
-            name="trackingStatus"
-            options={trackingActionOptions.map((option) => ({
-              label: option.label,
-              value: option.value,
-            }))}
-            value={
-              trackingActionOptions
-                .map((option) => ({
-                  label: option.label,
-                  value: option.value,
-                }))
-                .find(
-                  (option) => option.value === trackingAction.status,
-                ) || null
-            }
-            onChange={(option) => {
-              updateTrackingField("status", option?.value || "");
-            }}
-            placeholder="Select next status"
-            isClearable={false}
-            isSearchable={false}
-          />
-        </div>
-
-        {/* Checkpoint Details */}
-        {["in_transit", "delivered", "failed", "rto"].includes(
-          trackingAction.status,
-        ) && (
-          <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
-            {trackingAction.status !== "delivered" && (
-              <div className="sm:col-span-2">
-                <FormInput
-                  label="Checkpoint Location (optional)"
-                  name="location"
-                  type="textarea"
-                  limitMessage = "Checkpoint Location is limited to 200 characters"
-                  minLength={3}
-                  maxLength={200}
-                  rows={3}
-                  className="!mb-0"
-                  placeholder="Hub, city, or delivery area"
-                  value={trackingAction.location}
-                        error={
-                          trackingSubmitAttempted &&
-                          trackingFormik.errors.location
-                        }
-                  onChange={(event) =>
-                    updateTrackingField("location", event.target.value)
-                  }
-                  onBlur={trackingFormik.handleBlur}
-                />
-              </div>
-            )}
-
-            <div className="sm:col-span-2">
-              <FormInput
-                label={
-                  ["failed", "rto"].includes(trackingAction.status)
-                    ? "Note"
-                    : "Note (optional)"
-                }
-                name="note"
-                limitMessage = "Note is limited to 500 characters"
-                type="textarea"
-                minLength={3}
-                maxLength={500}
-                rows={3}
-                className="!mb-0"
-                required={["failed", "rto"].includes(
-                  trackingAction.status,
-                )}
-                placeholder={
-                  ["failed", "rto"].includes(trackingAction.status)
-                    ? "Explain the reason"
-                    : trackingAction.status === "delivered"
-                      ? "Add delivery details, recipient name, or proof reference"
-                      : "Add an update for this checkpoint"
-                }
-                value={trackingAction.note}
-                      error={
-                        trackingSubmitAttempted && trackingFormik.errors.note
-                      }
-                onChange={(event) =>
-                  updateTrackingField("note", event.target.value)
-                }
-                onBlur={trackingFormik.handleBlur}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Dispatch Details */}
-        {trackingAction.status === "in_transit" && (
-          <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-4">
-            <div className="mb-4 flex items-center gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-blue-700 ring-1 ring-gray-200">
-                <MdLocalShipping aria-hidden="true" size={17} />
-              </span>
-
-              <div>
-                <h4 className="font-semibold text-gray-900">
-                  Dispatch Details
-                </h4>
-                <p className="mt-0.5 text-xs text-gray-500">
-                  Enter courier and tracking information.
+                <p className="mt-1 max-w-xl text-xs leading-5 text-gray-500">
+                  Select the next valid shipment stage and provide the relevant
+                  details. Update time is recorded automatically.
                 </p>
               </div>
             </div>
+            <div className="space-y-4 p-4">
+              {trackingActionOptions.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Next Shipment Status */}
+                  <div>
+                    <FilterSelect
+                      label="Next Status"
+                      name="trackingStatus"
+                      options={trackingActionOptions.map((option) => ({
+                        label: option.label,
+                        value: option.value,
+                      }))}
+                      value={
+                        trackingActionOptions
+                          .map((option) => ({
+                            label: option.label,
+                            value: option.value,
+                          }))
+                          .find(
+                            (option) => option.value === trackingAction.status,
+                          ) || null
+                      }
+                      onChange={(option) => {
+                        updateTrackingField("status", option?.value || "");
+                      }}
+                      placeholder="Select next status"
+                      isClearable={false}
+                      isSearchable={false}
+                    />
+                  </div>
 
-            <div className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-              <FilterSelect
-                label="Courier / Delivery Method"
-                name="courierName"
-                options={[
-                  ...(trackingAction.courierName &&
-                  !DELIVERY_METHOD_OPTIONS.some(
-                    (option) =>
-                      option.value === trackingAction.courierName,
-                  )
-                    ? [
-                        {
-                          value: trackingAction.courierName,
-                          label: trackingAction.courierName,
-                        },
-                      ]
-                    : []),
-                  ...DELIVERY_METHOD_OPTIONS,
-                ]}
-                value={
-                  [
-                    ...(trackingAction.courierName &&
-                    !DELIVERY_METHOD_OPTIONS.some(
-                      (option) =>
-                        option.value === trackingAction.courierName,
-                    )
-                      ? [
-                          {
-                            value: trackingAction.courierName,
-                            label: trackingAction.courierName,
-                          },
-                        ]
-                      : []),
-                    ...DELIVERY_METHOD_OPTIONS,
-                  ].find(
-                    (option) =>
-                      option.value === trackingAction.courierName,
-                  ) || null
-                }
-                onChange={(option) => {
-                  updateTrackingField("courierName", option?.value || "");
-                }}
-                placeholder="Select delivery method"
-                required
-                isClearable={false}
-                isSearchable={false}
-                        error={
-                          trackingSubmitAttempted &&
-                          trackingFormik.errors.courierName
-                        }
-              />
+                  {/* Checkpoint Details */}
+                  {["in_transit", "delivered", "failed", "rto"].includes(
+                    trackingAction.status,
+                  ) && (
+                    <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                      {trackingAction.status !== "delivered" && (
+                        <div className="sm:col-span-2">
+                          <FormInput
+                            label="Checkpoint Location (optional)"
+                            name="location"
+                            type="textarea"
+                            limitMessage="Checkpoint Location is limited to 200 characters"
+                            minLength={3}
+                            maxLength={200}
+                            rows={3}
+                            className="!mb-0"
+                            placeholder="Hub, city, or delivery area"
+                            value={trackingAction.location}
+                            error={
+                              trackingSubmitAttempted &&
+                              trackingFormik.errors.location
+                            }
+                            onChange={(event) =>
+                              updateTrackingField(
+                                "location",
+                                event.target.value,
+                              )
+                            }
+                            onBlur={trackingFormik.handleBlur}
+                          />
+                        </div>
+                      )}
 
-              <FormInput
-                label="AWB / Tracking Reference"
-                name="awbNumber"
-                required
-                className="!mb-0"
-                value={trackingAction.awbNumber}
-                showLengthCount = {false}
-                maxLength={100}
-                limitMessage="Tracking reference must be 5–100 characters."
-                pattern="[A-Za-z0-9/-]{5,100}"
-                title="Use 5–100 letters, numbers, hyphens, or forward slashes. Spaces are not allowed."
-                autoCapitalize="characters"
-                spellCheck={false}
-                        error={
-                          trackingSubmitAttempted &&
-                          trackingFormik.errors.awbNumber
-                        }
-                onChange={(event) =>
-                  updateTrackingField("awbNumber", event.target.value)
-                }
-                onBlur={(event) => {
-                  const trimmedValue = event.target.value.trim();
-                  if (trimmedValue !== event.target.value) {
-                    updateTrackingField("awbNumber", trimmedValue);
-                  }
-                  trackingFormik.handleBlur(event);
-                }}
-              />
+                      <div className="sm:col-span-2">
+                        <FormInput
+                          label={
+                            ["failed", "rto"].includes(trackingAction.status)
+                              ? "Note"
+                              : "Note (optional)"
+                          }
+                          name="note"
+                          limitMessage="Note is limited to 500 characters"
+                          type="textarea"
+                          minLength={3}
+                          maxLength={500}
+                          rows={3}
+                          className="!mb-0"
+                          required={["failed", "rto"].includes(
+                            trackingAction.status,
+                          )}
+                          placeholder={
+                            ["failed", "rto"].includes(trackingAction.status)
+                              ? "Explain the reason"
+                              : trackingAction.status === "delivered"
+                                ? "Add delivery details, recipient name, or proof reference"
+                                : "Add an update for this checkpoint"
+                          }
+                          value={trackingAction.note}
+                          error={
+                            trackingSubmitAttempted &&
+                            trackingFormik.errors.note
+                          }
+                          onChange={(event) =>
+                            updateTrackingField("note", event.target.value)
+                          }
+                          onBlur={trackingFormik.handleBlur}
+                        />
+                      </div>
+                    </div>
+                  )}
 
-              <FormInput
-                label="Expected Delivery Date"
-                name="expectedDeliveryAt"
-                type="datetime-local"
-                required
-                className="!mb-0"
-                min={toDateTimeLocal(new Date())}
-                value={trackingAction.expectedDeliveryAt}
-                error={
-                  trackingSubmitAttempted &&
-                  trackingFormik.errors.expectedDeliveryAt
-                }
-                onChange={(event) =>
-                  updateTrackingField(
-                    "expectedDeliveryAt",
-                    event.target.value,
-                  )
-                }
-                onBlur={trackingFormik.handleBlur}
-              />
+                  {/* Dispatch Details */}
+                  {trackingAction.status === "in_transit" && (
+                    <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-4">
+                      <div className="mb-4 flex items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-blue-700 ring-1 ring-gray-200">
+                          <MdLocalShipping aria-hidden="true" size={17} />
+                        </span>
 
-              <FormInput
-                label="Tracking URL (optional)"
-                name="trackingUrl"
-                type="url"
-                showLengthCount = {false}
-                maxLength={2048}
-                limitMessage="Tracking URL cannot exceed 2048 characters."
-                className="!mb-0"
-                placeholder="https://..."
-                value={trackingAction.trackingUrl}
-                error={
-                  trackingSubmitAttempted && trackingFormik.errors.trackingUrl
-                }
-                onChange={(event) =>
-                  updateTrackingField("trackingUrl", event.target.value)
-                }
-                onBlur={trackingFormik.handleBlur}
-              />
+                        <div>
+                          <h4 className="font-semibold text-gray-900">
+                            Dispatch Details
+                          </h4>
+                          <p className="mt-0.5 text-xs text-gray-500">
+                            Enter courier and tracking information.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+                        <FilterSelect
+                          label="Courier / Delivery Method"
+                          name="courierName"
+                          options={[
+                            ...(trackingAction.courierName &&
+                            !DELIVERY_METHOD_OPTIONS.some(
+                              (option) =>
+                                option.value === trackingAction.courierName,
+                            )
+                              ? [
+                                  {
+                                    value: trackingAction.courierName,
+                                    label: trackingAction.courierName,
+                                  },
+                                ]
+                              : []),
+                            ...DELIVERY_METHOD_OPTIONS,
+                          ]}
+                          value={
+                            [
+                              ...(trackingAction.courierName &&
+                              !DELIVERY_METHOD_OPTIONS.some(
+                                (option) =>
+                                  option.value === trackingAction.courierName,
+                              )
+                                ? [
+                                    {
+                                      value: trackingAction.courierName,
+                                      label: trackingAction.courierName,
+                                    },
+                                  ]
+                                : []),
+                              ...DELIVERY_METHOD_OPTIONS,
+                            ].find(
+                              (option) =>
+                                option.value === trackingAction.courierName,
+                            ) || null
+                          }
+                          onChange={(option) => {
+                            updateTrackingField(
+                              "courierName",
+                              option?.value || "",
+                            );
+                          }}
+                          placeholder="Select delivery method"
+                          required
+                          isClearable={false}
+                          isSearchable={false}
+                          error={
+                            trackingSubmitAttempted &&
+                            trackingFormik.errors.courierName
+                          }
+                        />
+
+                        <FormInput
+                          label="AWB / Tracking Reference"
+                          name="awbNumber"
+                          required
+                          className="!mb-0"
+                          value={trackingAction.awbNumber}
+                          showLengthCount={false}
+                          maxLength={100}
+                          limitMessage="Tracking reference must be 5–100 characters."
+                          pattern="[A-Za-z0-9/-]{5,100}"
+                          title="Use 5–100 letters, numbers, hyphens, or forward slashes. Spaces are not allowed."
+                          autoCapitalize="characters"
+                          spellCheck={false}
+                          error={
+                            trackingSubmitAttempted &&
+                            trackingFormik.errors.awbNumber
+                          }
+                          onChange={(event) =>
+                            updateTrackingField("awbNumber", event.target.value)
+                          }
+                          onBlur={(event) => {
+                            const trimmedValue = event.target.value.trim();
+                            if (trimmedValue !== event.target.value) {
+                              updateTrackingField("awbNumber", trimmedValue);
+                            }
+                            trackingFormik.handleBlur(event);
+                          }}
+                        />
+
+                        <FormInput
+                          label="Expected Delivery Date"
+                          name="expectedDeliveryAt"
+                          type="datetime-local"
+                          required
+                          className="!mb-0"
+                          min={toDateTimeLocal(new Date())}
+                          value={trackingAction.expectedDeliveryAt}
+                          error={
+                            trackingSubmitAttempted &&
+                            trackingFormik.errors.expectedDeliveryAt
+                          }
+                          onChange={(event) =>
+                            updateTrackingField(
+                              "expectedDeliveryAt",
+                              event.target.value,
+                            )
+                          }
+                          onBlur={trackingFormik.handleBlur}
+                        />
+
+                        <FormInput
+                          label="Tracking URL (optional)"
+                          name="trackingUrl"
+                          type="url"
+                          showLengthCount={false}
+                          maxLength={2048}
+                          limitMessage="Tracking URL cannot exceed 2048 characters."
+                          className="!mb-0"
+                          placeholder="https://..."
+                          value={trackingAction.trackingUrl}
+                          error={
+                            trackingSubmitAttempted &&
+                            trackingFormik.errors.trackingUrl
+                          }
+                          onChange={(event) =>
+                            updateTrackingField(
+                              "trackingUrl",
+                              event.target.value,
+                            )
+                          }
+                          onBlur={trackingFormik.handleBlur}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      className="admin-btn-primary inline-flex min-h-10 items-center justify-center gap-2 !px-4 !py-2"
+                      onClick={handleTrackingSubmit}
+                      disabled={trackingFormik.isSubmitting || loading}
+                    >
+                      {trackingFormik.isSubmitting ? (
+                        <>
+                          <ButtonLoader />
+                          Updating shipment...
+                        </>
+                      ) : (
+                        "Update Shipment Status"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  {!selectedShipmentPaid ? (
+                    <div>
+                      <p className="font-semibold text-amber-800">
+                        Awaiting Payment
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-gray-500">
+                        Shipment processing is locked until online payment is
+                        captured or COD is authorized.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="leading-5 text-gray-600">
+                      This shipment is{" "}
+                      <strong className="font-semibold text-gray-900">
+                        {shipmentStepLabel(selectedShipment?.status)}
+                      </strong>
+                      . No further seller action is currently required.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            className="admin-btn-primary inline-flex min-h-10 items-center justify-center gap-2 !px-4 !py-2"
-            onClick={handleTrackingSubmit}
-            disabled={trackingFormik.isSubmitting || loading}
-          >
-            {trackingFormik.isSubmitting ? (
-              <>
-                <ButtonLoader />
-                Updating shipment...
-              </>
-            ) : (
-              "Update Shipment Status"
-            )}
-          </button>
-        </div>
-      </div>
-    ) : (
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-        {!selectedShipmentPaid ? (
-          <div>
-            <p className="font-semibold text-amber-800">
-              Awaiting Payment
-            </p>
-            <p className="mt-1 text-xs leading-5 text-gray-500">
-              Shipment processing is locked until online payment is
-              captured or COD is authorized.
-            </p>
-          </div>
-        ) : (
-          <p className="leading-5 text-gray-600">
-            This shipment is{" "}
-            <strong className="font-semibold text-gray-900">
-              {shipmentStepLabel(selectedShipment?.status)}
-            </strong>
-            . No further seller action is currently required.
-          </p>
-        )}
-      </div>
-    )}
-  </div>
-</section>
+          </section>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-1">
             <section className="rounded-2xl border border-gray-200 bg-white p-4">
@@ -1619,8 +1572,6 @@ const ShipmentTracking = () => {
           </section>
         </div>
       </DefaultModal>
-
-
     </div>
   );
 };

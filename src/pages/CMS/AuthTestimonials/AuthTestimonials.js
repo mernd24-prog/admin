@@ -519,10 +519,10 @@ const AuthTestimonials = () => {
                   file={formik.values.avatarUrl}
                   onChange={uploadAvatar}
                   isDisabled={uploadingAvatar || formik.isSubmitting}
-                  previewClassName="!h-32 !min-h-32 rounded-full object-cover"
+                  previewClassName="!h-32 !min-h-32 object-contain"
                 />
 
-                <input
+                {/* <input
                   className={`${inputClass} mt-2`}
                   name="avatarUrl"
                   value={formik.values.avatarUrl}
@@ -536,11 +536,11 @@ const AuthTestimonials = () => {
                   <p className="mt-1 text-xs text-red-600">
                     {formik.errors.avatarUrl}
                   </p>
-                )}
+                )} */}
 
-                <p className="mt-1 text-xs text-[#65718b]">
+                {/* <p className="mt-1 text-xs text-[#65718b]">
                   Upload folder: ecommerce/uploads/onboarding-testimonials
-                </p>
+                </p> */}
               </div>
             </div>
           </FormSection>
