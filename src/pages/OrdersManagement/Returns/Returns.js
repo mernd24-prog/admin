@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormik } from "formik";
 import { toast } from "../../../utils/toast";
+import { EmptyState } from "../Orders/components/ViewOrders";
 import {
   formatLabel,
   formatCurrency,
@@ -82,7 +83,7 @@ import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
 const INFO_CARD_CLASS = "rounded-lg border border-gray-100 bg-gray-50 p-3";
 const ITEM_CARD_CLASS = "rounded-lg border border-gray-200 bg-white p-3";
 const LABEL_CLASS = "text-xs text-gray-500";
-const VALUE_CLASS = "mt-1 font-medium text-gray-900";
+const VALUE_CLASS = "mt-1 font-regular text-[#252238] font-inter";
 
 const ACTION_TITLES = {
   approve: "Approve Return",
@@ -108,17 +109,7 @@ const ACTION_TITLES = {
 
 const FILTER_FIELDS = [
   { key: "returnNumber", type: "text", label: "Return #", width: "w-48" },
-  // {
-  //   key: "buyerId",
-  //   type: "asyncDropdown",
-  //   label: "Buyer",
-  //   width: "w-52",
-  //   load: (search) =>
-  //     dropdownApi.getBuyers({
-  //       keyWord: search,
-  //       searchFields: "full_name,email",
-  //     }),
-  // },
+
   {
     key: "sellerId",
     type: "asyncDropdown",
@@ -329,7 +320,7 @@ function QCEvidenceUploader({ value = "", required = false, onChange }) {
 
   const CLASS_DETAIL_VALUE = "mt-1 font-medium text-gray-900";
 
-  const CLASS_MONO_VALUE = "mt-1 break-all font-mono text-xs text-gray-800";
+  const CLASS_MONO_VALUE = "mt-1 break-all font-inter text-xs text-gray-800";
 
   const CLASS_ITEM_CARD = "rounded-xl border border-gray-200 bg-gray-50 p-4";
 
@@ -1852,9 +1843,7 @@ const Returns = () => {
                   {item.custom ? (
                     <div className="mt-1">{item.custom}</div>
                   ) : (
-                    <p className={`${VALUE_CLASS} ${item.className || ""}`}>
-                      {item.value}
-                    </p>
+                    <p className={` ${item.className || ""}`}>{item.value}</p>
                   )}
 
                   {item.subtext && (
@@ -1866,24 +1855,25 @@ const Returns = () => {
           </FormSection>
 
           {/* Refund Information */}
+
           <FormSection
             title="Refund Information"
             description="Details about the refund amount, method, reference, and processing status."
           >
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {[
+            {(() => {
+              const refundInfo = [
                 {
                   label: "Refund Amount",
                   value: money(
                     detailReturn?.refundAmount ||
                       detailReturn?.refundBreakup?.totalRefundAmount,
                   ),
-                  className: "text-base font-semibold text-gray-900",
+                  className: "text-sm font-regular text-[#252238]",
                 },
                 {
                   label: "Refund Reference",
-                  value: detailReturn?.refundReferenceId || "Not available",
-                  className: "break-all font-mono text-xs text-gray-800",
+                  value: detailReturn?.refundReferenceId,
+                  className: "break-all text-sm font-regular text-[#252238]",
                 },
                 {
                   label: "Refund Method",
@@ -1898,26 +1888,35 @@ const Returns = () => {
                   label: "Provider Refund ID",
                   value:
                     detailReturn?.refund?.providerRefundId ||
-                    detailReturn?.providerRefundId ||
-                    "Not available",
-                  className: "break-all font-mono text-xs text-gray-800",
+                    detailReturn?.providerRefundId,
+                  className: "break-all text-sm font-regular text-[#252238]",
                   fullWidth: true,
                 },
-              ].map((item, index) => (
-                <div
-                  key={index}
-                  className={`${INFO_CARD_CLASS} ${
-                    item.fullWidth ? "md:col-span-2" : ""
-                  }`}
-                >
-                  <p className={LABEL_CLASS}>{item.label}</p>
+              ].filter(
+                (item) =>
+                  item.value != null &&
+                  String(item.value).trim() !== "" &&
+                  String(item.value).toLowerCase() !== "not available",
+              );
 
-                  <p className={`${VALUE_CLASS} ${item.className || ""}`}>
-                    {item.value}
-                  </p>
+              return refundInfo.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {refundInfo.map((item) => (
+                    <div
+                      key={item.label}
+                      className={`${INFO_CARD_CLASS} ${
+                        item.fullWidth ? "md:col-span-2" : ""
+                      }`}
+                    >
+                      <p className={LABEL_CLASS}>{item.label}</p>
+                      <p className={`${VALUE_CLASS} ${item.className || ""}`}>
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              ) : null;
+            })()}
           </FormSection>
 
           {/* Eligibility & Reverse Shipping */}
@@ -1945,7 +1944,7 @@ const Returns = () => {
                     detailReturn?.reverseShipment?.awbNumber ||
                     detailReturn?.reverseShipment?.shipment?.awb_number ||
                     "Not assigned",
-                  className: "break-all font-mono text-xs text-gray-800",
+                  className: "break-all text-sm font-regular text-[#252238]",
                 },
                 {
                   label: "Courier",
@@ -1961,7 +1960,7 @@ const Returns = () => {
                     detailReturn?.reverseShipment?.shipment?.tracking_number ||
                     detailReturn?.trackingNumber ||
                     "Not available",
-                  className: "break-all font-mono text-xs text-gray-800",
+                  className: "break-all text-sm font-regular text-[#252238]",
                 },
                 {
                   label: "Shipment Status",
@@ -2054,7 +2053,7 @@ const Returns = () => {
                   {
                     label: "Refund",
                     value: money(item.refundAmount),
-                    className: "font-semibold text-gray-900",
+                    className: "font-regular text-sm text-[#252238]",
                   },
                   {
                     label: "QC Result",
@@ -2111,9 +2110,11 @@ const Returns = () => {
               })}
 
               {!detailReturn?.items?.length && (
-                <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-center text-xs text-gray-500">
-                  No returned items available.
-                </div>
+                <EmptyState>
+                  <p className="mt-2 text-center text-xs text-gray-500">
+                    No returned items available.
+                  </p>
+                </EmptyState>
               )}
             </div>
           </FormSection>
@@ -2206,9 +2207,11 @@ const Returns = () => {
                 )}
 
                 {!detailReturn?.refund?.attempts?.length && (
-                  <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-center text-xs text-gray-500">
-                    No refund attempts.
-                  </div>
+                  <EmptyState>
+                    <p className="mt-2 text-center text-xs text-gray-500">
+                      No refund attempts.
+                    </p>
+                  </EmptyState>
                 )}
               </div>
             </FormSection>
@@ -2324,7 +2327,7 @@ const Returns = () => {
                   {
                     label: "Tracking Number",
                     value: detailReturn.returnToCustomer.trackingNumber,
-                    className: "break-all font-mono text-xs",
+                    className: "break-all font-inter text-xs",
                   },
                   {
                     label: "Status",

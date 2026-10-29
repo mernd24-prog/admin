@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { forceLogout } from "../../_helpers/authSession";
 import { IoLogOutOutline } from "react-icons/io5";
 import {
@@ -178,8 +184,12 @@ export default function Header({
   hasPermanentOpen,
   isSidebarExpanded,
 }) {
-  const { canRoute, isSuperAdmin, isAdmin, role: permissionRole } =
-    usePermission();
+  const {
+    canRoute,
+    isSuperAdmin,
+    isAdmin,
+    role: permissionRole,
+  } = usePermission();
 
   const [openModel, setOpenModel] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -626,7 +636,7 @@ export default function Header({
                       <Link
                         to="/app/profile"
                         onClick={() => setOpenModel(false)}
-                        className="flex flex-wrap items-center rounded px-3.5 py-2 font-semibold text-gray-700 no-underline hover:bg-gray-50 hover:text-[var(--admin-gold)]"
+                        className="flex flex-wrap items-center rounded px-3.5 py-2 font-semibold text-gray-700 no-underline "
                       >
                         <FiUser className="mr-3" aria-hidden="true" />
                         Profile
@@ -637,7 +647,7 @@ export default function Header({
                       <Link
                         to="/app/changePassword"
                         onClick={() => setOpenModel(false)}
-                        className="flex flex-wrap items-center rounded px-3.5 py-2 font-medium text-gray-700 no-underline hover:bg-gray-50 hover:text-[var(--admin-gold)]"
+                        className="flex flex-wrap items-center rounded px-3.5 py-2 font-medium text-gray-700 no-underline "
                       >
                         <FiKey className="mr-3" aria-hidden="true" />
                         Change Password
@@ -649,7 +659,7 @@ export default function Header({
                 <div className="border-t border-gray-100 px-4 py-1 text-xs">
                   <button
                     type="button"
-                    className="flex w-full items-center rounded px-3.5 py-2 text-left font-medium text-gray-700 transition hover:bg-[#fff7ea] hover:text-[var(--admin-gold)]"
+                    className="flex w-full items-center rounded px-3.5 py-2 text-left font-medium text-gray-700 transition "
                     onClick={openLogoutConfirmation}
                   >
                     <IoLogOutOutline

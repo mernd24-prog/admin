@@ -49,7 +49,7 @@ const FormLayout = ({
         )}
         {topContent}
 
-        <div className="mb-[22px] text-center">
+        <div className="mb-[30px] text-center">
           <h2
             className={`text-[28px] font-bold leading-[1.12] tracking-normal text-[#1A1A2E] sm:text-[35px] ${titleClassName}`}
           >
@@ -65,7 +65,7 @@ const FormLayout = ({
         </div>
 
         <div
-          className={`flex w-full   max-w-[600.5px] flex-col gap-[35px] rounded-[10px] border border-[#e4dfd9] bg-white  px-4 py-[34px] opacity-100 shadow-[0_24px_44px_rgba(35,31,27,0.08)] sm:px-[30px] sm:py-[42px] ${cardClassName}`}
+          className={`flex w-full   max-w-[600.5px] flex-col gap-[35px] rounded-[10px] border border-[#e4dfd9] bg-white  px-4 py-[38px] opacity-100 shadow-[0_24px_44px_rgba(35,31,27,0.08)] sm:px-[36px] sm:py-[48px] ${cardClassName}`}
         >
           <form onSubmit={onSubmit} className={` space-y-0 ${formClassName}`}>
             <div className={childrenClassName}>{children}</div>

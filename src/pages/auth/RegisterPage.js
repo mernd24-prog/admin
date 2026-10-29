@@ -35,9 +35,9 @@ const RegisterPage = () => {
 
         <form
           onSubmit={auth.handleRegisterSubmit}
-          className="mx-auto min-h-[440px] w-full rounded-[14px] border border-[#dedede] bg-white px-5  shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:px-10 md:min-h-[480px] md:px-[64px] sm:py-[35px] 3xl:py-[70px] xl:min-h-[400px]"
+          className="mx-auto min-h-[440px] w-full  rounded-[14px] border border-[#dedede] bg-white px-5  shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:px-10 md:min-h-[480px] md:px-[64px] sm:py-[35px] 3xl:py-[70px] xl:min-h-[400px]"
         >
-          <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-2 mt-4">
             <EmailInput
               id="firstName"
               name="firstName"
@@ -53,6 +53,7 @@ const RegisterPage = () => {
               onlyLetters
               maxLength={20}
             />
+
             <EmailInput
               id="lastName"
               name="lastName"
@@ -150,7 +151,7 @@ const RegisterPage = () => {
             />
           </div>
 
-          <div className="my-8">
+          <div className="my-4 md:my-8">
             <AuthTermsCheckbox
               checked={auth.termsAccepted}
               onChange={(event) => auth.handleTermsChange(event.target.checked)}
@@ -163,7 +164,7 @@ const RegisterPage = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-[150px_1fr]">
+          <div className="grid my-4 md:my-0 grid-cols-1 gap-3 md:grid-cols-[150px_1fr]">
             <button
               type="button"
               onClick={() => auth.goToLogin({ reset: true })}

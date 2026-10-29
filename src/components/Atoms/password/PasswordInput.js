@@ -30,7 +30,7 @@ const PasswordInput = React.memo(
         {label && (
           <label
             htmlFor={id}
-            className={`mb-[6px] flex items-start gap-1 text-[13px] font-medium leading-[18px] text-[#344054] sm:text-[14px] sm:leading-[20px] ${labelClassName}`}
+            className={`mb-[6px] flex items-start gap-1 text-[13px] font-medium leading-[18px] text-[#344054] sm:text-[13px] sm:leading-[20px] ${labelClassName}`}
           >
             {label}
             {required && (

@@ -136,7 +136,7 @@ export function OrderLink({
   return (
     <Link
       to={`/app/orders/view/${encodeURIComponent(String(orderId))}`}
-      className={`font-mono text-xs font-medium text-[var(--admin-navy)] hover:underline ${className}`}
+      className={`font-inter text-sm  text-[#252238] hover:underline ${className}`}
       // title={`Open order ${orderNumber || orderId}`}
     >
       {label}

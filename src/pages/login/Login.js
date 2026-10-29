@@ -42,7 +42,7 @@ const Login = () => {
         showLogo
       >
         <div className="relative z-10 flex flex-col">
-          <div className={auth.sellerPanel ? "mb-[24px]" : "mb-[18px]"}>
+          <div className={auth.sellerPanel ? "mb-[28px]" : "mb-[24px]"}>
             <EmailInput
               id="email"
               name="email"
@@ -62,7 +62,7 @@ const Login = () => {
             />
           </div>
 
-          <div className="mb-[8px]">
+          <div className="mb-[16px]">
             <PasswordInput
               id="password"
               name="password"
@@ -82,7 +82,7 @@ const Login = () => {
           </div>
 
           {auth.sellerPanel && (
-            <div className="mb-[24px] flex min-h-[13px] items-center justify-end">
+            <div className="mb-[24px] flex min-h-[13px]  items-center justify-end">
               <button
                 type="button"
                 onClick={auth.goToForgotPassword}
@@ -96,9 +96,7 @@ const Login = () => {
           {auth.sellerPanel && (
             <AuthTermsCheckbox
               checked={auth.termsAccepted}
-              onChange={(event) =>
-                auth.handleTermsChange(event.target.checked)
-              }
+              onChange={(event) => auth.handleTermsChange(event.target.checked)}
             />
           )}
 
@@ -113,15 +111,17 @@ const Login = () => {
             </div>
           )}
 
-          <FormSubmitButton
-            buttonLabel={
-              auth.loading
-                ? "Signing in..."
-                : auth.sellerPanel
-                  ? "Seller Login"
-                  : "Login"
-            }
-          />
+          <div className="mt-[10px]">
+            <FormSubmitButton
+              buttonLabel={
+                auth.loading
+                  ? "Signing in..."
+                  : auth.sellerPanel
+                    ? "Seller Login"
+                    : "Login"
+              }
+            />
+          </div>
         </div>
       </FormLayout>
     </div>
