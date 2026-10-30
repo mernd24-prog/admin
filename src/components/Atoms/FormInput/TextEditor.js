@@ -309,14 +309,16 @@ export const TextEditor = React.memo(
             />
           </div>
 
-          {maxLength && (
-            <div className="flex items-start justify-between gap-3 mt-1">
-              <div className="min-w-0">
-                {limitReached && limitMessage && (
-                  <p className="text-red-500 text-xs">{limitMessage}</p>
-                )}
-              </div>
+          <div className="flex items-start justify-between gap-3 mt-[6px]">
+            <div className="min-w-0">
+              {error && <p className="text-red-500 text-xs">{error}</p>}
 
+              {maxLength && limitReached && limitMessage && (
+                <p className="text-red-500 text-xs">{limitMessage}</p>
+              )}
+            </div>
+
+            {maxLength && (
               <span
                 className={`shrink-0 text-xs ${
                   limitReached ? "text-red-500" : "text-gray-500"
@@ -324,11 +326,11 @@ export const TextEditor = React.memo(
               >
                 {characterCount}/{maxLength}
               </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+        {/* {error && <p className="text-red-500 text-xs mt-1">{error}</p>} */}
 
         <style>{`
           .text-editor-wrapper .text-editor-container {

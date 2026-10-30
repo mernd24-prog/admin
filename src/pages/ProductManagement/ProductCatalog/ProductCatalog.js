@@ -1244,7 +1244,7 @@ const ProductCatalog = () => {
 
               <span className="text-sm font-semibold text-[var(--admin-navy)]">
                 {selectedRow.length === 1
-                  ? "1 product selected"
+                  ? "1 Product Selected"
                   : `${selectedRow.length} Products Selected`}
               </span>
             </div>

@@ -229,7 +229,7 @@ const SEOPanel = ({
         </div>
 
         {/* Bottom health bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 bg-gray-50/50 px-4 py-2 text-[11px] text-gray-500">
+        {/* <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 bg-gray-50/50 px-4 py-2 text-[11px] text-gray-500">
           <div className="flex flex-wrap items-center gap-3">
             <span>
               Title:{" "}
@@ -247,7 +247,7 @@ const SEOPanel = ({
               chars
             </span>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Meta title */}
@@ -258,11 +258,12 @@ const SEOPanel = ({
           type="text"
           className="!mb-0"
           inputClassName="product-flat-gold-focus !h-[42px]"
-          placeholder="Compelling title for search engines (max 70 chars)"
+          placeholder="Compelling title for search engine results"
           value={seo.metaTitle || ""}
           onChange={(e) => updateSeoField("metaTitle", e.target.value)}
           onBlur={() => touchSeoField("metaTitle")}
           maxLength={70}
+          minLength={3}
           showLengthCount
           limitMessage="Meta title must be 70 characters or fewer."
           error={errors.metaTitle}
@@ -278,7 +279,7 @@ const SEOPanel = ({
           rows={3}
           className="!mb-0"
           inputClassName="product-flat-gold-focus !h-[64px] resize-none !pt-4"
-          placeholder="Summary shown in search results (max 160 chars)"
+          placeholder="Summary shown in search results"
           value={seo.metaDescription || ""}
           onChange={(e) => updateSeoField("metaDescription", e.target.value)}
           onBlur={() => touchSeoField("metaDescription")}
@@ -366,6 +367,9 @@ const SEOPanel = ({
           name="canonicalUrl"
           type="url"
           className="!mb-0"
+          maxLength={2048}
+          showLengthCount
+          limitMessage="Canonical URL must be 2048 characters or fewer."
           inputClassName="product-flat-gold-focus !h-[42px]"
           placeholder="https://yourstore.com/products/product-slug"
           value={seo.canonicalUrl || ""}
@@ -416,7 +420,7 @@ const SEOPanel = ({
                 type="text"
                 className="!mb-0"
                 inputClassName="product-flat-gold-focus"
-                placeholder="Title for Facebook/Twitter (max 70 characters)"
+                placeholder="Title for Facebook/Twitter sharing "
                 value={seo.ogTitle || ""}
                 onChange={(e) => updateSeoField("ogTitle", e.target.value)}
                 onBlur={() => touchSeoField("ogTitle")}
@@ -440,7 +444,7 @@ const SEOPanel = ({
                 rows={2}
                 className="!mb-0"
                 inputClassName="product-flat-gold-focus resize-none"
-                placeholder="Description for social sharing (max 160 characters)"
+                placeholder="Description for social sharing"
                 value={seo.ogDescription || ""}
                 onChange={(e) =>
                   updateSeoField("ogDescription", e.target.value)
@@ -464,35 +468,46 @@ const SEOPanel = ({
                 loadingText="Uploading OG image..."
               />
               <div className="space-y-1">
-                <FormInput
-                  label="OG Image URL"
-                  name="ogImage"
-                  type="url"
-                  className="!mb-0"
-                  inputClassName="product-flat-gold-focus"
-                  placeholder="https://cdn.yourstore.com/og-image.jpg"
-                  value={seo.ogImage || ""}
-                  onPaste={(event) => {
-                    const pastedUrl = event.clipboardData
-                      ?.getData("text")
-                      ?.trim();
-                    if (!pastedUrl) return;
-                    if (!isHttpUrl(pastedUrl)) {
-                      event.preventDefault();
-                      setOgImagePasteError(
-                        "Pasted image URLs must be valid HTTP/HTTPS URLs.",
-                      );
-                      return;
-                    }
-                    setOgImagePasteError("");
-                  }}
-                  onChange={(e) => {
-                    setOgImagePasteError("");
-                    updateSeoField("ogImage", e.target.value);
-                  }}
-                  onBlur={() => touchSeoField("ogImage")}
-                  error={ogImageError}
-                />
+               <FormInput
+  label="OG Image URL"
+  name="ogImage"
+  type="url"
+  maxLength={2048}
+  limitMessage="OG Image URL must be 2048 characters or fewer."
+  className="!mb-0"
+  inputClassName="product-flat-gold-focus"
+  placeholder="https://cdn.yourstore.com/og-image.jpg"
+  value={seo.ogImage || ""}
+  onPaste={(event) => {
+    const pastedUrl = event.clipboardData
+      ?.getData("text")
+      ?.trim();
+
+    if (!pastedUrl) return;
+
+    if (pastedUrl.length > 2048) {
+      event.preventDefault();
+      setOgImagePasteError("OG Image URL must be 2048 characters or fewer.");
+      return;
+    }
+
+    if (!isHttpUrl(pastedUrl)) {
+      event.preventDefault();
+      setOgImagePasteError(
+        "Pasted image URLs must be valid HTTP/HTTPS URLs.",
+      );
+      return;
+    }
+
+    setOgImagePasteError("");
+  }}
+  onChange={(e) => {
+    setOgImagePasteError("");
+    updateSeoField("ogImage", e.target.value);
+  }}
+  onBlur={() => touchSeoField("ogImage")}
+  error={ogImageError}
+/>
               </div>
             </div>
           </div>

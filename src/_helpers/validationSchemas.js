@@ -1,3 +1,4 @@
+import { min } from "moment";
 import * as Yup from "yup";
 
 export const parentInfluencerValidationSchema = Yup.object({
@@ -539,32 +540,39 @@ export const productSeoValidationSchema = Yup.object({
     .max(20, "Use no more than 20 SEO keywords."),
   metaTitle: Yup.string()
     .nullable()
-    .max(70, "Meta title must be 70 characters or fewer."),
+    .max(70, "Meta title must be 70 characters or fewer.")
+    .min(3, "Meta title must be at least 3 characters."),
   metaDescription: Yup.string()
+  .min(3, "Meta description must be at least 3 characters.")
     .nullable()
     .max(160, "Meta description must be 160 characters or fewer."),
 
-  canonicalUrl: Yup.string()
-    .nullable()
-    .test("http-url", "Canonical URL must use HTTP or HTTPS.", (value) => {
-      if (!value) return true;
-      try {
-        const url = new URL(value.trim());
-        return (
-          ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname)
-        );
-      } catch {
-        return false;
-      }
-    }),
+ canonicalUrl: Yup.string()
+  .nullable()
+  .max(2048, "Canonical URL must be 2048 characters or fewer.")
+  .test("http-url", "Canonical URL must use HTTP or HTTPS.", (value) => {
+    if (!value) return true;
+
+    try {
+      const url = new URL(value.trim());
+      return (
+        ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname)
+      );
+    } catch {
+      return false;
+    }
+  }),
   ogTitle: Yup.string()
     .nullable()
-    .max(70, "Open Graph title must be 70 characters or fewer."),
+    .max(70, "Open Graph title must be 70 characters or fewer.")
+    .min(3, "Open Graph title must be at least 3 characters."),
   ogDescription: Yup.string()
     .nullable()
-    .max(160, "Open Graph description must be 160 characters or fewer."),
+    .max(160, "Open Graph description must be 160 characters or fewer.")
+    .min(3, "Open Graph description must be at least 3 characters."),
   ogImage: Yup.string()
     .nullable()
+      .max(2048, "OG Image URL must be 2048 characters or fewer.")
     .test(
       "http-url",
       "Pasted image URLs must be valid HTTP/HTTPS URLs.",

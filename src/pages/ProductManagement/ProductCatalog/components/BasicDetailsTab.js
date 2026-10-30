@@ -2313,6 +2313,7 @@ export default function BasicDetailsTab({
                 }
                 required
                 maxLength={5000}
+                limitMessage="Maximum 5000 characters allowed."
                 placeholder="Enter detailed product description"
                 error={errors?.description}
                 height="220px"
@@ -2455,6 +2456,7 @@ export default function BasicDetailsTab({
                     }
                     maxLength={1000}
                     height="220px"
+                    limitMessage="Maximum 1000 characters allowed."
                     className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
                     placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
                   />
