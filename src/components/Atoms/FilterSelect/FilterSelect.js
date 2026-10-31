@@ -58,21 +58,23 @@ const customStyles = (
       },
     }),
 
-    valueContainer: (provided) => ({
-      ...provided,
-      padding: shouldWrap ? "3px 6px" : "2px 8px",
-      gap: shouldWrap ? "4px" : undefined,
-      display: "flex",
-      alignItems: "center",
-      flexWrap: shouldWrap ? "wrap" : "nowrap",
-    }),
-
-    placeholder: (provided, state) => ({
-      ...provided,
-      color: state.isDisabled ? "#9ca3af" : "var(--admin-muted)",
-      fontSize: "0.875rem",
-      paddingLeft: "2px",
-    }),
+ valueContainer: (provided) => ({
+  ...provided,
+  padding: shouldWrap ? "3px 6px" : "2px 8px",
+  gap: shouldWrap ? "4px" : undefined,
+  display: "flex",
+  alignItems: "center",
+  flexWrap: shouldWrap ? "wrap" : "nowrap",
+  minWidth: 0,
+}),
+   placeholder: (provided, state) => ({
+  ...provided,
+  color: state.isDisabled ? "#9ca3af" : "var(--admin-muted)",
+  fontSize: "0.875rem",
+  paddingLeft: "2px",
+  position: "absolute",
+  pointerEvents: "none",
+}),
 
     singleValue: (provided, state) => ({
       ...provided,
@@ -85,12 +87,12 @@ const customStyles = (
       paddingLeft: "2px",
     }),
 
-    input: (provided) => ({
-      ...provided,
-      margin: 0,
-      paddingBottom: 0,
-      paddingTop: 0,
-    }),
+input: (provided) => ({
+  ...provided,
+  margin: 0,
+  padding: 0,
+  textAlign: "left",
+}),
 
     multiValue: (provided) => ({
       ...provided,

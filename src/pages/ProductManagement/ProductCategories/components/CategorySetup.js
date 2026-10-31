@@ -175,6 +175,9 @@ const CategorySetup = ({
               {/* Category Name */}
               <FormInput
                 label="Category Name"
+                limitMessage="Category name is limited to 50 characters."
+                showLengthCount = {true}
+                placeholder="Enter category name"
                 name="categoryName"
                 value={formik.values.categoryName ?? ""}
                 maxLength={50}

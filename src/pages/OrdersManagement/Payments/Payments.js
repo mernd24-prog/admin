@@ -653,6 +653,10 @@ const Payments = () => {
             <Input
               labelName="Collection / Bank Reference"
               name="referenceId"
+              minLength={3}
+              maxLength={150}
+              showLengthCount={false}
+              limitMessage="Reference or bank reference is limited to 150 characters."
               value={decisionFormik.values.referenceId}
               onChange={decisionFormik.handleChange}
               onBlur={decisionFormik.handleBlur}
@@ -675,6 +679,7 @@ const Payments = () => {
             name="reason"
             minLength={3}
             maxLength={500}
+            limitMessage="Note is limited to 500 characters."
             value={decisionFormik.values.reason}
             onChange={decisionFormik.handleChange}
             onBlur={decisionFormik.handleBlur}
