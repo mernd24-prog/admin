@@ -1,4 +1,3 @@
-import { validateProductName } from "./productNameValidation";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormik } from "formik";
@@ -71,7 +70,10 @@ import {
   normalizeRole,
 } from "../../../../_helpers/authStorage";
 import { isSellerPanel } from "../../../../_helpers/panelConfig";
-import { productSeoValidationSchema } from "../../../../_helpers/validationSchemas";
+import {
+  productBasicDetailsValidationSchema,
+  productSeoValidationSchema,
+} from "../../../../_helpers/validationSchemas";
 import { LuSlidersHorizontal } from "react-icons/lu";
 import { IoLayers, IoSearch } from "react-icons/io5";
 import { FaTags, FaTruck } from "react-icons/fa";
@@ -168,6 +170,17 @@ const isHttpUrl = (value) => {
   } catch {
     return false;
   }
+};
+const getRichTextLength = (value = "") => {
+  if (typeof document === "undefined") {
+    return String(value)
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .trim().length;
+  }
+  const element = document.createElement("div");
+  element.innerHTML = String(value);
+  return (element.textContent || "").trim().length;
 };
 const canLoadImage = (url, timeoutMs = 8000) =>
   new Promise((resolve) => {
@@ -489,6 +502,32 @@ export default function ProductManagementUI() {
   const [error, setError] = useState(null);
   let { INITIALS_DATA } = selectJson;
   const [formData, setFormData] = useState(INITIALS_DATA);
+  const [userData, setUserData] = useState({});
+  const userRole = normalizeRole(
+    extractRole(
+      userData,
+      userData?.user,
+      userData?.data,
+      getSessionUser(),
+      getSessionUser()?.user,
+      getStoredUser(),
+      { role: getStoredRole() },
+    ),
+  );
+  const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
+  const basicDetailsFormik = useFormik({
+    initialValues: formData,
+    enableReinitialize: true,
+    validationSchema: productBasicDetailsValidationSchema,
+    validateOnChange: true,
+    validateOnBlur: true,
+    validateOnMount: false,
+    context: { isSellerPanelUser },
+    onSubmit: () => {},
+  });
+  useEffect(() => {
+    basicDetailsFormik.setValues(formData, false);
+  }, [formData]);
   const seoFormik = useFormik({
     initialValues: {
       metaTitle: "",
@@ -540,7 +579,6 @@ export default function ProductManagementUI() {
   const [isScrolling, setIsScrolling] = useState(false);
   const isEditMode = id ? true : false;
   const [taxData, setTaxData] = useState(null);
-  const [userData, setUserData] = useState({});
   const [categoryAttributeSchema, setCategoryAttributeSchema] = useState([]);
   const [useManualAttributes] = useState(false);
   const [newAttrKey, setNewAttrKey] = useState("");
@@ -1019,6 +1057,7 @@ export default function ProductManagementUI() {
             productData?.categoryKey ||
             productData?.category ||
             "";
+
           const resolvedCategoryKey =
             productData?.categoryKey ||
             productData?.category_key ||
@@ -1436,19 +1475,6 @@ export default function ProductManagementUI() {
     });
   }, [dispatch, variantAxes, prefillData.optionValuesByOptionId]);
 
-  const userRole = normalizeRole(
-    extractRole(
-      userData,
-      userData?.user,
-      userData?.data,
-      getSessionUser(),
-      getSessionUser()?.user,
-      getStoredUser(),
-      { role: getStoredRole() },
-    ),
-  );
-  const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
-
   // Load shipping profiles whenever the seller / org context changes.
   // Published Admin templates are available to both panels as copy sources.
   useEffect(() => {
@@ -1831,6 +1857,7 @@ export default function ProductManagementUI() {
       // Seller panel: use the active organization resolved by the session/header sync.
       const activeOrgId = getSelectedSellerOrganizationId();
       if (activeOrgId && formData?.organizationId !== activeOrgId) {
+        basicDetailsFormik.setFieldValue("organizationId", activeOrgId, false);
         setFormData((prev) => ({ ...prev, organizationId: activeOrgId }));
       }
       return;
@@ -1842,11 +1869,17 @@ export default function ProductManagementUI() {
         (option) => String(option.value) === String(formData.organizationId),
       );
       if (!exists) {
+        basicDetailsFormik.setFieldValue("organizationId", "", false);
         setFormData((prev) => ({ ...prev, organizationId: "" }));
       }
       return;
     }
     if (organizationOptions.length === 1) {
+      basicDetailsFormik.setFieldValue(
+        "organizationId",
+        organizationOptions[0].value,
+        false,
+      );
       setFormData((prev) => ({
         ...prev,
         organizationId: organizationOptions[0].value,
@@ -1921,60 +1954,27 @@ export default function ProductManagementUI() {
     return options;
   }, [selector?.getListData, prefillList]);
 
-  const validateForm = () => {
+  const validateForm = async () => {
     const newErrors = {};
+    const schemaErrors = await basicDetailsFormik.validateForm(formData);
 
-    const productNameError = validateProductName(formData?.name);
-    if (productNameError) newErrors.name = productNameError;
+    // Add Formik errors only when they exist
+    if (Object.keys(schemaErrors).length > 0) {
+      newErrors.formik = schemaErrors;
 
-    // Description validation
-    const description = formData?.description || "";
-
-    const plainDescription = description
-      .replace(/<[^>]*>/g, "")
-      .replace(/&nbsp;/g, " ")
-      .trim();
-
-    if (!plainDescription) {
-      newErrors.description = "Description is required.";
-    } else if (plainDescription.length < 10) {
-      newErrors.description = "Description must be at least 10 characters.";
-    } else if (plainDescription.length > 5000) {
-      newErrors.description =
-        "Description must not be more than 5000 characters.";
-    }
-    if (String(formData?.shortDescription || "").length > 500) {
-      newErrors.shortDescription =
-        "Short description must be 500 characters or fewer.";
-    }
-
-    // Seller validation
-    if (!formData?.sellerId && !isSellerPanelUser) {
-      newErrors.sellerId = "Seller is required.";
-    }
-
-    // Organization validation
-    if (!formData?.organizationId) {
-      if (isSellerPanelUser) {
-        const activeOrgId = getSelectedSellerOrganizationId();
-
-        if (!activeOrgId) {
-          newErrors.organizationId =
-            "No active organization is available for this seller account.";
+      Object.entries(schemaErrors).forEach(([field, message]) => {
+        if (field !== "name" && field !== "description") {
+          newErrors[field] = message;
         }
-      } else {
-        newErrors.organizationId = "Organization is required.";
-      }
+      });
     }
 
-    // Brand validation
+    // Catalog status checks depend on current lookup data, so keep them in the submit flow.
     const brandValue = String(
       formData?.brand || formData?.brandId || formData?.brand_id || "",
     ).trim();
 
-    if (!brandValue) {
-      newErrors.brand = "Brand is required.";
-    } else if (formattedData?.brandList?.length) {
+    if (brandValue && formattedData?.brandList?.length) {
       const selectedBrand =
         formattedData.brandList.find((item) =>
           [item.value, item.resourceId, item.brandName]
@@ -2009,9 +2009,7 @@ export default function ProductManagementUI() {
       formData?.category ||
       formData?.category_key;
 
-    if (!categoryValue) {
-      newErrors.category_id = "Category is required.";
-    } else if (createSelectOptions?.length) {
+    if (categoryValue && createSelectOptions?.length) {
       const selectedCategory = createSelectOptions.find((item) =>
         [item.value, item.resourceId, item.categoryKey]
           .filter(Boolean)
@@ -2031,9 +2029,7 @@ export default function ProductManagementUI() {
       formData?.hsn_code || formData?.hsnCode || formData?.hsn_id || "",
     ).trim();
 
-    if (!hsnValue) {
-      newErrors.hsn_code = "HSN Code is required.";
-    } else if (formattedData?.hsnCodeList?.length) {
+    if (hsnValue && formattedData?.hsnCodeList?.length) {
       const selectedHsn =
         formattedData.hsnCodeList.find((item) =>
           [item.value, item.code, item.resourceId]
@@ -2238,12 +2234,7 @@ export default function ProductManagementUI() {
     // Return policy validation
     const returnPolicy = formData?.warranty?.returnPolicy || {};
     const warranty = formData?.warranty || {};
-    const hasLegacyWarrantyDetails =
-      Number(warranty.period) >= 1 ||
-      Boolean(String(warranty.provider || "").trim());
-    const warrantyEnabled =
-      warranty.enabled === true ||
-      (warranty.enabled === undefined && hasLegacyWarrantyDetails);
+    const warrantyEnabled = warranty.enabled === true;
 
     if (warrantyEnabled) {
       const period = Number(warranty.period);
@@ -2268,7 +2259,11 @@ export default function ProductManagementUI() {
         newErrors.warrantyType =
           "Warranty type must be 100 characters or fewer.";
       }
-      if (String(warranty.terms || "").length > 1000) {
+      const warrantyTermsLength = getRichTextLength(warranty.terms);
+      if (warrantyTermsLength > 0 && warrantyTermsLength < 10) {
+        newErrors.warrantyTerms =
+          "Warranty terms must be at least 10 characters.";
+      } else if (warrantyTermsLength > 1000) {
         newErrors.warrantyTerms =
           "Warranty terms must be 1000 characters or fewer.";
       }
@@ -2283,31 +2278,34 @@ export default function ProductManagementUI() {
       newErrors.restockingFee =
         "Restocking fee must be a non-negative amount with no more than two decimal places.";
     }
-    if (
-      !["standard", "replacement_only", "non_returnable"].includes(
-        returnPolicy.type || "standard",
-      ) ||
-      !["refund", "replacement", "refund_or_replacement"].includes(
-        returnPolicy.resolution || "refund_or_replacement",
-      ) ||
-      !["platform", "seller", "customer"].includes(
-        returnPolicy.shippingPaidBy || "seller",
-      )
-    ) {
-      newErrors.returnWindowDays =
-        "Select a valid return policy type, resolution, and shipping responsibility.";
-    }
-    const isReturnable =
-      String(returnPolicy?.type || "").toLowerCase() !== "non_returnable" &&
-      returnPolicy?.returnable !== false &&
-      returnPolicy?.eligible !== false;
+    const isReturnable = returnPolicy?.returnable === true;
 
     if (isReturnable) {
+      if (
+        !["standard", "replacement_only", "non_returnable"].includes(
+          returnPolicy.type || "standard",
+        ) ||
+        !["refund", "replacement", "refund_or_replacement"].includes(
+          returnPolicy.resolution || "refund_or_replacement",
+        ) ||
+        !["platform", "seller", "customer"].includes(
+          returnPolicy.shippingPaidBy || "seller",
+        )
+      ) {
+        newErrors.returnWindowDays =
+          "Select a valid return policy type, resolution, and shipping responsibility.";
+      }
       const returnWindowDays = Number(
         returnPolicy?.returnWindowDays ?? returnPolicy?.days ?? 0,
       );
 
       if (
+        returnPolicy?.returnWindowDays === "" ||
+        returnPolicy?.returnWindowDays == null ||
+        Number(returnPolicy?.returnWindowDays) === 0
+      ) {
+        newErrors.returnWindowDays = "Return window is required.";
+      } else if (
         !Number.isInteger(returnWindowDays) ||
         returnWindowDays < 1 ||
         returnWindowDays > 365
@@ -2315,6 +2313,8 @@ export default function ProductManagementUI() {
         newErrors.returnWindowDays =
           "Return window must be between 1 and 365 days.";
       }
+    } else {
+      delete newErrors.returnWindowDays;
     }
 
     // Variant field validation
@@ -2845,8 +2845,25 @@ export default function ProductManagementUI() {
       newErrors.tags = "Tags must be unique, ignoring letter case.";
     }
 
-    setError(newErrors);
+    if (Object.keys(schemaErrors).length) {
+      basicDetailsFormik.setTouched(
+        Object.keys(schemaErrors).reduce((touched, field) => {
+          touched[field] = true;
+          return touched;
+        }, {}),
+        false,
+      );
+    }
+    if (!warrantyEnabled) {
+      delete newErrors.warrantyPeriod;
+      delete newErrors.warrantyPeriodUnit;
+      delete newErrors.warrantyProvider;
+      delete newErrors.warrantyType;
+      delete newErrors.warrantyTerms;
+    }
 
+    setError(newErrors);
+    console.log("Validation errors:", newErrors);
     if (Object.keys(newErrors).length > 0) {
       pendingValidationScrollRef.current = true;
       toast.error("Please Fill the highlighted fields before saving.");
@@ -3007,43 +3024,100 @@ export default function ProductManagementUI() {
     }));
   }, [formData.basePrice, formData.discount, taxData]);
 
-  const handleChange = useCallback((e) => {
-    const { name, value: rawValue } = e.target;
-    const value = name === "name" ? rawValue.trimStart() : rawValue;
+  const handleChange = useCallback(
+    (e) => {
+      const { name, value: rawValue } = e.target;
+      const value =
+        name === "name"
+          ? rawValue.replace(/\s{2,}/gu, " ").trimStart()
+          : rawValue;
+      basicDetailsFormik.setFieldValue(name, value);
+      basicDetailsFormik.setFieldTouched(name, true, false);
 
-    // Update form data
-    if (name.includes(".")) {
-      const [group, field] = name.split(".");
+      // Update form data
+      if (name.includes(".")) {
+        const [group, field] = name.split(".");
 
-      setFormData((prev) => ({
-        ...prev,
-        [group]: {
-          ...(prev[group] || {}),
-          [field]: value,
-        },
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-
-    // Clear/revalidate the error while typing
-    setError((prev) => {
-      const updatedErrors = { ...prev };
-
-      if (name === "name") {
-        const message = validateProductName(value);
-        if (message) updatedErrors.name = message;
-        else delete updatedErrors.name;
+        setFormData((prev) => ({
+          ...prev,
+          [group]: {
+            ...(prev[group] || {}),
+            [field]: value,
+          },
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
       }
-
-      return updatedErrors;
-    });
-  }, []);
+      productBasicDetailsValidationSchema
+        .validateAt(
+          name,
+          { ...formData, [name]: value },
+          { context: { isSellerPanelUser } },
+        )
+        .then(() => {
+          setError((previous) => ({
+            ...(previous || {}),
+            formik: { ...(previous?.formik || {}), [name]: undefined },
+          }));
+        })
+        .catch((validationError) => {
+          setError((previous) => ({
+            ...(previous || {}),
+            formik: {
+              ...(previous?.formik || {}),
+              [name]: validationError.message,
+            },
+          }));
+        });
+    },
+    [basicDetailsFormik, formData, isSellerPanelUser],
+  );
 
   const handleSelectChange = (selectedOption, action) => {
+    const basicFieldByAction = {
+      SELLER_ID: "sellerId",
+      ORGANIZATION_ID: "organizationId",
+      BRAND_ID: "brand",
+      CATEGORY_ID: "category_id",
+      hsn_code: "hsn_code",
+      PRODUCT_FAMILY: "productFamilyCode",
+    };
+    const basicField = basicFieldByAction[action];
+    if (basicField) {
+      const nextFormData = {
+        ...formData,
+        [basicField]: selectedOption?.value || "",
+      };
+      if (action === "SELLER_ID") nextFormData.organizationId = "";
+      basicDetailsFormik.setValues(nextFormData, false);
+      if (basicDetailsFormik.touched[basicField]) {
+        productBasicDetailsValidationSchema
+          .validateAt(basicField, nextFormData, {
+            context: { isSellerPanelUser },
+          })
+          .then(() =>
+            setError((previous) => ({
+              ...(previous || {}),
+              formik: { ...(previous?.formik || {}), [basicField]: undefined },
+            })),
+          )
+          .catch((validationError) =>
+            setError((previous) => ({
+              ...(previous || {}),
+              formik: {
+                ...(previous?.formik || {}),
+                [basicField]: validationError.message,
+              },
+            })),
+          );
+      }
+      if (!basicDetailsFormik.touched[basicField]) {
+        basicDetailsFormik.setFieldTouched(basicField, true, false);
+      }
+    }
     setError((prevErrors) => {
       const newErrors = { ...prevErrors };
       switch (action) {
@@ -3110,6 +3184,11 @@ export default function ProductManagementUI() {
         }));
         break;
       case "SELLER_ID":
+        basicDetailsFormik.setFieldValue(
+          "sellerId",
+          selectedOption?.value || "",
+        );
+        basicDetailsFormik.setFieldValue("organizationId", "");
         setFormData((prev) => ({
           ...prev,
           sellerId: selectedOption?.value || "",
@@ -3117,6 +3196,10 @@ export default function ProductManagementUI() {
         }));
         break;
       case "ORGANIZATION_ID":
+        basicDetailsFormik.setFieldValue(
+          "organizationId",
+          selectedOption?.value || "",
+        );
         setFormData((prev) => ({
           ...prev,
           organizationId: selectedOption?.value || "",
@@ -3124,6 +3207,7 @@ export default function ProductManagementUI() {
         break;
 
       case "BRAND_ID":
+        basicDetailsFormik.setFieldValue("brand", selectedOption?.value || "");
         setFormData((prev) => ({
           ...prev,
           // Products keep the immutable master-record ID. The display name is
@@ -3150,6 +3234,10 @@ export default function ProductManagementUI() {
         break;
 
       case "CATEGORY_ID":
+        basicDetailsFormik.setFieldValue(
+          "category_id",
+          selectedOption?.value || "",
+        );
         setFormData((prev) => ({
           ...prev,
           category_id: selectedOption?.value || "",
@@ -3185,6 +3273,10 @@ export default function ProductManagementUI() {
         }));
         break;
       case "hsn_code":
+        basicDetailsFormik.setFieldValue(
+          "hsn_code",
+          selectedOption?.value || "",
+        );
         setFormData((prev) => ({
           ...prev,
           hsn_code: selectedOption?.value || "",
@@ -3390,12 +3482,7 @@ export default function ProductManagementUI() {
       weight: toOptionalNumber(updatedFormData.dimensions?.weight),
     });
     const warrantySource = updatedFormData.warranty || {};
-    const hasLegacyWarrantyDetails =
-      Number(warrantySource.period) >= 1 ||
-      Boolean(String(warrantySource.provider || "").trim());
-    const warrantyEnabled =
-      warrantySource.enabled === true ||
-      (warrantySource.enabled === undefined && hasLegacyWarrantyDetails);
+    const warrantyEnabled = warrantySource.enabled === true;
     const warranty = compactObject({
       enabled: warrantyEnabled,
       ...(warrantyEnabled
@@ -3868,6 +3955,34 @@ export default function ProductManagementUI() {
   ]);
 
   const handleProductDetailChange = (field, content) => {
+    basicDetailsFormik.setFieldValue(field, content);
+    basicDetailsFormik.setFieldTouched(field, true, false);
+    productBasicDetailsValidationSchema
+      .validateAt(
+        field,
+        { ...formData, [field]: content },
+        { context: { isSellerPanelUser } },
+      )
+      .then(() => {
+        setError((previous) => ({
+          ...(previous || {}),
+          formik: { ...(previous?.formik || {}), [field]: undefined },
+        }));
+      })
+      .catch((validationError) => {
+        if (
+          validationError.name === "ValidationError" &&
+          validationError.path !== field
+        )
+          return;
+        setError((previous) => ({
+          ...(previous || {}),
+          formik: {
+            ...(previous?.formik || {}),
+            [field]: validationError.message,
+          },
+        }));
+      });
     setFormData((prev) => ({
       ...prev,
       [field]: content,
@@ -3882,44 +3997,182 @@ export default function ProductManagementUI() {
     });
   };
 
-  const handleNestedChange = useCallback((field, value) => {
-    const parts = field.split(".");
-    if (parts.length === 1) {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-    } else {
-      const [group, subKey, deepKey] = parts;
-      setFormData((prev) => ({
-        ...prev,
-        [group]: deepKey
-          ? {
-              ...(prev[group] || {}),
-              [subKey]: {
-                ...((prev[group] || {})[subKey] || {}),
-                [deepKey]: value,
-              },
-            }
-          : { ...(prev[group] || {}), [subKey]: value },
-      }));
-    }
-
-    setError((prev) => {
-      if (!prev || typeof prev !== "object") return prev;
-
-      if (field.startsWith("seo.") && prev.seo?.[field.slice(4)]) {
-        const seoErrors = { ...prev.seo };
-        delete seoErrors[field.slice(4)];
-        const nextErrors = { ...prev };
-        if (Object.keys(seoErrors).length) nextErrors.seo = seoErrors;
-        else delete nextErrors.seo;
-        return Object.keys(nextErrors).length ? nextErrors : null;
+  const handleNestedChange = useCallback(
+    (field, value) => {
+      const parts = field.split(".");
+      if (parts.length === 1) {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+      } else {
+        const [group, subKey, deepKey] = parts;
+        setFormData((prev) => ({
+          ...prev,
+          [group]: deepKey
+            ? {
+                ...(prev[group] || {}),
+                [subKey]: {
+                  ...((prev[group] || {})[subKey] || {}),
+                  [deepKey]: value,
+                },
+              }
+            : { ...(prev[group] || {}), [subKey]: value },
+        }));
       }
 
-      if (field !== "warranty.returnPolicy.returnWindowDays") return prev;
+      setError((prev) => {
+        if (
+          !prev &&
+          (field === "warranty.returnPolicy.returnWindowDays" ||
+            field === "warranty.returnPolicy.returnable")
+        ) {
+          const policy = formData.warranty?.returnPolicy || {};
+          const enabled =
+            field === "warranty.returnPolicy.returnable"
+              ? value === true
+              : policy.returnable === true;
+          if (!enabled) return null;
+          const days =
+            field === "warranty.returnPolicy.returnWindowDays"
+              ? value
+              : policy.returnWindowDays;
+          if (days === "" || days == null || days === 0)
+            return { returnWindowDays: "Return window is required." };
+          if (
+            !isValidNonNegativeInteger(days) ||
+            Number(days) < 1 ||
+            Number(days) > 365
+          )
+            return {
+              returnWindowDays: "Return window must be between 1 and 365 days.",
+            };
+          return null;
+        }
+        if (!prev || typeof prev !== "object") return prev;
 
-      const nextErrors = { ...prev };
-      delete nextErrors.returnWindowDays;
-      return Object.keys(nextErrors).length ? nextErrors : null;
-    });
+        const warrantyFieldErrors = {
+          "warranty.period": "warrantyPeriod",
+          "warranty.periodUnit": "warrantyPeriodUnit",
+          "warranty.provider": "warrantyProvider",
+          "warranty.type": "warrantyType",
+          "warranty.terms": "warrantyTerms",
+        };
+        const errorKey = warrantyFieldErrors[field];
+        if (errorKey) {
+          const nextErrors = { ...prev };
+          const warranty = formData.warranty || {};
+          const enabled = warranty.enabled === true;
+
+          let message;
+          if (enabled && field === "warranty.period") {
+            const period = Number(value);
+            if (!Number.isInteger(period) || period < 1 || period > 365)
+              message =
+                "Warranty period must be a whole number between 1 and 365.";
+          } else if (
+            enabled &&
+            field === "warranty.periodUnit" &&
+            !["days", "weeks", "months", "years"].includes(value)
+          ) {
+            message = "Warranty unit is required.";
+          } else if (
+            enabled &&
+            field === "warranty.provider" &&
+            !String(value || "").trim()
+          ) {
+            message = "Warranty provider is required.";
+          } else if (
+            enabled &&
+            field === "warranty.type" &&
+            !String(value || "").trim()
+          ) {
+            message = "Warranty type is required.";
+          } else if (
+            enabled &&
+            field === "warranty.terms" &&
+            getRichTextLength(value) > 0 &&
+            getRichTextLength(value) < 10
+          ) {
+            message = "Warranty terms must be at least 10 characters.";
+          } else if (getRichTextLength(value) > 1000) {
+            message = "Warranty terms must be 1000 characters or fewer.";
+          }
+
+          if (message) nextErrors[errorKey] = message;
+          else delete nextErrors[errorKey];
+          return Object.keys(nextErrors).length ? nextErrors : null;
+        }
+
+        if (field.startsWith("seo.") && prev.seo?.[field.slice(4)]) {
+          const seoErrors = { ...prev.seo };
+          delete seoErrors[field.slice(4)];
+          const nextErrors = { ...prev };
+          if (Object.keys(seoErrors).length) nextErrors.seo = seoErrors;
+          else delete nextErrors.seo;
+          return Object.keys(nextErrors).length ? nextErrors : null;
+        }
+
+        if (
+          field !== "warranty.returnPolicy.returnWindowDays" &&
+          field !== "warranty.returnPolicy.returnable"
+        )
+          return prev;
+
+        const nextErrors = { ...prev };
+        const returnPolicy = formData.warranty?.returnPolicy || {};
+        const isReturnable =
+          field === "warranty.returnPolicy.returnable"
+            ? value === true
+            : returnPolicy.returnable === true;
+        if (!isReturnable) {
+          delete nextErrors.returnWindowDays;
+        } else {
+          const windowDays =
+            field === "warranty.returnPolicy.returnWindowDays"
+              ? value
+              : returnPolicy.returnWindowDays;
+          if (windowDays === "" || windowDays == null || windowDays === 0) {
+            nextErrors.returnWindowDays = "Return window is required.";
+          } else if (
+            !isValidNonNegativeInteger(windowDays) ||
+            Number(windowDays) < 1 ||
+            Number(windowDays) > 365
+          ) {
+            nextErrors.returnWindowDays =
+              "Return window must be between 1 and 365 days.";
+          } else {
+            delete nextErrors.returnWindowDays;
+          }
+        }
+        return Object.keys(nextErrors).length ? nextErrors : null;
+      });
+    },
+    [formData.warranty],
+  );
+
+  const handleWarrantyToggle = useCallback((enabled) => {
+    setFormData((prev) => ({
+      ...prev,
+      warranty: {
+        ...(prev.warranty || {}),
+        enabled,
+        ...(!enabled
+          ? { period: "", periodUnit: "", provider: "", type: "", terms: "" }
+          : {}),
+      },
+    }));
+    if (!enabled) {
+      setError((previous) => {
+        if (!previous) return previous;
+        const next = { ...previous };
+        [
+          "warrantyPeriod",
+          "warrantyPeriodUnit",
+          "warrantyProvider",
+          "warrantyType",
+          "warrantyTerms",
+        ].forEach((key) => delete next[key]);
+        return Object.keys(next).length ? next : null;
+      });
+    }
   }, []);
 
   const patchShipping = useCallback((patch) => {
@@ -3986,7 +4239,7 @@ export default function ProductManagementUI() {
     }
     const current = getShippingPincodes(formData?.shipping);
     if (current.includes(value)) {
-      toast.error("This pincode is already added");
+      toast.error("This is already added");
       return;
     }
     const next = [...current, value];
@@ -4304,8 +4557,34 @@ export default function ProductManagementUI() {
           <BasicDetailsTab
             formData={formData}
             errors={error}
+            onFieldBlur={(field) => {
+              basicDetailsFormik.setFieldTouched(field, true, true);
+              productBasicDetailsValidationSchema
+                .validateAt(field, formData, {
+                  context: { isSellerPanelUser },
+                })
+                .then(() => {
+                  setError((previous) => ({
+                    ...(previous || {}),
+                    formik: {
+                      ...(previous?.formik || {}),
+                      [field]: undefined,
+                    },
+                  }));
+                })
+                .catch((validationError) => {
+                  setError((previous) => ({
+                    ...(previous || {}),
+                    formik: {
+                      ...(previous?.formik || {}),
+                      [field]: validationError.message,
+                    },
+                  }));
+                });
+            }}
             handleChange={handleChange}
             handleNestedChange={handleNestedChange}
+            handleWarrantyToggle={handleWarrantyToggle}
             formattedCategoryList={createSelectOptions}
             formattedBrandList={formattedData.brandList}
             formattedWarrantyList={formattedData.warrantyTemplateList}
@@ -5571,7 +5850,7 @@ export default function ProductManagementUI() {
 
   const handleValidateAndSubmit = useCallback(async () => {
     if (saving || checkingMedia) return;
-    const isBasicFormValid = validateForm();
+    const isBasicFormValid = await validateForm();
 
     const seoErrors = await seoFormik.validateForm();
     if (ogImageUploading) {

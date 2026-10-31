@@ -46,6 +46,7 @@ export const TextEditor = React.memo(
     readOnly = false,
     className = "",
     error = "",
+    onBlur,
     required = false,
     label = "",
     height = "200px",
@@ -130,15 +131,30 @@ export const TextEditor = React.memo(
       const editorElement = quill.root;
 
       const getSelectionInfo = () => {
-        const selection = quill.getSelection();
+        // beforeinput and paste can fire before Quill updates its selection;
+        // use the native range as a fallback so typing continues near the cap.
+        const nativeSelection = window.getSelection();
+        const range = nativeSelection?.rangeCount
+          ? nativeSelection.getRangeAt(0)
+          : null;
+        let nativeIndex = null;
+        if (range && quill.root.contains(range.startContainer)) {
+          const prefix = range.cloneRange();
+          prefix.selectNodeContents(quill.root);
+          prefix.setEnd(range.startContainer, range.startOffset);
+          nativeIndex = prefix.toString().length;
+        }
+        const selection = quill.getSelection() ||
+          (nativeIndex === null
+            ? null
+            : { index: nativeIndex, length: 0 });
 
         if (!selection) return null;
 
-        const currentLength = quill.getText().replace(/\n$/, "").length;
-
-        const selectedText = quill
-          .getText(selection.index, selection.length)
-          .replace(/\n$/, "");
+        const currentLength = getPlainText(quill.root.innerHTML).length;
+        const selectedText = selection.length
+          ? quill.getText(selection.index, selection.length).replace(/\n$/, "")
+          : "";
 
         return {
           selection,
@@ -154,7 +170,7 @@ export const TextEditor = React.memo(
       const handleBeforeInput = (event) => {
         if (readOnly || event.isComposing) return;
 
-        const info = getSelectionInfo();
+        const info = getSelectionInfo(event);
         if (!info) return;
 
         const isInsertion = event.inputType?.startsWith("insert");
@@ -196,7 +212,7 @@ export const TextEditor = React.memo(
 
         if (pastedText == null) return;
 
-        const info = getSelectionInfo();
+        const info = getSelectionInfo(event);
         if (!info) return;
 
         event.preventDefault();
@@ -223,7 +239,7 @@ export const TextEditor = React.memo(
         if (source !== "user" || restoringRef.current) return;
 
         const currentHtml = quill.root.innerHTML;
-        const currentLength = quill.getText().replace(/\n$/, "").length;
+        const currentLength = getPlainText(currentHtml).length;
 
         if (currentLength <= maxLength) {
           lastValidValueRef.current = currentHtml;
@@ -301,6 +317,7 @@ export const TextEditor = React.memo(
               theme={theme}
               value={value}
               onChange={handleChange}
+              onBlur={onBlur}
               placeholder={placeholder}
               readOnly={readOnly}
               modules={modules}
