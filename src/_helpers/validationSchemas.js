@@ -1085,14 +1085,33 @@ export const sellerHelpSupportValidationSchema = Yup.object({
 
   orderNumber: Yup.string().when("category", {
     is: "ORDER_ISSUE",
-    then: (schema) => schema.trim().required("Order number is required."),
+    then: (schema) =>
+      schema
+        .transform((value) =>
+          typeof value === "string" ? value.trim() : value,
+        )
+        .required("Order number is required.")
+        .max(24, "Order number must not exceed 24 characters.")
+        .test(
+          "valid-order-id",
+          "Enter a valid order number.",
+          (value) => !value || !/^["']+$/.test(value),
+        ),
     otherwise: (schema) => schema.notRequired(),
   }),
 
   product: Yup.string().when("category", {
     is: "PRODUCT_LISTING_ISSUE",
     then: (schema) =>
-      schema.trim().required("Product number or ID is required."),
+      schema
+        .trim()
+        .required("Product number or ID is required.")
+        .min(1, "Product number or ID is required.")
+        .test(
+          "valid-product-id",
+          "Enter a valid product ID.",
+          (value) => !value || !/^["']+$/.test(value),
+        ),
     otherwise: (schema) => schema.notRequired(),
   }),
 
