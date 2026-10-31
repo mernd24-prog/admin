@@ -543,25 +543,25 @@ export const productSeoValidationSchema = Yup.object({
     .max(70, "Meta title must be 70 characters or fewer.")
     .min(3, "Meta title must be at least 3 characters."),
   metaDescription: Yup.string()
-  .min(3, "Meta description must be at least 3 characters.")
+    .min(3, "Meta description must be at least 3 characters.")
     .nullable()
     .max(160, "Meta description must be 160 characters or fewer."),
 
- canonicalUrl: Yup.string()
-  .nullable()
-  .max(2048, "Canonical URL must be 2048 characters or fewer.")
-  .test("http-url", "Canonical URL must use HTTP or HTTPS.", (value) => {
-    if (!value) return true;
+  canonicalUrl: Yup.string()
+    .nullable()
+    .max(2048, "Canonical URL must be 2048 characters or fewer.")
+    .test("http-url", "Canonical URL must use HTTP or HTTPS.", (value) => {
+      if (!value) return true;
 
-    try {
-      const url = new URL(value.trim());
-      return (
-        ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname)
-      );
-    } catch {
-      return false;
-    }
-  }),
+      try {
+        const url = new URL(value.trim());
+        return (
+          ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname)
+        );
+      } catch {
+        return false;
+      }
+    }),
   ogTitle: Yup.string()
     .nullable()
     .max(70, "Open Graph title must be 70 characters or fewer.")
@@ -572,7 +572,7 @@ export const productSeoValidationSchema = Yup.object({
     .min(3, "Open Graph description must be at least 3 characters."),
   ogImage: Yup.string()
     .nullable()
-      .max(2048, "OG Image URL must be 2048 characters or fewer.")
+    .max(2048, "OG Image URL must be 2048 characters or fewer.")
     .test(
       "http-url",
       "Pasted image URLs must be valid HTTP/HTTPS URLs.",
@@ -1144,3 +1144,72 @@ export const sellerHelpSupportValidationSchema = Yup.object({
           .trim().length <= 5000,
     ),
 });
+
+export const optionSubmissionSchema = Yup.object({
+  name: Yup.string()
+    .trim()
+    .required("Option name is required")
+    .min(2, "Option name must be at least 2 characters")
+    .max(50, "Option name must be no more than 50 characters"),
+  displayType: Yup.string()
+    .required("Display type is required")
+    .oneOf(["button", "dropdown", "color_swatch", "radio", "thumbnail"]),
+  values: Yup.string()
+    .required("At least one value is required")
+    .test(
+      "has-values",
+      "At least one value is required",
+      (val) =>
+        val &&
+        val
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean).length > 0,
+    )
+    .test(
+      "max-value-length",
+      "Each value must be 80 characters or fewer",
+      (val) =>
+        !val ||
+        val
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean)
+          .every((v) => v.length <= 80),
+    )
+    .test("unique-values", "All values must be unique", (val) => {
+      if (!val) return true;
+      const items = val
+        .split(",")
+        .map((v) => v.trim().toLowerCase())
+        .filter(Boolean);
+      return new Set(items).size === items.length;
+    }),
+});
+
+export const bulkSalePriceSchema = (variants = []) =>
+  Yup.number()
+    .typeError("Special price must be a number")
+    .moreThan(0, "Special price must be greater than 0.")
+    .test(
+      "not-exceed-price",
+      "Special price cannot equal or exceed the price.",
+      function (val) {
+        if (val === undefined || val === null) return true;
+        return !variants.some((v) => {
+          const vPrice = Number(v.price || 0);
+          return vPrice > 0 && val >= vPrice;
+        });
+      },
+    )
+    .test(
+      "at-least-half",
+      "Special price must be at least half of the price.",
+      function (val) {
+        if (val === undefined || val === null) return true;
+        return !variants.some((v) => {
+          const vPrice = Number(v.price || 0);
+          return vPrice > 0 && val < vPrice / 2;
+        });
+      },
+    );

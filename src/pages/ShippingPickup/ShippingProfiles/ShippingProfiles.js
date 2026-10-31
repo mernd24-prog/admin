@@ -325,8 +325,9 @@ function ProfileForm({
     form.description ?? formik?.values.description ?? "",
   );
   const numericErrors = getShippingNumericErrors(form);
-  const [shippingAmountLimitReached, setShippingAmountLimitReached] =
-    useState({});
+  const [shippingAmountLimitReached, setShippingAmountLimitReached] = useState(
+    {},
+  );
   const patch = (key, val) => {
     setForm((prev) => ({ ...prev, [key]: val }));
     formik?.setFieldValue(key, val, key !== "description");
@@ -435,9 +436,7 @@ function ProfileForm({
                     patch("organizationId", "");
                   }}
                   onBlur={() => formik?.setFieldTouched("sellerId", true)}
-                  error={
-                    formik?.touched.sellerId && formik.errors.sellerId
-                  }
+                  error={formik?.touched.sellerId && formik.errors.sellerId}
                   isSearchable
                   placeholder="Select seller..."
                   isClearable
@@ -484,7 +483,12 @@ function ProfileForm({
             />
 
             <div className="flex min-w-0 flex-col gap-1.5">
-              <label htmlFor="shipping-profile-method" className="admin-label !mb-0">Shipping Method</label>
+              <label
+                htmlFor="shipping-profile-method"
+                className="admin-label !mb-0"
+              >
+                Shipping Method
+              </label>
 
               <FilterSelect
                 inputId="shipping-profile-method"
@@ -532,9 +536,7 @@ function ProfileForm({
                 formik?.setFieldTouched("description", true, false);
               }}
               onBlur={() => formik?.setFieldTouched("description", true)}
-              error={
-                formik?.touched.description && formik.errors.description
-              }
+              error={formik?.touched.description && formik.errors.description}
               placeholder="Optional description"
               rows={4}
               inputClassName="min-h-[100px] resize-y"
@@ -544,142 +546,143 @@ function ProfileForm({
       </FormSection>
 
       {/* Serviceability */}
-   <FormSection
-  title="Serviceability"
-  description="Choose where this shipping profile can be used."
->
-  <div className="space-y-3">
-    {SERVICEABILITY_MODES.map((mode) => {
-      const isSelected = form.serviceabilityMode === mode.value;
-      const isPincodeMode = mode.value === "selected_pincodes";
+      <FormSection
+        title="Serviceability"
+        description="Choose where this shipping profile can be used."
+      >
+        <div className="space-y-3">
+          {SERVICEABILITY_MODES.map((mode) => {
+            const isSelected = form.serviceabilityMode === mode.value;
+            const isPincodeMode = mode.value === "selected_pincodes";
 
-      return (
-        <div
-          key={mode.value}
-          className="overflow-hidden rounded-lg border border-[var(--admin-field-line)] bg-white transition-all"
-        >
-          <label className="flex cursor-pointer items-start gap-3 p-4">
-            <input
-              type="radio"
-              name="serviceabilityMode"
-              value={mode.value}
-              checked={isSelected}
-              onChange={() => patch("serviceabilityMode", mode.value)}
-              className="sr-only"
-            />
+            return (
+              <div
+                key={mode.value}
+                className="overflow-hidden rounded-lg border border-[var(--admin-field-line)] bg-white transition-all"
+              >
+                <label className="flex cursor-pointer items-start gap-3 p-4">
+                  <input
+                    type="radio"
+                    name="serviceabilityMode"
+                    value={mode.value}
+                    checked={isSelected}
+                    onChange={() => patch("serviceabilityMode", mode.value)}
+                    className="sr-only"
+                  />
 
-          <span
-  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
-    isSelected
-      ? "border-[var(--admin-gold)]"
-      : "border-[var(--admin-field-line)] bg-white"
-  }`}
-  aria-hidden="true"
->
-  {isSelected && (
-    <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
-  )}
-</span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-gray-800">
-                {mode.label}
-              </p>
+                  <span
+                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                      isSelected
+                        ? "border-[var(--admin-gold)]"
+                        : "border-[var(--admin-field-line)] bg-white"
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {isSelected && (
+                      <span className="h-2 w-2 rounded-full bg-[var(--admin-gold)]" />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-800">
+                      {mode.label}
+                    </p>
 
-              <p className="mt-1 text-xs leading-5 text-gray-500">
-                {mode.description}
-              </p>
-            </div>
-          </label>
-
-          {isSelected && isPincodeMode && (
-            <div className="border-t border-gray-100 bg-gray-50/80 px-4 py-4">
-              <div className="mb-3">
-                <label className="admin-label">
-                  Allowed Pincodes <span className="text-red-500">*</span>
+                    <p className="mt-1 text-xs leading-5 text-gray-500">
+                      {mode.description}
+                    </p>
+                  </div>
                 </label>
 
-                <p className="mt-1 text-xs text-gray-500">
-                  Add the 6-digit pincodes where this profile is available.
-                </p>
-              </div>
+                {isSelected && isPincodeMode && (
+                  <div className="border-t border-gray-100 bg-gray-50/80 px-4 py-4">
+                    <div className="mb-3">
+                      <label className="admin-label">
+                        Allowed Pincodes <span className="text-red-500">*</span>
+                      </label>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                <Input
-                  type="text"
-                  name="pincodeDraft"
-                  value={currentPincodeInput}
-                  onChange={(event) => {
-                    const value = event.target.value
-                      .replace(/\D/g, "")
-                      .slice(0, 6);
+                      <p className="mt-1 text-xs text-gray-500">
+                        Add the 6-digit pincodes where this profile is
+                        available.
+                      </p>
+                    </div>
 
-                    setPincodeInput(value);
-                    formik?.setFieldValue("pincodeDraft", value);
-                  }}
-                  onBlur={() =>
-                    formik?.setFieldTouched("pincodeDraft", true)
-                  }
-                  onKeyDown={handlePincodeKeyDown}
-                  placeholder="Enter 6-digit pincode"
-                  className="mb-0 min-w-0 flex-1"
-                  inputClassName="w-full"
-                  maxLength={6}
-                  showLengthCount={false}
-                  inputMode="numeric"
-                  error={
-                    formik?.touched.pincodeDraft &&
-                    formik.errors.pincodeDraft
-                  }
-                />
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                      <Input
+                        type="text"
+                        name="pincodeDraft"
+                        value={currentPincodeInput}
+                        onChange={(event) => {
+                          const value = event.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 6);
 
-                <button
-                  type="button"
-                  onClick={addPincode}
-                  className="admin-btn-primary h-8 shrink-0 whitespace-nowrap px-4"
-                >
-                  Add
-                </button>
-              </div>
+                          setPincodeInput(value);
+                          formik?.setFieldValue("pincodeDraft", value);
+                        }}
+                        onBlur={() =>
+                          formik?.setFieldTouched("pincodeDraft", true)
+                        }
+                        onKeyDown={handlePincodeKeyDown}
+                        placeholder="Enter 6-digit pincode"
+                        className="mb-0 min-w-0 flex-1"
+                        inputClassName="w-full"
+                        maxLength={6}
+                        showLengthCount={false}
+                        inputMode="numeric"
+                        error={
+                          formik?.touched.pincodeDraft &&
+                          formik.errors.pincodeDraft
+                        }
+                      />
 
-              {form.allowedPincodes.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
-                  {form.allowedPincodes.map((pincode) => (
-                   <span
-  key={pincode}
-  className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-gray-500"
->
-  {pincode}
+                      <button
+                        type="button"
+                        onClick={addPincode}
+                        className="admin-btn-primary h-8 shrink-0 whitespace-nowrap px-4"
+                      >
+                        Add
+                      </button>
+                    </div>
 
-  <button
-    type="button"
-    onClick={() => removePincode(pincode)}
-    className="ml-1 inline-flex h-4 w-4 shrink-0 -translate-y-0.5 items-center justify-center text-sm leading-none transition-colors hover:text-gray-800"
-    aria-label={`Remove ${pincode}`}
-  >
-    ×
-  </button>
-</span>
-                  ))}
-                </div>
-              )}
+                    {form.allowedPincodes.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
+                        {form.allowedPincodes.map((pincode) => (
+                          <span
+                            key={pincode}
+                            className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-gray-500"
+                          >
+                            {pincode}
 
-              <p className="mt-2 text-xs text-gray-500">
-                {form.allowedPincodes.length} pincode(s) selected
-              </p>
+                            <button
+                              type="button"
+                              onClick={() => removePincode(pincode)}
+                              className="ml-1 inline-flex h-4 w-4 shrink-0 -translate-y-0.5 items-center justify-center text-sm leading-none transition-colors hover:text-gray-800"
+                              aria-label={`Remove ${pincode}`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
-              {formik?.touched.allowedPincodes &&
-                formik.errors.allowedPincodes && (
-                  <p className="mt-1 text-xs text-red-600">
-                    {formik.errors.allowedPincodes}
-                  </p>
+                    <p className="mt-2 text-xs text-gray-500">
+                      {form.allowedPincodes.length} pincode(s) selected
+                    </p>
+
+                    {formik?.touched.allowedPincodes &&
+                      formik.errors.allowedPincodes && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {formik.errors.allowedPincodes}
+                        </p>
+                      )}
+                  </div>
                 )}
-            </div>
-          )}
+              </div>
+            );
+          })}
         </div>
-      );
-    })}
-  </div>
-</FormSection>
+      </FormSection>
 
       {/* Charges */}
       <FormSection
@@ -856,7 +859,11 @@ const unwrapProfiles = (payload = {}) => {
 
 const profileCreatedAt = (profile = {}) => {
   const timestamp = Date.parse(
-    profile.createdAt || profile.created_at || profile.createdOn || profile.created_on || "",
+    profile.createdAt ||
+      profile.created_at ||
+      profile.createdOn ||
+      profile.created_on ||
+      "",
   );
   if (Number.isFinite(timestamp)) return timestamp;
 
@@ -1718,7 +1725,9 @@ export default function ShippingProfiles() {
           return (
             <div
               className="min-w-0 max-w-full overflow-hidden [&>div>div:first-child]:truncate"
-              title={seller.name || row.storeName || row.organizationName || "Seller"}
+              title={
+                seller.name || row.storeName || row.organizationName || "Seller"
+              }
             >
               <SellerIdentity
                 row={row}
@@ -1818,20 +1827,15 @@ export default function ShippingProfiles() {
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {/* {canCreateProfile && (
-              <button onClick={() => openClone()}>
-                <MdLocalShipping aria-hidden="true" size={17} /> Use Admin
-                Template
-              </button>
-            )} */}
             {!isSeller && canCreateProfile && (
               <button onClick={openTemplateCreate}>
-                <MdAdd aria-hidden="true" size={17} /> New Template
+                <MdAdd aria-hidden="true" size={17} />
+                Create Global Template
               </button>
             )}
             {canCreateProfile && (
               <button onClick={openCreate}>
-                <MdAdd aria-hidden="true" size={17} /> New Profile
+                <MdAdd aria-hidden="true" size={17} /> Create Shipping Template
               </button>
             )}
           </div>
@@ -1888,13 +1892,13 @@ export default function ShippingProfiles() {
                           >
                             Edit Template
                           </button>
-                          <button
+                          {/* <button
                             type="button"
                             className="text-xs font-semibold text-red-500 hover:underline"
                             onClick={() => setDeleteTemplateTarget(template)}
                           >
                             Archive
-                          </button>
+                          </button> */}
                         </>
                       )}
                     </div>
@@ -1995,39 +1999,39 @@ export default function ShippingProfiles() {
         }
       />
 
-   <DefaultModal
-  isOpen={modal.open}
-  onClose={closeModal}
-  title={
-    modal.mode === "create" ? (
-      "Create Shipping Profile"
-    ) : (
-      <div className="flex min-w-0 flex-col">
-        <span className="text-lg leading-6">Edit Profile</span>
-        <span className="mt-1 inline-flex w-fit max-w-full break-all py-0.5 text-xs font-medium leading-5 text-gray-600">
-          {modal.profile?.name || "Untitled Profile"}
-        </span>
-      </div>
-    )
-  }
-  titleClassName="min-w-0 flex-1"
-  onSubmit={profileFormik.handleSubmit}
-  submitButtonText={
-    modal.mode === "create" ? "Create Profile" : "Save Changes"
-  }
-  closeButtonText="Cancel"
-  loading={saving}
->
-  <ProfileForm
-    form={form}
-    setForm={setForm}
-    formik={profileFormik}
-    isSeller={isSeller}
-    sellerOptions={sellerOptions}
-    organizationOptions={formOrganizationOptions}
-    onSellerSearch={loadSellerOptions}
-  />
-</DefaultModal>
+      <DefaultModal
+        isOpen={modal.open}
+        onClose={closeModal}
+        title={
+          modal.mode === "create" ? (
+            "Create Shipping Profile"
+          ) : (
+            <div className="flex min-w-0 flex-col">
+              <span className="text-lg leading-6">Edit Profile</span>
+              <span className="mt-1 inline-flex w-fit max-w-full break-all py-0.5 text-xs font-medium leading-5 text-gray-600">
+                {modal.profile?.name || "Untitled Profile"}
+              </span>
+            </div>
+          )
+        }
+        titleClassName="min-w-0 flex-1"
+        onSubmit={profileFormik.handleSubmit}
+        submitButtonText={
+          modal.mode === "create" ? "Create Profile" : "Save Changes"
+        }
+        closeButtonText="Cancel"
+        loading={saving}
+      >
+        <ProfileForm
+          form={form}
+          setForm={setForm}
+          formik={profileFormik}
+          isSeller={isSeller}
+          sellerOptions={sellerOptions}
+          organizationOptions={formOrganizationOptions}
+          onSellerSearch={loadSellerOptions}
+        />
+      </DefaultModal>
 
       <DefaultModal
         isOpen={templateModal.open}
@@ -2100,15 +2104,20 @@ export default function ShippingProfiles() {
                   <FilterSelect
                     options={sellerOptions}
                     error={
-                      cloneFormik.touched.sellerId && cloneFormik.errors.sellerId
+                      cloneFormik.touched.sellerId &&
+                      cloneFormik.errors.sellerId
                     }
                     value={
                       sellerOptions.find(
-                        (seller) => seller.value === cloneFormik.values.sellerId,
+                        (seller) =>
+                          seller.value === cloneFormik.values.sellerId,
                       ) || null
                     }
                     onChange={(option) => {
-                      cloneFormik.setFieldValue("sellerId", option?.value || "");
+                      cloneFormik.setFieldValue(
+                        "sellerId",
+                        option?.value || "",
+                      );
                       cloneFormik.setFieldValue("organizationId", "");
                     }}
                     onBlur={() => cloneFormik.setFieldTouched("sellerId", true)}
@@ -2130,11 +2139,15 @@ export default function ShippingProfiles() {
                     options={cloneOrganizationOptions}
                     value={
                       cloneOrganizationOptions.find(
-                        (option) => option.value === cloneFormik.values.organizationId,
+                        (option) =>
+                          option.value === cloneFormik.values.organizationId,
                       ) || null
                     }
                     onChange={(option) =>
-                      cloneFormik.setFieldValue("organizationId", option?.value || "")
+                      cloneFormik.setFieldValue(
+                        "organizationId",
+                        option?.value || "",
+                      )
                     }
                     isDisabled={!cloneFormik.values.sellerId}
                     placeholder="Seller-wide default"

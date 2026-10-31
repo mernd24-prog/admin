@@ -57,7 +57,11 @@ import VariantBuilder from "../../../../components/Product/VariantBuilder";
 import SEOPanel from "../../../../components/Product/SEOPanel";
 import TagsInput from "../../../../components/Product/TagsInput";
 import { getSelectedSellerOrganizationId } from "../../../../_helpers/sellerOrganizationContext";
-import { getShippingProfile, getShippingProfiles, getShippingProfileTemplates } from "../../../../Redux/deliverySlice";
+import {
+  getShippingProfile,
+  getShippingProfiles,
+  getShippingProfileTemplates,
+} from "../../../../Redux/deliverySlice";
 import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
 import FormInput from "../../../../components/Atoms/FormInput/FormInput";
 import {
@@ -340,8 +344,12 @@ const normalizePincodeList = (value) => {
 const getShippingPincodes = (shipping = {}) =>
   normalizePincodeList([
     ...(Array.isArray(shipping.allowPincodes) ? shipping.allowPincodes : []),
-    ...(Array.isArray(shipping.serviceablePincodes) ? shipping.serviceablePincodes : []),
-    ...(Array.isArray(shipping.allowedPincodes) ? shipping.allowedPincodes : []),
+    ...(Array.isArray(shipping.serviceablePincodes)
+      ? shipping.serviceablePincodes
+      : []),
+    ...(Array.isArray(shipping.allowedPincodes)
+      ? shipping.allowedPincodes
+      : []),
     ...(Array.isArray(shipping.pincodes) ? shipping.pincodes : []),
   ]);
 
@@ -560,7 +568,8 @@ export default function ProductManagementUI() {
   const [shippingProfileDetail, setShippingProfileDetail] = useState(null);
   const [shippingTemplateCatalog, setShippingTemplateCatalog] = useState([]);
   const [allowedPincodeInput, setAllowedPincodeInput] = useState("");
-  const [selectedShippingTemplate, setSelectedShippingTemplate] = useState(null);
+  const [selectedShippingTemplate, setSelectedShippingTemplate] =
+    useState(null);
   const [collectionSearch, setCollectionSearch] = useState("");
 
   const hasUnsavedChanges = useMemo(() => {
@@ -1541,14 +1550,25 @@ export default function ProductManagementUI() {
     const restoredTemplate = {
       ...(template || {}),
       id: templateId || template?.id || template?._id,
-      name: shipping.copiedFromShippingTemplateName || template?.name || "Copied shipping template",
-      shippingCharge: shipping.shippingCharge ?? shipping.additionalCost ?? template?.shippingCharge,
+      name:
+        shipping.copiedFromShippingTemplateName ||
+        template?.name ||
+        "Copied shipping template",
+      shippingCharge:
+        shipping.shippingCharge ??
+        shipping.additionalCost ??
+        template?.shippingCharge,
       handlingCharge: shipping.handlingCharge ?? template?.handlingCharge,
-      freeShippingThreshold: shipping.freeShippingMinOrder ?? template?.freeShippingThreshold,
-      etaMin: shipping.estimatedDaysMin ?? shipping.processingDays ?? template?.etaMin,
+      freeShippingThreshold:
+        shipping.freeShippingMinOrder ?? template?.freeShippingThreshold,
+      etaMin:
+        shipping.estimatedDaysMin ??
+        shipping.processingDays ??
+        template?.etaMin,
       etaMax: shipping.estimatedDaysMax ?? template?.etaMax,
       shippingMethod: shipping.shippingMethod ?? template?.shippingMethod,
-      serviceabilityMode: shipping.serviceabilityMode ?? template?.serviceabilityMode,
+      serviceabilityMode:
+        shipping.serviceabilityMode ?? template?.serviceabilityMode,
       codAvailable: shipping.codAvailable ?? template?.codAvailable,
       allowedPincodes: getShippingPincodes(shipping).length
         ? getShippingPincodes(shipping)
@@ -1572,29 +1592,57 @@ export default function ProductManagementUI() {
       return undefined;
     }
     const listed = shippingProfileOptions.find(
-      (option) => option.type === "profile" && String(option.value) === String(profileId),
+      (option) =>
+        option.type === "profile" && String(option.value) === String(profileId),
     );
     if (listed?.profile) {
-      if (shippingProfileDetail !== listed.profile) setShippingProfileDetail(listed.profile);
+      if (shippingProfileDetail !== listed.profile)
+        setShippingProfileDetail(listed.profile);
       return undefined;
     }
-    if (String(shippingProfileDetail?.id || shippingProfileDetail?._id || "") === String(profileId)) return undefined;
+    if (
+      String(shippingProfileDetail?.id || shippingProfileDetail?._id || "") ===
+      String(profileId)
+    )
+      return undefined;
     let cancelled = false;
     dispatch(getShippingProfile({ profileId }))
       .unwrap()
       .then((res) => {
         if (cancelled) return;
-        const profile = res?.data?.profile || res?.data?.data?.profile || res?.data?.data || res?.data || res?.profile;
+        const profile =
+          res?.data?.profile ||
+          res?.data?.data?.profile ||
+          res?.data?.data ||
+          res?.data ||
+          res?.profile;
         if (profile) {
           setShippingProfileDetail(profile);
-          setShippingProfileOptions((options) => options.some((option) => String(option.value) === String(profileId))
-            ? options
-            : [...options, { value: profile.id || profile._id || profileId, label: profile.name || "Shipping Profile", profile, type: "profile" }]);
+          setShippingProfileOptions((options) =>
+            options.some((option) => String(option.value) === String(profileId))
+              ? options
+              : [
+                  ...options,
+                  {
+                    value: profile.id || profile._id || profileId,
+                    label: profile.name || "Shipping Profile",
+                    profile,
+                    type: "profile",
+                  },
+                ],
+          );
         }
       })
       .catch(() => {});
-    return () => { cancelled = true; };
-  }, [dispatch, formData?.shipping?.shippingProfileId, shippingProfileOptions, shippingProfileDetail]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    dispatch,
+    formData?.shipping?.shippingProfileId,
+    shippingProfileOptions,
+    shippingProfileDetail,
+  ]);
 
   const handleOptionSearch = useCallback(
     (query) => {
@@ -2341,6 +2389,16 @@ export default function ProductManagementUI() {
       const variantErrors = variantsData.reduce((result, variant, index) => {
         const fieldErrors = {};
 
+        const hasPrice =
+          variant?.price !== undefined &&
+          variant?.price !== null &&
+          variant?.price !== "";
+
+        const hasMrp =
+          variant?.mrp !== undefined &&
+          variant?.mrp !== null &&
+          variant?.mrp !== "";
+
         const price = Number(variant?.price || 0);
         const mrp = Number(variant?.mrp || 0);
 
@@ -2369,13 +2427,17 @@ export default function ProductManagementUI() {
           fieldErrors.sku = "SKU must be unique across variants.";
         }
 
-        if (
+        if (!hasPrice) {
+          fieldErrors.price = "Price is required.";
+        } else if (
           !isValidDecimal(variant?.price, { min: 0.01, max: MAX_PRODUCT_MONEY })
         ) {
           fieldErrors.price =
             "Price must be positive, no more than 999999999.99, and have at most two decimal places.";
         }
-        if (
+        if (!hasMrp) {
+          fieldErrors.mrp = "MRP is required.";
+        } else if (
           !isValidDecimal(variant?.mrp, { min: 0.01, max: MAX_PRODUCT_MONEY })
         ) {
           fieldErrors.mrp =
@@ -2409,9 +2471,16 @@ export default function ProductManagementUI() {
         } else if (/[\u0000-\u001F\u007F-\u009F]/u.test(variantTitle)) {
           fieldErrors.title = "Variant title contains invalid characters.";
         }
-        if (String(variant?.shortDescription || "").trim().length > 500) {
+        const variantShortDescription = String(
+          variant?.shortDescription || "",
+        ).trim();
+        if (
+          variantShortDescription &&
+          (variantShortDescription.length < 10 ||
+            variantShortDescription.length > 500)
+        ) {
           fieldErrors.shortDescription =
-            "Variant short description must be 500 characters or fewer.";
+            "Variant short description must be between 10 and 500 characters.";
         }
         const variantDescription = String(variant?.description || "").trim();
         if (
@@ -2537,13 +2606,17 @@ export default function ProductManagementUI() {
           fieldErrors.attributes = attributeErrors;
         }
 
-        if (price <= 0) {
+        if (!hasPrice) {
+          fieldErrors.price = "Price is required.";
+        } else if (price <= 0) {
           fieldErrors.price = "Price must be greater than 0.";
         } else if (mrp > 0 && price > mrp) {
           fieldErrors.price = "Price cannot be greater than MRP.";
         }
 
-        if (mrp <= 0) {
+        if (!hasMrp) {
+          fieldErrors.mrp = "MRP is required.";
+        } else if (mrp <= 0) {
           fieldErrors.mrp = "MRP must be greater than 0.";
         }
 
@@ -2552,9 +2625,11 @@ export default function ProductManagementUI() {
         } else if (salePrice <= 0) {
           fieldErrors.salePrice = "Special price must be greater than 0.";
         } else if (price > 0 && salePrice >= price) {
-          fieldErrors.salePrice = "Special price cannot equal or exceed the price.";
+          fieldErrors.salePrice =
+            "Special price cannot equal or exceed the price.";
         } else if (price > 0 && salePrice < price / 2) {
-          fieldErrors.salePrice = "Special price must be at least half of the price.";
+          fieldErrors.salePrice =
+            "Special price must be at least half of the price.";
         }
 
         // Variant GST is optional. Older products and products whose tax is
@@ -3439,9 +3514,11 @@ export default function ProductManagementUI() {
             shippingProfileId:
               updatedFormData.shipping?.shippingProfileId || null,
             copiedFromShippingTemplateId:
-              updatedFormData.shipping?.copiedFromShippingTemplateId || undefined,
+              updatedFormData.shipping?.copiedFromShippingTemplateId ||
+              undefined,
             copiedFromShippingTemplateName:
-              updatedFormData.shipping?.copiedFromShippingTemplateName || undefined,
+              updatedFormData.shipping?.copiedFromShippingTemplateName ||
+              undefined,
           },
     );
 
@@ -4113,21 +4190,6 @@ export default function ProductManagementUI() {
     handleNestedChange("seo.ogImage", "");
   }, [handleNestedChange]);
 
-  // const addCommonProductImageUrl = () => {
-  //   const url = commonImageUrl.trim();
-  //   const current = Array.isArray(formData.commonImages) ? formData.commonImages : [];
-  //   if (!url) return;
-  //   if (current.length >= MAX_COMMON_PRODUCT_IMAGES) {
-  //     toast.error(`Maximum ${MAX_COMMON_PRODUCT_IMAGES} common images`);
-  //     return;
-  //   }
-  //   setFormData((previous) => ({
-  //     ...previous,
-  //     commonImages: [...(previous.commonImages || []), url],
-  //   }));
-  //   setCommonImageUrl("");
-  // };
-
   const removeCommonProductImage = (imageIndex) => {
     setFormData((previous) => ({
       ...previous,
@@ -4434,8 +4496,8 @@ export default function ProductManagementUI() {
             <div className="product-form-section-header">
               <h3>Variants &amp; Options</h3>
               <p>
-                Define option axes (Color, Size...), generate combinations, then
-                edit each variant.
+                Add product options such as color and size to create and manage
+                variant combinations.
               </p>
             </div>
             <VariantBuilder
@@ -4760,13 +4822,19 @@ export default function ProductManagementUI() {
 
               {/* Shipping Templates */}
               {!formData?.shipping?.shippingProfileId &&
-                (shippingProfileOptions.some((option) => option.type === "template") || restoredShippingTemplate || selectedShippingTemplate) && (
+                (shippingProfileOptions.some(
+                  (option) => option.type === "template",
+                ) ||
+                  restoredShippingTemplate ||
+                  selectedShippingTemplate) && (
                   <div className="my-4">
                     <FilterSelect
                       options={shippingProfileOptions.filter(
                         (option) => option.type === "template",
                       )}
-                      value={restoredShippingTemplate || selectedShippingTemplate}
+                      value={
+                        restoredShippingTemplate || selectedShippingTemplate
+                      }
                       onChange={(selected) => {
                         setSelectedShippingTemplate(selected);
 
@@ -4798,10 +4866,9 @@ export default function ProductManagementUI() {
               ).length === 0 &&
                 !formData?.sellerId &&
                 !formData?.shipping?.shippingProfileId &&
-                !restoredShippingTemplate && !selectedShippingTemplate && (
-                  <p className="text-xs text-[var(--admin-gold-dark)]">
-                    Select a seller to view saved profiles.
-                  </p>
+                !restoredShippingTemplate &&
+                !selectedShippingTemplate && (
+                  <p className="text-xs text-[var(--admin-gold-dark)]"></p>
                 )}
 
               {/* No Profiles */}
@@ -4975,136 +5042,172 @@ export default function ProductManagementUI() {
                     </div>
                   );
                 })()}
-              {!formData?.shipping?.shippingProfileId && (restoredShippingTemplate || selectedShippingTemplate)?.profile && (() => {
-                const p = (restoredShippingTemplate || selectedShippingTemplate).profile;
-                const days = [p.etaMin, p.etaMax].filter((value) => value !== null && value !== undefined && value !== "").join("–");
-                const amount = Number(p.shippingCharge || 0);
-                const details = [
-                  ["Shipping method", p.shippingMethod || "Standard"],
-                  ["Shipping charge", amount === 0 ? "Free" : `₹${amount.toFixed(2)}`],
-                  ["Estimated delivery", days ? `${days} days` : "Not specified"],
-                  ["Handling charge", p.handlingCharge == null ? "₹0.00" : `₹${Number(p.handlingCharge).toFixed(2)}`],
-                  ["Free shipping threshold", p.freeShippingThreshold == null ? "None" : `₹${Number(p.freeShippingThreshold).toFixed(2)}`],
-                  ["Cash on delivery", p.codAvailable === false ? "Unavailable" : "Available"],
-                  ["Delivery coverage", p.serviceabilityMode === "all_india" ? "All India" : (p.serviceabilityMode || "Configured pincodes").replace(/_/g, " ")],
-                ];
-                return (
-                  <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-4">
-                    <p className="text-sm font-semibold text-gray-800">Copied settings: {p.name || "Shipping template"}</p>
-                    <p className="mt-0.5 text-xs text-gray-600">These settings were copied into product delivery settings and can be adjusted below.</p>
-                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {details.map(([label, value]) => (
-                        <div key={label} className="rounded-lg border border-blue-100 bg-white px-3 py-2">
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">{label}</p>
-                          <p className="mt-1 text-xs font-semibold capitalize text-gray-800">{value}</p>
-                        </div>
-                      ))}
+              {!formData?.shipping?.shippingProfileId &&
+                (restoredShippingTemplate || selectedShippingTemplate)
+                  ?.profile &&
+                (() => {
+                  const p = (
+                    restoredShippingTemplate || selectedShippingTemplate
+                  ).profile;
+                  const days = [p.etaMin, p.etaMax]
+                    .filter(
+                      (value) =>
+                        value !== null && value !== undefined && value !== "",
+                    )
+                    .join("–");
+                  const amount = Number(p.shippingCharge || 0);
+                  const details = [
+                    ["Shipping method", p.shippingMethod || "Standard"],
+                    [
+                      "Shipping charge",
+                      amount === 0 ? "Free" : `₹${amount.toFixed(2)}`,
+                    ],
+                    [
+                      "Estimated delivery",
+                      days ? `${days} days` : "Not specified",
+                    ],
+                    [
+                      "Handling charge",
+                      p.handlingCharge == null
+                        ? "₹0.00"
+                        : `₹${Number(p.handlingCharge).toFixed(2)}`,
+                    ],
+                    [
+                      "Free shipping threshold",
+                      p.freeShippingThreshold == null
+                        ? "None"
+                        : `₹${Number(p.freeShippingThreshold).toFixed(2)}`,
+                    ],
+                    [
+                      "Cash on delivery",
+                      p.codAvailable === false ? "Unavailable" : "Available",
+                    ],
+                    [
+                      "Delivery coverage",
+                      p.serviceabilityMode === "all_india"
+                        ? "All India"
+                        : (
+                            p.serviceabilityMode || "Configured pincodes"
+                          ).replace(/_/g, " "),
+                    ],
+                  ];
+                  return (
+                    <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-4">
+                      <p className="text-sm font-semibold text-gray-800">
+                        Copied settings: {p.name || "Shipping template"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-600">
+                        These settings were copied into product delivery
+                        settings and can be adjusted below.
+                      </p>
+                      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {details.map(([label, value]) => (
+                          <div
+                            key={label}
+                            className="rounded-lg border border-blue-100 bg-white px-3 py-2"
+                          >
+                            <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                              {label}
+                            </p>
+                            <p className="mt-1 text-xs font-semibold capitalize text-gray-800">
+                              {value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
             </div>
 
             {/* Product Delivery Pincodes */}
             {/* Product Delivery Pincodes */}
-            {!formData?.shipping?.shippingProfileId && (
-              <div className="space-y-4 border-t border-[var(--admin-line)] pt-5">
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">
-                    Product delivery pincodes
-                  </p>
 
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    Choose where this product can be delivered. These rules also
-                    apply when shipping is free.
-                  </p>
-                </div>
+            <div className="space-y-4 border-t border-[var(--admin-line)] pt-5">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">
+                  Product delivery pincodes
+                </p>
 
-                {/* <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-                  Leave the list empty to deliver across All India. Add one or
-                  more pincodes only when this product must be restricted to
-                  specific delivery locations.
-                </div> */}
-
-                <div className="space-y-2">
-                  <label className="admin-label">
-                    Allowed pincodes{" "}
-                    <span className="font-normal text-gray-400">
-                      (optional)
-                    </span>
-                  </label>
-
-                  <div className="flex items-start gap-2">
-                    <FormInput
-                      name="allowedPincode"
-                      className="flex-1 !mb-0"
-                      inputMode="numeric"
-                      maxLength={6}
-                      showLengthCount={false}
-                      placeholder="Enter 6-digit pincode"
-                      value={allowedPincodeInput}
-                      error={
-                        allowedPincodeInput === "000000"
-                          ? "Pincode cannot be 000000"
-                          : ""
-                      }
-                      onChange={(event) =>
-                        setAllowedPincodeInput(
-                          event.target.value.replace(/\D/g, "").slice(0, 6),
-                        )
-                      }
-                      onKeyDown={handleProductPincodeKeyDown}
-                    />
-
-                    <button
-                      type="button"
-                      className="admin-btn-primary whitespace-nowrap px-4"
-                      onClick={addProductPincode}
-                    >
-                      Add
-                    </button>
-                  </div>
-
-                  <div className="flex min-h-[44px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
-                    {getShippingPincodes(formData?.shipping).length ? (
-                      getShippingPincodes(formData?.shipping).map((pincode) => (
-                        <span
-                          key={pincode}
-                          className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
-                        >
-                          {pincode}
-
-                          <button
-                            type="button"
-                            onClick={() => removeProductPincode(pincode)}
-                            className="ml-1 text-sm leading-none hover:text-red-500"
-                            aria-label={`Remove pincode ${pincode}`}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-gray-400">
-                        No pincodes added — delivery defaults to All India.
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {error?.shipping && (
-                  <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
-                    {error.shipping}
-                  </p>
-                )}
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Choose where this product can be delivered. These rules also
+                  apply when shipping is free.
+                </p>
               </div>
-            )}
+
+              <div className="space-y-2">
+                <label className="admin-label">
+                  Allowed pincodes{" "}
+                  <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+
+                <div className="flex items-start gap-2">
+                  <FormInput
+                    name="allowedPincode"
+                    className="flex-1 !mb-0"
+                    inputMode="numeric"
+                    maxLength={6}
+                    showLengthCount={false}
+                    placeholder="Enter 6-digit pincode"
+                    value={allowedPincodeInput}
+                    error={
+                      allowedPincodeInput === "000000"
+                        ? "Pincode cannot be 000000"
+                        : ""
+                    }
+                    onChange={(event) =>
+                      setAllowedPincodeInput(
+                        event.target.value.replace(/\D/g, "").slice(0, 6),
+                      )
+                    }
+                    onKeyDown={handleProductPincodeKeyDown}
+                  />
+
+                  <button
+                    type="button"
+                    className="admin-btn-primary whitespace-nowrap px-4"
+                    onClick={addProductPincode}
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <div className="flex min-h-[44px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
+                  {getShippingPincodes(formData?.shipping).length ? (
+                    getShippingPincodes(formData?.shipping).map((pincode) => (
+                      <span
+                        key={pincode}
+                        className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
+                      >
+                        {pincode}
+
+                        <button
+                          type="button"
+                          onClick={() => removeProductPincode(pincode)}
+                          className="ml-1 text-sm leading-none hover:text-red-500"
+                          aria-label={`Remove pincode ${pincode}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-400">
+                      No pincodes added — delivery defaults to All India.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {error?.shipping && (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                  {error.shipping}
+                </p>
+              )}
+            </div>
           </div>
         ),
       },
-
-      ,
-      ,
       {
         id: "seo",
         title: "SEO",
@@ -5173,7 +5276,8 @@ export default function ProductManagementUI() {
                         next.tags =
                           "Tags must be 2–40 lowercase letters or numbers separated by single hyphens.";
                       } else if (findDuplicate(tags)) {
-                        next.tags = "Tags must be unique, ignoring letter case.";
+                        next.tags =
+                          "Tags must be unique, ignoring letter case.";
                       } else {
                         delete next.tags;
                       }

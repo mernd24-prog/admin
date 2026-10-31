@@ -468,46 +468,48 @@ const SEOPanel = ({
                 loadingText="Uploading OG image..."
               />
               <div className="space-y-1">
-               <FormInput
-  label="OG Image URL"
-  name="ogImage"
-  type="url"
-  maxLength={2048}
-  limitMessage="OG Image URL must be 2048 characters or fewer."
-  className="!mb-0"
-  inputClassName="product-flat-gold-focus"
-  placeholder="https://cdn.yourstore.com/og-image.jpg"
-  value={seo.ogImage || ""}
-  onPaste={(event) => {
-    const pastedUrl = event.clipboardData
-      ?.getData("text")
-      ?.trim();
+                <FormInput
+                  label="OG Image URL"
+                  name="ogImage"
+                  type="url"
+                  maxLength={2048}
+                  limitMessage="OG Image URL must be 2048 characters or fewer."
+                  className="!mb-0"
+                  inputClassName="product-flat-gold-focus"
+                  placeholder="https://cdn.yourstore.com/og-image.jpg"
+                  value={seo.ogImage || ""}
+                  onPaste={(event) => {
+                    const pastedUrl = event.clipboardData
+                      ?.getData("text")
+                      ?.trim();
 
-    if (!pastedUrl) return;
+                    if (!pastedUrl) return;
 
-    if (pastedUrl.length > 2048) {
-      event.preventDefault();
-      setOgImagePasteError("OG Image URL must be 2048 characters or fewer.");
-      return;
-    }
+                    if (pastedUrl.length > 2048) {
+                      event.preventDefault();
+                      setOgImagePasteError(
+                        "OG Image URL must be 2048 characters or fewer.",
+                      );
+                      return;
+                    }
 
-    if (!isHttpUrl(pastedUrl)) {
-      event.preventDefault();
-      setOgImagePasteError(
-        "Pasted image URLs must be valid HTTP/HTTPS URLs.",
-      );
-      return;
-    }
+                    if (!isHttpUrl(pastedUrl)) {
+                      event.preventDefault();
+                      setOgImagePasteError(
+                        "Pasted image URLs must be valid HTTP/HTTPS URLs.",
+                      );
+                      return;
+                    }
 
-    setOgImagePasteError("");
-  }}
-  onChange={(e) => {
-    setOgImagePasteError("");
-    updateSeoField("ogImage", e.target.value);
-  }}
-  onBlur={() => touchSeoField("ogImage")}
-  error={ogImageError}
-/>
+                    setOgImagePasteError("");
+                  }}
+                  onChange={(e) => {
+                    setOgImagePasteError("");
+                    updateSeoField("ogImage", e.target.value);
+                  }}
+                  onBlur={() => touchSeoField("ogImage")}
+                  error={ogImageError}
+                />
               </div>
             </div>
           </div>

@@ -80,6 +80,7 @@ const DynamicAttributesTab = ({
                 label={label}
                 required={field.required}
                 options={options}
+                isClearable="true"
                 value={options.find((item) => item.value === value) || null}
                 onChange={(selected) =>
                   updateAttribute(field.key, selected?.value || "")
@@ -100,6 +101,7 @@ const DynamicAttributesTab = ({
                 label={label}
                 required={field.required}
                 isMulti
+                isClearable="true"
                 options={options}
                 value={options.filter((item) =>
                   selectedValues.includes(item.value),
@@ -125,7 +127,7 @@ const DynamicAttributesTab = ({
                   &nbsp;
                 </label>
                 <label
-                  className={`flex h-[36px] items-center gap-3 rounded-lg border bg-gray-50 px-3 text-sm cursor-pointer hover:bg-gray-100 transition-colors ${errors?.attributes?.[field.key] ? "border-red-400" : "border-gray-200"}`}
+                  className={`flex h-[40px] items-center gap-3 rounded-lg border bg-[#FFFDF8] px-3 text-sm cursor-pointer transition-colors ${errors?.attributes?.[field.key] ? "border-red-400" : "border-gray-200"}`}
                 >
                   <input
                     name={`attribute_${field.key}`}
