@@ -28,6 +28,7 @@ import { QueryDetailsSkeleton } from "../../components/Loader/SkeletonLoader";
 import { TextEditor } from "../../components/Atoms/FormInput/TextEditor";
 import { ButtonLoader } from "../../components/Loader/Loader";
 import { sellerHelpSupportValidationSchema } from "../../_helpers/validationSchemas";
+import OrangeButton from "../../components/Atoms/buttons/OrangeButton";
 
 const initialForm = {
   category: SELLER_QUERY_CATEGORIES[0]?.value || "",
@@ -532,10 +533,10 @@ const SellerHelpSupport = () => {
                   Cancel
                 </button>
 
-                <button
+                <OrangeButton
                   type="submit"
-                  className="admin-btn-primary inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={submitting || !formik.values.category}
+                  className="justify-center disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {submitting ? (
                     <>
@@ -548,7 +549,7 @@ const SellerHelpSupport = () => {
                       Submit Query
                     </>
                   )}
-                </button>
+                </OrangeButton>
               </div>
             </div>
           </section>
@@ -599,11 +600,13 @@ const SellerHelpSupport = () => {
                   setPage(1);
                 }}
                 loading={loading}
-                activeCount={Number(Boolean(dateFilters.fromDate || dateFilters.toDate))}
+                activeCount={Number(
+                  Boolean(dateFilters.fromDate || dateFilters.toDate),
+                )}
               />
             }
             onRefresh={fetchQueries}
-            searchPlaceholder="Search your support queries"
+            searchPlaceholder="Search By Query Id and Subject"
             rowKey="queryId"
             emptyText="No support queries submitted yet."
             rowActions={(row) => [
@@ -714,7 +717,7 @@ const SellerHelpSupport = () => {
               title="Ticket Conversation"
               subtitle="Review the conversation and previous responses."
             >
-              <div className="h-[400px] space-y-2.5 overflow-y-auto pr-2">
+              <div className=" space-y-2.5 overflow-y-auto pr-2">
                 {getConversationItems(selectedQuery).map((item) => {
                   const isAdminMessage = item.type === "admin";
 

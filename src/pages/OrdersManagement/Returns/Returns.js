@@ -2476,7 +2476,30 @@ const Returns = () => {
                 {["refund", "retry_refund"].includes(action.type) && (
                   <FormSelectGroup
                     label="Refund Method"
-                    value={action.method}
+                    value={
+                      [
+                        {
+                          value: "auto",
+                          label: "Automatic allocation",
+                        },
+                        {
+                          value: "original_payment",
+                          label: "Original payment",
+                        },
+                        {
+                          value: "wallet",
+                          label: "Wallet credit",
+                        },
+                        {
+                          value: "split",
+                          label: "Wallet + original payment",
+                        },
+                        {
+                          value: "manual",
+                          label: "Manual bank/cash refund",
+                        },
+                      ].find((option) => option.value === action.method) || null
+                    }
                     options={[
                       {
                         value: "auto",
@@ -2502,7 +2525,7 @@ const Returns = () => {
                     onChange={(selectedOption) =>
                       setAction((prev) => ({
                         ...prev,
-                        method: selectedOption?.value || selectedOption || "",
+                        method: selectedOption?.value || "",
                       }))
                     }
                     placeholder="Select refund method"

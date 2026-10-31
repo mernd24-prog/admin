@@ -11,6 +11,7 @@ import {
   MdRefresh,
   MdTrendingUp,
   MdVisibility,
+  MdWarningAmber,
 } from "react-icons/md";
 import Cards from "../../../components/Cards/Cards";
 import Loader from "../../../components/Loader/Loader";
@@ -374,46 +375,52 @@ export default function FinanceEarnings() {
 
       {/* <FinanceNav /> */}
 
-     
-
       {Number(codReconciliation.totalOrders || 0) > 0 && (
         <section className="admin-card p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="font-semibold">COD order reconciliation</h2>
-              <p className="mt-1 text-xs text-[var(--admin-muted)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            {/* Title and Description */}
+            <div className="min-w-0 lg:max-w-xl">
+              <h2 className="text-base font-semibold text-[var(--admin-text)]">
+                COD order reconciliation
+              </h2>
+              <p className="mt-1 text-xs  text-[var(--admin-muted)]">
                 COD orders and earnings are different records. An earning is
                 created after delivery; cash collected from the customer is
                 shown separately as a COD liability.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+
+            {/* Statistics */}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4 lg:min-w-[480px]">
               <div>
-                <strong className="block">
+                <strong className="block text-lg font-semibold text-[var(--admin-text)]">
                   {codReconciliation.totalOrders || 0}
                 </strong>
                 <span className="text-xs text-[var(--admin-muted)]">
                   COD orders
                 </span>
               </div>
+
               <div>
-                <strong className="block">
+                <strong className="block text-lg font-semibold text-[var(--admin-success)]">
                   {codReconciliation.deliveredOrders || 0}
                 </strong>
                 <span className="text-xs text-[var(--admin-muted)]">
                   Delivered
                 </span>
               </div>
+
               <div>
-                <strong className="block">
+                <strong className="block text-lg font-semibold text-[var(--admin-text)]">
                   {codReconciliation.awaitingDeliveryOrders || 0}
                 </strong>
                 <span className="text-xs text-[var(--admin-muted)]">
                   Awaiting delivery
                 </span>
               </div>
+
               <div>
-                <strong className="block">
+                <strong className="block text-lg font-semibold text-[var(--admin-gold-dark)]">
                   {codReconciliation.ordersWithLiability || 0}
                 </strong>
                 <span className="text-xs text-[var(--admin-muted)]">
@@ -422,12 +429,19 @@ export default function FinanceEarnings() {
               </div>
             </div>
           </div>
+
           {Number(codReconciliation.missingEarningOrders || 0) > 0 && (
-            <p className="mt-3 rounded-md bg-amber-50 p-3 text-xs text-amber-800">
-              {codReconciliation.missingEarningOrders} delivered COD order(s)
-              still need an earning calculation. Refresh to retry; if this
-              remains, an administrator should review the order pricing data.
-            </p>
+            <div className="mt-4 flex items-start gap-2 border-t border-amber-200 pt-3 text-xs text-amber-800">
+              <MdWarningAmber className="mt-0.5 shrink-0" size={15} />
+              <p className="leading-relaxed">
+                <strong>
+                  {codReconciliation.missingEarningOrders} delivered COD
+                  order(s)
+                </strong>{" "}
+                still need an earning calculation. Refresh to retry; if this
+                remains, an administrator should review the order pricing data.
+              </p>
+            </div>
           )}
         </section>
       )}
@@ -521,7 +535,7 @@ export default function FinanceEarnings() {
         />
       </div>
 
-      {Number(codReconciliation.totalOrders || 0) > 0 && (
+      {/* {Number(codReconciliation.totalOrders || 0) > 0 && (
         <section className="admin-card overflow-hidden">
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--admin-line)] px-5 py-4">
             <div className="min-w-0 flex-1">
@@ -590,7 +604,7 @@ export default function FinanceEarnings() {
             </div>
           )}
         </section>
-      )}
+      )} */}
 
       {/* STATUS FILTERS */}
       <Tabs
