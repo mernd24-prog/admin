@@ -118,12 +118,14 @@ export default function BasicDetailsTab({
   formData,
   handleChange,
   handleNestedChange,
+  handleWarrantyToggle,
   formattedBrandList,
   formattedWarrantyList,
   formattedProductFamilyList,
   formattedCategoryList,
   handleSelectChange,
   errors,
+  onFieldBlur,
   fetchAllData,
   allCategories,
   API_CALL_OBJECT,
@@ -1910,13 +1912,10 @@ export default function BasicDetailsTab({
     }
   };
 
+  const handleFieldBlur = (field) => onFieldBlur?.(field);
+
   const isReturnable = Boolean(formData.warranty?.returnPolicy?.returnable);
-  const hasLegacyWarrantyDetails =
-    Number(formData.warranty?.period) >= 1 ||
-    Boolean(String(formData.warranty?.provider || "").trim());
-  const warrantyEnabled =
-    formData.warranty?.enabled === true ||
-    (formData.warranty?.enabled === undefined && hasLegacyWarrantyDetails);
+  const warrantyEnabled = formData.warranty?.enabled === true;
 
   /*
    * ------------------------------------------------------------
@@ -1983,6 +1982,7 @@ export default function BasicDetailsTab({
                     setOrganizationOptions([]);
                   }}
                   options={formattedSellerOptions}
+                  onBlur={() => handleFieldBlur("sellerId")}
                   error={errors?.sellerId}
                   placeholder="Select Seller"
                   required
@@ -2012,6 +2012,7 @@ export default function BasicDetailsTab({
                     handleSelectChange(option, "ORGANIZATION_ID")
                   }
                   options={formattedOrganizationOptions}
+                  onBlur={() => handleFieldBlur("organizationId")}
                   error={errors?.organizationId}
                   placeholder={
                     !formData.sellerId
@@ -2042,12 +2043,17 @@ export default function BasicDetailsTab({
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                onBlur={handleNameBlur}
+                  onBlur={(event) => {
+                    handleNameBlur(event);
+                    handleFieldBlur("name");
+                  }}
                 minLength={3}
                 maxLength={200}
+                placeholder="Enter product name"
+                limitMessage={`Product name must be between 3 and 200 characters`}
                 required
                 helpText="Name of the product as it will be displayed"
-                error={errors?.name}
+                  error={errors?.name || errors?.formik?.name}
               />
             </div>
 
@@ -2062,6 +2068,7 @@ export default function BasicDetailsTab({
                   name="brand"
                   value={selectedBrandOption}
                   onChange={handleBrandSelect}
+                  onBlur={() => handleFieldBlur("brand")}
                   options={brandOptions}
                   loadOptions={loadBrandOptions}
                   defaultOptions={brandOptions}
@@ -2112,6 +2119,7 @@ export default function BasicDetailsTab({
                     name="category_id"
                     value={selectedCategoryOption}
                     onChange={handleCategoryChange}
+                    onBlur={() => handleFieldBlur("category_id")}
                     options={categoryOptions}
                     loadOptions={loadCategoryOptions}
                     defaultOptions={categoryOptions}
@@ -2169,6 +2177,7 @@ export default function BasicDetailsTab({
 
                       handleSelectChange(option, "hsn_code");
                     }}
+                    onBlur={() => handleFieldBlur("hsn_code")}
                     options={hsnOptions}
                     loadOptions={loadHsnOptions}
                     defaultOptions={hsnOptions}
@@ -2311,11 +2320,13 @@ export default function BasicDetailsTab({
                 onChange={(content) =>
                   handleInputReactQuillChange?.("description", content)
                 }
+                onBlur={() => handleFieldBlur("description")}
                 required
                 maxLength={5000}
+                minLength={10}
                 limitMessage="Maximum 5000 characters allowed."
                 placeholder="Enter detailed product description"
-                error={errors?.description}
+                error={errors?.description || errors?.formik?.description}
                 height="220px"
                 className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
               />
@@ -2346,18 +2357,7 @@ export default function BasicDetailsTab({
                         typeof eventOrValue === "boolean"
                           ? eventOrValue
                           : Boolean(eventOrValue?.target?.checked);
-                      handleNestedChange("warranty.enabled", checked);
-                      if (!checked) {
-                        [
-                          "period",
-                          "periodUnit",
-                          "provider",
-                          "type",
-                          "terms",
-                        ].forEach((field) =>
-                          handleNestedChange(`warranty.${field}`, ""),
-                        );
-                      }
+                      handleWarrantyToggle?.(checked);
                     }}
                   />
                 </div>
@@ -2369,6 +2369,7 @@ export default function BasicDetailsTab({
                     <Input
                       labelName="Warranty Period"
                       name="warranty.period"
+                      required
                       type="number"
                       min={1}
                       max={365}
@@ -2391,6 +2392,7 @@ export default function BasicDetailsTab({
 
                     <FilterSelect
                       label="Warranty Unit"
+                      required
                       value={
                         warrantyUnits.options.find(
                           (option) =>
@@ -2411,6 +2413,7 @@ export default function BasicDetailsTab({
                     />
                     <FilterSelect
                       label="Warranty Provider"
+                      required
                       value={
                         warrantyProviders.options.find(
                           (option) =>
@@ -2432,6 +2435,7 @@ export default function BasicDetailsTab({
 
                     <FilterSelect
                       label="Warranty Type"
+                      required
                       value={
                         warrantyTypes.options.find(
                           (option) => option.value === formData.warranty?.type,
@@ -2455,16 +2459,13 @@ export default function BasicDetailsTab({
                       handleNestedChange("warranty.terms", content)
                     }
                     maxLength={1000}
+                    minLength={10}
                     height="220px"
                     limitMessage="Maximum 1000 characters allowed."
+                    error={errors?.warrantyTerms}
                     className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
                     placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
                   />
-                  {errors?.warrantyTerms && (
-                    <p className="mt-1 text-xs text-red-600" role="alert">
-                      {errors.warrantyTerms}
-                    </p>
-                  )}
                 </>
               ) : (
                 <DisabledPolicyState
@@ -2536,6 +2537,7 @@ export default function BasicDetailsTab({
                 <div className="grid gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
                   <Input
                     labelName="Return Window Days"
+                    required
                     name="warranty.returnPolicy.returnWindowDays"
                     type="number"
                     min={1}
@@ -2554,6 +2556,10 @@ export default function BasicDetailsTab({
                     }
                     onChange={(event) => {
                       if (isNegativeNumericValue(event.target.value)) return;
+                      if (
+                        event.target.value !== "" &&
+                        Number(event.target.value) > 365
+                      ) return;
                       const value =
                         event.target.value === ""
                           ? ""
@@ -2573,35 +2579,53 @@ export default function BasicDetailsTab({
                     }}
                   />
 
-                  <Input
-                    labelName="Allowed Resolution"
-                    name="warranty.returnPolicy.resolution"
-                    type="select"
-                    value={
-                      formData.warranty?.returnPolicy?.resolution ||
-                      "refund_or_replacement"
-                    }
-                    onChange={(option) =>
-                      handleNestedChange(
-                        "warranty.returnPolicy.resolution",
-                        option?.value || "refund_or_replacement",
-                      )
-                    }
-                    options={[
-                      {
-                        value: "refund_or_replacement",
-                        label: "Refund or replacement",
-                      },
-                      {
-                        value: "refund",
-                        label: "Refund only",
-                      },
-                      {
-                        value: "replacement",
-                        label: "Replacement only",
-                      },
-                    ]}
-                  />
+                 <FilterSelect
+  label="Allowed Resolution"
+  required
+  name="warranty.returnPolicy.resolution"
+  value={
+    [
+      {
+        value: "refund_or_replacement",
+        label: "Refund or replacement",
+      },
+      {
+        value: "refund",
+        label: "Refund only",
+      },
+      {
+        value: "replacement",
+        label: "Replacement only",
+      },
+    ].find(
+      (option) =>
+        option.value ===
+        (formData.warranty?.returnPolicy?.resolution ||
+          "refund_or_replacement"),
+    ) || null
+  }
+  onChange={(option) =>
+    handleNestedChange(
+      "warranty.returnPolicy.resolution",
+      option?.value || "refund_or_replacement",
+    )
+  }
+  options={[
+    {
+      value: "refund_or_replacement",
+      label: "Refund or replacement",
+    },
+    {
+      value: "refund",
+      label: "Refund only",
+    },
+    {
+      value: "replacement",
+      label: "Replacement only",
+    },
+  ]}
+  placeholder="Select Allowed Resolution"
+/>
 
                   <Input
                     labelName="Return Shipping Paid By"

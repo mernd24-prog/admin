@@ -1,6 +1,80 @@
 import { min } from "moment";
 import * as Yup from "yup";
 
+const productDescriptionText = (value = "") => {
+  if (typeof document === "undefined") {
+    return String(value)
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;|&#160;|&#xA0;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .trim();
+  }
+
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = String(value);
+  return (tempDiv.textContent || "").trim();
+};
+
+export const productBasicDetailsValidationSchema = Yup.object({
+ name: Yup.string()
+  .trim()
+  .required("Product name is required.")
+  .min(3, "Product name must be at least 3 characters.")
+  .max(200, "Product name must not be more than 200 characters.")
+  .test(
+    "has-letter",
+    "Product name must contain at least one letter.",
+    (value) => !value || /\p{L}/u.test(value)
+  )
+  .test(
+    "no-repeated-spaces",
+    "Product name cannot contain repeated spaces.",
+    (value) => !value || !/ {2,}/u.test(value)
+  )
+  .test(
+    "no-only-spaces",
+    "Product name cannot contain only spaces.",
+    (value) => !value || value.trim().length > 0
+  )
+  .test(
+    "no-html-tags",
+    "HTML tags are not allowed in the product name.",
+    (value) => !value || !/<[^>]*>/u.test(value)
+  )
+  .test(
+    "no-control-characters",
+    "Product name contains invalid characters.",
+    (value) => !value || !/[\u0000-\u001F\u007F]/u.test(value)
+  ),
+  description: Yup.string()
+    .strict(true)
+    .required("Description is required.")
+    .test("description-length", "Description must be at least 10 characters.", (value) => {
+      const length = productDescriptionText(value).length;
+      return length === 0 || length >= 10;
+    })
+    .test("description-max", "Description must not be more than 5000 characters.", (value) => productDescriptionText(value).length <= 5000),
+  shortDescription: Yup.string().max(500, "Short description must be 500 characters or fewer."),
+  sellerId: Yup.string().when("$isSellerPanelUser", {
+    is: false,
+    then: (schema) => schema.required("Seller is required."),
+  }),
+  organizationId: Yup.string().when("$isSellerPanelUser", {
+    is: true,
+    then: (schema) => schema.notRequired(),
+    otherwise: (schema) => schema.required("Organization is required."),
+  }),
+  brand: Yup.string().test("brand-required", "Brand is required.", function (value) {
+    return Boolean(String(value || this.parent.brandId || this.parent.brand_id || "").trim());
+  }),
+  category_id: Yup.string().test("category-required", "Category is required.", function (value) {
+    return Boolean(value || this.parent.categoryId || this.parent.category || this.parent.category_key);
+  }),
+  hsn_code: Yup.string().test("hsn-required", "HSN Code is required.", function (value) {
+    return Boolean(String(value || this.parent.hsnCode || this.parent.hsn_id || "").trim());
+  }),
+});
+
 export const parentInfluencerValidationSchema = Yup.object({
   firstName: Yup.string()
     .trim()
