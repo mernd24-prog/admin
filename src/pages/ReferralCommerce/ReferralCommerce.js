@@ -1,3 +1,4 @@
+import MarketingSettings from "../../components/Marketing/MarketingSettings";
 import React, {
   useCallback,
   useEffect,
@@ -282,8 +283,8 @@ const validateRulesForm = (form) => {
 
   [
     ["customerSharePercent", "Customer discount share"],
-    ["childSharePercent", "Brand associate share"],
-    ["parentSharePercent", "Growth partner share"],
+    ["childSharePercent", "Code owner commission share"],
+    ["parentSharePercent", "Code owner parent commission share"],
   ].forEach(([name, label]) => number(name, label, { min: 0, max: 100 }));
   const shareTotal =
     Number(form.customerSharePercent) +
@@ -856,7 +857,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
 
   const amountTypeOptions = [
     {
-      label: "Fixed amount per unit",
+      label: "Fixed product pool per order",
       value: "fixed_amount",
     },
     {
@@ -1321,7 +1322,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
             label={
               form.amountType === "percentage"
                 ? "Pool Percentage (%)"
-                : "Pool Amount Per Unit (₹)"
+                : "Product Pool for Order (₹)"
             }
             name="amountValue"
             type="number"
@@ -1344,7 +1345,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
 
           {/* Maximum Amount */}
           <FormInput
-            label="Maximum Pool Per Line (₹)"
+            label="Maximum Product Pool (₹)"
             name="maximumAmount"
             type="number"
             min="0"
@@ -1357,7 +1358,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
               }));
             }}
             placeholder="0 means no additional limit"
-            hint="0 means no additional limit."
+            hint="0 means no additional limit. The lowest positive eligible product pool applies once per order; quantities do not multiply it."
             className="w-full"
           />
 
@@ -1439,7 +1440,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
                   <p className="text-[11px] text-[var(--admin-muted)]">
                     {form.amountType === "percentage"
                       ? "of product line"
-                      : "per unit"}
+                      : "once per order"}
                   </p>
                 </div>
               </div>
@@ -3154,6 +3155,8 @@ const ReferralCommerce = () => {
   );
 
   const renderRules = () => (
+    <div className="space-y-5">
+    <MarketingSettings kind="referrals" />
     <section className="admin-card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] bg-gradient-to-r from-white to-[var(--admin-gold-soft)]/35 px-5 py-4">
         <div>
@@ -3170,9 +3173,7 @@ const ReferralCommerce = () => {
             withdrawals
           </p>
         </div>
-        <span className="rounded-full border border-[var(--admin-line)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--admin-muted)]">
-          Global configuration
-        </span>
+
       </div>
       <form
         onSubmit={submitRules}
@@ -3271,7 +3272,7 @@ const ReferralCommerce = () => {
           error={rulesErrors.customerSharePercent}
         />
         <TextInput
-          label="Brand Associate Share %"
+          label="Code Owner Commission Share %"
           name="childSharePercent"
           type="number"
           min="0"
@@ -3283,7 +3284,7 @@ const ReferralCommerce = () => {
           error={rulesErrors.childSharePercent}
         />
         <TextInput
-          label="Growth Partner Share %"
+          label="Code Owner Parent Commission Share %"
           name="parentSharePercent"
           type="number"
           min="0"
@@ -3658,6 +3659,7 @@ const ReferralCommerce = () => {
         </div>
       </form>
     </section>
+    </div>
   );
 
   const renderActiveFilterBar = (options = activeStatusOptions) => (

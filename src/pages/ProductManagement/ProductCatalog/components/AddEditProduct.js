@@ -1451,31 +1451,32 @@ export default function ProductManagementUI() {
       userData?._id ||
       userData?.id;
     const requests = [];
-    if (sid) {
-      const params = { sellerId: sid, active: true, limit: 100 };
-      if (formData?.organizationId)
-        params.organizationId = formData.organizationId;
-      requests.push(
-        dispatch(getShippingProfiles(params))
-          .unwrap()
-          .then((res) => {
-            const list =
-              res?.data?.profiles ||
-              res?.data?.data?.items ||
-              res?.data?.items ||
-              res?.data?.list ||
-              res?.normalized?.data?.profiles ||
-              res?.profiles ||
-              [];
-            return list.map((p) => ({
-              value: p.id,
-              label: p.name,
-              profile: p,
-              type: "profile",
-            }));
-          })
-          .catch(() => []),
-      );
+    if (sid || !isSellerPanelUser) {
+      // Admins can browse every seller's profile; seller panels stay scoped.
+      const params = { limit: 100 };
+      if (isSellerPanelUser) {
+        params.sellerId = sid;
+        params.active = true;
+        if (formData?.organizationId) params.organizationId = formData.organizationId;
+      }
+      requests.push((async () => {
+        const profiles = [];
+        let offset = 0;
+        while (!cancelled) {
+          const res = await dispatch(getShippingProfiles({ ...params, offset })).unwrap();
+          const data = res?.data?.data || res?.data || res?.normalized?.data || res || {};
+          const list = data.profiles || data.items || data.list || [];
+          profiles.push(...list);
+          offset += list.length;
+          if (!list.length || (data.total != null ? offset >= Number(data.total) : list.length < params.limit)) break;
+        }
+        return profiles.map((profile) => ({
+          value: profile.id || profile._id,
+          label: profile.name,
+          profile,
+          type: "profile",
+        }));
+      })().catch(() => []));
     }
     requests.push(
       dispatch(
@@ -4705,24 +4706,30 @@ export default function ProductManagementUI() {
                   .filter((opt) => opt.type === "profile")
                   .map((opt) => ({
                     ...opt,
+                    isDisabled: opt.profile?.active === false ||
+                      Boolean(formData?.sellerId && String(opt.profile?.sellerId || "") !== String(formData.sellerId)) ||
+                      Boolean(opt.profile?.organizationId && String(opt.profile.organizationId) !== String(formData?.organizationId || "")),
                     value: String(
                       opt.value || opt.profile?._id || opt.profile?.id || "",
                     ),
                     label: `${
                       opt.label || opt.profile?.name || "Shipping Profile"
-                    }${opt.profile?.isDefault ? " (Default)" : ""}`,
+                    }${opt.profile?.isDefault ? " (Default)" : ""}${opt.profile?.active === false ? " (Inactive)" : ""}${!isSellerPanelUser ? ` — Seller: ${opt.profile?.sellerName || "Unknown seller"} — Org: ${opt.profile?.organizationName || (opt.profile?.organizationId ? "Unknown organization" : "All organizations")}` : ""}`,
                   }))}
                 value={
                   shippingProfileOptions
                     .filter((opt) => opt.type === "profile")
                     .map((opt) => ({
                       ...opt,
+                    isDisabled: opt.profile?.active === false ||
+                      Boolean(formData?.sellerId && String(opt.profile?.sellerId || "") !== String(formData.sellerId)) ||
+                      Boolean(opt.profile?.organizationId && String(opt.profile.organizationId) !== String(formData?.organizationId || "")),
                       value: String(
                         opt.value || opt.profile?._id || opt.profile?.id || "",
                       ),
                       label: `${
                         opt.label || opt.profile?.name || "Shipping Profile"
-                      }${opt.profile?.isDefault ? " (Default)" : ""}`,
+                      }${opt.profile?.isDefault ? " (Default)" : ""}${opt.profile?.active === false ? " (Inactive)" : ""}${!isSellerPanelUser ? ` — Seller: ${opt.profile?.sellerName || "Unknown seller"} — Org: ${opt.profile?.organizationName || (opt.profile?.organizationId ? "Unknown organization" : "All organizations")}` : ""}`,
                     }))
                     .find(
                       (opt) =>

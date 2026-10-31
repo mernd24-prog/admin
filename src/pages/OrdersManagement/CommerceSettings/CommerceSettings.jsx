@@ -1,3 +1,4 @@
+import MarketingSettings from "../../../components/Marketing/MarketingSettings";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -399,6 +400,7 @@ export default function CommerceSettings() {
     }));
   };
 
+
   const fetchSettings = useCallback(async () => {
     setLoading(true);
     try {
@@ -468,6 +470,8 @@ export default function CommerceSettings() {
           incomeTaxTdsRate: Number(nextSettings.finance.incomeTaxTdsRate || 0),
         },
       };
+      delete payload.marketing;
+      delete payload.referralMarketing;
       const response = await axiosProvider.put(
         ENDPOINTS.commerceSettings.detail,
         payload,
@@ -476,7 +480,7 @@ export default function CommerceSettings() {
       toast.success("Commerce settings saved");
     } catch (error) {
       toast.error(
-        error?.response?.data?.message || "Failed to save commerce settings",
+        error?.response?.data?.message || error.message || "Failed to save commerce settings",
       );
     } finally {
       setSaving(false);
@@ -554,6 +558,7 @@ export default function CommerceSettings() {
           <Cards key={metric.label} {...metric} />
         ))}
       </div>
+      <MarketingSettings kind="coupons" />
       <Section title="Platform COD Controls">
         <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
           Sellers manage COD pincodes and select who collects the cash. These
