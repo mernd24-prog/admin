@@ -9,6 +9,7 @@ import { useFormik } from "formik";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { EmptyState } from "../../../pages/OrdersManagement/Orders/components/ViewOrders";
 import {
   MdAdd,
   MdCheckCircle,
@@ -1853,9 +1854,11 @@ export default function ShippingProfiles() {
           </p>
         </div>
         {templatesPayload.list.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-[var(--admin-muted)]">
-            No published templates available yet.
-          </div>
+          <EmptyState>
+            <p className="mt-3 text-center">
+              No published templates available yet.
+            </p>
+          </EmptyState>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {templatesPayload.list.slice(0, 6).map((template) => (

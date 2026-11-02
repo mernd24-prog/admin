@@ -184,23 +184,25 @@ const VariantBuilder = ({
   };
 
   const getVariantFieldError = (idx, field) => {
-    if (!touchedVariants[idx]?.[field]) return "";
+    const isTouched = touchedVariants[idx]?.[field];
+    const existingError = errors?.[idx]?.[field];
+
+    // Show errors either when focused or when submitted
+    if (!isTouched && !existingError) return "";
 
     const value = variants[idx]?.[field];
 
-    // Show required error immediately when the field is focused and empty
     if (value === "" || value === null || value === undefined) {
+      if (field === "salePrice") return "";
       const labels = {
         price: "Price",
         mrp: "MRP",
-        salePrice: "Special Price",
       };
 
-      return `${labels[field]} is required`;
+      return labels[field] ? `${labels[field]} is required` : "";
     }
 
-    // Show existing validation errors
-    return errors?.[idx]?.[field] || "";
+    return existingError || "";
   };
 
   const bulkSalePriceValidator = useMemo(
@@ -1393,7 +1395,6 @@ const VariantBuilder = ({
                       <div>
                         <FormInput
                           label="Special Price (₹)"
-                          required
                           name={`variants.${idx}.salePrice`}
                           data-error-field={
                             variantErrors.salePrice ? "variants" : undefined
@@ -1565,6 +1566,7 @@ const VariantBuilder = ({
                       <FormInput
                         type="textarea"
                         label="Additional Short Description"
+                        limitMessage="Short description should not exceed more than 500 character"
                         value={variant.shortDescription || ""}
                         minLength={10}
                         maxLength={500}
@@ -1580,6 +1582,7 @@ const VariantBuilder = ({
                       <FormInput
                         type="textarea"
                         label="Additional Full Description"
+                        limitMessage="Full description should not exceed more than 5000 character"
                         value={variant.description || ""}
                         minLength={10}
                         maxLength={5000}
