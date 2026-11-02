@@ -125,6 +125,8 @@ export default function BasicDetailsTab({
   formattedCategoryList,
   handleSelectChange,
   errors,
+  formikErrors,
+  formikTouched,
   onFieldBlur,
   fetchAllData,
   allCategories,
@@ -2053,7 +2055,11 @@ export default function BasicDetailsTab({
                 limitMessage={`Product name must be between 3 and 200 characters`}
                 required
                 helpText="Name of the product as it will be displayed"
-                  error={errors?.name || errors?.formik?.name}
+                error={
+                  errors?.name ||
+                  errors?.formik?.name ||
+                  (formikTouched?.name && formikErrors?.name)
+                }
               />
             </div>
 
@@ -2074,7 +2080,10 @@ export default function BasicDetailsTab({
                   defaultOptions={brandOptions}
                   cacheOptions={false}
                   placeholder="Select Brand"
-                  error={errors?.brand}
+                  error={
+                    errors?.brand ||
+                    (formikTouched?.brand && formikErrors?.brand)
+                  }
                   formatOptionLabel={formatCatalogOption}
                   isClearable
                   required
@@ -2123,7 +2132,10 @@ export default function BasicDetailsTab({
                     options={categoryOptions}
                     loadOptions={loadCategoryOptions}
                     defaultOptions={categoryOptions}
-                    error={errors?.category_id}
+                    error={
+                      errors?.category_id ||
+                      (formikTouched?.category_id && formikErrors?.category_id)
+                    }
                     placeholder="Select Category"
                     helperText="Attributes are controlled by the selected category schema."
                     formatOptionLabel={formatCatalogOption}
@@ -2181,7 +2193,10 @@ export default function BasicDetailsTab({
                     options={hsnOptions}
                     loadOptions={loadHsnOptions}
                     defaultOptions={hsnOptions}
-                    error={errors?.hsn_code}
+                    error={
+                      errors?.hsn_code ||
+                      (formikTouched?.hsn_code && formikErrors?.hsn_code)
+                    }
                     placeholder="Search by code or description…"
                     formatOptionLabel={formatCatalogOption}
                     isClearable
@@ -2326,7 +2341,11 @@ export default function BasicDetailsTab({
                 minLength={10}
                 limitMessage="Maximum 5000 characters allowed."
                 placeholder="Enter detailed product description"
-                error={errors?.description || errors?.formik?.description}
+                error={
+                  errors?.description ||
+                  errors?.formik?.description ||
+                  (formikTouched?.description && formikErrors?.description)
+                }
                 height="220px"
                 className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
               />
@@ -2374,7 +2393,9 @@ export default function BasicDetailsTab({
                       min={1}
                       max={365}
                       maxLength={3}
+                      showLengthCount = {false}
                       value={formData.warranty?.period ?? ""}
+                      onBlur={() => handleFieldBlur("warranty.period")}
                       onKeyDown={preventNegativeNumericKey}
                       onPaste={preventNegativeNumericPaste}
                       onChange={(event) => {
@@ -2387,7 +2408,10 @@ export default function BasicDetailsTab({
                       }}
                       placeholder="Example: 12"
                       helperText="Enter a value between 1 and 365 (maximum 3 digits)."
-                      error={errors?.warrantyPeriod}
+                      error={
+                        formikTouched?.warranty?.period &&
+                        formikErrors?.warranty?.period
+                      }
                     />
 
                     <FilterSelect
@@ -2399,6 +2423,7 @@ export default function BasicDetailsTab({
                             option.value === formData.warranty?.periodUnit,
                         ) || null
                       }
+                      onBlur={() => handleFieldBlur("warranty.periodUnit")}
                       onChange={(option) =>
                         handleNestedChange(
                           "warranty.periodUnit",
@@ -2409,7 +2434,10 @@ export default function BasicDetailsTab({
                       placeholder="Select warranty unit"
                       isLoading={warrantyUnits.loading}
                       isClearable
-                      error={errors?.warrantyPeriodUnit}
+                      error={
+                        formikTouched?.warranty?.periodUnit &&
+                        formikErrors?.warranty?.periodUnit
+                      }
                     />
                     <FilterSelect
                       label="Warranty Provider"
@@ -2420,6 +2448,7 @@ export default function BasicDetailsTab({
                             option.value === formData.warranty?.provider,
                         ) || null
                       }
+                      onBlur={() => handleFieldBlur("warranty.provider")}
                       onChange={(option) =>
                         handleNestedChange(
                           "warranty.provider",
@@ -2430,7 +2459,10 @@ export default function BasicDetailsTab({
                       placeholder="Select warranty provider"
                       isLoading={warrantyProviders.loading}
                       isClearable
-                      error={errors?.warrantyProvider}
+                      error={
+                        formikTouched?.warranty?.provider &&
+                        formikErrors?.warranty?.provider
+                      }
                     />
 
                     <FilterSelect
@@ -2441,6 +2473,7 @@ export default function BasicDetailsTab({
                           (option) => option.value === formData.warranty?.type,
                         ) || null
                       }
+                      onBlur={() => handleFieldBlur("warranty.type")}
                       onChange={(option) =>
                         handleNestedChange("warranty.type", option?.value || "")
                       }
@@ -2448,13 +2481,17 @@ export default function BasicDetailsTab({
                       placeholder="Select warranty type"
                       isLoading={warrantyTypes.loading}
                       isClearable
-                      error={errors?.warrantyType}
+                      error={
+                        formikTouched?.warranty?.type &&
+                        formikErrors?.warranty?.type
+                      }
                     />
                   </div>
 
                   <TextEditor
                     label="Warranty description and rules"
                     value={formData.warranty?.terms || ""}
+                    onBlur={() => handleFieldBlur("warranty.terms")}
                     onChange={(content) =>
                       handleNestedChange("warranty.terms", content)
                     }
@@ -2462,7 +2499,10 @@ export default function BasicDetailsTab({
                     minLength={10}
                     height="220px"
                     limitMessage="Maximum 1000 characters allowed."
-                    error={errors?.warrantyTerms}
+                    error={
+                      formikTouched?.warranty?.terms &&
+                      formikErrors?.warranty?.terms
+                    }
                     className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
                     placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
                   />
@@ -2546,9 +2586,17 @@ export default function BasicDetailsTab({
                     value={
                       formData.warranty?.returnPolicy?.returnWindowDays ?? ""
                     }
+                    onBlur={() =>
+                      handleFieldBlur(
+                        "warranty.returnPolicy.returnWindowDays",
+                      )
+                    }
                     onKeyDown={preventNegativeNumericKey}
                     onPaste={preventNegativeNumericPaste}
-                    error={errors?.returnWindowDays}
+                    error={
+                      formikTouched?.warranty?.returnPolicy?.returnWindowDays &&
+                      formikErrors?.warranty?.returnPolicy?.returnWindowDays
+                    }
                     helperText={
                       isReturnable
                         ? "Use a return window between 1 and 365 days."
@@ -2610,6 +2658,9 @@ export default function BasicDetailsTab({
       option?.value || "refund_or_replacement",
     )
   }
+  onBlur={() =>
+    handleFieldBlur("warranty.returnPolicy.resolution")
+  }
   options={[
     {
       value: "refund_or_replacement",
@@ -2625,6 +2676,10 @@ export default function BasicDetailsTab({
     },
   ]}
   placeholder="Select Allowed Resolution"
+  error={
+    formikTouched?.warranty?.returnPolicy?.resolution &&
+    formikErrors?.warranty?.returnPolicy?.resolution
+  }
 />
 
                   <Input

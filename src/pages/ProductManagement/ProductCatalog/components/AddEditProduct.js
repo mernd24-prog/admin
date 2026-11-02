@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useFormik } from "formik";
+import { setNestedObjectValues, useFormik } from "formik";
 import BasicDetailsTab from "./BasicDetailsTab";
 import ProductSettingsPanel from "./ProductSettingsPanel";
 import { useDispatch, useSelector } from "react-redux";
@@ -170,17 +170,6 @@ const isHttpUrl = (value) => {
   } catch {
     return false;
   }
-};
-const getRichTextLength = (value = "") => {
-  if (typeof document === "undefined") {
-    return String(value)
-      .replace(/<[^>]*>/g, " ")
-      .replace(/&nbsp;/gi, " ")
-      .trim().length;
-  }
-  const element = document.createElement("div");
-  element.innerHTML = String(value);
-  return (element.textContent || "").trim().length;
 };
 const canLoadImage = (url, timeoutMs = 8000) =>
   new Promise((resolve) => {
@@ -517,7 +506,6 @@ export default function ProductManagementUI() {
   const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
   const basicDetailsFormik = useFormik({
     initialValues: formData,
-    enableReinitialize: true,
     validationSchema: productBasicDetailsValidationSchema,
     validateOnChange: true,
     validateOnBlur: true,
@@ -1958,11 +1946,14 @@ export default function ProductManagementUI() {
     const newErrors = {};
     const schemaErrors = await basicDetailsFormik.validateForm(formData);
 
-    // Add Formik errors only when they exist
-    if (Object.keys(schemaErrors).length > 0) {
-      newErrors.formik = schemaErrors;
+    const errorsForOtherFields = { ...schemaErrors };
+    delete errorsForOtherFields.warranty;
 
-      Object.entries(schemaErrors).forEach(([field, message]) => {
+    // Keep non-warranty schema errors in the legacy summary state.
+    if (Object.keys(errorsForOtherFields).length > 0) {
+      newErrors.formik = errorsForOtherFields;
+
+      Object.entries(errorsForOtherFields).forEach(([field, message]) => {
         if (field !== "name" && field !== "description") {
           newErrors[field] = message;
         }
@@ -2231,43 +2222,7 @@ export default function ProductManagementUI() {
         "Wait for catalog updates and uploads to finish before saving.";
     }
 
-    // Return policy validation
     const returnPolicy = formData?.warranty?.returnPolicy || {};
-    const warranty = formData?.warranty || {};
-    const warrantyEnabled = warranty.enabled === true;
-
-    if (warrantyEnabled) {
-      const period = Number(warranty.period);
-      if (!Number.isInteger(period) || period < 1 || period > 365) {
-        newErrors.warrantyPeriod =
-          "Warranty period must be a whole number between 1 and 365.";
-      }
-      if (!["days", "weeks", "months", "years"].includes(warranty.periodUnit)) {
-        newErrors.warrantyPeriodUnit = "Warranty unit is required.";
-      }
-      if (!String(warranty.provider || "").trim()) {
-        newErrors.warrantyProvider = "Warranty provider is required.";
-      }
-      if (!String(warranty.type || "").trim()) {
-        newErrors.warrantyType = "Warranty type is required.";
-      }
-      if (String(warranty.provider || "").trim().length > 100) {
-        newErrors.warrantyProvider =
-          "Warranty provider must be 100 characters or fewer.";
-      }
-      if (String(warranty.type || "").trim().length > 100) {
-        newErrors.warrantyType =
-          "Warranty type must be 100 characters or fewer.";
-      }
-      const warrantyTermsLength = getRichTextLength(warranty.terms);
-      if (warrantyTermsLength > 0 && warrantyTermsLength < 10) {
-        newErrors.warrantyTerms =
-          "Warranty terms must be at least 10 characters.";
-      } else if (warrantyTermsLength > 1000) {
-        newErrors.warrantyTerms =
-          "Warranty terms must be 1000 characters or fewer.";
-      }
-    }
     const restockingFee = returnPolicy?.restockingFee;
     if (
       restockingFee !== undefined &&
@@ -2278,45 +2233,6 @@ export default function ProductManagementUI() {
       newErrors.restockingFee =
         "Restocking fee must be a non-negative amount with no more than two decimal places.";
     }
-    const isReturnable = returnPolicy?.returnable === true;
-
-    if (isReturnable) {
-      if (
-        !["standard", "replacement_only", "non_returnable"].includes(
-          returnPolicy.type || "standard",
-        ) ||
-        !["refund", "replacement", "refund_or_replacement"].includes(
-          returnPolicy.resolution || "refund_or_replacement",
-        ) ||
-        !["platform", "seller", "customer"].includes(
-          returnPolicy.shippingPaidBy || "seller",
-        )
-      ) {
-        newErrors.returnWindowDays =
-          "Select a valid return policy type, resolution, and shipping responsibility.";
-      }
-      const returnWindowDays = Number(
-        returnPolicy?.returnWindowDays ?? returnPolicy?.days ?? 0,
-      );
-
-      if (
-        returnPolicy?.returnWindowDays === "" ||
-        returnPolicy?.returnWindowDays == null ||
-        Number(returnPolicy?.returnWindowDays) === 0
-      ) {
-        newErrors.returnWindowDays = "Return window is required.";
-      } else if (
-        !Number.isInteger(returnWindowDays) ||
-        returnWindowDays < 1 ||
-        returnWindowDays > 365
-      ) {
-        newErrors.returnWindowDays =
-          "Return window must be between 1 and 365 days.";
-      }
-    } else {
-      delete newErrors.returnWindowDays;
-    }
-
     // Variant field validation
     if (Array.isArray(variantsData) && variantsData.length) {
       const skuCounts = variantsData.reduce((counts, variant) => {
@@ -2847,21 +2763,10 @@ export default function ProductManagementUI() {
 
     if (Object.keys(schemaErrors).length) {
       basicDetailsFormik.setTouched(
-        Object.keys(schemaErrors).reduce((touched, field) => {
-          touched[field] = true;
-          return touched;
-        }, {}),
+        setNestedObjectValues(schemaErrors, true),
         false,
       );
     }
-    if (!warrantyEnabled) {
-      delete newErrors.warrantyPeriod;
-      delete newErrors.warrantyPeriodUnit;
-      delete newErrors.warrantyProvider;
-      delete newErrors.warrantyType;
-      delete newErrors.warrantyTerms;
-    }
-
     setError(newErrors);
     console.log("Validation errors:", newErrors);
     if (Object.keys(newErrors).length > 0) {
@@ -3999,6 +3904,10 @@ export default function ProductManagementUI() {
 
   const handleNestedChange = useCallback(
     (field, value) => {
+      if (field.startsWith("warranty.")) {
+        basicDetailsFormik.setFieldValue(field, value);
+      }
+
       const parts = field.split(".");
       if (parts.length === 1) {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -4019,87 +3928,7 @@ export default function ProductManagementUI() {
       }
 
       setError((prev) => {
-        if (
-          !prev &&
-          (field === "warranty.returnPolicy.returnWindowDays" ||
-            field === "warranty.returnPolicy.returnable")
-        ) {
-          const policy = formData.warranty?.returnPolicy || {};
-          const enabled =
-            field === "warranty.returnPolicy.returnable"
-              ? value === true
-              : policy.returnable === true;
-          if (!enabled) return null;
-          const days =
-            field === "warranty.returnPolicy.returnWindowDays"
-              ? value
-              : policy.returnWindowDays;
-          if (days === "" || days == null || days === 0)
-            return { returnWindowDays: "Return window is required." };
-          if (
-            !isValidNonNegativeInteger(days) ||
-            Number(days) < 1 ||
-            Number(days) > 365
-          )
-            return {
-              returnWindowDays: "Return window must be between 1 and 365 days.",
-            };
-          return null;
-        }
         if (!prev || typeof prev !== "object") return prev;
-
-        const warrantyFieldErrors = {
-          "warranty.period": "warrantyPeriod",
-          "warranty.periodUnit": "warrantyPeriodUnit",
-          "warranty.provider": "warrantyProvider",
-          "warranty.type": "warrantyType",
-          "warranty.terms": "warrantyTerms",
-        };
-        const errorKey = warrantyFieldErrors[field];
-        if (errorKey) {
-          const nextErrors = { ...prev };
-          const warranty = formData.warranty || {};
-          const enabled = warranty.enabled === true;
-
-          let message;
-          if (enabled && field === "warranty.period") {
-            const period = Number(value);
-            if (!Number.isInteger(period) || period < 1 || period > 365)
-              message =
-                "Warranty period must be a whole number between 1 and 365.";
-          } else if (
-            enabled &&
-            field === "warranty.periodUnit" &&
-            !["days", "weeks", "months", "years"].includes(value)
-          ) {
-            message = "Warranty unit is required.";
-          } else if (
-            enabled &&
-            field === "warranty.provider" &&
-            !String(value || "").trim()
-          ) {
-            message = "Warranty provider is required.";
-          } else if (
-            enabled &&
-            field === "warranty.type" &&
-            !String(value || "").trim()
-          ) {
-            message = "Warranty type is required.";
-          } else if (
-            enabled &&
-            field === "warranty.terms" &&
-            getRichTextLength(value) > 0 &&
-            getRichTextLength(value) < 10
-          ) {
-            message = "Warranty terms must be at least 10 characters.";
-          } else if (getRichTextLength(value) > 1000) {
-            message = "Warranty terms must be 1000 characters or fewer.";
-          }
-
-          if (message) nextErrors[errorKey] = message;
-          else delete nextErrors[errorKey];
-          return Object.keys(nextErrors).length ? nextErrors : null;
-        }
 
         if (field.startsWith("seo.") && prev.seo?.[field.slice(4)]) {
           const seoErrors = { ...prev.seo };
@@ -4110,70 +3939,42 @@ export default function ProductManagementUI() {
           return Object.keys(nextErrors).length ? nextErrors : null;
         }
 
-        if (
-          field !== "warranty.returnPolicy.returnWindowDays" &&
-          field !== "warranty.returnPolicy.returnable"
-        )
-          return prev;
-
-        const nextErrors = { ...prev };
-        const returnPolicy = formData.warranty?.returnPolicy || {};
-        const isReturnable =
-          field === "warranty.returnPolicy.returnable"
-            ? value === true
-            : returnPolicy.returnable === true;
-        if (!isReturnable) {
-          delete nextErrors.returnWindowDays;
-        } else {
-          const windowDays =
-            field === "warranty.returnPolicy.returnWindowDays"
-              ? value
-              : returnPolicy.returnWindowDays;
-          if (windowDays === "" || windowDays == null || windowDays === 0) {
-            nextErrors.returnWindowDays = "Return window is required.";
-          } else if (
-            !isValidNonNegativeInteger(windowDays) ||
-            Number(windowDays) < 1 ||
-            Number(windowDays) > 365
-          ) {
-            nextErrors.returnWindowDays =
-              "Return window must be between 1 and 365 days.";
-          } else {
-            delete nextErrors.returnWindowDays;
-          }
-        }
-        return Object.keys(nextErrors).length ? nextErrors : null;
+        return prev;
       });
     },
-    [formData.warranty],
+    [basicDetailsFormik, formData.warranty],
   );
 
-  const handleWarrantyToggle = useCallback((enabled) => {
-    setFormData((prev) => ({
-      ...prev,
-      warranty: {
-        ...(prev.warranty || {}),
-        enabled,
-        ...(!enabled
-          ? { period: "", periodUnit: "", provider: "", type: "", terms: "" }
-          : {}),
-      },
-    }));
-    if (!enabled) {
-      setError((previous) => {
-        if (!previous) return previous;
-        const next = { ...previous };
-        [
-          "warrantyPeriod",
-          "warrantyPeriodUnit",
-          "warrantyProvider",
-          "warrantyType",
-          "warrantyTerms",
-        ].forEach((key) => delete next[key]);
-        return Object.keys(next).length ? next : null;
-      });
-    }
-  }, []);
+  const handleWarrantyToggle = useCallback(
+    (enabled) => {
+      basicDetailsFormik.setFieldValue("warranty.enabled", enabled);
+      setFormData((prev) => ({
+        ...prev,
+        warranty: {
+          ...(prev.warranty || {}),
+          enabled,
+          ...(!enabled
+            ? { period: "", periodUnit: "", provider: "", type: "", terms: "" }
+            : {}),
+        },
+      }));
+      if (!enabled) {
+        setError((previous) => {
+          if (!previous) return previous;
+          const next = { ...previous };
+          [
+            "warrantyPeriod",
+            "warrantyPeriodUnit",
+            "warrantyProvider",
+            "warrantyType",
+            "warrantyTerms",
+          ].forEach((key) => delete next[key]);
+          return Object.keys(next).length ? next : null;
+        });
+      }
+    },
+    [basicDetailsFormik],
+  );
 
   const patchShipping = useCallback((patch) => {
     setFormData((prev) => ({
@@ -4557,30 +4358,10 @@ export default function ProductManagementUI() {
           <BasicDetailsTab
             formData={formData}
             errors={error}
+            formikErrors={basicDetailsFormik.errors}
+            formikTouched={basicDetailsFormik.touched}
             onFieldBlur={(field) => {
               basicDetailsFormik.setFieldTouched(field, true, true);
-              productBasicDetailsValidationSchema
-                .validateAt(field, formData, {
-                  context: { isSellerPanelUser },
-                })
-                .then(() => {
-                  setError((previous) => ({
-                    ...(previous || {}),
-                    formik: {
-                      ...(previous?.formik || {}),
-                      [field]: undefined,
-                    },
-                  }));
-                })
-                .catch((validationError) => {
-                  setError((previous) => ({
-                    ...(previous || {}),
-                    formik: {
-                      ...(previous?.formik || {}),
-                      [field]: validationError.message,
-                    },
-                  }));
-                });
             }}
             handleChange={handleChange}
             handleNestedChange={handleNestedChange}
@@ -5772,6 +5553,8 @@ export default function ProductManagementUI() {
       variantAxes,
       categoryAttributeSchema,
       error,
+      basicDetailsFormik.errors,
+      basicDetailsFormik.touched,
       commonImageUrl,
       commonImagesUploading,
       productVideoUploading,

@@ -73,6 +73,137 @@ export const productBasicDetailsValidationSchema = Yup.object({
   hsn_code: Yup.string().test("hsn-required", "HSN Code is required.", function (value) {
     return Boolean(String(value || this.parent.hsnCode || this.parent.hsn_id || "").trim());
   }),
+  warranty: Yup.object({
+    enabled: Yup.boolean(),
+    period: Yup.number()
+      .transform((value, originalValue) =>
+        originalValue === "" || originalValue == null ? undefined : value,
+      )
+      .typeError("Warranty period must be a whole number between 1 and 365.")
+      .when("enabled", {
+        is: true,
+        then: (schema) =>
+          schema
+            .integer("Warranty period must be a whole number between 1 and 365.")
+            .min(1, "Warranty period must be a whole number between 1 and 365.")
+            .max(365, "Warranty period must be a whole number between 1 and 365.")
+            .required("Warranty period is required."),
+        otherwise: (schema) => schema.notRequired(),
+      }),
+    periodUnit: Yup.string().when("enabled", {
+      is: true,
+      then: (schema) =>
+        schema
+          .oneOf(["days", "weeks", "months", "years"], "Warranty unit is required.")
+          .required("Warranty unit is required."),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+    provider: Yup.string().when("enabled", {
+      is: true,
+      then: (schema) =>
+        schema
+          .trim()
+          .required("Warranty provider is required.")
+          .max(100, "Warranty provider must be 100 characters or fewer."),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+    type: Yup.string().when("enabled", {
+      is: true,
+      then: (schema) =>
+        schema
+          .trim()
+          .required("Warranty type is required.")
+          .max(100, "Warranty type must be 100 characters or fewer."),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+    terms: Yup.string().when("enabled", {
+      is: true,
+      then: (schema) =>
+        schema
+          .test(
+            "warranty-terms-minimum",
+            "Warranty terms must be at least 10 characters.",
+            (value) => {
+              const length = productDescriptionText(value).length;
+              return length === 0 || length >= 10;
+            },
+          )
+          .test(
+            "warranty-terms-maximum",
+            "Warranty terms must be 1000 characters or fewer.",
+            (value) => productDescriptionText(value).length <= 1000,
+          ),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+    returnPolicy: Yup.object({
+      returnable: Yup.boolean(),
+      type: Yup.string().when("returnable", {
+        is: true,
+        then: (schema) =>
+          schema.test(
+            "valid-return-policy-type",
+            "Select a valid return policy type.",
+            (value) =>
+              ["standard", "replacement_only", "non_returnable"].includes(
+                value || "standard",
+              ),
+          ),
+        otherwise: (schema) => schema.notRequired(),
+      }),
+      resolution: Yup.string().when("returnable", {
+        is: true,
+        then: (schema) =>
+          schema.test(
+            "valid-return-resolution",
+            "Select a valid return resolution.",
+            (value) =>
+              ["refund", "replacement", "refund_or_replacement"].includes(
+                value || "refund_or_replacement",
+              ),
+          ),
+        otherwise: (schema) => schema.notRequired(),
+      }),
+      shippingPaidBy: Yup.string().when("returnable", {
+        is: true,
+        then: (schema) =>
+          schema.test(
+            "valid-return-shipping-payer",
+            "Select a valid return shipping responsibility.",
+            (value) => ["platform", "seller", "customer"].includes(value || "seller"),
+          ),
+        otherwise: (schema) => schema.notRequired(),
+      }),
+      returnWindowDays: Yup.number()
+        .transform((value, originalValue) =>
+          originalValue === "" || originalValue == null ? undefined : value,
+        )
+        .typeError("Return window must be between 1 and 365 days.")
+        .when("returnable", {
+          is: true,
+          then: (schema) =>
+            schema.test(
+              "valid-return-window",
+              "Return window is required.",
+              function (value) {
+                const windowDays = value ?? this.parent.days;
+                if (windowDays === undefined || windowDays === null || windowDays === "") {
+                  return this.createError({ message: "Return window is required." });
+                }
+
+                const numberOfDays = Number(windowDays);
+                if (!Number.isInteger(numberOfDays) || numberOfDays < 1 || numberOfDays > 365) {
+                  return this.createError({
+                    message: "Return window must be between 1 and 365 days.",
+                  });
+                }
+
+                return true;
+              },
+            ),
+          otherwise: (schema) => schema.notRequired(),
+        }),
+    }),
+  }),
 });
 
 export const parentInfluencerValidationSchema = Yup.object({
