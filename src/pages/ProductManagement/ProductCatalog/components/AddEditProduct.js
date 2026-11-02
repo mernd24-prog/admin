@@ -326,6 +326,13 @@ const toOptionalNumber = (value) => {
   return Number.isFinite(number) ? number : undefined;
 };
 
+const normalizeVariantSortOrder = (value, fallbackIndex) => {
+  if (value === null || value === undefined || value === "")
+    return fallbackIndex;
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : fallbackIndex;
+};
+
 const normalizeProductServiceabilityMode = (mode) => {
   const value = String(mode || "")
     .trim()
@@ -3470,7 +3477,7 @@ export default function ProductManagementUI() {
       isDefault:
         variant.isDefault === true ||
         (!variantsData.some((item) => item.isDefault) && index === 0),
-      sortOrder: variant.sortOrder ?? index,
+      sortOrder: normalizeVariantSortOrder(variant.sortOrder, index),
     }));
     const origin = compactObject(updatedFormData.origin || {});
     const dimensions = compactObject({
@@ -3776,6 +3783,8 @@ export default function ProductManagementUI() {
       const mappedErrors = {};
       let gstRateErrorMessage = "";
       let friendlyApiMessage = "";
+      const friendlyVariantSortOrderMessage =
+        "Variant sort order must be a valid number.";
       const setVariantApiError = (index, field, fieldMessage) => {
         mappedErrors.variants = mappedErrors.variants || {};
         mappedErrors.variants[index] = {
@@ -3797,7 +3806,10 @@ export default function ProductManagementUI() {
                   rawFieldMessage,
                 )
               ? "Add at least one tag."
-              : rawFieldMessage;
+              : /sortOrder|sort_order/i.test(`${field} ${rawFieldMessage}`) &&
+                  /must be a number|numeric|valid number/i.test(rawFieldMessage)
+                ? friendlyVariantSortOrderMessage
+                : rawFieldMessage;
         if (fieldMessage !== rawFieldMessage) {
           friendlyApiMessage = fieldMessage;
         }
@@ -3808,7 +3820,9 @@ export default function ProductManagementUI() {
           const friendlyMessage =
             variantField.toLowerCase() === "gstrate"
               ? formatGstRateError(fieldMessage)
-              : fieldMessage;
+              : variantField.toLowerCase() === "sortorder"
+                ? friendlyVariantSortOrderMessage
+                : fieldMessage;
           if (variantField.toLowerCase() === "gstrate") {
             gstRateErrorMessage = friendlyMessage;
           }
@@ -3917,6 +3931,16 @@ export default function ProductManagementUI() {
             Number(variantMatch[1]),
             variantMatch[2],
             friendlyMessage,
+          );
+        } else if (
+          variantMatch &&
+          variantMatch[2].toLowerCase() === "sortorder"
+        ) {
+          friendlyApiMessage = friendlyVariantSortOrderMessage;
+          setVariantApiError(
+            Number(variantMatch[1]),
+            variantMatch[2],
+            friendlyVariantSortOrderMessage,
           );
         } else if (
           /seo[\s._-]*keywords?|at least one seo keyword/i.test(message)
@@ -5526,9 +5550,8 @@ export default function ProductManagementUI() {
               <p>Tags and discoverability settings.</p>
             </div>
             <div className="space-y-2">
-              <p className="text-xs text-gray-500">
-                Tags help customers find this product through search and
-                filters.
+              <p className="text-sm font-medium font-[#252238]">
+                Tags <span className="text-red-400">*</span>
               </p>
               <TagsInput
                 tags={Array.isArray(formData?.tags) ? formData.tags : []}

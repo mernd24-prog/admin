@@ -16,45 +16,56 @@ const productDescriptionText = (value = "") => {
 };
 
 export const productBasicDetailsValidationSchema = Yup.object({
- name: Yup.string()
-  .trim()
-  .required("Product name is required.")
-  .min(3, "Product name must be at least 3 characters.")
-  .max(200, "Product name must not be more than 200 characters.")
-  .test(
-    "has-letter",
-    "Product name must contain at least one letter.",
-    (value) => !value || /\p{L}/u.test(value)
-  )
-  .test(
-    "no-repeated-spaces",
-    "Product name cannot contain repeated spaces.",
-    (value) => !value || !/ {2,}/u.test(value)
-  )
-  .test(
-    "no-only-spaces",
-    "Product name cannot contain only spaces.",
-    (value) => !value || value.trim().length > 0
-  )
-  .test(
-    "no-html-tags",
-    "HTML tags are not allowed in the product name.",
-    (value) => !value || !/<[^>]*>/u.test(value)
-  )
-  .test(
-    "no-control-characters",
-    "Product name contains invalid characters.",
-    (value) => !value || !/[\u0000-\u001F\u007F]/u.test(value)
-  ),
+  name: Yup.string()
+    .trim()
+    .required("Product name is required.")
+    .min(3, "Product name must be at least 3 characters.")
+    .max(200, "Product name must not be more than 200 characters.")
+    .test(
+      "has-letter",
+      "Product name must contain at least one letter.",
+      (value) => !value || /\p{L}/u.test(value),
+    )
+    .test(
+      "no-repeated-spaces",
+      "Product name cannot contain repeated spaces.",
+      (value) => !value || !/ {2,}/u.test(value),
+    )
+    .test(
+      "no-only-spaces",
+      "Product name cannot contain only spaces.",
+      (value) => !value || value.trim().length > 0,
+    )
+    .test(
+      "no-html-tags",
+      "HTML tags are not allowed in the product name.",
+      (value) => !value || !/<[^>]*>/u.test(value),
+    )
+    .test(
+      "no-control-characters",
+      "Product name contains invalid characters.",
+      (value) => !value || !/[\u0000-\u001F\u007F]/u.test(value),
+    ),
   description: Yup.string()
     .strict(true)
     .required("Description is required.")
-    .test("description-length", "Description must be at least 10 characters.", (value) => {
-      const length = productDescriptionText(value).length;
-      return length === 0 || length >= 10;
-    })
-    .test("description-max", "Description must not be more than 5000 characters.", (value) => productDescriptionText(value).length <= 5000),
-  shortDescription: Yup.string().max(500, "Short description must be 500 characters or fewer."),
+    .test(
+      "description-length",
+      "Description must be at least 10 characters.",
+      (value) => {
+        const length = productDescriptionText(value).length;
+        return length === 0 || length >= 10;
+      },
+    )
+    .test(
+      "description-max",
+      "Description must not be more than 5000 characters.",
+      (value) => productDescriptionText(value).length <= 5000,
+    ),
+  shortDescription: Yup.string().max(
+    500,
+    "Short description must be 500 characters or fewer.",
+  ),
   sellerId: Yup.string().when("$isSellerPanelUser", {
     is: false,
     then: (schema) => schema.required("Seller is required."),
@@ -64,15 +75,38 @@ export const productBasicDetailsValidationSchema = Yup.object({
     then: (schema) => schema.notRequired(),
     otherwise: (schema) => schema.required("Organization is required."),
   }),
-  brand: Yup.string().test("brand-required", "Brand is required.", function (value) {
-    return Boolean(String(value || this.parent.brandId || this.parent.brand_id || "").trim());
-  }),
-  category_id: Yup.string().test("category-required", "Category is required.", function (value) {
-    return Boolean(value || this.parent.categoryId || this.parent.category || this.parent.category_key);
-  }),
-  hsn_code: Yup.string().test("hsn-required", "HSN Code is required.", function (value) {
-    return Boolean(String(value || this.parent.hsnCode || this.parent.hsn_id || "").trim());
-  }),
+  brand: Yup.string().test(
+    "brand-required",
+    "Brand is required.",
+    function (value) {
+      return Boolean(
+        String(
+          value || this.parent.brandId || this.parent.brand_id || "",
+        ).trim(),
+      );
+    },
+  ),
+  category_id: Yup.string().test(
+    "category-required",
+    "Category is required.",
+    function (value) {
+      return Boolean(
+        value ||
+        this.parent.categoryId ||
+        this.parent.category ||
+        this.parent.category_key,
+      );
+    },
+  ),
+  hsn_code: Yup.string().test(
+    "hsn-required",
+    "HSN Code is required.",
+    function (value) {
+      return Boolean(
+        String(value || this.parent.hsnCode || this.parent.hsn_id || "").trim(),
+      );
+    },
+  ),
 });
 
 export const parentInfluencerValidationSchema = Yup.object({
@@ -613,17 +647,31 @@ export const productSeoValidationSchema = Yup.object({
     .min(1, "Add at least one SEO keyword.")
     .max(20, "Use no more than 20 SEO keywords."),
   metaTitle: Yup.string()
+    .transform((value) => (typeof value === "string" ? value.trim() : value))
     .nullable()
+    .test(
+      "not-blank",
+      "Meta title cannot be empty or blank spaces.",
+      (value) => value === null || value === undefined || value.trim().length > 0,
+    )
     .max(70, "Meta title must be 70 characters or fewer.")
     .min(3, "Meta title must be at least 3 characters."),
+
   metaDescription: Yup.string()
-    .min(3, "Meta description must be at least 3 characters.")
+    .transform((value) => (typeof value === "string" ? value.trim() : value))
     .nullable()
-    .max(160, "Meta description must be 160 characters or fewer."),
+    .test(
+      "not-blank",
+      "Meta description cannot be empty or blank spaces.",
+      (value) =>
+        value === null || value === undefined || value.trim().length > 0,
+    )
+    .max(160, "Meta description must be 160 characters or fewer.")
+    .min(3, "Meta description must be at least 3 characters."),
 
   canonicalUrl: Yup.string()
     .nullable()
-    .max(2048, "Canonical URL must be 2048 characters or fewer.")
+    .max(2048, "Canonical URL must  be 2048 characters or fewer.")
     .test("http-url", "Canonical URL must use HTTP or HTTPS.", (value) => {
       if (!value) return true;
 
@@ -639,11 +687,20 @@ export const productSeoValidationSchema = Yup.object({
   ogTitle: Yup.string()
     .nullable()
     .max(70, "Open Graph title must be 70 characters or fewer.")
-    .min(3, "Open Graph title must be at least 3 characters."),
+    .test(
+      "min-length",
+      "Open Graph title must be at least 3 characters.",
+      (value) => !value || value.trim().length >= 3,
+    ),
+
   ogDescription: Yup.string()
     .nullable()
     .max(160, "Open Graph description must be 160 characters or fewer.")
-    .min(3, "Open Graph description must be at least 3 characters."),
+    .test(
+      "min-length",
+      "Open Graph description must be at least 3 characters.",
+      (value) => !value || value.trim().length >= 3,
+    ),
   ogImage: Yup.string()
     .nullable()
     .max(2048, "OG Image URL must be 2048 characters or fewer.")
@@ -692,8 +749,27 @@ export const contentPageValidationSchema = Yup.object({
     roles: cmsOptionalTextList("Role", 50),
   }),
   seo: Yup.object({
-    metaTitle: cmsOptionalTextMax("Meta title", 60),
-    metaDescription: cmsOptionalText("Meta description", 3, 160),
+    metaTitle: Yup.string()
+      .transform((value) => (typeof value === "string" ? value.trim() : value))
+      .nullable()
+      .test(
+        "not-blank",
+        "Meta title cannot be empty or blank spaces.",
+        (value) => value === null || value === undefined || value.trim().length > 0,
+      )
+      .max(60, "Meta title must be no more than 60 characters")
+      .min(3, "Meta title must be at least 3 characters"),
+    metaDescription: Yup.string()
+      .transform((value) => (typeof value === "string" ? value.trim() : value))
+      .nullable()
+      .test(
+        "not-blank",
+        "Meta description cannot be empty or blank spaces.",
+        (value) =>
+          value === null || value === undefined || value.trim().length > 0,
+      )
+      .min(3, "Meta description must be at least 3 characters")
+      .max(160, "Meta description must be no more than 160 characters"),
     keywords: cmsOptionalTextList("SEO keyword", 100),
     focusKeyword: cmsOptionalText("Focus keyword", 2, 100),
     canonicalUrl: cmsOptionalText("Canonical URL", 2, 2048),

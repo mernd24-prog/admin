@@ -408,14 +408,8 @@ const SEOPanel = ({
         {showAdvanced && (
           <div className="mt-3 space-y-4 pl-4 border-l-2 border-gray-100">
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">
-                  OG Title
-                </label>
-              </div>
-
               <FormInput
-                label=""
+                label="OG Title"
                 name="ogTitle"
                 type="text"
                 className="!mb-0"
@@ -431,14 +425,8 @@ const SEOPanel = ({
               />
             </div>
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">
-                  OG Description
-                </label>
-              </div>
-
               <FormInput
-                label=""
+                label="OG Description"
                 name="ogDescription"
                 type="textarea"
                 rows={2}
