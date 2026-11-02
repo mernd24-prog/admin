@@ -18,6 +18,7 @@ const TagsInput = ({
   placeholder = "Add tag…",
   maxTags = 20,
   error = "",
+  onBlur,
 }) => {
   const [input, setInput] = useState("");
   const [focused, setFocused] = useState(false);
@@ -73,7 +74,10 @@ const TagsInput = ({
           aria-invalid={Boolean(error)}
           onKeyDown={handleKeyDown}
           onFocus={() => setFocused(true)}
-          onBlur={() => setTimeout(() => setFocused(false), 150)}
+          onBlur={() => {
+            setTimeout(() => setFocused(false), 150);
+            onBlur?.();
+          }}
         />
 
         {/* ── Autocomplete dropdown ── */}

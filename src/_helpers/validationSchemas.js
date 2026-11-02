@@ -66,6 +66,39 @@ export const productBasicDetailsValidationSchema = Yup.object({
     500,
     "Short description must be 500 characters or fewer.",
   ),
+  tags: Yup.array()
+    .ensure()
+    .test("product-tags", "Add at least onsdfgdfge tag.", function (tags = []) {
+      if (tags.length === 0) {
+        return this.createError({ message: "Add at least one tag." });
+      }
+      if (tags.length > 20) {
+        return this.createError({ message: "Use no more than 20 tags." });
+      }
+
+      const normalizedTags = tags.map((tag) => String(tag || "").trim());
+      if (
+        normalizedTags.some(
+          (tag) =>
+            tag.length < 2 ||
+            tag.length > 40 ||
+            !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tag),
+        )
+      ) {
+        return this.createError({
+          message:
+            "Tags must be 2–40 lowercase letters or numbers separated by single hyphens.",
+        });
+      }
+
+      if (new Set(normalizedTags.map((tag) => tag.toLowerCase())).size !== tags.length) {
+        return this.createError({
+          message: "Tags must be unique, ignoring letter case.",
+        });
+      }
+
+      return true;
+    }),
   sellerId: Yup.string().when("$isSellerPanelUser", {
     is: false,
     then: (schema) => schema.required("Seller is required."),
