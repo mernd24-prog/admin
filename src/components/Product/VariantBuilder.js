@@ -8,7 +8,6 @@ import React, {
 import { uploadFileMulti } from "../../_helpers/globalFunctions";
 import { validateImage } from "../../utils/imageValidation";
 import { toast } from "sonner";
-import { useFormik } from "formik";
 import {
   optionSubmissionSchema,
   bulkSalePriceSchema,
@@ -19,6 +18,7 @@ import { FaInfoCircle } from "react-icons/fa";
 import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
 import FormInput from "../Atoms/FormInput/FormInput";
 import { Circle, Copy, ChevronDown, Trash2 } from "lucide-react";
+import { useFormik } from "formik";
 
 const MAX_VARIANT_IMAGES = 5;
 const MAX_PRODUCT_MONEY = 999999999.99;
@@ -184,9 +184,23 @@ const VariantBuilder = ({
   };
 
   const getVariantFieldError = (idx, field) => {
-    const fieldError =
-      errors && typeof errors === "object" ? errors[idx]?.[field] : undefined;
-    return touchedVariants[idx]?.[field] ? fieldError : undefined;
+    if (!touchedVariants[idx]?.[field]) return "";
+
+    const value = variants[idx]?.[field];
+
+    // Show required error immediately when the field is focused and empty
+    if (value === "" || value === null || value === undefined) {
+      const labels = {
+        price: "Price",
+        mrp: "MRP",
+        salePrice: "Special Price",
+      };
+
+      return `${labels[field]} is required`;
+    }
+
+    // Show existing validation errors
+    return errors?.[idx]?.[field] || "";
   };
 
   const bulkSalePriceValidator = useMemo(
@@ -1314,10 +1328,8 @@ const VariantBuilder = ({
                           data-error-field={
                             variantErrors.price ? "variants" : undefined
                           }
-                          error={
-                            getVariantFieldError(idx, "price") ||
-                            variantErrors.price
-                          }
+                          error={getVariantFieldError(idx, "price")}
+                          onFocus={() => touchVariantField(idx, "price")}
                           type="text"
                           inputMode="decimal"
                           value={variant.price ?? ""}
@@ -1351,10 +1363,8 @@ const VariantBuilder = ({
                           data-error-field={
                             variantErrors.mrp ? "variants" : undefined
                           }
-                          error={
-                            getVariantFieldError(idx, "mrp") ||
-                            variantErrors.mrp
-                          }
+                          error={getVariantFieldError(idx, "mrp")}
+                          onFocus={() => touchVariantField(idx, "mrp")}
                           type="text"
                           inputMode="decimal"
                           value={variant.mrp ?? ""}
@@ -1388,10 +1398,8 @@ const VariantBuilder = ({
                           data-error-field={
                             variantErrors.salePrice ? "variants" : undefined
                           }
-                          error={
-                            getVariantFieldError(idx, "salePrice") ||
-                            variantErrors.salePrice
-                          }
+                          error={getVariantFieldError(idx, "salePrice")}
+                          onFocus={() => touchVariantField(idx, "salePrice")}
                           type="text"
                           inputMode="decimal"
                           value={variant.salePrice ?? ""}
