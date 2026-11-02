@@ -183,6 +183,12 @@ const VariantBuilder = ({
     }));
   };
 
+  const getVariantFieldError = (idx, field) => {
+    const fieldError =
+      errors && typeof errors === "object" ? errors[idx]?.[field] : undefined;
+    return touchedVariants[idx]?.[field] ? fieldError : undefined;
+  };
+
   const bulkSalePriceValidator = useMemo(
     () => bulkSalePriceSchema(variants),
     [variants],
@@ -1304,10 +1310,14 @@ const VariantBuilder = ({
                         <FormInput
                           label="Price (₹)"
                           name={`variants.${idx}.price`}
+                          required
                           data-error-field={
                             variantErrors.price ? "variants" : undefined
                           }
-                          error={variantErrors.price}
+                          error={
+                            getVariantFieldError(idx, "price") ||
+                            variantErrors.price
+                          }
                           type="text"
                           inputMode="decimal"
                           value={variant.price ?? ""}
@@ -1336,11 +1346,15 @@ const VariantBuilder = ({
                       <div>
                         <FormInput
                           label="MRP (₹)"
+                          required
                           name={`variants.${idx}.mrp`}
                           data-error-field={
                             variantErrors.mrp ? "variants" : undefined
                           }
-                          error={variantErrors.mrp}
+                          error={
+                            getVariantFieldError(idx, "mrp") ||
+                            variantErrors.mrp
+                          }
                           type="text"
                           inputMode="decimal"
                           value={variant.mrp ?? ""}
@@ -1369,11 +1383,15 @@ const VariantBuilder = ({
                       <div>
                         <FormInput
                           label="Special Price (₹)"
+                          required
                           name={`variants.${idx}.salePrice`}
                           data-error-field={
                             variantErrors.salePrice ? "variants" : undefined
                           }
-                          error={variantErrors.salePrice}
+                          error={
+                            getVariantFieldError(idx, "salePrice") ||
+                            variantErrors.salePrice
+                          }
                           type="text"
                           inputMode="decimal"
                           value={variant.salePrice ?? ""}
@@ -1573,7 +1591,8 @@ const VariantBuilder = ({
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-xs font-semibold text-gray-700">
-                            Variant Images
+                            Variant Images{" "}
+                            <span className="text-red-400">*</span>
                           </p>
 
                           <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-full">
