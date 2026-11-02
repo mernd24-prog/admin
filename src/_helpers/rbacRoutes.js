@@ -455,7 +455,7 @@ export const MODULE_DEFAULT_ROUTES = {
   // Marketing
   coupons: "discount-coupons",
   pricing: "discount-coupons",
-  referral: "referral-commerce",
+  referral: "referral-commerce/overview",
   notifications: "messages",
   reports: "reports-sales",
   // Invoices & Taxation

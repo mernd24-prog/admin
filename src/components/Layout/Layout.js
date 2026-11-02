@@ -867,12 +867,23 @@ function Layout() {
       // when Dashboard was not assigned. Land them on their first permitted
       // page instead of rendering an avoidable 403 as the initial screen.
       if (path === "/home") {
+        const referralOverview = "/referral-commerce/overview";
+        if (!isSellerPanel() && hasPermission(referralOverview)) {
+          return <Navigate to={`/app${referralOverview}`} replace />;
+        }
         const firstAllowedRoute = routeRegistry.find(
           (route) =>
             route.path &&
             route.path !== "/home" &&
             !route.path.includes(":") &&
             !route.redirectTo &&
+            !isSelfServiceRoute(route.path) &&
+            (backendRoutePatterns.has(normalizeRoutePattern(route.path)) ||
+              getRouteModuleCandidates(
+                route.permissionPath || route.path,
+                routePermissionModules,
+                { sellerPanel: isSellerPanel() },
+              ).length > 0) &&
             hasPermission(route.permissionPath || route.path),
         );
         if (firstAllowedRoute) {

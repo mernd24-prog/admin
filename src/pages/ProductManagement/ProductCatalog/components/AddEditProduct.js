@@ -2034,9 +2034,7 @@ export default function ProductManagementUI() {
     }
 
     // Shipping validation
-    const hasShippingProfile = Boolean(formData?.shipping?.shippingProfileId);
-
-    if (!hasShippingProfile) {
+    {
       const allowedPincodes = normalizePincodeList(
         formData?.shipping?.allowPincodes ||
           formData?.shipping?.serviceablePincodes,
@@ -3373,11 +3371,10 @@ export default function ProductManagementUI() {
             additionalCost: profileShippingCharge,
             shippingCharge: profileShippingCharge,
 
-            // The profile remains the delivery source. Product-level coverage
-            // stays unrestricted and empty so it cannot conflict with it.
+            // Product pincodes extend profile coverage; charges and ETA stay on the profile.
             serviceabilityMode: "all_pincodes",
-            allowPincodes: [],
-            serviceablePincodes: [],
+            allowPincodes: manualDeliveryPincodes,
+            serviceablePincodes: manualDeliveryPincodes,
             regions: [],
             states: [],
             cities: [],
@@ -5014,7 +5011,7 @@ export default function ProductManagementUI() {
 
             {/* Product Delivery Pincodes */}
             {/* Product Delivery Pincodes */}
-            {!formData?.shipping?.shippingProfileId && (
+           
               <div className="space-y-4 border-t border-[var(--admin-line)] pt-5">
                 <div>
                   <p className="text-sm font-semibold text-gray-800">
@@ -5022,8 +5019,9 @@ export default function ProductManagementUI() {
                   </p>
 
                   <p className="mt-0.5 text-xs text-gray-500">
-                    Choose where this product can be delivered. These rules also
-                    apply when shipping is free.
+                    With a shipping profile, these pincodes add to its delivery area.
+                    Without a profile, delivery is limited to these pincodes; leave
+                    empty for All India. These rules also apply when shipping is free.
                   </p>
                 </div>
 
@@ -5105,7 +5103,7 @@ export default function ProductManagementUI() {
                   </p>
                 )}
               </div>
-            )}
+           
           </div>
         ),
       },

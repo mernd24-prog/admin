@@ -1,3 +1,4 @@
+import { usePermission } from "../../_helpers/usePermission";
 import MarketingSettings from "../../components/Marketing/MarketingSettings";
 import React, {
   useCallback,
@@ -1453,6 +1454,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
 };
 
 const ReferralCommerce = () => {
+  const { can, permMap } = usePermission();
   const { section } = useParams();
   const navigate = useNavigate();
   const referralCodeStatuses = useDropdownOptions("referral-code-statuses");
@@ -1475,6 +1477,9 @@ const ReferralCommerce = () => {
     "referral-bonus-release-rules",
   );
   const dispatch = useDispatch();
+  // Each report has its own RBAC module. Do not prefetch unassigned reports.
+  const dispatchReferralRead = (action, moduleCode) =>
+    can(moduleCode, "view") ? dispatch(action) : Promise.resolve();
   const referralState = useSelector((state) => state.referralCommerce || {});
   const activeTab = sectionToTab[section] || "overview";
   const pageMeta =
@@ -1778,19 +1783,21 @@ const ReferralCommerce = () => {
         : {}),
     });
     await Promise.all([
-      dispatch(getReferralSummary()),
-      dispatch(getReferralHierarchy()),
-      dispatch(
+      dispatchReferralRead(getReferralSummary(), "referral-overview"),
+      dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
+      dispatchReferralRead(
         getReferralInfluencers(
           withStatus(["pending", "active", "suspended", "rejected"]),
         ),
+        "influencer-management",
       ),
-      dispatch(
+      dispatchReferralRead(
         getReferralCodes(
           withStatus(["active", "inactive", "expired", "suspended"]),
         ),
+        "referral-codes",
       ),
-      dispatch(
+      dispatchReferralRead(
         getReferralOrders(
           withStatus([
             "pending",
@@ -1800,8 +1807,9 @@ const ReferralCommerce = () => {
             "reversed",
           ]),
         ),
+        "referral-orders",
       ),
-      dispatch(
+      dispatchReferralRead(
         getReferralCommissions(
           withStatus([
             "pending",
@@ -1812,8 +1820,9 @@ const ReferralCommerce = () => {
             "reversed",
           ]),
         ),
+        "referral-ledger",
       ),
-      dispatch(
+      dispatchReferralRead(
         getReferralPayouts(
           withStatus([
             "pending",
@@ -1824,16 +1833,18 @@ const ReferralCommerce = () => {
             "failed",
           ]),
         ),
+        "referral-payouts",
       ),
-      dispatch(getReferralRules({ page: 1, limit: 20 })),
-      dispatch(getReferralBonusRules(withStatus(["active", "inactive"]))),
-      dispatch(getReferralBonusProgress({ page: 1, limit: 50 })),
-      dispatch(
+      dispatchReferralRead(getReferralRules({ page: 1, limit: 20 }), "referral-rules"),
+      dispatchReferralRead(getReferralBonusRules(withStatus(["active", "inactive"])), "referral-bonus-rules"),
+      dispatchReferralRead(getReferralBonusProgress({ page: 1, limit: 50 }), "referral-bonus-progress"),
+      dispatchReferralRead(
         getReferralBonusAchievements(
           withStatus(["locked", "released", "reversed"]),
         ),
+        "referral-bonus-history",
       ),
-      dispatch(
+      dispatchReferralRead(
         getReferralFraudReviews({
           page: 1,
           limit: 50,
@@ -1842,6 +1853,7 @@ const ReferralCommerce = () => {
             ? { status: nextStatus }
             : {}),
         }),
+        "referral-fraud",
       ),
     ]);
   };
@@ -1858,50 +1870,54 @@ const ReferralCommerce = () => {
     const requests = {
       overview: () =>
         Promise.all([
-          dispatch(getReferralSummary()),
-          dispatch(getReferralOrders({ page: 1, limit: 50 })),
+          dispatchReferralRead(getReferralSummary(), "referral-overview"),
+          dispatchReferralRead(getReferralOrders({ page: 1, limit: 50 }), "referral-orders"),
         ]),
       influencers: () =>
         Promise.all([
-          dispatch(
+          dispatchReferralRead(
             getReferralInfluencers({ ...query, influencerType: "parent" }),
+            "influencer-management",
           ),
-          dispatch(getReferralHierarchy()),
+          dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
         ]),
 
-      rules: () => dispatch(getReferralRules({ page: 1, limit: 20 })),
+      rules: () => dispatchReferralRead(getReferralRules({ page: 1, limit: 20 }), "referral-rules"),
       bonuses: () =>
         Promise.all([
-          dispatch(
+          dispatchReferralRead(
             getReferralBonusRules({
               ...query,
               status: ["active", "inactive"].includes(query.status)
                 ? query.status
                 : undefined,
             }),
+            "referral-bonus-rules",
           ),
-          dispatch(
+          dispatchReferralRead(
             getReferralBonusProgress({
               ...query,
               status: ["achieved", "in_progress"].includes(query.status)
                 ? query.status
                 : undefined,
             }),
+            "referral-bonus-progress",
           ),
-          dispatch(
+          dispatchReferralRead(
             getReferralBonusAchievements({
               ...query,
               status: ["locked", "released", "reversed"].includes(query.status)
                 ? query.status
                 : undefined,
             }),
+            "referral-bonus-history",
           ),
         ]),
-      orders: () => dispatch(getReferralOrders(query)),
-      commissions: () => dispatch(getReferralCommissions(query)),
-      payouts: () => dispatch(getReferralPayouts(query)),
-      hierarchy: () => dispatch(getReferralHierarchy()),
-      fraud: () => dispatch(getReferralFraudReviews(query)),
+      orders: () => dispatchReferralRead(getReferralOrders(query), "referral-orders"),
+      commissions: () => dispatchReferralRead(getReferralCommissions(query), "referral-ledger"),
+      payouts: () => dispatchReferralRead(getReferralPayouts(query), "referral-payouts"),
+      hierarchy: () => dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
+      fraud: () => dispatchReferralRead(getReferralFraudReviews(query), "referral-fraud"),
     };
     return requests[activeTab]?.();
   };
@@ -1912,7 +1928,7 @@ const ReferralCommerce = () => {
   useEffect(() => {
     refreshAll({ q: "", status: "" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [permMap]);
 
   useEffect(() => {
     if (isInitialMount.current) {

@@ -85,6 +85,7 @@ const ToggleField = ({ label, checked, onChange, hint, activeLabel = "Enabled", 
 );
 
 export default function MarketingSettings({ kind = "coupons" }) {
+  const permissionModule = kind === "referrals" ? "referral-rules" : "admin";
   const title =
     kind === "referrals"
       ? "Referral Marketing Settings"
@@ -154,7 +155,7 @@ export default function MarketingSettings({ kind = "coupons" }) {
         >
           Refresh
         </button>
-        <PermissionGuard module="admin" action={ACTIONS.UPDATE} hide>
+        <PermissionGuard module={permissionModule} action={ACTIONS.UPDATE} hide>
           <button
             type="button"
             className="admin-btn-primary"
@@ -168,7 +169,7 @@ export default function MarketingSettings({ kind = "coupons" }) {
       <p className="mb-4 text-sm text-gray-600" aria-live="polite">
         {marketingUsage && marketingUsage.campaignKey === policy.campaignKey
           ? `Saved campaign ${marketingUsage.campaignKey}: ₹${marketingUsage.spent} reserved across ${marketingUsage.orders} orders. Remaining saved budget: ${marketingUsage.remaining === null ? "Unlimited" : `₹${marketingUsage.remaining}`}. Refresh to update.`
-          : "Save and refresh to view the campaign budget usage (admin permission required)."}
+          : "Save and refresh to view the campaign budget usage."}
       </p>
       <p className="mb-4 text-sm text-gray-600">
         Limits apply across{" "}
