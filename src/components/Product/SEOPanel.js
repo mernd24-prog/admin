@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ImageUpload from "../Atoms/ImageGallery/ImageUpload";
 import FormInput from "../Atoms/FormInput/FormInput";
+import { productSeoValidationSchema } from "../../_helpers/validationSchemas";
 import {
   FiGlobe,
   FiMonitor,
@@ -61,6 +62,21 @@ const SEOPanel = ({
         ? errors.keywords.find((error) => typeof error === "string") || ""
         : "";
 
+  const validateKeywordList = (nextKeywords) => {
+    try {
+      productSeoValidationSchema.validateSyncAt("keywords", {
+        ...seo,
+        keywords: nextKeywords,
+      });
+      return "";
+    } catch (validationError) {
+      return validationError.errors?.[0] || validationError.message;
+    }
+  };
+  const keywordDraftError = keywordInput
+    ? validateKeywordList([...keywords, keywordInput])
+    : "";
+
   const updateSeoField = (field, value) => {
     onChange(`seo.${field}`, value);
     formik?.setFieldValue(field, value);
@@ -77,36 +93,24 @@ const SEOPanel = ({
   }, [errors.ogTitle, errors.ogDescription, errors.ogImage]);
 
   const addKeyword = () => {
-    const keyword = keywordInput.trim();
-    if (
-      keyword.length >= 2 &&
-      !keywords.some(
-        (item) => String(item).trim().toLowerCase() === keyword.toLowerCase(),
-      ) &&
-      keyword.length <= 60 &&
-      keywords.length < maxKeywords
-    ) {
-      updateSeoField("keywords", [...keywords, keyword]);
-      setKeywordInput("");
+    if (!keywordInput) return;
+    const nextKeywords = [...keywords, keywordInput];
+    const validationError = validateKeywordList(nextKeywords);
+    if (validationError) {
+      formik?.setFieldTouched("keywords", true, false);
+      formik?.setFieldError("keywords", validationError);
+      return;
     }
+    updateSeoField("keywords", nextKeywords);
+    formik?.setFieldTouched("keywords", true, false);
+    formik?.setFieldError("keywords", undefined);
+    setKeywordInput("");
   };
 
   const handleKeywordAdd = (e) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
-
-      const keyword = keywordInput.trim();
-      if (
-        keyword.length >= 2 &&
-        !keywords.some(
-          (item) => String(item).trim().toLowerCase() === keyword.toLowerCase(),
-        ) &&
-        keyword.length <= 60 &&
-        keywords.length < maxKeywords
-      ) {
-        updateSeoField("keywords", [...keywords, keyword]);
-        setKeywordInput("");
-      }
+      addKeyword();
     }
   };
 
@@ -115,6 +119,7 @@ const SEOPanel = ({
       "keywords",
       keywords.filter((k) => k !== kw),
     );
+    formik?.setFieldTouched("keywords", true, false);
   };
 
   const metaPreviewTitle = seo.metaTitle || "Your Product Title";
@@ -305,7 +310,15 @@ const SEOPanel = ({
           }
           value={keywordInput}
           disabled={keywordsAtMax}
-          onChange={(e) => setKeywordInput(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value.replace(/[^A-Za-z0-9 ]/g, "");
+            setKeywordInput(value);
+            const validationError = validateKeywordList(
+              value ? [...keywords, value] : keywords,
+            );
+            formik?.setFieldTouched("keywords", true, false);
+            formik?.setFieldError("keywords", validationError || undefined);
+          }}
           onKeyDown={handleKeywordAdd}
           onBlur={() => {
             addKeyword();
@@ -314,7 +327,7 @@ const SEOPanel = ({
           maxLength={60}
           showLengthCount={false}
           aria-required="true"
-          error={keywordError}
+          error={keywordDraftError || keywordError}
           helperText="Required — type a keyword, then press Enter or comma to add it."
         />
         <div className="flex min-h-[34px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-2">
@@ -408,14 +421,8 @@ const SEOPanel = ({
         {showAdvanced && (
           <div className="mt-3 space-y-4 pl-4 border-l-2 border-gray-100">
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">
-                  OG Title
-                </label>
-              </div>
-
               <FormInput
-                label=""
+                label="OG Title"
                 name="ogTitle"
                 type="text"
                 className="!mb-0"
@@ -431,14 +438,8 @@ const SEOPanel = ({
               />
             </div>
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">
-                  OG Description
-                </label>
-              </div>
-
               <FormInput
-                label=""
+                label="OG Description"
                 name="ogDescription"
                 type="textarea"
                 rows={2}
@@ -468,46 +469,48 @@ const SEOPanel = ({
                 loadingText="Uploading OG image..."
               />
               <div className="space-y-1">
-               <FormInput
-  label="OG Image URL"
-  name="ogImage"
-  type="url"
-  maxLength={2048}
-  limitMessage="OG Image URL must be 2048 characters or fewer."
-  className="!mb-0"
-  inputClassName="product-flat-gold-focus"
-  placeholder="https://cdn.yourstore.com/og-image.jpg"
-  value={seo.ogImage || ""}
-  onPaste={(event) => {
-    const pastedUrl = event.clipboardData
-      ?.getData("text")
-      ?.trim();
+                <FormInput
+                  label="OG Image URL"
+                  name="ogImage"
+                  type="url"
+                  maxLength={2048}
+                  limitMessage="OG Image URL must be 2048 characters or fewer."
+                  className="!mb-0"
+                  inputClassName="product-flat-gold-focus"
+                  placeholder="https://cdn.yourstore.com/og-image.jpg"
+                  value={seo.ogImage || ""}
+                  onPaste={(event) => {
+                    const pastedUrl = event.clipboardData
+                      ?.getData("text")
+                      ?.trim();
 
-    if (!pastedUrl) return;
+                    if (!pastedUrl) return;
 
-    if (pastedUrl.length > 2048) {
-      event.preventDefault();
-      setOgImagePasteError("OG Image URL must be 2048 characters or fewer.");
-      return;
-    }
+                    if (pastedUrl.length > 2048) {
+                      event.preventDefault();
+                      setOgImagePasteError(
+                        "OG Image URL must be 2048 characters or fewer.",
+                      );
+                      return;
+                    }
 
-    if (!isHttpUrl(pastedUrl)) {
-      event.preventDefault();
-      setOgImagePasteError(
-        "Pasted image URLs must be valid HTTP/HTTPS URLs.",
-      );
-      return;
-    }
+                    if (!isHttpUrl(pastedUrl)) {
+                      event.preventDefault();
+                      setOgImagePasteError(
+                        "Pasted image URLs must be valid HTTP/HTTPS URLs.",
+                      );
+                      return;
+                    }
 
-    setOgImagePasteError("");
-  }}
-  onChange={(e) => {
-    setOgImagePasteError("");
-    updateSeoField("ogImage", e.target.value);
-  }}
-  onBlur={() => touchSeoField("ogImage")}
-  error={ogImageError}
-/>
+                    setOgImagePasteError("");
+                  }}
+                  onChange={(e) => {
+                    setOgImagePasteError("");
+                    updateSeoField("ogImage", e.target.value);
+                  }}
+                  onBlur={() => touchSeoField("ogImage")}
+                  error={ogImageError}
+                />
               </div>
             </div>
           </div>

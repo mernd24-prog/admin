@@ -1,7 +1,6 @@
-import { validateProductName } from "./productNameValidation";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useFormik } from "formik";
+import { setNestedObjectValues, useFormik } from "formik";
 import BasicDetailsTab from "./BasicDetailsTab";
 import ProductSettingsPanel from "./ProductSettingsPanel";
 import { useDispatch, useSelector } from "react-redux";
@@ -57,7 +56,11 @@ import VariantBuilder from "../../../../components/Product/VariantBuilder";
 import SEOPanel from "../../../../components/Product/SEOPanel";
 import TagsInput from "../../../../components/Product/TagsInput";
 import { getSelectedSellerOrganizationId } from "../../../../_helpers/sellerOrganizationContext";
-import { getShippingProfile, getShippingProfiles, getShippingProfileTemplates } from "../../../../Redux/deliverySlice";
+import {
+  getShippingProfile,
+  getShippingProfiles,
+  getShippingProfileTemplates,
+} from "../../../../Redux/deliverySlice";
 import FilterSelect from "../../../../components/Atoms/FilterSelect/FilterSelect";
 import FormInput from "../../../../components/Atoms/FormInput/FormInput";
 import {
@@ -67,7 +70,18 @@ import {
   normalizeRole,
 } from "../../../../_helpers/authStorage";
 import { isSellerPanel } from "../../../../_helpers/panelConfig";
-import { productSeoValidationSchema } from "../../../../_helpers/validationSchemas";
+import {
+  productBasicDetailsValidationSchema,
+  productSeoValidationSchema,
+  validateProductDataYup,
+  MAX_COMMON_PRODUCT_IMAGES,
+  getMediaUrl,
+  canLoadImage,
+  getVariantAxisKey,
+  isValidIndianPincode,
+  normalizeVariantAttributes,
+  normalizePincodeList,
+} from "../../../../_helpers/validationSchemas";
 import { LuSlidersHorizontal } from "react-icons/lu";
 import { IoLayers, IoSearch } from "react-icons/io5";
 import { FaTags, FaTruck } from "react-icons/fa";
@@ -137,157 +151,6 @@ const SELLER_PANEL_ROLES = new Set([
   "seller-admin",
   "seller-sub-admin",
 ]);
-const MAX_COMMON_PRODUCT_IMAGES = 8;
-const MAX_PRODUCT_MONEY = 999999999.99;
-const MAX_PRODUCT_STOCK = 1000000000;
-const MAX_PRODUCT_MEASUREMENT = 1000000;
-const PRODUCT_SKU_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]{1,62}[A-Za-z0-9]$/;
-const PRODUCT_TAG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const getMediaUrl = (media) =>
-  typeof media === "string"
-    ? media.trim()
-    : String(
-        media?.url ||
-          media?.imageURL ||
-          media?.imageUrl ||
-          media?.secure_url ||
-          media?.src ||
-          "",
-      ).trim();
-const isHttpUrl = (value) => {
-  try {
-    const parsed = new URL(String(value || "").trim());
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-};
-const canLoadImage = (url, timeoutMs = 8000) =>
-  new Promise((resolve) => {
-    if (typeof Image === "undefined") {
-      resolve(true);
-      return;
-    }
-    const image = new Image();
-    let settled = false;
-    const finish = (loaded) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      image.onload = null;
-      image.onerror = null;
-      resolve(loaded);
-    };
-    const timeout = setTimeout(() => finish(false), timeoutMs);
-    image.onload = () =>
-      finish(image.naturalWidth > 0 && image.naturalHeight > 0);
-    image.onerror = () => finish(false);
-    image.src = url;
-    if (image.complete) {
-      finish(image.naturalWidth > 0 && image.naturalHeight > 0);
-    }
-  });
-const isValidDecimal = (
-  value,
-  { min = 0, max = Number.MAX_SAFE_INTEGER, places = 2 } = {},
-) => {
-  if (value === undefined || value === null || value === "") return false;
-  if (typeof value === "string" && value.trim() === "") return false;
-  const text = String(value).trim();
-  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(text)) return false;
-  const number = Number(text);
-  if (!Number.isFinite(number) || number < min || number > max) return false;
-  const decimalPart = text.split(".")[1] || "";
-  return decimalPart.length <= places;
-};
-const isPositiveMeasurement = (value, max = MAX_PRODUCT_MEASUREMENT) =>
-  isValidDecimal(value, {
-    min: Number.MIN_VALUE,
-    max,
-    places: 6,
-  });
-const isFurnitureDimensionAttribute = (field = {}) => {
-  const key = String(field.key || "")
-    .trim()
-    .toLowerCase();
-  const label = String(field.label || "")
-    .trim()
-    .toLowerCase();
-  return ["width", "depth", "height"].some(
-    (dimension) => key === dimension || label.includes(dimension),
-  );
-};
-const isValidNonNegativeInteger = (value, max = MAX_PRODUCT_STOCK) => {
-  if (value === undefined || value === null || value === "") return false;
-  if (typeof value === "string" && value.trim() === "") return false;
-  const number = Number(value);
-  return Number.isInteger(number) && number >= 0 && number <= max;
-};
-const findDuplicate = (values = []) => {
-  const seen = new Set();
-  return values.find((value) => {
-    const normalized = String(value || "")
-      .trim()
-      .toLowerCase();
-    if (!normalized) return false;
-    if (seen.has(normalized)) return true;
-    seen.add(normalized);
-    return false;
-  });
-};
-const findDuplicateUrls = (values = []) => {
-  const seen = new Set();
-  return values.find((value) => {
-    let normalized;
-    try {
-      normalized = new URL(String(value || "").trim()).href;
-    } catch {
-      normalized = String(value || "").trim();
-    }
-    if (!normalized) return false;
-    if (seen.has(normalized)) return true;
-    seen.add(normalized);
-    return false;
-  });
-};
-const slugifyVariantAxis = (value = "") =>
-  String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-const getVariantAxisKey = (axis = {}) =>
-  String(axis.slug || slugifyVariantAxis(axis.name)).trim();
-const getVariantAxisValue = (variant = {}, axis = {}) => {
-  const attributes = variant.attributes || {};
-  const key = getVariantAxisKey(axis);
-  const candidateKeys = [
-    key,
-    String(axis.name || "")
-      .trim()
-      .toLowerCase(),
-    key.replace(/-/g, "_"),
-  ].filter(Boolean);
-  const matchingKey = candidateKeys.find(
-    (candidate) => attributes[candidate] != null,
-  );
-  return matchingKey ? attributes[matchingKey] : "";
-};
-const getVariantCombinationKey = (variant = {}, axes = []) =>
-  axes
-    .map(
-      (axis) =>
-        `${getVariantAxisKey(axis)}=${String(getVariantAxisValue(variant, axis)).trim().toLowerCase()}`,
-    )
-    .join("|");
-const normalizeVariantAttributes = (variant = {}, axes = []) =>
-  axes.reduce((attributes, axis) => {
-    const value = getVariantAxisValue(variant, axis);
-    if (value !== "" && value !== null && value !== undefined) {
-      attributes[getVariantAxisKey(axis)] = value;
-    }
-    return attributes;
-  }, {});
 const getSessionUser = () => {
   if (typeof window === "undefined") return null;
   try {
@@ -304,6 +167,13 @@ const toOptionalNumber = (value) => {
   if (!hasValue(value)) return undefined;
   const number = Number(value);
   return Number.isFinite(number) ? number : undefined;
+};
+
+const normalizeVariantSortOrder = (value, fallbackIndex) => {
+  if (value === null || value === undefined || value === "")
+    return fallbackIndex;
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : fallbackIndex;
 };
 
 const normalizeProductServiceabilityMode = (mode) => {
@@ -325,25 +195,17 @@ const normalizeProductServiceabilityMode = (mode) => {
   return modeMap[value] || "inherit";
 };
 
-const normalizePincodeList = (value) => {
-  const source = Array.isArray(value)
-    ? value
-    : String(value || "").split(/[\n,]+/);
-  return Array.from(
-    new Set(source.map((item) => String(item || "").trim()).filter(Boolean)),
-  );
-};
-
 const getShippingPincodes = (shipping = {}) =>
   normalizePincodeList([
     ...(Array.isArray(shipping.allowPincodes) ? shipping.allowPincodes : []),
-    ...(Array.isArray(shipping.serviceablePincodes) ? shipping.serviceablePincodes : []),
-    ...(Array.isArray(shipping.allowedPincodes) ? shipping.allowedPincodes : []),
+    ...(Array.isArray(shipping.serviceablePincodes)
+      ? shipping.serviceablePincodes
+      : []),
+    ...(Array.isArray(shipping.allowedPincodes)
+      ? shipping.allowedPincodes
+      : []),
     ...(Array.isArray(shipping.pincodes) ? shipping.pincodes : []),
   ]);
-
-const isValidIndianPincode = (value) =>
-  /^[1-9]\d{5}$/.test(String(value || "").trim());
 
 const inferWarrantyDuration = (template = {}) => {
   const metadata = template?.metadata || {};
@@ -478,6 +340,31 @@ export default function ProductManagementUI() {
   const [error, setError] = useState(null);
   let { INITIALS_DATA } = selectJson;
   const [formData, setFormData] = useState(INITIALS_DATA);
+  const [userData, setUserData] = useState({});
+  const userRole = normalizeRole(
+    extractRole(
+      userData,
+      userData?.user,
+      userData?.data,
+      getSessionUser(),
+      getSessionUser()?.user,
+      getStoredUser(),
+      { role: getStoredRole() },
+    ),
+  );
+  const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
+  const basicDetailsFormik = useFormik({
+    initialValues: formData,
+    validationSchema: productBasicDetailsValidationSchema,
+    validateOnChange: true,
+    validateOnBlur: true,
+    validateOnMount: false,
+    context: { isSellerPanelUser },
+    onSubmit: () => {},
+  });
+  useEffect(() => {
+    basicDetailsFormik.setValues(formData, false);
+  }, [formData]);
   const seoFormik = useFormik({
     initialValues: {
       metaTitle: "",
@@ -529,7 +416,6 @@ export default function ProductManagementUI() {
   const [isScrolling, setIsScrolling] = useState(false);
   const isEditMode = id ? true : false;
   const [taxData, setTaxData] = useState(null);
-  const [userData, setUserData] = useState({});
   const [categoryAttributeSchema, setCategoryAttributeSchema] = useState([]);
   const [useManualAttributes] = useState(false);
   const [newAttrKey, setNewAttrKey] = useState("");
@@ -557,7 +443,8 @@ export default function ProductManagementUI() {
   const [shippingProfileDetail, setShippingProfileDetail] = useState(null);
   const [shippingTemplateCatalog, setShippingTemplateCatalog] = useState([]);
   const [allowedPincodeInput, setAllowedPincodeInput] = useState("");
-  const [selectedShippingTemplate, setSelectedShippingTemplate] = useState(null);
+  const [selectedShippingTemplate, setSelectedShippingTemplate] =
+    useState(null);
   const [collectionSearch, setCollectionSearch] = useState("");
 
   const hasUnsavedChanges = useMemo(() => {
@@ -836,6 +723,17 @@ export default function ProductManagementUI() {
     tags: "tags",
   };
 
+  const BASIC_DETAILS_FIELD_ORDER = [
+    "sellerId",
+    "organizationId",
+    "name",
+    "brand",
+    "category_id",
+    "hsn_code",
+    "productFamilyCode",
+    "description",
+  ];
+
   const scrollToFirstValidationError = (errors, attempt = 0) => {
     const sectionOrder = [
       "basic-details",
@@ -846,7 +744,12 @@ export default function ProductManagementUI() {
       "seo",
       "tags",
     ];
-    const errorFields = Object.keys(errors || {});
+    const errorFields = Array.from(
+      new Set([
+        ...Object.keys(errors?.formik || {}),
+        ...Object.keys(errors || {}).filter((field) => field !== "formik"),
+      ]),
+    );
     const firstField = errorFields
       .map((field, index) => ({
         field,
@@ -854,17 +757,41 @@ export default function ProductManagementUI() {
         sectionIndex: sectionOrder.indexOf(
           FIELD_TO_SECTION[field] || "basic-details",
         ),
+        fieldOrder: BASIC_DETAILS_FIELD_ORDER.indexOf(field),
       }))
       .sort(
         (a, b) =>
           (a.sectionIndex < 0 ? sectionOrder.length : a.sectionIndex) -
             (b.sectionIndex < 0 ? sectionOrder.length : b.sectionIndex) ||
+          (a.fieldOrder < 0 ? BASIC_DETAILS_FIELD_ORDER.length : a.fieldOrder) -
+            (b.fieldOrder < 0
+              ? BASIC_DETAILS_FIELD_ORDER.length
+              : b.fieldOrder) ||
           a.index - b.index,
       )[0]?.field;
     if (!firstField || typeof document === "undefined") return;
 
     let nestedFieldSelector = null;
-    if (
+    if (firstField === "warranty") {
+      const findFirstErrorPath = (value, path) => {
+        if (typeof value === "string") return value ? path : null;
+        if (!value || typeof value !== "object") return null;
+
+        for (const [key, nestedValue] of Object.entries(value)) {
+          const nestedPath = findFirstErrorPath(nestedValue, `${path}.${key}`);
+          if (nestedPath) return nestedPath;
+        }
+
+        return null;
+      };
+      const warrantyErrorPath = findFirstErrorPath(
+        errors?.formik?.warranty,
+        "warranty",
+      );
+      if (warrantyErrorPath) {
+        nestedFieldSelector = `[name="${warrantyErrorPath}"], [data-error-field="${warrantyErrorPath}"]`;
+      }
+    } else if (
       firstField === "variants" &&
       errors?.variants &&
       typeof errors.variants === "object"
@@ -925,12 +852,11 @@ export default function ProductManagementUI() {
           const matches = Array.from(
             (formRoot || document).querySelectorAll(selector),
           );
-          const found =
-            matches.find(
-              (element) =>
-                element.getClientRects().length > 0 &&
-                !element.closest("[aria-hidden='true']"),
-            ) || matches[0];
+          const found = matches.find(
+            (element) =>
+              element.getClientRects().length > 0 &&
+              !element.closest("[aria-hidden='true']"),
+          );
           if (found) {
             field = found;
             break;
@@ -944,7 +870,29 @@ export default function ProductManagementUI() {
         const target =
           field?.closest?.(".admin-field") || field || validationSummary;
         if (target?.scrollIntoView) {
-          target.scrollIntoView({ behavior: "smooth", block: "center" });
+          const scrollContainer = target.closest(".sidebar-scrollbar");
+          if (scrollContainer) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            const nextScrollTop =
+              scrollContainer.scrollTop +
+              targetRect.top -
+              containerRect.top -
+              (scrollContainer.clientHeight - targetRect.height) / 2;
+
+            scrollContainer.scrollTo({
+              top: Math.max(
+                0,
+                Math.min(
+                  nextScrollTop,
+                  scrollContainer.scrollHeight - scrollContainer.clientHeight,
+                ),
+              ),
+              behavior: "smooth",
+            });
+          } else {
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
         }
 
         const focusTarget = field?.matches?.("input, select, textarea")
@@ -1007,6 +955,7 @@ export default function ProductManagementUI() {
             productData?.categoryKey ||
             productData?.category ||
             "";
+
           const resolvedCategoryKey =
             productData?.categoryKey ||
             productData?.category_key ||
@@ -1424,19 +1373,6 @@ export default function ProductManagementUI() {
     });
   }, [dispatch, variantAxes, prefillData.optionValuesByOptionId]);
 
-  const userRole = normalizeRole(
-    extractRole(
-      userData,
-      userData?.user,
-      userData?.data,
-      getSessionUser(),
-      getSessionUser()?.user,
-      getStoredUser(),
-      { role: getStoredRole() },
-    ),
-  );
-  const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
-
   // Load shipping profiles whenever the seller / org context changes.
   // Published Admin templates are available to both panels as copy sources.
   useEffect(() => {
@@ -1539,14 +1475,25 @@ export default function ProductManagementUI() {
     const restoredTemplate = {
       ...(template || {}),
       id: templateId || template?.id || template?._id,
-      name: shipping.copiedFromShippingTemplateName || template?.name || "Copied shipping template",
-      shippingCharge: shipping.shippingCharge ?? shipping.additionalCost ?? template?.shippingCharge,
+      name:
+        shipping.copiedFromShippingTemplateName ||
+        template?.name ||
+        "Copied shipping template",
+      shippingCharge:
+        shipping.shippingCharge ??
+        shipping.additionalCost ??
+        template?.shippingCharge,
       handlingCharge: shipping.handlingCharge ?? template?.handlingCharge,
-      freeShippingThreshold: shipping.freeShippingMinOrder ?? template?.freeShippingThreshold,
-      etaMin: shipping.estimatedDaysMin ?? shipping.processingDays ?? template?.etaMin,
+      freeShippingThreshold:
+        shipping.freeShippingMinOrder ?? template?.freeShippingThreshold,
+      etaMin:
+        shipping.estimatedDaysMin ??
+        shipping.processingDays ??
+        template?.etaMin,
       etaMax: shipping.estimatedDaysMax ?? template?.etaMax,
       shippingMethod: shipping.shippingMethod ?? template?.shippingMethod,
-      serviceabilityMode: shipping.serviceabilityMode ?? template?.serviceabilityMode,
+      serviceabilityMode:
+        shipping.serviceabilityMode ?? template?.serviceabilityMode,
       codAvailable: shipping.codAvailable ?? template?.codAvailable,
       allowedPincodes: getShippingPincodes(shipping).length
         ? getShippingPincodes(shipping)
@@ -1570,29 +1517,57 @@ export default function ProductManagementUI() {
       return undefined;
     }
     const listed = shippingProfileOptions.find(
-      (option) => option.type === "profile" && String(option.value) === String(profileId),
+      (option) =>
+        option.type === "profile" && String(option.value) === String(profileId),
     );
     if (listed?.profile) {
-      if (shippingProfileDetail !== listed.profile) setShippingProfileDetail(listed.profile);
+      if (shippingProfileDetail !== listed.profile)
+        setShippingProfileDetail(listed.profile);
       return undefined;
     }
-    if (String(shippingProfileDetail?.id || shippingProfileDetail?._id || "") === String(profileId)) return undefined;
+    if (
+      String(shippingProfileDetail?.id || shippingProfileDetail?._id || "") ===
+      String(profileId)
+    )
+      return undefined;
     let cancelled = false;
     dispatch(getShippingProfile({ profileId }))
       .unwrap()
       .then((res) => {
         if (cancelled) return;
-        const profile = res?.data?.profile || res?.data?.data?.profile || res?.data?.data || res?.data || res?.profile;
+        const profile =
+          res?.data?.profile ||
+          res?.data?.data?.profile ||
+          res?.data?.data ||
+          res?.data ||
+          res?.profile;
         if (profile) {
           setShippingProfileDetail(profile);
-          setShippingProfileOptions((options) => options.some((option) => String(option.value) === String(profileId))
-            ? options
-            : [...options, { value: profile.id || profile._id || profileId, label: profile.name || "Shipping Profile", profile, type: "profile" }]);
+          setShippingProfileOptions((options) =>
+            options.some((option) => String(option.value) === String(profileId))
+              ? options
+              : [
+                  ...options,
+                  {
+                    value: profile.id || profile._id || profileId,
+                    label: profile.name || "Shipping Profile",
+                    profile,
+                    type: "profile",
+                  },
+                ],
+          );
         }
       })
       .catch(() => {});
-    return () => { cancelled = true; };
-  }, [dispatch, formData?.shipping?.shippingProfileId, shippingProfileOptions, shippingProfileDetail]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    dispatch,
+    formData?.shipping?.shippingProfileId,
+    shippingProfileOptions,
+    shippingProfileDetail,
+  ]);
 
   const handleOptionSearch = useCallback(
     (query) => {
@@ -1781,22 +1756,24 @@ export default function ProductManagementUI() {
       // Seller panel: use the active organization resolved by the session/header sync.
       const activeOrgId = getSelectedSellerOrganizationId();
       if (activeOrgId && formData?.organizationId !== activeOrgId) {
+        basicDetailsFormik.setFieldValue("organizationId", activeOrgId, false);
         setFormData((prev) => ({ ...prev, organizationId: activeOrgId }));
       }
       return;
     }
 
-    // Admin: derive from the organization list (existing behavior)
+    // The form's organization picker can load seller-specific options that are
+    // not present in the global prefill list. Preserve its selected value;
+    // changing sellers clears it in the seller selection handler.
     if (formData?.organizationId) {
-      const exists = organizationOptions.some(
-        (option) => String(option.value) === String(formData.organizationId),
-      );
-      if (!exists) {
-        setFormData((prev) => ({ ...prev, organizationId: "" }));
-      }
       return;
     }
     if (organizationOptions.length === 1) {
+      basicDetailsFormik.setFieldValue(
+        "organizationId",
+        organizationOptions[0].value,
+        false,
+      );
       setFormData((prev) => ({
         ...prev,
         organizationId: organizationOptions[0].value,
@@ -1871,902 +1848,47 @@ export default function ProductManagementUI() {
     return options;
   }, [selector?.getListData, prefillList]);
 
-  const validateForm = () => {
+  const validateForm = async () => {
     const newErrors = {};
+    const schemaErrors = await basicDetailsFormik.validateForm(formData);
 
-    const productNameError = validateProductName(formData?.name);
-    if (productNameError) newErrors.name = productNameError;
+    if (Object.keys(schemaErrors).length > 0) {
+      newErrors.formik = schemaErrors;
 
-    // Description validation
-    const description = formData?.description || "";
-
-    const plainDescription = description
-      .replace(/<[^>]*>/g, "")
-      .replace(/&nbsp;/g, " ")
-      .trim();
-
-    if (!plainDescription) {
-      newErrors.description = "Description is required.";
-    } else if (plainDescription.length < 10) {
-      newErrors.description = "Description must be at least 10 characters.";
-    } else if (plainDescription.length > 5000) {
-      newErrors.description =
-        "Description must not be more than 5000 characters.";
-    }
-    if (String(formData?.shortDescription || "").length > 500) {
-      newErrors.shortDescription =
-        "Short description must be 500 characters or fewer.";
-    }
-
-    // Seller validation
-    if (!formData?.sellerId && !isSellerPanelUser) {
-      newErrors.sellerId = "Seller is required.";
-    }
-
-    // Organization validation
-    if (!formData?.organizationId) {
-      if (isSellerPanelUser) {
-        const activeOrgId = getSelectedSellerOrganizationId();
-
-        if (!activeOrgId) {
-          newErrors.organizationId =
-            "No active organization is available for this seller account.";
-        }
-      } else {
-        newErrors.organizationId = "Organization is required.";
-      }
-    }
-
-    // Brand validation
-    const brandValue = String(
-      formData?.brand || formData?.brandId || formData?.brand_id || "",
-    ).trim();
-
-    if (!brandValue) {
-      newErrors.brand = "Brand is required.";
-    } else if (formattedData?.brandList?.length) {
-      const selectedBrand =
-        formattedData.brandList.find((item) =>
-          [item.value, item.resourceId, item.brandName]
-            .filter(Boolean)
-            .some(
-              (value) =>
-                String(value).toLowerCase() === brandValue.toLowerCase(),
-            ),
-        ) ||
-        (formData?.brandApprovalStatus
-          ? {
-              approvalStatus: formData.brandApprovalStatus,
-              active: formData.brandActive,
-            }
-          : null);
-      if (
-        !selectedBrand ||
-        selectedBrand.approvalStatus === "rejected" ||
-        (selectedBrand.active === false &&
-          !(isSellerPanelUser && selectedBrand.approvalStatus === "pending")) ||
-        (!isSellerPanelUser && selectedBrand.approvalStatus === "pending")
-      ) {
-        newErrors.brand =
-          "Select an approved brand or your own pending submission.";
-      }
-    }
-
-    // Category validation
-    const categoryValue =
-      formData?.category_id ||
-      formData?.categoryId ||
-      formData?.category ||
-      formData?.category_key;
-
-    if (!categoryValue) {
-      newErrors.category_id = "Category is required.";
-    } else if (createSelectOptions?.length) {
-      const selectedCategory = createSelectOptions.find((item) =>
-        [item.value, item.resourceId, item.categoryKey]
-          .filter(Boolean)
-          .some((value) => String(value) === String(categoryValue)),
-      );
-      if (
-        !selectedCategory ||
-        selectedCategory.active === false ||
-        ["pending", "rejected"].includes(selectedCategory.approvalStatus)
-      ) {
-        newErrors.category_id = "Select a current active category.";
-      }
-    }
-
-    // HSN code validation
-    const hsnValue = String(
-      formData?.hsn_code || formData?.hsnCode || formData?.hsn_id || "",
-    ).trim();
-
-    if (!hsnValue) {
-      newErrors.hsn_code = "HSN Code is required.";
-    } else if (formattedData?.hsnCodeList?.length) {
-      const selectedHsn =
-        formattedData.hsnCodeList.find((item) =>
-          [item.value, item.code, item.resourceId]
-            .filter(Boolean)
-            .some(
-              (value) => String(value).toLowerCase() === hsnValue.toLowerCase(),
-            ),
-        ) ||
-        (formData?.hsnApprovalStatus
-          ? {
-              approvalStatus: formData.hsnApprovalStatus,
-              active: formData.hsnActive,
-            }
-          : null);
-      if (
-        !selectedHsn ||
-        selectedHsn.approvalStatus === "rejected" ||
-        (selectedHsn.active === false &&
-          !(isSellerPanelUser && selectedHsn.approvalStatus === "pending")) ||
-        (!isSellerPanelUser && selectedHsn.approvalStatus === "pending")
-      ) {
-        newErrors.hsn_code =
-          "Select an approved HSN code or your own pending submission.";
-      }
-    }
-
-    if (formData?.productFamilyCode) {
-      const family = formattedData?.productFamilyList?.find(
-        (item) => String(item.value) === String(formData.productFamilyCode),
-      );
-      if (
-        (formattedData?.productFamilyList?.length && !family) ||
-        family?.active === false ||
-        ["pending", "rejected"].includes(family?.approvalStatus)
-      ) {
-        newErrors.productFamilyCode = "Select a current active product family.";
-      }
-    }
-
-    // Variant existence validation
-    if (!Array.isArray(variantsData) || !variantsData.length) {
-      newErrors.variants = {
-        _form: "Add at least one variant for this product.",
-      };
-    }
-
-    // Shipping validation
-    {
-      const allowedPincodes = normalizePincodeList(
-        formData?.shipping?.allowPincodes ||
-          formData?.shipping?.serviceablePincodes,
-      );
-
-      if (allowedPincodes.some((pincode) => !isValidIndianPincode(pincode))) {
-        newErrors.shipping = "Every pincode must be a valid 6-digit pincode.";
-      }
-    }
-
-    const shipping = formData?.shipping || {};
-    const shippingAmounts = [
-      ["shippingCharge", "Shipping charge"],
-      ["freeShippingMinOrder", "Free shipping minimum order"],
-      ["additionalCost", "Additional shipping cost"],
-      ["handlingCharge", "Handling charge"],
-    ];
-    for (const [key, label] of shippingAmounts) {
-      const value = shipping[key];
-      if (
-        value !== undefined &&
-        value !== null &&
-        value !== "" &&
-        !isValidDecimal(value, { min: 0, max: MAX_PRODUCT_MONEY })
-      ) {
-        newErrors.shipping = `${label} must be a non-negative amount with no more than two decimal places.`;
-        break;
-      }
-    }
-    const etaMin = shipping.estimatedDaysMin;
-    const etaMax = shipping.estimatedDaysMax;
-    const processingDays = shipping.processingDays;
-    if (
-      (etaMin !== undefined &&
-        etaMin !== "" &&
-        !isValidNonNegativeInteger(etaMin)) ||
-      (etaMax !== undefined &&
-        etaMax !== "" &&
-        !isValidNonNegativeInteger(etaMax)) ||
-      (processingDays !== undefined &&
-        processingDays !== "" &&
-        !isValidNonNegativeInteger(processingDays))
-    ) {
-      newErrors.shipping =
-        "Delivery ETA values must be whole non-negative days.";
-    } else if (
-      etaMin !== undefined &&
-      etaMin !== "" &&
-      etaMax !== undefined &&
-      etaMax !== "" &&
-      Number(etaMin) > Number(etaMax)
-    ) {
-      newErrors.shipping = "Minimum delivery ETA cannot exceed maximum ETA.";
-    }
-    if (
-      shipping.shippingProfileId &&
-      !shippingProfilesLoading &&
-      shippingProfileOptions.length
-    ) {
-      const selectedProfile = shippingProfileOptions.find(
-        (item) => String(item.value) === String(shipping.shippingProfileId),
-      );
-      if (
-        !selectedProfile ||
-        selectedProfile.profile?.active === false ||
-        String(selectedProfile.value).startsWith("template:")
-      ) {
-        newErrors.shipping =
-          "Select an active shipping profile available to this seller and organization.";
-      }
-    }
-
-    const dimensions = formData?.dimensions || {};
-    const dimensionValues = ["length", "width", "height", "weight"];
-    const hasEnteredDimension = dimensionValues.some(
-      (key) =>
-        dimensions[key] !== undefined &&
-        dimensions[key] !== null &&
-        dimensions[key] !== "",
-    );
-    for (const key of dimensionValues) {
-      const value = dimensions[key];
-      if (
-        value !== undefined &&
-        value !== null &&
-        value !== "" &&
-        !isValidDecimal(value, {
-          min: Number.MIN_VALUE,
-          max: MAX_PRODUCT_MEASUREMENT,
-          places: 6,
-        })
-      ) {
-        newErrors.dimensions =
-          "Weight and dimensions must be positive valid measurements.";
-        break;
-      }
-    }
-    if (
-      dimensions.weight !== undefined &&
-      dimensions.weight !== null &&
-      dimensions.weight !== "" &&
-      !dimensions.weightUnit
-    ) {
-      newErrors.dimensions = "Select a weight unit when entering weight.";
-    } else if (
-      hasEnteredDimension &&
-      dimensionValues.some(
-        (key) =>
-          key !== "weight" &&
-          dimensions[key] !== undefined &&
-          dimensions[key] !== null &&
-          dimensions[key] !== "",
-      ) &&
-      !dimensions.unit
-    ) {
-      newErrors.dimensions =
-        "Select a dimension unit when entering dimensions.";
-    }
-
-    const commonImages = (
-      Array.isArray(formData?.commonImages) ? formData.commonImages : []
-    ).map(getMediaUrl);
-    const duplicateCommonImage = findDuplicateUrls(commonImages);
-    if (duplicateCommonImage) {
-      newErrors.commonImages = "Remove duplicate product images before saving.";
-    } else if (commonImages.some((image) => !isHttpUrl(image))) {
-      newErrors.commonImages = "Product image URLs must use HTTP or HTTPS.";
-    }
-    const videoUrls = (Array.isArray(formData?.videos) ? formData.videos : [])
-      .map(getMediaUrl)
-      .filter(Boolean);
-    if (videoUrls.length > 1 || videoUrls.some((url) => !isHttpUrl(url))) {
-      newErrors.commonImages = "Use one valid HTTP or HTTPS product video URL.";
-    }
-    if (commonImages.length > MAX_COMMON_PRODUCT_IMAGES) {
-      newErrors.commonImages = `A maximum of ${MAX_COMMON_PRODUCT_IMAGES} product images is allowed.`;
-    }
-    if (
-      commonImagesUploading ||
-      productVideoUploading ||
-      ogImageUploading ||
-      variantBuilderBusy
-    ) {
-      newErrors.commonImages =
-        "Wait for media and option uploads to finish before saving.";
-    }
-    if (catalogBusy) {
-      newErrors.basicDetails =
-        "Wait for catalog updates and uploads to finish before saving.";
-    }
-
-    // Return policy validation
-    const returnPolicy = formData?.warranty?.returnPolicy || {};
-    const warranty = formData?.warranty || {};
-    const hasLegacyWarrantyDetails =
-      Number(warranty.period) >= 1 ||
-      Boolean(String(warranty.provider || "").trim());
-    const warrantyEnabled =
-      warranty.enabled === true ||
-      (warranty.enabled === undefined && hasLegacyWarrantyDetails);
-
-    if (warrantyEnabled) {
-      const period = Number(warranty.period);
-      if (!Number.isInteger(period) || period < 1 || period > 365) {
-        newErrors.warrantyPeriod =
-          "Warranty period must be a whole number between 1 and 365.";
-      }
-      if (!["days", "weeks", "months", "years"].includes(warranty.periodUnit)) {
-        newErrors.warrantyPeriodUnit = "Warranty unit is required.";
-      }
-      if (!String(warranty.provider || "").trim()) {
-        newErrors.warrantyProvider = "Warranty provider is required.";
-      }
-      if (!String(warranty.type || "").trim()) {
-        newErrors.warrantyType = "Warranty type is required.";
-      }
-      if (String(warranty.provider || "").trim().length > 100) {
-        newErrors.warrantyProvider =
-          "Warranty provider must be 100 characters or fewer.";
-      }
-      if (String(warranty.type || "").trim().length > 100) {
-        newErrors.warrantyType =
-          "Warranty type must be 100 characters or fewer.";
-      }
-      if (String(warranty.terms || "").length > 1000) {
-        newErrors.warrantyTerms =
-          "Warranty terms must be 1000 characters or fewer.";
-      }
-    }
-    const restockingFee = returnPolicy?.restockingFee;
-    if (
-      restockingFee !== undefined &&
-      restockingFee !== null &&
-      restockingFee !== "" &&
-      !isValidDecimal(restockingFee, { min: 0, max: MAX_PRODUCT_MONEY })
-    ) {
-      newErrors.restockingFee =
-        "Restocking fee must be a non-negative amount with no more than two decimal places.";
-    }
-    if (
-      !["standard", "replacement_only", "non_returnable"].includes(
-        returnPolicy.type || "standard",
-      ) ||
-      !["refund", "replacement", "refund_or_replacement"].includes(
-        returnPolicy.resolution || "refund_or_replacement",
-      ) ||
-      !["platform", "seller", "customer"].includes(
-        returnPolicy.shippingPaidBy || "seller",
-      )
-    ) {
-      newErrors.returnWindowDays =
-        "Select a valid return policy type, resolution, and shipping responsibility.";
-    }
-    const isReturnable =
-      String(returnPolicy?.type || "").toLowerCase() !== "non_returnable" &&
-      returnPolicy?.returnable !== false &&
-      returnPolicy?.eligible !== false;
-
-    if (isReturnable) {
-      const returnWindowDays = Number(
-        returnPolicy?.returnWindowDays ?? returnPolicy?.days ?? 0,
-      );
-
-      if (
-        !Number.isInteger(returnWindowDays) ||
-        returnWindowDays < 1 ||
-        returnWindowDays > 365
-      ) {
-        newErrors.returnWindowDays =
-          "Return window must be between 1 and 365 days.";
-      }
-    }
-
-    // Variant field validation
-    if (Array.isArray(variantsData) && variantsData.length) {
-      const skuCounts = variantsData.reduce((counts, variant) => {
-        const sku = String(variant?.sku || "")
-          .trim()
-          .toLowerCase();
-        if (sku) counts.set(sku, (counts.get(sku) || 0) + 1);
-        return counts;
-      }, new Map());
-      const combinationCounts = variantsData.reduce((counts, variant) => {
-        const key = getVariantCombinationKey(variant, variantAxes);
-        if (key) counts.set(key, (counts.get(key) || 0) + 1);
-        return counts;
-      }, new Map());
-
-      const optionNames = variantAxes.map((axis) =>
-        String(axis?.name || "").trim(),
-      );
-      if (
-        optionNames.some((name) => name.length < 2 || name.length > 50) ||
-        findDuplicate(optionNames)
-      ) {
-        newErrors.variants = {
-          ...(newErrors.variants || {}),
-          _form: "Option names must be unique and 2–50 characters long.",
-        };
-      }
-      const invalidOptionValue = variantAxes.some((axis) => {
-        const values = Array.isArray(axis?.values) ? axis.values : [];
-        return (
-          values.some(
-            (value) =>
-              String(value || "").trim().length < 1 ||
-              String(value).trim().length > 80,
-          ) || Boolean(findDuplicate(values))
-        );
-      });
-      if (invalidOptionValue) {
-        newErrors.variants = {
-          ...(newErrors.variants || {}),
-          _form: "Option values must be unique and 1–80 characters long.",
-        };
-      }
-
-      const defaultCount = variantsData.filter(
-        (variant) => variant?.isDefault === true,
-      ).length;
-      if (defaultCount !== 1) {
-        newErrors.variants = {
-          ...(newErrors.variants || {}),
-          _form: "Choose exactly one default variant.",
-        };
-      }
-      const productWillBeActive =
-        !formData?.isDisable &&
-        (formData?.status === "active" ||
-          formData?.approvalStatus === "approved" ||
-          formData?.isApproved === true);
-      if (
-        productWillBeActive &&
-        !variantsData.some((variant) => variant?.status === "active")
-      ) {
-        newErrors.variants = {
-          ...(newErrors.variants || {}),
-          _form:
-            "At least one variant must be active before activating the product.",
-        };
-      }
-
-      const variantErrors = variantsData.reduce((result, variant, index) => {
-        const fieldErrors = {};
-
-        const price = Number(variant?.price || 0);
-        const mrp = Number(variant?.mrp || 0);
-
-        const hasSalePrice =
-          variant?.salePrice !== undefined &&
-          variant?.salePrice !== null &&
-          variant?.salePrice !== "";
-
-        const salePrice = Number(variant?.salePrice || 0);
-
-        const hasGstRate =
-          variant?.gstRate !== undefined &&
-          variant?.gstRate !== null &&
-          variant?.gstRate !== "";
-
-        const gstRate = Number(variant?.gstRate);
-
-        if (String(variant?.sku || "").trim() && !PRODUCT_SKU_PATTERN.test(String(variant.sku).trim())) {
-          fieldErrors.sku =
-            "Use 3–64 letters, numbers, hyphens, underscores, periods, or slashes; begin and end with a letter or number.";
-        } else if (
-          String(variant?.sku || "").trim() &&
-          skuCounts.get(String(variant.sku).trim().toLowerCase()) > 1
-        ) {
-          fieldErrors.sku = "SKU must be unique across variants.";
-        }
-
-        if (
-          !isValidDecimal(variant?.price, { min: 0.01, max: MAX_PRODUCT_MONEY })
-        ) {
-          fieldErrors.price =
-            "Price must be positive, no more than 999999999.99, and have at most two decimal places.";
-        }
-        if (
-          !isValidDecimal(variant?.mrp, { min: 0.01, max: MAX_PRODUCT_MONEY })
-        ) {
-          fieldErrors.mrp =
-            "MRP must be positive, no more than 999999999.99, and have at most two decimal places.";
-        }
-        if (!isValidNonNegativeInteger(variant?.stock)) {
-          fieldErrors.stock =
-            "Stock must be a whole number from 0 to 1000000000.";
-        }
-        const reservedValue = variant?.reservedStock ?? 0;
-        if (
-          !isValidNonNegativeInteger(reservedValue) ||
-          Number(reservedValue) > Number(variant?.stock ?? 0)
-        ) {
-          fieldErrors.reservedStock =
-            "Reserved stock must be a whole number no greater than stock.";
-        }
-        if (
-          hasSalePrice &&
-          !isValidDecimal(variant?.salePrice, {
-            min: 0.01,
-            max: MAX_PRODUCT_MONEY,
-          })
-        ) {
-          fieldErrors.salePrice =
-            "Sale price must be positive, no more than 999999999.99, and have at most two decimal places.";
-        }
-        const variantTitle = String(variant?.title || "").trim();
-        if (variantTitle.length > 100) {
-          fieldErrors.title = "Variant title must be 100 characters or fewer.";
-        } else if (/[\u0000-\u001F\u007F-\u009F]/u.test(variantTitle)) {
-          fieldErrors.title = "Variant title contains invalid characters.";
-        }
-        if (String(variant?.shortDescription || "").trim().length > 500) {
-          fieldErrors.shortDescription =
-            "Variant short description must be 500 characters or fewer.";
-        }
-        const variantDescription = String(variant?.description || "").trim();
-        if (
-          variantDescription &&
-          (variantDescription.length < 10 || variantDescription.length > 5000)
-        ) {
-          fieldErrors.description =
-            "Variant description must be between 10 and 5000 characters.";
-        }
-        const barcode = String(variant?.barcode || "").trim();
-        if (barcode && !/^\d{8,14}$/.test(barcode)) {
-          fieldErrors.barcode = "Barcode must contain 8–14 digits.";
-        }
-        if (
-          !["active", "inactive", "out_of_stock"].includes(
-            variant?.status || "active",
-          )
-        ) {
-          fieldErrors.status = "Select a valid variant status.";
-        }
-        if (
-          variant?.weight !== undefined &&
-          variant?.weight !== null &&
-          variant?.weight !== ""
-        ) {
-          if (
-            !isValidDecimal(variant.weight, {
-              min: Number.MIN_VALUE,
-              max: MAX_PRODUCT_MEASUREMENT,
-              places: 6,
-            })
-          ) {
-            fieldErrors.weight =
-              "Variant weight must be a positive measurement.";
-          } else if (!variant.weightUnit) {
-            fieldErrors.weight = "Select a unit for variant weight.";
-          }
-        }
-        const variantDimensions = variant?.dimensions || {};
-        const dimensionKeys = ["length", "width", "height"];
-        const hasVariantDimension = dimensionKeys.some(
-          (key) =>
-            variantDimensions[key] !== undefined &&
-            variantDimensions[key] !== null &&
-            variantDimensions[key] !== "",
-        );
-        if (
-          dimensionKeys.some((key) => {
-            const value = variantDimensions[key];
-            return (
-              value !== undefined &&
-              value !== null &&
-              value !== "" &&
-              !isValidDecimal(value, {
-                min: Number.MIN_VALUE,
-                max: MAX_PRODUCT_MEASUREMENT,
-                places: 6,
-              })
-            );
-          })
-        ) {
-          fieldErrors.dimensions =
-            "Variant dimensions must be positive measurements.";
-        } else if (hasVariantDimension && !variantDimensions.unit) {
-          fieldErrors.dimensions = "Select a unit for variant dimensions.";
-        }
-
-        const variantImages = (
-          Array.isArray(variant?.images) ? variant.images : []
-        ).map(getMediaUrl);
-        if (variantImages.length > 5) {
-          fieldErrors.images =
-            "A maximum of five images is allowed per variant.";
-        } else if (findDuplicateUrls(variantImages)) {
-          fieldErrors.images = "Remove duplicate images from this variant.";
-        } else if (variantImages.some((image) => !isHttpUrl(image))) {
-          fieldErrors.images = "Variant image URLs must use HTTP or HTTPS.";
-        } else if (!variantImages.length) {
-          fieldErrors.images = "Add at least one image to this variant.";
-        }
-
-        const attributeErrors = Object.entries(
-          variant?.attributes || {},
-        ).reduce((axisErrors, [key, value]) => {
-          const normalizedKey = String(key || "").trim();
-          const normalizedValue = String(value ?? "").trim();
-          if (normalizedKey.length < 2 || normalizedKey.length > 50) {
-            axisErrors[normalizedKey || "_key"] =
-              "Attribute names must be 2–50 characters.";
-          } else if (
-            normalizedValue.length < 1 ||
-            normalizedValue.length > 80
-          ) {
-            axisErrors[normalizedKey] =
-              "Attribute values must be 1–80 characters.";
-          }
-          return axisErrors;
-        }, {});
-        variantAxes.reduce((axisErrors, axis) => {
-          const axisKey = getVariantAxisKey(axis);
-          const value = getVariantAxisValue(variant, axis);
-          if (axis.required && !String(value || "").trim()) {
-            axisErrors[axisKey] = `${axis.name || axisKey} is required.`;
-          } else if (
-            value &&
-            Array.isArray(axis.values) &&
-            axis.values.length &&
-            !axis.values.some(
-              (allowedValue) => String(allowedValue) === String(value),
-            )
-          ) {
-            axisErrors[axisKey] =
-              `${value} is not an allowed ${axis.name || axisKey} value.`;
-          }
-          return axisErrors;
-        }, attributeErrors);
-        const combinationKey = getVariantCombinationKey(variant, variantAxes);
-        if (combinationKey && combinationCounts.get(combinationKey) > 1) {
-          attributeErrors._combination =
-            "This option combination is already used by another variant.";
-        }
-        if (Object.keys(attributeErrors).length) {
-          fieldErrors.attributes = attributeErrors;
-        }
-
-        if (price <= 0) {
-          fieldErrors.price = "Price must be greater than 0.";
-        } else if (mrp > 0 && price > mrp) {
-          fieldErrors.price = "Price cannot be greater than MRP.";
-        }
-
-        if (mrp <= 0) {
-          fieldErrors.mrp = "MRP must be greater than 0.";
-        }
-
-        if (!hasSalePrice) {
-          fieldErrors.salePrice = "Special price is required.";
-        } else if (salePrice <= 0) {
-          fieldErrors.salePrice = "Special price must be greater than 0.";
-        } else if (price > 0 && salePrice >= price) {
-          fieldErrors.salePrice = "Special price cannot equal or exceed the price.";
-        } else if (price > 0 && salePrice < price / 2) {
-          fieldErrors.salePrice = "Special price must be at least half of the price.";
-        }
-
-        // Variant GST is optional. Older products and products whose tax is
-        // driven by the selected HSN code do not store it per variant.
-        if (hasGstRate && Number.isNaN(gstRate)) {
-          fieldErrors.gstRate = "Enter a valid GST rate.";
-        } else if (hasGstRate && (gstRate < 0 || gstRate > 100)) {
-          fieldErrors.gstRate = "GST rate must be between 0 and 100.";
-        } else if (
-          hasGstRate &&
-          !isValidDecimal(variant?.gstRate, { min: 0, max: 100, places: 2 })
-        ) {
-          fieldErrors.gstRate =
-            "GST rate can have no more than two decimal places.";
-        }
-
-        if (Object.keys(fieldErrors).length) {
-          result[index] = fieldErrors;
-        }
-
-        return result;
-      }, {});
-
-      if (Object.keys(variantErrors).length) {
-        newErrors.variants = {
-          ...(newErrors.variants || {}),
-          ...variantErrors,
-        };
-      }
-    } else if (!Array.isArray(variantsData) || variantsData.length === 0) {
-      newErrors.commonImages =
-        "Add at least one variant or product image before saving.";
-    }
-
-    // Category attribute validation
-    if (!useManualAttributes) {
-      categoryAttributeSchema.forEach((field) => {
-        const value = formData?.attributes?.[field.key];
-
-        const isEmpty =
-          value === undefined ||
-          value === null ||
-          (typeof value === "string" && value.trim() === "") ||
-          (Array.isArray(value) && value.length === 0);
-        if (field.required && isEmpty) {
-          newErrors.attributes = {
-            ...(newErrors.attributes || {}),
-            [field.key]: `${field.label || field.key} is required.`,
-          };
-          return;
-        }
-        if (isEmpty) {
-          if (
-            field.type === "multi_select" &&
-            Number(field.minSelections || 0) > 0
-          ) {
-            newErrors.attributes = {
-              ...(newErrors.attributes || {}),
-              [field.key]: `Select at least ${field.minSelections} option(s).`,
-            };
-          }
-          return;
-        }
-
-        let message = "";
-        if (["text", "select"].includes(field.type)) {
-          const text = String(value);
-          const minLength = Number(field.minLength || 0);
-          const maxLength = Number(field.maxLength ?? 5000);
-          if (text.length < minLength || text.length > maxLength) {
-            message = `Enter between ${minLength} and ${maxLength} characters.`;
-          } else if (field.pattern) {
-            try {
-              if (!new RegExp(field.pattern).test(text))
-                message = "Enter a value in the required format.";
-            } catch {
-              message =
-                "This attribute has an invalid validation pattern. Contact an administrator.";
-            }
-          }
-        } else if (field.type === "number") {
-          const isDimensionField = isFurnitureDimensionAttribute(field);
-          if (isDimensionField) {
-            if (!isPositiveMeasurement(value)) {
-              message = `${field.label || field.key} must be a positive number greater than 0. Example: 12.5.`;
-            }
-          } else {
-            const numericValue = Number(value);
-            if (!Number.isFinite(numericValue)) {
-              message = "Enter a valid number.";
-            } else if (
-              field.min !== undefined &&
-              field.min !== null &&
-              field.min !== "" &&
-              numericValue < Number(field.min)
-            ) {
-              message = `Value must be at least ${field.min}.`;
-            } else if (
-              field.max !== undefined &&
-              field.max !== null &&
-              field.max !== "" &&
-              numericValue > Number(field.max)
-            ) {
-              message = `Value must be no more than ${field.max}.`;
-            } else if (
-              field.precision !== undefined &&
-              field.precision !== null &&
-              (String(value).split(".")[1] || "").length >
-                Number(field.precision)
-            ) {
-              message = `Use no more than ${field.precision} decimal places.`;
-            }
-          }
-        } else if (field.type === "date") {
-          const date = new Date(value);
-          if (Number.isNaN(date.getTime())) {
-            message = "Enter a valid date.";
-          } else if (field.min && date < new Date(field.min)) {
-            message = `Date must be on or after ${field.min}.`;
-          } else if (field.max && date > new Date(field.max)) {
-            message = `Date must be on or before ${field.max}.`;
-          }
-        } else if (field.type === "boolean" && typeof value !== "boolean") {
-          message = "Enter a valid true or false value.";
-        } else if (field.type === "multi_select") {
-          if (!Array.isArray(value)) {
-            message = "Select one or more valid options.";
-          } else if (
-            field.minSelections !== undefined &&
-            field.minSelections !== null &&
-            value.length < Number(field.minSelections)
-          ) {
-            message = `Select at least ${field.minSelections} option(s).`;
-          } else if (
-            field.maxSelections !== undefined &&
-            field.maxSelections !== null &&
-            value.length > Number(field.maxSelections)
-          ) {
-            message = `Select no more than ${field.maxSelections} option(s).`;
-          } else if (findDuplicate(value)) {
-            message = "Remove duplicate selections.";
-          }
-        }
-        if (
-          !message &&
-          ["select", "multi_select"].includes(field.type) &&
-          Array.isArray(field.options) &&
-          field.options.length
-        ) {
-          const selectedValues = Array.isArray(value) ? value : [value];
-          if (
-            selectedValues.some(
-              (item) =>
-                !field.options.some(
-                  (allowed) => String(allowed) === String(item),
-                ),
-            )
-          ) {
-            message = "Select only the available options.";
-          }
-        }
-        if (message) {
-          newErrors.attributes = {
-            ...(newErrors.attributes || {}),
-            [field.key]: message,
-          };
-        }
-      });
-    } else {
-      const attributes = formData?.attributes || {};
-      const normalizedKeys = Object.keys(attributes).map((key) =>
-        key.trim().toLowerCase(),
-      );
-      if (new Set(normalizedKeys).size !== normalizedKeys.length) {
-        newErrors.attributes = {
-          _form: "Manual attribute keys must be unique.",
-        };
-      }
-      Object.entries(attributes).forEach(([key, value]) => {
-        if (key.trim().length < 2 || key.trim().length > 50) {
-          newErrors.attributes = {
-            ...(newErrors.attributes || {}),
-            [key]: "Attribute key must be 2–50 characters.",
-          };
-        }
-        if (typeof value === "string" && value.trim().length > 500) {
-          newErrors.attributes = {
-            ...(newErrors.attributes || {}),
-            [key]: "Attribute value must be 500 characters or fewer.",
-          };
+      Object.entries(schemaErrors).forEach(([field, message]) => {
+        if (field !== "name" && field !== "description") {
+          newErrors[field] = message;
         }
       });
     }
+    const yupErrors = await validateProductDataYup({
+      formData,
+      variantsData,
+      variantAxes,
+      categoryAttributeSchema,
+      useManualAttributes,
+      formattedData,
+      createSelectOptions,
+      isSellerPanelUser,
+      shippingProfilesLoading,
+      shippingProfileOptions,
+      commonImagesUploading,
+      productVideoUploading,
+      ogImageUploading,
+      variantBuilderBusy,
+      catalogBusy,
+    });
 
-    const tags = Array.isArray(formData?.tags) ? formData.tags : [];
-    if (tags.length === 0) {
-      newErrors.tags = "Add at least one tag.";
-    } else if (tags.length > 20) {
-      newErrors.tags = "Use no more than 20 tags.";
-    } else if (
-      tags.some((tag) => {
-        const normalized = String(tag || "").trim();
-        return (
-          normalized.length < 2 ||
-          normalized.length > 40 ||
-          !PRODUCT_TAG_PATTERN.test(normalized)
-        );
-      })
-    ) {
-      newErrors.tags =
-        "Tags must be 2–40 lowercase letters or numbers separated by single hyphens.";
-    } else if (findDuplicate(tags)) {
-      newErrors.tags = "Tags must be unique, ignoring letter case.";
+    Object.assign(newErrors, yupErrors);
+
+    if (Object.keys(schemaErrors).length) {
+      basicDetailsFormik.setTouched(
+        setNestedObjectValues(schemaErrors, true),
+        false,
+      );
     }
-
     setError(newErrors);
-
+    console.log("Validation errors:", newErrors);
     if (Object.keys(newErrors).length > 0) {
       pendingValidationScrollRef.current = true;
       toast.error("Please Fill the highlighted fields before saving.");
@@ -2927,43 +2049,103 @@ export default function ProductManagementUI() {
     }));
   }, [formData.basePrice, formData.discount, taxData]);
 
-  const handleChange = useCallback((e) => {
-    const { name, value: rawValue } = e.target;
-    const value = name === "name" ? rawValue.trimStart() : rawValue;
+  const handleChange = useCallback(
+    (e) => {
+      const { name, value: rawValue } = e.target;
+      const value =
+        name === "name"
+          ? rawValue.replace(/\s{2,}/gu, " ").trimStart()
+          : rawValue;
+      basicDetailsFormik.setFieldValue(name, value);
+      basicDetailsFormik.setFieldTouched(name, true, false);
 
-    // Update form data
-    if (name.includes(".")) {
-      const [group, field] = name.split(".");
+      // Update form data
+      if (name.includes(".")) {
+        const [group, field] = name.split(".");
 
-      setFormData((prev) => ({
-        ...prev,
-        [group]: {
-          ...(prev[group] || {}),
-          [field]: value,
-        },
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-
-    // Clear/revalidate the error while typing
-    setError((prev) => {
-      const updatedErrors = { ...prev };
-
-      if (name === "name") {
-        const message = validateProductName(value);
-        if (message) updatedErrors.name = message;
-        else delete updatedErrors.name;
+        setFormData((prev) => ({
+          ...prev,
+          [group]: {
+            ...(prev[group] || {}),
+            [field]: value,
+          },
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
       }
-
-      return updatedErrors;
-    });
-  }, []);
+      productBasicDetailsValidationSchema
+        .validateAt(
+          name,
+          { ...formData, [name]: value },
+          { context: { isSellerPanelUser } },
+        )
+        .then(() => {
+          setError((previous) => ({
+            ...(previous || {}),
+            formik: { ...(previous?.formik || {}), [name]: undefined },
+          }));
+        })
+        .catch((validationError) => {
+          setError((previous) => ({
+            ...(previous || {}),
+            formik: {
+              ...(previous?.formik || {}),
+              [name]: validationError.message,
+            },
+          }));
+        });
+    },
+    [basicDetailsFormik, formData, isSellerPanelUser],
+  );
 
   const handleSelectChange = (selectedOption, action) => {
+    const basicFieldByAction = {
+      SELLER_ID: "sellerId",
+      ORGANIZATION_ID: "organizationId",
+      BRAND_ID: "brand",
+      CATEGORY_ID: "category_id",
+      hsn_code: "hsn_code",
+      PRODUCT_FAMILY: "productFamilyCode",
+    };
+    const basicField = basicFieldByAction[action];
+    if (basicField) {
+      const nextFormData = {
+        ...formData,
+        [basicField]: selectedOption?.value || "",
+      };
+      if (action === "SELLER_ID") nextFormData.organizationId = "";
+      basicDetailsFormik.setValues(nextFormData, false);
+      if (selectedOption?.value) {
+        basicDetailsFormik.setFieldError(basicField, undefined);
+      }
+      if (basicDetailsFormik.touched[basicField]) {
+        productBasicDetailsValidationSchema
+          .validateAt(basicField, nextFormData, {
+            context: { isSellerPanelUser },
+          })
+          .then(() =>
+            setError((previous) => ({
+              ...(previous || {}),
+              formik: { ...(previous?.formik || {}), [basicField]: undefined },
+            })),
+          )
+          .catch((validationError) =>
+            setError((previous) => ({
+              ...(previous || {}),
+              formik: {
+                ...(previous?.formik || {}),
+                [basicField]: validationError.message,
+              },
+            })),
+          );
+      }
+      if (!basicDetailsFormik.touched[basicField]) {
+        basicDetailsFormik.setFieldTouched(basicField, true, false);
+      }
+    }
     setError((prevErrors) => {
       const newErrors = { ...prevErrors };
       switch (action) {
@@ -3044,6 +2226,7 @@ export default function ProductManagementUI() {
         break;
 
       case "BRAND_ID":
+        basicDetailsFormik.setFieldValue("brand", selectedOption?.value || "");
         setFormData((prev) => ({
           ...prev,
           // Products keep the immutable master-record ID. The display name is
@@ -3070,6 +2253,10 @@ export default function ProductManagementUI() {
         break;
 
       case "CATEGORY_ID":
+        basicDetailsFormik.setFieldValue(
+          "category_id",
+          selectedOption?.value || "",
+        );
         setFormData((prev) => ({
           ...prev,
           category_id: selectedOption?.value || "",
@@ -3105,6 +2292,10 @@ export default function ProductManagementUI() {
         }));
         break;
       case "hsn_code":
+        basicDetailsFormik.setFieldValue(
+          "hsn_code",
+          selectedOption?.value || "",
+        );
         setFormData((prev) => ({
           ...prev,
           hsn_code: selectedOption?.value || "",
@@ -3298,7 +2489,7 @@ export default function ProductManagementUI() {
       isDefault:
         variant.isDefault === true ||
         (!variantsData.some((item) => item.isDefault) && index === 0),
-      sortOrder: variant.sortOrder ?? index,
+      sortOrder: normalizeVariantSortOrder(variant.sortOrder, index),
     }));
     const origin = compactObject(updatedFormData.origin || {});
     const dimensions = compactObject({
@@ -3310,12 +2501,7 @@ export default function ProductManagementUI() {
       weight: toOptionalNumber(updatedFormData.dimensions?.weight),
     });
     const warrantySource = updatedFormData.warranty || {};
-    const hasLegacyWarrantyDetails =
-      Number(warrantySource.period) >= 1 ||
-      Boolean(String(warrantySource.provider || "").trim());
-    const warrantyEnabled =
-      warrantySource.enabled === true ||
-      (warrantySource.enabled === undefined && hasLegacyWarrantyDetails);
+    const warrantyEnabled = warrantySource.enabled === true;
     const warranty = compactObject({
       enabled: warrantyEnabled,
       ...(warrantyEnabled
@@ -3433,9 +2619,11 @@ export default function ProductManagementUI() {
             shippingProfileId:
               updatedFormData.shipping?.shippingProfileId || null,
             copiedFromShippingTemplateId:
-              updatedFormData.shipping?.copiedFromShippingTemplateId || undefined,
+              updatedFormData.shipping?.copiedFromShippingTemplateId ||
+              undefined,
             copiedFromShippingTemplateName:
-              updatedFormData.shipping?.copiedFromShippingTemplateName || undefined,
+              updatedFormData.shipping?.copiedFromShippingTemplateName ||
+              undefined,
           },
     );
 
@@ -3606,6 +2794,8 @@ export default function ProductManagementUI() {
       const mappedErrors = {};
       let gstRateErrorMessage = "";
       let friendlyApiMessage = "";
+      const friendlyVariantSortOrderMessage =
+        "Variant sort order must be a valid number.";
       const setVariantApiError = (index, field, fieldMessage) => {
         mappedErrors.variants = mappedErrors.variants || {};
         mappedErrors.variants[index] = {
@@ -3619,15 +2809,10 @@ export default function ProductManagementUI() {
           .replace(/\[(\d+)\]/g, ".$1");
         const rawFieldMessage = String(detail?.message || message);
         const fieldMessage =
-          /seo\.keywords/i.test(field) &&
-          /required|does not contain|at least|array\.min/i.test(rawFieldMessage)
-            ? "Add at least one SEO keyword."
-            : /^tags$/i.test(field) &&
-                /does not contain|required|at least|array\.min/i.test(
-                  rawFieldMessage,
-                )
-              ? "Add at least one tag."
-              : rawFieldMessage;
+          /sortOrder|sort_order/i.test(`${field} ${rawFieldMessage}`) &&
+          /must be a number|numeric|valid number/i.test(rawFieldMessage)
+            ? friendlyVariantSortOrderMessage
+            : rawFieldMessage;
         if (fieldMessage !== rawFieldMessage) {
           friendlyApiMessage = fieldMessage;
         }
@@ -3638,7 +2823,9 @@ export default function ProductManagementUI() {
           const friendlyMessage =
             variantField.toLowerCase() === "gstrate"
               ? formatGstRateError(fieldMessage)
-              : fieldMessage;
+              : variantField.toLowerCase() === "sortorder"
+                ? friendlyVariantSortOrderMessage
+                : fieldMessage;
           if (variantField.toLowerCase() === "gstrate") {
             gstRateErrorMessage = friendlyMessage;
           }
@@ -3749,10 +2936,15 @@ export default function ProductManagementUI() {
             friendlyMessage,
           );
         } else if (
-          /seo[\s._-]*keywords?|at least one seo keyword/i.test(message)
+          variantMatch &&
+          variantMatch[2].toLowerCase() === "sortorder"
         ) {
-          friendlyApiMessage = "Add at least one SEO keyword.";
-          mappedErrors.seo = { keywords: friendlyApiMessage };
+          friendlyApiMessage = friendlyVariantSortOrderMessage;
+          setVariantApiError(
+            Number(variantMatch[1]),
+            variantMatch[2],
+            friendlyVariantSortOrderMessage,
+          );
         } else if (/image|media|video/i.test(message))
           mappedErrors.commonImages = message;
         else if (/shipping|delivery|pincode/i.test(message))
@@ -3785,6 +2977,34 @@ export default function ProductManagementUI() {
   ]);
 
   const handleProductDetailChange = (field, content) => {
+    basicDetailsFormik.setFieldValue(field, content);
+    basicDetailsFormik.setFieldTouched(field, true, false);
+    productBasicDetailsValidationSchema
+      .validateAt(
+        field,
+        { ...formData, [field]: content },
+        { context: { isSellerPanelUser } },
+      )
+      .then(() => {
+        setError((previous) => ({
+          ...(previous || {}),
+          formik: { ...(previous?.formik || {}), [field]: undefined },
+        }));
+      })
+      .catch((validationError) => {
+        if (
+          validationError.name === "ValidationError" &&
+          validationError.path !== field
+        )
+          return;
+        setError((previous) => ({
+          ...(previous || {}),
+          formik: {
+            ...(previous?.formik || {}),
+            [field]: validationError.message,
+          },
+        }));
+      });
     setFormData((prev) => ({
       ...prev,
       [field]: content,
@@ -3799,45 +3019,79 @@ export default function ProductManagementUI() {
     });
   };
 
-  const handleNestedChange = useCallback((field, value) => {
-    const parts = field.split(".");
-    if (parts.length === 1) {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-    } else {
-      const [group, subKey, deepKey] = parts;
-      setFormData((prev) => ({
-        ...prev,
-        [group]: deepKey
-          ? {
-              ...(prev[group] || {}),
-              [subKey]: {
-                ...((prev[group] || {})[subKey] || {}),
-                [deepKey]: value,
-              },
-            }
-          : { ...(prev[group] || {}), [subKey]: value },
-      }));
-    }
-
-    setError((prev) => {
-      if (!prev || typeof prev !== "object") return prev;
-
-      if (field.startsWith("seo.") && prev.seo?.[field.slice(4)]) {
-        const seoErrors = { ...prev.seo };
-        delete seoErrors[field.slice(4)];
-        const nextErrors = { ...prev };
-        if (Object.keys(seoErrors).length) nextErrors.seo = seoErrors;
-        else delete nextErrors.seo;
-        return Object.keys(nextErrors).length ? nextErrors : null;
+  const handleNestedChange = useCallback(
+    (field, value) => {
+      if (field.startsWith("warranty.")) {
+        basicDetailsFormik.setFieldValue(field, value);
       }
 
-      if (field !== "warranty.returnPolicy.returnWindowDays") return prev;
+      const parts = field.split(".");
+      if (parts.length === 1) {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+      } else {
+        const [group, subKey, deepKey] = parts;
+        setFormData((prev) => ({
+          ...prev,
+          [group]: deepKey
+            ? {
+                ...(prev[group] || {}),
+                [subKey]: {
+                  ...((prev[group] || {})[subKey] || {}),
+                  [deepKey]: value,
+                },
+              }
+            : { ...(prev[group] || {}), [subKey]: value },
+        }));
+      }
 
-      const nextErrors = { ...prev };
-      delete nextErrors.returnWindowDays;
-      return Object.keys(nextErrors).length ? nextErrors : null;
-    });
-  }, []);
+      setError((prev) => {
+        if (!prev || typeof prev !== "object") return prev;
+
+        if (field.startsWith("seo.") && prev.seo?.[field.slice(4)]) {
+          const seoErrors = { ...prev.seo };
+          delete seoErrors[field.slice(4)];
+          const nextErrors = { ...prev };
+          if (Object.keys(seoErrors).length) nextErrors.seo = seoErrors;
+          else delete nextErrors.seo;
+          return Object.keys(nextErrors).length ? nextErrors : null;
+        }
+
+        return prev;
+      });
+    },
+    [basicDetailsFormik, formData.warranty],
+  );
+
+  const handleWarrantyToggle = useCallback(
+    (enabled) => {
+      basicDetailsFormik.setFieldValue("warranty.enabled", enabled);
+      setFormData((prev) => ({
+        ...prev,
+        warranty: {
+          ...(prev.warranty || {}),
+          enabled,
+          ...(!enabled
+            ? { period: "", periodUnit: "", provider: "", type: "", terms: "" }
+            : {}),
+        },
+      }));
+      if (!enabled) {
+        setError((previous) => {
+          if (!previous) return previous;
+          const next = { ...previous };
+          [
+            "warrantyPeriod",
+            "warrantyPeriodUnit",
+            "warrantyProvider",
+            "warrantyType",
+            "warrantyTerms",
+          ].forEach((key) => delete next[key]);
+          return Object.keys(next).length ? next : null;
+        });
+      }
+    },
+    [basicDetailsFormik],
+  );
 
   const patchShipping = useCallback((patch) => {
     setFormData((prev) => ({
@@ -3903,7 +3157,7 @@ export default function ProductManagementUI() {
     }
     const current = getShippingPincodes(formData?.shipping);
     if (current.includes(value)) {
-      toast.error("This pincode is already added");
+      toast.error("This is already added");
       return;
     }
     const next = [...current, value];
@@ -4107,21 +3361,6 @@ export default function ProductManagementUI() {
     handleNestedChange("seo.ogImage", "");
   }, [handleNestedChange]);
 
-  // const addCommonProductImageUrl = () => {
-  //   const url = commonImageUrl.trim();
-  //   const current = Array.isArray(formData.commonImages) ? formData.commonImages : [];
-  //   if (!url) return;
-  //   if (current.length >= MAX_COMMON_PRODUCT_IMAGES) {
-  //     toast.error(`Maximum ${MAX_COMMON_PRODUCT_IMAGES} common images`);
-  //     return;
-  //   }
-  //   setFormData((previous) => ({
-  //     ...previous,
-  //     commonImages: [...(previous.commonImages || []), url],
-  //   }));
-  //   setCommonImageUrl("");
-  // };
-
   const removeCommonProductImage = (imageIndex) => {
     setFormData((previous) => ({
       ...previous,
@@ -4225,6 +3464,25 @@ export default function ProductManagementUI() {
     });
   }, []);
 
+  const validateTagCandidate = useCallback(
+    (candidate, currentTags = []) => {
+      try {
+        productBasicDetailsValidationSchema.validateSyncAt(
+          "tags",
+          {
+            ...basicDetailsFormik.values,
+            tags: [...currentTags, candidate],
+          },
+          { context: { isSellerPanelUser } },
+        );
+        return "";
+      } catch (validationError) {
+        return validationError.message;
+      }
+    },
+    [basicDetailsFormik.values, isSellerPanelUser],
+  );
+
   const tabs = useMemo(
     () => [
       {
@@ -4236,8 +3494,14 @@ export default function ProductManagementUI() {
           <BasicDetailsTab
             formData={formData}
             errors={error}
+            formikErrors={basicDetailsFormik.errors}
+            formikTouched={basicDetailsFormik.touched}
+            onFieldBlur={(field) => {
+              basicDetailsFormik.setFieldTouched(field, true, true);
+            }}
             handleChange={handleChange}
             handleNestedChange={handleNestedChange}
+            handleWarrantyToggle={handleWarrantyToggle}
             formattedCategoryList={createSelectOptions}
             formattedBrandList={formattedData.brandList}
             formattedWarrantyList={formattedData.warrantyTemplateList}
@@ -4428,8 +3692,8 @@ export default function ProductManagementUI() {
             <div className="product-form-section-header">
               <h3>Variants &amp; Options</h3>
               <p>
-                Define option axes (Color, Size...), generate combinations, then
-                edit each variant.
+                Add product options such as color and size to create and manage
+                variant combinations.
               </p>
             </div>
             <VariantBuilder
@@ -4760,13 +4024,19 @@ export default function ProductManagementUI() {
 
               {/* Shipping Templates */}
               {!formData?.shipping?.shippingProfileId &&
-                (shippingProfileOptions.some((option) => option.type === "template") || restoredShippingTemplate || selectedShippingTemplate) && (
+                (shippingProfileOptions.some(
+                  (option) => option.type === "template",
+                ) ||
+                  restoredShippingTemplate ||
+                  selectedShippingTemplate) && (
                   <div className="my-4">
                     <FilterSelect
                       options={shippingProfileOptions.filter(
                         (option) => option.type === "template",
                       )}
-                      value={restoredShippingTemplate || selectedShippingTemplate}
+                      value={
+                        restoredShippingTemplate || selectedShippingTemplate
+                      }
                       onChange={(selected) => {
                         setSelectedShippingTemplate(selected);
 
@@ -4798,10 +4068,9 @@ export default function ProductManagementUI() {
               ).length === 0 &&
                 !formData?.sellerId &&
                 !formData?.shipping?.shippingProfileId &&
-                !restoredShippingTemplate && !selectedShippingTemplate && (
-                  <p className="text-xs text-[var(--admin-gold-dark)]">
-                    Select a seller to view saved profiles.
-                  </p>
+                !restoredShippingTemplate &&
+                !selectedShippingTemplate && (
+                  <p className="text-xs text-[var(--admin-gold-dark)]"></p>
                 )}
 
               {/* No Profiles */}
@@ -4975,137 +4244,172 @@ export default function ProductManagementUI() {
                     </div>
                   );
                 })()}
-              {!formData?.shipping?.shippingProfileId && (restoredShippingTemplate || selectedShippingTemplate)?.profile && (() => {
-                const p = (restoredShippingTemplate || selectedShippingTemplate).profile;
-                const days = [p.etaMin, p.etaMax].filter((value) => value !== null && value !== undefined && value !== "").join("–");
-                const amount = Number(p.shippingCharge || 0);
-                const details = [
-                  ["Shipping method", p.shippingMethod || "Standard"],
-                  ["Shipping charge", amount === 0 ? "Free" : `₹${amount.toFixed(2)}`],
-                  ["Estimated delivery", days ? `${days} days` : "Not specified"],
-                  ["Handling charge", p.handlingCharge == null ? "₹0.00" : `₹${Number(p.handlingCharge).toFixed(2)}`],
-                  ["Free shipping threshold", p.freeShippingThreshold == null ? "None" : `₹${Number(p.freeShippingThreshold).toFixed(2)}`],
-                  ["Cash on delivery", p.codAvailable === false ? "Unavailable" : "Available"],
-                  ["Delivery coverage", p.serviceabilityMode === "all_india" ? "All India" : (p.serviceabilityMode || "Configured pincodes").replace(/_/g, " ")],
-                ];
-                return (
-                  <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-4">
-                    <p className="text-sm font-semibold text-gray-800">Copied settings: {p.name || "Shipping template"}</p>
-                    <p className="mt-0.5 text-xs text-gray-600">These settings were copied into product delivery settings and can be adjusted below.</p>
-                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {details.map(([label, value]) => (
-                        <div key={label} className="rounded-lg border border-blue-100 bg-white px-3 py-2">
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">{label}</p>
-                          <p className="mt-1 text-xs font-semibold capitalize text-gray-800">{value}</p>
-                        </div>
-                      ))}
+              {!formData?.shipping?.shippingProfileId &&
+                (restoredShippingTemplate || selectedShippingTemplate)
+                  ?.profile &&
+                (() => {
+                  const p = (
+                    restoredShippingTemplate || selectedShippingTemplate
+                  ).profile;
+                  const days = [p.etaMin, p.etaMax]
+                    .filter(
+                      (value) =>
+                        value !== null && value !== undefined && value !== "",
+                    )
+                    .join("–");
+                  const amount = Number(p.shippingCharge || 0);
+                  const details = [
+                    ["Shipping method", p.shippingMethod || "Standard"],
+                    [
+                      "Shipping charge",
+                      amount === 0 ? "Free" : `₹${amount.toFixed(2)}`,
+                    ],
+                    [
+                      "Estimated delivery",
+                      days ? `${days} days` : "Not specified",
+                    ],
+                    [
+                      "Handling charge",
+                      p.handlingCharge == null
+                        ? "₹0.00"
+                        : `₹${Number(p.handlingCharge).toFixed(2)}`,
+                    ],
+                    [
+                      "Free shipping threshold",
+                      p.freeShippingThreshold == null
+                        ? "None"
+                        : `₹${Number(p.freeShippingThreshold).toFixed(2)}`,
+                    ],
+                    [
+                      "Cash on delivery",
+                      p.codAvailable === false ? "Unavailable" : "Available",
+                    ],
+                    [
+                      "Delivery coverage",
+                      p.serviceabilityMode === "all_india"
+                        ? "All India"
+                        : (
+                            p.serviceabilityMode || "Configured pincodes"
+                          ).replace(/_/g, " "),
+                    ],
+                  ];
+                  return (
+                    <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-4">
+                      <p className="text-sm font-semibold text-gray-800">
+                        Copied settings: {p.name || "Shipping template"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-600">
+                        These settings were copied into product delivery
+                        settings and can be adjusted below.
+                      </p>
+                      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {details.map(([label, value]) => (
+                          <div
+                            key={label}
+                            className="rounded-lg border border-blue-100 bg-white px-3 py-2"
+                          >
+                            <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                              {label}
+                            </p>
+                            <p className="mt-1 text-xs font-semibold capitalize text-gray-800">
+                              {value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
             </div>
 
             {/* Product Delivery Pincodes */}
             {/* Product Delivery Pincodes */}
-           
-              <div className="space-y-4 border-t border-[var(--admin-line)] pt-5">
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">
-                    Product delivery pincodes
-                  </p>
 
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    With a shipping profile, these pincodes add to its delivery area.
-                    Without a profile, delivery is limited to these pincodes; leave
-                    empty for All India. These rules also apply when shipping is free.
-                  </p>
-                </div>
+            <div className="space-y-4 border-t border-[var(--admin-line)] pt-5">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">
+                  Product delivery pincodes
+                </p>
 
-                {/* <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-                  Leave the list empty to deliver across All India. Add one or
-                  more pincodes only when this product must be restricted to
-                  specific delivery locations.
-                </div> */}
-
-                <div className="space-y-2">
-                  <label className="admin-label">
-                    Allowed pincodes{" "}
-                    <span className="font-normal text-gray-400">
-                      (optional)
-                    </span>
-                  </label>
-
-                  <div className="flex items-start gap-2">
-                    <FormInput
-                      name="allowedPincode"
-                      className="flex-1 !mb-0"
-                      inputMode="numeric"
-                      maxLength={6}
-                      showLengthCount={false}
-                      placeholder="Enter 6-digit pincode"
-                      value={allowedPincodeInput}
-                      error={
-                        allowedPincodeInput === "000000"
-                          ? "Pincode cannot be 000000"
-                          : ""
-                      }
-                      onChange={(event) =>
-                        setAllowedPincodeInput(
-                          event.target.value.replace(/\D/g, "").slice(0, 6),
-                        )
-                      }
-                      onKeyDown={handleProductPincodeKeyDown}
-                    />
-
-                    <button
-                      type="button"
-                      className="admin-btn-primary whitespace-nowrap px-4"
-                      onClick={addProductPincode}
-                    >
-                      Add
-                    </button>
-                  </div>
-
-                  <div className="flex min-h-[44px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
-                    {getShippingPincodes(formData?.shipping).length ? (
-                      getShippingPincodes(formData?.shipping).map((pincode) => (
-                        <span
-                          key={pincode}
-                          className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
-                        >
-                          {pincode}
-
-                          <button
-                            type="button"
-                            onClick={() => removeProductPincode(pincode)}
-                            className="ml-1 text-sm leading-none hover:text-red-500"
-                            aria-label={`Remove pincode ${pincode}`}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-gray-400">
-                        No pincodes added — delivery defaults to All India.
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {error?.shipping && (
-                  <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
-                    {error.shipping}
-                  </p>
-                )}
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Choose where this product can be delivered. These rules also
+                  apply when shipping is free.
+                </p>
               </div>
-           
+
+              <div className="space-y-2">
+                <label className="admin-label">
+                  Allowed pincodes{" "}
+                  <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+
+                <div className="flex items-start gap-2">
+                  <FormInput
+                    name="allowedPincode"
+                    className="flex-1 !mb-0"
+                    inputMode="numeric"
+                    maxLength={6}
+                    showLengthCount={false}
+                    placeholder="Enter 6-digit pincode"
+                    value={allowedPincodeInput}
+                    error={
+                      allowedPincodeInput === "000000"
+                        ? "Pincode cannot be 000000"
+                        : ""
+                    }
+                    onChange={(event) =>
+                      setAllowedPincodeInput(
+                        event.target.value.replace(/\D/g, "").slice(0, 6),
+                      )
+                    }
+                    onKeyDown={handleProductPincodeKeyDown}
+                  />
+
+                  <button
+                    type="button"
+                    className="admin-btn-primary whitespace-nowrap px-4"
+                    onClick={addProductPincode}
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <div className="flex min-h-[44px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3">
+                  {getShippingPincodes(formData?.shipping).length ? (
+                    getShippingPincodes(formData?.shipping).map((pincode) => (
+                      <span
+                        key={pincode}
+                        className="inline-flex items-center gap-1 rounded-md bg-[var(--admin-blue)]/10 px-2 py-1 text-xs font-medium text-[var(--admin-blue)]"
+                      >
+                        {pincode}
+
+                        <button
+                          type="button"
+                          onClick={() => removeProductPincode(pincode)}
+                          className="ml-1 text-sm leading-none hover:text-red-500"
+                          aria-label={`Remove pincode ${pincode}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-400">
+                      No pincodes added — delivery defaults to All India.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {error?.shipping && (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                  {error.shipping}
+                </p>
+              )}
+            </div>
           </div>
         ),
       },
-
-      ,
-      ,
       {
         id: "seo",
         title: "SEO",
@@ -5145,47 +4449,42 @@ export default function ProductManagementUI() {
               <p>Tags and discoverability settings.</p>
             </div>
             <div className="space-y-2">
-              <p className="text-xs text-gray-500">
-                Tags help customers find this product through search and
-                filters.
+              <p className="text-sm font-medium font-[#252238]">
+                Tags <span className="text-red-400">*</span>
               </p>
-              <TagsInput
-                tags={Array.isArray(formData?.tags) ? formData.tags : []}
-                onChange={(tags) => {
-                  setFormData((prev) => ({ ...prev, tags }));
-                  if (error?.tags) {
-                    setError((prev) => {
-                      if (!prev?.tags) return prev;
-                      const next = { ...prev };
-                      if (!tags || tags.length === 0) {
-                        next.tags = "Add at least one tag.";
-                      } else if (tags.length > 20) {
-                        next.tags = "Use no more than 20 tags.";
-                      } else if (
-                        tags.some((tag) => {
-                          const normalized = String(tag || "").trim();
-                          return (
-                            normalized.length < 2 ||
-                            normalized.length > 40 ||
-                            !PRODUCT_TAG_PATTERN.test(normalized)
-                          );
-                        })
-                      ) {
-                        next.tags =
-                          "Tags must be 2–40 lowercase letters or numbers separated by single hyphens.";
-                      } else if (findDuplicate(tags)) {
-                        next.tags = "Tags must be unique, ignoring letter case.";
-                      } else {
-                        delete next.tags;
-                      }
-                      return next;
-                    });
+              <div data-error-field="tags" name="tags">
+                <TagsInput
+                  tags={Array.isArray(formData?.tags) ? formData.tags : []}
+                  onChange={(tags) => {
+                    basicDetailsFormik.setFieldValue("tags", tags, false);
+                    basicDetailsFormik.setFieldTouched("tags", true, false);
+                    setFormData((prev) => ({ ...prev, tags }));
+                    try {
+                      productBasicDetailsValidationSchema.validateSyncAt(
+                        "tags",
+                        { ...basicDetailsFormik.values, tags },
+                        { context: { isSellerPanelUser } },
+                      );
+                      basicDetailsFormik.setFieldError("tags", undefined);
+                    } catch (validationError) {
+                      basicDetailsFormik.setFieldError(
+                        "tags",
+                        validationError.message,
+                      );
+                    }
+                  }}
+                  onBlur={() =>
+                    basicDetailsFormik.setFieldTouched("tags", true, true)
                   }
-                }}
-                placeholder="Add tag…"
-                maxTags={20}
-                error={typeof error?.tags === "string" ? error.tags : ""}
-              />
+                  placeholder="Add tag…"
+                  maxTags={20}
+                  validateTag={validateTagCandidate}
+                  error={
+                    basicDetailsFormik.touched.tags &&
+                    basicDetailsFormik.errors.tags
+                  }
+                />
+              </div>
             </div>
 
             <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white">
@@ -5390,6 +4689,8 @@ export default function ProductManagementUI() {
       variantAxes,
       categoryAttributeSchema,
       error,
+      basicDetailsFormik.errors,
+      basicDetailsFormik.touched,
       commonImageUrl,
       commonImagesUploading,
       productVideoUploading,
@@ -5400,39 +4701,9 @@ export default function ProductManagementUI() {
       handleProductPincodeKeyDown,
       handleVariantsChange,
       handleVariantErrorClear,
+      validateTagCandidate,
     ],
   );
-
-  // const flowReadiness = useMemo(() => {
-  //   const items = [
-  //     {
-  //       label: "Categories",
-  //       count: createSelectOptions?.length || 0,
-  //       route: "/app/categories",
-  //     },
-  //     {
-  //       label: "Attributes (selected category)",
-  //       count: categoryAttributeSchema?.length || 0,
-  //       route: "/app/categories",
-  //     },
-  //     {
-  //       label: "Brands",
-  //       count: formattedData?.brandList?.length || 0,
-  //       route: "/app/brands",
-  //     },
-  //     {
-  //       label: "HSN Codes",
-  //       count: formattedData?.hsnCodeList?.length || 0,
-  //       route: "/app/hsn-code",
-  //     },
-  //     {
-  //       label: "Warranty Templates",
-  //       count: formattedData?.warrantyTemplateList?.length || 0,
-  //       route: "/app/warranty",
-  //     },
-  //   ];
-  //   return items;
-  // }, [createSelectOptions, categoryAttributeSchema, formattedData]);
 
   const flowGateErrors = useMemo(() => {
     const blockers = [];
@@ -5468,7 +4739,7 @@ export default function ProductManagementUI() {
 
   const handleValidateAndSubmit = useCallback(async () => {
     if (saving || checkingMedia) return;
-    const isBasicFormValid = validateForm();
+    const isBasicFormValid = await validateForm();
 
     const seoErrors = await seoFormik.validateForm();
     if (ogImageUploading) {
@@ -5489,7 +4760,7 @@ export default function ProductManagementUI() {
         seo: seoErrors,
       }));
       pendingValidationScrollRef.current = true;
-      toast.error("Please correct the highlighted SEO fields before saving.");
+      // toast.error("Please correct the highlighted SEO fields before saving.");
       return;
     }
 
@@ -5631,40 +4902,7 @@ export default function ProductManagementUI() {
         }
       />
       <Breadcrumb isEditMode={isEditMode} />
-      {/* <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
-        <p className="text-sm font-semibold text-blue-900">Master Data Readiness</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {flowReadiness.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              onClick={() => navigate(item.route)}
-              className={`rounded border px-2 py-1 text-xs ${item.count > 0 ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-amber-300 bg-amber-50 text-amber-700'}`}
-            >
-              {item.label}: {item.count}
-            </button>
-          ))}
-        </div>
-      </div> */}
-      {/* {flowGateErrors.length > 0 && (
-        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3">
-          <p className="text-sm font-semibold text-amber-900">Complete Required Master Data Before Save</p>
-          <ul className="mt-2 space-y-2 text-xs text-amber-900">
-            {flowGateErrors.map((item) => (
-              <li key={item.key} className="flex items-center justify-between gap-2 rounded border border-amber-200 bg-white p-2">
-                <span>{item.message}</span>
-                <button
-                  type="button"
-                  className="rounded bg-amber-600 px-2 py-1 text-white"
-                  onClick={() => navigate(item.route)}
-                >
-                  Fix Now
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )} */}
+
       {error?.flow && (
         <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">
           {error.flow}

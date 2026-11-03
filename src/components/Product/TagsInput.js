@@ -18,6 +18,8 @@ const TagsInput = ({
   placeholder = "Add tag…",
   maxTags = 20,
   error = "",
+  validateTag,
+  onBlur,
 }) => {
   const [input, setInput] = useState("");
   const [focused, setFocused] = useState(false);
@@ -31,6 +33,16 @@ const TagsInput = ({
       .toLowerCase()
       .replace(/\s+/g, "-");
 
+  const filterTagInput = (raw) =>
+    raw
+      .replace(/[^a-zA-Z0-9\s#-]/g, "")
+      .replace(/#/g, (character, index) => (index === 0 ? character : ""))
+      .toLowerCase();
+
+  const inputError = input.trim()
+    ? validateTag?.(normalise(input), tags) || ""
+    : "";
+
   const filteredSuggestions = input.trim()
     ? suggestions.filter(
         (s) =>
@@ -40,7 +52,7 @@ const TagsInput = ({
 
   const addTag = (raw) => {
     const trimmed = normalise(raw || input);
-    if (!trimmed || tags.some((tag) => String(tag).toLowerCase() === trimmed.toLowerCase()) || tags.length >= maxTags) return;
+    if (!trimmed || validateTag?.(trimmed, tags)) return;
     onChange([...tags, trimmed]);
     setInput("");
   };
@@ -64,16 +76,19 @@ const TagsInput = ({
         <input
           ref={inputRef}
           type="text"
-          className={`admin-input w-full ${error ? "border-red-400 focus:border-red-500" : ""}`}
+          className={`admin-input w-full ${inputError || error ? "border-red-400 focus:border-red-500" : ""}`}
           placeholder={atMax ? `Max ${maxTags} tags reached` : placeholder}
           value={input}
           disabled={atMax}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => setInput(filterTagInput(e.target.value))}
           maxLength={40}
-          aria-invalid={Boolean(error)}
+          aria-invalid={Boolean(inputError || error)}
           onKeyDown={handleKeyDown}
           onFocus={() => setFocused(true)}
-          onBlur={() => setTimeout(() => setFocused(false), 150)}
+          onBlur={() => {
+            setTimeout(() => setFocused(false), 150);
+            onBlur?.();
+          }}
         />
 
         {/* ── Autocomplete dropdown ── */}
@@ -93,7 +108,11 @@ const TagsInput = ({
           </div>
         )}
       </div>
-      {error && <p className="text-xs text-red-600" role="alert">{error}</p>}
+      {(inputError || error) && (
+        <p className="text-xs text-red-600" role="alert">
+          {inputError || error}
+        </p>
+      )}
 
       {/* ── Tags container box (like Allowed Pincodes box) ── */}
       <div className="flex min-h-[34px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-2">

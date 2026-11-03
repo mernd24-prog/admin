@@ -118,12 +118,16 @@ export default function BasicDetailsTab({
   formData,
   handleChange,
   handleNestedChange,
+  handleWarrantyToggle,
   formattedBrandList,
   formattedWarrantyList,
   formattedProductFamilyList,
   formattedCategoryList,
   handleSelectChange,
   errors,
+  formikErrors,
+  formikTouched,
+  onFieldBlur,
   fetchAllData,
   allCategories,
   API_CALL_OBJECT,
@@ -1901,7 +1905,7 @@ export default function BasicDetailsTab({
     const titled = toTitleCase(value.trim());
 
     if (titled !== value) {
-      handleChange({
+      handleInputCategoryChange({
         target: {
           name,
           value: titled,
@@ -1910,13 +1914,10 @@ export default function BasicDetailsTab({
     }
   };
 
+  const handleFieldBlur = (field) => onFieldBlur?.(field);
+
   const isReturnable = Boolean(formData.warranty?.returnPolicy?.returnable);
-  const hasLegacyWarrantyDetails =
-    Number(formData.warranty?.period) >= 1 ||
-    Boolean(String(formData.warranty?.provider || "").trim());
-  const warrantyEnabled =
-    formData.warranty?.enabled === true ||
-    (formData.warranty?.enabled === undefined && hasLegacyWarrantyDetails);
+  const warrantyEnabled = formData.warranty?.enabled === true;
 
   /*
    * ------------------------------------------------------------
@@ -1971,19 +1972,15 @@ export default function BasicDetailsTab({
                     ) || null
                   }
                   onChange={(option) => {
-                    /*
-                     * Seller changes should clear the
-                     * organization/store because stores
-                     * belong to the selected seller.
-                     */
                     handleSelectChange(option, "SELLER_ID");
-
-                    handleSelectChange(null, "ORGANIZATION_ID");
-
                     setOrganizationOptions([]);
                   }}
                   options={formattedSellerOptions}
-                  error={errors?.sellerId}
+                  onBlur={() => handleFieldBlur("sellerId")}
+                  error={
+                    errors?.sellerId ||
+                    (formikTouched?.sellerId && formikErrors?.sellerId)
+                  }
                   placeholder="Select Seller"
                   required
                   isLoading={sellerLoading}
@@ -2012,7 +2009,12 @@ export default function BasicDetailsTab({
                     handleSelectChange(option, "ORGANIZATION_ID")
                   }
                   options={formattedOrganizationOptions}
-                  error={errors?.organizationId}
+                  onBlur={() => handleFieldBlur("organizationId")}
+                  error={
+                    errors?.organizationId ||
+                    (formikTouched?.organizationId &&
+                      formikErrors?.organizationId)
+                  }
                   placeholder={
                     !formData.sellerId
                       ? "Select Seller First"
@@ -2023,7 +2025,6 @@ export default function BasicDetailsTab({
                   required
                   isDisabled={!formData.sellerId}
                   isLoading={organizationLoading}
-                  isClearable
                 />
               </div>
             )}
@@ -2042,12 +2043,21 @@ export default function BasicDetailsTab({
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                onBlur={handleNameBlur}
+                onBlur={(event) => {
+                  handleNameBlur(event);
+                  handleFieldBlur("name");
+                }}
                 minLength={3}
                 maxLength={200}
+                placeholder="Enter product name"
+                limitMessage={`Product name must be between 3 and 200 characters`}
                 required
                 helpText="Name of the product as it will be displayed"
-                error={errors?.name}
+                error={
+                  errors?.name ||
+                  errors?.formik?.name ||
+                  (formikTouched?.name && formikErrors?.name)
+                }
               />
             </div>
 
@@ -2062,12 +2072,16 @@ export default function BasicDetailsTab({
                   name="brand"
                   value={selectedBrandOption}
                   onChange={handleBrandSelect}
+                  onBlur={() => handleFieldBlur("brand")}
                   options={brandOptions}
                   loadOptions={loadBrandOptions}
                   defaultOptions={brandOptions}
                   cacheOptions={false}
                   placeholder="Select Brand"
-                  error={errors?.brand}
+                  error={
+                    errors?.brand ||
+                    (formikTouched?.brand && formikErrors?.brand)
+                  }
                   formatOptionLabel={formatCatalogOption}
                   isClearable
                   required
@@ -2112,10 +2126,14 @@ export default function BasicDetailsTab({
                     name="category_id"
                     value={selectedCategoryOption}
                     onChange={handleCategoryChange}
+                    onBlur={() => handleFieldBlur("category_id")}
                     options={categoryOptions}
                     loadOptions={loadCategoryOptions}
                     defaultOptions={categoryOptions}
-                    error={errors?.category_id}
+                    error={
+                      errors?.category_id ||
+                      (formikTouched?.category_id && formikErrors?.category_id)
+                    }
                     placeholder="Select Category"
                     helperText="Attributes are controlled by the selected category schema."
                     formatOptionLabel={formatCatalogOption}
@@ -2169,10 +2187,14 @@ export default function BasicDetailsTab({
 
                       handleSelectChange(option, "hsn_code");
                     }}
+                    onBlur={() => handleFieldBlur("hsn_code")}
                     options={hsnOptions}
                     loadOptions={loadHsnOptions}
                     defaultOptions={hsnOptions}
-                    error={errors?.hsn_code}
+                    error={
+                      errors?.hsn_code ||
+                      (formikTouched?.hsn_code && formikErrors?.hsn_code)
+                    }
                     placeholder="Search by code or description…"
                     formatOptionLabel={formatCatalogOption}
                     isClearable
@@ -2311,11 +2333,17 @@ export default function BasicDetailsTab({
                 onChange={(content) =>
                   handleInputReactQuillChange?.("description", content)
                 }
+                onBlur={() => handleFieldBlur("description")}
                 required
                 maxLength={5000}
+                minLength={10}
                 limitMessage="Maximum 5000 characters allowed."
                 placeholder="Enter detailed product description"
-                error={errors?.description}
+                error={
+                  errors?.description ||
+                  errors?.formik?.description ||
+                  (formikTouched?.description && formikErrors?.description)
+                }
                 height="220px"
                 className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
               />
@@ -2346,18 +2374,7 @@ export default function BasicDetailsTab({
                         typeof eventOrValue === "boolean"
                           ? eventOrValue
                           : Boolean(eventOrValue?.target?.checked);
-                      handleNestedChange("warranty.enabled", checked);
-                      if (!checked) {
-                        [
-                          "period",
-                          "periodUnit",
-                          "provider",
-                          "type",
-                          "terms",
-                        ].forEach((field) =>
-                          handleNestedChange(`warranty.${field}`, ""),
-                        );
-                      }
+                      handleWarrantyToggle?.(checked);
                     }}
                   />
                 </div>
@@ -2369,11 +2386,14 @@ export default function BasicDetailsTab({
                     <Input
                       labelName="Warranty Period"
                       name="warranty.period"
+                      required
                       type="number"
                       min={1}
                       max={365}
                       maxLength={3}
+                      showLengthCount={false}
                       value={formData.warranty?.period ?? ""}
+                      onBlur={() => handleFieldBlur("warranty.period")}
                       onKeyDown={preventNegativeNumericKey}
                       onPaste={preventNegativeNumericPaste}
                       onChange={(event) => {
@@ -2386,85 +2406,119 @@ export default function BasicDetailsTab({
                       }}
                       placeholder="Example: 12"
                       helperText="Enter a value between 1 and 365 (maximum 3 digits)."
-                      error={errors?.warrantyPeriod}
+                      error={
+                        formikTouched?.warranty?.period &&
+                        formikErrors?.warranty?.period
+                      }
                     />
 
-                    <FilterSelect
-                      label="Warranty Unit"
-                      value={
-                        warrantyUnits.options.find(
-                          (option) =>
-                            option.value === formData.warranty?.periodUnit,
-                        ) || null
-                      }
-                      onChange={(option) =>
-                        handleNestedChange(
-                          "warranty.periodUnit",
-                          option?.value || "",
-                        )
-                      }
-                      options={warrantyUnits.options}
-                      placeholder="Select warranty unit"
-                      isLoading={warrantyUnits.loading}
-                      isClearable
-                      error={errors?.warrantyPeriodUnit}
-                    />
-                    <FilterSelect
-                      label="Warranty Provider"
-                      value={
-                        warrantyProviders.options.find(
-                          (option) =>
-                            option.value === formData.warranty?.provider,
-                        ) || null
-                      }
-                      onChange={(option) =>
-                        handleNestedChange(
-                          "warranty.provider",
-                          option?.value || "",
-                        )
-                      }
-                      options={warrantyProviders.options}
-                      placeholder="Select warranty provider"
-                      isLoading={warrantyProviders.loading}
-                      isClearable
-                      error={errors?.warrantyProvider}
-                    />
+                    <div data-error-field="warranty.periodUnit">
+                      <FilterSelect
+                        label="Warranty Unit"
+                        name="warranty.periodUnit"
+                        required
+                        value={
+                          warrantyUnits.options.find(
+                            (option) =>
+                              option.value === formData.warranty?.periodUnit,
+                          ) || null
+                        }
+                        onBlur={() => handleFieldBlur("warranty.periodUnit")}
+                        onChange={(option) =>
+                          handleNestedChange(
+                            "warranty.periodUnit",
+                            option?.value || "",
+                          )
+                        }
+                        options={warrantyUnits.options}
+                        placeholder="Select warranty unit"
+                        isLoading={warrantyUnits.loading}
+                        isClearable
+                        error={
+                          formikTouched?.warranty?.periodUnit &&
+                          formikErrors?.warranty?.periodUnit
+                        }
+                      />
+                    </div>
+                    <div data-error-field="warranty.provider">
+                      <FilterSelect
+                        label="Warranty Provider"
+                        name="warranty.provider"
+                        required
+                        value={
+                          warrantyProviders.options.find(
+                            (option) =>
+                              option.value === formData.warranty?.provider,
+                          ) || null
+                        }
+                        onBlur={() => handleFieldBlur("warranty.provider")}
+                        onChange={(option) =>
+                          handleNestedChange(
+                            "warranty.provider",
+                            option?.value || "",
+                          )
+                        }
+                        options={warrantyProviders.options}
+                        placeholder="Select warranty provider"
+                        isLoading={warrantyProviders.loading}
+                        isClearable
+                        error={
+                          formikTouched?.warranty?.provider &&
+                          formikErrors?.warranty?.provider
+                        }
+                      />
+                    </div>
 
-                    <FilterSelect
-                      label="Warranty Type"
-                      value={
-                        warrantyTypes.options.find(
-                          (option) => option.value === formData.warranty?.type,
-                        ) || null
-                      }
-                      onChange={(option) =>
-                        handleNestedChange("warranty.type", option?.value || "")
-                      }
-                      options={warrantyTypes.options}
-                      placeholder="Select warranty type"
-                      isLoading={warrantyTypes.loading}
-                      isClearable
-                      error={errors?.warrantyType}
-                    />
+                    <div data-error-field="warranty.type">
+                      <FilterSelect
+                        label="Warranty Type"
+                        name="warranty.type"
+                        required
+                        value={
+                          warrantyTypes.options.find(
+                            (option) =>
+                              option.value === formData.warranty?.type,
+                          ) || null
+                        }
+                        onBlur={() => handleFieldBlur("warranty.type")}
+                        onChange={(option) =>
+                          handleNestedChange(
+                            "warranty.type",
+                            option?.value || "",
+                          )
+                        }
+                        options={warrantyTypes.options}
+                        placeholder="Select warranty type"
+                        isLoading={warrantyTypes.loading}
+                        isClearable
+                        error={
+                          formikTouched?.warranty?.type &&
+                          formikErrors?.warranty?.type
+                        }
+                      />
+                    </div>
                   </div>
 
-                  <TextEditor
-                    label="Warranty description and rules"
-                    value={formData.warranty?.terms || ""}
-                    onChange={(content) =>
-                      handleNestedChange("warranty.terms", content)
-                    }
-                    maxLength={1000}
-                    height="220px"
-                    limitMessage="Maximum 1000 characters allowed."
-                    className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
-                    placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
-                  />
-                  {errors?.warrantyTerms && (
-                    <p className="mt-1 text-xs text-red-600" role="alert">
-                      {errors.warrantyTerms}
-                    </p>
-                  )}
+                  <div data-error-field="warranty.terms" name="warranty.terms">
+                    <TextEditor
+                      label="Warranty Description and Rules"
+                      value={formData.warranty?.terms || ""}
+                      onBlur={() => handleFieldBlur("warranty.terms")}
+                      onChange={(content) =>
+                        handleNestedChange("warranty.terms", content)
+                      }
+                      maxLength={1000}
+                      minLength={10}
+                      height="220px"
+                      limitMessage="Maximum 1000 characters allowed."
+                      error={
+                        formikTouched?.warranty?.terms &&
+                        formikErrors?.warranty?.terms
+                      }
+                      className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
+                      placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
+                    />
+                  </div>
                 </>
               ) : (
                 <DisabledPolicyState
@@ -2536,6 +2590,7 @@ export default function BasicDetailsTab({
                 <div className="grid gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
                   <Input
                     labelName="Return Window Days"
+                    required
                     name="warranty.returnPolicy.returnWindowDays"
                     type="number"
                     min={1}
@@ -2544,9 +2599,15 @@ export default function BasicDetailsTab({
                     value={
                       formData.warranty?.returnPolicy?.returnWindowDays ?? ""
                     }
+                    onBlur={() =>
+                      handleFieldBlur("warranty.returnPolicy.returnWindowDays")
+                    }
                     onKeyDown={preventNegativeNumericKey}
                     onPaste={preventNegativeNumericPaste}
-                    error={errors?.returnWindowDays}
+                    error={
+                      formikTouched?.warranty?.returnPolicy?.returnWindowDays &&
+                      formikErrors?.warranty?.returnPolicy?.returnWindowDays
+                    }
                     helperText={
                       isReturnable
                         ? "Use a return window between 1 and 365 days."
@@ -2554,6 +2615,11 @@ export default function BasicDetailsTab({
                     }
                     onChange={(event) => {
                       if (isNegativeNumericValue(event.target.value)) return;
+                      if (
+                        event.target.value !== "" &&
+                        Number(event.target.value) > 365
+                      )
+                        return;
                       const value =
                         event.target.value === ""
                           ? ""
@@ -2573,35 +2639,62 @@ export default function BasicDetailsTab({
                     }}
                   />
 
-                  <Input
-                    labelName="Allowed Resolution"
-                    name="warranty.returnPolicy.resolution"
-                    type="select"
-                    value={
-                      formData.warranty?.returnPolicy?.resolution ||
-                      "refund_or_replacement"
-                    }
-                    onChange={(option) =>
-                      handleNestedChange(
-                        "warranty.returnPolicy.resolution",
-                        option?.value || "refund_or_replacement",
-                      )
-                    }
-                    options={[
-                      {
-                        value: "refund_or_replacement",
-                        label: "Refund or replacement",
-                      },
-                      {
-                        value: "refund",
-                        label: "Refund only",
-                      },
-                      {
-                        value: "replacement",
-                        label: "Replacement only",
-                      },
-                    ]}
-                  />
+                  <div data-error-field="warranty.returnPolicy.resolution">
+                    <FilterSelect
+                      label="Allowed Resolution"
+                      required
+                      name="warranty.returnPolicy.resolution"
+                      value={
+                        [
+                          {
+                            value: "refund_or_replacement",
+                            label: "Refund or replacement",
+                          },
+                          {
+                            value: "refund",
+                            label: "Refund only",
+                          },
+                          {
+                            value: "replacement",
+                            label: "Replacement only",
+                          },
+                        ].find(
+                          (option) =>
+                            option.value ===
+                            (formData.warranty?.returnPolicy?.resolution ||
+                              "refund_or_replacement"),
+                        ) || null
+                      }
+                      onChange={(option) =>
+                        handleNestedChange(
+                          "warranty.returnPolicy.resolution",
+                          option?.value || "refund_or_replacement",
+                        )
+                      }
+                      onBlur={() =>
+                        handleFieldBlur("warranty.returnPolicy.resolution")
+                      }
+                      options={[
+                        {
+                          value: "refund_or_replacement",
+                          label: "Refund or replacement",
+                        },
+                        {
+                          value: "refund",
+                          label: "Refund only",
+                        },
+                        {
+                          value: "replacement",
+                          label: "Replacement only",
+                        },
+                      ]}
+                      placeholder="Select Allowed Resolution"
+                      error={
+                        formikTouched?.warranty?.returnPolicy?.resolution &&
+                        formikErrors?.warranty?.returnPolicy?.resolution
+                      }
+                    />
+                  </div>
 
                   <Input
                     labelName="Return Shipping Paid By"
@@ -2785,8 +2878,10 @@ export default function BasicDetailsTab({
                   label="Brand Name"
                   name="name"
                   type="text"
+                  limitMessage="Brand name must be between 2 and 50 characters"
                   value={formik.values.name}
                   maxLength={50}
+                  minLength={2}
                   onChange={(event) => {
                     formik.setFieldTouched("name", true, false);
                     formik.setFieldValue(
@@ -2814,6 +2909,8 @@ export default function BasicDetailsTab({
                   type="textarea"
                   value={formik.values.description}
                   maxLength={1000}
+                  limitMessage="Description must be between 3 and 1000 characters"
+                  minLength={3}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={
