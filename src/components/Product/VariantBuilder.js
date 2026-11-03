@@ -1568,6 +1568,9 @@ const VariantBuilder = ({
                         label="Additional Short Description"
                         limitMessage="Short description should not exceed more than 500 character"
                         value={variant.shortDescription || ""}
+                        name={`variants.${idx}.shortDescription`}
+                        data-error-field={`variants.${idx}.shortDescription`}
+                        data-variant-index={idx}
                         minLength={10}
                         maxLength={500}
                         rows={3}
@@ -1582,6 +1585,9 @@ const VariantBuilder = ({
                       <FormInput
                         type="textarea"
                         label="Additional Full Description"
+                        name={`variants.${idx}.description`}
+                        data-error-field={`variants.${idx}.description`}
+                        data-variant-index={idx}
                         limitMessage="Full description should not exceed more than 5000 character"
                         value={variant.description || ""}
                         minLength={10}
@@ -1598,7 +1604,12 @@ const VariantBuilder = ({
                     </div>
 
                     {/* Images section */}
-                    <div className="space-y-3">
+                    <div
+                      name={`variants.${idx}.images`}
+                      data-error-field={`variants.${idx}.images`}
+                      data-variant-index={idx}
+                      className="space-y-3"
+                    >
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-xs font-semibold text-gray-700">

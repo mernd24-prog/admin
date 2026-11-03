@@ -67,67 +67,59 @@ export const productBasicDetailsValidationSchema = Yup.object({
     "Short description must be 500 characters or fewer.",
   ),
 
-tags: Yup.array()
-  .ensure()
-  .of(Yup.string().required("Tag cannot be empty."))
-  .test("product-tags", function (tags = []) {
-    const createError = (message) =>
-      this.createError({ message });
+  tags: Yup.array()
+    .ensure()
+    .of(Yup.string().required("Tag cannot be empty."))
+    .test("product-tags", function (tags = []) {
+      const createError = (message) => this.createError({ message });
 
-    if (!tags.length) {
-      return createError("Add at least one tag.");
-    }
+      if (!tags.length) {
+        return createError("Add at least one tag.");
+      }
 
-    if (tags.length > 20) {
-      return createError("You can add a maximum of 20 tags.");
-    }
+      if (tags.length > 20) {
+        return createError("You can add a maximum of 20 tags.");
+      }
 
-    const normalizedTags = tags.map((tag) =>
-      String(tag ?? "").trim()
-    );
+      const normalizedTags = tags.map((tag) => String(tag ?? "").trim());
 
-    if (normalizedTags.some((tag) => !tag)) {
-      return createError("Empty tags are not allowed.");
-    }
+      if (normalizedTags.some((tag) => !tag)) {
+        return createError("Empty tags are not allowed.");
+      }
 
-    if (normalizedTags.some((tag) => tag.length < 2)) {
-      return createError(
-        "Each tag must contain at least 2 characters."
+      if (normalizedTags.some((tag) => tag.length < 2)) {
+        return createError("Each tag must contain at least 2 characters.");
+      }
+
+      if (normalizedTags.some((tag) => tag.length > 40)) {
+        return createError("Each tag cannot exceed 40 characters.");
+      }
+
+      const invalidTag = normalizedTags.some(
+        (tag) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tag),
       );
-    }
 
-    if (normalizedTags.some((tag) => tag.length > 40)) {
-      return createError(
-        "Each tag cannot exceed 40 characters."
+      if (invalidTag) {
+        return createError(
+          "Use lowercase letters, numbers, and single hyphens only. Tags cannot start or end with a hyphen.",
+        );
+      }
+
+      const uniqueTags = new Set(
+        normalizedTags.map((tag) => tag.toLowerCase()),
       );
-    }
 
-    const invalidTag = normalizedTags.some(
-      (tag) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tag)
-    );
+      if (uniqueTags.size !== normalizedTags.length) {
+        return createError("Duplicate tags are not allowed.");
+      }
 
-    if (invalidTag) {
-      return createError(
-        "Use lowercase letters, numbers, and single hyphens only. Tags cannot start or end with a hyphen."
-      );
-    }
-
-    const uniqueTags = new Set(
-      normalizedTags.map((tag) => tag.toLowerCase())
-    );
-
-    if (uniqueTags.size !== normalizedTags.length) {
-      return createError(
-        "Duplicate tags are not allowed."
-      );
-    }
-
-    return true;
-  }),
+      return true;
+    }),
 
   sellerId: Yup.string().when("$isSellerPanelUser", {
-    is: false,
-    then: (schema) => schema.required("Seller is required."),
+    is: true,
+    then: (schema) => schema.notRequired(),
+    otherwise: (schema) => schema.required("Seller is required."),
   }),
   organizationId: Yup.string().when("$isSellerPanelUser", {
     is: true,
@@ -864,8 +856,8 @@ export const productSeoValidationSchema = Yup.object({
       "unique-keywords",
       "SEO keywords must be unique, ignoring letter case.",
       (keywords = []) =>
-        new Set(keywords.map((keyword) => String(keyword).toLowerCase())).size ===
-        keywords.length,
+        new Set(keywords.map((keyword) => String(keyword).toLowerCase()))
+          .size === keywords.length,
     ),
   metaTitle: Yup.string()
     .transform((value) => (typeof value === "string" ? value.trim() : value))
@@ -1591,7 +1583,8 @@ export const MAX_COMMON_PRODUCT_IMAGES = 8;
 export const MAX_PRODUCT_MONEY = 999999999.99;
 export const MAX_PRODUCT_STOCK = 1000000000;
 export const MAX_PRODUCT_MEASUREMENT = 1000000;
-export const PRODUCT_SKU_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]{1,62}[A-Za-z0-9]$/;
+export const PRODUCT_SKU_PATTERN =
+  /^[A-Za-z0-9][A-Za-z0-9._/-]{1,62}[A-Za-z0-9]$/;
 export const PRODUCT_TAG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export const getMediaUrl = (media) =>
@@ -2202,7 +2195,6 @@ export const productRestockingFeeValidationSchema = Yup.mixed().test(
   },
 );
 
-
 export const productVariantsValidationSchema = Yup.mixed().test(
   "product-variants",
   null,
@@ -2350,9 +2342,7 @@ export const productVariantsValidationSchema = Yup.mixed().test(
             `variants.${index}.sku`,
           ),
         );
-      } else if (
-        skuCounts.get(String(variant.sku).trim().toLowerCase()) > 1
-      ) {
+      } else if (skuCounts.get(String(variant.sku).trim().toLowerCase()) > 1) {
         errors.push(
           new Yup.ValidationError(
             "SKU must be unique across variants.",
@@ -2676,10 +2666,7 @@ export const productVariantsValidationSchema = Yup.mixed().test(
               `variants.${index}.attributes.${normalizedKey || "_key"}`,
             ),
           );
-        } else if (
-          normalizedValue.length < 1 ||
-          normalizedValue.length > 80
-        ) {
+        } else if (normalizedValue.length < 1 || normalizedValue.length > 80) {
           errors.push(
             new Yup.ValidationError(
               "Attribute values must be 1–80 characters.",
@@ -2909,11 +2896,7 @@ export const productCategoryAttributesValidationSchema = Yup.mixed().test(
         }
         if (message) {
           errors.push(
-            new Yup.ValidationError(
-              message,
-              value,
-              `attributes.${field.key}`,
-            ),
+            new Yup.ValidationError(message, value, `attributes.${field.key}`),
           );
         }
       });
@@ -3101,7 +3084,6 @@ export const validateProductDataYup = async ({
   } catch (err) {
     collectYupErrors(err);
   }
-
 
   return errors;
 };
