@@ -81,6 +81,7 @@ import {
   getVariantAxisKey,
   isValidIndianPincode,
   normalizePincodeList,
+  normalizeVariantAttributes,
 } from "../../../../_helpers/validationSchemas";
 import { LuSlidersHorizontal } from "react-icons/lu";
 import { IoLayers, IoSearch } from "react-icons/io5";
@@ -154,7 +155,6 @@ const SELLER_PANEL_ROLES = new Set([
   "seller-admin",
   "seller-sub-admin",
 ]);
-
 const getSessionUser = () => {
   if (typeof window === "undefined") return null;
   try {
@@ -737,7 +737,12 @@ export default function ProductManagementUI() {
       "seo",
       "tags",
     ];
-    const errorFields = Object.keys(errors || {});
+    const errorFields = Array.from(
+      new Set([
+        ...Object.keys(errors?.formik || {}),
+        ...Object.keys(errors || {}).filter((field) => field !== "formik"),
+      ]),
+    );
     const firstField = errorFields
       .map((field, index) => ({
         field,
@@ -755,7 +760,26 @@ export default function ProductManagementUI() {
     if (!firstField || typeof document === "undefined") return;
 
     let nestedFieldSelector = null;
-    if (
+    if (firstField === "warranty") {
+      const findFirstErrorPath = (value, path) => {
+        if (typeof value === "string") return value ? path : null;
+        if (!value || typeof value !== "object") return null;
+
+        for (const [key, nestedValue] of Object.entries(value)) {
+          const nestedPath = findFirstErrorPath(nestedValue, `${path}.${key}`);
+          if (nestedPath) return nestedPath;
+        }
+
+        return null;
+      };
+      const warrantyErrorPath = findFirstErrorPath(
+        errors?.formik?.warranty,
+        "warranty",
+      );
+      if (warrantyErrorPath) {
+        nestedFieldSelector = `[name="${warrantyErrorPath}"], [data-error-field="${warrantyErrorPath}"]`;
+      }
+    } else if (
       firstField === "variants" &&
       errors?.variants &&
       typeof errors.variants === "object"
@@ -816,12 +840,11 @@ export default function ProductManagementUI() {
           const matches = Array.from(
             (formRoot || document).querySelectorAll(selector),
           );
-          const found =
-            matches.find(
-              (element) =>
-                element.getClientRects().length > 0 &&
-                !element.closest("[aria-hidden='true']"),
-            ) || matches[0];
+          const found = matches.find(
+            (element) =>
+              element.getClientRects().length > 0 &&
+              !element.closest("[aria-hidden='true']"),
+          );
           if (found) {
             field = found;
             break;
@@ -835,7 +858,29 @@ export default function ProductManagementUI() {
         const target =
           field?.closest?.(".admin-field") || field || validationSummary;
         if (target?.scrollIntoView) {
-          target.scrollIntoView({ behavior: "smooth", block: "center" });
+          const scrollContainer = target.closest(".sidebar-scrollbar");
+          if (scrollContainer) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            const nextScrollTop =
+              scrollContainer.scrollTop +
+              targetRect.top -
+              containerRect.top -
+              (scrollContainer.clientHeight - targetRect.height) / 2;
+
+            scrollContainer.scrollTo({
+              top: Math.max(
+                0,
+                Math.min(
+                  nextScrollTop,
+                  scrollContainer.scrollHeight - scrollContainer.clientHeight,
+                ),
+              ),
+              behavior: "smooth",
+            });
+          } else {
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
         }
 
         const focusTarget = field?.matches?.("input, select, textarea")
@@ -1799,14 +1844,10 @@ export default function ProductManagementUI() {
     const newErrors = {};
     const schemaErrors = await basicDetailsFormik.validateForm(formData);
 
-    const errorsForOtherFields = { ...schemaErrors };
-    delete errorsForOtherFields.warranty;
+    if (Object.keys(schemaErrors).length > 0) {
+      newErrors.formik = schemaErrors;
 
-    // Keep non-warranty schema errors in the legacy summary state.
-    if (Object.keys(errorsForOtherFields).length > 0) {
-      newErrors.formik = errorsForOtherFields;
-
-      Object.entries(errorsForOtherFields).forEach(([field, message]) => {
+      Object.entries(schemaErrors).forEach(([field, message]) => {
         if (field !== "name" && field !== "description") {
           newErrors[field] = message;
         }
@@ -2767,18 +2808,10 @@ export default function ProductManagementUI() {
           .replace(/\[(\d+)\]/g, ".$1");
         const rawFieldMessage = String(detail?.message || message);
         const fieldMessage =
-          /seo\.keywords/i.test(field) &&
-          /required|does not contain|at least|array\.min/i.test(rawFieldMessage)
-            ? "Add at least one SEO keyword."
-            : /^tags$/i.test(field) &&
-                /does not contain|required|at least|array\.min/i.test(
-                  rawFieldMessage,
-                )
-              ? "Add at least one tag."
-              : /sortOrder|sort_order/i.test(`${field} ${rawFieldMessage}`) &&
-                  /must be a number|numeric|valid number/i.test(rawFieldMessage)
-                ? friendlyVariantSortOrderMessage
-                : rawFieldMessage;
+          /sortOrder|sort_order/i.test(`${field} ${rawFieldMessage}`) &&
+          /must be a number|numeric|valid number/i.test(rawFieldMessage)
+            ? friendlyVariantSortOrderMessage
+            : rawFieldMessage;
         if (fieldMessage !== rawFieldMessage) {
           friendlyApiMessage = fieldMessage;
         }
@@ -2911,11 +2944,6 @@ export default function ProductManagementUI() {
             variantMatch[2],
             friendlyVariantSortOrderMessage,
           );
-        } else if (
-          /seo[\s._-]*keywords?|at least one seo keyword/i.test(message)
-        ) {
-          friendlyApiMessage = "Add at least one SEO keyword.";
-          mappedErrors.seo = { keywords: friendlyApiMessage };
         } else if (/image|media|video/i.test(message))
           mappedErrors.commonImages = message;
         else if (/shipping|delivery|pincode/i.test(message))
@@ -4398,33 +4426,25 @@ export default function ProductManagementUI() {
               <p className="text-sm font-medium font-[#252238]">
                 Tags <span className="text-red-400">*</span>
               </p>
-              <TagsInput
-                tags={Array.isArray(formData?.tags) ? formData.tags : []}
-                onChange={(tags) => {
-                  setFormData((prev) => ({ ...prev, tags }));
-                  if (error?.tags) {
-                    productTagsValidationSchema
-                      .validate(tags)
-                      .then(() => {
-                        setError((prev) => {
-                          if (!prev?.tags) return prev;
-                          const next = { ...prev };
-                          delete next.tags;
-                          return Object.keys(next).length ? next : null;
-                        });
-                      })
-                      .catch((validationError) => {
-                        setError((prev) => ({
-                          ...(prev || {}),
-                          tags: validationError.message,
-                        }));
-                      });
+              <div data-error-field="tags" name="tags">
+                <TagsInput
+                  tags={Array.isArray(formData?.tags) ? formData.tags : []}
+                  onChange={(tags) => {
+                    basicDetailsFormik.setFieldValue("tags", tags);
+                    basicDetailsFormik.setFieldTouched("tags", true, false);
+                    setFormData((prev) => ({ ...prev, tags }));
+                  }}
+                  onBlur={() =>
+                    basicDetailsFormik.setFieldTouched("tags", true, true)
                   }
-                }}
-                placeholder="Add tag…"
-                maxTags={20}
-                error={typeof error?.tags === "string" ? error.tags : ""}
-              />
+                  placeholder="Add tag…"
+                  maxTags={20}
+                  error={
+                    basicDetailsFormik.touched.tags &&
+                    basicDetailsFormik.errors.tags
+                  }
+                />
+              </div>
             </div>
 
             <div className="overflow-hidden rounded-xl border border-[var(--admin-line)] bg-white">
@@ -4699,7 +4719,7 @@ export default function ProductManagementUI() {
         seo: seoErrors,
       }));
       pendingValidationScrollRef.current = true;
-      toast.error("Please correct the highlighted SEO fields before saving.");
+      // toast.error("Please correct the highlighted SEO fields before saving.");
       return;
     }
 

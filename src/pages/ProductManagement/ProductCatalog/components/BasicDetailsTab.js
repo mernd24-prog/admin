@@ -2414,9 +2414,11 @@ export default function BasicDetailsTab({
                       }
                     />
 
-                    <FilterSelect
-                      label="Warranty Unit"
-                      required
+                    <div data-error-field="warranty.periodUnit">
+                      <FilterSelect
+                        label="Warranty Unit"
+                        name="warranty.periodUnit"
+                        required
                       value={
                         warrantyUnits.options.find(
                           (option) =>
@@ -2434,14 +2436,17 @@ export default function BasicDetailsTab({
                       placeholder="Select warranty unit"
                       isLoading={warrantyUnits.loading}
                       isClearable
-                      error={
-                        formikTouched?.warranty?.periodUnit &&
-                        formikErrors?.warranty?.periodUnit
-                      }
-                    />
-                    <FilterSelect
-                      label="Warranty Provider"
-                      required
+                        error={
+                          formikTouched?.warranty?.periodUnit &&
+                          formikErrors?.warranty?.periodUnit
+                        }
+                      />
+                    </div>
+                    <div data-error-field="warranty.provider">
+                      <FilterSelect
+                        label="Warranty Provider"
+                        name="warranty.provider"
+                        required
                       value={
                         warrantyProviders.options.find(
                           (option) =>
@@ -2459,15 +2464,18 @@ export default function BasicDetailsTab({
                       placeholder="Select warranty provider"
                       isLoading={warrantyProviders.loading}
                       isClearable
-                      error={
-                        formikTouched?.warranty?.provider &&
-                        formikErrors?.warranty?.provider
-                      }
-                    />
+                        error={
+                          formikTouched?.warranty?.provider &&
+                          formikErrors?.warranty?.provider
+                        }
+                      />
+                    </div>
 
-                    <FilterSelect
-                      label="Warranty Type"
-                      required
+                    <div data-error-field="warranty.type">
+                      <FilterSelect
+                        label="Warranty Type"
+                        name="warranty.type"
+                        required
                       value={
                         warrantyTypes.options.find(
                           (option) => option.value === formData.warranty?.type,
@@ -2481,31 +2489,37 @@ export default function BasicDetailsTab({
                       placeholder="Select warranty type"
                       isLoading={warrantyTypes.loading}
                       isClearable
-                      error={
-                        formikTouched?.warranty?.type &&
-                        formikErrors?.warranty?.type
-                      }
-                    />
+                        error={
+                          formikTouched?.warranty?.type &&
+                          formikErrors?.warranty?.type
+                        }
+                      />
+                    </div>
                   </div>
 
-                  <TextEditor
-                    label="Warranty description and rules"
-                    value={formData.warranty?.terms || ""}
-                    onBlur={() => handleFieldBlur("warranty.terms")}
-                    onChange={(content) =>
-                      handleNestedChange("warranty.terms", content)
-                    }
-                    maxLength={1000}
-                    minLength={10}
-                    height="220px"
-                    limitMessage="Maximum 1000 characters allowed."
-                    error={
-                      formikTouched?.warranty?.terms &&
-                      formikErrors?.warranty?.terms
-                    }
-                    className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
-                    placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
-                  />
+                  <div
+                    data-error-field="warranty.terms"
+                    name="warranty.terms"
+                  >
+                    <TextEditor
+                      label="Warranty Description and Rules"
+                      value={formData.warranty?.terms || ""}
+                      onBlur={() => handleFieldBlur("warranty.terms")}
+                      onChange={(content) =>
+                        handleNestedChange("warranty.terms", content)
+                      }
+                      maxLength={1000}
+                      minLength={10}
+                      height="220px"
+                      limitMessage="Maximum 1000 characters allowed."
+                      error={
+                        formikTouched?.warranty?.terms &&
+                        formikErrors?.warranty?.terms
+                      }
+                      className="[&_.ql-container]:h-[220px] [&_.ql-editor]:min-h-[180px]"
+                      placeholder="Add coverage, exclusions, claim process, required proof, service locations, and other warranty rules"
+                    />
+                  </div>
                 </>
               ) : (
                 <DisabledPolicyState
@@ -2627,7 +2641,8 @@ export default function BasicDetailsTab({
                     }}
                   />
 
-                 <FilterSelect
+                 <div data-error-field="warranty.returnPolicy.resolution">
+                   <FilterSelect
   label="Allowed Resolution"
   required
   name="warranty.returnPolicy.resolution"
@@ -2680,7 +2695,8 @@ export default function BasicDetailsTab({
     formikTouched?.warranty?.returnPolicy?.resolution &&
     formikErrors?.warranty?.returnPolicy?.resolution
   }
-/>
+                   />
+                 </div>
 
                   <Input
                     labelName="Return Shipping Paid By"
