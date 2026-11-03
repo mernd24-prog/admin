@@ -3087,3 +3087,12 @@ export const validateProductDataYup = async ({
 
   return errors;
 };
+export const collectionValidationSchema = Yup.object({
+  name: Yup.string()
+    .trim()
+    .required("Collection name is required")
+    .min(2, "Collection name must be at least 2 characters")
+    .max(100, "Collection name must be no more than 100 characters"),
+
+  type: Yup.string().trim().required("Collection type is required"),
+});

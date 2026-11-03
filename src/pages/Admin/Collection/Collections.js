@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { MdAdd, MdDelete, MdEdit, MdRefresh } from "react-icons/md";
+import { useFormik } from "formik";
 import {
   ConfirmModal,
   DataTable,
@@ -25,6 +26,7 @@ import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal"
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormToggleRow from "../../../components/Atoms/FormToggleRow/FormToggleRow";
+import { collectionValidationSchema } from "../../../_helpers/validationSchemas";
 
 const emptyForm = {
   name: "",
@@ -52,6 +54,17 @@ export default function Collections() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
   const [uploadingField, setUploadingField] = useState(null);
+
+  const formik = useFormik({
+    initialValues: {
+      name: "",
+      type: "custom",
+    },
+    validationSchema: collectionValidationSchema,
+    validateOnChange: true,
+    validateOnBlur: true,
+    onSubmit: () => {},
+  });
 
   const list = useListPage({
     defaultPageSize: 10,
@@ -86,6 +99,7 @@ export default function Collections() {
   const beginCreate = () => {
     setEditing(null);
     setForm(emptyForm);
+    formik.resetForm();
     setUploadingField(null);
     setOpen(true);
   };
@@ -93,7 +107,8 @@ export default function Collections() {
   const beginEdit = (row) => {
     setEditing(row);
     setUploadingField(null);
-    setForm({
+
+    const updatedForm = {
       ...emptyForm,
       ...row,
       categoriesText: (row.categories || []).join(", "),
@@ -101,9 +116,20 @@ export default function Collections() {
       startsAt: dateValue(row.startsAt),
       endsAt: dateValue(row.endsAt),
       active: row.active ?? row.isActive ?? true,
+    };
+
+    setForm(updatedForm);
+
+    formik.resetForm({
+      values: {
+        name: updatedForm.name || "",
+        type: updatedForm.type || "",
+      },
     });
+
     setOpen(true);
   };
+
   const set = (key) => (event) =>
     setForm((current) => ({
       ...current,
@@ -155,18 +181,33 @@ export default function Collections() {
 
   const save = async (event) => {
     event.preventDefault();
+
     if (uploadingField) {
       return toast.error("Please wait for the image to finish uploading");
     }
-    if (!form.name.trim()) return toast.error("Collection name is required");
+
+    const validationErrors = await formik.validateForm();
+
+    formik.setTouched({
+      name: true,
+      type: true,
+    });
+
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
+
     setSaving(true);
+
     try {
       const { categoriesText, tagsText, ...values } = form;
+
       const split = (text) =>
         String(text || "")
           .split(",")
           .map((item) => item.trim())
           .filter(Boolean);
+
       const body = {
         ...values,
         categories: split(categoriesText),
@@ -175,16 +216,22 @@ export default function Collections() {
         startsAt: form.startsAt || null,
         endsAt: form.endsAt || null,
       };
-      if (editing)
+
+      if (editing) {
         await dispatch(
           updateCollection({
             collectionId: editing._id || editing.slug,
             ...body,
           }),
         ).unwrap();
-      else await dispatch(createCollection(body)).unwrap();
+      } else {
+        await dispatch(createCollection(body)).unwrap();
+      }
+
       toast.success(editing ? "Collection updated" : "Collection created");
+
       setOpen(false);
+      formik.resetForm();
       load();
     } catch (error) {
       toast.error(error?.message || "Unable to save collection");
@@ -291,7 +338,11 @@ export default function Collections() {
               disabled={loading}
               aria-busy={loading}
             >
-              <MdRefresh size={17} aria-hidden="true"  className={loading ? "animate-spin" : ""} />
+              <MdRefresh
+                size={17}
+                aria-hidden="true"
+                className={loading ? "animate-spin" : ""}
+              />
               {loading ? "Refreshing..." : "Refresh"}
             </button>
 
@@ -341,13 +392,20 @@ export default function Collections() {
               description="Enter the basic details for this collection."
             >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                 <FormInput
+                <FormInput
                   label="Name"
                   name="name"
                   value={form.name}
-                  onChange={set("name")}
+                  onChange={(event) => {
+                    const value = event.target.value;
+
+                    set("name")(event);
+                    formik.setFieldValue("name", value);
+                  }}
+                  onBlur={() => formik.setFieldTouched("name", true)}
                   placeholder="Enter collection name"
                   required
+                  error={formik.touched.name ? formik.errors.name : ""}
                 />
 
                 {/* Slug */}
@@ -364,8 +422,18 @@ export default function Collections() {
                   label="Type"
                   name="type"
                   value={form.type}
-                  onChange={set("type")}
+                  maxLength={60}
+                  limitMessage="Type should not exceed more than 60 characters"
+                  onChange={(event) => {
+                    const value = event.target.value;
+
+                    set("type")(event);
+                    formik.setFieldValue("type", value);
+                  }}
+                  onBlur={() => formik.setFieldTouched("type", true)}
                   placeholder="seasonal, sale, custom"
+                  required
+                  error={formik.touched.type ? formik.errors.type : ""}
                 />
 
                 {/* Sort Order */}
@@ -384,6 +452,8 @@ export default function Collections() {
                   <FormInput
                     label="Description"
                     name="description"
+                    maxLength={1000}
+                    limitMessage="Description should not exceed more than 1000 characters"
                     type="textarea"
                     rows={4}
                     value={form.description}
@@ -391,32 +461,32 @@ export default function Collections() {
                     placeholder="Enter collection description"
                   />
                 </div>
+
+                <div className="sm:col-span-2 w-full">
+                  <ImageUpload
+                    id="collection-thumbnail-upload"
+                    label="Thumbnail Image"
+                    subtext="JPG, PNG, WEBP, or SVG up to 5MB"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,image/svg+xml"
+                    file={form.thumbnailImage}
+                    onChange={(file) =>
+                      handleImageUpload(file, "thumbnailImage")
+                    }
+                    onRemove={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        thumbnailImage: "",
+                      }))
+                    }
+                    isLoading={uploadingField === "thumbnailImage"}
+                    loadingText="Uploading thumbnail..."
+                    isDisabled={Boolean(uploadingField)}
+                  />
+                </div>
               </div>
             </FormSection>
 
             {/* ==================== Collection Image ==================== */}
-            <FormSection
-              title="Collection Image"
-              description="Upload an image to represent this collection."
-            >
-              <ImageUpload
-                id="collection-thumbnail-upload"
-                label="Thumbnail Image"
-                subtext="JPG, PNG, WEBP, or SVG up to 5MB"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/svg+xml"
-                file={form.thumbnailImage}
-                onChange={(file) => handleImageUpload(file, "thumbnailImage")}
-                onRemove={() =>
-                  setForm((prev) => ({
-                    ...prev,
-                    thumbnailImage: "",
-                  }))
-                }
-                isLoading={uploadingField === "thumbnailImage"}
-                loadingText="Uploading thumbnail..."
-                isDisabled={Boolean(uploadingField)}
-              />
-            </FormSection>
 
             {/* ==================== Collection Configuration ==================== */}
             <FormSection
