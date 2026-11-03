@@ -514,7 +514,7 @@ export const hsnValidationSchema = Yup.object({
   code: Yup.string()
     .trim()
     .required("HSN Code is required")
-    .matches(/^\d{4,8}$/, "Must be 4-8 digits")
+    .matches(/^\d{4,8}$/, "HSN Code must be 4-8 digits")
     .matches(/^(?!0+$)\d+$/, "HSN Code cannot be all zeroes"),
   description: Yup.string()
     .trim()
@@ -2685,35 +2685,6 @@ export const productVariantsValidationSchema = Yup.mixed().test(
             "This option combination is already used by another variant.",
             combinationKey,
             `variants.${index}.attributes._combination`,
-          ),
-        );
-      }
-
-      if (hasGstRate && Number.isNaN(gstRate)) {
-        errors.push(
-          new Yup.ValidationError(
-            "Enter a valid GST rate.",
-            gstRate,
-            `variants.${index}.gstRate`,
-          ),
-        );
-      } else if (hasGstRate && (gstRate < 0 || gstRate > 100)) {
-        errors.push(
-          new Yup.ValidationError(
-            "GST rate must be between 0 and 100.",
-            gstRate,
-            `variants.${index}.gstRate`,
-          ),
-        );
-      } else if (
-        hasGstRate &&
-        !isValidDecimal(variant?.gstRate, { min: 0, max: 100, places: 2 })
-      ) {
-        errors.push(
-          new Yup.ValidationError(
-            "GST rate can have no more than two decimal places.",
-            variant?.gstRate,
-            `variants.${index}.gstRate`,
           ),
         );
       }

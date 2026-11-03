@@ -136,6 +136,10 @@ const AddHsnModal = ({
                 name="code"
                 type="text"
                 value={formik.values.code}
+                limitMessage="HSN Code must be 4-8 digits"
+                maxLength={8}
+                minLength={4}
+                showLengthCount = {false}
                 onChange={(event) => {
                   const digitsOnly = event.target.value
                     .replace(/\D/g, "")
@@ -144,6 +148,7 @@ const AddHsnModal = ({
                 }}
                 onBlur={formik.handleBlur}
                 error={formik.touched.code && formik.errors.code}
+                
                 required
                 placeholder="e.g. 84715000"
                 inputMode="numeric"
@@ -155,6 +160,9 @@ const AddHsnModal = ({
                   label="GST Rate %"
                   name="gstRate"
                   type="number"
+                  limitMessage="GST Rate must be between 0 and 100"
+                  maxLength={3}
+                  showLengthCount = {false}
                   value={formik.values.gstRate}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -170,6 +178,9 @@ const AddHsnModal = ({
                   label="Compensation Cess %"
                   name="cessRate"
                   type="number"
+                  limitMessage="Cess Rate must be between 0 and 100"
+                  maxLength={3}
+                  showLengthCount = {false}
                   value={formik.values.cessRate}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -202,6 +213,7 @@ const AddHsnModal = ({
                 type="textarea"
                 minLength={3}
                 maxLength={500}
+                limitMessage="Description must be between 3 and 500 characters"
                 value={formik.values.description}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}

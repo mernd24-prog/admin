@@ -1905,7 +1905,7 @@ export default function BasicDetailsTab({
     const titled = toTitleCase(value.trim());
 
     if (titled !== value) {
-      handleChange({
+      handleInputCategoryChange({
         target: {
           name,
           value: titled,
@@ -2878,8 +2878,10 @@ export default function BasicDetailsTab({
                   label="Brand Name"
                   name="name"
                   type="text"
+                  limitMessage="Brand name must be between 2 and 50 characters"
                   value={formik.values.name}
                   maxLength={50}
+                  minLength={2}
                   onChange={(event) => {
                     formik.setFieldTouched("name", true, false);
                     formik.setFieldValue(
@@ -2907,6 +2909,8 @@ export default function BasicDetailsTab({
                   type="textarea"
                   value={formik.values.description}
                   maxLength={1000}
+                  limitMessage="Description must be between 3 and 1000 characters"
+                  minLength={3}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={

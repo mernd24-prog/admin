@@ -521,7 +521,9 @@ const DataTable = ({
       {filterBar}
 
       {/* Bulk action bar slot */}
-      {bulkActionBar && <div className="px-4 pt-3">{bulkActionBar}</div>}
+      {bulkActionBar && selectedKeys.length > 0 && (
+        <div className="px-4 pt-3">{bulkActionBar}</div>
+      )}
 
       {/* Table */}
       <div
