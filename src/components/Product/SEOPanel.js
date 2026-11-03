@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ImageUpload from "../Atoms/ImageGallery/ImageUpload";
 import FormInput from "../Atoms/FormInput/FormInput";
+import { productSeoValidationSchema } from "../../_helpers/validationSchemas";
 import {
   FiGlobe,
   FiMonitor,
@@ -61,6 +62,21 @@ const SEOPanel = ({
         ? errors.keywords.find((error) => typeof error === "string") || ""
         : "";
 
+  const validateKeywordList = (nextKeywords) => {
+    try {
+      productSeoValidationSchema.validateSyncAt("keywords", {
+        ...seo,
+        keywords: nextKeywords,
+      });
+      return "";
+    } catch (validationError) {
+      return validationError.errors?.[0] || validationError.message;
+    }
+  };
+  const keywordDraftError = keywordInput
+    ? validateKeywordList([...keywords, keywordInput])
+    : "";
+
   const updateSeoField = (field, value) => {
     onChange(`seo.${field}`, value);
     formik?.setFieldValue(field, value);
@@ -77,36 +93,24 @@ const SEOPanel = ({
   }, [errors.ogTitle, errors.ogDescription, errors.ogImage]);
 
   const addKeyword = () => {
-    const keyword = keywordInput.trim();
-    if (
-      keyword.length >= 2 &&
-      !keywords.some(
-        (item) => String(item).trim().toLowerCase() === keyword.toLowerCase(),
-      ) &&
-      keyword.length <= 60 &&
-      keywords.length < maxKeywords
-    ) {
-      updateSeoField("keywords", [...keywords, keyword]);
-      setKeywordInput("");
+    if (!keywordInput) return;
+    const nextKeywords = [...keywords, keywordInput];
+    const validationError = validateKeywordList(nextKeywords);
+    if (validationError) {
+      formik?.setFieldTouched("keywords", true, false);
+      formik?.setFieldError("keywords", validationError);
+      return;
     }
+    updateSeoField("keywords", nextKeywords);
+    formik?.setFieldTouched("keywords", true, false);
+    formik?.setFieldError("keywords", undefined);
+    setKeywordInput("");
   };
 
   const handleKeywordAdd = (e) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
-
-      const keyword = keywordInput.trim();
-      if (
-        keyword.length >= 2 &&
-        !keywords.some(
-          (item) => String(item).trim().toLowerCase() === keyword.toLowerCase(),
-        ) &&
-        keyword.length <= 60 &&
-        keywords.length < maxKeywords
-      ) {
-        updateSeoField("keywords", [...keywords, keyword]);
-        setKeywordInput("");
-      }
+      addKeyword();
     }
   };
 
@@ -115,6 +119,7 @@ const SEOPanel = ({
       "keywords",
       keywords.filter((k) => k !== kw),
     );
+    formik?.setFieldTouched("keywords", true, false);
   };
 
   const metaPreviewTitle = seo.metaTitle || "Your Product Title";
@@ -305,7 +310,15 @@ const SEOPanel = ({
           }
           value={keywordInput}
           disabled={keywordsAtMax}
-          onChange={(e) => setKeywordInput(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value.replace(/[^A-Za-z0-9 ]/g, "");
+            setKeywordInput(value);
+            const validationError = validateKeywordList(
+              value ? [...keywords, value] : keywords,
+            );
+            formik?.setFieldTouched("keywords", true, false);
+            formik?.setFieldError("keywords", validationError || undefined);
+          }}
           onKeyDown={handleKeywordAdd}
           onBlur={() => {
             addKeyword();
@@ -314,7 +327,7 @@ const SEOPanel = ({
           maxLength={60}
           showLengthCount={false}
           aria-required="true"
-          error={keywordError}
+          error={keywordDraftError || keywordError}
           helperText="Required — type a keyword, then press Enter or comma to add it."
         />
         <div className="flex min-h-[34px] flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-2">

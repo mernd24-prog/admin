@@ -73,15 +73,14 @@ import { isSellerPanel } from "../../../../_helpers/panelConfig";
 import {
   productBasicDetailsValidationSchema,
   productSeoValidationSchema,
-  productTagsValidationSchema,
   validateProductDataYup,
   MAX_COMMON_PRODUCT_IMAGES,
   getMediaUrl,
   canLoadImage,
   getVariantAxisKey,
   isValidIndianPincode,
-  normalizePincodeList,
   normalizeVariantAttributes,
+  normalizePincodeList,
 } from "../../../../_helpers/validationSchemas";
 import { LuSlidersHorizontal } from "react-icons/lu";
 import { IoLayers, IoSearch } from "react-icons/io5";
@@ -3463,6 +3462,25 @@ export default function ProductManagementUI() {
     });
   }, []);
 
+  const validateTagCandidate = useCallback(
+    (candidate, currentTags = []) => {
+      try {
+        productBasicDetailsValidationSchema.validateSyncAt(
+          "tags",
+          {
+            ...basicDetailsFormik.values,
+            tags: [...currentTags, candidate],
+          },
+          { context: { isSellerPanelUser } },
+        );
+        return "";
+      } catch (validationError) {
+        return validationError.message;
+      }
+    },
+    [basicDetailsFormik.values, isSellerPanelUser],
+  );
+
   const tabs = useMemo(
     () => [
       {
@@ -4430,15 +4448,29 @@ export default function ProductManagementUI() {
                 <TagsInput
                   tags={Array.isArray(formData?.tags) ? formData.tags : []}
                   onChange={(tags) => {
-                    basicDetailsFormik.setFieldValue("tags", tags);
+                    basicDetailsFormik.setFieldValue("tags", tags, false);
                     basicDetailsFormik.setFieldTouched("tags", true, false);
                     setFormData((prev) => ({ ...prev, tags }));
+                    try {
+                      productBasicDetailsValidationSchema.validateSyncAt(
+                        "tags",
+                        { ...basicDetailsFormik.values, tags },
+                        { context: { isSellerPanelUser } },
+                      );
+                      basicDetailsFormik.setFieldError("tags", undefined);
+                    } catch (validationError) {
+                      basicDetailsFormik.setFieldError(
+                        "tags",
+                        validationError.message,
+                      );
+                    }
                   }}
                   onBlur={() =>
                     basicDetailsFormik.setFieldTouched("tags", true, true)
                   }
                   placeholder="Add tag…"
                   maxTags={20}
+                  validateTag={validateTagCandidate}
                   error={
                     basicDetailsFormik.touched.tags &&
                     basicDetailsFormik.errors.tags
@@ -4661,6 +4693,7 @@ export default function ProductManagementUI() {
       handleProductPincodeKeyDown,
       handleVariantsChange,
       handleVariantErrorClear,
+      validateTagCandidate,
     ],
   );
 

@@ -66,39 +66,65 @@ export const productBasicDetailsValidationSchema = Yup.object({
     500,
     "Short description must be 500 characters or fewer.",
   ),
-  tags: Yup.array()
-    .ensure()
-    .test("product-tags", "Add at least onsdfgdfge tag.", function (tags = []) {
-      if (tags.length === 0) {
-        return this.createError({ message: "Add at least one tag." });
-      }
-      if (tags.length > 20) {
-        return this.createError({ message: "Use no more than 20 tags." });
-      }
 
-      const normalizedTags = tags.map((tag) => String(tag || "").trim());
-      if (
-        normalizedTags.some(
-          (tag) =>
-            tag.length < 2 ||
-            tag.length > 40 ||
-            !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tag),
-        )
-      ) {
-        return this.createError({
-          message:
-            "Tags must be 2–40 lowercase letters or numbers separated by single hyphens.",
-        });
-      }
+tags: Yup.array()
+  .ensure()
+  .of(Yup.string().required("Tag cannot be empty."))
+  .test("product-tags", function (tags = []) {
+    const createError = (message) =>
+      this.createError({ message });
 
-      if (new Set(normalizedTags.map((tag) => tag.toLowerCase())).size !== tags.length) {
-        return this.createError({
-          message: "Tags must be unique, ignoring letter case.",
-        });
-      }
+    if (!tags.length) {
+      return createError("Add at least one tag.");
+    }
 
-      return true;
-    }),
+    if (tags.length > 20) {
+      return createError("You can add a maximum of 20 tags.");
+    }
+
+    const normalizedTags = tags.map((tag) =>
+      String(tag ?? "").trim()
+    );
+
+    if (normalizedTags.some((tag) => !tag)) {
+      return createError("Empty tags are not allowed.");
+    }
+
+    if (normalizedTags.some((tag) => tag.length < 2)) {
+      return createError(
+        "Each tag must contain at least 2 characters."
+      );
+    }
+
+    if (normalizedTags.some((tag) => tag.length > 40)) {
+      return createError(
+        "Each tag cannot exceed 40 characters."
+      );
+    }
+
+    const invalidTag = normalizedTags.some(
+      (tag) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tag)
+    );
+
+    if (invalidTag) {
+      return createError(
+        "Use lowercase letters, numbers, and single hyphens only. Tags cannot start or end with a hyphen."
+      );
+    }
+
+    const uniqueTags = new Set(
+      normalizedTags.map((tag) => tag.toLowerCase())
+    );
+
+    if (uniqueTags.size !== normalizedTags.length) {
+      return createError(
+        "Duplicate tags are not allowed."
+      );
+    }
+
+    return true;
+  }),
+
   sellerId: Yup.string().when("$isSellerPanelUser", {
     is: false,
     then: (schema) => schema.required("Seller is required."),
@@ -821,14 +847,26 @@ const cmsOptionalTextList = (label, maxItems = 100) =>
 
 export const productSeoValidationSchema = Yup.object({
   keywords: Yup.array()
+    .ensure()
     .of(
       Yup.string()
-        .trim()
+        .required("Keywords cannot be empty.")
         .min(2, "Each SEO keyword must be at least 2 characters.")
-        .max(60, "Each SEO keyword must be 60 characters or fewer."),
+        .max(60, "Each SEO keyword must be 60 characters or fewer.")
+        .matches(
+          /^[A-Za-z0-9]+(?: [A-Za-z0-9]+)*$/,
+          "Use letters and numbers with single spaces between words only.",
+        ),
     )
     .min(1, "Add at least one SEO keyword.")
-    .max(20, "Use no more than 20 SEO keywords."),
+    .max(20, "Use no more than 20 SEO keywords.")
+    .test(
+      "unique-keywords",
+      "SEO keywords must be unique, ignoring letter case.",
+      (keywords = []) =>
+        new Set(keywords.map((keyword) => String(keyword).toLowerCase())).size ===
+        keywords.length,
+    ),
   metaTitle: Yup.string()
     .transform((value) => (typeof value === "string" ? value.trim() : value))
     .nullable()
@@ -2164,45 +2202,6 @@ export const productRestockingFeeValidationSchema = Yup.mixed().test(
   },
 );
 
-export const productTagsValidationSchema = Yup.array().test(
-  "product-tags",
-  null,
-  function (tags) {
-    const list = Array.isArray(tags) ? tags : [];
-    if (list.length === 0) {
-      return this.createError({
-        path: "tags",
-        message: "Add at least one tag.",
-      });
-    } else if (list.length > 20) {
-      return this.createError({
-        path: "tags",
-        message: "Use no more than 20 tags.",
-      });
-    } else if (
-      list.some((tag) => {
-        const normalized = String(tag || "").trim();
-        return (
-          normalized.length < 2 ||
-          normalized.length > 40 ||
-          !PRODUCT_TAG_PATTERN.test(normalized)
-        );
-      })
-    ) {
-      return this.createError({
-        path: "tags",
-        message:
-          "Tags must be 2–40 lowercase letters or numbers separated by single hyphens.",
-      });
-    } else if (findDuplicate(list)) {
-      return this.createError({
-        path: "tags",
-        message: "Tags must be unique, ignoring letter case.",
-      });
-    }
-    return true;
-  },
-);
 
 export const productVariantsValidationSchema = Yup.mixed().test(
   "product-variants",
@@ -3103,16 +3102,6 @@ export const validateProductDataYup = async ({
     collectYupErrors(err);
   }
 
-  try {
-    await productTagsValidationSchema.validate(
-      Array.isArray(formData?.tags) ? formData.tags : [],
-      {
-        abortEarly: false,
-      },
-    );
-  } catch (err) {
-    collectYupErrors(err);
-  }
 
   return errors;
 };
