@@ -1420,7 +1420,7 @@ const VariantBuilder = ({
                     )}
                     {/* Core fields grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                      <div>
+                      {/* <div>
                         <FormInput
                           label="SKU"
                           name={`variants.${idx}.sku`}
@@ -1437,7 +1437,7 @@ const VariantBuilder = ({
                           showLengthCount={false}
                           className="!mb-0"
                         />
-                      </div>
+                      </div> */}
                       <div>
                         <FormInput
                           label="Price (₹)"

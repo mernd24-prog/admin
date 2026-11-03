@@ -2326,31 +2326,31 @@ export const productVariantsValidationSchema = Yup.mixed().test(
 
       const gstRate = Number(variant?.gstRate);
 
-      if (!String(variant?.sku || "").trim()) {
-        errors.push(
-          new Yup.ValidationError(
-            "SKU is required.",
-            variant?.sku,
-            `variants.${index}.sku`,
-          ),
-        );
-      } else if (!PRODUCT_SKU_PATTERN.test(String(variant.sku).trim())) {
-        errors.push(
-          new Yup.ValidationError(
-            "Use 3–64 letters, numbers, hyphens, underscores, periods, or slashes; begin and end with a letter or number.",
-            variant?.sku,
-            `variants.${index}.sku`,
-          ),
-        );
-      } else if (skuCounts.get(String(variant.sku).trim().toLowerCase()) > 1) {
-        errors.push(
-          new Yup.ValidationError(
-            "SKU must be unique across variants.",
-            variant?.sku,
-            `variants.${index}.sku`,
-          ),
-        );
-      }
+      // if (!String(variant?.sku || "").trim()) {
+      //   errors.push(
+      //     new Yup.ValidationError(
+      //       "SKU is required.",
+      //       variant?.sku,
+      //       `variants.${index}.sku`,
+      //     ),
+      //   );
+      // } else if (!PRODUCT_SKU_PATTERN.test(String(variant.sku).trim())) {
+      //   errors.push(
+      //     new Yup.ValidationError(
+      //       "Use 3–64 letters, numbers, hyphens, underscores, periods, or slashes; begin and end with a letter or number.",
+      //       variant?.sku,
+      //       `variants.${index}.sku`,
+      //     ),
+      //   );
+      // } else if (skuCounts.get(String(variant.sku).trim().toLowerCase()) > 1) {
+      //   errors.push(
+      //     new Yup.ValidationError(
+      //       "SKU must be unique across variants.",
+      //       variant?.sku,
+      //       `variants.${index}.sku`,
+      //     ),
+      //   );
+      // }
 
       if (!hasPrice) {
         errors.push(
@@ -2904,9 +2904,10 @@ export const validateProductDataYup = async ({
   catalogBusy = false,
 }) => {
   const errors = {};
-
+ console.log("this is the seller panel user", isSellerPanelUser);
   const collectYupErrors = (validationError) => {
     if (!validationError) return;
+    console.log("this is the seller panel user", isSellerPanelUser);
     const inner =
       Array.isArray(validationError.inner) && validationError.inner.length
         ? validationError.inner

@@ -161,6 +161,37 @@ const getSessionUser = () => {
   }
 };
 
+export const resolveSellerContext = (user = {}, fallbackOrganizationId = "") => {
+  const sellerId = String(
+    user?.ownerSellerId ||
+      user?.sellerId ||
+      user?.seller?.sellerId ||
+      user?.seller?.id ||
+      user?.data?.ownerSellerId ||
+      user?.data?.sellerId ||
+      user?.user?.ownerSellerId ||
+      user?.user?.sellerId ||
+      user?._id ||
+      user?.id ||
+      user?.userId ||
+      "",
+  ).trim();
+
+  const organizationId = String(
+    fallbackOrganizationId ||
+      user?.activeOrganizationId ||
+      user?.organizationId ||
+      user?.organization?.id ||
+      user?.organization?._id ||
+      user?.sellerProfile?.organizationId ||
+      user?.data?.organizationId ||
+      user?.user?.organizationId ||
+      "",
+  ).trim();
+
+  return { sellerId, organizationId };
+};
+
 const hasValue = (value) =>
   value !== undefined && value !== null && value !== "";
 
@@ -353,7 +384,14 @@ export default function ProductManagementUI() {
       { role: getStoredRole() },
     ),
   );
-  const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
+  const sellerContext = useMemo(
+    () => resolveSellerContext(userData, getSelectedSellerOrganizationId()),
+    [userData],
+  );
+  const isSellerPanelUser =
+    isSellerPanel() ||
+    SELLER_PANEL_ROLES.has(userRole) ||
+    SELLER_PANEL_ROLES.has(normalizeRole(getStoredRole()));
   const basicDetailsFormik = useFormik({
     initialValues: formData,
     validationSchema: productBasicDetailsValidationSchema,
@@ -1146,6 +1184,42 @@ export default function ProductManagementUI() {
 
     fetchAllData();
   }, [fetchAllData]);
+
+  useEffect(() => {
+    if (!isSellerPanelUser) return;
+
+    const nextSellerId = String(
+      formData?.sellerId || sellerContext.sellerId || "",
+    ).trim();
+    const nextOrganizationId = String(
+      formData?.organizationId ||
+        sellerContext.organizationId ||
+        getSelectedSellerOrganizationId() ||
+        "",
+    ).trim();
+
+    if (!nextSellerId && !nextOrganizationId) return;
+
+    if (nextSellerId && String(formData?.sellerId || "") !== nextSellerId) {
+      basicDetailsFormik.setFieldValue("sellerId", nextSellerId, false);
+      setFormData((prev) => ({ ...prev, sellerId: nextSellerId }));
+    }
+
+    if (
+      nextOrganizationId &&
+      String(formData?.organizationId || "") !== nextOrganizationId
+    ) {
+      basicDetailsFormik.setFieldValue("organizationId", nextOrganizationId, false);
+      setFormData((prev) => ({ ...prev, organizationId: nextOrganizationId }));
+    }
+  }, [
+    basicDetailsFormik,
+    formData?.organizationId,
+    formData?.sellerId,
+    isSellerPanelUser,
+    sellerContext.organizationId,
+    sellerContext.sellerId,
+  ]);
 
   // Locations and related-product choices are not required to render the form.
   // Load them after the essential catalog data so a large location catalog can

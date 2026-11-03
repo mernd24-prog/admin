@@ -161,7 +161,10 @@ export default function BasicDetailsTab({
     ),
   );
 
-  const isSellerPanelUser = isSellerPanel() || SELLER_PANEL_ROLES.has(userRole);
+  const isSellerPanelUser =
+    isSellerPanel() ||
+    SELLER_PANEL_ROLES.has(userRole) ||
+    SELLER_PANEL_ROLES.has(normalizeRole(getStoredRole()));
 
   const [localCategoryOptions, setLocalCategoryOptions] = useState([]);
 
