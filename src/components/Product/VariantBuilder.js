@@ -549,7 +549,7 @@ const VariantBuilder = ({
       }
     }
 
-    // Special price validation via existing Yup schema
+    // Special price validation
     if (field === "salePrice") {
       try {
         bulkSalePriceValidator.validateSync(numVal);
@@ -562,14 +562,27 @@ const VariantBuilder = ({
       }
     }
 
+    // Update all variants
+    const updatedVariants = variants.map((variant, idx) => {
+      // Clear the corresponding Formik error
+      onClearError?.(idx, field);
+
+      return {
+        ...variant,
+        [field]: numVal,
+      };
+    });
+
+    onChange(updatedVariants);
+
+    // Clear bulk validation error
     setBulkFieldErrors((prev) => ({
       ...prev,
       [field]: "",
     }));
 
-    onChange(variants.map((v) => ({ ...v, [field]: numVal })));
-
     toast.success(`Applied to all ${variants.length} variants`);
+
     return true;
   };
 
