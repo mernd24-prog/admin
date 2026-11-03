@@ -307,6 +307,28 @@ const Cancellations = () => {
     fetchCancellations();
   }, [fetchCancellations]);
 
+  const hasProcessingRefunds = cancellations.some((row) =>
+    ["pending", "provider_pending"].includes(row.refundStatus),
+  );
+  useEffect(() => {
+    if (!hasProcessingRefunds) return undefined;
+    const timer = setInterval(() => {
+      const params = toQueryParams();
+      dispatch(getCancellationList({ ...params, offset: (params.page - 1) * params.limit }));
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [hasProcessingRefunds, dispatch, toQueryParams]);
+
+  useEffect(() => {
+    setDetail((current) => {
+      if (!current) return current;
+      const updated = unwrapList(selector.cancellationListData).list.find((row) =>
+        String(row.id || row._id) === String(current.id || current._id),
+      );
+      return updated ? normalizeCancellation(updated) : current;
+    });
+  }, [selector.cancellationListData]);
+
   const handleRetry = useCallback(async () => {
     if (isSeller) {
       toast.error("Cancellation refund retry is admin-only");
@@ -376,7 +398,7 @@ const Cancellations = () => {
           note: approveRefund.note,
         }),
       ).unwrap();
-      toast.success("Refund approved and submitted for processing");
+      toast.success("Refund approved and queued for processing");
       setApproveRefund({ open: false, item: null, note: "" });
       fetchCancellations();
     } catch (err) {
@@ -476,10 +498,14 @@ const Cancellations = () => {
     {
       key: "refundStatus",
       label: "Refund Status",
-      render: (v) => (
+      render: (v, row) => (
         <StatusBadge
           status={v || "not_started"}
-          label={display(v)}
+          label={v === "completed" ? "Completed" :
+            row.metadata?.refundSubmissionUncertain ? "Needs Review" :
+            row.metadata?.refundSubmissionState === "queued" ? "Queued" :
+            row.metadata?.refundSubmissionState === "submitting" ? "Submitting" :
+            v === "provider_pending" ? "Processing at Razorpay" : display(v)}
           dot
           appearance="order"
         />
@@ -600,8 +626,8 @@ const Cancellations = () => {
                   className={CLASS_ACTION_ICON_BLUE}
                 />
               ),
-              requiredModule: "orders",
-              requiredAction: ACTIONS.UPDATE,
+              requiredModule: "cancellations",
+              requiredAction: ACTIONS.APPROVE,
               onClick: () =>
                 setApproveRequest({ open: true, item: row, note: "" }),
             });
@@ -614,14 +640,16 @@ const Cancellations = () => {
                   className={CLASS_ACTION_ICON_RED}
                 />
               ),
-              requiredModule: "orders",
-              requiredAction: ACTIONS.UPDATE,
+              requiredModule: "cancellations",
+              requiredAction: ACTIONS.REJECT,
               onClick: () =>
                 setRejectRequest({ open: true, item: row, reason: "" }),
             });
           }
 
-          if (!isSeller && ["refund_pending", "failed"].includes(row.status)) {
+          if (!isSeller && ["refund_pending", "failed"].includes(row.status) &&
+            !["queued", "submitting"].includes(row.metadata?.refundSubmissionState) &&
+            !row.metadata?.refundSubmissionUncertain) {
             actions.push({
               label: "Retry Refund",
               icon: (
@@ -631,7 +659,7 @@ const Cancellations = () => {
                   className={CLASS_ACTION_ICON_ORANGE}
                 />
               ),
-              requiredModule: "orders",
+              requiredModule: "cancellations",
               requiredAction: ACTIONS.UPDATE,
               onClick: () =>
                 setRetryConfirm({
@@ -644,8 +672,8 @@ const Cancellations = () => {
 
           if (!isSeller && row.status === "manual_review") {
             if (
-              row.paymentProvider === "razorpay" ||
-              row.providerRefundAmount <= 0
+              !row.metadata?.refundSubmissionUncertain &&
+              (row.paymentProvider === "razorpay" || row.providerRefundAmount <= 0)
             )
               actions.push({
                 label: "Approve Refund",
@@ -656,7 +684,7 @@ const Cancellations = () => {
                     className={CLASS_ACTION_ICON_BLUE}
                   />
                 ),
-                requiredModule: "orders",
+                requiredModule: "cancellations",
                 requiredAction: ACTIONS.UPDATE,
                 onClick: () =>
                   setApproveRefund({ open: true, item: row, note: "" }),
@@ -677,7 +705,7 @@ const Cancellations = () => {
                     className={CLASS_ACTION_ICON_GREEN}
                   />
                 ),
-                requiredModule: "orders",
+                requiredModule: "cancellations",
                 requiredAction: ACTIONS.UPDATE,
                 onClick: () =>
                   setManualRefund({
@@ -867,6 +895,36 @@ const Cancellations = () => {
               </div>
             </FormSection>
 
+            <FormSection title="Refund Progress" description="Approval, background submission and payment provider confirmation.">
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-gray-900">
+                  {detail.refundStatus === "completed" ? "Refund completed" :
+                    detail.metadata?.refundSubmissionUncertain ? "Needs review — verify the refund in Razorpay" :
+                    detail.metadata?.refundSubmissionState === "queued" ? "Queued — waiting for the refund worker" :
+                    detail.metadata?.refundSubmissionState === "submitting" ? "Submitting refund" :
+                    detail.refundStatus === "provider_pending" ? "Processing at Razorpay" :
+                    display(detail.refundStatus)}
+                </p>
+                {detail.providerRefundId && <p className="break-all text-xs text-gray-600">Provider refund ID: {detail.providerRefundId}</p>}
+                {(detail.lastError || detail.last_error) && <p className="text-sm text-red-700" role="alert">{detail.lastError || detail.last_error}</p>}
+                <ol className="space-y-3 border-l-2 border-gray-200 pl-4">
+                  {[
+                    { status: "Approved and queued", at: detail.metadata?.refundQueuedAt || detail.metadata?.refundApprovedAt },
+                    { status: "Submission started", at: detail.metadata?.refundSubmissionStartedAt },
+                    ...(detail.metadata?.refundTimeline || []),
+                  ].filter((event) => event.at).map((event, index) => (
+                    <li key={`${event.at}-${index}`} className="text-sm">
+                      <p className="font-medium capitalize text-gray-800">{display(event.status)}</p>
+                      <p className="text-xs text-gray-500">{fmt(event.at)}</p>
+                      {event.note && <p className="mt-1 text-xs text-gray-600">{event.note}</p>}
+                    </li>
+                  ))}
+                </ol>
+                {!detail.metadata?.refundApprovedAt && !detail.metadata?.refundTimeline?.length &&
+                  <p className="text-xs text-gray-500">No refund processing events recorded yet.</p>}
+              </div>
+            </FormSection>
+
             {/* ==================== Processing Status ==================== */}
             <FormSection
               title="Processing Status"
@@ -1053,7 +1111,7 @@ const Cancellations = () => {
       <ConfirmModal
         isOpen={approveRefund.open}
         title="Approve cancellation refund"
-        description={`Approve the ${approveRefund.item?.scope === "partial" ? "selected product" : "full order"} refund and submit the eligible amount to Razorpay?`}
+        description={`Approve the ${approveRefund.item?.scope === "partial" ? "selected product" : "full order"} refund and queue the eligible amount for background processing?`}
         onConfirm={handleApproveRefund}
         onCancel={() => setApproveRefund({ open: false, item: null, note: "" })}
         loading={actionLoading}

@@ -1,3 +1,4 @@
+import { usePermission, ACTIONS } from "../../../_helpers/usePermission";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import {
@@ -28,6 +29,9 @@ const CANONICAL_ACTIONS = [
   "export",
   "import",
   "status_change",
+  "restore",
+  "bulk_action",
+  "adjust",
 ];
 const ROLE_OPTIONS = [
   "admin",
@@ -75,6 +79,17 @@ const groupSlugsByModule = (slugs = []) => {
 const PermissionBuilder = ({ value = [], onChange }) => {
   const [module, setModule] = useState("");
   const [picked, setPicked] = useState([]);
+  const [modules, setModules] = useState([]);
+  useEffect(() => {
+    let active = true;
+    axiosProvider.get("/rbac/permission-management/modules")
+      .then(response => { if (active) setModules(response.data?.data?.modules || []); })
+      .catch(() => toast.error("Unable to load permission modules"));
+    return () => { active = false; };
+  }, []);
+  const availableActions = (modules.find(item => item.slug === module)?.permissions || [])
+    .map(permission => permission.action)
+    .filter(action => CANONICAL_ACTIONS.includes(action));
 
   const byModule = useMemo(() => groupSlugsByModule(value), [value]);
   const allMods = useMemo(() => Object.keys(byModule), [byModule]);
@@ -106,13 +121,15 @@ const PermissionBuilder = ({ value = [], onChange }) => {
           Add permissions
         </p>
         <div className="flex gap-2">
-          <input
-            className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-blue)]/20"
-            placeholder="Module slug (e.g. products)"
+          <select
+            className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm"
+            aria-label="Permission module"
             value={module}
-            onChange={(e) => setModule(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), add())}
-          />
+            onChange={event => { setModule(event.target.value); setPicked([]); }}
+          >
+            <option value="">Choose a module</option>
+            {modules.map(item => <option key={item.id || item.slug} value={item.slug}>{item.moduleName || item.name}</option>)}
+          </select>
           <button
             type="button"
             onClick={add}
@@ -123,7 +140,7 @@ const PermissionBuilder = ({ value = [], onChange }) => {
           </button>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {CANONICAL_ACTIONS.map((a) => (
+          {availableActions.map((a) => (
             <button
               key={a}
               type="button"
@@ -402,6 +419,7 @@ const TemplateModal = ({ template, onClose, onSave }) => {
 
 /* ─── Main Page ─────────────────────────────────────────────────────────────── */
 const PermissionTemplates = () => {
+  const { can } = usePermission();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -502,7 +520,7 @@ const PermissionTemplates = () => {
             <button onClick={fetch} title="Refresh">
               <MdRefresh size={18} className={loading ? "animate-spin" : ""} />
             </button>
-            <button onClick={() => setModal(null)}>
+            <button disabled={!can("rbac", ACTIONS.CREATE)} onClick={() => setModal(null)}>
               <MdAdd size={16} />
               New Template
             </button>
@@ -558,6 +576,7 @@ const PermissionTemplates = () => {
           {!search && filterActive === "all" && (
             <button
               onClick={() => setModal(null)}
+              disabled={!can("rbac", ACTIONS.CREATE)}
               className="mt-3 text-sm text-[var(--admin-blue)] hover:underline"
             >
               Create your first template →
@@ -608,6 +627,7 @@ const PermissionTemplates = () => {
                     <button
                       title={tpl.isActive ? "Deactivate" : "Activate"}
                       onClick={() => toggleActive(tpl)}
+                      disabled={!can("rbac", ACTIONS.UPDATE)}
                       className={`p-1.5 rounded-lg transition-colors ${
                         tpl.isActive
                           ? "text-teal-400 hover:text-teal-600 hover:bg-teal-50"
@@ -625,6 +645,7 @@ const PermissionTemplates = () => {
                     <button
                       title="Edit"
                       onClick={() => setModal(tpl)}
+                      disabled={!can("rbac", ACTIONS.UPDATE)}
                       className="p-1.5 text-gray-400 hover:text-[var(--admin-blue)] rounded-lg hover:bg-[var(--admin-blue-soft)] transition-colors"
                     >
                       <MdEdit size={15} />

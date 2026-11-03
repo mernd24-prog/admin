@@ -266,7 +266,7 @@ export function usePermission() {
         if (!slug) return;
 
         if (!map[slug]) map[slug] = { _assigned: false };
-        if (mod.assigned === true) {
+        if (mod.assigned === true && !Array.isArray(mod.permissions)) {
           map[slug]._assigned = true;
           map[slug].view = true;
         }

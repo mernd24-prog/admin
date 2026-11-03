@@ -1,3 +1,4 @@
+import { usePermission, ACTIONS } from "../../../_helpers/usePermission";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
@@ -79,9 +80,11 @@ const slugify = (value = "") =>
     .replace(/^-+|-+$/g, "");
 
 export default function ModuleManagement() {
+  const { can } = usePermission();
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.adminCore);
   const [search, setSearch] = useState("");
+  const [moduleScope, setModuleScope] = useState("backend");
   const [filters, setFilters] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -137,9 +140,10 @@ export default function ModuleManagement() {
       getRbacModules({
         limit: 1000,
         includeInactive: true,
+        scope: moduleScope,
       }),
     );
-  }, [dispatch]);
+  }, [dispatch, moduleScope]);
 
   useEffect(() => {
     load();
@@ -253,10 +257,10 @@ export default function ModuleManagement() {
 
   const handleDelete = useCallback(
     async (row) => {
-      if (!window.confirm(`Delete ${row.moduleName || row.name}?`)) return;
+      if (!window.confirm(`Archive ${row.moduleName || row.name}?`)) return;
       try {
         await dispatch(deleteRbacModule({ id: idOf(row) })).unwrap();
-        toast.success("Module deleted");
+        toast.success("Module archived");
         load();
       } catch (error) {
         toast.error(error?.message || error || "Failed to delete module");
@@ -377,6 +381,7 @@ export default function ModuleManagement() {
           <button
             type="button"
             onClick={() => toggleStatus(row)}
+            disabled={!can("rbac", ACTIONS.STATUS_CHANGE)}
             title="Click to toggle status"
           >
             <StatusBadge
@@ -387,13 +392,14 @@ export default function ModuleManagement() {
         ),
       },
     ],
-    [toggleStatus],
+    [toggleStatus, can],
   );
 
   const rowActions = useCallback(
     (row) => [
       {
         label: "Edit Module",
+        permission: ACTIONS.UPDATE,
         icon: <MdEdit size={16} className="text-amber-600" />,
         onClick: () => openEdit(row),
       },
@@ -409,15 +415,17 @@ export default function ModuleManagement() {
             <MdCheckCircle size={16} className="text-green-600" />
           ),
         onClick: () => toggleStatus(row),
+        permission: ACTIONS.STATUS_CHANGE,
       },
       {
-        label: "Delete Module",
+        label: "Archive Module",
+        permission: ACTIONS.DELETE,
         icon: <MdDelete size={16} className="text-red-600" />,
         onClick: () => handleDelete(row),
         danger: true,
       },
-    ],
-    [openEdit, toggleStatus, handleDelete],
+    ].filter(action => can("rbac", action.permission)),
+    [openEdit, toggleStatus, handleDelete, can],
   );
 
   return (
@@ -431,13 +439,18 @@ export default function ModuleManagement() {
         ]}
         actions={
           <div className="flex items-center gap-2">
+            <select className="admin-input" aria-label="Module listing" value={moduleScope} onChange={event => setModuleScope(event.target.value)}>
+              <option value="backend">Permission modules</option>
+              <option value="sidebar">Navigation entries</option>
+            </select>
             <button
               onClick={normalizeOrders}
+              disabled={!can("rbac", ACTIONS.UPDATE)}
               className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
             >
               <MdSort size={16} /> Normalize Order
             </button>
-            <OrangeButton onClick={openCreate}>
+            <OrangeButton onClick={openCreate} disabled={!can("rbac", ACTIONS.CREATE)}>
               <MdAdd size={16} /> Add Module
             </OrangeButton>
           </div>
@@ -489,6 +502,7 @@ export default function ModuleManagement() {
                 Module Name
                 <input
                   value={form.moduleName}
+                  disabled={Boolean(editing?.identityLocked && editing?.metadata?.source !== "sidebar-seed")}
                   onChange={(e) => updateName(e.target.value)}
                   className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
                 />
@@ -497,6 +511,7 @@ export default function ModuleManagement() {
                 Module Key
                 <input
                   value={form.moduleKey}
+                  disabled={Boolean(editing?.identityLocked)}
                   onChange={(e) =>
                     setForm((p) => ({ ...p, moduleKey: e.target.value }))
                   }
@@ -507,6 +522,7 @@ export default function ModuleManagement() {
                 Module Slug
                 <input
                   value={form.moduleSlug}
+                  disabled={Boolean(editing?.identityLocked)}
                   onChange={(e) =>
                     setForm((p) => ({ ...p, moduleSlug: e.target.value }))
                   }

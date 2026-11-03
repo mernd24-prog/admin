@@ -55,6 +55,8 @@
   "tunnel:seller": "ngrok http 3000",
 
   "build": "react-scripts build",
+  "check:rbac": "node scripts/audit-rbac-routes.cjs",
+  "sync:rbac": "node scripts/audit-rbac-routes.cjs --write",
   "test": "react-scripts test",
   "eject": "react-scripts eject"
 },

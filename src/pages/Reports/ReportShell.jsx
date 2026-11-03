@@ -821,6 +821,7 @@ const PerformanceOverview = ({
   barFormatter = formatCurrency,
   lineFormatter = formatNumber,
   includeZeroRows = false,
+  productCategories = false,
 }) => {
   const loading = useContext(ReportLoadingContext);
   const chartRows = includeZeroRows
@@ -836,12 +837,17 @@ const PerformanceOverview = ({
   const barSize = composedRows.length <= 4 ? 54 : 42;
 
   return (
-    <div className="admin-card overflow-hidden border-[var(--admin-line)] bg-white p-4 shadow-[0_12px_34px_rgba(31,27,95,0.06)]">
+    <div className="admin-card min-w-0 overflow-hidden border-[var(--admin-line)] bg-white p-4 shadow-[0_12px_34px_rgba(31,27,95,0.06)]">
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--admin-line)] pb-3.5">
         <div>
           <h3 className="text-[14px] font-bold text-[var(--admin-navy)]">
             {title}
           </h3>
+          {productCategories && composedRows.length > 0 && (
+            <p className="mt-1 text-[11px] text-[var(--admin-muted)]">
+              Hover over a point to see the full product name and values.
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-[var(--admin-muted)]">
           <span className="inline-flex items-center gap-2">
@@ -870,8 +876,8 @@ const PerformanceOverview = ({
             <div className="mx-auto h-4 w-44 rounded bg-[var(--admin-gold-soft)]" />
           </div>
         ) : composedRows.length ? (
-          <div className="w-full">
-            <ResponsiveContainer width="100%" height={250}>
+          <div className="w-full min-w-0">
+            <ResponsiveContainer width="100%" height={productCategories ? 280 : 250}>
               <ComposedChart
                 data={composedRows}
                 margin={{ left: 4, right: 8, top: 18, bottom: 0 }}
@@ -917,15 +923,18 @@ const PerformanceOverview = ({
                   vertical={false}
                 />
                 <XAxis
-                  dataKey="label"
-                  interval={0}
+                  dataKey={productCategories ? "title" : "label"}
+                  interval={productCategories ? "preserveStartEnd" : 0}
+                  height={productCategories ? 42 : 30}
+                  tickFormatter={productCategories ? (value) => truncateLabel(value, 18) : undefined}
+                  tickMargin={12}
                   tick={{
                     fontSize: 11,
                     fill: "var(--admin-muted)",
                   }}
                   axisLine={{ stroke: "#e9dfc9" }}
                   tickLine={false}
-                  minTickGap={8}
+                  minTickGap={productCategories ? 28 : 8}
                 />
                 <YAxis
                   yAxisId="left"
@@ -955,9 +964,9 @@ const PerformanceOverview = ({
                         ) === index,
                     );
                     return (
-                      <div className="rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 shadow-[var(--admin-shadow-strong)]">
+                      <div className="max-w-[min(320px,80vw)] whitespace-normal break-words rounded-md border border-[var(--admin-line)] bg-white px-3 py-2 shadow-[var(--admin-shadow-strong)]">
                         <p className="text-[12px] font-bold text-[var(--admin-navy)]">
-                          {label}
+                          {payload[0]?.payload?.title || label}
                         </p>
                         <div className="mt-2 space-y-1">
                           {visiblePayload.map((item) => {
@@ -2325,6 +2334,7 @@ export const ProductAnalytics = () => {
             ========================== */}
         <PerformanceOverview
           title="Top Product Growth"
+          productCategories
           rows={rows}
           barKey="revenue"
           lineKey={sellerView ? "views" : "purchases"}
@@ -2819,6 +2829,7 @@ export const InventoryAnalytics = () => {
         {/* Product-level graph */}
         <PerformanceOverview
           title="Inventory Stock Growth"
+          productCategories
           rows={lowStockRows}
           barKey="stock"
           lineKey="availableStock"

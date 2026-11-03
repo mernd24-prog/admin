@@ -595,19 +595,9 @@ const UserPermissions = ({ setModuleName }) => {
             return;
         }
 
-        const actorModuleSlugs = new Set(Object.keys(actorPermissionMap || {}));
-        const hasModuleVisibilityCeiling =
-            !sellerPanel && (sidebarModuleSlugs.size > 0 || actorModuleSlugs.size > 0);
+        // The API already applies the actor's assignment ceiling. Sidebar
+        // visibility must not hide API-only reports and supporting modules.
         const visibleModules = modules
-            .filter((module) => {
-                const moduleSlug = getModuleCode(module);
-                const moduleCandidates = getModuleCodeCandidates(moduleSlug);
-                return sellerPanel ||
-                    !hasModuleVisibilityCeiling ||
-                    moduleCandidates.some((candidate) =>
-                        sidebarModuleSlugs.has(candidate) || actorModuleSlugs.has(candidate)
-                    );
-            })
             .sort((a, b) => {
                 const tabA = a.tab || a.metadata?.tab || '';
                 const tabB = b.tab || b.metadata?.tab || '';
@@ -709,10 +699,6 @@ const UserPermissions = ({ setModuleName }) => {
         const allowedModules = assignedModules(next);
         const modulePermissions = assignedModulePermissions(next);
 
-        if (!allowedModules.length) {
-            toast.error('At least one module is required for this user.');
-            return;
-        }
         if (!canAssignPermissions) {
             toast.error('You do not have permission to assign module permissions.');
             return;

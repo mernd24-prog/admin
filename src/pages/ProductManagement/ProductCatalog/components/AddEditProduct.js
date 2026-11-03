@@ -118,11 +118,8 @@ const API_CALL_OBJECT = {
   },
 };
 
-const generateProductVariantSku = () =>
-  `SKU-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
-
 const DEFAULT_PRODUCT_VARIANT = {
-  sku: generateProductVariantSku(),
+  sku: "",
   title: "Default",
   price: "",
   mrp: "",
@@ -1121,7 +1118,7 @@ export default function ProductManagementUI() {
             setVariantsData([
               {
                 ...DEFAULT_PRODUCT_VARIANT,
-                sku: productData?.sku || generateProductVariantSku(),
+                sku: productData?.sku || "",
                 title:
                   productData?.color && productData.color !== "default"
                     ? productData.color
@@ -2357,12 +2354,11 @@ export default function ProductManagementUI() {
 
         const gstRate = Number(variant?.gstRate);
 
-        if (!String(variant?.sku || "").trim()) {
-          fieldErrors.sku = "SKU is required.";
-        } else if (!PRODUCT_SKU_PATTERN.test(String(variant.sku).trim())) {
+        if (String(variant?.sku || "").trim() && !PRODUCT_SKU_PATTERN.test(String(variant.sku).trim())) {
           fieldErrors.sku =
             "Use 3–64 letters, numbers, hyphens, underscores, periods, or slashes; begin and end with a letter or number.";
         } else if (
+          String(variant?.sku || "").trim() &&
           skuCounts.get(String(variant.sku).trim().toLowerCase()) > 1
         ) {
           fieldErrors.sku = "SKU must be unique across variants.";
@@ -3276,7 +3272,7 @@ export default function ProductManagementUI() {
           option.sku || option.salePrice || option.mrp || option.stock,
       )
       .map((option, index) => ({
-        sku: option.sku || generateProductVariantSku(),
+        sku: option.sku || "",
         price: Number(option.salePrice || 0),
         mrp: Number(option.mrp || 0),
         stock: Number(option.stock || 0),
@@ -3290,7 +3286,7 @@ export default function ProductManagementUI() {
     ).map((variant, index) => ({
       ...variant,
       attributes: normalizeVariantAttributes(variant, variableOptionAxes),
-      sku: variant.sku || generateProductVariantSku(),
+      sku: variant.sku || "",
       price: Number(variant.price || variant.salePrice || 0),
       mrp: Number(variant.mrp || variant.price || variant.salePrice || 0),
       salePrice:
@@ -3575,7 +3571,7 @@ export default function ProductManagementUI() {
           setVariantsData([
             {
               ...DEFAULT_PRODUCT_VARIANT,
-              sku: generateProductVariantSku(),
+              sku: "",
             },
           ]);
           setVariantAxes([]);

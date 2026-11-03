@@ -38,7 +38,7 @@ const MODEL_LABEL = {
 };
 
 const STANDARD_SLUGS = Object.values(ROLES);
-const ALL_ACTIONS = ['view', 'create', 'update', 'delete', 'status_change', 'approve', 'reject', 'assign', 'export', 'import'];
+const ALL_ACTIONS = ['view', 'create', 'update', 'delete', 'status_change', 'approve', 'reject', 'assign', 'export', 'import', 'restore', 'bulk_action', 'adjust'];
 const ACTION_ALIASES = { add: 'create', edit: 'update', status: 'status_change', approval: 'approve', action: 'status_change', review: 'approve', manage: 'status_change' };
 const ACTION_LABELS  = { status_change: 'Status', create: 'Create', update: 'Update', delete: 'Delete', approve: 'Approve', reject: 'Reject', export: 'Export', import: 'Import', assign: 'Assign', view: 'View' };
 
@@ -62,7 +62,7 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
   const toggleAll = (modSlug, checked) => {
     visibleActions.forEach((action) => {
       const perm = permissionMap[modSlug]?.[action];
-      if (perm) onChange?.(perm.id, checked, modSlug, action);
+      if (perm && perm.assignable !== false) onChange?.(perm.id, checked, modSlug, action);
     });
   };
 
@@ -122,7 +122,7 @@ const PermissionMatrix = ({ modules = [], matrixState = {}, permissionMap = {}, 
                           <input
                             type="checkbox"
                             checked={isChecked}
-                            disabled={readOnly}
+                            disabled={readOnly || perm.assignable === false}
                             onChange={(e) => onChange?.(perm.id, e.target.checked, mod.slug || mod.moduleKey, action)}
                             className="w-4 h-4 accent-[var(--admin-blue)] cursor-pointer disabled:cursor-default rounded"
                           />
@@ -281,7 +281,7 @@ const HowItWorksBanner = () => {
             </div>
             <p className="text-xs text-gray-500 leading-relaxed">
               Permissions you set here apply to <strong>every user</strong> who has this role.
-              Useful for <strong>seller</strong> role and custom roles. For admin/sub-admin, this is typically left empty.
+              Useful for <strong>seller</strong> role and custom roles. For delegated accounts, inherited rights are limited to their assigned modules.
             </p>
           </div>
           <div className="bg-white rounded-lg border border-[#c7d4f5] p-3">
@@ -291,7 +291,7 @@ const HowItWorksBanner = () => {
             </div>
             <p className="text-xs text-gray-500 leading-relaxed">
               Set permissions for a <strong>specific admin or sub-admin</strong>.
-              This is the primary way to control what each person can access. Stacks on top of role defaults.
+              This is the primary way to control what each person can access. Individual grants and denials refine the role defaults.
             </p>
           </div>
         </div>
@@ -315,9 +315,9 @@ const PerUserRolePanel = ({ role }) => (
         {ROLE_META[role.slug]?.label || role.name} uses per-user permissions
       </p>
       <p className="text-xs text-blue-600 leading-relaxed mb-3">
-        For the <strong>{ROLE_META[role.slug]?.label || role.name}</strong> role, permissions are configured
-        <strong> individually per user</strong> — not at the role level. The matrix below shows role-level defaults
-        (usually all unchecked), which is intentional.
+        The matrix shows inherited defaults for this role. Each user's assigned
+        modules limit those defaults, and individual grants or denials refine access.
+        Only super-admin can change system role defaults.
       </p>
       <p className="text-xs text-blue-500 mb-3">
         To set what a specific admin or sub-admin can do, go to <strong>Admin Users</strong> and use the
@@ -335,7 +335,7 @@ const PerUserRolePanel = ({ role }) => (
 
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 const RolesPermissions = () => {
-  const { isSuperAdmin, isAdmin } = usePermission();
+  const { isSuperAdmin, can } = usePermission();
   const [roles, setRoles]             = useState([]);
   const [loading, setLoading]         = useState(true);
   const [selected, setSelected]       = useState(null);
@@ -344,6 +344,7 @@ const RolesPermissions = () => {
   const [permissionMap, setPermissionMap] = useState({});
   const [matrixModules, setMatrixModules] = useState([]);
   const [permLoading, setPermLoading] = useState(false);
+  const [matrixCanManageRole, setMatrixCanManageRole] = useState(true);
   const [saving, setSaving]           = useState(false);
   const [modal, setModal]             = useState(null);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
@@ -351,7 +352,7 @@ const RolesPermissions = () => {
   const loadRoles = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axiosProvider.get('/rbac/roles', { params: { active: null, limit: 200 } });
+      const res = await axiosProvider.get('/rbac/roles', { params: { includeInactive: true, limit: 1000 } });
       setRoles(res.data?.data || []);
     } catch { toast.error('Failed to load roles'); }
     finally { setLoading(false); }
@@ -389,6 +390,7 @@ const RolesPermissions = () => {
       const res = await axiosProvider.get('/rbac/permission-management/modules', {
         params: role.slug ? { roleSlug: role.slug } : { roleId: role.id },
       });
+      setMatrixCanManageRole(res.data?.data?.canManageRole !== false);
       const mods  = res.data?.data?.modules || [];
       const map   = {};
       const state = {};
@@ -453,7 +455,7 @@ const RolesPermissions = () => {
     } finally { setSaving(false); }
   };
 
-  const canEdit = isSuperAdmin || isAdmin;
+  const canEdit = matrixCanManageRole && can("rbac", ACTIONS.ASSIGN) && (isSuperAdmin || selected?.type === "custom");
   const isSelectedRole = (role) => selected && ((role.id && selected.id === role.id) || (!role.id && selected.slug === role.slug));
 
   const assignedCount = useMemo(() =>
@@ -520,7 +522,7 @@ const RolesPermissions = () => {
                     </div>
                     <div className="flex items-center gap-1 shrink-0 mt-0.5">
                       {isSelectedRole(role) && <MdCheck size={14} className="text-[var(--admin-blue)]" />}
-                      {!role._placeholder && canEdit && !role.isSuperAdmin && (
+                      {!role._placeholder && can("rbac", ACTIONS.UPDATE) && (isSuperAdmin || role.type === "custom") && !role.isSuperAdmin && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setModal(role); }}
                           className="p-1 text-gray-300 hover:text-[var(--admin-blue)] rounded transition-colors"

@@ -18,8 +18,6 @@ import {
 const MAX_VARIANT_IMAGES = 5;
 const MAX_PRODUCT_MONEY = 999999999.99;
 const MAX_PRODUCT_STOCK = 1000000000;
-const generateVariantSku = () =>
-  `SKU-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
 
 const sanitizeDecimalInput = (value, { max = null, decimals = 2 } = {}) => {
   let next = String(value ?? "")
@@ -311,7 +309,7 @@ const VariantBuilder = ({
         if (existing) return existing;
         return {
           ...DEFAULT_VARIANT,
-          sku: generateVariantSku(),
+          sku: "",
           title: Object.values(attributes).join(" / "),
           attributes,
           isDefault: idx === 0,
@@ -357,9 +355,12 @@ const VariantBuilder = ({
   const duplicateVariant = (idx) => {
     const copy = {
       ...variants[idx],
-      sku: generateVariantSku(),
+      sku: "",
       isDefault: false,
     };
+    delete copy._id;
+    delete copy.id;
+    delete copy.skuNormalized;
     const next = [...variants];
     next.splice(idx + 1, 0, copy);
     onChange(next);
@@ -1325,8 +1326,8 @@ const VariantBuilder = ({
                           value={variant.sku || ""}
                           readOnly
                           disabled
-                          placeholder="Generated automatically"
-                          title="SKU is generated automatically and cannot be edited"
+                          placeholder="Assigned when saved"
+                          title="The server assigns a unique SKU when this product is saved"
                           maxLength={64}
                         />
                         {variantErrors.sku && (
@@ -1762,7 +1763,7 @@ const VariantBuilder = ({
             ...variants,
             {
               ...DEFAULT_VARIANT,
-              sku: generateVariantSku(),
+              sku: "",
               isDefault: variants.length === 0,
               sortOrder: variants.length,
             },
