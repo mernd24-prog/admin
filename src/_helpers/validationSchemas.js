@@ -2497,35 +2497,7 @@ export const productVariantsValidationSchema = Yup.mixed().test(
           ),
         );
       }
-      const variantShortDescription = String(
-        variant?.shortDescription || "",
-      ).trim();
-      if (
-        variantShortDescription &&
-        (variantShortDescription.length < 10 ||
-          variantShortDescription.length > 500)
-      ) {
-        errors.push(
-          new Yup.ValidationError(
-            "Variant short description must be between 10 and 500 characters.",
-            variantShortDescription,
-            `variants.${index}.shortDescription`,
-          ),
-        );
-      }
-      const variantDescription = String(variant?.description || "").trim();
-      if (
-        variantDescription &&
-        (variantDescription.length < 10 || variantDescription.length > 5000)
-      ) {
-        errors.push(
-          new Yup.ValidationError(
-            "Variant description must be between 10 and 5000 characters.",
-            variantDescription,
-            `variants.${index}.description`,
-          ),
-        );
-      }
+
       const barcode = String(variant?.barcode || "").trim();
       if (barcode && !/^\d{8,14}$/.test(barcode)) {
         errors.push(

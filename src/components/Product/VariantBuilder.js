@@ -144,6 +144,34 @@ const VariantBuilder = ({
   const optionSearchRef = useRef(null);
   const dragOptionIdx = useRef(null);
   const dragVariantIdx = useRef(null);
+  const [bulkFieldErrors, setBulkFieldErrors] = useState({});
+  const [touchedDescriptionFields, setTouchedDescriptionFields] = useState({});
+
+  const touchDescriptionField = (idx, field) => {
+    setTouchedDescriptionFields((prev) => ({
+      ...prev,
+      [`${idx}.${field}`]: true,
+    }));
+  };
+
+  const getDescriptionError = (idx, field, value) => {
+    if (!touchedDescriptionFields[`${idx}.${field}`]) return "";
+
+    const text = String(value || "").trim();
+
+    // Optional field: empty hone par error nahi dikhega
+    if (!text) return "";
+
+    const maxLength = field === "shortDescription" ? 500 : 5000;
+
+    if (text.length < 10 || text.length > maxLength) {
+      return field === "shortDescription"
+        ? "Variant short description must be between 10 and 500 characters."
+        : "Variant description must be between 10 and 5000 characters.";
+    }
+
+    return "";
+  };
 
   const optionFormik = useFormik({
     initialValues: { name: "", displayType: "button", values: "" },
@@ -348,7 +376,23 @@ const VariantBuilder = ({
       next.add(idx);
       return next;
     });
-    onClearError?.(idx, field);
+
+    if (field === "shortDescription") {
+      const trimmedValue = String(value || "").trim();
+
+      if (trimmedValue.length >= 10 && trimmedValue.length <= 500) {
+        onClearError?.(idx, field);
+      }
+    } else if (field === "description") {
+      const trimmedValue = String(value || "").trim();
+
+      if (trimmedValue.length >= 10 && trimmedValue.length <= 5000) {
+        onClearError?.(idx, field);
+      }
+    } else {
+      onClearError?.(idx, field);
+    }
+
     onChange(
       variants.map((v, i) => (i === idx ? { ...v, [field]: value } : v)),
     );
@@ -464,19 +508,67 @@ const VariantBuilder = ({
 
   const applyToAll = (field, value) => {
     if (value === "" || value === undefined) return false;
+
     const numVal = Number(value);
 
-    // Special price validation via Yup schema
-    if (field === "salePrice") {
-      try {
-        bulkSalePriceValidator.validateSync(numVal);
-      } catch (err) {
-        toast.error(err.message);
+    // Validate Price against existing MRP values
+    if (field === "price") {
+      const hasInvalidPrice = variants.some(
+        (variant) =>
+          variant.mrp !== "" &&
+          variant.mrp !== null &&
+          variant.mrp !== undefined &&
+          numVal > Number(variant.mrp),
+      );
+
+      if (hasInvalidPrice) {
+        setBulkFieldErrors((prev) => ({
+          ...prev,
+          price: "Price cannot be greater than MRP.",
+        }));
         return false;
       }
     }
 
+    // Validate MRP against existing Price values
+    if (field === "mrp") {
+      const hasInvalidMrp = variants.some(
+        (variant) =>
+          variant.price !== "" &&
+          variant.price !== null &&
+          variant.price !== undefined &&
+          Number(variant.price) > numVal,
+      );
+
+      if (hasInvalidMrp) {
+        setBulkFieldErrors((prev) => ({
+          ...prev,
+          mrp: "MRP must be greater than or equal to Price.",
+        }));
+        return false;
+      }
+    }
+
+    // Special price validation via existing Yup schema
+    if (field === "salePrice") {
+      try {
+        bulkSalePriceValidator.validateSync(numVal);
+      } catch (err) {
+        setBulkFieldErrors((prev) => ({
+          ...prev,
+          salePrice: err.message,
+        }));
+        return false;
+      }
+    }
+
+    setBulkFieldErrors((prev) => ({
+      ...prev,
+      [field]: "",
+    }));
+
     onChange(variants.map((v) => ({ ...v, [field]: numVal })));
+
     toast.success(`Applied to all ${variants.length} variants`);
     return true;
   };
@@ -968,6 +1060,11 @@ const VariantBuilder = ({
                           ...prev,
                           [field]: nextValue,
                         }));
+
+                        setBulkFieldErrors((prev) => ({
+                          ...prev,
+                          [field]: "",
+                        }));
                       }}
                       onKeyDown={(e) => {
                         blockInvalidNumberKeys(e);
@@ -1001,6 +1098,11 @@ const VariantBuilder = ({
                     Set
                   </button>
                 </div>
+                {bulkFieldErrors[field] && (
+                  <p className="text-xs text-red-600" role="alert">
+                    {bulkFieldErrors[field]}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -1498,15 +1600,15 @@ const VariantBuilder = ({
                           )}
                           value={
                             productStatuses.options.find(
-                              (o) => o.value === (variant.status || "active"),
+                              (o) =>
+                                o.value ===
+                                (variant.status === undefined
+                                  ? "active"
+                                  : variant.status),
                             ) || null
                           }
                           onChange={(selected) =>
-                            updateVariant(
-                              idx,
-                              "status",
-                              selected?.value || "active",
-                            )
+                            updateVariant(idx, "status", selected?.value ?? "")
                           }
                           isClearable={true}
                           isSearchable={false}
@@ -1574,14 +1676,24 @@ const VariantBuilder = ({
                         minLength={10}
                         maxLength={500}
                         rows={3}
-                        error={variantErrors.shortDescription}
+                        error={getDescriptionError(
+                          idx,
+                          "shortDescription",
+                          variant.shortDescription,
+                        )}
                         showLengthCount={true}
                         className="!mb-0"
-                        onChange={(e) =>
-                          updateVariant(idx, "shortDescription", e.target.value)
-                        }
+                        onChange={(e) => {
+                          touchDescriptionField(idx, "shortDescription");
+                          updateVariant(
+                            idx,
+                            "shortDescription",
+                            e.target.value,
+                          );
+                        }}
                         placeholder="Optional variant detail. Added to the product short description (10–500 chars)."
                       />
+
                       <FormInput
                         type="textarea"
                         label="Additional Full Description"
@@ -1593,12 +1705,17 @@ const VariantBuilder = ({
                         minLength={10}
                         maxLength={5000}
                         rows={3}
-                        error={variantErrors.description}
+                        error={getDescriptionError(
+                          idx,
+                          "description",
+                          variant.description,
+                        )}
                         showLengthCount={true}
                         className="!mb-0"
-                        onChange={(e) =>
-                          updateVariant(idx, "description", e.target.value)
-                        }
+                        onChange={(e) => {
+                          touchDescriptionField(idx, "description");
+                          updateVariant(idx, "description", e.target.value);
+                        }}
                         placeholder="Optional variant detail. Added after the main product description (10–5000 chars)."
                       />
                     </div>
