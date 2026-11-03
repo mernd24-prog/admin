@@ -731,12 +731,7 @@ export default function BasicDetailsTab({
     }
 
     const isPending = option.approvalStatus === "pending";
-    const menuLabel = isPending
-      ? String(option.label || "").replace(
-          /\s*\(\s*Pending approval\s*\)\s*$/i,
-          "",
-        )
-      : option.label;
+    const menuLabel = option.label;
 
     return (
       <div className="flex min-w-0 items-center gap-3">
@@ -2957,7 +2952,7 @@ export default function BasicDetailsTab({
             </div>
           </FormSection>
 
-          {myBrandSubmissions.filter((brand) =>
+          {/* {myBrandSubmissions.filter((brand) =>
             ["pending", "rejected"].includes(brand.approvalStatus),
           ).length > 0 && (
             <FormSection
@@ -3000,7 +2995,7 @@ export default function BasicDetailsTab({
                   ))}
               </div>
             </FormSection>
-          )}
+          )} */}
         </div>
       </DefaultModal>
     </>
