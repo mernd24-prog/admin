@@ -1973,14 +1973,14 @@ export default function BasicDetailsTab({
                   }
                   onChange={(option) => {
                     handleSelectChange(option, "SELLER_ID");
-
-                    handleSelectChange(null, "ORGANIZATION_ID");
-
                     setOrganizationOptions([]);
                   }}
                   options={formattedSellerOptions}
                   onBlur={() => handleFieldBlur("sellerId")}
-                  error={errors?.sellerId}
+                  error={
+                    errors?.sellerId ||
+                    (formikTouched?.sellerId && formikErrors?.sellerId)
+                  }
                   placeholder="Select Seller"
                   required
                   isLoading={sellerLoading}
@@ -2010,7 +2010,11 @@ export default function BasicDetailsTab({
                   }
                   options={formattedOrganizationOptions}
                   onBlur={() => handleFieldBlur("organizationId")}
-                  error={errors?.organizationId}
+                  error={
+                    errors?.organizationId ||
+                    (formikTouched?.organizationId &&
+                      formikErrors?.organizationId)
+                  }
                   placeholder={
                     !formData.sellerId
                       ? "Select Seller First"
@@ -2021,7 +2025,6 @@ export default function BasicDetailsTab({
                   required
                   isDisabled={!formData.sellerId}
                   isLoading={organizationLoading}
-                  isClearable
                 />
               </div>
             )}

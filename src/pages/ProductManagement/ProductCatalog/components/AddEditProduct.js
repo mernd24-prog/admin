@@ -726,6 +726,17 @@ export default function ProductManagementUI() {
     tags: "tags",
   };
 
+  const BASIC_DETAILS_FIELD_ORDER = [
+    "sellerId",
+    "organizationId",
+    "name",
+    "brand",
+    "category_id",
+    "hsn_code",
+    "productFamilyCode",
+    "description",
+  ];
+
   const scrollToFirstValidationError = (errors, attempt = 0) => {
     const sectionOrder = [
       "basic-details",
@@ -749,11 +760,16 @@ export default function ProductManagementUI() {
         sectionIndex: sectionOrder.indexOf(
           FIELD_TO_SECTION[field] || "basic-details",
         ),
+        fieldOrder: BASIC_DETAILS_FIELD_ORDER.indexOf(field),
       }))
       .sort(
         (a, b) =>
           (a.sectionIndex < 0 ? sectionOrder.length : a.sectionIndex) -
             (b.sectionIndex < 0 ? sectionOrder.length : b.sectionIndex) ||
+          (a.fieldOrder < 0 ? BASIC_DETAILS_FIELD_ORDER.length : a.fieldOrder) -
+            (b.fieldOrder < 0
+              ? BASIC_DETAILS_FIELD_ORDER.length
+              : b.fieldOrder) ||
           a.index - b.index,
       )[0]?.field;
     if (!firstField || typeof document === "undefined") return;
@@ -1748,15 +1764,10 @@ export default function ProductManagementUI() {
       return;
     }
 
-    // Admin: derive from the organization list (existing behavior)
+    // The form's organization picker can load seller-specific options that are
+    // not present in the global prefill list. Preserve its selected value;
+    // changing sellers clears it in the seller selection handler.
     if (formData?.organizationId) {
-      const exists = organizationOptions.some(
-        (option) => String(option.value) === String(formData.organizationId),
-      );
-      if (!exists) {
-        basicDetailsFormik.setFieldValue("organizationId", "", false);
-        setFormData((prev) => ({ ...prev, organizationId: "" }));
-      }
       return;
     }
     if (organizationOptions.length === 1) {
@@ -2109,6 +2120,9 @@ export default function ProductManagementUI() {
       };
       if (action === "SELLER_ID") nextFormData.organizationId = "";
       basicDetailsFormik.setValues(nextFormData, false);
+      if (selectedOption?.value) {
+        basicDetailsFormik.setFieldError(basicField, undefined);
+      }
       if (basicDetailsFormik.touched[basicField]) {
         productBasicDetailsValidationSchema
           .validateAt(basicField, nextFormData, {
@@ -2200,11 +2214,6 @@ export default function ProductManagementUI() {
         }));
         break;
       case "SELLER_ID":
-        basicDetailsFormik.setFieldValue(
-          "sellerId",
-          selectedOption?.value || "",
-        );
-        basicDetailsFormik.setFieldValue("organizationId", "");
         setFormData((prev) => ({
           ...prev,
           sellerId: selectedOption?.value || "",
@@ -2212,10 +2221,6 @@ export default function ProductManagementUI() {
         }));
         break;
       case "ORGANIZATION_ID":
-        basicDetailsFormik.setFieldValue(
-          "organizationId",
-          selectedOption?.value || "",
-        );
         setFormData((prev) => ({
           ...prev,
           organizationId: selectedOption?.value || "",
