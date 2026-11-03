@@ -28,6 +28,7 @@ const FormInput = ({
           name={name}
           value={value}
           onChange={onChange}
+          aria-invalid={Boolean(error)}
           className={`admin-input ${error ? "admin-input-error" : ""}`}
           {...props}
         >

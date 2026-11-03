@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { setNestedObjectValues, useFormik } from "formik";
 import BasicDetailsTab from "./BasicDetailsTab";
+import { focusValidationTarget } from "../../../../components/Validation/errorFocus";
 import ProductSettingsPanel from "./ProductSettingsPanel";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -869,40 +870,7 @@ export default function ProductManagementUI() {
         );
         const target =
           field?.closest?.(".admin-field") || field || validationSummary;
-        if (target?.scrollIntoView) {
-          const scrollContainer = target.closest(".sidebar-scrollbar");
-          if (scrollContainer) {
-            const containerRect = scrollContainer.getBoundingClientRect();
-            const targetRect = target.getBoundingClientRect();
-            const nextScrollTop =
-              scrollContainer.scrollTop +
-              targetRect.top -
-              containerRect.top -
-              (scrollContainer.clientHeight - targetRect.height) / 2;
-
-            scrollContainer.scrollTo({
-              top: Math.max(
-                0,
-                Math.min(
-                  nextScrollTop,
-                  scrollContainer.scrollHeight - scrollContainer.clientHeight,
-                ),
-              ),
-              behavior: "smooth",
-            });
-          } else {
-            target.scrollIntoView({ behavior: "smooth", block: "center" });
-          }
-        }
-
-        const focusTarget = field?.matches?.("input, select, textarea")
-          ? field
-          : field?.querySelector?.(
-              "input:not([type='hidden']), select, textarea",
-            );
-        if (focusTarget && focusTarget.type !== "file") {
-          focusTarget.focus({ preventScroll: true });
-        }
+        focusValidationTarget(field || target);
 
         if (!field && !validationSummary && attempt < 5) {
           setTimeout(
@@ -4928,6 +4896,7 @@ export default function ProductManagementUI() {
           </div>
           <main
             ref={mainContainerRef}
+            data-error-focus-managed
             className="product-form-sections flex-1 overflow-visible rounded-xl border border-[var(--admin-line)] bg-white"
           >
             {tabs?.map((tab) => (

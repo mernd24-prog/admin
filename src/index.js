@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import App from "./components/App";
+import AutoFocusError from "./components/Validation/AutoFocusError";
 import { BrowserRouter } from "react-router-dom";
 
 import { store } from "./Redux/Store";
@@ -40,6 +41,7 @@ root.render(
         <LoaderProvider>
           <KYCProvider>
             <App />
+            <AutoFocusError />
           </KYCProvider>
         </LoaderProvider>
       </BrowserRouter>

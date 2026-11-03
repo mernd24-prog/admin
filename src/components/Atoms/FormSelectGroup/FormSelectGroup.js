@@ -50,6 +50,7 @@ const FormSelectGroup = ({
         isSearchable={isSearchable}
         isClearable={isClearable}
         isLoading={isLoading}
+        error={error}
         className={`w-full ${selectClassName}`}
       />
 
