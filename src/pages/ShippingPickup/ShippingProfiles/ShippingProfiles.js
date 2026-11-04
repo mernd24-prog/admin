@@ -2094,16 +2094,6 @@ export default function ShippingProfiles() {
                 {/* Target Seller */}
                 <div className="space-y-1.5">
                   <label className="admin-label">Target Seller</label>
-
-                  <input
-                    className="admin-input w-full"
-                    value={cloneSellerSearch}
-                    onChange={(event) =>
-                      setCloneSellerSearch(event.target.value)
-                    }
-                    placeholder="Search seller by name, email, or business..."
-                  />
-
                   <FilterSelect
                     options={sellerOptions}
                     error={
