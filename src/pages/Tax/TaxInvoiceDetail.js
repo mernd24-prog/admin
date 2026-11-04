@@ -17,11 +17,13 @@ import {
   OrderLink,
   StatusBadge,
   SummaryCard,
+  DataTable,
 } from "../../components/Shared";
 import { getTaxInvoice } from "../../Redux/adminCoreSlice";
 import { downloadApiFile } from "../../_helpers/downloadApi";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { formatDateTime12Hour } from "../../utils/formatters";
+import { useListPage } from "../../hooks/useListPage";
 
 const pick = (row = {}, ...keys) => {
   for (const key of keys) {
@@ -63,23 +65,26 @@ const invoiceCopy = {
 
 const Field = ({ label: fieldLabel, value, mono = false, onClick }) => {
   const displayValue = value || "—";
-  const textStyles = `mt-1 text-sm ${mono ? "font-mono break-all" : ""}`;
+  const valueStyles = `text-sm font-medium text-[var(--admin-ink)] ${
+    mono ? "font-mono break-all" : "break-words"
+  }`;
 
   return (
-    <div>
-      <p className="text-xs font-medium uppercase text-gray-500">
+    <div className="min-w-0 rounded-md border border-[var(--admin-field-line)] bg-[var(--admin-field)] px-3 py-2.5">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
         {fieldLabel}
       </p>
+
       {onClick && value ? (
         <button
           type="button"
           onClick={onClick}
-          className={`${textStyles} text-[var(--admin-navy)] font-medium hover:underline text-left block`}
+          className={`${valueStyles} block text-left hover:text-[var(--admin-blue)] hover:underline`}
         >
           {displayValue}
         </button>
       ) : (
-        <p className={`${textStyles} text-gray-900`}>{displayValue}</p>
+        <div className={valueStyles}>{displayValue}</div>
       )}
     </div>
   );
@@ -127,6 +132,7 @@ const TaxInvoiceDetail = () => {
   const [downloading, setDownloading] = useState(false);
   const stateInvoice = location.state?.invoice || null;
   const fetchedInvoice = unwrap(selector.taxInvoiceData);
+
   const invoice = useMemo(() => {
     const fetchedId = pick(fetchedInvoice, "id", "invoiceId", "invoice_id");
     if (fetchedId && String(fetchedId) === String(invoiceId))
@@ -164,6 +170,96 @@ const TaxInvoiceDetail = () => {
             Number(item.platformFeeTaxAmount || 0),
         }))
       : metadata.items || metadata.lineItems || [];
+
+  const lineItemsPagination =
+    invoice.lineItemsPagination ||
+    invoice.line_items_pagination ||
+    metadata.lineItemsPagination ||
+    {};
+
+  const totalLineItems =
+    Number(lineItemsPagination.total) > 0
+      ? Number(lineItemsPagination.total)
+      : items.length;
+
+  const columns = useMemo(() => {
+    const baseColumns = [
+      {
+        key: "description",
+        label: "Item",
+        render: (_, item) => (
+          <div className="min-w-[180px] whitespace-normal">
+            <div className="font-medium text-gray-900">
+              {item.description || item.productTitle || "—"}
+            </div>
+
+            {invoiceType === "platform_commission" &&
+              Number(item.commissionRate || 0) > 0 && (
+                <div className="mt-1 text-xs text-gray-500">
+                  Commission: {Number(item.commissionRate).toFixed(2)}%
+                </div>
+              )}
+          </div>
+        ),
+      },
+      {
+        key: "hsnCode",
+        label: invoiceType === "platform_commission" ? "SAC" : "HSN",
+      },
+      {
+        key: "quantity",
+        label: "Qty",
+        render: (value) => value || "—",
+      },
+    ];
+
+    if (invoiceType === "seller_customer") {
+      baseColumns.push(
+        {
+          key: "customerDiscountAmount",
+          label: "Customer Promotion",
+          render: (value) => money(value, currency),
+        },
+        {
+          key: "platformContribution",
+          label: "Paid by Platform / Partner",
+          render: (_, item) =>
+            money(
+              Number(item.marketplaceFundedDiscountAmount || 0) +
+                Number(item.paymentPartnerFundedDiscountAmount || 0),
+              currency,
+            ),
+        },
+      );
+    }
+
+    baseColumns.push(
+      {
+        key: "taxableAmount",
+        label: "Taxable",
+        render: (value) => money(value, currency),
+      },
+      {
+        key: "taxAmount",
+        label: "Tax",
+        render: (value) => money(value, currency),
+      },
+      {
+        key: "totalAmount",
+        label: "Total",
+        render: (value, item) =>
+          money(
+            value ??
+              Number(item.taxableAmount || 0) + Number(item.taxAmount || 0),
+            currency,
+          ),
+        cellClassName: "font-semibold",
+      },
+    );
+
+    return baseColumns;
+  }, [invoiceType, currency]);
+
   const sellerName =
     metadata.organization?.legalBusinessName ||
     metadata.organization?.storeDisplayName ||
@@ -194,11 +290,34 @@ const TaxInvoiceDetail = () => {
     ? pick(invoice, "gstin_marketplace")
     : pick(invoice, "gstin_seller") || metadata.seller?.gstNumber;
 
+  const list = useListPage({
+    defaultPageSize: 20,
+    defaultSortKey: "created_at",
+    defaultSortDir: "desc",
+  });
+
+  const { toQueryParams } = list;
+
+  const paginationList = useMemo(() => {
+    const { setSearch, ...pagination } = list;
+    return pagination;
+  }, [list]);
+
   const loadInvoice = useCallback(async () => {
     if (!invoiceId) return;
+
     try {
       setLoading(true);
-      await dispatch(getTaxInvoice({ invoiceId })).unwrap();
+
+      const params = toQueryParams();
+
+      await dispatch(
+        getTaxInvoice({
+          invoiceId,
+          page: params.page,
+          limit: params.limit,
+        }),
+      ).unwrap();
     } catch (error) {
       toast.error(error?.message || error || "Unable to load invoice", {
         id: `invoice-load-error-${invoiceId}`,
@@ -206,7 +325,7 @@ const TaxInvoiceDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, invoiceId]);
+  }, [dispatch, invoiceId, toQueryParams]);
 
   useEffect(() => {
     loadInvoice();
@@ -272,8 +391,10 @@ const TaxInvoiceDetail = () => {
       <section className="rounded-lg border border-[var(--admin-line)] bg-white p-4">
         <div className="mb-4 flex items-center justify-between border-b border-[var(--admin-line)] pb-3">
           <div>
-            <p className="text-xs text-[var(--admin-muted)]">Invoice Number</p>
-            <h3 className="font-semibold text-[var(--admin-ink)]">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--admin-muted)]">
+              Invoice Number
+            </p>
+            <h3 className="mt-1 text-base font-semibold text-[var(--admin-ink)]">
               {pick(invoice, "invoiceNumber", "invoice_number") || "—"}
             </h3>
           </div>
@@ -290,7 +411,7 @@ const TaxInvoiceDetail = () => {
           Invoice Details
         </h3>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Field
             label="Order"
             value={
@@ -299,16 +420,6 @@ const TaxInvoiceDetail = () => {
                 orderNumber={pick(invoice, "orderNumber", "order_number")}
               />
             }
-          />
-
-          <Field
-            label="Reference"
-            value={
-              [pick(invoice, "reference_type"), pick(invoice, "reference_id")]
-                .filter(Boolean)
-                .join(" / ") || "—"
-            }
-            mono
           />
 
           <Field
@@ -325,21 +436,11 @@ const TaxInvoiceDetail = () => {
             }
           />
 
-          <Field label="Issued By" value={issuerName || "—"} />
+          <Field label="Issued By" value={issuerName} />
 
-          <Field label="Recipient" value={recipientName || "—"} />
+          <Field label="Recipient" value={recipientName} />
 
-          <Field
-            label="Organization"
-            value={
-              pick(invoice, "organizationId", "organization_id") ||
-              metadata.organization?.legalBusinessName ||
-              "—"
-            }
-            mono
-          />
-
-          <Field label={partyGstinLabel} value={partyGstin || "—"} mono />
+          <Field label={partyGstinLabel} value={partyGstin} mono />
         </div>
       </section>
 
@@ -373,7 +474,7 @@ const TaxInvoiceDetail = () => {
         />
       </section>
       {invoiceType === "seller_customer" && (
-        <section className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+        <section className="rounded-lg border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-semibold text-gray-900">
             Invoice payment allocation
           </h2>
@@ -431,90 +532,24 @@ const TaxInvoiceDetail = () => {
           />
         </div>
       </section>
+
       <section className="rounded-lg border border-gray-200 bg-white">
         <div className="border-b border-gray-100 px-4 py-3">
           <h2 className="text-sm font-semibold text-gray-900">Line Items</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100 text-sm">
-            <thead className="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
-              <tr>
-                <th className="px-4 py-3">Item</th>
-                <th className="px-4 py-3">
-                  {invoiceType === "platform_commission" ? "SAC" : "HSN"}
-                </th>
-                <th className="px-4 py-3">Qty</th>
-                {invoiceType === "seller_customer" && (
-                  <th className="px-4 py-3">Customer Promotion</th>
-                )}
-                {invoiceType === "seller_customer" && (
-                  <th className="px-4 py-3">Paid by Platform / Partner</th>
-                )}
-                <th className="px-4 py-3">Taxable</th>
-                <th className="px-4 py-3">Tax</th>
-                <th className="px-4 py-3">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {items.length ? (
-                items.map((item, index) => (
-                  <tr key={item.orderItemId || item.productId || index}>
-                    <td className="px-4 py-3">
-                      <div>{item.description || item.productTitle || "—"}</div>
-                      {invoiceType === "platform_commission" &&
-                        Number(item.commissionRate || 0) > 0 && (
-                          <div className="mt-1 text-xs text-gray-500">
-                            Commission: {Number(item.commissionRate).toFixed(2)}
-                            %
-                          </div>
-                        )}
-                    </td>
-                    <td className="px-4 py-3">{item.hsnCode || "—"}</td>
-                    <td className="px-4 py-3">{item.quantity || "—"}</td>
-                    {invoiceType === "seller_customer" && (
-                      <td className="px-4 py-3">
-                        {money(item.customerDiscountAmount, currency)}
-                      </td>
-                    )}
-                    {invoiceType === "seller_customer" && (
-                      <td className="px-4 py-3">
-                        {money(
-                          Number(item.marketplaceFundedDiscountAmount || 0) +
-                            Number(
-                              item.paymentPartnerFundedDiscountAmount || 0,
-                            ),
-                          currency,
-                        )}
-                      </td>
-                    )}
-                    <td className="px-4 py-3">
-                      {money(item.taxableAmount, currency)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {money(item.taxAmount, currency)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {money(
-                        item.totalAmount ??
-                          Number(item.taxableAmount || 0) +
-                            Number(item.taxAmount || 0),
-                        currency,
-                      )}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={invoiceType === "seller_customer" ? 8 : 6}
-                    className="px-4 py-6 text-center text-gray-500"
-                  >
-                    No line items available
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <DataTable
+            columns={columns}
+            data={items}
+            loading={loading}
+            total={totalLineItems}
+            listPage={paginationList}
+            onRefresh={loadInvoice}
+            showSerialNumber
+            rowKey={(item) => item.orderItemId || item.productId || item.id}
+            emptyMessage="No line items available"
+            tableContainerClassName="overflow-x-auto"
+          />
         </div>
       </section>
     </div>

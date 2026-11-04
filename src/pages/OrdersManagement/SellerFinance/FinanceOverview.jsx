@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -13,6 +13,7 @@ import {
 import Cards from "../../../components/Cards/Cards";
 import { toast } from "sonner";
 import PageHeader from "../../../components/Shared/PageHeader";
+import Pagination from "../../../components/Pagination/Pagination";
 import Loader from "../../../components/Loader/Loader";
 import { getMySellerWalletSummary } from "../../../Redux/sellerCommissionsSlice";
 import {
@@ -37,6 +38,8 @@ const interactiveClass =
 export default function FinanceOverview() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityPageSize, setActivityPageSize] = useState(6);
 
   const state = useSelector(
     (store) => store.sellerCommissions?.walletSummaryData || {},
@@ -64,18 +67,22 @@ export default function FinanceOverview() {
         getMySellerWalletSummary({
           fromDate: dateFilters.fromDate,
           toDate: dateFilters.toDate,
-          limit: 8,
-          offset: 0,
+          limit: activityPageSize,
+          offset: (activityPage - 1) * activityPageSize,
         }),
       ).unwrap();
     } catch (error) {
       toast.error(error?.message || error || "Unable to load finance overview");
     }
-  }, [dateFilters, dispatch]);
+  }, [activityPage, activityPageSize, dateFilters, dispatch]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    setActivityPage(1);
+  }, [dateFilters.fromDate, dateFilters.toDate]);
 
   const financeSummary = wallet.summary || wallet.earningsSummary || {};
   const previousSummary =
@@ -529,9 +536,8 @@ export default function FinanceOverview() {
                 </strong>
                 <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
                   This was recorded automatically from delivered COD orders.
-                  Confirm retained COD cash and track automatic payout
-                  recovery. It reduces available or future earnings until fully
-                  recovered.
+                  Confirm retained COD cash and track automatic payout recovery.
+                  It reduces available or future earnings until fully recovered.
                 </p>
               </div>
 
@@ -606,7 +612,7 @@ export default function FinanceOverview() {
             </div>
 
             <div className="divide-y divide-[var(--admin-line)]">
-              {items.slice(0, 6).map((item) => {
+              {items.map((item) => {
                 const status = sellerFinanceStatus(item);
 
                 return (
@@ -658,6 +664,23 @@ export default function FinanceOverview() {
                   </button>
                 );
               })}
+            </div>
+            <div className="border-t border-[var(--admin-line)] px-4 py-3">
+              <Pagination
+                totalPages={Math.max(
+                  1,
+                  Math.ceil(Number(wallet.total || 0) / activityPageSize),
+                )}
+                currentPage={activityPage}
+                onPageChange={setActivityPage}
+                totalRecords={Number(wallet.total || 0)}
+                pageSize={activityPageSize}
+                pageSizeOptions={[6, 10, 20, 50, 100]}
+                onPageSizeChange={(size) => {
+                  setActivityPageSize(size);
+                  setActivityPage(1);
+                }}
+              />
             </div>
           </>
         ) : (

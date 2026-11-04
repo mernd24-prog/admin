@@ -34,13 +34,6 @@ import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
 
-const CHANNEL_OPTIONS = [
-  { value: "in_app", label: "In-App" },
-  { value: "email", label: "Email" },
-  { value: "sms", label: "SMS" },
-  { value: "push", label: "Push" },
-];
-
 const TEMPLATE_OPTIONS = [
   { value: "order_update", label: "Order Update" },
   { value: "payment_confirmation", label: "Payment Confirmation" },
@@ -249,8 +242,20 @@ const getNotificationDetailRoute = (notification = {}, isSeller = false) => {
     return `/app/returns?returnId=${encodeURIComponent(returnId)}`;
   }
 
+  const eventName = meta.eventName || "";
+  const targetType = meta.targetType || "";
+
+  if (
+    eventName === "inventory.low_stock.v1" ||
+    (targetType === "inventory" && meta.templateKey === "low_stock_alert")
+  ) {
+    return meta.productId
+      ? `/app/inventory/${encodeURIComponent(meta.productId)}`
+      : "/app/inventory";
+  }
+
   if (productId) {
-    return `/app/products/edit/${encodeURIComponent(productId)}`;
+    return `/app/product-catalog/view/${encodeURIComponent(productId)}`;
   }
 
   if (shipmentId) {
@@ -279,7 +284,7 @@ const getNotificationDetailRoute = (notification = {}, isSeller = false) => {
 
   if (extracted.topic === "invoice") return "/app/tax-invoices";
   if (extracted.topic === "shipment") return "/app/shipment-tracking";
-  if (extracted.topic === "product") return "/app/products";
+  if (extracted.topic === "product") return "/app/product-catalog";
   if (extracted.topic === "order") return "/app/orders";
   if (extracted.topic === "return") return "/app/returns";
 
@@ -287,13 +292,6 @@ const getNotificationDetailRoute = (notification = {}, isSeller = false) => {
 };
 
 const FILTER_FIELDS = [
-  {
-    key: "type",
-    type: "select",
-    label: "Channel",
-    width: "w-36",
-    options: CHANNEL_OPTIONS,
-  },
   {
     key: "fromDate",
     type: "date",
@@ -486,9 +484,7 @@ const UserMessages = () => {
           type: filters.type || undefined,
           search: queryParams.search || undefined,
           fromDate: filters.fromDate || undefined,
-          toDate: filters.toDate
-            ? `${filters.toDate}T23:59:59.999`
-            : undefined,
+          toDate: filters.toDate ? `${filters.toDate}T23:59:59.999` : undefined,
         };
 
         const res = await axiosProvider.get(endpoint, { params });
@@ -521,13 +517,7 @@ const UserMessages = () => {
         }
       }
     },
-    [
-      isSeller,
-      toQueryParams,
-      filters.type,
-      filters.fromDate,
-      filters.toDate,
-    ],
+    [isSeller, toQueryParams, filters.type, filters.fromDate, filters.toDate],
   );
 
   useEffect(() => {
@@ -782,23 +772,6 @@ const UserMessages = () => {
             description="Choose the channel and template for this notification."
           >
             <div className="space-y-4">
-              <FormSelectGroup
-                label="Channel"
-                options={CHANNEL_OPTIONS}
-                value={
-                  CHANNEL_OPTIONS.find(
-                    (item) => item.value === form.channel,
-                  ) || null
-                }
-                onChange={(selectedOption) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    channel: selectedOption?.value ?? "",
-                  }))
-                }
-                placeholder="Select channel"
-              />
-
               <FormSelectGroup
                 label="Template"
                 options={TEMPLATE_OPTIONS}

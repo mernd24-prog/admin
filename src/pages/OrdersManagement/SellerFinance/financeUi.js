@@ -669,50 +669,55 @@ export const CalculationRows = ({ row }) => {
           {financeMoney(amounts.net, currency)}
         </span>
       </div>
-      <p className="rounded-lg bg-blue-50 p-3 text-xs leading-5 text-blue-800">
+      {/* <p className="rounded-lg bg-blue-50 p-3 text-xs leading-5 text-blue-800">
         Shipping is shown from the backend settlement snapshot. A reimbursement
         is added to your earning; only an actual shipping deduction is
         subtracted.
-      </p>
-      <details className="group rounded-lg border border-[var(--admin-line)] p-3 text-xs">
-        <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold [&::-webkit-details-marker]:hidden">
-          <MdChevronRight
-            aria-hidden="true"
-            size={18}
-            className="shrink-0 transition-transform group-open:rotate-90"
-          />
-          VIEW TAX &amp; TECHNICAL DETAILS
-        </summary>
-        <dl className="mt-3 divide-y divide-[var(--admin-line)] border-t border-[var(--admin-line)]">
-          {[
-            ["Settlement Row", row.id || "—"],
-            [
-              "Seller-funded Promotion",
-              financeMoney(amounts.sellerPromotion, currency),
-            ],
-            [
-              "Payment-partner Contribution",
-              financeMoney(amounts.partnerPromotion, currency),
-            ],
-            ["Shipping Credit", financeMoney(amounts.shippingCredit, currency)],
-            [
-              "Shipping Deduction",
-              financeMoney(amounts.shippingDeduction, currency),
-            ],
-            ["Created", financeDateTime(row.created_at || row.createdAt)],
-          ].map(([label, value]) => (
-            <div
-              key={label}
-              className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-2 sm:gap-4"
-            >
-              <dt className="text-[var(--admin-muted)]">{label}</dt>
-              <dd className="min-w-0 break-words font-medium tabular-nums text-[var(--admin-ink)] sm:text-right">
-                {value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </details>
+      </p> */}
+      <div className="pt-3">
+        <details className="group  rounded-lg border border-[var(--admin-line)] p-3 text-xs">
+          <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold [&::-webkit-details-marker]:hidden">
+            <MdChevronRight
+              aria-hidden="true"
+              size={18}
+              className="shrink-0 transition-transform group-open:rotate-90"
+            />
+            VIEW TAX &amp; TECHNICAL DETAILS
+          </summary>
+          <dl className="mt-3 divide-y divide-[var(--admin-line)] border-t border-[var(--admin-line)]">
+            {[
+              ["Settlement Row", row.id || "—"],
+              [
+                "Seller-funded Promotion",
+                financeMoney(amounts.sellerPromotion, currency),
+              ],
+              [
+                "Payment-partner Contribution",
+                financeMoney(amounts.partnerPromotion, currency),
+              ],
+              [
+                "Shipping Credit",
+                financeMoney(amounts.shippingCredit, currency),
+              ],
+              [
+                "Shipping Deduction",
+                financeMoney(amounts.shippingDeduction, currency),
+              ],
+              ["Created", financeDateTime(row.created_at || row.createdAt)],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-2 sm:gap-4"
+              >
+                <dt className="text-[var(--admin-muted)]">{label}</dt>
+                <dd className="min-w-0 break-words font-medium tabular-nums text-[var(--admin-ink)] sm:text-right">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      </div>
     </div>
   );
 };

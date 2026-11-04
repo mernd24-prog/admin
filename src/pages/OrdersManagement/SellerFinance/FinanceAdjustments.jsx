@@ -8,14 +8,13 @@ import {
   MdAssignmentReturn,
   MdLocalOffer,
   MdPauseCircle,
-  MdRefresh,
-  MdTune,
   MdVisibility,
 } from "react-icons/md";
 import Cards from "../../../components/Cards/Cards";
 import Loader from "../../../components/Loader/Loader";
 import PageHeader from "../../../components/Shared/PageHeader";
 import DataTable from "../../../components/Shared/DataTable";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import { OrderLink } from "../../../components/Shared/EntityLink";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
@@ -25,8 +24,6 @@ import {
   getMySellerWalletSummary,
 } from "../../../Redux/sellerCommissionsSlice";
 import {
-  FinanceChoiceFilters,
-  FinanceEmptyState,
   FinanceStatusBadge,
   financeDateTime,
   financeMoney,
@@ -64,6 +61,8 @@ export default function FinanceAdjustments() {
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sortDir, setSortDir] = useState("asc");
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -163,9 +162,11 @@ export default function FinanceAdjustments() {
   }, [category, codRows, promotionPayload.items, wallet.items]);
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return rows;
-
     return rows.filter((row) => {
+      if (statusFilter && sellerFinanceStatus(row).key !== statusFilter) {
+        return false;
+      }
+      if (!query) return true;
       const visibleValues = [
         row.title,
         row.description,
@@ -190,7 +191,29 @@ export default function FinanceAdjustments() {
         .filter((value) => value !== null && value !== undefined)
         .some((value) => String(value).toLowerCase().includes(query));
     });
-  }, [rows, search]);
+  }, [rows, search, statusFilter]);
+  const sortedRows = useMemo(
+    () =>
+      [...filteredRows].sort((left, right) => {
+        const difference = Number(left.amount || 0) - Number(right.amount || 0);
+        return sortDir === "desc" ? -difference : difference;
+      }),
+    [filteredRows, sortDir],
+  );
+  const statusOptions = useMemo(() => {
+    const availableStatuses = new Map();
+    rows.forEach((row) => {
+      const status = sellerFinanceStatus(row);
+      availableStatuses.set(status.key, status.label);
+    });
+    return [
+      { value: "", label: "All statuses" },
+      ...Array.from(availableStatuses, ([value, label]) => ({
+        value,
+        label,
+      })).sort((left, right) => left.label.localeCompare(right.label)),
+    ];
+  }, [rows]);
   const owed = Math.abs(Number(balances.codLiabilityBalance || 0));
   const columns = useMemo(
     () => [
@@ -226,6 +249,7 @@ export default function FinanceAdjustments() {
       {
         key: "amount",
         label: "Amount",
+        sortable: true,
         cellClassName: "align-top",
         render: (value, row) => (
           <strong
@@ -285,7 +309,7 @@ export default function FinanceAdjustments() {
         ]}
       />
       {/* <FinanceNav /> */}
-     
+
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Cards
           label="Returns & refunds"
@@ -324,12 +348,6 @@ export default function FinanceAdjustments() {
           onClick={() => setParams({ type: "holds" })}
         />
       </div>
-      {/* <FinanceChoiceFilters
-        label="Filter adjustments"
-        value={category}
-        onChange={(key) => setParams(key ? { type: key } : {})}
-        options={CATEGORIES}
-      /> */}
       <Tabs
         tabs={CATEGORIES}
         activeTab={category}
@@ -352,10 +370,33 @@ export default function FinanceAdjustments() {
       )}
       <DataTable
         columns={columns}
-        data={filteredRows}
+        data={sortedRows}
         loading={loading}
-        totalCount={filteredRows.length}
+        totalCount={sortedRows.length}
         pageSize={20}
+        sortKey="amount"
+        sortDir={sortDir}
+        onSort={(key, direction) => {
+          if (key === "amount") setSortDir(direction);
+        }}
+        filterBar={
+          <div className="flex flex-wrap items-end gap-4 border-b border-[var(--admin-line)] bg-[var(--admin-card)] px-4 py-3">
+            <div className="w-full max-w-xs">
+              <label className="admin-label mb-1 block">Status</label>
+              <FilterSelect
+                options={statusOptions}
+                value={
+                  statusOptions.find(
+                    (option) => option.value === statusFilter,
+                  ) || statusOptions[0]
+                }
+                onChange={(option) => setStatusFilter(option?.value || "")}
+                isSearchable={false}
+                isClearable={false}
+              />
+            </div>
+          </div>
+        }
         onRefresh={load}
         onSearch={setSearch}
         searchPlaceholder="Search adjustment, order, amount, status, or date..."
