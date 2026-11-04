@@ -15,6 +15,7 @@ import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 import { formatDateTime12Hour } from "../../utils/formatters";
+import { Upload } from "lucide-react";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Active" },
@@ -340,11 +341,17 @@ const StockNotifications = () => {
         }
         onRefresh={fetchRows}
         emptyText="No stock notification requests found."
-        exportConfig={{
-          filename: "stock-notifications",
-          columns: exportColumns,
-          data: rows,
-        }}
+      exportConfig={{
+
+          filename: "stock-notifications",
+
+          columns: exportColumns,
+
+          data: rows,
+
+          icon: <Upload size={15} className="shrink-0 text-[var(--admin-blue)]" aria-hidden="true" />,
+
+        }}
         rowActions={(row) => [
           {
             label: row.status === "pending" ? "Send Email" : "Send Again",

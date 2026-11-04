@@ -55,6 +55,7 @@ import {
   RefreshButton,
 } from "../../components/Atoms/buttons/exportImport";
 import { useFormik } from "formik";
+import Input from "../../components/Atoms/Input/Input";
 
 const STOCK_FILTER_OPTIONS = [
   { value: "", label: "All Stock" },
@@ -92,8 +93,20 @@ const IMPORT_COLUMNS = [
 ];
 
 const EDITABLE_IMPORT_COLUMN = "newStock";
+const EDITABLE_IMPORT_COLUMN_LABEL = "New Stock";
 const READ_ONLY_IMPORT_COLUMNS = IMPORT_COLUMNS.filter(
   (column) => column !== EDITABLE_IMPORT_COLUMN,
+);
+
+const normalizeImportColumn = (column) =>
+  String(column ?? "")
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+const IMPORT_COLUMN_LOOKUP = new Map(
+  IMPORT_COLUMNS.map((column) => [normalizeImportColumn(column), column]),
 );
 
 const getErrorMessage = (error, fallback) => {
@@ -117,7 +130,7 @@ const normalizeNumber = (value) => {
 };
 
 const buildImportValidationError = (message) =>
-  `${message} Export a fresh template and edit only the "${EDITABLE_IMPORT_COLUMN}" column.`;
+  `${message} Export a fresh template and edit only the "${EDITABLE_IMPORT_COLUMN_LABEL}" column.`;
 
 const unwrapApiPayload = (response) =>
   response?.data?.data ?? response?.data ?? response ?? {};
@@ -518,7 +531,7 @@ const Inventory = () => {
   const navigate = useNavigate();
 
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "updatedAt",
     defaultFilters: getInitialInventoryFilters(),
   });
@@ -570,14 +583,29 @@ const Inventory = () => {
     setError("");
 
     try {
-      const response = await dispatch(
-        getInventoryList(toQueryParams()),
-      ).unwrap();
-
-      const nextRows = getRowsFromResponse(response);
+      const params = { ...toQueryParams(), page: 1, limit: 100 };
+      const response = await dispatch(getInventoryList(params)).unwrap();
+      const firstRows = getRowsFromResponse(response);
+      const variantTotal = getVariantTotalFromResponse(
+        response,
+        firstRows.length,
+      );
+      const pageCount = Math.max(1, Math.ceil(variantTotal / 100));
+      const remainingResponses = await Promise.all(
+        Array.from({ length: pageCount - 1 }, (_, index) =>
+          dispatch(
+            getInventoryList({ ...params, page: index + 2 }),
+          ).unwrap(),
+        ),
+      );
+      const nextRows = [
+        ...firstRows,
+        ...remainingResponses.flatMap(getRowsFromResponse),
+      ];
+      const nextProductRows = groupInventoryByProduct(nextRows);
 
       setRows(nextRows);
-      setTotal(getTotalFromResponse(response, nextRows.length));
+      setTotal(getTotalFromResponse(response, nextProductRows.length));
     } catch (requestError) {
       setError(getErrorMessage(requestError, "Unable to load inventory"));
       setRows([]);
@@ -675,16 +703,31 @@ const Inventory = () => {
     const grouped = groupInventoryByProduct(rows);
     const stockStatus = list.filters?.stockStatus;
 
-    if (!stockStatus) {
-      return grouped;
-    }
+    const filtered = !stockStatus
+      ? grouped
+      : grouped.filter((row) => {
+          if (stockStatus === "in_stock") return row.status === "in_stock";
+          if (stockStatus === "out_of_stock") return row.status === "out_of_stock";
+          if (stockStatus === "low_stock") return row.status === "low_stock";
+          return true;
+        });
+
+    const offset = (list.page - 1) * list.pageSize;
+    return filtered.slice(offset, offset + list.pageSize);
+  }, [rows, list.filters?.stockStatus, list.page, list.pageSize]);
+
+  const filteredProductTotal = useMemo(() => {
+    const grouped = groupInventoryByProduct(rows);
+    const stockStatus = list.filters?.stockStatus;
+
+    if (!stockStatus) return grouped.length;
 
     return grouped.filter((row) => {
       if (stockStatus === "in_stock") return row.status === "in_stock";
       if (stockStatus === "out_of_stock") return row.status === "out_of_stock";
       if (stockStatus === "low_stock") return row.status === "low_stock";
       return true;
-    });
+    }).length;
   }, [rows, list.filters?.stockStatus]);
 
   const filteredDetailRows = useMemo(() => {
@@ -855,22 +898,43 @@ const Inventory = () => {
   };
 
   const fetchAllInventoryRows = useCallback(async () => {
-    const params = { ...toQueryParams(), page: 1, size: 100 };
+    const params = {
+      page: 1,
+      size: 100,
+      sortBy: "updatedAt",
+      sortDir: "desc",
+    };
     const firstResponse = await dispatch(getInventoryList(params)).unwrap();
     const firstRows = getRowsFromResponse(firstResponse);
     const rowTotal = getVariantTotalFromResponse(
       firstResponse,
       firstRows.length,
     );
+    const pagesToFetch = Math.max(0, Math.ceil(rowTotal / 100) - 1);
     const remaining = await Promise.all(
-      Array.from(
-        { length: Math.max(0, Math.ceil(rowTotal / 100) - 1) },
-        (_, index) =>
-          dispatch(getInventoryList({ ...params, page: index + 2 })).unwrap(),
+      Array.from({ length: pagesToFetch }, (_, index) =>
+        dispatch(getInventoryList({ ...params, page: index + 2 })).unwrap(),
       ),
     );
-    return [...firstRows, ...remaining.flatMap(getRowsFromResponse)];
-  }, [dispatch, toQueryParams]);
+    const rows = [firstRows, ...remaining.map(getRowsFromResponse)].flat();
+
+    // Keep fetching if the API total is absent or lower than the actual row
+    // count, so exports always include every inventory variant.
+    let page = pagesToFetch + 2;
+    let lastPageRows = remaining.at(-1)
+      ? getRowsFromResponse(remaining.at(-1))
+      : firstRows;
+    while (lastPageRows.length === 100) {
+      const response = await dispatch(
+        getInventoryList({ ...params, page }),
+      ).unwrap();
+      lastPageRows = getRowsFromResponse(response);
+      rows.push(...lastPageRows);
+      page += 1;
+    }
+
+    return rows;
+  }, [dispatch]);
 
   const handleExport = async () => {
     try {
@@ -952,10 +1016,13 @@ const Inventory = () => {
             name: "Inventory Stock",
             title: "Inventory Stock",
             data: exportRows,
-            columns: IMPORT_COLUMNS.map((key) => ({
-              key,
-              label: key,
-            })),
+         columns: IMPORT_COLUMNS.map((key) => ({
+  key,
+  label: key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (char) => char.toUpperCase())
+    .trim(),
+})),
           },
         ],
         filename,
@@ -986,23 +1053,31 @@ const Inventory = () => {
       const imported = await parseImportFile(file);
       if (!imported.length)
         throw new Error("The selected file did not contain any rows");
-      const importedColumns = Object.keys(imported[0] || {});
-      const missing = IMPORT_COLUMNS.filter(
-        (column) => !importedColumns.includes(column),
+      const normalizedImport = imported
+        .map((item) =>
+          Object.entries(item || {}).reduce((normalized, [header, value]) => {
+            const key = IMPORT_COLUMN_LOOKUP.get(
+              normalizeImportColumn(header),
+            );
+            if (key) normalized[key] = value;
+            return normalized;
+          }, {}),
+        )
+        .filter((item) =>
+          IMPORT_COLUMNS.some((column) => normalizeText(item[column]) !== ""),
+        );
+      if (!normalizedImport.length)
+        throw new Error("The selected file did not contain any inventory rows");
+      const importedColumns = new Set(
+        normalizedImport.flatMap((item) => Object.keys(item)),
       );
-      const unknown = importedColumns.filter(
-        (column) => !IMPORT_COLUMNS.includes(column),
+      const missing = IMPORT_COLUMNS.filter(
+        (column) => !importedColumns.has(column),
       );
       if (missing.length)
         throw new Error(
           buildImportValidationError(
             `Missing required column(s): ${missing.join(", ")}.`,
-          ),
-        );
-      if (unknown.length)
-        throw new Error(
-          buildImportValidationError(
-            `Unknown column(s): ${unknown.join(", ")}.`,
           ),
         );
 
@@ -1019,15 +1094,14 @@ const Inventory = () => {
         ]),
       );
       const updates = new Map();
-      imported.forEach((item, index) => {
-        const rowNumber = index + 2;
+      normalizedImport.forEach((item) => {
         const productIdValue = normalizeText(item.productId);
         const variantIdValue = normalizeText(item.variantId);
         const variantSkuValue = normalizeText(item.variantSku);
         if (!productIdValue || (!variantIdValue && !variantSkuValue))
           throw new Error(
             buildImportValidationError(
-              `Row ${rowNumber}: productId and variantId or variantSku are required.`,
+              "Product Id and Variant Id or Variant Sku are required.",
             ),
           );
         const row = variantIdValue
@@ -1038,14 +1112,14 @@ const Inventory = () => {
         if (!row)
           throw new Error(
             buildImportValidationError(
-              `Row ${rowNumber}: product or variant identity was changed or no longer exists.`,
+              "Product or Variant identity was changed or no longer exists.",
             ),
           );
         const key = row.id || getVariantIdentity(row);
         if (updates.has(key))
           throw new Error(
             buildImportValidationError(
-              `Row ${rowNumber}: duplicate variant row.`,
+              "Duplicate variant row.",
             ),
           );
         const edited = READ_ONLY_IMPORT_COLUMNS.filter(
@@ -1059,17 +1133,17 @@ const Inventory = () => {
         if (edited.length)
           throw new Error(
             buildImportValidationError(
-              `Row ${rowNumber}: ${edited.join(", ")} cannot be changed.`,
+              `${edited.join(", ").toUpperCase()} cannot be changed.`,
             ),
           );
         const stock = Number(item.newStock);
         if (!Number.isInteger(stock) || stock < 0)
           throw new Error(
-            `Row ${rowNumber}: newStock must be a non-negative whole number.`,
+            "New Stock must be a non-negative whole number.",
           );
         if (stock < Number(row.reservedStock || 0))
           throw new Error(
-            `Row ${rowNumber}: newStock cannot be below reserved stock (${row.reservedStock}).`,
+            `New Stock cannot be below reserved stock (${row.reservedStock}).`,
           );
         updates.set(key, { row, stock });
       });
@@ -1344,33 +1418,32 @@ const Inventory = () => {
             Number(value || 0) <= 0 ? "text-red-600" : "text-emerald-700",
           ),
       },
-      {
-        key: "currentStock",
-        label: "New Stock",
-        render: (_, row) => {
-          const hasError =
-            row.currentStock === "" ||
-            !Number.isInteger(Number(row.currentStock)) ||
-            Number(row.currentStock) < 0;
+   {
+  key: "currentStock",
+  label: "New Stock",
+  render: (_, row) => {
+    const hasError =
+      row.currentStock === "" ||
+      !Number.isInteger(Number(row.currentStock)) ||
+      Number(row.currentStock) < 0;
 
-          return (
-            <input
-              type="number"
-              min={0}
-              step={1}
-              className={`w-28 rounded-lg border px-2 py-1.5 text-sm ${
-                hasError
-                  ? "border-red-300 bg-red-50 text-red-800"
-                  : "border-[var(--admin-line)]"
-              }`}
-              value={row.currentStock}
-              onChange={(event) =>
-                handleStockChange(row.id, event.target.value)
-              }
-            />
-          );
-        },
-      },
+    return (
+      <Input
+        type="number"
+        min={0}
+        step={1}
+        value={row.currentStock}
+        hasError={hasError}
+        onChange={(event) =>
+          handleStockChange(row.id, event.target.value)
+        }
+        className="w-28"
+        inputClassName="px-2 py-1.5 text-sm"
+        showLengthCount={false}
+      />
+    );
+  },
+},
       {
         key: "status",
         label: "Status",
@@ -1648,13 +1721,13 @@ const Inventory = () => {
               </div>
             }
             emptyText="No variants found"
-            rowActions={(row) => [
-              {
-                label: "Adjust Inventory",
-                icon: <MdInventory2 aria-hidden="true" />,
-                onClick: () => setAdjustTarget(row),
-              },
-            ]}
+            // rowActions={(row) => [
+            //   {
+            //     label: "Adjust Inventory",
+            //     icon: <MdInventory2 aria-hidden="true" />,
+            //     onClick: () => setAdjustTarget(row),
+            //   },
+            // ]}
           />
         )}
 
@@ -1759,8 +1832,12 @@ const Inventory = () => {
         data={productRows}
         loading={listTableLoading}
         error={error}
-        totalCount={total}
+        totalCount={filteredProductTotal || total}
         listPage={list}
+        page={list.page}
+        pageSize={list.pageSize}
+        onPageChange={list.setPage}
+        onPageSizeChange={list.setPageSize}
         rowKey="id"
         onRefresh={refresh}
         actions={importExportActions}

@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { useFormik } from "formik";
+import { Upload } from "lucide-react";
 
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
@@ -198,20 +199,24 @@ const ShipmentFact = ({ icon, label, children }) => (
 
 const ShipmentTracking = () => {
   const dispatch = useDispatch();
-  const { isSeller } = usePermission();
+  const { isSeller, isAdmin } = usePermission();
   const selector = useSelector((state) => state.delivery);
   const shipmentPayload = unwrapList(selector.shipmentsData);
   const [exporting, setExporting] = useState(false);
   const initialOrderId = getInitialQuery("orderId");
+  const [initialOrderFilterApplied, setInitialOrderFilterApplied] = useState(
+    !initialOrderId || Boolean(getInitialQuery("orderNumber")),
+  );
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
-   defaultFilters: {
-  orderNumber: getInitialQuery("orderNumber"),
-  sellerId: getInitialQuery("sellerId"),
-  search: initialShipmentId,
-},
+    defaultFilters: {
+      orderId: initialOrderId,
+      orderNumber: getInitialQuery("orderNumber"),
+      sellerId: getInitialQuery("sellerId"),
+      search: initialShipmentId,
+    },
   });
 
   const handleExport = async () => {
@@ -404,7 +409,7 @@ const ShipmentTracking = () => {
     }
   };
 
-  const { toQueryParams, filters, setFilter } = list;
+  const { toQueryParams, filters, setFilter, setFilters } = list;
 
   const hasResolvedInitialRef = useRef(false);
 
@@ -413,6 +418,7 @@ useEffect(() => {
     hasResolvedInitialRef.current ||
     initialShipmentId ||
     !initialOrderId ||
+    filters.orderNumber ||
     !shipmentPayload.list.length
   ) {
     return;
@@ -451,12 +457,13 @@ useEffect(() => {
   if (!realOrderNumber) return;
 
   hasResolvedInitialRef.current = true;
-  setFilter("orderNumber", realOrderNumber);
+  setFilters({ ...filters, orderId: "", orderNumber: realOrderNumber });
 }, [
   shipmentPayload.list,
   initialOrderId,
   initialShipmentId,
-  setFilter,
+  filters,
+  setFilters,
 ]);
   const [organizationOptions, setOrganizationOptions] = useState([]);
 
@@ -665,9 +672,11 @@ useEffect(() => {
     if (Object.keys(validationErrors).length > 0) return;
     await trackingFormik.submitForm();
   };
-  const filterFields = isSeller
-    ? FILTER_FIELDS.filter((field) => field.key !== "sellerId")
-    : FILTER_FIELDS;
+  const filterFields = isAdmin
+    ? FILTER_FIELDS
+    : FILTER_FIELDS.filter(
+        (field) => !["sellerId", "organizationId"].includes(field.key),
+      );
 
   const fetchShipments = useCallback(async () => {
     try {
@@ -680,6 +689,9 @@ useEffect(() => {
           offset: (params.page - 1) * params.limit,
         }),
       ).unwrap();
+      if (!initialOrderId || params.orderNumber) {
+        setInitialOrderFilterApplied(true);
+      }
     } catch (error) {
       const message = error?.message || error || "Failed to load shipments";
       setError(message);
@@ -687,7 +699,28 @@ useEffect(() => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, toQueryParams]);
+  }, [dispatch, initialOrderId, toQueryParams]);
+
+  const resolvingInitialOrder = Boolean(
+    initialOrderId && !initialShipmentId && !initialOrderFilterApplied,
+  );
+  const visibleShipmentRows = resolvingInitialOrder
+    ? shipmentPayload.list.filter((row) => {
+        const orderId =
+          row?.order_id ??
+          row?.orderId ??
+          row?.order?._id ??
+          row?.order?.id ??
+          row?.orderSnapshot?._id ??
+          row?.orderSnapshot?.id ??
+          row?.order_snapshot?._id ??
+          row?.order_snapshot?.id;
+        return String(orderId ?? "") === String(initialOrderId);
+      })
+    : shipmentPayload.list;
+  const visibleShipmentTotal = resolvingInitialOrder
+    ? visibleShipmentRows.length
+    : shipmentPayload.total || shipmentPayload.list.length;
 
   useEffect(() => {
     fetchShipments();
@@ -969,9 +1002,9 @@ useEffect(() => {
 
       <DataTable
         columns={columns}
-        data={shipmentPayload.list}
-        loading={loading}
-        totalCount={shipmentPayload.total || shipmentPayload.list.length}
+        data={visibleShipmentRows}
+        loading={loading && visibleShipmentRows.length === 0}
+        totalCount={visibleShipmentTotal}
         page={list.page}
         pageSize={list.pageSize}
         onPageChange={list.setPage}
@@ -986,6 +1019,13 @@ useEffect(() => {
           onClick: handleExport,
           disabled: loading || !shipmentPayload.list.length,
           loading: exporting,
+          icon: (
+            <Upload
+              size={15}
+              className="shrink-0 text-[var(--admin-blue)]"
+              aria-hidden="true"
+            />
+          ),
         }}
         error={error}
         filterBar={

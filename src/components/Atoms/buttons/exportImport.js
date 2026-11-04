@@ -32,7 +32,7 @@ export const ExportButton = React.memo(
       >
         {showIcon &&
           (icon || (
-            <Download
+            <Upload
               size={15}
               className="shrink-0 text-[var(--admin-blue)]"
               aria-hidden="true"
@@ -80,7 +80,7 @@ export const ImportButton = React.memo(
       >
         {showIcon &&
           (icon || (
-            <Upload
+            <Download
               size={15}
               className="shrink-0 text-[var(--admin-blue)]"
               aria-hidden="true"
