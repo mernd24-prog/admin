@@ -227,6 +227,7 @@ const RowActionsMenu = ({ actions = [], rowLabel = "record" }) => {
  *   onPageChange     {(page: number) => void}
  *   onSearch         {(q: string) => void}
  *   searchPlaceholder {string}
+ *   searchValue      {string} — optional controlled search text
  *   rowKey           {string | (row) => string}  — defaults to "_id"
  *   actions          {React.ReactNode}            — toolbar actions (buttons etc.)
  *   emptyText        {string}
@@ -295,8 +296,12 @@ const DataTable = ({
   rowClassName = "",
   rowActions,
   showSerialNumber = true,
+  initialSearchValue = "",
+  searchValue: controlledSearchValue,
 }) => {
-  const [searchValue, setSearchValue] = useState("");
+  const [searchValue, setSearchValue] = useState(
+    () => String(initialSearchValue ?? ""),
+  );
   const [hasMounted, setHasMounted] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const safeData = Array.isArray(data) ? data : [];
@@ -344,10 +349,11 @@ const DataTable = ({
   useEffect(() => {
     setHasMounted(true);
   }, []);
+useEffect(() => {
+  if (!listPage) return;
 
-  useEffect(() => {
-    setSearchValue(resolvedSearchValue);
-  }, [resolvedSearchValue]);
+  setSearchValue(listPage.search ?? "");
+}, [listPage?.search]);
 
   const getKey = (row, index) =>
     typeof rowKey === "function"
@@ -500,7 +506,7 @@ const DataTable = ({
                 }
               >
                 <SearchInput
-                  searchTerm={searchValue}
+                  searchTerm={controlledSearchValue ?? searchValue}
                   handleChange={handleSearch}
                   placeholder={searchPlaceholder}
                 />

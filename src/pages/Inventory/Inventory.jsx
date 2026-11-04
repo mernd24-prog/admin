@@ -55,7 +55,7 @@ import {
   RefreshButton,
 } from "../../components/Atoms/buttons/exportImport";
 import { useFormik } from "formik";
-
+import { useLocation } from "react-router-dom";
 const STOCK_FILTER_OPTIONS = [
   { value: "", label: "All Stock" },
   { value: "in_stock", label: "In Stock" },
@@ -139,11 +139,11 @@ const getTotalFromResponse = (response, fallback = 0) => {
 
   return Number(
     response?.data?.meta?.productTotal ??
-      response?.data?.data?.meta?.productTotal ??
-      payload?.meta?.productTotal ??
-      payload?.meta?.pagination?.totalItems ??
-      payload?.total ??
-      fallback,
+    response?.data?.data?.meta?.productTotal ??
+    payload?.meta?.productTotal ??
+    payload?.meta?.pagination?.totalItems ??
+    payload?.total ??
+    fallback,
   );
 };
 
@@ -151,11 +151,11 @@ const getVariantTotalFromResponse = (response, fallback = 0) => {
   const payload = unwrapApiPayload(response);
   return Number(
     response?.data?.meta?.total ??
-      response?.data?.data?.meta?.total ??
-      payload?.meta?.total ??
-      payload?.meta?.pagination?.totalItems ??
-      payload?.total ??
-      fallback,
+    response?.data?.data?.meta?.total ??
+    payload?.meta?.total ??
+    payload?.meta?.pagination?.totalItems ??
+    payload?.total ??
+    fallback,
   );
 };
 
@@ -266,11 +266,11 @@ const groupInventoryByProduct = (variantRows = []) => {
   variantRows.forEach((variant, index) => {
     const productKey = String(
       variant.productId ||
-        variant.product_id ||
-        variant.productSku ||
-        variant.productName ||
-        variant.id ||
-        index,
+      variant.product_id ||
+      variant.productSku ||
+      variant.productName ||
+      variant.id ||
+      index,
     );
 
     if (!groups.has(productKey)) {
@@ -513,10 +513,20 @@ const AdjustModal = ({ open, target, loading, onClose, onConfirm }) => {
 };
 
 const Inventory = () => {
+  const { state } = useLocation();
+
+  const sku = state?.sku || null;
+  const variantId = state?.variantId || null;
+
+
   const dispatch = useDispatch();
   const { productId } = useParams();
   const navigate = useNavigate();
-
+  console.log({
+    productId,
+    sku,
+    variantId,
+  });
   const list = useListPage({
     defaultPageSize: 20,
     defaultSortKey: "updatedAt",
@@ -562,7 +572,16 @@ const Inventory = () => {
   const [importInfo, setImportInfo] = useState("");
   const [importSuccess, setImportSuccess] = useState("");
   const [activeTab, setActiveTab] = useState("inventory");
+  useEffect(() => {
+    const searchSku = String(sku || "").trim();
 
+    if (!productId || !searchSku) return;
+
+    setActiveTab("inventory");
+    setVariantSearch(searchSku);
+    setInventoryPage(1);
+    detailList.setPage(1);
+  }, [productId, sku, detailList.setPage]);
   const fetchList = useCallback(async () => {
     if (productId) return;
 
@@ -820,8 +839,7 @@ const Inventory = () => {
 
         if (showToast) {
           toast.success(
-            `Updated ${changedRows.length} inventory ${
-              changedRows.length === 1 ? "entry" : "entries"
+            `Updated ${changedRows.length} inventory ${changedRows.length === 1 ? "entry" : "entries"
             }`,
           );
         }
@@ -940,11 +958,10 @@ const Inventory = () => {
         return;
       }
 
-      const filename = `${
-        productId
-          ? normalizeText(detail?.product?.sku || "product")
-          : "inventory"
-      }-stock-template.xlsx`;
+      const filename = `${productId
+        ? normalizeText(detail?.product?.sku || "product")
+        : "inventory"
+        }-stock-template.xlsx`;
 
       exportToExcelWorkbook(
         [
@@ -1032,8 +1049,8 @@ const Inventory = () => {
           );
         const row = variantIdValue
           ? byIdentity.get(
-              [productIdValue, variantIdValue, variantSkuValue].join("::"),
-            )
+            [productIdValue, variantIdValue, variantSkuValue].join("::"),
+          )
           : bySku.get(`${productIdValue}::${variantSkuValue}`);
         if (!row)
           throw new Error(
@@ -1183,11 +1200,10 @@ const Inventory = () => {
                 event.stopPropagation();
                 openImageGallery(row);
               }}
-              className={`text-xs ${
-                images.length
-                  ? "text-[var(--admin-blue)] hover:underline"
-                  : "cursor-not-allowed text-[var(--admin-muted)]"
-              }`}
+              className={`text-xs ${images.length
+                ? "text-[var(--admin-blue)] hover:underline"
+                : "cursor-not-allowed text-[var(--admin-muted)]"
+                }`}
             >
               View
             </button>
@@ -1236,18 +1252,18 @@ const Inventory = () => {
     },
     ...(adminPanel
       ? [
-          {
-            key: "seller",
-            label: "Seller",
-            render: (_, row) => (
-              <SellerIdentity
-                row={row}
-                storeName={row.storeName || row.organizationName}
-                loginName={sellerLabel(row)}
-              />
-            ),
-          },
-        ]
+        {
+          key: "seller",
+          label: "Seller",
+          render: (_, row) => (
+            <SellerIdentity
+              row={row}
+              storeName={row.storeName || row.organizationName}
+              loginName={sellerLabel(row)}
+            />
+          ),
+        },
+      ]
       : []),
     {
       key: "lastUpdated",
@@ -1358,11 +1374,10 @@ const Inventory = () => {
               type="number"
               min={0}
               step={1}
-              className={`w-28 rounded-lg border px-2 py-1.5 text-sm ${
-                hasError
-                  ? "border-red-300 bg-red-50 text-red-800"
-                  : "border-[var(--admin-line)]"
-              }`}
+              className={`w-28 rounded-lg border px-2 py-1.5 text-sm ${hasError
+                ? "border-red-300 bg-red-50 text-red-800"
+                : "border-[var(--admin-line)]"
+                }`}
               value={row.currentStock}
               onChange={(event) =>
                 handleStockChange(row.id, event.target.value)
@@ -1468,9 +1483,8 @@ const Inventory = () => {
 
         <span
           aria-hidden="true"
-          className={`inline-flex shrink-0 items-center justify-center text-gray-500 transition-transform duration-200 ${
-            isImportHelpOpen ? "rotate-180" : "rotate-0"
-          }`}
+          className={`inline-flex shrink-0 items-center justify-center text-gray-500 transition-transform duration-200 ${isImportHelpOpen ? "rotate-180" : "rotate-0"
+            }`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -1614,6 +1628,7 @@ const Inventory = () => {
             }}
             pageSizeOptions={[10, 20, 50, 100]}
             rowKey="id"
+            searchValue={variantSearch}
             onSearch={(value) => {
               setVariantSearch(value);
               setInventoryPage(1);

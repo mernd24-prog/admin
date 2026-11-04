@@ -15,7 +15,7 @@ import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 import { formatDateTime12Hour } from "../../utils/formatters";
-
+import { useNavigate } from "react-router-dom";
 const STATUS_OPTIONS = [
   { value: "", label: "Active" },
   { value: "pending", label: "Pending" },
@@ -28,9 +28,9 @@ const STATUS_OPTIONS = [
 const getPaginationTotal = (payload = {}, fallback = 0) =>
   Number(
     payload?.pagination?.total ??
-      payload?.meta?.total ??
-      payload?.meta?.pagination?.total ??
-      fallback,
+    payload?.meta?.total ??
+    payload?.meta?.pagination?.total ??
+    fallback,
   );
 
 const productCell = (row = {}) => (
@@ -69,6 +69,7 @@ const userCell = (row = {}) => (
 );
 
 const StockNotifications = () => {
+  const navigate = useNavigate();
   const sellerView = isSellerPanel();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -80,13 +81,30 @@ const StockNotifications = () => {
   const [sendingId, setSendingId] = useState("");
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [bulkSending, setBulkSending] = useState(false);
+
   const selectedStatusOption = useMemo(
     () =>
       STATUS_OPTIONS.find((option) => option.value === status) ||
       STATUS_OPTIONS[0],
     [status],
   );
+  const handleViewInventory = useCallback(
+    (row) => {
+      if (!row?.productId) {
+        toast.error("Product ID not found");
+        return;
+      }
 
+      navigate(`/app/inventory/${encodeURIComponent(row.productId)}`, {
+        state: {
+          productId: row.productId,
+          sku: row.sku || null,
+          variantId: row.variantId || null,
+        },
+      });
+    },
+    [navigate],
+  );
   const fetchRows = useCallback(async () => {
     try {
       setLoading(true);
@@ -230,14 +248,14 @@ const StockNotifications = () => {
       },
       ...(!sellerView
         ? [
-            {
-              key: "sellerId",
-              label: "Seller",
-              render: (value, row) => (
-                <SellerIdentity row={row} sellerId={value} />
-              ),
-            },
-          ]
+          {
+            key: "sellerId",
+            label: "Seller",
+            render: (value, row) => (
+              <SellerIdentity row={row} sellerId={value} />
+            ),
+          },
+        ]
         : []),
     ],
     [sellerView],
@@ -347,10 +365,10 @@ const StockNotifications = () => {
         }}
         rowActions={(row) => [
           {
-            label: row.status === "pending" ? "Send Email" : "Send Again",
-            icon: <MdEmail aria-hidden="true" size={17} />,
-            onClick: () => notifyUser(row),
-            disabled: sendingId === row.id,
+            label: "View Inventory",
+            icon: <MdInventory2 aria-hidden="true" size={17} />,
+            onClick: () => handleViewInventory(row),
+            disabled: !row.productId,
           },
         ]}
       />
