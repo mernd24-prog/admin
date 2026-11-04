@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
-import { MdFileDownload, MdFileUpload } from "react-icons/md";
+import { MdFileUpload } from "react-icons/md";
+import { Upload } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import PermissionGuard from "../Atoms/PermissionGuard/PermissionGuard";
@@ -41,6 +42,7 @@ export const ExportButton = ({
   onExport,
   workbookTitle = "Export Report",
   sheetName = "Data",
+  icon,
 }) => {
   const rows = selectedData.length ? selectedData : data;
 
@@ -104,7 +106,13 @@ export const ExportButton = ({
         onClick={exportRows}
         className="admin-btn-secondary"
       >
-        <MdFileDownload aria-hidden="true" size={17} />
+        {icon || (
+          <Upload
+            aria-hidden="true"
+            size={15}
+            className="shrink-0 text-[var(--admin-blue)]"
+          />
+        )}
         {label || "Export"}
       </button>
     </MaybeGuard>
