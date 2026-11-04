@@ -8,8 +8,6 @@ import {
   MdHourglassEmpty,
   MdPauseCircle,
   MdPayments,
-  MdRefresh,
-  MdTrendingUp,
   MdVisibility,
   MdWarningAmber,
 } from "react-icons/md";
@@ -18,6 +16,7 @@ import Loader from "../../../components/Loader/Loader";
 
 import PageHeader from "../../../components/Shared/PageHeader";
 import DataTable from "../../../components/Shared/DataTable";
+import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import { OrderLink } from "../../../components/Shared/EntityLink";
 
@@ -27,7 +26,6 @@ import {
   CalculationRows,
   FinanceDateRangeFilter,
   // FinanceNav,
-  FinancePageGuide,
   FinanceStatusBadge,
   financeDateTime,
   financeList,
@@ -37,16 +35,6 @@ import {
   unwrapFinance,
   useFinanceDateRange,
 } from "./financeUi";
-import Tabs from "../../../components/Shared/Tabs";
-import { RefreshButton } from "../../../components/Atoms/buttons/exportImport";
-
-const FILTERS = [
-  ["", "All"],
-  ["waiting", "Waiting"],
-  ["available", "Available"],
-  ["held", "On hold"],
-  ["paid", "Paid"],
-];
 
 export default function FinanceEarnings() {
   const dispatch = useDispatch();
@@ -64,6 +52,8 @@ export default function FinanceEarnings() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortKey, setSortKey] = useState("");
+  const [sortDir, setSortDir] = useState("asc");
 
   const dateRange = useFinanceDateRange();
   const { dateFilters } = dateRange;
@@ -130,47 +120,56 @@ export default function FinanceEarnings() {
     });
   }, [rows, search, status]);
 
+  const sortedFiltered = useMemo(() => {
+    if (!["orderAmount", "net"].includes(sortKey)) return filtered;
+    const getAmount = (row) => {
+      if (sortKey === "net") {
+        return Number(financeValue(row, "net_amount", "netAmount") || 0);
+      }
+      const amountKey = [
+        "order_amount",
+        "orderAmount",
+        "amount",
+        "gross_amount",
+        "grossAmount",
+        "item_amount",
+        "itemAmount",
+        "total_amount",
+        "totalAmount",
+      ].find(
+        (key) => row[key] !== undefined && row[key] !== null && row[key] !== "",
+      );
+      return Number((amountKey ? row[amountKey] : 0) || 0);
+    };
+    return [...filtered].sort((left, right) => {
+      const difference = getAmount(left) - getAmount(right);
+      return sortDir === "desc" ? -difference : difference;
+    });
+  }, [filtered, sortDir, sortKey]);
+
   const pagedFiltered = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, page, pageSize]);
+    return sortedFiltered.slice(start, start + pageSize);
+  }, [sortedFiltered, page, pageSize]);
+
+  const statusOptions = useMemo(() => {
+    const availableStatuses = new Map();
+    rows.forEach((row) => {
+      const mapped = sellerFinanceStatus(row);
+      availableStatuses.set(mapped.key, mapped.label);
+    });
+    return [
+      { value: "", label: "All statuses" },
+      ...Array.from(availableStatuses, ([value, label]) => ({
+        value,
+        label,
+      })).sort((left, right) => left.label.localeCompare(right.label)),
+    ];
+  }, [rows]);
 
   useEffect(() => {
     setPage(1);
   }, [search, status]);
-
-  /*
-   * STATUS SUMMARY
-   */
-  const statusSummary = useMemo(() => {
-    return rows.reduce(
-      (result, row) => {
-        const key = sellerFinanceStatus(row).key;
-
-        const amount = Number(
-          financeValue(row, "net_amount", "netAmount") || 0,
-        );
-
-        result[key] = {
-          count: (result[key]?.count || 0) + 1,
-          amount: (result[key]?.amount || 0) + amount,
-        };
-
-        result.all = {
-          count: (result.all?.count || 0) + 1,
-          amount: (result.all?.amount || 0) + amount,
-        };
-
-        return result;
-      },
-      {
-        all: {
-          count: 0,
-          amount: 0,
-        },
-      },
-    );
-  }, [rows]);
 
   /*
    * FILTERED SUMMARY
@@ -253,6 +252,7 @@ export default function FinanceEarnings() {
       {
         key: "orderAmount",
         label: "Order amount",
+        sortable: true,
         render: (_, row) => {
           const amountKey = [
             "order_amount",
@@ -281,6 +281,7 @@ export default function FinanceEarnings() {
       {
         key: "net",
         label: "Your earning",
+        sortable: true,
         render: (_, row) => (
           <strong>
             {financeMoney(
@@ -376,56 +377,63 @@ export default function FinanceEarnings() {
       {/* <FinanceNav /> */}
 
       {Number(codReconciliation.totalOrders || 0) > 0 && (
-        <section className="admin-card p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            {/* Title and Description */}
-            <div className="min-w-0 lg:max-w-xl">
-              <h2 className="text-base font-semibold text-[var(--admin-text)]">
-                COD order reconciliation
-              </h2>
-              <p className="mt-1 text-xs  text-[var(--admin-muted)]">
-                COD orders and earnings are different records. An earning is
-                created after delivery; cash collected from the customer is
-                shown separately as a COD liability.
-              </p>
-            </div>
+        <section>
+          <div className="rounded-xl border border-[#EADDBF] bg-[#FFFCF5] px-5 py-4">
+            <div className="grid grid-cols-1 items-center gap-5 lg:grid-cols-[1.8fr_2.2fr]">
+              {/* Heading & Description */}
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-[var(--admin-text)]">
+                  COD order reconciliation
+                </h2>
 
-            {/* Statistics */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4 lg:min-w-[480px]">
-              <div>
-                <strong className="block text-lg font-semibold text-[var(--admin-text)]">
-                  {codReconciliation.totalOrders || 0}
-                </strong>
-                <span className="text-xs text-[var(--admin-muted)]">
-                  COD orders
-                </span>
+                <p className="mt-1.5 max-w-xl text-xs leading-5 text-[var(--admin-muted)]">
+                  COD orders and earnings are different records. Earnings are
+                  created after delivery, while collected cash is tracked
+                  separately as a COD liability.
+                </p>
               </div>
 
-              <div>
-                <strong className="block text-lg font-semibold text-[var(--admin-success)]">
-                  {codReconciliation.deliveredOrders || 0}
-                </strong>
-                <span className="text-xs text-[var(--admin-muted)]">
-                  Delivered
-                </span>
-              </div>
+              {/* Statistics */}
+              <div className="grid grid-cols-2 gap-y-4 lg:grid-cols-4">
+                {/* COD Orders */}
+                <div className="text-center lg:border-l lg:border-[#EADDBF] lg:px-3">
+                  <p className="text-2xl font-semibold tabular-nums text-[var(--admin-text)]">
+                    {codReconciliation.totalOrders || 0}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                    COD orders
+                  </p>
+                </div>
 
-              <div>
-                <strong className="block text-lg font-semibold text-[var(--admin-text)]">
-                  {codReconciliation.awaitingDeliveryOrders || 0}
-                </strong>
-                <span className="text-xs text-[var(--admin-muted)]">
-                  Awaiting delivery
-                </span>
-              </div>
+                {/* Delivered */}
+                <div className="text-center lg:border-l lg:border-[#EADDBF] lg:px-3">
+                  <p className="text-2xl font-semibold tabular-nums text-[var(--admin-success)]">
+                    {codReconciliation.deliveredOrders || 0}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                    Delivered
+                  </p>
+                </div>
 
-              <div>
-                <strong className="block text-lg font-semibold text-[var(--admin-gold-dark)]">
-                  {codReconciliation.ordersWithLiability || 0}
-                </strong>
-                <span className="text-xs text-[var(--admin-muted)]">
-                  Cash liabilities
-                </span>
+                {/* Awaiting Delivery */}
+                <div className="text-center lg:border-l lg:border-[#EADDBF] lg:px-3">
+                  <p className="text-2xl font-semibold tabular-nums text-[var(--admin-text)]">
+                    {codReconciliation.awaitingDeliveryOrders || 0}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                    Awaiting delivery
+                  </p>
+                </div>
+
+                {/* Cash Liabilities */}
+                <div className="text-center lg:border-l lg:border-[#EADDBF] lg:px-3">
+                  <p className="text-2xl font-semibold tabular-nums text-[var(--admin-gold-dark)]">
+                    {codReconciliation.ordersWithLiability || 0}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                    Cash liabilities
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -606,38 +614,7 @@ export default function FinanceEarnings() {
         </section>
       )} */}
 
-      {/* STATUS FILTERS */}
-      <Tabs
-        tabs={FILTERS.map(([key, label]) => {
-          const summary =
-            key === ""
-              ? statusSummary.all
-              : statusSummary[key] || {
-                  count: 0,
-                };
-
-          return {
-            value: key,
-            label,
-            count: summary.count,
-          };
-        })}
-        activeTab={status}
-        onChange={(key) =>
-          setParams((previous) => {
-            const next = new URLSearchParams(previous);
-
-            if (key) {
-              next.set("status", key);
-            } else {
-              next.delete("status");
-            }
-
-            return next;
-          })
-        }
-      />
-      {/* SEARCH + TABLE */}
+      {/* SEARCH, FILTERS + TABLE */}
       <DataTable
         columns={columns}
         data={pagedFiltered}
@@ -652,6 +629,38 @@ export default function FinanceEarnings() {
         }}
         onRefresh={load}
         pageSizeOptions={[10, 20, 50, 100]}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={(key, direction) => {
+          setSortKey(key);
+          setSortDir(direction);
+          setPage(1);
+        }}
+        filterBar={
+          <div className="flex flex-wrap items-end gap-4 border-b border-[var(--admin-line)] bg-[var(--admin-card)] px-4 py-3">
+            <div className="w-full max-w-xs">
+              <label className="admin-label mb-1 block">Status</label>
+              <FilterSelect
+                options={statusOptions}
+                value={
+                  statusOptions.find((option) => option.value === status) ||
+                  statusOptions[0]
+                }
+                onChange={(option) => {
+                  setParams((previous) => {
+                    const next = new URLSearchParams(previous);
+                    if (option?.value) next.set("status", option.value);
+                    else next.delete("status");
+                    return next;
+                  });
+                  setPage(1);
+                }}
+                isSearchable={false}
+                isClearable={false}
+              />
+            </div>
+          </div>
+        }
         rowKey={(row) => row.id || row.commissionId}
         searchPlaceholder="Search order or product"
         onSearch={(value) => {

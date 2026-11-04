@@ -547,7 +547,7 @@ export default function Header({
                 onClick={() => {
                   setSuppressNotificationBadge(true);
                   dispatch(setNotificationsSeenAt(Date.now()));
-                  navigate("/app/notifications");
+                  navigate("/app/messages");
                 }}
                 className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-line)] bg-white text-[var(--admin-blue)] transition hover:border-[var(--admin-blue)] hover:bg-[var(--admin-blue-soft)]"
               >

@@ -3,7 +3,14 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormik } from "formik";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { MdAdd, MdDownload, MdVisibility } from "react-icons/md";
+import {
+  MdAdd,
+  MdDownload,
+  MdPayments,
+  MdPercent,
+  MdReceiptLong,
+  MdVisibility,
+} from "react-icons/md";
 
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
@@ -394,18 +401,18 @@ const CreditNotes = () => {
           ),
           onClick: () => setDetail(row),
         },
-        {
-          label: "Download PDF",
-          icon: (
-            <MdDownload
-              aria-hidden="true"
-              size={16}
-              className="text-blue-600"
-            />
-          ),
-          disabled: downloadingId === creditNoteId,
-          onClick: () => downloadCreditNote(row),
-        },
+        // {
+        //   label: "Download PDF",
+        //   icon: (
+        //     <MdDownload
+        //       aria-hidden="true"
+        //       size={16}
+        //       className="text-blue-600"
+        //     />
+        //   ),
+        //   disabled: downloadingId === creditNoteId,
+        //   onClick: () => downloadCreditNote(row),
+        // },
       ];
     },
     [downloadCreditNote, downloadingId],
@@ -514,13 +521,13 @@ const CreditNotes = () => {
                   </p>
                 </div>
 
-                <div className={CLASS_CARD_WHITE}>
+                {/* <div className={CLASS_CARD_WHITE}>
                   <p className={CLASS_TEXT_XS_MUTED}>Reference ID</p>
 
                   <p className={CLASS_CODE_VALUE}>
                     {pick(detail, "referenceId", "reference_id") || "—"}
                   </p>
-                </div>
+                </div> */}
 
                 <div className={CLASS_CARD_WHITE}>
                   <p className={CLASS_TEXT_XS_MUTED}>Buyer ID</p>
@@ -561,35 +568,52 @@ const CreditNotes = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className={CLASS_AMOUNT_CARD}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Taxable Amount</p>
+                <div className="rounded-lg border border-gray-200 bg-gray-50/70 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-gray-500">
+                      Taxable Amount
+                    </p>
+                    <MdReceiptLong className="text-gray-400" size={17} />
+                  </div>
 
-                  <p className={CLASS_AMOUNT_VALUE}>
+                  <p className="mt-2 text-lg font-semibold text-gray-900">
                     {formatIndianNumber(
                       pick(detail, "taxableAmount", "taxable_amount"),
                     )}
                   </p>
                 </div>
 
-                <div className={CLASS_AMOUNT_CARD}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Tax Amount</p>
+                <div className="rounded-lg border border-gray-200 bg-gray-50/70 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-gray-500">
+                      Tax Amount
+                    </p>
+                    <MdPercent className="text-gray-400" size={17} />
+                  </div>
 
-                  <p className={CLASS_AMOUNT_VALUE}>
+                  <p className="mt-2 text-lg font-semibold text-gray-900">
                     {formatIndianNumber(
                       pick(detail, "taxAmount", "tax_amount"),
                     )}
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-[#CB9C2D]/30 bg-[#CB9C2D]/10 p-4">
-                  <p className="text-xs font-medium text-gray-600">
-                    Total Credit
-                  </p>
+                <div className="rounded-lg border border-gray-200 bg-gray-50/70 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-gray-600">
+                      Total Credit
+                    </p>
+                    <MdPayments className="text-gray-400" size={17} />
+                  </div>
 
-                  <p className="mt-1 text-lg font-bold text-gray-900">
+                  <p className="mt-2 text-xl font-bold text-gray-900">
                     {formatIndianNumber(
                       pick(detail, "totalAmount", "total_amount"),
                     )}
+                  </p>
+
+                  <p className="mt-1 text-[11px] font-medium text-[#98701D]">
+                    Final Credit Amount
                   </p>
                 </div>
               </div>
