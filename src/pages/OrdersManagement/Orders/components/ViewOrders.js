@@ -4094,7 +4094,7 @@ const selectedCount = Object.keys(formData.cancelItems).length;
                   className="rounded-full border border-[#eadfbd] bg-white px-3 py-1.5 text-xs font-semibold text-[#202337] hover:border-[#2f6fed] hover:text-[#2f6fed]"
                   onClick={() =>
                     navigate(
-                      `${action.path}?orderId=${encodeURIComponent(orderId)}`,
+                      `${action.path}?orderId=${encodeURIComponent(orderId)}${action.module === "tax-invoices" ? `&orderNumber=${encodeURIComponent(orderNumber)}` : ""}`,
                     )
                   }
                 >

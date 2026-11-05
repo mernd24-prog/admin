@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useFormik } from "formik";
 import { MdAdd, MdDownload, MdVisibility } from "react-icons/md";
 
@@ -168,6 +168,14 @@ const invoicePurpose = (row = {}) => {
 const TaxInvoices = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const orderId = searchParams.get("orderId") || "";
+  const orderNumber = searchParams.get("orderNumber") || "";
+  const [searchText, setSearchText] = useState(orderNumber || orderId);
+
+  useEffect(() => {
+    if (orderId) setSearchText(orderNumber || orderId);
+  }, [orderId, orderNumber]);
 
   const selector = useSelector((state) => state.adminCore);
   const payload = unwrapList(selector.taxInvoicesData);
@@ -223,6 +231,7 @@ const TaxInvoices = () => {
       await dispatch(
         getTaxInvoices({
           ...params,
+          ...(orderId ? { orderId } : {}),
           sortBy,
           offset: (params.page - 1) * params.limit,
         }),
@@ -235,7 +244,7 @@ const TaxInvoices = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, toQueryParams]);
+  }, [dispatch, toQueryParams, orderId]);
 
   useEffect(() => {
     fetchInvoices();
@@ -499,13 +508,49 @@ const TaxInvoices = () => {
         ]}
       />
 
+      {orderId && (
+        <div className="mb-4 flex items-center gap-3 text-sm">
+          <span>Showing invoices for order {orderNumber || payload.list[0]?.orderNumber || orderId}</span>
+          <button
+            type="button"
+            className="text-blue-600 underline"
+            onClick={() => {
+              list.clearSearch();
+              setSearchText("");
+              list.setPage(1);
+              setSearchParams((previous) => {
+                const next = new URLSearchParams(previous);
+                next.delete("orderId");
+                next.delete("orderNumber");
+                return next;
+              });
+            }}
+          >
+            Show all invoices
+          </button>
+        </div>
+      )}
+
       <DataTable
         columns={COLUMNS}
         data={payload.list}
         loading={loading}
         total={payload.total}
         listPage={list}
-        searchPlaceholder="Search By Order Id"
+        searchPlaceholder="Search by order number or invoice number"
+        searchValue={searchText}
+        onSearch={(value) => {
+          setSearchText(value);
+          list.setSearch(value);
+          if (orderId) {
+            setSearchParams((previous) => {
+              const next = new URLSearchParams(previous);
+              next.delete("orderId");
+                next.delete("orderNumber");
+              return next;
+            }, { replace: true });
+          }
+        }}
         emptyMessage={error || "No tax invoices found"}
         onRefresh={fetchInvoices}
         filterBar={
