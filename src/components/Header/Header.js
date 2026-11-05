@@ -148,6 +148,7 @@ const getAvatarUrl = (user = {}) =>
 const HEADER_ROUTE_TITLES = {
   home: "Dashboard",
   orders: "Orders",
+  "reports-products": "Products Report",
 };
 
 const formatRouteLabel = (value = "") =>
