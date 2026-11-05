@@ -56,9 +56,10 @@ const REF_TYPES = [
   "manual",
 ];
 
-const CLASS_TEXT_XS_MUTED = "text-xs text-gray-500";
+const CLASS_TEXT_XS_MUTED = "text-sm text-gray-500";
 const CLASS_CARD_WHITE = "rounded-lg border border-gray-100 bg-white p-3";
-const CLASS_CODE_VALUE = "mt-1 break-all font-mono text-xs text-gray-800";
+const CLASS_CODE_VALUE =
+  "mt-1 break-all font-inter font-medium text-sm text-[#1f2937]";
 const CLASS_AMOUNT_CARD = "rounded-xl border border-gray-200 p-4";
 const CLASS_AMOUNT_VALUE = "mt-1 text-base font-semibold text-gray-900";
 
@@ -530,10 +531,12 @@ const CreditNotes = () => {
                 </div> */}
 
                 <div className={CLASS_CARD_WHITE}>
-                  <p className={CLASS_TEXT_XS_MUTED}>Buyer ID</p>
+                  <p className={CLASS_TEXT_XS_MUTED}>Buyer Name</p>
 
-                  <p className={CLASS_CODE_VALUE}>
-                    {pick(detail, "buyerId", "buyer_id") || "—"}
+                  <p className="mt-1 text-sm font-medium text-gray-800">
+                    {formatLabel(
+                      pick(detail, "buyerName", "buyer_name") || "—",
+                    )}
                   </p>
                 </div>
 

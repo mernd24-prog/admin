@@ -39,7 +39,7 @@ export default function FinanceOverview() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [activityPage, setActivityPage] = useState(1);
-  const [activityPageSize, setActivityPageSize] = useState(6);
+  const [activityPageSize, setActivityPageSize] = useState(10);
 
   const state = useSelector(
     (store) => store.sellerCommissions?.walletSummaryData || {},
@@ -675,7 +675,7 @@ export default function FinanceOverview() {
                 onPageChange={setActivityPage}
                 totalRecords={Number(wallet.total || 0)}
                 pageSize={activityPageSize}
-                pageSizeOptions={[6, 10, 20, 50, 100]}
+                pageSizeOptions={[10, 20, 50, 100]}
                 onPageSizeChange={(size) => {
                   setActivityPageSize(size);
                   setActivityPage(1);

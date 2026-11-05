@@ -63,6 +63,8 @@ export default function FinanceAdjustments() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [sortDir, setSortDir] = useState("asc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const load = useCallback(async () => {
     try {
       setLoading(true);
@@ -200,6 +202,13 @@ export default function FinanceAdjustments() {
       }),
     [filteredRows, sortDir],
   );
+  const pagedRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return sortedRows.slice(start, start + pageSize);
+  }, [page, pageSize, sortedRows]);
+  useEffect(() => {
+    setPage(1);
+  }, [category, search, statusFilter]);
   const statusOptions = useMemo(() => {
     const availableStatuses = new Map();
     rows.forEach((row) => {
@@ -370,14 +379,24 @@ export default function FinanceAdjustments() {
       )}
       <DataTable
         columns={columns}
-        data={sortedRows}
+        data={pagedRows}
         loading={loading}
         totalCount={sortedRows.length}
-        pageSize={20}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+        pageSizeOptions={[10, 20, 50, 100]}
         sortKey="amount"
         sortDir={sortDir}
         onSort={(key, direction) => {
-          if (key === "amount") setSortDir(direction);
+          if (key === "amount") {
+            setSortDir(direction);
+            setPage(1);
+          }
         }}
         filterBar={
           <div className="flex flex-wrap items-end gap-4 border-b border-[var(--admin-line)] bg-[var(--admin-card)] px-4 py-3">
@@ -398,7 +417,10 @@ export default function FinanceAdjustments() {
           </div>
         }
         onRefresh={load}
-        onSearch={setSearch}
+        onSearch={(value) => {
+          setSearch(value);
+          setPage(1);
+        }}
         searchPlaceholder="Search adjustment, order, amount, status, or date..."
         rowKey={(row) =>
           `${row.adjustmentType}-${row.id || row.orderId || row.shipment_id}`

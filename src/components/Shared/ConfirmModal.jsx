@@ -177,11 +177,7 @@ const ConfirmModal = ({
             </div>
           </div>
 
-          {children && (
-            <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50/70 p-4">
-              {children}
-            </div>
-          )}
+          {children && <div className="mt-5 rounded-xl">{children}</div>}
         </div>
 
         <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 bg-gray-50/60 px-6 py-4 sm:px-7">
