@@ -77,10 +77,10 @@ const cancellationStatusLabel = (status) =>
     rejected: "Cancellation Rejected",
   })[String(status || "").toLowerCase()] || formatLabel(status);
 
-const CLASS_TEXT_XS_MUTED = "text-xs text-gray-500";
-const CLASS_TEXT_XS_GRAY = "text-xs text-gray-600";
+const CLASS_TEXT_XS_MUTED = "text-sm text-[#252238]";
+const CLASS_TEXT_XS_GRAY = "text-sm text-gray-600";
 const CLASS_TEXT_SM_GRAY = "text-sm text-gray-700";
-const CLASS_DETAIL_LABEL = "text-gray-500";
+const CLASS_DETAIL_LABEL = "text-[#252238] text-sm";
 const CLASS_DETAIL_VALUE = "font-medium text-gray-800";
 const CLASS_DETAIL_SECTION = "border-t border-gray-100 pt-3";
 const CLASS_MODAL_BODY = "mt-3";
@@ -314,7 +314,12 @@ const Cancellations = () => {
     if (!hasProcessingRefunds) return undefined;
     const timer = setInterval(() => {
       const params = toQueryParams();
-      dispatch(getCancellationList({ ...params, offset: (params.page - 1) * params.limit }));
+      dispatch(
+        getCancellationList({
+          ...params,
+          offset: (params.page - 1) * params.limit,
+        }),
+      );
     }, 5000);
     return () => clearInterval(timer);
   }, [hasProcessingRefunds, dispatch, toQueryParams]);
@@ -322,8 +327,9 @@ const Cancellations = () => {
   useEffect(() => {
     setDetail((current) => {
       if (!current) return current;
-      const updated = unwrapList(selector.cancellationListData).list.find((row) =>
-        String(row.id || row._id) === String(current.id || current._id),
+      const updated = unwrapList(selector.cancellationListData).list.find(
+        (row) =>
+          String(row.id || row._id) === String(current.id || current._id),
       );
       return updated ? normalizeCancellation(updated) : current;
     });
@@ -454,15 +460,14 @@ const Cancellations = () => {
   const COLUMNS = [
     {
       key: "cancellationNumber",
-      label: "Cancellation #",
+      label: "Cancellation",
       render: (v, row) => (
         <div className="flex flex-col gap-1">
-          <span className={`font-mono ${CLASS_TEXT_XS_GRAY}`}>
+          <span className={`font-inter ${CLASS_TEXT_XS_GRAY}`}>
             {v || String(row.id || "—").slice(-8)}
           </span>
           {isSeller && (
             <div className={CLASS_TEXT_XS_MUTED}>
-              <span>Order </span>
               <OrderLink
                 orderId={row.orderId || row.order_id}
                 orderNumber={row.orderNumber || row.order_number}
@@ -501,11 +506,19 @@ const Cancellations = () => {
       render: (v, row) => (
         <StatusBadge
           status={v || "not_started"}
-          label={v === "completed" ? "Completed" :
-            row.metadata?.refundSubmissionUncertain ? "Needs Review" :
-            row.metadata?.refundSubmissionState === "queued" ? "Queued" :
-            row.metadata?.refundSubmissionState === "submitting" ? "Submitting" :
-            v === "provider_pending" ? "Processing at Razorpay" : display(v)}
+          label={
+            v === "completed"
+              ? "Completed"
+              : row.metadata?.refundSubmissionUncertain
+                ? "Needs Review"
+                : row.metadata?.refundSubmissionState === "queued"
+                  ? "Queued"
+                  : row.metadata?.refundSubmissionState === "submitting"
+                    ? "Submitting"
+                    : v === "provider_pending"
+                      ? "Processing at Razorpay"
+                      : display(v)
+          }
           dot
           appearance="order"
         />
@@ -647,9 +660,14 @@ const Cancellations = () => {
             });
           }
 
-          if (!isSeller && ["refund_pending", "failed"].includes(row.status) &&
-            !["queued", "submitting"].includes(row.metadata?.refundSubmissionState) &&
-            !row.metadata?.refundSubmissionUncertain) {
+          if (
+            !isSeller &&
+            ["refund_pending", "failed"].includes(row.status) &&
+            !["queued", "submitting"].includes(
+              row.metadata?.refundSubmissionState,
+            ) &&
+            !row.metadata?.refundSubmissionUncertain
+          ) {
             actions.push({
               label: "Retry Refund",
               icon: (
@@ -673,7 +691,8 @@ const Cancellations = () => {
           if (!isSeller && row.status === "manual_review") {
             if (
               !row.metadata?.refundSubmissionUncertain &&
-              (row.paymentProvider === "razorpay" || row.providerRefundAmount <= 0)
+              (row.paymentProvider === "razorpay" ||
+                row.providerRefundAmount <= 0)
             )
               actions.push({
                 label: "Approve Refund",
@@ -895,33 +914,70 @@ const Cancellations = () => {
               </div>
             </FormSection>
 
-            <FormSection title="Refund Progress" description="Approval, background submission and payment provider confirmation.">
+            <FormSection
+              title="Refund Progress"
+              description="Approval, background submission and payment provider confirmation."
+            >
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-gray-900">
-                  {detail.refundStatus === "completed" ? "Refund completed" :
-                    detail.metadata?.refundSubmissionUncertain ? "Needs review — verify the refund in Razorpay" :
-                    detail.metadata?.refundSubmissionState === "queued" ? "Queued — waiting for the refund worker" :
-                    detail.metadata?.refundSubmissionState === "submitting" ? "Submitting refund" :
-                    detail.refundStatus === "provider_pending" ? "Processing at Razorpay" :
-                    display(detail.refundStatus)}
+                  {detail.refundStatus === "completed"
+                    ? "Refund completed"
+                    : detail.metadata?.refundSubmissionUncertain
+                      ? "Needs review — verify the refund in Razorpay"
+                      : detail.metadata?.refundSubmissionState === "queued"
+                        ? "Queued — waiting for the refund worker"
+                        : detail.metadata?.refundSubmissionState ===
+                            "submitting"
+                          ? "Submitting refund"
+                          : detail.refundStatus === "provider_pending"
+                            ? "Processing at Razorpay"
+                            : display(detail.refundStatus)}
                 </p>
-                {detail.providerRefundId && <p className="break-all text-xs text-gray-600">Provider refund ID: {detail.providerRefundId}</p>}
-                {(detail.lastError || detail.last_error) && <p className="text-sm text-red-700" role="alert">{detail.lastError || detail.last_error}</p>}
+                {detail.providerRefundId && (
+                  <p className="break-all text-xs text-gray-600">
+                    Provider refund ID: {detail.providerRefundId}
+                  </p>
+                )}
+                {(detail.lastError || detail.last_error) && (
+                  <p className="text-sm text-red-700" role="alert">
+                    {detail.lastError || detail.last_error}
+                  </p>
+                )}
                 <ol className="space-y-3 border-l-2 border-gray-200 pl-4">
                   {[
-                    { status: "Approved and queued", at: detail.metadata?.refundQueuedAt || detail.metadata?.refundApprovedAt },
-                    { status: "Submission started", at: detail.metadata?.refundSubmissionStartedAt },
+                    {
+                      status: "Approved and queued",
+                      at:
+                        detail.metadata?.refundQueuedAt ||
+                        detail.metadata?.refundApprovedAt,
+                    },
+                    {
+                      status: "Submission started",
+                      at: detail.metadata?.refundSubmissionStartedAt,
+                    },
                     ...(detail.metadata?.refundTimeline || []),
-                  ].filter((event) => event.at).map((event, index) => (
-                    <li key={`${event.at}-${index}`} className="text-sm">
-                      <p className="font-medium capitalize text-gray-800">{display(event.status)}</p>
-                      <p className="text-xs text-gray-500">{fmt(event.at)}</p>
-                      {event.note && <p className="mt-1 text-xs text-gray-600">{event.note}</p>}
-                    </li>
-                  ))}
+                  ]
+                    .filter((event) => event.at)
+                    .map((event, index) => (
+                      <li key={`${event.at}-${index}`} className="text-sm">
+                        <p className="font-medium capitalize text-gray-800">
+                          {display(event.status)}
+                        </p>
+                        <p className="text-xs text-gray-500">{fmt(event.at)}</p>
+                        {event.note && (
+                          <p className="mt-1 text-xs text-gray-600">
+                            {event.note}
+                          </p>
+                        )}
+                      </li>
+                    ))}
                 </ol>
-                {!detail.metadata?.refundApprovedAt && !detail.metadata?.refundTimeline?.length &&
-                  <p className="text-xs text-gray-500">No refund processing events recorded yet.</p>}
+                {!detail.metadata?.refundApprovedAt &&
+                  !detail.metadata?.refundTimeline?.length && (
+                    <p className="text-xs text-gray-500">
+                      No refund processing events recorded yet.
+                    </p>
+                  )}
               </div>
             </FormSection>
 
@@ -1062,18 +1118,18 @@ const Cancellations = () => {
           setApproveRequest({ open: false, item: null, note: "" })
         }
         loading={actionLoading}
-        confirmLabel="Approve Cancellation"
+        confirmLabel="Approve"
       >
         <div className={CLASS_MODAL_BODY}>
           <label className="block text-sm font-semibold text-[#30384d]">
-            Approval note (optional)
+            Approval note
             <textarea
-              className="mt-2 min-h-[120px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
+              className="mt-2 min-h-[85px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
               value={approveRequest.note}
               onChange={(event) =>
                 setApproveRequest((p) => ({ ...p, note: event.target.value }))
               }
-              maxLength={5000}
+              maxLength={3000}
               placeholder="Enter your approval note."
             />
           </label>
@@ -1089,18 +1145,18 @@ const Cancellations = () => {
           setRejectRequest({ open: false, item: null, reason: "" })
         }
         loading={actionLoading}
-        confirmLabel="Reject Cancellation"
+        confirmLabel="Reject"
       >
         <div className={CLASS_MODAL_BODY}>
           <label className="block text-sm font-semibold text-[#30384d]">
             Rejection reason *
             <textarea
-              className="mt-2 min-h-[120px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
+              className="mt-2 min-h-[85px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
               value={rejectRequest.reason}
               onChange={(event) =>
                 setRejectRequest((p) => ({ ...p, reason: event.target.value }))
               }
-              maxLength={5000}
+              maxLength={3000}
               placeholder="Enter the reason for rejection."
             />
           </label>
@@ -1119,9 +1175,9 @@ const Cancellations = () => {
       >
         <div className={CLASS_MODAL_BODY}>
           <label className="block text-sm font-semibold text-[#30384d]">
-            Approval note (optional)
+            Approval note
             <textarea
-              className="mt-2 min-h-[120px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
+              className="mt-2 min-h-[85px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
               value={approveRefund.note}
               onChange={(event) =>
                 setApproveRefund((p) => ({ ...p, note: event.target.value }))

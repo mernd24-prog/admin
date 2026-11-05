@@ -543,77 +543,6 @@ export default function FinanceEarnings() {
         />
       </div>
 
-      {/* {Number(codReconciliation.totalOrders || 0) > 0 && (
-        <section className="admin-card overflow-hidden">
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--admin-line)] px-5 py-4">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-base font-semibold text-[var(--admin-navy)]">
-                COD Order Reconciliation
-              </h2>
-            </div>
-
-            <span className="shrink-0 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3 py-1.5 text-xs font-medium text-[var(--admin-muted)]">
-              Cash on Delivery
-            </span>
-          </div>
-
-          <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
-            {[
-              {
-                label: "COD orders",
-                value: codReconciliation.totalOrders,
-                icon: <MdAccountBalanceWallet aria-hidden="true" size={18} />,
-                iconBg: "#FFF7EA",
-                iconColor: "#1F1B5F",
-              },
-              {
-                label: "Delivered",
-                value: codReconciliation.deliveredOrders,
-                icon: <MdCheckCircle aria-hidden="true" size={18} />,
-                iconBg: "#cce8c9",
-                iconColor: "#1d9b50",
-              },
-              {
-                label: "Awaiting delivery",
-                value: codReconciliation.awaitingDeliveryOrders,
-                icon: <MdHourglassEmpty aria-hidden="true" size={18} />,
-                iconBg: "#ffe5b5",
-                iconColor: "#f5a300",
-              },
-              {
-                label: "Cash liabilities",
-                value: codReconciliation.ordersWithLiability,
-                icon: <MdPauseCircle aria-hidden="true" size={18} />,
-                iconBg: "#ffd4d2",
-                iconColor: "#ff4b55",
-              },
-            ].map((item) => (
-              <Cards
-                key={item.label}
-                label={item.label}
-                value={item.value || 0}
-                icon={item.icon}
-                iconBg={item.iconBg}
-                iconColor={item.iconColor}
-              />
-            ))}
-          </div>
-
-          {Number(codReconciliation.missingEarningOrders || 0) > 0 && (
-            <div className="mx-4 mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 sm:mx-5">
-              <span className="mt-0.5 shrink-0 text-amber-700">
-                <MdHourglassEmpty aria-hidden="true" size={18} />
-              </span>
-              <p className="text-xs leading-5 text-amber-800">
-                {codReconciliation.missingEarningOrders} delivered COD order(s)
-                still need an earning calculation. Refresh to retry; if this
-                remains, an administrator should review the order pricing data.
-              </p>
-            </div>
-          )}
-        </section>
-      )} */}
-
       {/* SEARCH, FILTERS + TABLE */}
       <DataTable
         columns={columns}
@@ -697,16 +626,18 @@ export default function FinanceEarnings() {
         isButtonView={false}
       >
         {detail && (
-          <div className="space-y-5 border border-golden p-4 rounded-lg">
+          <div className="space-y-5 border border-golden/45 p-4 rounded-lg">
             {/* EARNING SUMMARY */}
-            <div className="rounded-lg bg-[var(--admin-soft)]  p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
+            {/* EARNING SUMMARY */}
+            <div className="rounded-lg border border-[var(--admin-line)] bg-[#FFFCF7] p-4">
+              <div className="grid grid-cols-2 items-center gap-4 sm:grid-cols-[1fr_1fr_auto]">
+                {/* PRODUCT */}
+                <div className="min-w-0">
                   <span className="text-xs text-[var(--admin-muted)]">
                     Product
                   </span>
 
-                  <p className="mt-1 font-semibold">
+                  <p className="mt-1 truncate text-sm font-medium text-[var(--admin-ink)]">
                     {detail.productTitle ||
                       detail.productName ||
                       detail.metadata?.productTitle ||
@@ -714,16 +645,13 @@ export default function FinanceEarnings() {
                   </p>
                 </div>
 
-                <FinanceStatusBadge row={detail} />
-              </div>
-
-              <div className="mt-4 flex items-end justify-between">
+                {/* YOUR EARNING */}
                 <div>
                   <span className="text-xs text-[var(--admin-muted)]">
                     Your earning
                   </span>
 
-                  <strong className="mt-1 block text-[#2E1B78] text-2xl">
+                  <strong className="mt-1 block text-base font-bold text-emerald-700">
                     {financeMoney(
                       financeValue(detail, "net_amount", "netAmount"),
                       detail.currency,
@@ -731,23 +659,22 @@ export default function FinanceEarnings() {
                   </strong>
                 </div>
 
+                {/* QUANTITY */}
                 <div className="text-right">
                   <span className="text-xs text-[var(--admin-muted)]">
                     Quantity
                   </span>
 
-                  <strong className="mt-1 block">{detail.quantity || 1}</strong>
+                  <strong className="mt-1 block text-base font-medium text-[var(--admin-ink)]">
+                    {detail.quantity || 1}
+                  </strong>
                 </div>
               </div>
-
-              <p className="mt-3 text-xs text-[var(--admin-muted)]">
-                {sellerFinanceStatus(detail).detail}
-              </p>
             </div>
 
             {/* AVAILABILITY INFORMATION */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-golden p-3">
+              <div className="rounded-lg border border-golden/45 p-3">
                 <span className="text-xs text-[var(--admin-muted)]">
                   Available / Paid On
                 </span>
@@ -764,7 +691,7 @@ export default function FinanceEarnings() {
                 </p>
               </div>
 
-              <div className="rounded-lg border border-golden p-3">
+              <div className="rounded-lg border border-golden/45 p-3">
                 <span className="text-xs text-[var(--admin-muted)]">
                   Status
                 </span>
