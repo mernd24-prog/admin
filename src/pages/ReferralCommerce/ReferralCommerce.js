@@ -564,7 +564,7 @@ const RowActions = ({ actions = [] }) => {
   );
 };
 
-const TextInput = ({
+export const TextInput = ({
   label,
   name,
   value,
@@ -588,13 +588,35 @@ const TextInput = ({
       {label}
       {required ? <span className="admin-required">*</span> : null}
     </span>
+
     <input
       type={type}
       name={name}
       value={value}
-      onChange={onChange}
+      onKeyDown={(event) => {
+        if (type === "number" && ["-", "e", "E"].includes(event.key)) {
+          event.preventDefault();
+        }
+      }}
+      onPaste={(event) => {
+        if (
+          type === "number" &&
+          /-/.test(event.clipboardData.getData("text"))
+        ) {
+          event.preventDefault();
+        }
+      }}
+      onChange={(event) => {
+        if (type === "number") {
+          const inputValue = event.target.value;
+
+          if (inputValue !== "" && Number(inputValue) < 0) return;
+        }
+
+        onChange?.(event);
+      }}
       placeholder={placeholder}
-      min={min}
+      min={type === "number" ? (min ?? 0) : min}
       max={max}
       minLength={minLength}
       maxLength={maxLength}
@@ -603,8 +625,11 @@ const TextInput = ({
       required={nativeRequired}
       onBlur={onBlur}
       aria-invalid={Boolean(error)}
-      className={`h-10 w-full rounded border bg-white px-3 text-sm text-gray-800 outline-none focus:border-golden-400 ${error ? "border-red-400" : "border-gray-200"}`}
+      className={`h-10 w-full rounded border bg-white px-3 text-sm text-gray-800 outline-none focus:border-golden-400 ${
+        error ? "border-red-400" : "border-gray-200"
+      }`}
     />
+
     {error ? (
       <span className="admin-field-error" role="alert">
         {error}
@@ -1835,9 +1860,18 @@ const ReferralCommerce = () => {
         ),
         "referral-payouts",
       ),
-      dispatchReferralRead(getReferralRules({ page: 1, limit: 20 }), "referral-rules"),
-      dispatchReferralRead(getReferralBonusRules(withStatus(["active", "inactive"])), "referral-bonus-rules"),
-      dispatchReferralRead(getReferralBonusProgress({ page: 1, limit: 50 }), "referral-bonus-progress"),
+      dispatchReferralRead(
+        getReferralRules({ page: 1, limit: 20 }),
+        "referral-rules",
+      ),
+      dispatchReferralRead(
+        getReferralBonusRules(withStatus(["active", "inactive"])),
+        "referral-bonus-rules",
+      ),
+      dispatchReferralRead(
+        getReferralBonusProgress({ page: 1, limit: 50 }),
+        "referral-bonus-progress",
+      ),
       dispatchReferralRead(
         getReferralBonusAchievements(
           withStatus(["locked", "released", "reversed"]),
@@ -1871,7 +1905,10 @@ const ReferralCommerce = () => {
       overview: () =>
         Promise.all([
           dispatchReferralRead(getReferralSummary(), "referral-overview"),
-          dispatchReferralRead(getReferralOrders({ page: 1, limit: 50 }), "referral-orders"),
+          dispatchReferralRead(
+            getReferralOrders({ page: 1, limit: 50 }),
+            "referral-orders",
+          ),
         ]),
       influencers: () =>
         Promise.all([
@@ -1882,7 +1919,11 @@ const ReferralCommerce = () => {
           dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
         ]),
 
-      rules: () => dispatchReferralRead(getReferralRules({ page: 1, limit: 20 }), "referral-rules"),
+      rules: () =>
+        dispatchReferralRead(
+          getReferralRules({ page: 1, limit: 20 }),
+          "referral-rules",
+        ),
       bonuses: () =>
         Promise.all([
           dispatchReferralRead(
@@ -1913,11 +1954,16 @@ const ReferralCommerce = () => {
             "referral-bonus-history",
           ),
         ]),
-      orders: () => dispatchReferralRead(getReferralOrders(query), "referral-orders"),
-      commissions: () => dispatchReferralRead(getReferralCommissions(query), "referral-ledger"),
-      payouts: () => dispatchReferralRead(getReferralPayouts(query), "referral-payouts"),
-      hierarchy: () => dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
-      fraud: () => dispatchReferralRead(getReferralFraudReviews(query), "referral-fraud"),
+      orders: () =>
+        dispatchReferralRead(getReferralOrders(query), "referral-orders"),
+      commissions: () =>
+        dispatchReferralRead(getReferralCommissions(query), "referral-ledger"),
+      payouts: () =>
+        dispatchReferralRead(getReferralPayouts(query), "referral-payouts"),
+      hierarchy: () =>
+        dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
+      fraud: () =>
+        dispatchReferralRead(getReferralFraudReviews(query), "referral-fraud"),
     };
     return requests[activeTab]?.();
   };
@@ -3172,478 +3218,478 @@ const ReferralCommerce = () => {
 
   const renderRules = () => (
     <div className="space-y-5">
-    <MarketingSettings kind="referrals" />
-    <section className="admin-card overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] bg-gradient-to-r from-white to-[var(--admin-gold-soft)]/35 px-5 py-4">
-        <div>
-          <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[var(--admin-navy)]">
-            <BadgeIndianRupee
-              aria-hidden="true"
-              size={18}
-              className="text-[var(--admin-gold-dark)]"
-            />
-            Referral Commerce Rules
-          </h2>
-          <p className="mt-1 text-xs text-[var(--admin-muted)]">
-            Configure referral pools, coin behavior, distribution shares, and
-            withdrawals
-          </p>
-        </div>
-
-      </div>
-      <form
-        onSubmit={submitRules}
-        noValidate
-        className="grid grid-cols-1 gap-x-4 gap-y-5 p-5 md:grid-cols-4"
-      >
-        <div className="flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
-            1
-          </span>
+      <MarketingSettings kind="referrals" />
+      <section className="admin-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] bg-gradient-to-r from-white to-[var(--admin-gold-soft)]/35 px-5 py-4">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
-              Coin & Eligibility Setup
-            </h3>
-            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-              Product pool amounts are configured below. Define shared coin
-              value, validity, usage, and order eligibility here.
-            </p>
-          </div>
-        </div>
-        <TextInput
-          label="INR per Coin"
-          name="coinValue"
-          type="number"
-          min="0.000001"
-          step="0.000001"
-          value={rulesForm.coinValue}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.coinValue}
-        />
-        <TextInput
-          label="Coin Expiry Days"
-          name="coinExpiryDays"
-          type="number"
-          min="0"
-          step="1"
-          value={rulesForm.coinExpiryDays}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.coinExpiryDays}
-        />
-        <SelectInput
-          label="Coin Usage"
-          name="coinUsage"
-          value={rulesForm.coinUsage}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.coinUsage}
-        >
-          {optionList(referralCoinUsageModes.options, [
-            "wallet",
-            "discount",
-            "both",
-          ]).map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </SelectInput>
-        <TextInput
-          label="Minimum Eligible Order Amount"
-          name="minOrderAmount"
-          type="number"
-          min="0"
-          step="0.01"
-          value={rulesForm.minOrderAmount}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.minOrderAmount}
-        />
-
-        <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
-            2
-          </span>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
-              Distribution Shares
-            </h3>
-            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-              Split the referral pool between the customer and referral partners
-            </p>
-          </div>
-        </div>
-        <TextInput
-          label="Customer Discount Share %"
-          name="customerSharePercent"
-          type="number"
-          min="0"
-          step="0.01"
-          max="100"
-          value={rulesForm.customerSharePercent}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.customerSharePercent}
-        />
-        <TextInput
-          label="Code Owner Commission Share %"
-          name="childSharePercent"
-          type="number"
-          min="0"
-          step="0.01"
-          max="100"
-          value={rulesForm.childSharePercent}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.childSharePercent}
-        />
-        <TextInput
-          label="Code Owner Parent Commission Share %"
-          name="parentSharePercent"
-          type="number"
-          min="0"
-          max="100"
-          step="0.01"
-          value={rulesForm.parentSharePercent}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.parentSharePercent}
-        />
-
-        <div>
-          <label className="mb-1.5 block text-xs font-medium uppercase text-[var(--admin-navy)]">
-            Total Allocation
-          </label>
-
-          <div
-            className={`flex h-9 items-center gap-2 rounded-md border px-3 ${
-              Number(rulesForm.customerSharePercent || 0) +
-                Number(rulesForm.childSharePercent || 0) +
-                Number(rulesForm.parentSharePercent || 0) ===
-              100
-                ? " border-[var(--admin-line)] bg-[#fffaf0]"
-                : " border-[var(--admin-line)] bg-[#fffaf0]"
-            }`}
-          >
-            {/* Progress bar */}
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  Number(rulesForm.customerSharePercent || 0) +
-                    Number(rulesForm.childSharePercent || 0) +
-                    Number(rulesForm.parentSharePercent || 0) ===
-                  100
-                    ? "bg-emerald-500"
-                    : "bg-red-500"
-                }`}
-                style={{
-                  width: `${Math.min(
-                    Math.max(
-                      Number(rulesForm.customerSharePercent || 0) +
-                        Number(rulesForm.childSharePercent || 0) +
-                        Number(rulesForm.parentSharePercent || 0),
-                      0,
-                    ),
-                    100,
-                  )}%`,
-                }}
+            <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+              <BadgeIndianRupee
+                aria-hidden="true"
+                size={18}
+                className="text-[var(--admin-gold-dark)]"
               />
+              Referral Commerce Rules
+            </h2>
+            <p className="mt-1 text-xs text-[var(--admin-muted)]">
+              Configure referral pools, coin behavior, distribution shares, and
+              withdrawals
+            </p>
+          </div>
+        </div>
+        <form
+          onSubmit={submitRules}
+          noValidate
+          className="grid grid-cols-1 gap-x-4 gap-y-5 p-5 md:grid-cols-4"
+        >
+          <div className="flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
+              1
+            </span>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+                Coin & Eligibility Setup
+              </h3>
+              <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+                Product pool amounts are configured below. Define shared coin
+                value, validity, usage, and order eligibility here.
+              </p>
             </div>
+          </div>
+          <TextInput
+            label="INR per Coin"
+            name="coinValue"
+            type="number"
+            min="0.000001"
+            step="0.000001"
+            value={rulesForm.coinValue}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.coinValue}
+          />
+          <TextInput
+            label="Coin Expiry Days"
+            name="coinExpiryDays"
+            type="number"
+            min="0"
+            step="1"
+            value={rulesForm.coinExpiryDays}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.coinExpiryDays}
+          />
+          <SelectInput
+            label="Coin Usage"
+            name="coinUsage"
+            value={rulesForm.coinUsage}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.coinUsage}
+          >
+            {optionList(referralCoinUsageModes.options, [
+              "wallet",
+              "discount",
+              "both",
+            ]).map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </SelectInput>
+          <TextInput
+            label="Minimum Eligible Order Amount"
+            name="minOrderAmount"
+            type="number"
+            min="0"
+            step="0.01"
+            value={rulesForm.minOrderAmount}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.minOrderAmount}
+          />
 
-            {/* Percentage */}
-            <span
-              className={`shrink-0 text-xs font-bold ${
+          <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
+              2
+            </span>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+                Distribution Shares
+              </h3>
+              <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+                Split the referral pool between the customer and referral
+                partners
+              </p>
+            </div>
+          </div>
+          <TextInput
+            label="Customer Discount Share %"
+            name="customerSharePercent"
+            type="number"
+            min="0"
+            step="0.01"
+            max="100"
+            value={rulesForm.customerSharePercent}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.customerSharePercent}
+          />
+          <TextInput
+            label="Code Owner Commission Share %"
+            name="childSharePercent"
+            type="number"
+            min="0"
+            step="0.01"
+            max="100"
+            value={rulesForm.childSharePercent}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.childSharePercent}
+          />
+          <TextInput
+            label="Code Owner Parent Commission Share %"
+            name="parentSharePercent"
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            value={rulesForm.parentSharePercent}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.parentSharePercent}
+          />
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium uppercase text-[var(--admin-navy)]">
+              Total Allocation
+            </label>
+
+            <div
+              className={`flex h-9 items-center gap-2 rounded-md border px-3 ${
                 Number(rulesForm.customerSharePercent || 0) +
                   Number(rulesForm.childSharePercent || 0) +
                   Number(rulesForm.parentSharePercent || 0) ===
                 100
-                  ? "text-emerald-700"
-                  : "text-red-700"
+                  ? " border-[var(--admin-line)] bg-[#fffaf0]"
+                  : " border-[var(--admin-line)] bg-[#fffaf0]"
               }`}
             >
-              {Number(rulesForm.customerSharePercent || 0) +
-                Number(rulesForm.childSharePercent || 0) +
-                Number(rulesForm.parentSharePercent || 0)}
-              %
-            </span>
-          </div>
-
-          {/* Helper text outside */}
-
-          {rulesErrors.shareTotal ? (
-            <p className="admin-field-error" role="alert">
-              {rulesErrors.shareTotal}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
-            3
-          </span>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
-              Withdrawal Rules
-            </h3>
-            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-              Control payout limits, approvals, KYC, and supported methods
-            </p>
-          </div>
-        </div>
-        <TextInput
-          label="Minimum Withdrawal Coins"
-          name="minimumWithdrawalCoins"
-          type="number"
-          min="0"
-          step="0.01"
-          value={rulesForm.minimumWithdrawalCoins}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.minimumWithdrawalCoins}
-        />
-        <TextInput
-          label="Maximum Withdrawal Coins"
-          name="maximumWithdrawalCoins"
-          type="number"
-          min="0"
-          step="0.01"
-          value={rulesForm.maximumWithdrawalCoins}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.maximumWithdrawalCoins}
-        />
-        <TextInput
-          label="Daily Withdrawal Limit"
-          name="dailyWithdrawalLimitCoins"
-          type="number"
-          min="0"
-          step="0.01"
-          value={rulesForm.dailyWithdrawalLimitCoins}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.dailyWithdrawalLimitCoins}
-        />
-        <TextInput
-          label="Monthly Withdrawal Limit"
-          name="monthlyWithdrawalLimitCoins"
-          type="number"
-          min="0"
-          step="0.01"
-          value={rulesForm.monthlyWithdrawalLimitCoins}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.monthlyWithdrawalLimitCoins}
-        />
-        <TextInput
-          label="Coin Release Delay Days"
-          name="releaseDelayDays"
-          type="number"
-          min="0"
-          step="1"
-          value={rulesForm.releaseDelayDays}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.releaseDelayDays}
-          hint="Whole days before earned referral coins become available."
-        />
-        <SelectInput
-          label="Approval Mode"
-          name="withdrawalApprovalMode"
-          value={rulesForm.withdrawalApprovalMode}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.withdrawalApprovalMode}
-        >
-          {optionList(referralWithdrawalApprovalModes.options, [
-            "manual",
-            "auto",
-          ]).map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </SelectInput>
-        <label className="admin-switch mt-6 h-10 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3">
-          <input
-            type="checkbox"
-            className="sr-only"
-            name="withdrawalKycRequired"
-            checked={Boolean(rulesForm.withdrawalKycRequired)}
-            onChange={handleRulesField}
-          />
-          <span className="admin-switch-track" />
-          <span className="font-semibold">KYC required</span>
-        </label>
-        <div className="md:col-span-2">
-          <span className="mb-2 block text-xs font-semibold uppercase text-[var(--admin-navy)]">
-            Withdrawal Methods
-          </span>
-
-          <div className="flex flex-wrap gap-2">
-            {optionList(referralWithdrawalMethods.options, [
-              "upi",
-              "bank",
-              "manual",
-            ]).map((option) => {
-              const isSelected =
-                Array.isArray(rulesForm.withdrawalMethods) &&
-                rulesForm.withdrawalMethods.includes(option.value);
-
-              return (
-                <label
-                  key={option.value}
-                  className={`flex min-w-[120px] cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5 text-xs font-semibold transition-all ${
-                    isSelected
-                      ? "border-[var(--admin-gold)] bg-[#fffaf0] text-[var(--admin-navy)] shadow-sm"
-                      : "border-[var(--admin-line)] bg-white text-[var(--admin-muted)] hover:border-[var(--admin-gold)] hover:bg-[#fffaf0]"
+              {/* Progress bar */}
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    Number(rulesForm.customerSharePercent || 0) +
+                      Number(rulesForm.childSharePercent || 0) +
+                      Number(rulesForm.parentSharePercent || 0) ===
+                    100
+                      ? "bg-emerald-500"
+                      : "bg-red-500"
                   }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleWithdrawalMethod(option.value)}
-                    className="h-4 w-4 rounded border-gray-300 accent-[var(--admin-gold)]"
-                  />
-
-                  <span>{option.label}</span>
-                </label>
-              );
-            })}
-          </div>
-          {rulesErrors.withdrawalMethods ? (
-            <p className="admin-field-error" role="alert">
-              {rulesErrors.withdrawalMethods}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
-            4
-          </span>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
-              Referral Code Format
-            </h3>
-            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-              Define the format used for every newly generated influencer code
-            </p>
-          </div>
-        </div>
-        <TextInput
-          label="Code Prefix"
-          name="referralCodePrefix"
-          value={rulesForm.referralCodePrefix}
-          onChange={handleRulesField}
-          maxLength="8"
-          pattern="[A-Za-z0-9]*"
-          error={rulesErrors.referralCodePrefix}
-          hint="Optional; up to 8 uppercase letters or numbers, for example SAM."
-        />
-        <TextInput
-          label="Random Character Length"
-          name="referralCodeRandomLength"
-          type="number"
-          min="4"
-          max="16"
-          step="1"
-          value={rulesForm.referralCodeRandomLength}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.referralCodeRandomLength}
-        />
-        <SelectInput
-          label="Character Set"
-          name="referralCodeCharacterSet"
-          value={rulesForm.referralCodeCharacterSet}
-          onChange={handleRulesField}
-          required
-          error={rulesErrors.referralCodeCharacterSet}
-        >
-          <option value="alphanumeric">Letters and numbers</option>
-          <option value="alphabetic">Letters only</option>
-          <option value="numeric">Numbers only</option>
-        </SelectInput>
-        <div className="relative">
-          <label className="mb-1.5 block text-xs font-semibold text-[var(--admin-navy)]">
-            Example
-          </label>
-
-          <div className="flex h-10 items-center rounded-md border border-[var(--admin-line)] bg-[var(--admin-field)] px-3">
-            <span className="font-mono text-sm font-semibold tracking-wider text-[var(--admin-navy)]">
-              {String(rulesForm.referralCodePrefix || "").toUpperCase()}
-              {rulesForm.referralCodeCharacterSet === "numeric"
-                ? "0".repeat(
-                    Math.min(
+                  style={{
+                    width: `${Math.min(
                       Math.max(
-                        Number(rulesForm.referralCodeRandomLength || 4),
-                        4,
+                        Number(rulesForm.customerSharePercent || 0) +
+                          Number(rulesForm.childSharePercent || 0) +
+                          Number(rulesForm.parentSharePercent || 0),
+                        0,
                       ),
-                      16,
-                    ),
-                  )
-                : "X".repeat(
-                    Math.min(
-                      Math.max(
-                        Number(rulesForm.referralCodeRandomLength || 4),
-                        4,
-                      ),
-                      16,
-                    ),
-                  )}
-            </span>
+                      100,
+                    )}%`,
+                  }}
+                />
+              </div>
 
-            <span className="ml-auto text-[10px] font-medium text-[var(--admin-muted)]">
-              Preview
-            </span>
-          </div>
-        </div>
+              {/* Percentage */}
+              <span
+                className={`shrink-0 text-xs font-bold ${
+                  Number(rulesForm.customerSharePercent || 0) +
+                    Number(rulesForm.childSharePercent || 0) +
+                    Number(rulesForm.parentSharePercent || 0) ===
+                  100
+                    ? "text-emerald-700"
+                    : "text-red-700"
+                }`}
+              >
+                {Number(rulesForm.customerSharePercent || 0) +
+                  Number(rulesForm.childSharePercent || 0) +
+                  Number(rulesForm.parentSharePercent || 0)}
+                %
+              </span>
+            </div>
 
-        <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
-            5
-          </span>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
-              Activation & Advanced Settings
-            </h3>
-            <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-              Control when this global rule is active and attach optional
-              backend metadata
-            </p>
+            {/* Helper text outside */}
+
+            {rulesErrors.shareTotal ? (
+              <p className="admin-field-error" role="alert">
+                {rulesErrors.shareTotal}
+              </p>
+            ) : null}
           </div>
-        </div>
-        <DateRangeFilter
-          field={{
-            key: "effectiveRange",
-            type: "daterange",
-            label: "Effective Period",
-            startKey: "effectiveFrom",
-            endKey: "effectiveTo",
-            disableFuture: true,
-            width: "w-full",
-            placeholder: "Select effective period",
-          }}
-          values={rulesForm}
-          onChange={(key, value) =>
-            handleRulesField({ target: { name: key, value } })
-          }
-        />
-        <label className="admin-switch mt-6 h-10 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3">
-          <input
-            type="checkbox"
-            className="sr-only"
-            name="active"
-            checked={Boolean(rulesForm.active)}
+
+          <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
+              3
+            </span>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+                Withdrawal Rules
+              </h3>
+              <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+                Control payout limits, approvals, KYC, and supported methods
+              </p>
+            </div>
+          </div>
+          <TextInput
+            label="Minimum Withdrawal Coins"
+            name="minimumWithdrawalCoins"
+            type="number"
+            min="0"
+            step="0.01"
+            value={rulesForm.minimumWithdrawalCoins}
             onChange={handleRulesField}
+            required
+            error={rulesErrors.minimumWithdrawalCoins}
           />
-          <span className="admin-switch-track" />
-          <span className="font-semibold">Rule active</span>
-        </label>
-        <div />
-        {/* <label className="block md:col-span-4">
+          <TextInput
+            label="Maximum Withdrawal Coins"
+            name="maximumWithdrawalCoins"
+            type="number"
+            min="0"
+            step="0.01"
+            value={rulesForm.maximumWithdrawalCoins}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.maximumWithdrawalCoins}
+          />
+          <TextInput
+            label="Daily Withdrawal Limit"
+            name="dailyWithdrawalLimitCoins"
+            type="number"
+            min="0"
+            step="0.01"
+            value={rulesForm.dailyWithdrawalLimitCoins}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.dailyWithdrawalLimitCoins}
+          />
+          <TextInput
+            label="Monthly Withdrawal Limit"
+            name="monthlyWithdrawalLimitCoins"
+            type="number"
+            min="0"
+            step="0.01"
+            value={rulesForm.monthlyWithdrawalLimitCoins}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.monthlyWithdrawalLimitCoins}
+          />
+          <TextInput
+            label="Coin Release Delay Days"
+            name="releaseDelayDays"
+            type="number"
+            min="0"
+            step="1"
+            value={rulesForm.releaseDelayDays}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.releaseDelayDays}
+            hint="Whole days before earned referral coins become available."
+          />
+          <SelectInput
+            label="Approval Mode"
+            name="withdrawalApprovalMode"
+            value={rulesForm.withdrawalApprovalMode}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.withdrawalApprovalMode}
+          >
+            {optionList(referralWithdrawalApprovalModes.options, [
+              "manual",
+              "auto",
+            ]).map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </SelectInput>
+          <label className="admin-switch mt-6 h-10 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3">
+            <input
+              type="checkbox"
+              className="sr-only"
+              name="withdrawalKycRequired"
+              checked={Boolean(rulesForm.withdrawalKycRequired)}
+              onChange={handleRulesField}
+            />
+            <span className="admin-switch-track" />
+            <span className="font-semibold">KYC required</span>
+          </label>
+          <div className="md:col-span-2">
+            <span className="mb-2 block text-xs font-semibold uppercase text-[var(--admin-navy)]">
+              Withdrawal Methods
+            </span>
+
+            <div className="flex flex-wrap gap-2">
+              {optionList(referralWithdrawalMethods.options, [
+                "upi",
+                "bank",
+                "manual",
+              ]).map((option) => {
+                const isSelected =
+                  Array.isArray(rulesForm.withdrawalMethods) &&
+                  rulesForm.withdrawalMethods.includes(option.value);
+
+                return (
+                  <label
+                    key={option.value}
+                    className={`flex min-w-[120px] cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5 text-xs font-semibold transition-all ${
+                      isSelected
+                        ? "border-[var(--admin-gold)] bg-[#fffaf0] text-[var(--admin-navy)] shadow-sm"
+                        : "border-[var(--admin-line)] bg-white text-[var(--admin-muted)] hover:border-[var(--admin-gold)] hover:bg-[#fffaf0]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleWithdrawalMethod(option.value)}
+                      className="h-4 w-4 rounded border-gray-300 accent-[var(--admin-gold)]"
+                    />
+
+                    <span>{option.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {rulesErrors.withdrawalMethods ? (
+              <p className="admin-field-error" role="alert">
+                {rulesErrors.withdrawalMethods}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
+              4
+            </span>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+                Referral Code Format
+              </h3>
+              <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+                Define the format used for every newly generated influencer code
+              </p>
+            </div>
+          </div>
+          <TextInput
+            label="Code Prefix"
+            name="referralCodePrefix"
+            value={rulesForm.referralCodePrefix}
+            onChange={handleRulesField}
+            maxLength="8"
+            pattern="[A-Za-z0-9]*"
+            error={rulesErrors.referralCodePrefix}
+            hint="Optional; up to 8 uppercase letters or numbers, for example SAM."
+          />
+          <TextInput
+            label="Random Character Length"
+            name="referralCodeRandomLength"
+            type="number"
+            min="4"
+            max="16"
+            step="1"
+            value={rulesForm.referralCodeRandomLength}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.referralCodeRandomLength}
+          />
+          <SelectInput
+            label="Character Set"
+            name="referralCodeCharacterSet"
+            value={rulesForm.referralCodeCharacterSet}
+            onChange={handleRulesField}
+            required
+            error={rulesErrors.referralCodeCharacterSet}
+          >
+            <option value="alphanumeric">Letters and numbers</option>
+            <option value="alphabetic">Letters only</option>
+            <option value="numeric">Numbers only</option>
+          </SelectInput>
+          <div className="relative">
+            <label className="mb-1.5 block text-xs font-semibold text-[var(--admin-navy)]">
+              Example
+            </label>
+
+            <div className="flex h-10 items-center rounded-md border border-[var(--admin-line)] bg-[var(--admin-field)] px-3">
+              <span className="font-mono text-sm font-semibold tracking-wider text-[var(--admin-navy)]">
+                {String(rulesForm.referralCodePrefix || "").toUpperCase()}
+                {rulesForm.referralCodeCharacterSet === "numeric"
+                  ? "0".repeat(
+                      Math.min(
+                        Math.max(
+                          Number(rulesForm.referralCodeRandomLength || 4),
+                          4,
+                        ),
+                        16,
+                      ),
+                    )
+                  : "X".repeat(
+                      Math.min(
+                        Math.max(
+                          Number(rulesForm.referralCodeRandomLength || 4),
+                          4,
+                        ),
+                        16,
+                      ),
+                    )}
+              </span>
+
+              <span className="ml-auto text-[10px] font-medium text-[var(--admin-muted)]">
+                Preview
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-1 flex items-center gap-3 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3 md:col-span-4">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-navy)] text-xs font-bold text-white">
+              5
+            </span>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--admin-navy)]">
+                Activation & Advanced Settings
+              </h3>
+              <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
+                Control when this global rule is active and attach optional
+                backend metadata
+              </p>
+            </div>
+          </div>
+          <DateRangeFilter
+            field={{
+              key: "effectiveRange",
+              type: "daterange",
+              label: "Effective Period",
+              startKey: "effectiveFrom",
+              endKey: "effectiveTo",
+              disableFuture: true,
+              width: "w-full",
+              placeholder: "Select effective period",
+            }}
+            values={rulesForm}
+            onChange={(key, value) =>
+              handleRulesField({ target: { name: key, value } })
+            }
+          />
+          <label className="admin-switch mt-6 h-10 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3">
+            <input
+              type="checkbox"
+              className="sr-only"
+              name="active"
+              checked={Boolean(rulesForm.active)}
+              onChange={handleRulesField}
+            />
+            <span className="admin-switch-track" />
+            <span className="font-semibold">Rule active</span>
+          </label>
+          <div />
+          {/* <label className="block md:col-span-4">
           <span className="mb-1 block text-xs font-medium uppercase text-gray-500">
             Metadata (JSON object)
           </span>
@@ -3667,14 +3713,14 @@ const ReferralCommerce = () => {
           )}
         </label> */}
 
-        <div className="flex justify-end border-t border-[var(--admin-line)] pt-4 md:col-span-4">
-          <OrangeButton type="submit" disabled={rulesSubmitting || loading}>
-            <Check size={16} />
-            {rulesSubmitting ? "Saving..." : "Save Rules"}
-          </OrangeButton>
-        </div>
-      </form>
-    </section>
+          <div className="flex justify-end border-t border-[var(--admin-line)] pt-4 md:col-span-4">
+            <OrangeButton type="submit" disabled={rulesSubmitting || loading}>
+              <Check size={16} />
+              {rulesSubmitting ? "Saving..." : "Save Rules"}
+            </OrangeButton>
+          </div>
+        </form>
+      </section>
     </div>
   );
 
