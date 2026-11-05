@@ -484,7 +484,7 @@ export const ReportShell = ({
       <section className="mb-4 rounded-lg border border-[var(--admin-line)] bg-white py-2 px-4 shadow-[0_10px_28px_rgba(31,27,95,0.05)]">
         {showFilters ? (
           <>
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="my-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="w-full sm:max-w-sm">
                 <DateRangeFilter
                   field={{
@@ -2416,6 +2416,8 @@ export const ProductAnalytics = () => {
           getRowLink={(row) =>
             row.id ? `/app/product-catalog/view/${row.id}` : null
           }
+           enablePagination
+          pageSize={20}
         />
       </div>
     </ReportShell>
@@ -2840,7 +2842,7 @@ export const InventoryAnalytics = () => {
         />
 
         {/* Product-level table */}
-        <ReportTable
+        {/* <ReportTable
           title={sellerView ? "Inventory Products" : "Low Stock Products"}
           rows={lowStockRows}
           emptyTitle={
@@ -2899,7 +2901,7 @@ export const InventoryAnalytics = () => {
           getRowLink={(row) =>
             row.id ? `/app/product-catalog/view/${row.id}` : null
           }
-        />
+        /> */}
       </div>
     </ReportShell>
   );
@@ -3292,12 +3294,51 @@ export const AnalyticsDashboard = () => {
     },
     { metric: "Pending Payouts", value: pendingPayout },
   ];
-  const analyticsExportProducts = fallbackProductRows.map((product) => ({
-    product: product.title,
-    purchases: product.purchases,
-    revenue: product.revenue,
-    views: product.views || product.impressions,
-  }));
+  const analyticsExportProductRows = listFrom(data.topProducts).map(
+    (product) => {
+      const analytics = product.analytics || {};
+      return {
+        productName: product.title || product.name || "Untitled",
+        sku: product.sku || "-",
+        price: asNumber(product.price),
+        status: product.status || "-",
+        views: asNumber(analytics.views),
+        uniqueViews: asNumber(analytics.uniqueViews),
+        impressions: asNumber(analytics.impressions),
+        cartAdds: asNumber(analytics.cartAdds),
+        wishlistAdds: asNumber(analytics.wishlistAdds),
+        purchases: asNumber(analytics.purchases),
+        orderCount: asNumber(analytics.orderCount),
+        revenue: asNumber(analytics.revenue),
+        conversionRate: asNumber(analytics.conversionRate),
+        lastViewedAt: analytics.lastViewedAt
+          ? formatDateTime(analytics.lastViewedAt, "-")
+          : "-",
+      };
+    },
+  );
+  const analyticsDatePart = (value) =>
+    formatDateLabel(value).replace(/\s+/g, "-");
+  const analyticsExportFilename = `Analytics_Report_${analyticsDatePart(
+    filters.fromDate,
+  )}_to_${analyticsDatePart(filters.toDate)}.xlsx`;
+  const analyticsExportSummaryRows = [
+    {
+      field: "Report Name",
+      value: sellerView ? "Seller Analytics Dashboard" : "Analytics Dashboard",
+    },
+    {
+      field: "Date Range",
+      value: `${formatDateLabel(filters.fromDate)} - ${formatDateLabel(
+        filters.toDate,
+      )}`,
+    },
+    { field: "Generated On", value: formatDateLabel(toIsoDate(new Date())) },
+    ...analyticsExportSummary.map(({ metric, value }) => ({
+      field: metric,
+      value,
+    })),
+  ];
 
   return (
     <ReportShell
@@ -3316,7 +3357,39 @@ export const AnalyticsDashboard = () => {
       error={error}
       filters={filters}
       onRefresh={refresh}
-      showExport={false}
+      exportFilename={analyticsExportFilename}
+      exportExcelSheets={[
+        {
+          name: "Analytics Summary",
+          title: "Analytics Summary",
+          data: analyticsExportSummaryRows,
+          columns: [
+            { key: "field", label: "Field" },
+            { key: "value", label: "Value" },
+          ],
+        },
+        {
+          name: "Top Products",
+          title: "Top Products",
+          data: analyticsExportProductRows,
+          columns: [
+            { key: "productName", label: "Product Name" },
+            { key: "sku", label: "SKU" },
+            { key: "price", label: "Price" },
+            { key: "status", label: "Status" },
+            { key: "views", label: "Views" },
+            { key: "uniqueViews", label: "Unique Views" },
+            { key: "impressions", label: "Impressions" },
+            { key: "cartAdds", label: "Cart Adds" },
+            { key: "wishlistAdds", label: "Wishlist Adds" },
+            { key: "purchases", label: "Purchases" },
+            { key: "orderCount", label: "Order Count" },
+            { key: "revenue", label: "Revenue" },
+            { key: "conversionRate", label: "Conversion Rate" },
+            { key: "lastViewedAt", label: "Last Viewed" },
+          ],
+        },
+      ]}
     >
       <SummaryColumnChart
         title={

@@ -1034,13 +1034,24 @@ const Inventory = () => {
             name: "Inventory Stock",
             title: "Inventory Stock",
             data: exportRows,
-         columns: IMPORT_COLUMNS.map((key) => ({
-  key,
-  label: key
-    .replace(/([A-Z])/g, " $1")
-    .replace(/^./, (char) => char.toUpperCase())
-    .trim(),
-})),
+            columns: IMPORT_COLUMNS.map((key) => ({
+              key,
+              label: key
+                .replace(/([A-Z])/g, " $1")
+                .replace(/^./, (char) => char.toUpperCase())
+                .trim(),
+            })),
+            cellStyles: {
+              "Current Stock": {
+                0: {
+                  font: { color: { rgb: "C62828" }, bold: true },
+                  fill: {
+                    patternType: "solid",
+                    fgColor: { rgb: "FDE8E7" },
+                  },
+                },
+              },
+            },
           },
         ],
         filename,

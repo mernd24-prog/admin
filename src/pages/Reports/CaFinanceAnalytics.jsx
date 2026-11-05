@@ -43,6 +43,7 @@ import {
 } from "../../components/Shared";
 import { financeMoney } from "../OrdersManagement/SellerFinance/financeUi";
 import Tabs from "../../components/Shared/Tabs";
+import { Download, Upload } from "lucide-react";
 
 const REGISTERS = [
   ["sales", "Sales Register"],
@@ -160,9 +161,29 @@ export default function CaFinanceAnalytics() {
     [filters],
   );
   const overviewQuery = useMemo(() => {
-    const { limit, offset, search, ...rest } = query;
-    return rest;
-  }, [query]);
+    const {
+      basis,
+      fromDate,
+      toDate,
+      sellerId,
+      organizationId,
+    } = filters;
+    return Object.fromEntries(
+      Object.entries({
+        basis,
+        fromDate,
+        toDate,
+        sellerId,
+        organizationId,
+      }).filter(([, value]) => value !== "" && value !== null && value !== undefined),
+    );
+  }, [
+    filters.basis,
+    filters.fromDate,
+    filters.toDate,
+    filters.sellerId,
+    filters.organizationId,
+  ]);
   const [activeAnalyticsTab, setActiveAnalyticsTab] = useState("trends");
 
 const analyticsTabs = [
@@ -636,13 +657,13 @@ const analyticsTabs = [
                   onChange={importFile}
                 />
                 <button type="button" onClick={() => fileRef.current?.click()}>
-                  <MdUploadFile />
+                  <Download />
                   Import
                 </button>
               </>
             )}
             <button type="button" onClick={exportReport}>
-              <MdDownload />
+              <Upload />
               Export
             </button>
           </>
@@ -771,16 +792,24 @@ const analyticsTabs = [
   onChange={(key) => {
     if (key === register) return;
 
-    setRegisterData({ rows: [], total: 0 });
-    setTableLoading(true);
     setRegister(key);
-    setFilters((current) => ({
-      ...current,
-      offset: 0,
-      search: "",
-      status: "",
-      provider: "",
-    }));
+    setFilters((current) => {
+      if (
+        current.offset === 0 &&
+        current.search === "" &&
+        current.status === "" &&
+        current.provider === ""
+      ) {
+        return current;
+      }
+      return {
+        ...current,
+        offset: 0,
+        search: "",
+        status: "",
+        provider: "",
+      };
+    });
   }}
 />
 </div>

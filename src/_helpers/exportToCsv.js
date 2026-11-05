@@ -238,9 +238,11 @@ export const exportToExcelWorkbook = (
         const cell = worksheet[cellRef];
         if (!cell) return;
 
-        const value = getExportValue(row, exportColumns[exportColumnIndex]);
+        // normalizedRows uses display labels as keys, so look up the cell
+        // value by its exported column label rather than the source data key.
+        const value = row[columnLabel];
 
-        const customStyle = stylesByValue[value];
+        const customStyle = stylesByValue[String(value)];
         if (!customStyle) return;
 
         cell.s = {
