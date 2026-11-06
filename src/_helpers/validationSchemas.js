@@ -1,6 +1,8 @@
 import { min } from "moment";
 import * as Yup from "yup";
 
+export const MAX_PRODUCT_MONEY = 999999999.99;
+
 const productDescriptionText = (value = "") => {
   if (typeof document === "undefined") {
     return String(value)
@@ -584,7 +586,11 @@ const optionalCreditNoteAmount = (label) =>
     )
     .typeError(`${label} must be a number`)
     .notRequired()
-    .min(0, `${label} cannot be negative`);
+    .min(0, `${label} cannot be negative`)
+    .max(
+      MAX_PRODUCT_MONEY,
+      `${label} must be at most 15 digits with up to 2 decimal places`,
+    );
 
 export const creditNoteValidationSchema = Yup.object({
   orderId: Yup.string()
@@ -602,7 +608,11 @@ export const creditNoteValidationSchema = Yup.object({
     )
     .typeError("Taxable amount must be a number")
     .required("Taxable amount is required")
-    .moreThan(0, "Taxable amount must be greater than zero"),
+    .moreThan(0, "Taxable amount must be greater than zero")
+    .max(
+      MAX_PRODUCT_MONEY,
+      "Taxable amount must be at most 15 digits with up to 2 decimal places",
+    ),
   taxAmount: optionalCreditNoteAmount("Tax amount"),
   totalAmount: optionalCreditNoteAmount("Total credit amount"),
   reason: optionalCreditNoteText("Reason", 500),
@@ -1355,7 +1365,7 @@ export const dealProductValidationSchema = Yup.object({
     .trim()
     .required("Deal title is required")
     .min(2, "Deal title must be at least 2 characters")
-    .max(120, "Deal title must be no more than 120 characters"),
+    .max(150, "Deal title must be no more than 150 characters"),
   dealType: Yup.string().notRequired(),
   dealSource: Yup.string().notRequired(),
   allocatedQuantity: Yup.number()
@@ -1364,16 +1374,18 @@ export const dealProductValidationSchema = Yup.object({
     )
     .typeError("Deal quantity must be a number")
     .integer("Deal quantity must be a whole number")
-    .min(0, "Deal quantity cannot be negative")
-    .notRequired(),
+    .required("Deal quantity allocation is required")
+    .min(1, "Deal quantity allocation must be at least 1")
+    .max(999999999, "Deal quantity allocation cannot exceed 9 digits"),
   maxQuantityPerOrder: Yup.number()
     .transform((value, originalValue) =>
       originalValue === "" || originalValue == null ? undefined : value,
     )
     .typeError("Maximum quantity must be a number")
     .integer("Maximum quantity must be a whole number")
+    .required("Maximum quantity per customer is required")
     .min(1, "Maximum quantity must be at least 1")
-    .notRequired(),
+    .max(999999999, "Maximum quantity cannot exceed 9 digits"),
   startAt: Yup.string().required("Please select the deal period"),
   endAt: Yup.string()
     .required("Please select the deal period")
@@ -1394,6 +1406,7 @@ export const dealProductValidationSchema = Yup.object({
     .typeError("Priority must be a number")
     .integer("Priority must be a whole number")
     .min(0, "Priority cannot be negative")
+    .max(99999, "Priority cannot exceed 5 digits")
     .notRequired(),
   reason: Yup.string().when("mode", {
     is: "seller_request",
@@ -1580,7 +1593,6 @@ export const bulkSalePriceSchema = (variants = []) =>
     );
 
 export const MAX_COMMON_PRODUCT_IMAGES = 8;
-export const MAX_PRODUCT_MONEY = 999999999.99;
 export const MAX_PRODUCT_STOCK = 1000000000;
 export const MAX_PRODUCT_MEASUREMENT = 1000000;
 export const PRODUCT_SKU_PATTERN =
@@ -2904,7 +2916,7 @@ export const validateProductDataYup = async ({
   catalogBusy = false,
 }) => {
   const errors = {};
- console.log("this is the seller panel user", isSellerPanelUser);
+  console.log("this is the seller panel user", isSellerPanelUser);
   const collectYupErrors = (validationError) => {
     if (!validationError) return;
     console.log("this is the seller panel user", isSellerPanelUser);

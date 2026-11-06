@@ -32,7 +32,10 @@ import {
 } from "../../Redux/adminCoreSlice";
 
 import { ACTIONS, usePermission } from "../../_helpers/usePermission";
-import { creditNoteValidationSchema } from "../../_helpers/validationSchemas";
+import {
+  creditNoteValidationSchema,
+  MAX_PRODUCT_MONEY,
+} from "../../_helpers/validationSchemas";
 import { useListPage } from "../../hooks/useListPage";
 import useStoreNames from "../../hooks/useStoreNames";
 
@@ -428,17 +431,17 @@ const CreditNotes = () => {
           { label: "Invoices & Taxation" },
           { label: "Credit Notes" },
         ]}
-        actions={
-          <div className="flex gap-2">
-            {!isSeller && (
-              <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
-                <button onClick={() => setShowCreate(true)}>
-                  <MdAdd aria-hidden="true" size={16} /> New Credit Note
-                </button>
-              </PermissionGuard>
-            )}
-          </div>
-        }
+        // actions={
+        //   <div className="flex gap-2">
+        //     {!isSeller && (
+        //       <PermissionGuard module="tax" action={ACTIONS.CREATE} hide>
+        //         <button onClick={() => setShowCreate(true)}>
+        //           <MdAdd aria-hidden="true" size={16} /> New Credit Note
+        //         </button>
+        //       </PermissionGuard>
+        //     )}
+        //   </div>
+        // }
       />
 
       <DataTable
@@ -691,6 +694,10 @@ const CreditNotes = () => {
                 <FormInput
                   label="Order ID"
                   name="orderId"
+                  maxLength={100}
+                  minLength={3}
+                  limitMessage="Order ID must be between 3 and 100 characters"
+                  showLengthCount={false}
                   value={formik.values.orderId}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -703,6 +710,10 @@ const CreditNotes = () => {
               <FormInput
                 label="Reference ID"
                 name="referenceId"
+                maxLength={100}
+                minLength={3}
+                limitMessage="Reference ID must be between 3 and 100 characters"
+                showLengthCount={false}
                 value={formik.values.referenceId}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
@@ -748,6 +759,10 @@ const CreditNotes = () => {
                 name="taxableAmount"
                 type="number"
                 min="0"
+                max={MAX_PRODUCT_MONEY}
+                maxLength={18}
+                limitMessage="Maximum length is 18 characters (15 digits, a decimal point, and 2 decimal places)."
+                showLengthCount={false}
                 value={formik.values.taxableAmount}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
@@ -770,6 +785,10 @@ const CreditNotes = () => {
                 name="taxAmount"
                 type="number"
                 min="0"
+                max={MAX_PRODUCT_MONEY}
+                maxLength={18}
+                limitMessage="Maximum length is 18 characters (15 digits, a decimal point, and 2 decimal places)."
+                showLengthCount={false}
                 value={formik.values.taxAmount}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
@@ -808,11 +827,16 @@ const CreditNotes = () => {
             <FormInput
               label="Reason"
               name="reason"
+              type="textarea"
+              maxLength={500}
+              limitMessage="Maximum length is 500 characters."
               value={formik.values.reason}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               error={formik.touched.reason ? formik.errors.reason : ""}
               placeholder="Enter reason for credit note"
+              rows={4}
+              showLengthCount
             />
           </FormSection>
         </div>

@@ -157,7 +157,11 @@ const DealStatusConfirmModal = ({
                   : "border-amber-500 bg-amber-500 hover:bg-amber-600"
               }`}
             >
-              {loading ? (isResume ? "Resuming..." : "Pausing...") : actionLabel}
+              {loading
+                ? isResume
+                  ? "Resuming..."
+                  : "Pausing..."
+                : actionLabel}
             </button>
           </div>
         </div>
@@ -462,7 +466,7 @@ function SellerSearch({ value, onSelect, error }) {
 
   return (
     <FilterSelect
-      label="Seller"
+      label="Store / Organization"
       required
       name="sellerId"
       inputId="deal-seller-id"
@@ -470,7 +474,7 @@ function SellerSearch({ value, onSelect, error }) {
       value={value}
       onChange={onSelect}
       loadOptions={loadSellerOptions}
-      placeholder="Select seller"
+      placeholder="Select store / organization"
       defaultOptions
       cacheOptions
     />
@@ -1366,7 +1370,7 @@ const DealManagement = () => {
           {/* ==================== Product Selection ==================== */}
           <FormSection
             title="Product Selection"
-            description="Select the seller and existing product for this deal."
+            description="Select the store / organization and existing product for this deal."
           >
             <div className="space-y-4">
               {isAdminPanel() && (
@@ -1401,6 +1405,9 @@ const DealManagement = () => {
               <Input
                 label="Deal Title"
                 name="title"
+                maxLength={150}
+                minLength={2}
+                limitMessage="Deal title must be between 2 and 150 characters."
                 value={form.title}
                 onChange={(event) => setField("title", event.target.value)}
                 error={formik.touched.title ? formik.errors.title : ""}
@@ -1459,41 +1466,64 @@ const DealManagement = () => {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label="Deal Quantity Allocation"
+                  required
                   name="allocatedQuantity"
                   type="number"
+                  min="1"
+                  max="999999999"
+                  step="1"
                   value={form.allocatedQuantity}
                   onChange={(event) =>
-                    setField("allocatedQuantity", event.target.value)
+                    setField(
+                      "allocatedQuantity",
+                      event.target.value.replace(/\D/g, "").slice(0, 9),
+                    )
                   }
                   error={
                     formik.touched.allocatedQuantity
                       ? formik.errors.allocatedQuantity
                       : ""
                   }
-                  min="0"
+                  limitMessage="Required. Enter a whole number from 1 to 999,999,999 (maximum 9 digits)."
+                  showLengthCount={false}
+                  onKeyDown={(event) => {
+                    if (["-", "+", ".", "e", "E"].includes(event.key)) {
+                      event.preventDefault();
+                    }
+                  }}
                 />
 
                 <Input
                   label="Maximum Quantity Per Customer"
+                  required
                   name="maxQuantityPerOrder"
                   type="number"
+                  min="1"
+                  max="999999999"
+                  step="1"
                   value={form.maxQuantityPerOrder}
                   onChange={(event) =>
-                    setField("maxQuantityPerOrder", event.target.value)
+                    setField(
+                      "maxQuantityPerOrder",
+                      event.target.value.replace(/\D/g, "").slice(0, 9),
+                    )
                   }
                   error={
                     formik.touched.maxQuantityPerOrder
                       ? formik.errors.maxQuantityPerOrder
                       : ""
                   }
-                  min="1"
+                  limitMessage="Required. Whole numbers only, maximum 9 digits (1 to 999,999,999)."
+                  showLengthCount={false}
+                  onKeyDown={(event) => {
+                    if (["-", "+", ".", "e", "E"].includes(event.key)) {
+                      event.preventDefault();
+                    }
+                  }}
                 />
               </div>
 
-              {/* Deal Period */}
-
-              {/* Deal Period */}
-              <div className="space-y-5">
+              <div>
                 <DateRangeFilter
                   field={{
                     key: "dateRange",
@@ -1574,8 +1604,22 @@ const DealManagement = () => {
                 label="Priority"
                 type="number"
                 value={form.priority}
-                onChange={(event) => setField("priority", event.target.value)}
+                onChange={(event) =>
+                  setField(
+                    "priority",
+                    event.target.value.replace(/\D/g, "").slice(0, 5),
+                  )
+                }
                 min="0"
+                max="99999"
+                step="1"
+                limitMessage="Priority allows up to 5 digits; 0 is valid."
+                showLengthCount={false}
+                onKeyDown={(event) => {
+                  if (["-", "+", ".", "e", "E"].includes(event.key)) {
+                    event.preventDefault();
+                  }
+                }}
               />
             </div>
           </FormSection>
