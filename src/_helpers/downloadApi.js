@@ -31,10 +31,31 @@ const downloadBlob = (blob, filename) => {
 };
 
 export const downloadApiFile = async (endpoint, params = {}, options = {}) => {
-  const response = await axiosPrivate.get(endpoint, {
-    params,
-    responseType: "blob",
-  });
+  let response;
+  try {
+    response = await axiosPrivate.get(endpoint, {
+      params,
+      responseType: "blob",
+    });
+  } catch (error) {
+    // Download errors arrive as blobs too; decode the API's actual reason.
+    let data = error.response?.data;
+    if (data && typeof data.text === "function") {
+      try { data = JSON.parse(await data.text()); } catch { data = null; }
+    }
+    const status = error.response?.status;
+    const fallback = {
+      401: "Your session has expired. Sign in again to download this document.",
+      403: "You do not have permission to download this document.",
+      404: "This document is no longer available. Refresh the page and try again.",
+      409: "This document is not available in the current order or shipment status.",
+      429: "Too many download requests. Please try again shortly.",
+    }[status];
+    error.message = data?.message || data?.error?.message || fallback ||
+      (!error.response ? "Unable to reach the server. Check your connection and try again." : "Document generation failed. Please try again.");
+    if (error.response) error.response.data = data;
+    throw error;
+  }
   const format = params?.format || options.format || "pdf";
   const filename =
     options.filename ||

@@ -1,3 +1,4 @@
+import { cancellationRequesterLabel } from "../../../utils/cancellationRequester";
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
@@ -488,6 +489,11 @@ const Cancellations = () => {
       ),
     },
     {
+      key: "requestedByRole",
+      label: "Requested By",
+      render: (_value, row) => cancellationRequesterLabel(row),
+    },
+    {
       key: "status",
       label: "Cancellation Status",
       sortable: false,
@@ -811,6 +817,11 @@ const Cancellations = () => {
                       orderNumber={detail.orderNumber || detail.order_number}
                     />
                   </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Requested By</p>
+                  <p className="mt-1 text-sm font-medium">{cancellationRequesterLabel(detail)}</p>
                 </div>
 
                 <div>

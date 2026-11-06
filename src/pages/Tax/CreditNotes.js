@@ -449,7 +449,7 @@ const CreditNotes = () => {
         onRefresh={fetchNotes}
         listPage={list}
         emptyMessage="No credit notes found"
-        searchPlaceholder="Search credit note, order ID..."
+        searchPlaceholder="Search credit note, order number..."
         rowActions={rowActions}
         filterBar={<FilterBar fields={filterFields} listPage={list} />}
       />

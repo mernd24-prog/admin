@@ -1,3 +1,5 @@
+import { boxLabelUnavailableReason } from "../../../../utils/boxLabelAvailability";
+import { cancellationRequesterLabel } from "../../../../utils/cancellationRequester";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormik } from "formik";
@@ -2443,7 +2445,7 @@ const DetailStat = ({ label, value, icon, tone = "default" }) => {
   );
 };
 
-const ShipmentCard = ({ shipment = {}, seller, onManage, onDownloadLabel }) => {
+const ShipmentCard = ({ shipment = {}, seller, onManage, onDownloadLabel, labelUnavailableReason = "" }) => {
   const trackingNumber = firstDefined(
     shipment.tracking_number,
     shipment.trackingNumber,
@@ -2508,8 +2510,9 @@ const ShipmentCard = ({ shipment = {}, seller, onManage, onDownloadLabel }) => {
             ? `${eventCount} tracking update${eventCount === 1 ? "" : "s"}`
             : "No tracking updates yet"}
         </span>
+        {labelUnavailableReason && <span className="w-full text-amber-700">{labelUnavailableReason}</span>}
         <div className="flex flex-wrap items-center gap-2">
-          {onDownloadLabel && (
+          {onDownloadLabel && !labelUnavailableReason && (
             <button
               type="button"
               className="rounded-md border border-[#D8A21D] bg-white px-3 py-1.5 text-xs font-semibold text-[#8A5A00] hover:bg-[#fff8ea]"
@@ -4117,7 +4120,7 @@ const selectedCount = Object.keys(formData.cancelItems).length;
                     <RelatedCard
                       key={cancellation.id}
                       title={cancellation.cancellation_number}
-                      subtitle={`${displayStatus(cancellation.scope)} · ${cancellation.reason}`}
+                      subtitle={`Requested by: ${cancellationRequesterLabel(cancellation)} · ${displayStatus(cancellation.scope)} · ${cancellation.reason}`}
                       status={cancellationDisplayStatus(cancellation)}
                       rows={[
                         {
@@ -4240,6 +4243,7 @@ const selectedCount = Object.keys(formData.cancelItems).length;
                         }
                         shipment={shipment}
                         seller={seller}
+                        labelUnavailableReason={boxLabelUnavailableReason(order, shipment)}
                         onDownloadLabel={() => handleDownloadBoxLabel(shipment)}
                         onManage={() =>
                           navigate(
