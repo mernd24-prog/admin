@@ -135,27 +135,35 @@ export default function MarketingSettings({ kind = "coupons" }) {
   };
   return (
     <section className="admin-card p-5">
-      <h2 className="mb-4 text-sm font-semibold">{title}</h2>
-      <div className="mb-4 flex gap-2">
-        <button
-          type="button"
-          className="admin-btn-secondary"
-          onClick={load}
-          disabled={busy}
-        >
-          Refresh
-        </button>
-        <PermissionGuard module={permissionModule} action={ACTIONS.UPDATE} hide>
+      <div className="flex  justify-between">
+        <h2 className="mb-4 text-sm font-semibold">{title}</h2>
+
+        <div className="mb-4 flex gap-2">
           <button
             type="button"
-            className="admin-btn-primary"
-            onClick={save}
-            disabled={busy || !loaded}
+            className="admin-btn-secondary"
+            onClick={load}
+            disabled={busy}
           >
-            {busy ? "Please wait..." : "Save Marketing Settings"}
+            Refresh
           </button>
-        </PermissionGuard>
+          <PermissionGuard
+            module={permissionModule}
+            action={ACTIONS.UPDATE}
+            hide
+          >
+            <button
+              type="button"
+              className="admin-btn-primary"
+              onClick={save}
+              disabled={busy || !loaded}
+            >
+              {busy ? "Please wait..." : "Save Marketing Settings"}
+            </button>
+          </PermissionGuard>
+        </div>
       </div>
+
       <p className="mb-4 text-sm text-gray-600" aria-live="polite">
         {marketingUsage && marketingUsage.campaignKey === policy.campaignKey
           ? `Saved campaign ${marketingUsage.campaignKey}: ₹${marketingUsage.spent} reserved across ${marketingUsage.orders} orders. Remaining saved budget: ${marketingUsage.remaining === null ? "Unlimited" : `₹${marketingUsage.remaining}`}. Refresh to update.`

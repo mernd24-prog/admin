@@ -208,7 +208,7 @@ const ShipmentTracking = () => {
     !initialOrderId || Boolean(getInitialQuery("orderNumber")),
   );
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
     defaultFilters: {
@@ -413,58 +413,55 @@ const ShipmentTracking = () => {
 
   const hasResolvedInitialRef = useRef(false);
 
-useEffect(() => {
-  if (
-    hasResolvedInitialRef.current ||
-    initialShipmentId ||
-    !initialOrderId ||
-    filters.orderNumber ||
-    !shipmentPayload.list.length
-  ) {
-    return;
-  }
+  useEffect(() => {
+    if (
+      hasResolvedInitialRef.current ||
+      initialShipmentId ||
+      !initialOrderId ||
+      filters.orderNumber ||
+      !shipmentPayload.list.length
+    ) {
+      return;
+    }
 
-  const match = shipmentPayload.list.find((item) => {
-    const orderId =
-      item?.order_id ??
-      item?.orderId ??
-      item?.order?._id ??
-      item?.order?.id ??
-      item?.orderSnapshot?._id ??
-      item?.orderSnapshot?.id ??
-      item?.order_snapshot?._id ??
-      item?.order_snapshot?.id;
+    const match = shipmentPayload.list.find((item) => {
+      const orderId =
+        item?.order_id ??
+        item?.orderId ??
+        item?.order?._id ??
+        item?.order?.id ??
+        item?.orderSnapshot?._id ??
+        item?.orderSnapshot?.id ??
+        item?.order_snapshot?._id ??
+        item?.order_snapshot?.id;
 
-    return (
-      orderId != null &&
-      String(orderId) === String(initialOrderId)
-    );
-  });
+      return orderId != null && String(orderId) === String(initialOrderId);
+    });
 
-  // Do not select the first shipment when no matching order is found.
-  if (!match) return;
+    // Do not select the first shipment when no matching order is found.
+    if (!match) return;
 
-  const realOrderNumber =
-    match.orderNumber ??
-    match.order_number ??
-    match.order?.orderNumber ??
-    match.order?.order_number ??
-    match.orderSnapshot?.orderNumber ??
-    match.orderSnapshot?.order_number ??
-    match.order_snapshot?.orderNumber ??
-    match.order_snapshot?.order_number;
+    const realOrderNumber =
+      match.orderNumber ??
+      match.order_number ??
+      match.order?.orderNumber ??
+      match.order?.order_number ??
+      match.orderSnapshot?.orderNumber ??
+      match.orderSnapshot?.order_number ??
+      match.order_snapshot?.orderNumber ??
+      match.order_snapshot?.order_number;
 
-  if (!realOrderNumber) return;
+    if (!realOrderNumber) return;
 
-  hasResolvedInitialRef.current = true;
-  setFilters({ ...filters, orderId: "", orderNumber: realOrderNumber });
-}, [
-  shipmentPayload.list,
-  initialOrderId,
-  initialShipmentId,
-  filters,
-  setFilters,
-]);
+    hasResolvedInitialRef.current = true;
+    setFilters({ ...filters, orderId: "", orderNumber: realOrderNumber });
+  }, [
+    shipmentPayload.list,
+    initialOrderId,
+    initialShipmentId,
+    filters,
+    setFilters,
+  ]);
   const [organizationOptions, setOrganizationOptions] = useState([]);
 
   const FILTER_FIELDS = [
