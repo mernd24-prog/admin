@@ -1,5 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useState } from "react";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { MdAdd, MdCheckCircle, MdRefresh, MdVisibility } from "react-icons/md";
@@ -97,10 +99,32 @@ const DealPayouts = () => {
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState(null);
   const [showGenerate, setShowGenerate] = useState(false);
-  const [generateForm, setGenerateForm] = useState({
-    fromDate: "",
-    toDate: "",
-    sellerId: "",
+  const generateFormik = useFormik({
+    initialValues: { fromDate: "", toDate: "", sellerId: "" },
+    validationSchema: Yup.object({
+      fromDate: Yup.string().required("Please select a date range"),
+      toDate: Yup.string().required("Please select a date range"),
+    }),
+    onSubmit: async (values, { resetForm }) => {
+      try {
+        setGenerating(true);
+        await dispatch(
+          generateDealPayout({
+            periodStart: values.fromDate,
+            periodEnd: values.toDate,
+            sellerId: values.sellerId || undefined,
+          }),
+        ).unwrap();
+        toast.success("Payout(s) generated");
+        setShowGenerate(false);
+        resetForm();
+        fetchPayouts();
+      } catch (err) {
+        toast.error(err?.message || "Failed to generate payouts");
+      } finally {
+        setGenerating(false);
+      }
+    },
   });
   const [sellerOptions, setSellerOptions] = useState([]);
   const [sellerLoading, setSellerLoading] = useState(false);
@@ -145,31 +169,6 @@ const DealPayouts = () => {
   useEffect(() => {
     fetchPayouts();
   }, [fetchPayouts]);
-
-  const handleGenerate = useCallback(async () => {
-    if (!generateForm.fromDate || !generateForm.toDate) {
-      toast.error("Date range required");
-      return;
-    }
-    try {
-      setGenerating(true);
-      await dispatch(
-        generateDealPayout({
-          fromDate: generateForm.fromDate,
-          toDate: generateForm.toDate,
-          sellerId: generateForm.sellerId || undefined,
-        }),
-      ).unwrap();
-      toast.success("Payout(s) generated");
-      setShowGenerate(false);
-      setGenerateForm({ fromDate: "", toDate: "", sellerId: "" });
-      fetchPayouts();
-    } catch (err) {
-      toast.error(err?.message || "Failed to generate payouts");
-    } finally {
-      setGenerating(false);
-    }
-  }, [generateForm, dispatch, fetchPayouts]);
 
   const handleProcess = useCallback(async () => {
     const { payout, status, referenceId, note } = processConfirm;
@@ -375,8 +374,11 @@ const DealPayouts = () => {
       {/* Generate payouts modal */}
       <DefaultModal
         isOpen={showGenerate}
-        onClose={() => setShowGenerate(false)}
-        onSubmit={handleGenerate}
+        onClose={() => {
+          setShowGenerate(false);
+          generateFormik.resetForm();
+        }}
+        onSubmit={generateFormik.handleSubmit}
         loading={generating}
         title="Generate Deal Payouts"
         submitButtonText="Generate Payouts"
@@ -387,24 +389,43 @@ const DealPayouts = () => {
             title="Payout Details"
             subtitle="Select the payout period and seller for which you want to generate payouts."
           >
-            <div className="space-y-5">
+            <div className="space-y-3">
               {/* Payout Period */}
-              <DateRangeFilter
-                field={{
-                  key: "dateRange",
-                  type: "daterange",
-                  label: "Date Range",
-                  startKey: "fromDate",
-                  endKey: "toDate",
-                  disableFuture: true,
-                  width: "w-full",
-                  placeholder: "Select date range",
-                }}
-                values={generateForm}
-                onChange={(key, value) =>
-                  setGenerateForm((prev) => ({ ...prev, [key]: value }))
-                }
-              />
+              <div>
+                <DateRangeFilter
+                  field={{
+                    key: "dateRange",
+                    type: "daterange",
+                    label: "Date Range",
+                    startKey: "fromDate",
+                    endKey: "toDate",
+                    disableFuture: true,
+                    width: "w-full",
+                    wrapperClassName: "!gap-1",
+                    placeholder: "Select date range",
+                  }}
+                  values={generateFormik.values}
+                  onApply={(fromDate, toDate) => {
+                    generateFormik.setValues(
+                      (current) => ({ ...current, fromDate, toDate }),
+                      true,
+                    );
+                    generateFormik.setTouched(
+                      { ...generateFormik.touched, fromDate: true, toDate: true },
+                      false,
+                    );
+                  }}
+                />
+                {(generateFormik.touched.fromDate ||
+                  generateFormik.touched.toDate) &&
+                  (generateFormik.errors.fromDate ||
+                    generateFormik.errors.toDate) && (
+                    <p className="admin-field-error !mt-0" role="alert">
+                      {generateFormik.errors.fromDate ||
+                        generateFormik.errors.toDate}
+                    </p>
+                  )}
+              </div>
 
               {/* Seller Selection */}
               <FilterSelect
@@ -412,14 +433,11 @@ const DealPayouts = () => {
                 options={sellerOptions}
                 value={
                   sellerOptions.find(
-                    (option) => option.value === generateForm.sellerId,
+                    (option) => option.value === generateFormik.values.sellerId,
                   ) || null
                 }
                 onChange={(option) =>
-                  setGenerateForm((prev) => ({
-                    ...prev,
-                    sellerId: option?.value || "",
-                  }))
+                  generateFormik.setFieldValue("sellerId", option?.value || "")
                 }
                 isLoading={sellerLoading}
                 placeholder="All Sellers"

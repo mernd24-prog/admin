@@ -44,6 +44,7 @@ import {
 import { financeMoney } from "../OrdersManagement/SellerFinance/financeUi";
 import Tabs from "../../components/Shared/Tabs";
 import { Download, Upload } from "lucide-react";
+import { formatDateTime12Hour } from "../../utils/formatters";
 
 const REGISTERS = [
   ["sales", "Sales Register"],
@@ -161,13 +162,7 @@ export default function CaFinanceAnalytics() {
     [filters],
   );
   const overviewQuery = useMemo(() => {
-    const {
-      basis,
-      fromDate,
-      toDate,
-      sellerId,
-      organizationId,
-    } = filters;
+    const { basis, fromDate, toDate, sellerId, organizationId } = filters;
     return Object.fromEntries(
       Object.entries({
         basis,
@@ -175,7 +170,9 @@ export default function CaFinanceAnalytics() {
         toDate,
         sellerId,
         organizationId,
-      }).filter(([, value]) => value !== "" && value !== null && value !== undefined),
+      }).filter(
+        ([, value]) => value !== "" && value !== null && value !== undefined,
+      ),
     );
   }, [
     filters.basis,
@@ -186,10 +183,10 @@ export default function CaFinanceAnalytics() {
   ]);
   const [activeAnalyticsTab, setActiveAnalyticsTab] = useState("trends");
 
-const analyticsTabs = [
-  { value: "trends", label: "Daily Orders and GMV" },
-  { value: "reconciliation", label: "Reconciliation Checks" },
-];
+  const analyticsTabs = [
+    { value: "trends", label: "Daily Orders and GMV" },
+    { value: "reconciliation", label: "Reconciliation Checks" },
+  ];
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
@@ -317,7 +314,8 @@ const analyticsTabs = [
   };
   const exportReport = () => {
     const overviewRows = CARDS.filter(
-      ([key]) => !(seller && ["platformRevenue", "outputGstLiability"].includes(key)),
+      ([key]) =>
+        !(seller && ["platformRevenue", "outputGstLiability"].includes(key)),
     ).map(([key, label]) => ({
       metric: label,
       value: summary.cards?.[key] ?? "Unavailable",
@@ -334,15 +332,14 @@ const analyticsTabs = [
     ];
 
     try {
-      const exported = exportToExcelWorkbook(
-        sheets,
-        "ca-finance-summary.xlsx",
-      );
+      const exported = exportToExcelWorkbook(sheets, "ca-finance-summary.xlsx");
       if (exported) toast.success("Finance analytics workbook exported.");
       else toast.error("Unable to export finance analytics workbook.");
     } catch (error) {
       console.error("Finance analytics workbook export failed:", error);
-      toast.error(error?.message || "Failed to export finance analytics workbook.");
+      toast.error(
+        error?.message || "Failed to export finance analytics workbook.",
+      );
     }
   };
 
@@ -369,7 +366,11 @@ const analyticsTabs = [
   const columnMap = useMemo(
     () => ({
       sales: [
-        { key: "date", label: "Date", render: dateTime },
+        {
+          key: "date",
+          label: "Date",
+          render: (value) => formatDateTime12Hour(value),
+        },
         {
           key: "order_number",
           label: "Order",
@@ -386,7 +387,11 @@ const analyticsTabs = [
         },
       ],
       collections: [
-        { key: "created_at", label: "Captured at", render: dateTime },
+        {
+          key: "created_at",
+          label: "Captured at",
+          render: (value) => formatDateTime12Hour(value),
+        },
         {
           key: "order_number",
           label: "Order",
@@ -403,7 +408,11 @@ const analyticsTabs = [
         },
       ],
       "seller-payable": [
-        { key: "created_at", label: "Date", render: dateTime },
+        {
+          key: "created_at",
+          label: "Date",
+          render: (value) => formatDateTime12Hour(value),
+        },
         {
           key: "order_id",
           label: "Order",
@@ -422,7 +431,11 @@ const analyticsTabs = [
         },
       ],
       refunds: [
-        { key: "created_at", label: "Recorded", render: dateTime },
+        {
+          key: "created_at",
+          label: "Recorded",
+          render: (value) => formatDateTime12Hour(value),
+        },
         {
           key: "order_id",
           label: "Order",
@@ -439,7 +452,11 @@ const analyticsTabs = [
         },
       ],
       "platform-revenue": [
-        { key: "created_at", label: "Recognized", render: dateTime },
+        {
+          key: "created_at",
+          label: "Recognized",
+          render: (value) => formatDateTime12Hour(value),
+        },
         {
           key: "order_id",
           label: "Order",
@@ -461,7 +478,11 @@ const analyticsTabs = [
         },
       ],
       payouts: [
-        { key: "created_at", label: "Created", render: dateTime },
+        {
+          key: "created_at",
+          label: "Created",
+          render: (value) => formatDateTime12Hour(value),
+        },
         ...identities,
         {
           key: "id",
@@ -480,7 +501,11 @@ const analyticsTabs = [
         },
       ],
       gst: [
-        { key: "issued_at", label: "Issued", render: dateTime },
+        {
+          key: "issued_at",
+          label: "Issued",
+          render: (value) => formatDateTime12Hour(value),
+        },
         { key: "invoice_number", label: "Invoice" },
         {
           key: "order_id",
@@ -496,7 +521,11 @@ const analyticsTabs = [
         { key: "total_amount", label: "Total", render: money },
       ],
       "tcs-tds": [
-        { key: "created_at", label: "Date", render: dateTime },
+        {
+          key: "created_at",
+          label: "Date",
+          render: (value) => formatDateTime12Hour(value),
+        },
         {
           key: "order_id",
           label: "Order",
@@ -509,7 +538,11 @@ const analyticsTabs = [
         { key: "net_amount", label: "Net payable", render: money },
       ],
       razorpay: [
-        { key: "occurred_at", label: "Provider date", render: dateTime },
+        {
+          key: "occurred_at",
+          label: "Provider date",
+          render: (value) => formatDateTime12Hour(value),
+        },
         { key: "transaction_type", label: "Type" },
         { key: "external_id", label: "Provider ID" },
         { key: "order_reference", label: "Order reference" },
@@ -618,7 +651,7 @@ const analyticsTabs = [
   ];
 
   return (
-    <div className="p-3 sm:p-4 lg:p-6">
+    <div>
       <PageHeader
         title={seller ? "My Finance Analytics" : "CA Finance & Reconciliation"}
         subtitle="Sales, collections, statutory liabilities, seller payables and reconciliation exceptions."
@@ -627,26 +660,33 @@ const analyticsTabs = [
             label: seller ? "My Reports" : "Reports & Analytics",
             to: "/app/analytics",
           },
-          { label: "CA Finance" },
+          {
+            label: isSellerPanel()
+              ? "Finance Analytics"
+              : "CA Finance & Reconciliation",
+          },
         ]}
         actions={
           <>
-           <button
-  type="button"
-  onClick={() => {
-    loadOverview();
-    loadRegister();
-  }}
-  disabled={refreshing}
-  aria-label={
-    refreshing
-      ? "Refreshing finance analytics"
-      : "Refresh finance analytics"
-  }
->
-  <MdRefresh className={refreshing ? "animate-spin" : ""} />
-  {refreshing ? "Refreshing..." : "Refresh"}
-</button>
+            <button
+              type="button"
+              onClick={() => {
+                loadOverview();
+                loadRegister();
+              }}
+              disabled={refreshing}
+              aria-label={
+                refreshing
+                  ? "Refreshing finance analytics"
+                  : "Refresh finance analytics"
+              }
+            >
+              <MdRefresh
+                size={15}
+                className={refreshing ? "animate-spin" : ""}
+              />
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </button>
             {!seller && (
               <>
                 <input
@@ -657,13 +697,13 @@ const analyticsTabs = [
                   onChange={importFile}
                 />
                 <button type="button" onClick={() => fileRef.current?.click()}>
-                  <Download />
+                  <Download size={15} />
                   Import
                 </button>
               </>
             )}
             <button type="button" onClick={exportReport}>
-              <Upload />
+              <Upload size={15} />
               Export
             </button>
           </>
@@ -697,122 +737,118 @@ const analyticsTabs = [
           );
         })}
       </section>
-       <section className="space-y-4 mb-4">
-    <Tabs
-      tabs={analyticsTabs}
-      activeTab={activeAnalyticsTab}
-      onChange={setActiveAnalyticsTab}
-    />
+      <section className="space-y-4 mb-4">
+        <Tabs
+          tabs={analyticsTabs}
+          activeTab={activeAnalyticsTab}
+          onChange={setActiveAnalyticsTab}
+        />
 
-    {activeAnalyticsTab === "trends" && (
-      <div className="admin-card bg-white p-4">
-        <h2 className="text-sm font-bold text-[var(--admin-ink)]">
-          Daily Orders and GMV
-        </h2>
-        <p className="text-xs text-[var(--admin-muted)]">
-          Based on the active accounting period.
-        </p>
+        {activeAnalyticsTab === "trends" && (
+          <div className="admin-card bg-white p-4">
+            <h2 className="text-sm font-bold text-[var(--admin-ink)]">
+              Daily Orders and GMV
+            </h2>
+            <p className="text-xs text-[var(--admin-muted)]">
+              Based on the active accounting period.
+            </p>
 
-        <div className="mt-4 h-64">
-          {overviewLoading ? (
-            <div className="h-full animate-pulse rounded bg-[var(--admin-surface-soft)]" />
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trends}>
-                <CartesianGrid stroke="#e9dfc9" strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v) => financeMoney(v)} />
-                <Area
-                  type="monotone"
-                  dataKey="gmv"
-                  stroke="#2e1b78"
-                  fill="#f5e7bd"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
-    )}
-
-    {activeAnalyticsTab === "reconciliation" && (
-      <div className="admin-card bg-white p-4">
-        <h2 className="text-sm font-bold text-[var(--admin-ink)]">
-          Reconciliation Checks
-        </h2>
-        <p className="text-xs text-[var(--admin-muted)]">
-          Matched, warning, mismatch, or unavailable.
-        </p>
-
-        <div className="mt-3 space-y-2">
-          {checks.map((check) => (
-            <div
-              key={check.id}
-              className="rounded-md border border-[var(--admin-line)] p-3"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <span className="text-xs font-semibold text-[var(--admin-ink)]">
-                  {check.label}
-                </span>
-
-                <StatusBadge
-                  status={check.state}
-                  label={check.state}
-                  dot
-                />
-              </div>
-
-              {check.variance !== null && (
-                <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                  Variance: {financeMoney(check.variance)}
-                </p>
-              )}
-
-              {check.reason && (
-                <p className="mt-1 text-xs text-amber-700">
-                  {check.reason}
-                </p>
+            <div className="mt-4 h-64">
+              {overviewLoading ? (
+                <div className="h-full animate-pulse rounded bg-[var(--admin-surface-soft)]" />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trends}>
+                    <CartesianGrid stroke="#e9dfc9" strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip formatter={(v) => financeMoney(v)} />
+                    <Area
+                      type="monotone"
+                      dataKey="gmv"
+                      stroke="#2e1b78"
+                      fill="#f5e7bd"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               )}
             </div>
-          ))}
-        </div>
-      </div>
-    )}
-  </section>
-   <div className="mb-4">
-<Tabs
-  tabs={REGISTERS.filter(([key]) => !(seller && key === "razorpay")).map(
-    ([key, label]) => ({
-      value: key,
-      label,
-    }),
-  )}
-  activeTab={register}
-  onChange={(key) => {
-    if (key === register) return;
+          </div>
+        )}
 
-    setRegister(key);
-    setFilters((current) => {
-      if (
-        current.offset === 0 &&
-        current.search === "" &&
-        current.status === "" &&
-        current.provider === ""
-      ) {
-        return current;
-      }
-      return {
-        ...current,
-        offset: 0,
-        search: "",
-        status: "",
-        provider: "",
-      };
-    });
-  }}
-/>
-</div>
+        {activeAnalyticsTab === "reconciliation" && (
+          <div className="admin-card bg-white p-4">
+            <h2 className="text-sm font-bold text-[var(--admin-ink)]">
+              Reconciliation Checks
+            </h2>
+            <p className="text-xs text-[var(--admin-muted)]">
+              Matched, warning, mismatch, or unavailable.
+            </p>
+
+            <div className="mt-3 space-y-2">
+              {checks.map((check) => (
+                <div
+                  key={check.id}
+                  className="rounded-md border border-[var(--admin-line)] p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-xs font-semibold text-[var(--admin-ink)]">
+                      {check.label}
+                    </span>
+
+                    <StatusBadge status={check.state} label={check.state} dot />
+                  </div>
+
+                  {check.variance !== null && (
+                    <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                      Variance: {financeMoney(check.variance)}
+                    </p>
+                  )}
+
+                  {check.reason && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      {check.reason}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+      <div className="mb-4">
+        <Tabs
+          tabs={REGISTERS.filter(
+            ([key]) => !(seller && key === "razorpay"),
+          ).map(([key, label]) => ({
+            value: key,
+            label,
+          }))}
+          activeTab={register}
+          onChange={(key) => {
+            if (key === register) return;
+
+            setRegister(key);
+            setFilters((current) => {
+              if (
+                current.offset === 0 &&
+                current.search === "" &&
+                current.status === "" &&
+                current.provider === ""
+              ) {
+                return current;
+              }
+              return {
+                ...current,
+                offset: 0,
+                search: "",
+                status: "",
+                provider: "",
+              };
+            });
+          }}
+        />
+      </div>
       <DataTable
         columns={columnMap[register]}
         data={registerData.rows || []}

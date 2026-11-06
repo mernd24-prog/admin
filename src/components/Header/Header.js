@@ -38,6 +38,7 @@ import {
   getStoredUser,
   isAdminOrSuperAdminRole,
 } from "../../_helpers/authStorage";
+import { isSellerPanel } from "../../_helpers/panelConfig";
 
 const SELLER_ROLES = new Set(["seller", "seller-admin", "seller-sub-admin"]);
 
@@ -168,7 +169,7 @@ const getHeaderTitle = (path = "", fallback = "") => {
   const isId = /^[a-fA-F0-9]{24}$/.test(lastPart);
   const routeKey = isId ? routeParts[routeParts.length - 2] : lastPart;
 
-  if (HEADER_ROUTE_TITLES[routeKey]) {
+    if (HEADER_ROUTE_TITLES[routeKey]) {
     return HEADER_ROUTE_TITLES[routeKey];
   }
 
@@ -514,11 +515,11 @@ export default function Header({
               )}
             </button>
 
-            <div className="min-w-0 leading-tight">
+            {/* <div className="min-w-0 leading-tight">
               <h1 className="truncate text-[13px] font-semibold capitalize text-[var(--admin-ink)]">
                 {headerTitle || moduleName || "Dashboard"}
               </h1>
-            </div>
+            </div> */}
           </div>
 
           {/* Right: notifications and user profile */}
