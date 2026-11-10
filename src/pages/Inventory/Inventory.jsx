@@ -547,7 +547,7 @@ const Inventory = () => {
   });
 
   const detailList = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
   });
 
   const adminPanel = !isSellerPanel();

@@ -959,7 +959,7 @@ export default function ShippingProfiles() {
     [storedUser],
   );
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
   });

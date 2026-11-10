@@ -129,7 +129,7 @@ const HsnCode = () => {
   const dispatch = useDispatch();
 
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "code",
     defaultSortDir: "asc",
   });

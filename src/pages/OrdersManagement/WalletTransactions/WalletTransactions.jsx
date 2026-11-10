@@ -31,19 +31,29 @@ const FILTER_FIELDS = [
     type: "asyncDropdown",
     label: "Buyer",
     width: "w-52",
-    load: (search) => dropdownApi.getBuyers({ keyWord: search, searchFields: "full_name,email" }),
+    load: (search) =>
+      dropdownApi.getBuyers({
+        keyWord: search,
+        searchFields: "full_name,email",
+      }),
   },
   {
     key: "type",
     type: "select",
     label: "Type",
-    options: TRANSACTION_TYPES.map((v) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) })),
+    options: TRANSACTION_TYPES.map((v) => ({
+      value: v,
+      label: v.charAt(0).toUpperCase() + v.slice(1),
+    })),
   },
   {
     key: "status",
     type: "select",
     label: "Status",
-    options: TRANSACTION_STATUSES.map((v) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) })),
+    options: TRANSACTION_STATUSES.map((v) => ({
+      value: v,
+      label: v.charAt(0).toUpperCase() + v.slice(1),
+    })),
   },
   { key: "referenceType", type: "text", label: "Ref. Type", width: "w-40" },
   { key: "fromDate", type: "date", label: "From" },
@@ -55,7 +65,9 @@ const unwrapList = (payload = {}) => {
   if (Array.isArray(data)) return { list: data, total: data.length };
   return {
     list: data?.list || data?.items || data?.transactions || data || [],
-    total: Number(data?.total || data?.list?.length || data?.items?.length || 0),
+    total: Number(
+      data?.total || data?.list?.length || data?.items?.length || 0,
+    ),
   };
 };
 
@@ -74,14 +86,22 @@ const COLUMNS = [
   {
     key: "id",
     label: "Transaction ID",
-    render: (v) => <span className="font-mono text-xs text-gray-500">{String(v || "—").slice(-12)}</span>,
+    render: (v) => (
+      <span className="font-mono text-xs text-gray-500">
+        {String(v || "—").slice(-12)}
+      </span>
+    ),
   },
   {
     key: "userId",
     label: "User",
     render: (v, row) => (
       <span className="text-sm">
-        {row.userName || row.user?.fullName || row.user?.name || row.user?.email || String(v || row.user_id || "—").slice(-8)}
+        {row.userName ||
+          row.user?.fullName ||
+          row.user?.name ||
+          row.user?.email ||
+          String(v || row.user_id || "—").slice(-8)}
       </span>
     ),
   },
@@ -89,7 +109,9 @@ const COLUMNS = [
     key: "type",
     label: "Type",
     render: (v) => (
-      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${typeColorClass(v)}`}>
+      <span
+        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${typeColorClass(v)}`}
+      >
         {v || "—"}
       </span>
     ),
@@ -100,8 +122,14 @@ const COLUMNS = [
     render: (v, row) => {
       const isDebit = ["debit", "payout"].includes(row.type);
       return (
-        <span className={`text-sm font-semibold ${isDebit ? "text-red-600" : "text-green-700"}`}>
-          {isDebit ? "−" : "+"}₹{Number(v || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <span
+          className={`text-sm font-semibold ${isDebit ? "text-red-600" : "text-green-700"}`}
+        >
+          {isDebit ? "−" : "+"}₹
+          {Number(v || 0).toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
         </span>
       );
     },
@@ -115,21 +143,31 @@ const COLUMNS = [
   {
     key: "referenceType",
     label: "Reference Type",
-    render: (v, row) => <span className="text-xs capitalize text-gray-600">{String(v || row.reference_type || "—").replace(/_/g, " ")}</span>,
+    render: (v, row) => (
+      <span className="text-xs capitalize text-gray-600">
+        {String(v || row.reference_type || "—").replace(/_/g, " ")}
+      </span>
+    ),
   },
   {
     key: "referenceId",
     label: "Reference ID",
     render: (v, row) => {
       const referenceId = v || row.reference_id;
-      return <span className="font-mono text-xs text-gray-500">{referenceId ? String(referenceId).slice(-12) : "—"}</span>;
+      return (
+        <span className="font-mono text-xs text-gray-500">
+          {referenceId ? String(referenceId).slice(-12) : "—"}
+        </span>
+      );
     },
   },
   {
     key: "createdAt",
     label: "Created",
     sortable: true,
-    render: (v, row) => <span className="text-xs text-gray-500">{fmt(v || row.created_at)}</span>,
+    render: (v, row) => (
+      <span className="text-xs text-gray-500">{fmt(v || row.created_at)}</span>
+    ),
   },
 ];
 
@@ -139,7 +177,7 @@ const WalletTransactions = () => {
   const payload = unwrapList(selector.walletTransactionsData);
 
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
   });
@@ -157,7 +195,7 @@ const WalletTransactions = () => {
         getWalletTransactions({
           ...params,
           offset: ((params.page || 1) - 1) * (params.limit || 20),
-        })
+        }),
       ).unwrap();
     } catch (err) {
       const msg = err?.message || "Failed to load wallet transactions";
@@ -188,7 +226,6 @@ const WalletTransactions = () => {
               type="button"
               onClick={fetchTransactions}
               disabled={loading}
-
             >
               <MdRefresh size={16} /> Refresh
             </button>
@@ -209,31 +246,31 @@ const WalletTransactions = () => {
         )}
 
         <DataTable
-            columns={COLUMNS}
-            data={payload.list}
-            loading={loading}
-            totalCount={payload.total || payload.list.length}
-            page={list.page}
-            pageSize={list.pageSize}
-            onPageChange={list.setPage}
-            onPageSizeChange={list.setPageSize}
-            onSearch={list.setSearch}
-            searchPlaceholder="Search transaction ID, user, reference, or metadata"
-            onSort={list.setSort}
-            sortKey={list.sortKey}
-            sortDir={list.sortDir}
-            filterBar={(
-              <FilterBar
-                filters={FILTER_FIELDS}
-                values={list.filters}
-                onChange={list.setFilter}
-                onClear={list.clearFilters}
-                loading={loading}
-                activeCount={list.activeFilterCount}
-              />
-            )}
-            emptyText="No wallet transactions found"
-          />
+          columns={COLUMNS}
+          data={payload.list}
+          loading={loading}
+          totalCount={payload.total || payload.list.length}
+          page={list.page}
+          pageSize={list.pageSize}
+          onPageChange={list.setPage}
+          onPageSizeChange={list.setPageSize}
+          onSearch={list.setSearch}
+          searchPlaceholder="Search transaction ID, user, reference, or metadata"
+          onSort={list.setSort}
+          sortKey={list.sortKey}
+          sortDir={list.sortDir}
+          filterBar={
+            <FilterBar
+              filters={FILTER_FIELDS}
+              values={list.filters}
+              onChange={list.setFilter}
+              onClear={list.clearFilters}
+              loading={loading}
+              activeCount={list.activeFilterCount}
+            />
+          }
+          emptyText="No wallet transactions found"
+        />
       </div>
     </PermissionGuard>
   );

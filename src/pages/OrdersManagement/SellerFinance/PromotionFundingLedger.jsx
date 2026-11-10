@@ -65,7 +65,7 @@ const PromotionFundingLedger = () => {
   const [filters, setFilters] = useState({
     search: "",
     fundingType: "",
-    limit: 20,
+    limit: 10,
     offset: 0,
   });
 

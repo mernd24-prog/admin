@@ -262,7 +262,7 @@ const PayoutOpsQueue = () => {
   const selector = useSelector((state) => state.sellerCommissions);
   const payload = unwrapList(selector.payoutOperationsQueueData);
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "createdAt",
     defaultSortDir: "asc",
   });

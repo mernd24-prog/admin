@@ -477,7 +477,7 @@ const ProductReviews = () => {
   const [reviewDetailsTarget, setReviewDetailsTarget] = useState(null);
 
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
   });
@@ -510,72 +510,72 @@ const ProductReviews = () => {
   const summaryPayload = getProductReviewSummaryPayload(reviewsData);
   const detailPayload = getProductReviewDetailPayload(reviewsData);
 
-const filterFields = useMemo(
-  () => [
-    ...(showSellerFilter
-      ? [
-          {
-            key: "sellerId",
-            type: "asyncDropdown",
-            label: "Seller",
-            width: "w-52",
-            placeholder: "All Sellers",
-            load: async (search) => {
-              const result = await dropdownApi.getSellers({
-                keyWord: search,
-                searchFields: "full_name,email,businessName",
-                limit: 20,
-              });
+  const filterFields = useMemo(
+    () => [
+      ...(showSellerFilter
+        ? [
+            {
+              key: "sellerId",
+              type: "asyncDropdown",
+              label: "Seller",
+              width: "w-52",
+              placeholder: "All Sellers",
+              load: async (search) => {
+                const result = await dropdownApi.getSellers({
+                  keyWord: search,
+                  searchFields: "full_name,email,businessName",
+                  limit: 20,
+                });
 
-              return Array.isArray(result) ? result : [];
+                return Array.isArray(result) ? result : [];
+              },
             },
-          },
-        ]
-      : []),
+          ]
+        : []),
 
-    {
-      key: "status",
-      type: "select",
-      label: "Status",
-      width: "w-52",
-      placeholder: "All Status",
-       options: [
-    { label: "All", value: "all" },
-    { label: "Pending", value: "pending" },
-    { label: "Published", value: "published" },
-    { label: "Hidden", value: "hidden" },
-    { label: "Rejected", value: "rejected" },
-  ],
-    },
+      {
+        key: "status",
+        type: "select",
+        label: "Status",
+        width: "w-52",
+        placeholder: "All Status",
+        options: [
+          { label: "All", value: "all" },
+          { label: "Pending", value: "pending" },
+          { label: "Published", value: "published" },
+          { label: "Hidden", value: "hidden" },
+          { label: "Rejected", value: "rejected" },
+        ],
+      },
 
-    ...(!isDetailMode
-      ? [
-          {
-            key: "product",
-            type: "select",
-            label: "Product",
-            width: "w-52",
-            options: productOptions,
-            placeholder: "All Products",
-          },
-        ]
-      : [
-          {
-            key: "fromDate",
-            type: "date",
-            label: "From Date",
-            disableFuture: true,
-          },
-          {
-            key: "toDate",
-            type: "date",
-            label: "To Date",
-            disableFuture: true,
-          },
-        ]),
-  ],
-  [productOptions, showSellerFilter, isDetailMode],
-);
+      ...(!isDetailMode
+        ? [
+            {
+              key: "product",
+              type: "select",
+              label: "Product",
+              width: "w-52",
+              options: productOptions,
+              placeholder: "All Products",
+            },
+          ]
+        : [
+            {
+              key: "fromDate",
+              type: "date",
+              label: "From Date",
+              disableFuture: true,
+            },
+            {
+              key: "toDate",
+              type: "date",
+              label: "To Date",
+              disableFuture: true,
+            },
+          ]),
+    ],
+    [productOptions, showSellerFilter, isDetailMode],
+  );
 
   const items = isDetailMode ? detailPayload.list : summaryPayload.list;
   const total = isDetailMode ? detailPayload.total : summaryPayload.total;
@@ -629,23 +629,23 @@ const filterFields = useMemo(
     const sellerIdFromFilter =
       list.filters.sellerId || selectedSellerId || undefined;
 
-  const requestParams = {
-  page: params.page,
-  limit: params.limit,
-  search: params.search || undefined,
-  status: params.status || undefined,
-  rating: params.rating ? Number(params.rating) : undefined,
-  sellerId: !sellerScoped ? sellerIdFromFilter : undefined,
-  sortBy: params.sortBy,
-  sortDir: params.sortDir,
-  sellerScope: sellerScoped || undefined,
+    const requestParams = {
+      page: params.page,
+      limit: params.limit,
+      search: params.search || undefined,
+      status: params.status || undefined,
+      rating: params.rating ? Number(params.rating) : undefined,
+      sellerId: !sellerScoped ? sellerIdFromFilter : undefined,
+      sortBy: params.sortBy,
+      sortDir: params.sortDir,
+      sellerScope: sellerScoped || undefined,
 
-  // Date range filter
-  fromDate: list.filters.fromDate || undefined,
-  toDate: list.filters.toDate
-    ? `${list.filters.toDate}T23:59:59.999`
-    : undefined,
-};
+      // Date range filter
+      fromDate: list.filters.fromDate || undefined,
+      toDate: list.filters.toDate
+        ? `${list.filters.toDate}T23:59:59.999`
+        : undefined,
+    };
 
     const action = selectedProductId
       ? getProductReviewSummaryReviews({
@@ -1258,25 +1258,25 @@ const filterFields = useMemo(
         rowKey={isDetailMode ? "_id" : "productId"}
         onRowClick={undefined}
         filterBar={
-  <FilterBar
-    fields={filterFields}
-    listPage={list}
-    excludeCountKeys={isDetailMode ? ["product"] : []}
-    onClear={() => {
-      if (isDetailMode && selectedProductId) {
-        list.setFilters({
-          product: selectedProductId,
-          fromDate: "",
-          toDate: "",
-        });
-      } else {
-        list.clearFilters();
-      }
+          <FilterBar
+            fields={filterFields}
+            listPage={list}
+            excludeCountKeys={isDetailMode ? ["product"] : []}
+            onClear={() => {
+              if (isDetailMode && selectedProductId) {
+                list.setFilters({
+                  product: selectedProductId,
+                  fromDate: "",
+                  toDate: "",
+                });
+              } else {
+                list.clearFilters();
+              }
 
-      list.clearSearch();
-    }}
-  />
-}
+              list.clearSearch();
+            }}
+          />
+        }
         bulkActionBar={
           isDetailMode ? (
             <BulkActionBar

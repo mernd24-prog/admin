@@ -55,7 +55,7 @@ export default function ProductOptionValue() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "sortOrder",
     defaultSortDir: "asc",
   });

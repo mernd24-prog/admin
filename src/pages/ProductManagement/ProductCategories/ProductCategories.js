@@ -2,22 +2,23 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { FaChevronRight } from "react-icons/fa";
 import { MdAdd, MdTune, MdFolder } from "react-icons/md";
 import { ChevronRight } from "lucide-react";
 // Components
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
-import { PageHeader, ConfirmModal } from "../../../components/Shared";
+import {
+  PageHeader,
+  ConfirmModal,
+  DataTable,
+} from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import SearchInput from "../../../components/Atoms/SearchInput/SearchInput";
 import { SkeletonLoader } from "../../../components/Loader/SkeletonLoader";
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { isSellerPanel } from "../../../_helpers/panelConfig";
 import { categoryValidationSchema } from "../../../_helpers/validationSchemas";
 import CategorySetup from "./components/CategorySetup";
 import { CategoryAttributesPanel } from "./CategoryAttributes";
-import Pagination from "../../../components/Pagination/Pagination";
 
 // Redux actions
 import {
@@ -273,6 +274,11 @@ const ProductCategories = () => {
   const categoriesLoading = !hasLoadedCategories;
 
   const isTableLoading = categoriesLoading || isDrillDownLoading;
+
+  const handleRefresh = useCallback(() => {
+    if (isTableLoading) return;
+    setIsRefresh((prev) => !prev);
+  }, [isTableLoading]);
 
   // ---------------------------------------------------------------------------
   // Category Select Options
@@ -721,7 +727,9 @@ const ProductCategories = () => {
 
     const term = searchTerm.toLowerCase().trim();
     const matchRank = (category) => {
-      const name = String(category.name || "").toLowerCase().trim();
+      const name = String(category.name || "")
+        .toLowerCase()
+        .trim();
       if (name === term) return 0;
       if (name.startsWith(term)) return 1;
       if (name.split(/\s+/).some((word) => word.startsWith(term))) return 2;
@@ -778,13 +786,6 @@ const ProductCategories = () => {
       setSelectedMainCategoryKey("");
     }
   }, [categories, selectedMainCategoryKey]);
-
-  const handleSearchRemove = useCallback(() => {
-    setFilters((prev) => ({
-      ...prev,
-      search: "",
-    }));
-  }, []);
 
   // ---------------------------------------------------------------------------
   // Table Data
@@ -881,6 +882,134 @@ const ProductCategories = () => {
         </button>
       </PermissionGuard>
     </div>
+  );
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        label: "Category Name",
+        render: (_, row) => {
+          const categoryIcon =
+            row.category?.iconUrl?.trim() || row.iconUrl?.trim();
+
+          if (row.hasSubCategories) {
+            return (
+              <button
+                type="button"
+                onClick={() => handleNavigate([...currentPath, row.category])}
+                className="grid w-full space-x-2 max-w-full grid-cols-[36px_360px_18px] items-center gap-1 text-left"
+              >
+                {/* Category / Subcategory Icon */}
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#fffaf0] transition-all group-hover:bg-white group-hover:shadow-sm">
+                  {categoryIcon ? (
+                    <img
+                      src={categoryIcon}
+                      alt={row.category?.name || row.name}
+                      className="h-9 w-9 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+
+                        const fallback = e.currentTarget.nextElementSibling;
+
+                        if (fallback) {
+                          fallback.classList.remove("hidden");
+                        }
+                      }}
+                    />
+                  ) : null}
+
+                  {/* Dot fallback */}
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full bg-[var(--admin-primary)] ${
+                      categoryIcon ? "hidden" : ""
+                    }`}
+                  />
+                </span>
+
+                {/* Category / Subcategory Name */}
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold capitalize text-[var(--admin-primary)]">
+                    {row.name}
+                  </span>
+                </span>
+              </button>
+            );
+          }
+
+          return (
+            <div className="flex items-center gap-3">
+              {/* Category / Subcategory Icon */}
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--admin-surface-soft)]">
+                {categoryIcon ? (
+                  <img
+                    src={categoryIcon}
+                    alt={row.category?.name || row.name}
+                    className="h-7 w-7 object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+
+                      const fallback = e.currentTarget.nextElementSibling;
+
+                      if (fallback) {
+                        fallback.classList.remove("hidden");
+                      }
+                    }}
+                  />
+                ) : null}
+
+                {/* Dot fallback */}
+                <span
+                  className={`h-2.5 w-2.5 rounded-full bg-[var(--admin-muted)] ${
+                    categoryIcon ? "hidden" : ""
+                  }`}
+                />
+              </span>
+
+              {/* Category / Subcategory Name */}
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-[var(--admin-ink)]">
+                  {row.name}
+                </span>
+
+                <span className="text-xs text-[var(--admin-muted)]">
+                  No subcategories
+                </span>
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        key: "subCategories",
+        label: "Subcategories",
+        render: (_, row) =>
+          row.hasSubCategories ? (
+            <button
+              type="button"
+              onClick={() => handleNavigate([...currentPath, row.category])}
+              className="group inline-flex items-center gap-1.5 rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-100 transition-colors hover:bg-cyan-100"
+              aria-label={`View ${row.count} subcategories of ${row.name}`}
+            >
+              <span>{formatCount(row.count)}</span>
+              <span>View</span>
+              <ChevronRight
+                size={14}
+                strokeWidth={2.5}
+                className="transition-transform group-hover:translate-x-0.5"
+              />
+            </button>
+          ) : (
+            <span className="text-xs text-gray-400">No subcategories</span>
+          ),
+      },
+      {
+        key: "actions",
+        label: "Actions",
+        render: (_, row) => renderCategoryActions(row.category),
+      },
+    ],
+    [currentPath, handleNavigate, renderCategoryActions],
   );
 
   const handleDashboardVisible = () => {
@@ -998,322 +1127,58 @@ const ProductCategories = () => {
             onClick: () => handleNavigate(currentPath.slice(0, index + 1)),
           })),
         ]}
-        actions={!isSellerAccount ? (
-          <PermissionGuard module="categories" action={ACTIONS.CREATE} hide>
-            <button
-              type="button"
-              onClick={() => {
-                handleResetForm();
-                setCategoryOpen(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--admin-gold-dark)] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]/30"
-            >
-              <MdAdd aria-hidden="true" size={18} />
-              Add Category
-            </button>
-          </PermissionGuard>
-        ) : null}
+        actions={
+          !isSellerAccount ? (
+            <PermissionGuard module="categories" action={ACTIONS.CREATE} hide>
+              <button
+                type="button"
+                onClick={() => {
+                  handleResetForm();
+                  setCategoryOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--admin-gold-dark)] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--admin-gold)]/30"
+              >
+                <MdAdd aria-hidden="true" size={18} />
+                Add Category
+              </button>
+            </PermissionGuard>
+          ) : null
+        }
       />
 
-      {/* Main Content */}
-      <div className="overflow-hidden rounded-2xl border border-[var(--admin-line)] bg-white shadow-sm">
-        {/* Search Header */}
-        <div className="border-b border-[var(--admin-line)] bg-white px-5 py-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="w-full lg:max-w-2xl">
-              <SearchInput
-                placeholder="Search Category..."
-                searchTerm={filters.search}
-                handleChange={(e) =>
-                  setFilters((f) => ({
-                    ...f,
-                    search: e.target.value,
-                  }))
-                }
-                handleRemove={handleSearchRemove}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Breadcrumb Navigation */}
-
-        {/* Table */}
-        <div className="overflow-hidden">
-          {isTableLoading ? (
-            <div
-              className="p-4"
-              role="status"
-              aria-label="Loading categories"
-              aria-busy="true"
-            >
-              {/* Skeleton Header */}
-              <div className="mb-2 grid grid-cols-[50%_25%_25%] items-center rounded-lg bg-[var(--admin-surface-soft)] px-5 py-3">
-                <SkeletonLoader height={11} width="30%" />
-
-                <SkeletonLoader height={11} width="35%" />
-
-                <SkeletonLoader height={11} width="25%" />
-              </div>
-
-              {/* Skeleton Rows */}
-              {[0, 1, 2, 3, 4, 5].map((row) => (
-                <div
-                  key={row}
-                  className="mb-2 grid min-h-[62px] grid-cols-[50%_25%_25%] items-center rounded-lg border border-[var(--admin-line)] bg-white px-5 py-3"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <SkeletonLoader circle height={36} width={36} />
-
-                    <div className="min-w-0 flex-1">
-                      <SkeletonLoader
-                        height={12}
-                        width={row % 2 === 0 ? "38%" : "30%"}
-                      />
-
-                      <div className="mt-2">
-                        <SkeletonLoader
-                          height={8}
-                          width={row % 2 === 0 ? "25%" : "18%"}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <SkeletonLoader height={24} width={45} />
-
-                  <div className="flex items-center gap-2">
-                    <SkeletonLoader height={28} width={35} />
-                    <SkeletonLoader height={28} width={28} />
-                    <SkeletonLoader height={28} width={28} />
-                  </div>
-                </div>
-              ))}
-
-              <span className="sr-only">Loading categories...</span>
-            </div>
-          ) : categoryTableRows.length > 0 ? (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] table-fixed text-sm">
-                  <colgroup>
-                    <col className="w-[50%]" />
-                    <col className="w-[25%]" />
-                    <col className="w-[25%]" />
-                  </colgroup>
-
-                  <thead>
-                    <tr className="border-y border-[#dfe3eb] bg-[#f1f3f7]">
-                      <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
-                        Category Name
-                      </th>
-
-                      <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
-                        Subcategories
-                      </th>
-
-                      <th className="px-5 py-3.5 text-left align-middle text-[11px] font-bold uppercase tracking-[0.08em] text-[#374151]">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-[var(--admin-line)]">
-                    {pagedCategoryRows.map((row) => {
-                      const categoryIcon =
-                        row.category?.iconUrl?.trim() || row.iconUrl?.trim();
-
-                      return (
-                        <tr
-                          key={
-                            row.category?._id ||
-                            row.category?.categoryKey ||
-                            row.name
-                          }
-                          className="group/category-row h-[62px] transition-colors hover:bg-[var(--admin-surface-soft)]"
-                        >
-                          {/* Category Name */}
-                          <td className="px-5 py-3.5 text-left align-middle">
-                            {row.hasSubCategories ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleNavigate([...currentPath, row.category])
-                                }
-                                className="grid w-full space-x-2 max-w-full grid-cols-[36px_360px_18px] items-center gap-1 text-left"
-                              >
-                                {/* Category / Subcategory Icon */}
-                                <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#fffaf0] transition-all group-hover/category-row:bg-white group-hover/category-row:shadow-sm">
-                                  {categoryIcon ? (
-                                    <img
-                                      src={categoryIcon}
-                                      alt={row.category?.name || row.name}
-                                      className="h-9 w-9 object-contain"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = "none";
-
-                                        const fallback =
-                                          e.currentTarget.nextElementSibling;
-
-                                        if (fallback) {
-                                          fallback.classList.remove("hidden");
-                                        }
-                                      }}
-                                    />
-                                  ) : null}
-
-                                  {/* Dot fallback */}
-                                  <span
-                                    className={`h-2.5 w-2.5 rounded-full bg-[var(--admin-primary)] ${
-                                      categoryIcon ? "hidden" : ""
-                                    }`}
-                                  />
-                                </span>
-
-                                {/* Category / Subcategory Name */}
-                                <span className="min-w-0">
-                                  <span className="block truncate font-semibold capitalize text-[var(--admin-primary)]">
-                                    {row.name}
-                                  </span>
-                                </span>
-
-                                {/* Arrow */}
-                                {/* <span className="flex h-5 w-5 shrink-0 items-center justify-center text-gray-400 transition-transform group-hover/category-row:translate-x-0.5">
-                                <FaChevronRight size={8} />
-                              </span> */}
-                              </button>
-                            ) : (
-                              <div className="flex items-center gap-3">
-                                {/* Category / Subcategory Icon */}
-                                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--admin-surface-soft)]">
-                                  {categoryIcon ? (
-                                    <img
-                                      src={categoryIcon}
-                                      alt={row.category?.name || row.name}
-                                      className="h-7 w-7 object-contain"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = "none";
-
-                                        const fallback =
-                                          e.currentTarget.nextElementSibling;
-
-                                        if (fallback) {
-                                          fallback.classList.remove("hidden");
-                                        }
-                                      }}
-                                    />
-                                  ) : null}
-
-                                  {/* Dot fallback */}
-                                  <span
-                                    className={`h-2.5 w-2.5 rounded-full bg-[var(--admin-muted)] ${
-                                      categoryIcon ? "hidden" : ""
-                                    }`}
-                                  />
-                                </span>
-
-                                {/* Category / Subcategory Name */}
-                                <span className="min-w-0">
-                                  <span className="block truncate text-sm font-semibold text-[var(--admin-ink)]">
-                                    {row.name}
-                                  </span>
-
-                                  <span className="text-xs text-[var(--admin-muted)]">
-                                    No subcategories
-                                  </span>
-                                </span>
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Subcategories */}
-                          {/* Subcategories */}
-                          <td className="px-5 py-3.5 text-left align-middle">
-                            {row.hasSubCategories ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleNavigate([...currentPath, row.category])
-                                }
-                                className="group inline-flex items-center gap-1.5 rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-100 transition-colors hover:bg-cyan-100"
-                                aria-label={`View ${row.count} subcategories of ${row.name}`}
-                              >
-                                <span>{formatCount(row.count)}</span>
-                                <span>View</span>
-                                <ChevronRight
-                                  size={14}
-                                  strokeWidth={2.5}
-                                  className="transition-transform group-hover:translate-x-0.5"
-                                />
-                              </button>
-                            ) : (
-                              <span className="text-xs text-gray-400">
-                                No subcategories
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Actions */}
-                          <td className="px-5 py-3.5 text-left align-middle">
-                            {renderCategoryActions(row.category)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              <div className="border-t border-[var(--admin-line)] bg-white px-5 py-3">
-                <Pagination
-                  totalPages={totalCategoryPages}
-                  currentPage={categoryPage}
-                  onPageChange={setCategoryPage}
-                  totalRecords={categoryTableRows.length}
-                  pageSize={categoryPageSize}
-                  pageSizeOptions={[10, 20, 50, 100]}
-                  onPageSizeChange={(size) => {
-                    const newSize = Number(size) || CATEGORY_TABLE_PAGE_SIZE;
-
-                    setCategoryPageSize(newSize);
-                    setCategoryPage(1);
-                  }}
-                />
-              </div>
-            </>
-          ) : (
-            /* Empty State */
-            <div className="flex min-h-[280px] flex-col items-center justify-center px-5 text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-surface-soft)] text-[var(--admin-muted)]">
-                <MdFolder aria-hidden="true" size={27} />
-              </div>
-
-              <h3 className="text-sm font-semibold text-[var(--admin-ink)]">
-                {filters.search
-                  ? "No categories found"
-                  : "No categories available"}
-              </h3>
-
-              <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--admin-muted)]">
-                {filters.search
-                  ? "Try adjusting your search term to find a matching category."
-                  : "Create your first category to start building your product catalog hierarchy."}
-              </p>
-
-              {filters.search && (
-                <button
-                  type="button"
-                  onClick={handleSearchRemove}
-                  className="mt-4 rounded-lg border border-[var(--admin-line)] bg-white px-3.5 py-2 text-xs font-semibold text-[var(--admin-primary)] transition hover:bg-[var(--admin-surface-soft)]"
-                >
-                  Clear Search
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Main Table Content */}
+      <DataTable
+        columns={columns}
+        data={pagedCategoryRows}
+        loading={isTableLoading}
+        totalCount={categoryTableRows.length}
+        page={categoryPage}
+        pageSize={categoryPageSize}
+        onPageChange={setCategoryPage}
+        onPageSizeChange={(size) => {
+          setCategoryPageSize(Number(size) || CATEGORY_TABLE_PAGE_SIZE);
+          setCategoryPage(1);
+        }}
+        onSearch={(value) => {
+          setFilters((f) => ({
+            ...f,
+            search: value,
+          }));
+          setCategoryPage(1);
+        }}
+        searchValue={filters.search}
+        searchPlaceholder="Search Category..."
+        onRefresh={handleRefresh}
+        emptyText={
+          filters.search ? "No categories found" : "No categories available"
+        }
+        emptyIcon={<MdFolder aria-hidden="true" size={32} />}
+        showSerialNumber={false}
+        cardClassName="overflow-hidden rounded-2xl border border-[var(--admin-line)] bg-white shadow-sm"
+        rowKey={(row) =>
+          row.category?._id || row.category?.categoryKey || row.name
+        }
+      />
 
       {/* Category Setup */}
       <CategorySetup

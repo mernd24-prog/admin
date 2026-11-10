@@ -45,6 +45,7 @@ import { financeMoney } from "../OrdersManagement/SellerFinance/financeUi";
 import Tabs from "../../components/Shared/Tabs";
 import { Download, Upload } from "lucide-react";
 import { formatDateTime12Hour } from "../../utils/formatters";
+import { EmptyState } from "../OrdersManagement/Orders/components/ViewOrders";
 
 const REGISTERS = [
   ["sales", "Sales Register"],
@@ -749,6 +750,7 @@ export default function CaFinanceAnalytics() {
             <h2 className="text-sm font-bold text-[var(--admin-ink)]">
               Daily Orders and GMV
             </h2>
+
             <p className="text-xs text-[var(--admin-muted)]">
               Based on the active accounting period.
             </p>
@@ -756,6 +758,13 @@ export default function CaFinanceAnalytics() {
             <div className="mt-4 h-64">
               {overviewLoading ? (
                 <div className="h-full animate-pulse rounded bg-[var(--admin-surface-soft)]" />
+              ) : !trends || trends.length === 0 ? (
+                <EmptyState>
+                  <p className="mt-2 font-medium">No Data Found</p>
+                  <p className="mt-1 text-xs">
+                    No orders or GMV available for this accounting period.
+                  </p>
+                </EmptyState>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={trends}>

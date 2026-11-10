@@ -38,6 +38,7 @@ import {
 
 import { resolveStoreName } from "../../utils/storeNameUtils";
 import { generateInvoiceValidationSchema } from "../../_helpers/validationSchemas";
+import { exportToExcelWorkbook } from "../../_helpers/exportToCsv";
 
 const STATES = ["draft", "issued", "cancelled", "amended"];
 
@@ -91,17 +92,31 @@ const FILTER_FIELDS = isSellerPanel()
     ];
 
 const unwrapList = (payload = {}) => {
-  const data = payload?.data?.data;
+  const data =
+    payload?.data?.data ||
+    payload?.data ||
+    payload?.normalized?.data ||
+    payload?.normalized ||
+    payload;
 
   if (Array.isArray(data)) {
-    return { list: data, total: data.length };
+    return {
+      list: data,
+      total: data.length,
+    };
   }
 
+  const list = Array.isArray(data?.list)
+    ? data.list
+    : Array.isArray(data?.items)
+      ? data.items
+      : Array.isArray(data?.invoices)
+        ? data.invoices
+        : [];
+
   return {
-    list: data?.list || data?.items || data?.invoices || data || [],
-    total: Number(
-      data?.total || data?.list?.length || data?.items?.length || 0,
-    ),
+    list,
+    total: Number(data?.total ?? list.length),
   };
 };
 
@@ -172,6 +187,7 @@ const TaxInvoices = () => {
   const orderId = searchParams.get("orderId") || "";
   const orderNumber = searchParams.get("orderNumber") || "";
   const [searchText, setSearchText] = useState(orderNumber || orderId);
+  const [exportLoading, setExportLoading] = useState(false);
 
   useEffect(() => {
     if (orderId) setSearchText(orderNumber || orderId);
@@ -190,7 +206,7 @@ const TaxInvoices = () => {
   const hideOrganizationColumn = isSellerPanel();
 
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "issuedAt",
     defaultSortDir: "desc",
   });
@@ -314,6 +330,140 @@ const TaxInvoices = () => {
       setDownloadingId(null);
     }
   }, []);
+
+  const handleExportInvoices = useCallback(async () => {
+    try {
+      setExportLoading(true);
+
+      const params = toQueryParams();
+      const exportLimit =
+        Math.max(
+          Number(payload.total) || 0,
+          Number(payload.list?.length) || 0,
+        ) || 1000;
+
+      const response = await dispatch(
+        getTaxInvoices({
+          ...params,
+          ...(orderId ? { orderId } : {}),
+          page: 1,
+          limit: exportLimit,
+          offset: 0,
+        }),
+      ).unwrap();
+
+      const exportPayload = unwrapList(response);
+      const allInvoices =
+        exportPayload.list?.length > 0
+          ? exportPayload.list
+          : payload.list || [];
+
+      if (!allInvoices.length) {
+        toast.info("No tax invoices available to export.");
+        return;
+      }
+
+      const exportColumns = [
+        { key: "invoiceNumber", label: "Document No." },
+        { key: "orderNumber", label: "Order Number" },
+        { key: "invoiceType", label: "Document Type" },
+        { key: "issuer", label: "From" },
+        { key: "recipient", label: "To" },
+        { key: "status", label: "Status" },
+        { key: "storeName", label: "Store Name" },
+        { key: "taxableAmount", label: "Taxable Amount" },
+        { key: "taxAmount", label: "Tax Amount" },
+        { key: "totalAmount", label: "Total Amount" },
+        { key: "issuedAt", label: "Issued Date" },
+      ];
+
+      const exportRows = allInvoices.map((row) => {
+        const type = row.invoiceType || row.invoice_type;
+        const metadata = invoiceMetadata(row);
+
+        const seller =
+          metadata.organization?.legalBusinessName ||
+          metadata.organization?.storeDisplayName ||
+          metadata.seller?.legalBusinessName ||
+          metadata.seller?.businessName ||
+          metadata.seller?.displayName ||
+          "Seller";
+
+        const customer =
+          metadata.buyer?.profile?.displayName ||
+          metadata.buyer?.email ||
+          "Customer";
+
+        const issuer = type === "seller_customer" ? seller : "Sam Global";
+
+        const recipient = type === "platform_commission" ? seller : customer;
+
+        const { name: storeName } = resolveStoreName(row, storeNameMap);
+
+        const status = row.state || row.status || row.invoice_state || "issued";
+
+        return {
+          invoiceNumber: pick(row, "invoiceNumber", "invoice_number") || "N/A",
+
+          orderNumber:
+            pick(row, "orderNumber", "order_number") ||
+            pick(row, "orderId", "order_id") ||
+            "N/A",
+
+          invoiceType: invoiceTypeLabel(type),
+          issuer,
+          recipient,
+          status: formatLabel(status),
+          storeName: storeName || "N/A",
+
+          taxableAmount: formatIndianNumber(
+            row.taxableAmount ?? row.taxable_amount,
+          ),
+
+          taxAmount: formatIndianNumber(
+            row.taxAmount ?? row.totalTax ?? row.tax_amount,
+          ),
+
+          totalAmount: formatIndianNumber(row.totalAmount ?? row.total_amount),
+
+          issuedAt: formatDateTime12Hour(
+            row.issuedAt ?? row.issueDate ?? row.issued_at,
+          ),
+        };
+      });
+
+      const exported = exportToExcelWorkbook(
+        [
+          {
+            name: "Tax Invoices",
+            title: "Tax Invoices",
+            data: exportRows,
+            columns: exportColumns,
+          },
+        ],
+        "Tax-Invoices.xlsx",
+      );
+
+      if (exported) {
+        toast.success(`${allInvoices.length} invoices exported successfully.`);
+      } else {
+        toast.error("Unable to export tax invoices.");
+      }
+    } catch (error) {
+      console.error("Tax invoices export error:", error);
+
+      toast.error(error?.message || "Failed to export tax invoices.");
+    } finally {
+      setExportLoading(false);
+    }
+  }, [
+    dispatch,
+    toQueryParams,
+    orderId,
+    payload.total,
+    payload.list.length,
+    storeNameMap,
+  ]);
 
   /**
    * Table columns.
@@ -510,7 +660,10 @@ const TaxInvoices = () => {
 
       {orderId && (
         <div className="mb-4 flex items-center gap-3 text-sm">
-          <span>Showing invoices for order {orderNumber || payload.list[0]?.orderNumber || orderId}</span>
+          <span>
+            Showing invoices for order{" "}
+            {orderNumber || payload.list[0]?.orderNumber || orderId}
+          </span>
           <button
             type="button"
             className="text-blue-600 underline"
@@ -543,12 +696,15 @@ const TaxInvoices = () => {
           setSearchText(value);
           list.setSearch(value);
           if (orderId) {
-            setSearchParams((previous) => {
-              const next = new URLSearchParams(previous);
-              next.delete("orderId");
+            setSearchParams(
+              (previous) => {
+                const next = new URLSearchParams(previous);
+                next.delete("orderId");
                 next.delete("orderNumber");
-              return next;
-            }, { replace: true });
+                return next;
+              },
+              { replace: true },
+            );
           }
         }}
         emptyMessage={error || "No tax invoices found"}
@@ -593,6 +749,11 @@ const TaxInvoices = () => {
               onClick: () => downloadInvoice(row),
             },
           ];
+        }}
+        exportConfig={{
+          onClick: handleExportInvoices,
+          label: "Export",
+          disabled: loading || exportLoading || !payload.list.length,
         }}
       />
 
