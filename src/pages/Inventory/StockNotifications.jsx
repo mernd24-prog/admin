@@ -30,9 +30,9 @@ const STATUS_OPTIONS = [
 const getPaginationTotal = (payload = {}, fallback = 0) =>
   Number(
     payload?.pagination?.total ??
-    payload?.meta?.total ??
-    payload?.meta?.pagination?.total ??
-    fallback,
+      payload?.meta?.total ??
+      payload?.meta?.pagination?.total ??
+      fallback,
   );
 
 const productCell = (row = {}) => (
@@ -58,9 +58,6 @@ const productCell = (row = {}) => (
       </p>
       <p className="truncate text-xs text-[var(--admin-muted)]">
         {row.variantTitle || row.sku || "Default variant"}
-      </p>
-      <p className="truncate font-mono text-[11px] text-[var(--admin-muted)]">
-        {row.productId}
       </p>
     </div>
   </div>
@@ -250,14 +247,14 @@ const StockNotifications = () => {
       },
       ...(!sellerView
         ? [
-          {
-            key: "sellerId",
-            label: "Seller",
-            render: (value, row) => (
-              <SellerIdentity row={row} sellerId={value} />
-            ),
-          },
-        ]
+            {
+              key: "sellerId",
+              label: "Seller",
+              render: (value, row) => (
+                <SellerIdentity row={row} sellerId={value} />
+              ),
+            },
+          ]
         : []),
     ],
     [sellerView],
@@ -360,17 +357,21 @@ const StockNotifications = () => {
         }
         onRefresh={fetchRows}
         emptyText="No stock notification requests found."
-      exportConfig={{
+        exportConfig={{
+          filename: "stock-notifications",
 
-          filename: "stock-notifications",
+          columns: exportColumns,
 
-          columns: exportColumns,
+          data: rows,
 
-          data: rows,
-
-          icon: <Upload size={15} className="shrink-0 text-[var(--admin-blue)]" aria-hidden="true" />,
-
-        }}
+          icon: (
+            <Upload
+              size={15}
+              className="shrink-0 text-[var(--admin-blue)]"
+              aria-hidden="true"
+            />
+          ),
+        }}
         rowActions={(row) => [
           {
             label: "View Inventory",

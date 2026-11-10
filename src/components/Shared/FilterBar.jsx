@@ -16,6 +16,7 @@ import {
 } from "react-icons/md";
 import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
 import DateRangePickerModal from "./DateRangePickerModal";
+import { RxCross2 } from "react-icons/rx";
 
 /**
  * FilterBar
@@ -585,6 +586,24 @@ export const DateRangeFilter = ({
     });
   };
 
+  const clearAppliedRange = (event) => {
+    event.stopPropagation();
+
+    setDraftDates({
+      fromDate: "",
+      toDate: "",
+    });
+
+    if (onApplyOverride) {
+      onApplyOverride("", "");
+    } else {
+      onChange(startKey, "");
+      onChange(endKey, "");
+    }
+
+    setOpen(false);
+  };
+
   const selectToday = () => {
     const todayValue = toInputDate(new Date());
     setDraftDates({ fromDate: todayValue, toDate: todayValue });
@@ -641,33 +660,48 @@ export const DateRangeFilter = ({
         </label>
       )}
 
-      <button
-        id={id}
-        type="button"
-        onClick={() => {
-          if (open) {
-            setOpen(false);
-          } else {
-            openPicker();
-          }
-        }}
-        className={`admin-input !flex !h-9 w-full items-center justify-between gap-2 !py-0 text-left !text-[13px] !leading-none ${
-          field.inputClassName || ""
-        } ${
-          startValue && endValue ? "text-[var(--admin-ink)]" : "text-gray-500"
-        }`}
-      >
-        <span className="whitespace-nowrap">{displayLabel}</span>
-
-        <MdKeyboardArrowDown
-          aria-hidden="true"
-          size={22}
-          color="hsl(0, 0%, 80%)"
-          className={`shrink-0 transition-transform duration-200 ${
-            open ? "rotate-180" : "rotate-0"
+      <div className="relative flex w-full min-w-0 items-center">
+        <button
+          id={id}
+          type="button"
+          onClick={() => {
+            if (open) {
+              setOpen(false);
+            } else {
+              openPicker();
+            }
+          }}
+          className={`admin-input !flex !h-9 min-w-0 w-full flex-1 items-center justify-between gap-2 !py-0 !pr-14 text-left !text-[13px] !leading-none ${
+            field.inputClassName || ""
+          } ${
+            startValue && endValue ? "text-[var(--admin-ink)]" : "text-gray-500"
           }`}
-        />
-      </button>
+        >
+          <span className="truncate whitespace-nowrap">{displayLabel}</span>
+
+          <MdKeyboardArrowDown
+            aria-hidden="true"
+            size={22}
+            color="hsl(0, 0%, 80%)"
+            className={`absolute right-2 shrink-0 transition-transform duration-200 ${
+              open ? "rotate-180" : "rotate-0"
+            }`}
+          />
+        </button>
+
+        {(startValue || endValue) && (
+          <button
+            type="button"
+            onClick={clearAppliedRange}
+            disabled={loading}
+            aria-label="Clear date range"
+            title="Clear date range"
+            className="absolute right-8 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-gray-300 hover:text-gray-600 transition-colors   disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RxCross2 size={16} />
+          </button>
+        )}
+      </div>
 
       <DateRangePickerModal
         open={open}

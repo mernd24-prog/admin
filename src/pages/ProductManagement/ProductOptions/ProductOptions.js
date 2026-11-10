@@ -69,7 +69,7 @@ export default function ProductOptions() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const list = useListPage({
-    defaultPageSize: 15,
+    defaultPageSize: 10,
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
   });
@@ -180,9 +180,13 @@ export default function ProductOptions() {
           `Selected option masters ${isNextActive ? "activated" : "deactivated"} successfully`,
         );
         const changedIds = new Set(targetKeys.map(String));
-        setItems((current) => current.map((item) =>
-          changedIds.has(String(idOf(item))) ? { ...item, active: isNextActive } : item
-        ));
+        setItems((current) =>
+          current.map((item) =>
+            changedIds.has(String(idOf(item)))
+              ? { ...item, active: isNextActive }
+              : item,
+          ),
+        );
         setSelectedKeys([]);
         await load();
       } catch (err) {
@@ -234,9 +238,11 @@ export default function ProductOptions() {
           updatePlatformOption({ id: idOf(editing), ...form }),
         ).unwrap();
         toast.success("Option master updated");
-        setItems((current) => current.map((item) =>
-          idOf(item) === idOf(editing) ? { ...item, ...form } : item
-        ));
+        setItems((current) =>
+          current.map((item) =>
+            idOf(item) === idOf(editing) ? { ...item, ...form } : item,
+          ),
+        );
       } else {
         await dispatch(createPlatformOption(form)).unwrap();
         toast.success("Option master created");
@@ -256,7 +262,9 @@ export default function ProductOptions() {
     try {
       await dispatch(deletePlatformOption({ id: idOf(deleteTarget) })).unwrap();
       toast.success("Option master deleted");
-      setItems((current) => current.filter((item) => idOf(item) !== idOf(deleteTarget)));
+      setItems((current) =>
+        current.filter((item) => idOf(item) !== idOf(deleteTarget)),
+      );
       setDeleteTarget(null);
       await load();
     } catch (err) {
@@ -274,9 +282,11 @@ export default function ProductOptions() {
         updatePlatformOption({ id: idOf(row), active: !row.active }),
       ).unwrap();
       toast.success(row.active ? "Disabled" : "Enabled");
-      setItems((current) => current.map((item) =>
-        idOf(item) === idOf(row) ? { ...item, active: !row.active } : item
-      ));
+      setItems((current) =>
+        current.map((item) =>
+          idOf(item) === idOf(row) ? { ...item, active: !row.active } : item,
+        ),
+      );
       setStatusTarget(null);
       await load();
     } catch (err) {
@@ -301,12 +311,20 @@ export default function ProductOptions() {
           rejectionReason: rejectionReason || "",
         }),
       ).unwrap();
-      toast.success(`Option Master ${action === "approve" ? "approved" : "rejected"}`);
-      setItems((current) => current.map((item) =>
-        idOf(item) === idOf(row)
-          ? { ...item, approvalStatus: action === "approve" ? "approved" : "rejected", needsApprovalReview: false }
-          : item
-      ));
+      toast.success(
+        `Option Master ${action === "approve" ? "approved" : "rejected"}`,
+      );
+      setItems((current) =>
+        current.map((item) =>
+          idOf(item) === idOf(row)
+            ? {
+                ...item,
+                approvalStatus: action === "approve" ? "approved" : "rejected",
+                needsApprovalReview: false,
+              }
+            : item,
+        ),
+      );
       await load();
     } catch (err) {
       toast.error(err?.message || "Review failed");
@@ -355,9 +373,12 @@ export default function ProductOptions() {
         key: "approvalStatus",
         label: "Approval",
         render: (value, row) => {
-          const status = value || (row.submittedBySellerId ? "pending" : "approved");
+          const status =
+            value || (row.submittedBySellerId ? "pending" : "approved");
           return (
-            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${status === "approved" ? "bg-emerald-100 text-emerald-700" : status === "rejected" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${status === "approved" ? "bg-emerald-100 text-emerald-700" : status === "rejected" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}
+            >
               {status}
             </span>
           );

@@ -291,7 +291,7 @@ const TaxInvoiceDetail = () => {
     : pick(invoice, "gstin_seller") || metadata.seller?.gstNumber;
 
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
   });

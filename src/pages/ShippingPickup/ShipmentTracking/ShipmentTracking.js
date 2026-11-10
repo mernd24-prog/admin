@@ -1000,7 +1000,7 @@ const ShipmentTracking = () => {
       <DataTable
         columns={columns}
         data={visibleShipmentRows}
-        loading={loading && visibleShipmentRows.length === 0}
+        loading={loading}
         totalCount={visibleShipmentTotal}
         page={list.page}
         pageSize={list.pageSize}

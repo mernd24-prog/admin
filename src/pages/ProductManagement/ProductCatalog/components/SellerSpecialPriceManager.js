@@ -479,8 +479,8 @@ const SellerSpecialPriceManager = () => {
   const sellerContext = useMemo(() => getSellerContext(), []);
   const sellerView = isSellerPanel();
 
-  const list = useListPage({ defaultPageSize: 20 });
-  const detailList = useListPage({ defaultPageSize: 20 });
+  const list = useListPage({ defaultPageSize: 10 });
+  const detailList = useListPage({ defaultPageSize: 10 });
 
   // Main list state (Products view)
   const [products, setProducts] = useState([]);

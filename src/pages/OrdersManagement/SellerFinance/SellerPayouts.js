@@ -329,7 +329,7 @@ const SellerPayouts = () => {
   const settlementsPayload = unwrapList(finance.mySettlementsData);
 
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
     defaultFilters: getInitialPayoutFilters(),
@@ -341,9 +341,6 @@ const SellerPayouts = () => {
   const [error, setError] = useState("");
   const [detail, setDetail] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
-
-  // Three-dot action menu state
-  const [openActionId, setOpenActionId] = useState(null);
 
   const filterFields = useMemo(
     () =>
@@ -398,7 +395,6 @@ const SellerPayouts = () => {
   /* ------------------------------------------------------------------------ */
 
   const handleView = useCallback((row) => {
-    setOpenActionId(null);
     setDetail(row);
   }, []);
 
@@ -429,54 +425,6 @@ const SellerPayouts = () => {
   /* ------------------------------------------------------------------------ */
   /* Action Menu                                                              */
   /* ------------------------------------------------------------------------ */
-
-  const ActionMenu = useCallback(
-    ({ row }) => {
-      const rowId = row?._id || row?.id || row?.payoutId || row?.payout_id;
-
-      return (
-        <div
-          className="relative flex justify-center"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-
-              setOpenActionId((current) => (current === rowId ? null : rowId));
-            }}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-            title="Actions"
-            aria-label="Actions"
-          >
-            <MdMoreVert aria-hidden="true" size={20} />
-          </button>
-
-          {openActionId === rowId && (
-            <div
-              className="absolute right-0 top-full z-[9999] mt-1 w-36 rounded-md border border-gray-200 bg-white py-1 shadow-lg"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <button
-                type="button"
-                onClick={() => handleView(row)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-gray-50"
-              >
-                <MdVisibility
-                  aria-hidden="true"
-                  size={17}
-                  className="text-blue-600"
-                />
-                <span>View</span>
-              </button>
-            </div>
-          )}
-        </div>
-      );
-    },
-    [openActionId, handleView],
-  );
 
   /* ------------------------------------------------------------------------ */
   /* Table Columns                                                            */
@@ -561,7 +509,18 @@ const SellerPayouts = () => {
           label: "Action",
           headerClassName: "whitespace-nowrap text-center",
           cellClassName: "whitespace-nowrap text-center",
-          render: (_, row) => <ActionMenu row={row} />,
+          render: (_, row) => (
+            <div className="flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => handleView(row)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--admin-line)] px-3 py-1.5 text-xs font-medium text-[var(--admin-navy)] transition hover:border-[var(--admin-gold)] hover:bg-[var(--admin-gold-soft)]"
+              >
+                <MdVisibility size={16} className="text-blue-600" />
+                View
+              </button>
+            </div>
+          ),
         },
       ];
     }
@@ -730,12 +689,23 @@ const SellerPayouts = () => {
         label: "Action",
         headerClassName: "whitespace-nowrap text-center",
         cellClassName: "whitespace-nowrap text-center",
-        render: (_, row) => <ActionMenu row={row} />,
+        render: (_, row) => (
+          <div className="flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => handleView(row)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-blue-600 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:border-blue-600 hover:bg-blue-50"
+            >
+              <MdVisibility size={16} className="text-blue-600" />
+              View
+            </button>
+          </div>
+        ),
       },
     ];
 
     return base;
-  }, [isSeller, ActionMenu]);
+  }, [isSeller]);
 
   /* ------------------------------------------------------------------------ */
   /* Payout Export                                                            */
@@ -1394,7 +1364,7 @@ const SellerPayouts = () => {
                     <div className="space-y-3">
                       <div>
                         <div className="text-base font-semibold text-gray-800">
-                          {sellerName(detail)}
+                          {formatLabel(sellerName(detail))}
                         </div>
 
                         <div className="mt-1">

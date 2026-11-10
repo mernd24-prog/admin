@@ -26,7 +26,7 @@ const FILTER_FIELDS = [
 const TaxReports = () => {
   const dispatch = useDispatch();
   const { storeNameMap } = useStoreNames();
-  const list = useListPage({ defaultPageSize: 20 });
+  const list = useListPage({ defaultPageSize: 10 });
   const { filters: reportFilters } = list;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

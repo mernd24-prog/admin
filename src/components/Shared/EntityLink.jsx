@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { getStoredRole, isAllowedSellerRole } from "../../_helpers/authStorage";
+import { formatLabel } from "../../utils/formatters";
 
 const shortOrderId = (value) => String(value || "").slice(-8);
 
@@ -111,7 +112,7 @@ const IdentityContent = ({ primary, secondary, fallback }) => (
     </div>
     {secondary && secondary !== primary && (
       <div className="truncate text-xs text-gray-400 transition-colors group-hover:text-[var(--admin-blue)]">
-        {secondary}
+        {formatLabel(secondary)}
       </div>
     )}
   </div>

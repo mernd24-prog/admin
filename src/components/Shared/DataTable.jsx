@@ -261,7 +261,7 @@ const DataTable = ({
   totalCount,
   total,
   page = 1,
-  pageSize = 20,
+  pageSize = 10,
   onPageChange,
   onSearch,
   searchPlaceholder = "Search…",
@@ -299,8 +299,8 @@ const DataTable = ({
   initialSearchValue = "",
   searchValue: controlledSearchValue,
 }) => {
-  const [searchValue, setSearchValue] = useState(
-    () => String(initialSearchValue ?? ""),
+  const [searchValue, setSearchValue] = useState(() =>
+    String(initialSearchValue ?? ""),
   );
   const [hasMounted, setHasMounted] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -349,11 +349,11 @@ const DataTable = ({
   useEffect(() => {
     setHasMounted(true);
   }, []);
-useEffect(() => {
-  if (!listPage) return;
+  useEffect(() => {
+    if (!listPage) return;
 
-  setSearchValue(listPage.search ?? "");
-}, [listPage?.search]);
+    setSearchValue(listPage.search ?? "");
+  }, [listPage?.search]);
 
   const getKey = (row, index) =>
     typeof rowKey === "function"

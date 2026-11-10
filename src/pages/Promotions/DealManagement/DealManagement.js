@@ -495,7 +495,7 @@ const DealManagement = () => {
   );
   const attemptedSellerIds = useRef(new Set());
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
   });

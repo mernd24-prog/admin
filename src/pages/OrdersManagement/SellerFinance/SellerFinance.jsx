@@ -445,9 +445,9 @@ const SellerFinance = () => {
   });
 
   const [overviewPage, setOverviewPage] = useState(1);
-  const [overviewPageSize, setOverviewPageSize] = useState(20);
+  const [overviewPageSize, setOverviewPageSize] = useState(10);
   const [commissionsPage, setCommissionsPage] = useState(1);
-  const [commissionsPageSize, setCommissionsPageSize] = useState(20);
+  const [commissionsPageSize, setCommissionsPageSize] = useState(10);
   const [overviewPaginationLoading, setOverviewPaginationLoading] =
     useState(false);
   const [commissionsPaginationLoading, setCommissionsPaginationLoading] =
@@ -1027,16 +1027,13 @@ const SellerFinance = () => {
     }
     const selectedCommissions =
       processModal.mode === "order"
-        ? commissions.filter(
-            (commission) => {
-              const decision = payoutDecision(commission);
-              return (
+        ? commissions.filter((commission) => {
+            const decision = payoutDecision(commission);
+            return (
               String(commission.order_id || commission.orderId) ===
-                String(processModal.orderId) &&
-              decision.allowed
-              );
-            },
-          )
+                String(processModal.orderId) && decision.allowed
+            );
+          })
         : [];
     if (processModal.mode === "order" && !processModal.orderId) {
       toast.error("Select an eligible order");
@@ -1882,9 +1879,10 @@ const SellerFinance = () => {
                     ...(!decision.allowed
                       ? [
                           {
-                            label: decision.label === "Already in payout"
-                              ? "Already in payout"
-                              : "Wait until eligible",
+                            label:
+                              decision.label === "Already in payout"
+                                ? "Already in payout"
+                                : "Wait until eligible",
                             disabled: true,
                             onClick: () => {},
                           },
@@ -2108,9 +2106,10 @@ const SellerFinance = () => {
                       ...(!decision.allowed
                         ? [
                             {
-                              label: decision.label === "Already in payout"
-                                ? "Already in payout"
-                                : "Wait until eligible",
+                              label:
+                                decision.label === "Already in payout"
+                                  ? "Already in payout"
+                                  : "Wait until eligible",
                               disabled: true,
                               onClick: () => {},
                             },

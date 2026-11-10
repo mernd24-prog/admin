@@ -33,6 +33,7 @@ import { useListPage } from "../../../hooks/useListPage";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import { EmptyState } from "../Orders/components/ViewOrders";
+import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
 
 const STATUSES = [
   "requested",
@@ -149,12 +150,16 @@ const FILTER_FIELDS = [
 ];
 
 const unwrapList = (payload = {}) => {
-  const data = payload?.data?.data;
-  if (Array.isArray(data)) return { list: data, total: data.length };
+  const data = payload?.data?.data ?? payload?.data ?? payload;
+
+  const list = Array.isArray(data)
+    ? data
+    : (data?.list ?? data?.items ?? data?.cancellations ?? data?.results ?? []);
+
   return {
-    list: data?.list || data?.items || data?.cancellations || data || [],
+    list: Array.isArray(list) ? list : [],
     total: Number(
-      data?.total || data?.list?.length || data?.items?.length || 0,
+      data?.total ?? data?.totalCount ?? data?.count ?? list.length,
     ),
   };
 };
@@ -246,7 +251,7 @@ const Cancellations = () => {
   const cancellations = payload.list.map(normalizeCancellation);
 
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
     defaultFilters: { orderId: getInitialQuery("orderId") },
@@ -254,6 +259,7 @@ const Cancellations = () => {
   const { toQueryParams } = list;
 
   const [loading, setLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [error, setError] = useState("");
   const [detail, setDetail] = useState(null);
   const [retryConfirm, setRetryConfirm] = useState({
@@ -308,6 +314,100 @@ const Cancellations = () => {
   useEffect(() => {
     fetchCancellations();
   }, [fetchCancellations]);
+
+  const handleExportCancellations = useCallback(async () => {
+    try {
+      setExportLoading(true);
+
+      const params = toQueryParams();
+
+      const response = await dispatch(
+        getCancellationList({
+          ...params,
+          page: 1,
+          limit: payload.total || payload.list.length,
+          offset: 0,
+        }),
+      ).unwrap();
+
+      const exportPayload = unwrapList(response);
+      const allCancellations = exportPayload.list.map(normalizeCancellation);
+
+      if (!allCancellations.length) {
+        toast.info("No cancellations available to export.");
+        return;
+      }
+
+      const exportColumns = [
+        { key: "cancellationNumber", label: "Cancellation Number" },
+        { key: "orderNumber", label: "Order Number" },
+        { key: "requestedBy", label: "Requested By" },
+        { key: "status", label: "Cancellation Status" },
+        { key: "refundStatus", label: "Refund Status" },
+        { key: "refundSource", label: "Refunded Through" },
+        { key: "refundAmount", label: "Customer Refund" },
+        { key: "sellerCancelledValue", label: "Seller Impact Amount" },
+        { key: "financeImpact", label: "Seller Finance Impact" },
+        { key: "scope", label: "Order Scope" },
+        { key: "createdAt", label: "Created Date" },
+      ];
+
+      const exportRows = allCancellations?.map((row) => ({
+        cancellationNumber: row.cancellationNumber || row?.id || "N/A",
+
+        orderNumber: row.orderNumber || row.orderId || "N/A",
+
+        requestedBy: cancellationRequesterLabel(row) || "N/A",
+
+        status: cancellationStatusLabel(row.status),
+
+        refundStatus: display(row.refundStatus),
+
+        refundSource: refundSource(row),
+
+        refundAmount: money(row.refundAmount),
+
+        sellerCancelledValue: money(row.sellerCancelledValue),
+
+        financeImpact: row.sellerFinanceAdjustments.length
+          ? "Recovered from settlement"
+          : row.status === "requested"
+            ? "Pending approval — no adjustment"
+            : row.status === "rejected"
+              ? "No adjustment — request rejected"
+              : "No payout — cancelled before settlement",
+
+        scope: display(row.scope),
+
+        createdAt: fmt(row.createdAt),
+      }));
+
+      const exported = exportToExcelWorkbook(
+        [
+          {
+            name: "Cancellations",
+            title: "Cancellations",
+            data: exportRows,
+            columns: exportColumns,
+          },
+        ],
+        "Cancellations.xlsx",
+      );
+
+      if (exported) {
+        toast.success(
+          `${allCancellations.length} cancellations exported successfully.`,
+        );
+      } else {
+        toast.error("Unable to export cancellations.");
+      }
+    } catch (error) {
+      console.error("Cancellations export error:", error);
+      toast.error(error?.message || "Failed to export cancellations.");
+    } finally {
+      setExportLoading(false);
+    }
+  }, [dispatch, toQueryParams, payload.total, payload.list.length]);
 
   const hasProcessingRefunds = cancellations.some((row) =>
     ["pending", "provider_pending"].includes(row.refundStatus),
@@ -747,6 +847,11 @@ const Cancellations = () => {
 
           return actions;
         }}
+        exportConfig={{
+          onClick: handleExportCancellations,
+          label: "Export",
+          disabled: loading || exportLoading || !cancellations.length,
+        }}
       />
 
       {/* Detail */}
@@ -821,8 +926,12 @@ const Cancellations = () => {
                 </div>
 
                 <div>
-                  <p className="text-xs font-medium text-gray-500">Requested By</p>
-                  <p className="mt-1 text-sm font-medium">{cancellationRequesterLabel(detail)}</p>
+                  <p className="text-xs font-medium text-gray-500">
+                    Requested By
+                  </p>
+                  <p className="mt-1 text-sm font-medium">
+                    {cancellationRequesterLabel(detail)}
+                  </p>
                 </div>
 
                 <div>

@@ -153,7 +153,7 @@ const CreditNotes = () => {
   );
 
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "issuedAt",
     defaultSortDir: "desc",
   });

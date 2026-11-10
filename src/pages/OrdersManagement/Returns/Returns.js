@@ -742,7 +742,7 @@ const Returns = () => {
     [isSeller],
   );
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "createdAt",
     defaultSortDir: "desc",
     defaultFilters: {
