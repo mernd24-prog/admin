@@ -153,6 +153,7 @@ const flattenSidebarChildren = (
   includeParent = true,
 ) => {
   return items.flatMap((item) => {
+    if (toRouteCode(item.routePath) === "deal-payouts") return [];
     const currentName = item.moduleName || item.name;
 
     const label =
@@ -229,6 +230,7 @@ const mergeSidebarModuleTrees = (...sources) => {
 
 const buildDynamicSidebarData = (modules = [], options = {}) => {
   return modules
+    .filter((item) => toRouteCode(item.routePath) !== "deal-payouts")
     .map((item) => {
       const subItems = flattenSidebarChildren(
         item.children || [],

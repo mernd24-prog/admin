@@ -1372,6 +1372,7 @@ const SellerPayouts = () => {
           <div className="space-y-5">
             {(() => {
               const breakdown = breakdownOf(detail);
+              const earnings = detail.earningsBreakdown || jsonOf(detail.metadata).earningsBreakdown;
 
               const taxWithheld =
                 Number(breakdown.gstTcsAmount || 0) +
@@ -1418,6 +1419,30 @@ const SellerPayouts = () => {
                       </div>
                     </div>
                   </FormSection>
+
+                  {earnings && earnings.deals?.length > 0 && (
+                    <FormSection
+                      title="Earnings by source"
+                      description="Deal earnings are included in this payout. Amounts shown are before payout recoveries and adjustments."
+                    >
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between gap-4">
+                          <span>Regular order earnings</span>
+                          <span>{money(earnings.regularNetAmount, detail.currency)}</span>
+                        </div>
+                        {earnings.deals.map((deal) => (
+                          <div key={deal.dealId} className="flex justify-between gap-4">
+                            <span>{deal.title} ({deal.itemCount} {deal.itemCount === 1 ? "item" : "items"})</span>
+                            <span className="whitespace-nowrap">{money(deal.netAmount, detail.currency)}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between gap-4 border-t border-gray-200 pt-3 font-semibold">
+                          <span>Total earnings</span>
+                          <span>{money(earnings.totalNetAmount, detail.currency)}</span>
+                        </div>
+                      </div>
+                    </FormSection>
+                  )}
 
                   {/* ==================== Calculation Breakdown ==================== */}
                   <FormSection

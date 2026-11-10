@@ -1,3 +1,4 @@
+import { orderDisplayStatus } from "../../../utils/orderDisplayStatus";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "../../../utils/toast";
@@ -108,9 +109,9 @@ const FILTER_FIELDS = [
   },
 
   {
-    key: "sellerId",
+    key: "organizationId",
     type: "asyncDropdown",
-    label: "Seller Store name",
+    label: "Seller Store Name",
     width: "w-52",
     load: (search) =>
       dropdownApi.getStoreName({
@@ -160,6 +161,7 @@ const getInitialQueryFilters = () => {
     "deliveryStatus",
     "buyerId",
     "sellerId",
+    "organizationId",
     "fromDate",
     "toDate",
   ].reduce((filters, key) => {
@@ -228,10 +230,6 @@ const sellerGroupsOf = (row = {}) => {
     ? row.relations.sellerFulfillmentGroups
     : [];
 
-  if (relationGroups.length) {
-    return relationGroups;
-  }
-
   const itemGroups = (Array.isArray(row.items) ? row.items : []).reduce(
     (groups, item) => {
       const sellerId = firstDefined(item.seller_id, item.sellerId, "platform");
@@ -274,8 +272,60 @@ const sellerGroupsOf = (row = {}) => {
     {},
   );
 
-  return Object.values(itemGroups);
+  // Item ownership is authoritative. Fulfillment groups can be incomplete
+  // while shipments are being created, so merge rather than replacing items.
+  const merged = new Map(Object.entries(itemGroups));
+  relationGroups.forEach((group) => {
+    const sellerId = firstDefined(group.sellerId, group.seller_id, "platform");
+    const organizationId = firstDefined(group.organizationId, group.organization_id, "default");
+    const key = `${sellerId}:${organizationId}`;
+    const itemGroup = merged.get(key) || {};
+    merged.set(key, {
+      ...itemGroup,
+      ...group,
+      sellerId,
+      organizationId,
+      sellerName: firstDefined(itemGroup.sellerName, group.sellerName),
+      organizationName: firstDefined(itemGroup.organizationName, group.organizationName),
+      organizationSnapshot: Object.keys(itemGroup.organizationSnapshot || {}).length
+        ? itemGroup.organizationSnapshot : group.organizationSnapshot,
+      itemCount: itemGroup.itemCount ?? group.itemCount,
+      quantity: itemGroup.quantity ?? group.quantity,
+    });
+  });
+  return [...merged.values()];
 };
+
+// Keep every seller/store pair separate; an order may span several stores.
+const sellerIdentitiesOf = (row = {}) => {
+  const groups = sellerGroupsOf(row);
+  const sellers = row.relations?.sellers || (row.seller ? [row.seller] : []);
+  const source = groups.length ? groups : [row];
+  const seen = new Set();
+  return source.map((group) => {
+    const sellerId = firstDefined(group.sellerId, group.seller_id);
+    const seller = sellers.find((entry) => String(entry.id || entry._id) === String(sellerId)) ||
+      (source.length === 1 ? sellers[0] : null) || {};
+    const organizationId = firstDefined(group.organizationId, group.organization_id);
+    const snapshot = normalizeJson(group.organizationSnapshot || group.organization_snapshot || group.organization, {});
+    const sellerName = firstDefined(group.sellerName, sellerNameOf(normalizeJson(group.sellerSnapshot || group.seller_snapshot, {})), sellerNameOf(seller));
+    return {
+      sellerId: firstDefined(sellerId, seller.id, seller._id),
+      organizationId,
+      sellerName: sellerName === sellerId ? sellerNameOf(seller) : sellerName,
+      organizationName: firstDefined(group.organizationName, organizationNameOf(snapshot)),
+    };
+  }).filter((identity) => {
+    const key = `${identity.sellerId || "platform"}:${identity.organizationId || identity.organizationName || "default"}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const buyerDisplayName = (...values) => values.find((value) =>
+  value && !/^(?:[a-f0-9]{24}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/i.test(String(value).trim()),
+);
 
 /* =========================================================
    ITEM COUNT
@@ -478,15 +528,17 @@ const createColumns = (
               row.buyerSnapshot ||
               {};
 
-            const name =
-              row.buyerName ||
-              row.customerName ||
-              buyer.displayName ||
-              buyer.fullName ||
-              buyer.name ||
-              row.buyer_name ||
-              shippingAddress.fullName ||
-              shippingAddress.name;
+            const name = buyerDisplayName(
+              row.buyerName,
+              row.customerName,
+              buyer.displayName,
+              buyer.fullName,
+              buyer.name,
+              row.buyer_name,
+              [buyer.profile?.firstName, buyer.profile?.lastName].filter(Boolean).join(" "),
+              shippingAddress.fullName,
+              shippingAddress.name,
+            );
 
             const email =
               row.buyerEmail ||
@@ -506,7 +558,7 @@ const createColumns = (
               <CustomerIdentity
                 row={{ ...row, shippingAddress }}
                 userId={canOpenBuyerDetails ? buyerId : undefined}
-                name={name}
+                name={name || email || "Customer details unavailable"}
                 loginName={email}
                 link={canOpenBuyerDetails}
               />
@@ -520,76 +572,36 @@ const createColumns = (
     ? [
         {
           key: "seller",
-          label: "Seller / Org",
+          label: "Sellers / Stores",
 
           render: (_, row) => {
-            const sellerGroups = sellerGroupsOf(row);
-
-            const primaryGroup = sellerGroups[0] || {};
-
-            const primarySeller =
-              row.relations?.sellers?.[0] || row.seller || {};
-
-            const sellerName = firstDefined(
-              row.sellerName,
-              primaryGroup.sellerName,
-              sellerNameOf(primarySeller),
-              row.sellerSnapshot?.name,
-              row.seller_snapshot?.name,
-            );
-
-            const organizationName = firstDefined(
-              row.organizationName,
-              primaryGroup.organizationName,
-              organizationNameOf(primaryGroup.organizationSnapshot),
-              row.organization?.legalName,
-              row.organizationSnapshot?.legalName,
-              row.organization_snapshot?.legalName,
-              row.organizationSnapshot?.storeDisplayName,
-              row.organization_snapshot?.storeDisplayName,
-            );
-
-            const sellerId = firstDefined(
-              row.sellerId,
-              row.seller_id,
-              primaryGroup.sellerId,
-              primaryGroup.seller_id,
-              primarySeller.id,
-              primarySeller._id,
-              row.seller?.id,
-              row.seller?._id,
-            );
-
-            const organizationId = firstDefined(
-              row.organizationId,
-              row.organization_id,
-              primaryGroup.organizationId,
-              primaryGroup.organization_id,
-            );
-
-            if (
-              !sellerName &&
-              !organizationName &&
-              !sellerId &&
-              !organizationId
-            ) {
-              return <span className="text-gray-400">—</span>;
-            }
-
+            const identities = sellerIdentitiesOf(row);
             return (
-              <div>
-                <SellerIdentity
-                  row={row}
-                  sellerId={canOpenSellerDetails ? sellerId : undefined}
-                  storeName={organizationName}
-                  loginName={sellerName}
-                  link={canOpenSellerDetails}
-                />
-                {sellerGroups.length > 1 && (
-                  <div className="text-xs text-gray-400">
-                    +{sellerGroups.length - 1} more seller
+              <div className="min-w-[180px] space-y-2">
+                {identities.length > 1 && (
+                  <div className="text-xs font-semibold text-gray-600">
+                    {new Set(identities.map((identity) => identity.sellerId)).size} sellers · {identities.length} stores
                   </div>
                 )}
+                {identities.map((identity) => (
+                  <div
+                    key={`${identity.sellerId}:${identity.organizationId || identity.organizationName || "default"}`}
+                    className="border-l-2 border-[#CE9F2D]/40 pl-2"
+                  >
+                    <SellerIdentity
+                      row={{
+                        sellerId: identity.sellerId,
+                        organizationId: identity.organizationId,
+                        organizationName: identity.organizationName,
+                        sellerName: identity.sellerName,
+                      }}
+                      sellerId={identity.sellerId}
+                      storeName={identity.organizationName}
+                      loginName={identity.sellerName}
+                      link={canOpenSellerDetails && Boolean(identity.sellerId) && identity.sellerId !== "platform"}
+                    />
+                  </div>
+                ))}
               </div>
             );
           },
@@ -654,7 +666,7 @@ const createColumns = (
     key: "status",
     label: "Order Status",
 
-    render: (value) => <OrderStatusBadge status={value} dot />,
+    render: (_, row) => <OrderStatusBadge status={orderDisplayStatus(row)} dot />,
   },
 
   {
@@ -662,7 +674,7 @@ const createColumns = (
     label: "Shipment Status",
 
     render: (value, row) => {
-      const status = firstDefined(value, shipmentStatusOf(row));
+      const status = firstDefined(shipmentStatusOf(row), value);
 
       return status ? (
         <StatusBadge status={status} dot />
@@ -853,29 +865,10 @@ const buildExportFilename = (fromDate, toDate) => {
 ========================================================= */
 
 const sellerExportInfo = (order = {}) => {
-  const group = sellerGroupsOf(order)[0] || {};
-
-  const seller = order.relations?.sellers?.[0] || order.seller || {};
-
+  const identities = sellerIdentitiesOf(order);
   return {
-    sellerName: firstDefined(
-      order.sellerName,
-      group.sellerName,
-      sellerNameOf(seller),
-      "—",
-    ),
-
-    organizationName: firstDefined(
-      order.organizationName,
-      group.organizationName,
-      organizationNameOf(group.organizationSnapshot),
-      order.organization?.legalName,
-      order.organizationSnapshot?.legalName,
-      order.organization_snapshot?.legalName,
-      order.organizationSnapshot?.storeDisplayName,
-      order.organization_snapshot?.storeDisplayName,
-      "—",
-    ),
+    sellerName: identities.map((identity) => identity.sellerName || "—").join("; "),
+    organizationName: identities.map((identity) => identity.organizationName || "—").join("; "),
   };
 };
 
@@ -1134,7 +1127,7 @@ const buildOrderExportData = (orders = [], filters = {}) => {
         "—",
       ),
 
-      orderStatus: firstDefined(order.status, "—"),
+      orderStatus: orderDisplayStatus(order) || "—",
 
       shipmentStatus: firstDefined(
         order.delivery_status,
@@ -1298,7 +1291,7 @@ const Orders = () => {
         setBuyerDirectory(
           buyers.reduce((directory, buyer) => {
             directory[String(buyer.value)] = {
-              name: buyer.label,
+              name: buyerDisplayName(buyer.label),
               email: buyer.meta?.email || "",
             };
 
@@ -1377,7 +1370,8 @@ const Orders = () => {
         paymentProvider: params.paymentProvider || undefined,
         deliveryStatus: params.deliveryStatus || undefined,
         buyerId: params.buyerId || undefined,
-        sellerId: params.sellerId || undefined,
+        sellerId: !isSeller ? params.sellerId || undefined : undefined,
+        organizationId: !isSeller ? params.organizationId || undefined : undefined,
         fromDate: params.fromDate || undefined,
         toDate: params.toDate || undefined,
         sortBy: params.sortBy,
@@ -1589,7 +1583,7 @@ const Orders = () => {
           return false;
         }
 
-        if (field.key === "sellerId" && isSeller) {
+        if (field.key === "organizationId" && isSeller) {
           return false;
         }
 

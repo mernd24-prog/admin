@@ -3,6 +3,7 @@ import { formatLabel } from "../../utils/formatters";
 
 // Color map: status key → Tailwind classes
 const VARIANTS = {
+  shipment_cancelled: "bg-red-50 text-red-700 border-red-200",
   // ── Generic ──────────────────────────────────────────────────────────────
   active: "bg-green-50 text-green-700 border-green-200",
   locked: "bg-amber-50 text-amber-700 border-amber-200",
@@ -120,6 +121,7 @@ const VARIANTS = {
 
 // Dot colors (optional indicator dot)
 const DOT_COLORS = {
+  shipment_cancelled: "bg-red-500",
   waiting: "bg-amber-500",
   available: "bg-emerald-500",
   paid: "bg-green-500",
@@ -189,6 +191,7 @@ const DOT_COLORS = {
 
 // Human-readable display labels override for underscore keys
 const DISPLAY_LABELS = {
+  shipment_cancelled: "Shipment Cancelled",
   in_stock: "In Stock",
   low_stock: "Low Stock",
   out_of_stock: "Out of Stock",

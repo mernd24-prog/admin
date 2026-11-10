@@ -15,6 +15,7 @@ const toOrderListParams = (params = {}) => {
         ...(params.paymentProvider || params.payment_provider ? { paymentProvider: params.paymentProvider || params.payment_provider } : {}),
         ...(params.deliveryStatus || params.delivery_status ? { deliveryStatus: params.deliveryStatus || params.delivery_status } : {}),
         ...(params.sellerId || params.seller_id ? { sellerId: params.sellerId || params.seller_id } : {}),
+        ...(params.organizationId ? { organizationId: params.organizationId } : {}),
         ...(params.userId || params.buyerId ? { buyerId: params.userId || params.buyerId } : {}),
         ...(params.keyWord || params.search ? { search: params.keyWord || params.search } : {}),
         ...(params.fromDate || params.dateFrom ? { fromDate: params.fromDate || params.dateFrom } : {}),

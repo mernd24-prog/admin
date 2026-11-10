@@ -1,3 +1,4 @@
+import { itemDisplayStatus, orderDisplayStatus } from "../../../../utils/orderDisplayStatus";
 import { boxLabelUnavailableReason } from "../../../../utils/boxLabelAvailability";
 import { cancellationRequesterLabel } from "../../../../utils/cancellationRequester";
 /* eslint-disable react-hooks/exhaustive-deps */
@@ -2586,6 +2587,16 @@ const PaymentCard = ({
 };
 
 const DocumentCard = ({ document = {}, onOpen }) => {
+  const metadata = normalizeJson(document.metadata, {});
+  const organization = normalizeJson(document.organization_snapshot || document.organizationSnapshot, {});
+  const sellerName = firstDefined(
+    organization.storeDisplayName, organization.legalBusinessName,
+    metadata.organization?.storeDisplayName, metadata.organization?.legalBusinessName,
+    metadata.seller?.displayName, metadata.seller?.businessName,
+    document.sellerName,
+  );
+  const isCommission = firstDefined(document.invoice_type, document.invoiceType) === "platform_commission";
+
   const number = firstDefined(
     document.invoice_number,
     document.invoiceNumber,
@@ -2611,6 +2622,7 @@ const DocumentCard = ({ document = {}, onOpen }) => {
         <div>
           <div className="font-bold text-[#202337]">{number}</div>
           <div className="mt-1 text-xs text-[#65718b] capitalize">{type}</div>
+          {sellerName && <div className="mt-1 text-sm font-medium text-[#202337]">{sellerName}</div>}
         </div>
         <StatusBadge
           status={firstDefined(document.status, "generated")}
@@ -2619,7 +2631,13 @@ const DocumentCard = ({ document = {}, onOpen }) => {
         />
       </div>
       <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2">
-        <DetailStat label="Total" value={total} tone="success" />
+        {isCommission && (
+          <>
+            <DetailStat label="Commission before GST" value={formatIndianNumber(firstDefined(document.taxable_amount, document.taxableAmount, 0))} tone="muted" />
+            <DetailStat label="GST on commission" value={formatIndianNumber(firstDefined(document.tax_amount, document.taxAmount, 0))} tone="muted" />
+          </>
+        )}
+        <DetailStat label={isCommission ? "Total including GST" : "Total"} value={total} tone="success" />
         <DetailStat
           label="Created"
           value={formatDate(
@@ -3001,26 +3019,13 @@ const selectedCount = Object.keys(formData.cancelItems).length;
     [items, pendingCancellationQuantityByItem, isItemShipmentCancellable],
   );
   const returns = Array.isArray(state.returns) ? state.returns : [];
-  const hasPendingItemRequest =
-    cancellations.some(
-      (request) =>
-        !["completed", "failed", "rejected"].includes(
-          String(request.status || "").toLowerCase(),
-        ),
-    ) ||
-    returns.some((request) =>
-      ["requested", "pending", "under_review"].includes(
-        String(request.status || "").toLowerCase(),
-      ),
-    );
-  const displayedOrderStatus =
-    hasPendingItemRequest &&
-      ["delivered", "fulfilled"].includes(
-        String(order.status || "").toLowerCase(),
-      )
-      ? "partially_delivered"
-      : order.status;
+  const displayedOrderStatus = orderDisplayStatus(order);
   const invoice = relations.invoice || relations.taxInvoice || null;
+  const invoices = Array.isArray(relations.invoices) && relations.invoices.length
+    ? relations.invoices : invoice ? [invoice] : [];
+  const commissionInvoices = invoices.filter((document) =>
+    firstDefined(document.invoice_type, document.invoiceType) === "platform_commission",
+  );
   const sellerGroups = useMemo(
     () => Object.values(groupItemsBySeller(items, relations)),
     [items, relations],
@@ -3398,7 +3403,7 @@ const selectedCount = Object.keys(formData.cancelItems).length;
             { label: "Order View" },
           ]}
           backPath="/app/orders"
-          status={order.status}
+          status={displayedOrderStatus}
           actions={
             <>
               <PermissionGuard module="orders" action="update" hide>
@@ -3699,7 +3704,7 @@ const selectedCount = Object.keys(formData.cancelItems).length;
                             </div>
                             <div className="md:col-span-2">
                               <StatusBadge
-                                status={displayedOrderStatus}
+                                status={itemDisplayStatus(item, order)}
                                 size="sm"
                                 dot
                               />
@@ -4268,23 +4273,40 @@ const selectedCount = Object.keys(formData.cancelItems).length;
               </h3>
 
               <div className="space-y-3">
-                {invoice ? (
+                {commissionInvoices.length > 0 && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <DetailStat
+                      label="Seller commission invoices (including GST)"
+                      value={formatIndianNumber(commissionInvoices.reduce((sum, document) =>
+                        sum + Number(firstDefined(document.total_amount, document.totalAmount, 0)), 0))}
+                      tone="success"
+                    />
+                    <DetailStat
+                      label="GST on seller commissions"
+                      value={formatIndianNumber(commissionInvoices.reduce((sum, document) =>
+                        sum + Number(firstDefined(document.tax_amount, document.taxAmount, 0)), 0))}
+                      tone="muted"
+                    />
+                  </div>
+                )}
+                {invoices.length ? invoices.map((document) => (
                   <DocumentCard
-                    document={invoice}
+                    key={document.id || document._id || document.invoice_number || document.invoiceNumber}
+                    document={document}
                     onOpen={() =>
                       navigate(
                         `/app/tax-invoices?search=${encodeURIComponent(
                           firstDefined(
-                            invoice.invoice_number,
-                            invoice.invoiceNumber,
+                            document.invoice_number,
+                            document.invoiceNumber,
                             "",
                           ),
                         )}`,
                       )
                     }
                   />
-                ) : (
-                  <EmptyState>No seller settlement data found</EmptyState>
+                )) : (
+                  <EmptyState>No tax invoices found</EmptyState>
                 )}
               </div>
             </div>
