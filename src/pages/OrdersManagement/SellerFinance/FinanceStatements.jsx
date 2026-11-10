@@ -61,8 +61,7 @@ export default function FinanceStatements() {
     if (!query) return rows;
 
     return rows.filter((row) => {
-      const periodStart =
-        row.period_start || row.periodStart || row.created_at;
+      const periodStart = row.period_start || row.periodStart || row.created_at;
       const periodEnd =
         row.period_end ||
         row.periodEnd ||
@@ -94,7 +93,9 @@ export default function FinanceStatements() {
       ];
 
       return visibleValues.some((value) =>
-        String(value || "").toLowerCase().includes(query),
+        String(value || "")
+          .toLowerCase()
+          .includes(query),
       );
     });
   }, [rows, search]);
@@ -121,10 +122,10 @@ export default function FinanceStatements() {
         render: (_, row) => (
           <div>
             <strong className="font-mono">{shortReference(row.id, "#")}</strong>
-            <span className="mt-1 block text-xs text-[var(--admin-muted)]">
+            {/* <span className="mt-1 block text-xs text-[var(--admin-muted)]">
               Payout{" "}
               {shortReference(financeValue(row, "payout_id", "payoutId"), "#")}
-            </span>
+            </span> */}
           </div>
         ),
       },
@@ -192,7 +193,7 @@ export default function FinanceStatements() {
         ]}
       />
       {/* <FinanceNav /> */}
-     
+
       <DataTable
         columns={columns}
         data={pagedRows}

@@ -32,6 +32,7 @@ import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 import { useListPage } from "../../../hooks/useListPage";
 import { formatDateTime12Hour, formatLabel } from "../../../utils/formatters";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import { EmptyState } from "../Orders/components/ViewOrders";
 
 const STATUSES = [
   "requested",
@@ -79,7 +80,7 @@ const cancellationStatusLabel = (status) =>
   })[String(status || "").toLowerCase()] || formatLabel(status);
 
 const CLASS_TEXT_XS_MUTED = "text-sm text-[#252238]";
-const CLASS_TEXT_XS_GRAY = "text-sm text-gray-600";
+const CLASS_TEXT_XS_GRAY = "text-sm text-[#252238]";
 const CLASS_TEXT_SM_GRAY = "text-sm text-gray-700";
 const CLASS_DETAIL_LABEL = "text-[#252238] text-sm";
 const CLASS_DETAIL_VALUE = "font-medium text-gray-800";
@@ -1047,39 +1048,38 @@ const Cancellations = () => {
             >
               <div className="space-y-3">
                 {(detail.items || []).map((item) => (
-                  <div
-                    key={item.orderItemId || item.order_item_id}
-                    className="rounded-lg border border-gray-200 bg-white p-4 transition hover:border-gray-300"
-                  >
-                    <div className="flex items-start justify-between gap-4">
+                  <>
+                    {/* Product title */}
+                    <div className="col-span-3 min-w-0">
+                      <p className="truncate text-sm font-semibold text-gray-900">
+                        {item.productTitle || item.product_title || "Product"}
+                      </p>
+                    </div>
+
+                    <div
+                      key={item.orderItemId || item.order_item_id}
+                      className="flex flex-row justify-between rounded-lg  bg-white  transition hover:border-gray-300"
+                    >
+                      {/* SKU */}
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-gray-900">
-                          {item.productTitle || item.product_title || "Product"}
+                        <span className="text-xs text-gray-500">SKU</span>
+                        <p className="mt-0.5 truncate text-xs font-medium text-gray-700">
+                          {item.variantSku || item.variant_sku || "—"}
                         </p>
-
-                        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                          <div>
-                            <span className="text-gray-500">SKU</span>
-
-                            <p className="mt-0.5 font-medium text-gray-700">
-                              {item.variantSku || item.variant_sku || "—"}
-                            </p>
-                          </div>
-
-                          <div>
-                            <span className="text-gray-500">Quantity</span>
-
-                            <p className="mt-0.5 font-medium text-gray-700">
-                              {item.quantity || 0}
-                            </p>
-                          </div>
-                        </div>
                       </div>
 
-                      <div className="shrink-0 text-right">
-                        <p className="text-xs text-gray-500">Refund</p>
+                      {/* Quantity */}
+                      <div className="min-w-0">
+                        <span className="text-xs text-gray-500">Quantity</span>
+                        <p className="mt-0.5 text-xs mx-auto font-medium text-gray-700">
+                          {item.quantity || 0}
+                        </p>
+                      </div>
 
-                        <p className="mt-1 text-sm font-bold text-gray-900">
+                      {/* Refund */}
+                      <div className="min-w-0 text-right">
+                        <span className="text-xs text-gray-500">Refund</span>
+                        <p className="mt-0.5 whitespace-nowrap text-sm font-bold text-gray-900">
                           {money(
                             item.refundAmount ??
                               item.refund_amount ??
@@ -1089,15 +1089,15 @@ const Cancellations = () => {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </>
                 ))}
 
                 {!detail.items?.length && (
-                  <div className="rounded-lg border border-dashed border-gray-200 p-5 text-center">
-                    <p className="text-xs text-gray-500">
+                  <EmptyState>
+                    <p className="text-xs font-medium text-[#65718b]">
                       No cancelled items found.
                     </p>
-                  </div>
+                  </EmptyState>
                 )}
               </div>
             </FormSection>

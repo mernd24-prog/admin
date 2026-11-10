@@ -442,7 +442,7 @@ const ProductAdminDetails = () => {
       key: "sku",
       label: "SKU",
       render: (_value, variant) => (
-        <span className="rounded-md bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
+        <span className="text-[#252238] font-regular font-inter">
           {variant?.sku || "N/A"}
         </span>
       ),
@@ -452,7 +452,7 @@ const ProductAdminDetails = () => {
       key: "price",
       label: "Price",
       render: (_value, variant) => (
-        <span className="font-bold text-gray-900">
+        <span className="text-[#252238] font-regular font-inter">
           {variant?.price !== undefined
             ? `₹${Number(variant.price).toLocaleString("en-IN")}`
             : "N/A"}
@@ -464,7 +464,7 @@ const ProductAdminDetails = () => {
       key: "mrp",
       label: "MRP",
       render: (_value, variant) => (
-        <span className="text-gray-600">
+        <span className="text-[#252238] font-regular font-inter">
           {variant?.mrp !== undefined
             ? `₹${Number(variant.mrp).toLocaleString("en-IN")}`
             : "N/A"}
@@ -477,7 +477,7 @@ const ProductAdminDetails = () => {
       label: "Stock",
       render: (_value, variant) => (
         <span
-          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+          className={`inline-flex rounded-full px-3 py-1 text-xs font-regular ${
             Number(variant?.stock) > 0
               ? "bg-green-50 text-green-700"
               : "bg-red-50 text-red-600"
@@ -492,7 +492,7 @@ const ProductAdminDetails = () => {
       key: "attributes",
       label: "Attributes",
       render: (_value, variant) => (
-        <div className="max-w-md text-xs leading-5 text-gray-500">
+        <div className="max-w-md text-sm text-black font-regular font-inter">
           {variant?.attributes
             ? Object.entries(
                 variant.attributes instanceof Map

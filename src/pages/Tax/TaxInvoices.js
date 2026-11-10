@@ -459,7 +459,7 @@ const TaxInvoices = () => {
           label: "Tax",
           sortable: true,
           render: (value, row) => (
-            <span className="text-sm font-medium">
+            <span className="text-sm">
               {formatIndianNumber(value ?? row.totalTax ?? row.tax_amount)}
             </span>
           ),
@@ -469,7 +469,7 @@ const TaxInvoices = () => {
           label: "Total",
           sortable: true,
           render: (value, row) => (
-            <span className="text-sm font-semibold">
+            <span className="text-sm ">
               {formatIndianNumber(value ?? row.total_amount)}
             </span>
           ),
@@ -479,7 +479,7 @@ const TaxInvoices = () => {
           label: "Issued",
           sortable: true,
           render: (value, row) => (
-            <span className="text-xs text-gray-500">
+            <span className="text-sm text-[#252238]">
               {formatDateTime12Hour(value ?? row.issueDate ?? row.issued_at)}
             </span>
           ),

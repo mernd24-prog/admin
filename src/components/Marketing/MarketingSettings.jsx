@@ -4,6 +4,8 @@ import { ACTIONS } from "../../_helpers/usePermission";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "../../utils/toast";
+import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
+import { TextInput } from "../../pages/ReferralCommerce/ReferralCommerce";
 const DEFAULT_MARKETING = {
   enabled: false,
   campaignKey: "default",
@@ -49,34 +51,22 @@ const Field = ({ label, children, hint }) => (
   </div>
 );
 
-const InputField = ({
+const ToggleField = ({
   label,
-  value,
+  checked,
   onChange,
-  type = "text",
   hint,
-  ...props
+  activeLabel = "Enabled",
+  inactiveLabel = "Disabled",
+  disabled = false,
 }) => (
-  <Field label={label} hint={hint}>
-    <input
-      className="admin-input"
-      type={type}
-      value={value ?? ""}
-      onChange={(event) => onChange(event.target.value)}
-      {...props}
-    />
-  </Field>
-);
-
-const ToggleField = ({ label, checked, onChange, hint, activeLabel = "Enabled", inactiveLabel = "Disabled", disabled = false }) => (
   <Field label={label} hint={hint}>
     <label className="flex h-[36px] cursor-pointer items-center justify-between gap-3 rounded-[6px] border border-[var(--admin-field-line)] bg-[var(--admin-field)] px-3 text-xs font-medium text-gray-700 transition hover:border-[var(--admin-line-strong)]">
       <span>{checked ? activeLabel : inactiveLabel}</span>
-      <input
+      <TextInput
         type="checkbox"
-        aria-label={label}
-        disabled={disabled}
         checked={Boolean(checked)}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
         className="h-4 w-4 cursor-pointer accent-[var(--admin-navy)]"
       />
@@ -145,27 +135,35 @@ export default function MarketingSettings({ kind = "coupons" }) {
   };
   return (
     <section className="admin-card p-5">
-      <h2 className="mb-4 text-sm font-semibold">{title}</h2>
-      <div className="mb-4 flex gap-2">
-        <button
-          type="button"
-          className="admin-btn-secondary"
-          onClick={load}
-          disabled={busy}
-        >
-          Refresh
-        </button>
-        <PermissionGuard module={permissionModule} action={ACTIONS.UPDATE} hide>
+      <div className="flex  justify-between">
+        <h2 className="mb-4 text-sm font-semibold">{title}</h2>
+
+        <div className="mb-4 flex gap-2">
           <button
             type="button"
-            className="admin-btn-primary"
-            onClick={save}
-            disabled={busy || !loaded}
+            className="admin-btn-secondary"
+            onClick={load}
+            disabled={busy}
           >
-            {busy ? "Please wait..." : "Save Marketing Settings"}
+            Refresh
           </button>
-        </PermissionGuard>
+          <PermissionGuard
+            module={permissionModule}
+            action={ACTIONS.UPDATE}
+            hide
+          >
+            <button
+              type="button"
+              className="admin-btn-primary"
+              onClick={save}
+              disabled={busy || !loaded}
+            >
+              {busy ? "Please wait..." : "Save Marketing Settings"}
+            </button>
+          </PermissionGuard>
+        </div>
       </div>
+
       <p className="mb-4 text-sm text-gray-600" aria-live="polite">
         {marketingUsage && marketingUsage.campaignKey === policy.campaignKey
           ? `Saved campaign ${marketingUsage.campaignKey}: ₹${marketingUsage.spent} reserved across ${marketingUsage.orders} orders. Remaining saved budget: ${marketingUsage.remaining === null ? "Unlimited" : `₹${marketingUsage.remaining}`}. Refresh to update.`
@@ -192,25 +190,31 @@ export default function MarketingSettings({ kind = "coupons" }) {
           onChange={(value) => patchField("enabled", value)}
         />
       </div>
-      <p className={`mb-4 rounded-md border p-3 text-sm ${policy.enabled ? "border-green-200 bg-green-50 text-green-900" : "border-amber-200 bg-amber-50 text-amber-900"}`} role="status">
+      <p
+        className={`mb-4 rounded-md border p-3 text-sm ${policy.enabled ? "border-green-200 bg-green-50 text-green-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}
+        role="status"
+      >
         {policy.enabled
           ? "The minimum order amount, usage limits and budgets below will apply."
-          : `${kind === "referrals" ? "Referral codes" : "Coupons"} still work under their existing rules. The marketing limits below are not applied.`}
-        {" "}Click Save Marketing Settings to apply changes.
+          : `${kind === "referrals" ? "Referral codes" : "Coupons"} still work under their existing rules. The marketing limits below are not applied.`}{" "}
+        Click Save Marketing Settings to apply changes.
       </p>
-      <fieldset disabled={!policy.enabled || busy || !loaded} className={`grid min-w-0 grid-cols-1 gap-4 border-0 p-0 md:grid-cols-2 xl:grid-cols-3 ${!policy.enabled ? "opacity-50" : ""}`}>
+      <fieldset
+        disabled={!policy.enabled || busy || !loaded}
+        className={`grid min-w-0 grid-cols-1 gap-4 border-0 p-0 md:grid-cols-2 xl:grid-cols-3 ${!policy.enabled ? "opacity-50" : ""}`}
+      >
         <legend className="sr-only">Marketing limits</legend>
-        <InputField
+        <TextInput
           label="Campaign key"
           value={policy.campaignKey}
-          onChange={(value) => patchField("campaignKey", value)}
+          onChange={(event) => patchField("campaignKey", event.target.value)}
           hint="Keep this key to retain usage history. A new key starts new limits; reusing a key restores its history."
         />
         {[
           ["startsAt", "Campaign start"],
           ["endsAt", "Campaign end"],
         ].map(([key, label]) => (
-          <InputField
+          <TextInput
             key={key}
             label={`${label} (local time)`}
             type="datetime-local"
@@ -224,33 +228,49 @@ export default function MarketingSettings({ kind = "coupons" }) {
                     .slice(0, 16)
                 : ""
             }
-            onChange={(value) =>
-              patchField(key, value ? new Date(value).toISOString() : null)
+            onChange={(event) =>
+              patchField(
+                key,
+                event.target.value
+                  ? new Date(event.target.value).toISOString()
+                  : null,
+              )
             }
           />
         ))}
         {kind === "referrals" && (
           <p className="text-sm text-gray-600 md:col-span-2 xl:col-span-3">
-            One referral pool per order: the lowest positive eligible product pool applies.
-            Quantities do not multiply it. Products without a pool are ignored.
-            Percentage pools use one unit’s price.
+            One referral pool per order: the lowest positive eligible product
+            pool applies. Quantities do not multiply it. Products without a pool
+            are ignored. Percentage pools use one unit’s price.
           </p>
         )}
         <Field label="Customer eligibility">
-          <select
-            className="admin-input"
-            value={policy.firstOrderOnly ? "new" : policy.customerEligibility}
-            onChange={(event) =>
+          <FilterSelect
+            options={[
+              { value: "all", label: "All customers" },
+              { value: "new", label: "First order only" },
+              { value: "returning", label: "Returning customers only" },
+            ]}
+            value={{
+              value: policy.firstOrderOnly ? "new" : policy.customerEligibility,
+              label:
+                policy.firstOrderOnly || policy.customerEligibility === "new"
+                  ? "First order only"
+                  : policy.customerEligibility === "returning"
+                    ? "Returning customers only"
+                    : "All customers",
+            }}
+            onChange={(option) =>
               patchPolicy({
-                customerEligibility: event.target.value,
+                customerEligibility: option?.value || "all",
                 firstOrderOnly: false,
               })
             }
-          >
-            <option value="all">All customers</option>
-            <option value="new">First order only</option>
-            <option value="returning">Returning customers only</option>
-          </select>
+            isSearchable={false}
+            isClearable={false}
+            placeholder="Select customer eligibility"
+          />
         </Field>
         <ToggleField
           label="Allow combining with deals"
@@ -269,16 +289,20 @@ export default function MarketingSettings({ kind = "coupons" }) {
               key,
             ),
         ).map(([key, label]) => (
-          <InputField
+          <TextInput
             key={key}
             label={label}
             type="number"
             min="0"
-            hint={key === "minOrderAmount" ? "Uses the whole order subtotal, including products without a referral pool, before discounts, tax and shipping." : "Optional. Leave blank or enter 0 for no limit."}
+            hint={
+              key === "minOrderAmount"
+                ? "Uses the whole order subtotal, including products without a referral pool, before discounts, tax and shipping."
+                : "Optional. Leave blank or enter 0 for no limit."
+            }
             placeholder="0 — no limit"
             step={key.toLowerCase().includes("uses") ? "1" : "0.01"}
             value={policy[key]}
-            onChange={(value) => patchField(key, value)}
+            onChange={(event) => patchField(key, event.target.value)}
           />
         ))}
       </fieldset>

@@ -72,7 +72,7 @@ const STOCK_FILTER_OPTIONS = [
 // ];
 
 const STOCK_HISTORY_PAGE_SIZE = 10;
-
+const MAX_STOCK = 10000000;
 const getInitialInventoryFilters = () => {
   const params = new URLSearchParams(window.location.search);
   return ["stockStatus", "variantStatus", "status"].reduce((filters, key) => {
@@ -153,11 +153,11 @@ const getTotalFromResponse = (response, fallback = 0) => {
 
   return Number(
     response?.data?.meta?.productTotal ??
-    response?.data?.data?.meta?.productTotal ??
-    payload?.meta?.productTotal ??
-    payload?.meta?.pagination?.totalItems ??
-    payload?.total ??
-    fallback,
+      response?.data?.data?.meta?.productTotal ??
+      payload?.meta?.productTotal ??
+      payload?.meta?.pagination?.totalItems ??
+      payload?.total ??
+      fallback,
   );
 };
 
@@ -165,11 +165,11 @@ const getVariantTotalFromResponse = (response, fallback = 0) => {
   const payload = unwrapApiPayload(response);
   return Number(
     response?.data?.meta?.total ??
-    response?.data?.data?.meta?.total ??
-    payload?.meta?.total ??
-    payload?.meta?.pagination?.totalItems ??
-    payload?.total ??
-    fallback,
+      response?.data?.data?.meta?.total ??
+      payload?.meta?.total ??
+      payload?.meta?.pagination?.totalItems ??
+      payload?.total ??
+      fallback,
   );
 };
 
@@ -280,11 +280,11 @@ const groupInventoryByProduct = (variantRows = []) => {
   variantRows.forEach((variant, index) => {
     const productKey = String(
       variant.productId ||
-      variant.product_id ||
-      variant.productSku ||
-      variant.productName ||
-      variant.id ||
-      index,
+        variant.product_id ||
+        variant.productSku ||
+        variant.productName ||
+        variant.id ||
+        index,
     );
 
     if (!groups.has(productKey)) {
@@ -532,7 +532,6 @@ const Inventory = () => {
   const sku = state?.sku || null;
   const variantId = state?.variantId || null;
 
-
   const dispatch = useDispatch();
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -613,9 +612,7 @@ const Inventory = () => {
       const pageCount = Math.max(1, Math.ceil(variantTotal / 100));
       const remainingResponses = await Promise.all(
         Array.from({ length: pageCount - 1 }, (_, index) =>
-          dispatch(
-            getInventoryList({ ...params, page: index + 2 }),
-          ).unwrap(),
+          dispatch(getInventoryList({ ...params, page: index + 2 })).unwrap(),
         ),
       );
       const nextRows = [
@@ -727,7 +724,8 @@ const Inventory = () => {
       ? grouped
       : grouped.filter((row) => {
           if (stockStatus === "in_stock") return row.status === "in_stock";
-          if (stockStatus === "out_of_stock") return row.status === "out_of_stock";
+          if (stockStatus === "out_of_stock")
+            return row.status === "out_of_stock";
           if (stockStatus === "low_stock") return row.status === "low_stock";
           return true;
         });
@@ -788,28 +786,16 @@ const Inventory = () => {
   const canSave = pendingCount > 0 && !saving && !importing && !loading;
 
   const handleStockChange = useCallback((rowId, value) => {
-    setImportError("");
-    setImportInfo("");
-    setImportSuccess("");
+    if (value !== "" && Number(value) > MAX_STOCK) {
+      return;
+    }
 
     setDetailRows((current) =>
-      current.map((row) => {
-        if (row.id !== rowId) return row;
-
-        if (value === "") {
-          return {
-            ...row,
-            currentStock: "",
-          };
-        }
-
-        const parsed = Number(value);
-
-        return {
-          ...row,
-          currentStock: Number.isFinite(parsed) ? parsed : value,
-        };
-      }),
+      current.map((row) =>
+        row.id === rowId
+          ? { ...row, currentStock: value === "" ? "" : Number(value) }
+          : row,
+      ),
     );
   }, []);
 
@@ -883,7 +869,8 @@ const Inventory = () => {
 
         if (showToast) {
           toast.success(
-            `Updated ${changedRows.length} inventory ${changedRows.length === 1 ? "entry" : "entries"
+            `Updated ${changedRows.length} inventory ${
+              changedRows.length === 1 ? "entry" : "entries"
             }`,
           );
         }
@@ -1023,10 +1010,11 @@ const Inventory = () => {
         return;
       }
 
-      const filename = `${productId
-        ? normalizeText(detail?.product?.sku || "product")
-        : "inventory"
-        }-stock-template.xlsx`;
+      const filename = `${
+        productId
+          ? normalizeText(detail?.product?.sku || "product")
+          : "inventory"
+      }-stock-template.xlsx`;
 
       exportToExcelWorkbook(
         [
@@ -1041,17 +1029,6 @@ const Inventory = () => {
                 .replace(/^./, (char) => char.toUpperCase())
                 .trim(),
             })),
-            cellStyles: {
-              "Current Stock": {
-                0: {
-                  font: { color: { rgb: "C62828" }, bold: true },
-                  fill: {
-                    patternType: "solid",
-                    fgColor: { rgb: "FDE8E7" },
-                  },
-                },
-              },
-            },
           },
         ],
         filename,
@@ -1085,9 +1062,7 @@ const Inventory = () => {
       const normalizedImport = imported
         .map((item) =>
           Object.entries(item || {}).reduce((normalized, [header, value]) => {
-            const key = IMPORT_COLUMN_LOOKUP.get(
-              normalizeImportColumn(header),
-            );
+            const key = IMPORT_COLUMN_LOOKUP.get(normalizeImportColumn(header));
             if (key) normalized[key] = value;
             return normalized;
           }, {}),
@@ -1135,8 +1110,8 @@ const Inventory = () => {
           );
         const row = variantIdValue
           ? byIdentity.get(
-            [productIdValue, variantIdValue, variantSkuValue].join("::"),
-          )
+              [productIdValue, variantIdValue, variantSkuValue].join("::"),
+            )
           : bySku.get(`${productIdValue}::${variantSkuValue}`);
         if (!row)
           throw new Error(
@@ -1146,11 +1121,7 @@ const Inventory = () => {
           );
         const key = row.id || getVariantIdentity(row);
         if (updates.has(key))
-          throw new Error(
-            buildImportValidationError(
-              "Duplicate variant row.",
-            ),
-          );
+          throw new Error(buildImportValidationError("Duplicate variant row."));
         const edited = READ_ONLY_IMPORT_COLUMNS.filter(
           (column) =>
             !importValuesMatch(
@@ -1167,9 +1138,7 @@ const Inventory = () => {
           );
         const stock = Number(item.newStock);
         if (!Number.isInteger(stock) || stock < 0)
-          throw new Error(
-            "New Stock must be a non-negative whole number.",
-          );
+          throw new Error("New Stock must be a non-negative whole number.");
         if (stock < Number(row.reservedStock || 0))
           throw new Error(
             `New Stock cannot be below reserved stock (${row.reservedStock}).`,
@@ -1286,10 +1255,11 @@ const Inventory = () => {
                 event.stopPropagation();
                 openImageGallery(row);
               }}
-              className={`text-xs ${images.length
-                ? "text-[var(--admin-blue)] hover:underline"
-                : "cursor-not-allowed text-[var(--admin-muted)]"
-                }`}
+              className={`text-xs ${
+                images.length
+                  ? "text-[var(--admin-blue)] hover:underline"
+                  : "cursor-not-allowed text-[var(--admin-muted)]"
+              }`}
             >
               View
             </button>
@@ -1338,18 +1308,18 @@ const Inventory = () => {
     },
     ...(adminPanel
       ? [
-        {
-          key: "seller",
-          label: "Seller",
-          render: (_, row) => (
-            <SellerIdentity
-              row={row}
-              storeName={row.storeName || row.organizationName}
-              loginName={sellerLabel(row)}
-            />
-          ),
-        },
-      ]
+          {
+            key: "seller",
+            label: "Seller",
+            render: (_, row) => (
+              <SellerIdentity
+                row={row}
+                storeName={row.storeName || row.organizationName}
+                loginName={sellerLabel(row)}
+              />
+            ),
+          },
+        ]
       : []),
     {
       key: "lastUpdated",
@@ -1446,32 +1416,34 @@ const Inventory = () => {
             Number(value || 0) <= 0 ? "text-red-600" : "text-emerald-700",
           ),
       },
-   {
-  key: "currentStock",
-  label: "New Stock",
-  render: (_, row) => {
-    const hasError =
-      row.currentStock === "" ||
-      !Number.isInteger(Number(row.currentStock)) ||
-      Number(row.currentStock) < 0;
+      {
+        key: "currentStock",
+        label: "New Stock",
+        render: (_, row) => {
+          const hasError =
+            row.currentStock === "" ||
+            !Number.isInteger(Number(row.currentStock)) ||
+            Number(row.currentStock) < 0;
 
-    return (
-      <Input
-        type="number"
-        min={0}
-        step={1}
-        value={row.currentStock}
-        hasError={hasError}
-        onChange={(event) =>
-          handleStockChange(row.id, event.target.value)
-        }
-        className="w-28"
-        inputClassName="px-2 py-1.5 text-sm"
-        showLengthCount={false}
-      />
-    );
-  },
-},
+          return (
+            <Input
+              type="number"
+              min={0}
+              maxLength={10000000}
+              limitMessage="Stock cannot exceed 10000000"
+              step={1}
+              value={row.currentStock}
+              hasError={hasError}
+              onChange={(event) =>
+                handleStockChange(row.id, event.target.value)
+              }
+              className="w-28"
+              inputClassName="px-2 py-1.5 text-sm"
+              showLengthCount={false}
+            />
+          );
+        },
+      },
       {
         key: "status",
         label: "Status",
@@ -1569,8 +1541,9 @@ const Inventory = () => {
 
         <span
           aria-hidden="true"
-          className={`inline-flex shrink-0 items-center justify-center text-gray-500 transition-transform duration-200 ${isImportHelpOpen ? "rotate-180" : "rotate-0"
-            }`}
+          className={`inline-flex shrink-0 items-center justify-center text-gray-500 transition-transform duration-200 ${
+            isImportHelpOpen ? "rotate-180" : "rotate-0"
+          }`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

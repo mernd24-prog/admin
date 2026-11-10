@@ -55,16 +55,20 @@ const STATUSES = [
 ];
 
 const unwrapList = (payload = {}) => {
-  const data = payload?.data?.data;
-  if (Array.isArray(data)) return { list: data, total: data.length };
+  const data =
+    payload?.data?.data ||
+    payload?.data ||
+    payload?.normalized?.data ||
+    payload?.normalized ||
+    payload;
+
+  const list = Array.isArray(data) ? data : data?.list || data?.items || [];
+
   return {
-    list: data?.list || data?.items || data || [],
-    total: Number(
-      data?.total || data?.list?.length || data?.items?.length || 0,
-    ),
+    list,
+    total: Number(data?.total ?? list.length),
   };
 };
-
 const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
 
 const FILTER_FIELDS = [
@@ -120,7 +124,7 @@ const Payments = () => {
   const selector = useSelector((state) => state.adminCore);
   const payload = unwrapList(selector.adminPaymentsData);
   const list = useListPage({
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultSortKey: "created_at",
     defaultSortDir: "desc",
     defaultFilters: getInitialPaymentFilters(),
@@ -128,6 +132,7 @@ const Payments = () => {
   const { toQueryParams } = list;
 
   const [loading, setLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [error, setError] = useState("");
   const [detailPayment, setDetailPayment] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -299,13 +304,29 @@ const Payments = () => {
     [],
   );
 
-  const handleExportPayments = useCallback(() => {
-    if (!payload.list.length) {
-      toast.info("No payments available to export.");
-      return;
-    }
-
+  const handleExportPayments = useCallback(async () => {
     try {
+      setExportLoading(true);
+
+      const params = toQueryParams();
+
+      const response = await dispatch(
+        getAdminPayments({
+          ...params,
+          page: 1,
+          limit: payload.total,
+          offset: 0,
+        }),
+      ).unwrap();
+
+      const exportPayload = unwrapList(response);
+      const allPayments = exportPayload.list;
+
+      if (!allPayments.length) {
+        toast.info("No payments available to export.");
+        return;
+      }
+
       const exportColumns = [
         { key: "transaction_reference", label: "Payment" },
         { key: "buyerName", label: "Buyer Name" },
@@ -315,7 +336,7 @@ const Payments = () => {
         { key: "created_at", label: "Date" },
       ];
 
-      const exportRows = payload.list.map((row) => {
+      const exportRows = allPayments.map((row) => {
         const buyerName =
           row.buyerName ||
           row.buyer?.displayName ||
@@ -328,15 +349,10 @@ const Payments = () => {
           transaction_reference: row.provider
             ? `${display(row.provider)} payment`
             : "N/A",
-
           buyerName,
-
           provider: display(row.provider),
-
           status: display(row.status),
-
           amount: `${row.currency || "INR"} ${formatIndianNumber(row.amount)}`,
-
           created_at: formatDateTime12Hour(row.created_at, "N/A"),
         };
       });
@@ -354,15 +370,17 @@ const Payments = () => {
       );
 
       if (exported) {
-        toast.success("Payments exported successfully.");
+        toast.success(`${allPayments.length} payments exported successfully.`);
       } else {
         toast.error("Unable to export payments.");
       }
     } catch (error) {
       console.error("Payments export error:", error);
-      toast.error("Failed to export payments.");
+      toast.error(error?.message || "Failed to export payments.");
+    } finally {
+      setExportLoading(false);
     }
-  }, [payload.list]);
+  }, [dispatch, toQueryParams, payload.total]);
 
   return (
     <div>
@@ -426,8 +444,8 @@ const Payments = () => {
               ),
               requiredModule: "payments",
               requiredAction: ACTIONS.APPROVE,
-              onClick: () =>
-                (setDecision({
+              onClick: () => (
+                setDecision({
                   open: true,
                   type: "approve",
                   payment: row,
@@ -435,10 +453,13 @@ const Payments = () => {
                 decisionFormik.resetForm({
                   values: {
                     referenceId:
-                      row.provider_payment_id || row.transaction_reference || "",
+                      row.provider_payment_id ||
+                      row.transaction_reference ||
+                      "",
                     reason: "",
                   },
-                })),
+                })
+              ),
             });
 
             actions.push({
@@ -452,12 +473,14 @@ const Payments = () => {
               ),
               requiredModule: "payments",
               requiredAction: ACTIONS.APPROVE,
-              onClick: () =>
-                (setDecision({
+              onClick: () => (
+                setDecision({
                   open: true,
                   type: "reject",
                   payment: row,
-                }), decisionFormik.resetForm()),
+                }),
+                decisionFormik.resetForm()
+              ),
             });
           }
 
@@ -467,7 +490,7 @@ const Payments = () => {
         exportConfig={{
           onClick: handleExportPayments,
           label: "Export",
-          disabled: loading || !payload.list.length,
+          disabled: loading || exportLoading || !payload.list.length,
         }}
       />
 
@@ -622,82 +645,84 @@ const Payments = () => {
         </div>
       </DefaultModal>
 
-
-<DefaultModal
-  isOpen={decision.open}
-  onClose={() =>
-    (setDecision({ open: false, type: "", payment: null }),
-    decisionFormik.resetForm())
-  }
-  title={
-    decision.type === "approve" ? "Approve Payment" : "Reject Payment"
-  }
-  onSubmit={() => decisionFormik.handleSubmit()}
-  submitButtonText={
-    decision.type === "approve" ? "Approve Payment" : "Reject Payment"
-  }
-  closeButtonText="Cancel"
->
-  <div className="space-y-5">
-    <FormSection
-      title="Payment Decision"
-      description={
-        decision.type === "approve"
-          ? "Provide the collection or bank reference to approve this payment."
-          : "Provide a reason for rejecting this payment."
-      }
-    >
-      <div className="space-y-4">
-        {decision.type === "approve" && (
-          <div>
-            <Input
-              labelName="Collection / Bank Reference"
-              name="referenceId"
-              minLength={3}
-              maxLength={150}
-              showLengthCount={false}
-              limitMessage="Reference or bank reference is limited to 150 characters."
-              value={decisionFormik.values.referenceId}
-              onChange={decisionFormik.handleChange}
-              onBlur={decisionFormik.handleBlur}
-              error={decisionFormik.touched.referenceId && decisionFormik.errors.referenceId}
-              placeholder="Enter collection or bank reference"
-              required
-            />
-          
-          </div>
+      <DefaultModal
+        isOpen={decision.open}
+        onClose={() => (
+          setDecision({ open: false, type: "", payment: null }),
+          decisionFormik.resetForm()
         )}
+        title={
+          decision.type === "approve" ? "Approve Payment" : "Reject Payment"
+        }
+        onSubmit={() => decisionFormik.handleSubmit()}
+        submitButtonText={
+          decision.type === "approve" ? "Approve Payment" : "Reject Payment"
+        }
+        closeButtonText="Cancel"
+      >
+        <div className="space-y-5">
+          <FormSection
+            title="Payment Decision"
+            description={
+              decision.type === "approve"
+                ? "Provide the collection or bank reference to approve this payment."
+                : "Provide a reason for rejecting this payment."
+            }
+          >
+            <div className="space-y-4">
+              {decision.type === "approve" && (
+                <div>
+                  <Input
+                    labelName="Collection / Bank Reference"
+                    name="referenceId"
+                    minLength={3}
+                    maxLength={150}
+                    showLengthCount={false}
+                    limitMessage="Reference or bank reference is limited to 150 characters."
+                    value={decisionFormik.values.referenceId}
+                    onChange={decisionFormik.handleChange}
+                    onBlur={decisionFormik.handleBlur}
+                    error={
+                      decisionFormik.touched.referenceId &&
+                      decisionFormik.errors.referenceId
+                    }
+                    placeholder="Enter collection or bank reference"
+                    required
+                  />
+                </div>
+              )}
 
-        <div>
-          <Input
-            type="textarea"
-            labelName={
-              decision.type === "reject"
-                ? "Rejection Reason"
-                : "Additional Notes (Optional)"
-            }
-            name="reason"
-            minLength={3}
-            maxLength={500}
-            limitMessage="Note is limited to 500 characters."
-            value={decisionFormik.values.reason}
-            onChange={decisionFormik.handleChange}
-            onBlur={decisionFormik.handleBlur}
-            error={decisionFormik.touched.reason && decisionFormik.errors.reason}
-            placeholder={
-              decision.type === "reject"
-                ? "Explain why this payment is being rejected"
-                : "Add any relevant payment notes"
-            }
-            required={decision.type === "reject"}
-          />
-        
+              <div>
+                <Input
+                  type="textarea"
+                  labelName={
+                    decision.type === "reject"
+                      ? "Rejection Reason"
+                      : "Additional Notes (Optional)"
+                  }
+                  name="reason"
+                  minLength={3}
+                  maxLength={500}
+                  limitMessage="Note is limited to 500 characters."
+                  value={decisionFormik.values.reason}
+                  onChange={decisionFormik.handleChange}
+                  onBlur={decisionFormik.handleBlur}
+                  error={
+                    decisionFormik.touched.reason &&
+                    decisionFormik.errors.reason
+                  }
+                  placeholder={
+                    decision.type === "reject"
+                      ? "Explain why this payment is being rejected"
+                      : "Add any relevant payment notes"
+                  }
+                  required={decision.type === "reject"}
+                />
+              </div>
+            </div>
+          </FormSection>
         </div>
-      </div>
-    </FormSection>
-  </div>
-</DefaultModal>
-
+      </DefaultModal>
     </div>
   );
 };

@@ -136,9 +136,7 @@ const PageHeader = ({
           </div>
 
           {subtitle && (
-            <p className="text-sm text-[var(--admin-muted)] mt-0.5">
-              {subtitle}
-            </p>
+            <p className="text-sm text-[var(--admin-muted)] mt-0.5" dangerouslySetInnerHTML={{ __html: subtitle }} /> 
           )}
         </div>
       </div>

@@ -59,7 +59,7 @@ const REF_TYPES = [
   "manual",
 ];
 
-const CLASS_TEXT_XS_MUTED = "text-sm text-gray-500";
+const CLASS_TEXT_XS_MUTED = "text-sm text-[#252238]";
 const CLASS_CARD_WHITE = "rounded-lg border border-gray-100 bg-white p-3";
 const CLASS_CODE_VALUE =
   "mt-1 break-all font-inter font-medium text-sm text-[#1f2937]";
@@ -349,7 +349,7 @@ const CreditNotes = () => {
           label: "Total Credit",
           sortable: true,
           render: (v, row) => (
-            <span className="text-sm font-semibold">
+            <span className="text-sm">
               {formatIndianNumber(v ?? row.total_amount ?? row.taxable_amount)}
             </span>
           ),
