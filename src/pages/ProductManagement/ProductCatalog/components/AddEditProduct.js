@@ -4007,7 +4007,7 @@ export default function ProductManagementUI() {
                     ...opt,
                     isDisabled: opt.profile?.active === false ||
                       Boolean(formData?.sellerId && String(opt.profile?.sellerId || "") !== String(formData.sellerId)) ||
-                      Boolean(opt.profile?.organizationId && String(opt.profile.organizationId) !== String(formData?.organizationId || "")),
+                      Boolean(formData?.organizationId && opt.profile?.organizationId && String(opt.profile.organizationId) !== String(formData.organizationId)),
                     value: String(
                       opt.value || opt.profile?._id || opt.profile?.id || "",
                     ),
@@ -4022,7 +4022,7 @@ export default function ProductManagementUI() {
                       ...opt,
                     isDisabled: opt.profile?.active === false ||
                       Boolean(formData?.sellerId && String(opt.profile?.sellerId || "") !== String(formData.sellerId)) ||
-                      Boolean(opt.profile?.organizationId && String(opt.profile.organizationId) !== String(formData?.organizationId || "")),
+                      Boolean(formData?.organizationId && opt.profile?.organizationId && String(opt.profile.organizationId) !== String(formData.organizationId)),
                       value: String(
                         opt.value || opt.profile?._id || opt.profile?.id || "",
                       ),

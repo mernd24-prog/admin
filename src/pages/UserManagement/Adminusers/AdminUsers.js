@@ -4,7 +4,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import { MdLogout, MdClose, MdSecurity, MdContentCopy, MdDashboardCustomize } from "react-icons/md";
+import {
+  MdLogout,
+  MdClose,
+  MdSecurity,
+  MdContentCopy,
+  MdDashboardCustomize,
+} from "react-icons/md";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import {
   getAdmins,
@@ -21,7 +27,7 @@ import TableData from "../../../components/Atoms/TableData/TableData";
 import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 import Loader from "../../../components/Loader/Loader";
 import Pagination from "../../../components/Pagination/Pagination";
-import AddButton from "../../../components/Button/AddButton";
+
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import { ActionButtons } from "../../../components/Atoms/TableActionButton/TableActionButton";
 import StatusPopup from "../../../components/Atoms/PopupData/StatusPopup";
@@ -38,6 +44,7 @@ import {
   MODULE_TAB_ORDER,
 } from "../../../_helpers/rbacRoutes";
 import { usePermission } from "../../../_helpers/usePermission";
+import AddButton from "../../../components/Atoms/buttons/AddButton";
 
 const PAGE_SIZE = 10;
 
@@ -49,7 +56,8 @@ const EffectivePermissionsDrawer = ({ userId, userName, onClose }) => {
   useEffect(() => {
     if (!userId) return;
     setLoading(true);
-    axiosProvider.get(`/rbac/users/${userId}/permissions/effective`)
+    axiosProvider
+      .get(`/rbac/users/${userId}/permissions/effective`)
       .then((res) => setData(res.data?.data || null))
       .catch(() => toast.error("Failed to load effective permissions"))
       .finally(() => setLoading(false));
@@ -66,64 +74,99 @@ const EffectivePermissionsDrawer = ({ userId, userName, onClose }) => {
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">{userName}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded hover:bg-gray-100 text-gray-400"
+          >
             <MdClose size={18} />
           </button>
         </div>
 
         {loading ? (
           <div className="p-6 space-y-3 animate-pulse">
-            {[1,2,3,4].map((i) => <div key={i} className="h-10 bg-[var(--admin-surface-soft)] rounded" />)}
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="h-10 bg-[var(--admin-surface-soft)] rounded"
+              />
+            ))}
           </div>
         ) : !data ? (
-          <div className="p-8 text-center text-sm text-gray-400">No data available</div>
+          <div className="p-8 text-center text-sm text-gray-400">
+            No data available
+          </div>
         ) : (
           <div className="p-5 space-y-5 flex-1">
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
                 <p className="text-gray-400 mb-0.5">Role</p>
-                <p className="font-semibold text-gray-700 capitalize">{data.role || "—"}</p>
+                <p className="font-semibold text-gray-700 capitalize">
+                  {data.role || "—"}
+                </p>
               </div>
               <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
                 <p className="text-gray-400 mb-0.5">Total Permissions</p>
-                <p className="font-semibold text-gray-700">{(data.assignedPermissions || []).length}</p>
+                <p className="font-semibold text-gray-700">
+                  {(data.assignedPermissions || []).length}
+                </p>
               </div>
               <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
                 <p className="text-gray-400 mb-0.5">Modules</p>
-                <p className="font-semibold text-gray-700">{(data.assignedModules || []).length}</p>
+                <p className="font-semibold text-gray-700">
+                  {(data.assignedModules || []).length}
+                </p>
               </div>
               <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
                 <p className="text-gray-400 mb-0.5">Denied</p>
-                <p className="font-semibold text-red-500">{(data.deniedPermissions || []).length}</p>
+                <p className="font-semibold text-red-500">
+                  {(data.deniedPermissions || []).length}
+                </p>
               </div>
             </div>
 
             {Object.entries(data.permissionsByAction || {}).length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">By Module</h4>
+                <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                  By Module
+                </h4>
                 <div className="space-y-1">
-                  {Object.entries(data.permissionsByAction).map(([mod, actions]) => (
-                    <div key={mod} className="flex items-start gap-2 text-xs py-1.5 border-b border-[#f7efde] last:border-0">
-                      <span className="font-medium text-gray-700 w-32 shrink-0 capitalize">{mod}</span>
-                      <div className="flex flex-wrap gap-1">
-                        {Object.keys(actions).map((action) => (
-                          <span key={action} className="px-1.5 py-0.5 bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] rounded text-[10px] font-medium">
-                            {action}
-                          </span>
-                        ))}
+                  {Object.entries(data.permissionsByAction).map(
+                    ([mod, actions]) => (
+                      <div
+                        key={mod}
+                        className="flex items-start gap-2 text-xs py-1.5 border-b border-[#f7efde] last:border-0"
+                      >
+                        <span className="font-medium text-gray-700 w-32 shrink-0 capitalize">
+                          {mod}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {Object.keys(actions).map((action) => (
+                            <span
+                              key={action}
+                              className="px-1.5 py-0.5 bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] rounded text-[10px] font-medium"
+                            >
+                              {action}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               </div>
             )}
 
             {(data.deniedPermissions || []).length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-2">Explicitly Denied</h4>
+                <h4 className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-2">
+                  Explicitly Denied
+                </h4>
                 <div className="flex flex-wrap gap-1">
                   {data.deniedPermissions.map((s) => (
-                    <span key={s} className="px-2 py-0.5 bg-red-50 text-red-500 border border-red-100 rounded text-[10px] font-mono">
+                    <span
+                      key={s}
+                      className="px-2 py-0.5 bg-red-50 text-red-500 border border-red-100 rounded text-[10px] font-mono"
+                    >
                       {s}
                     </span>
                   ))}
@@ -427,7 +470,10 @@ const normalizeActionsForAssignment = (actions = []) =>
 const getAssignableActionsForModule = (module = {}) => {
   if (!module || typeof module === "string") return PERMISSION_ACTIONS;
 
-  if (Array.isArray(module.assignableActions) && module.assignableActions.length) {
+  if (
+    Array.isArray(module.assignableActions) &&
+    module.assignableActions.length
+  ) {
     return normalizeActionsForAssignment(module.assignableActions);
   }
 
@@ -452,7 +498,9 @@ const buildModulePermissions = (
     const module = typeof mod === "string" ? mod : mod.slug || mod;
     const moduleOption =
       moduleOptions.find((option) => option?.slug === module) || mod;
-    const assignableActions = new Set(getAssignableActionsForModule(moduleOption));
+    const assignableActions = new Set(
+      getAssignableActionsForModule(moduleOption),
+    );
     const actions = normalizeActionsForAssignment(
       actionsMap[module] || fallbackActions,
     ).filter((action) => action === "view" || assignableActions.has(action));
@@ -537,7 +585,10 @@ const ModuleActionsSelector = ({
               const assignableActions = getAssignableActionsForModule(mod);
               const currentActions = actionsMap[slug] || ["view"];
               return (
-                <tr key={slug} className="hover:bg-[var(--admin-surface-soft)]/60">
+                <tr
+                  key={slug}
+                  className="hover:bg-[var(--admin-surface-soft)]/60"
+                >
                   <td className="px-3 py-2 font-medium text-gray-700 capitalize">
                     {label}
                   </td>
@@ -553,7 +604,9 @@ const ModuleActionsSelector = ({
                         <input
                           type="checkbox"
                           checked={checked && canAssignAction}
-                          disabled={disabled || action === "view" || !canAssignAction}
+                          disabled={
+                            disabled || action === "view" || !canAssignAction
+                          }
                           onChange={(e) => {
                             if (!canAssignAction) return;
                             const next = e.target.checked
@@ -698,7 +751,9 @@ const AdminUsers = () => {
   const handleForceLogout = useCallback(async () => {
     if (!forceLogoutTarget) return;
     try {
-      await axiosProvider.post(`/rbac/users/${forceLogoutTarget.userId}/force-logout`);
+      await axiosProvider.post(
+        `/rbac/users/${forceLogoutTarget.userId}/force-logout`,
+      );
       toast.success(`${forceLogoutTarget.userName} has been logged out`);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Force logout failed");
@@ -710,21 +765,24 @@ const AdminUsers = () => {
 
   // Copy-from modal state
   const [copyFromTarget, setCopyFromTarget] = useState(null); // { userId, userName }
-  const [copyFromSourceId, setCopyFromSourceId] = useState('');
-  const [copyFromMerge, setCopyFromMerge] = useState('replace');
+  const [copyFromSourceId, setCopyFromSourceId] = useState("");
+  const [copyFromMerge, setCopyFromMerge] = useState("replace");
   const [copyFromLoading, setCopyFromLoading] = useState(false);
 
   const handleCopyFrom = useCallback(async () => {
     if (!copyFromTarget || !copyFromSourceId) return;
     setCopyFromLoading(true);
     try {
-      await axiosProvider.post(`/rbac/users/${copyFromTarget.userId}/copy-from`, {
-        sourceUserId: copyFromSourceId,
-        mergeMode: copyFromMerge,
-      });
+      await axiosProvider.post(
+        `/rbac/users/${copyFromTarget.userId}/copy-from`,
+        {
+          sourceUserId: copyFromSourceId,
+          mergeMode: copyFromMerge,
+        },
+      );
       toast.success(`Permissions copied to ${copyFromTarget.userName}`);
       setCopyFromTarget(null);
-      setCopyFromSourceId('');
+      setCopyFromSourceId("");
       setRefresh((r) => !r);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Copy failed");
@@ -737,15 +795,18 @@ const AdminUsers = () => {
   const [applyTemplateTarget, setApplyTemplateTarget] = useState(null); // { userId, userName }
   const [templates, setTemplates] = useState([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState('');
-  const [applyTemplateMerge, setApplyTemplateMerge] = useState('replace');
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [applyTemplateMerge, setApplyTemplateMerge] = useState("replace");
   const [applyTemplateLoading, setApplyTemplateLoading] = useState(false);
 
   useEffect(() => {
     if (!applyTemplateTarget) return;
     setTemplatesLoading(true);
-    axiosProvider.get('/rbac/templates')
-      .then((res) => setTemplates(res.data?.data?.items || res.data?.data || []))
+    axiosProvider
+      .get("/rbac/templates")
+      .then((res) =>
+        setTemplates(res.data?.data?.items || res.data?.data || []),
+      )
       .catch(() => setTemplates([]))
       .finally(() => setTemplatesLoading(false));
   }, [applyTemplateTarget]);
@@ -754,16 +815,21 @@ const AdminUsers = () => {
     if (!applyTemplateTarget || !selectedTemplate) return;
     setApplyTemplateLoading(true);
     try {
-      await axiosProvider.post(`/rbac/users/${applyTemplateTarget.userId}/apply-template`, {
-        templateSlug: selectedTemplate,
-        mergeMode: applyTemplateMerge,
-      });
+      await axiosProvider.post(
+        `/rbac/users/${applyTemplateTarget.userId}/apply-template`,
+        {
+          templateSlug: selectedTemplate,
+          mergeMode: applyTemplateMerge,
+        },
+      );
       toast.success(`Template applied to ${applyTemplateTarget.userName}`);
       setApplyTemplateTarget(null);
-      setSelectedTemplate('');
+      setSelectedTemplate("");
       setRefresh((r) => !r);
     } catch (err) {
-      toast.error(err?.response?.data?.error?.message || "Apply template failed");
+      toast.error(
+        err?.response?.data?.error?.message || "Apply template failed",
+      );
     } finally {
       setApplyTemplateLoading(false);
     }
@@ -859,8 +925,7 @@ const AdminUsers = () => {
     return preferred.length ? preferred : moduleOptionSlugs.slice(0, 1);
   }, [moduleOptionSlugs]);
   const defaultAdminModules = useMemo(
-    () =>
-      moduleOptionSlugs,
+    () => moduleOptionSlugs,
     [moduleOptionSlugs],
   );
   const filteredSubAdmins = useMemo(
@@ -1251,7 +1316,9 @@ const AdminUsers = () => {
               viewButton={true}
               onViewClick={() => navigate(`/app/admin-users/view/${userId}`)}
               userPermissions={true}
-              onPermissionClick={() => navigate(`/app/user-permissions/${userId}`)}
+              onPermissionClick={() =>
+                navigate(`/app/user-permissions/${userId}`)
+              }
               requiredModule="rbac"
             />
             <button
@@ -1265,21 +1332,30 @@ const AdminUsers = () => {
               <>
                 <button
                   title="Copy permissions from another user"
-                  onClick={() => { setCopyFromTarget({ userId, userName: name }); setCopyFromSourceId(''); }}
+                  onClick={() => {
+                    setCopyFromTarget({ userId, userName: name });
+                    setCopyFromSourceId("");
+                  }}
                   className="p-1.5 text-gray-400 hover:text-indigo-500 rounded hover:bg-indigo-50 transition-colors"
                 >
                   <MdContentCopy size={15} />
                 </button>
                 <button
                   title="Apply permission template"
-                  onClick={() => { setApplyTemplateTarget({ userId, userName: name }); setSelectedTemplate(''); }}
+                  onClick={() => {
+                    setApplyTemplateTarget({ userId, userName: name });
+                    setSelectedTemplate("");
+                  }}
                   className="p-1.5 text-gray-400 hover:text-teal-500 rounded hover:bg-teal-50 transition-colors"
                 >
                   <MdDashboardCustomize size={15} />
                 </button>
                 <button
                   title="Force logout"
-                  onClick={() => { setForceLogoutTarget({ userId, userName: name }); setForceLogoutConfirm(true); }}
+                  onClick={() => {
+                    setForceLogoutTarget({ userId, userName: name });
+                    setForceLogoutConfirm(true);
+                  }}
                   className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
                 >
                   <MdLogout size={15} />
@@ -1336,7 +1412,9 @@ const AdminUsers = () => {
               viewButton={true}
               onViewClick={() => navigate(`/app/admin-users/view/${userId}`)}
               userPermissions={true}
-              onPermissionClick={() => navigate(`/app/user-permissions/${userId}`)}
+              onPermissionClick={() =>
+                navigate(`/app/user-permissions/${userId}`)
+              }
               requiredModule="rbac"
             />
             <button
@@ -1350,21 +1428,30 @@ const AdminUsers = () => {
               <>
                 <button
                   title="Copy permissions from another user"
-                  onClick={() => { setCopyFromTarget({ userId, userName: name }); setCopyFromSourceId(''); }}
+                  onClick={() => {
+                    setCopyFromTarget({ userId, userName: name });
+                    setCopyFromSourceId("");
+                  }}
                   className="p-1.5 text-gray-400 hover:text-indigo-500 rounded hover:bg-indigo-50 transition-colors"
                 >
                   <MdContentCopy size={15} />
                 </button>
                 <button
                   title="Apply permission template"
-                  onClick={() => { setApplyTemplateTarget({ userId, userName: name }); setSelectedTemplate(''); }}
+                  onClick={() => {
+                    setApplyTemplateTarget({ userId, userName: name });
+                    setSelectedTemplate("");
+                  }}
                   className="p-1.5 text-gray-400 hover:text-teal-500 rounded hover:bg-teal-50 transition-colors"
                 >
                   <MdDashboardCustomize size={15} />
                 </button>
                 <button
                   title="Force logout"
-                  onClick={() => { setForceLogoutTarget({ userId, userName: name }); setForceLogoutConfirm(true); }}
+                  onClick={() => {
+                    setForceLogoutTarget({ userId, userName: name });
+                    setForceLogoutConfirm(true);
+                  }}
                   className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
                 >
                   <MdLogout size={15} />
@@ -1385,7 +1472,10 @@ const AdminUsers = () => {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm text-gray-500">
-            <Link to="/app/home" className="hover:underline text-[var(--admin-blue)]">
+            <Link
+              to="/app/home"
+              className="hover:underline text-[var(--admin-blue)]"
+            >
               Home
             </Link>{" "}
             / <b className="text-gray-800">Admin Users</b>
@@ -2035,7 +2125,10 @@ const AdminUsers = () => {
       {/* Force logout confirm */}
       <StatusPopup
         isOpen={forceLogoutConfirm}
-        onClose={() => { setForceLogoutConfirm(false); setForceLogoutTarget(null); }}
+        onClose={() => {
+          setForceLogoutConfirm(false);
+          setForceLogoutTarget(null);
+        }}
         onConfirm={handleForceLogout}
         heading={`Force logout ${forceLogoutTarget?.userName || "this user"}? Their active session will be invalidated immediately.`}
       />
@@ -2050,104 +2143,157 @@ const AdminUsers = () => {
       )}
 
       {/* Copy-from modal */}
-      {copyFromTarget && (() => {
-        const sourceUsers = [
-          ...admins.map((u) => ({ id: u._id || u.id, label: getUserDisplayName(u), role: 'admin', email: u.email })),
-          ...subAdminPool.map((u) => ({ id: u._id || u.id, label: getUserDisplayName(u), role: u.role, email: u.email })),
-        ].filter((u) => String(u.id) !== String(copyFromTarget.userId));
+      {copyFromTarget &&
+        (() => {
+          const sourceUsers = [
+            ...admins.map((u) => ({
+              id: u._id || u.id,
+              label: getUserDisplayName(u),
+              role: "admin",
+              email: u.email,
+            })),
+            ...subAdminPool.map((u) => ({
+              id: u._id || u.id,
+              label: getUserDisplayName(u),
+              role: u.role,
+              email: u.email,
+            })),
+          ].filter((u) => String(u.id) !== String(copyFromTarget.userId));
 
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-[var(--admin-line)]">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-t-2xl">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                    <MdContentCopy className="text-indigo-500" size={16} />
-                    Copy Permissions From
-                  </h3>
-                  <p className="text-xs text-gray-400 mt-0.5">Target: <span className="font-medium text-gray-600">{copyFromTarget.userName}</span></p>
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-[var(--admin-line)]">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-t-2xl">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                      <MdContentCopy className="text-indigo-500" size={16} />
+                      Copy Permissions From
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Target:{" "}
+                      <span className="font-medium text-gray-600">
+                        {copyFromTarget.userName}
+                      </span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setCopyFromTarget(null)}
+                    className="p-1.5 rounded hover:bg-gray-100 text-gray-400"
+                  >
+                    <MdClose size={18} />
+                  </button>
                 </div>
-                <button onClick={() => setCopyFromTarget(null)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
-                  <MdClose size={18} />
-                </button>
-              </div>
-              <div className="p-5 space-y-4">
-                <div>
-                  <label className="text-xs font-medium text-gray-600 mb-2 block">
-                    Select source user <span className="text-red-400">*</span>
-                  </label>
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
-                      {sourceUsers.length === 0 && (
-                        <p className="py-6 text-center text-sm text-gray-400">No other users available</p>
-                      )}
-                      {sourceUsers.map((u) => (
+                <div className="p-5 space-y-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-2 block">
+                      Select source user <span className="text-red-400">*</span>
+                    </label>
+                    <div className="border border-gray-200 rounded-xl overflow-hidden">
+                      <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                        {sourceUsers.length === 0 && (
+                          <p className="py-6 text-center text-sm text-gray-400">
+                            No other users available
+                          </p>
+                        )}
+                        {sourceUsers.map((u) => (
+                          <label
+                            key={u.id}
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                              copyFromSourceId === String(u.id)
+                                ? "bg-indigo-50"
+                                : "hover:bg-gray-50"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="copySource"
+                              value={String(u.id)}
+                              checked={copyFromSourceId === String(u.id)}
+                              onChange={() => setCopyFromSourceId(String(u.id))}
+                              className="accent-indigo-500"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-700 truncate">
+                                {u.label || u.email}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {u.email} ·{" "}
+                                <span className="capitalize">{u.role}</span>
+                              </p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1.5">
+                      Only permissions within your hierarchy will be
+                      transferred.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1.5 block">
+                      Merge Mode
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        {
+                          value: "replace",
+                          label: "Replace",
+                          desc: "Overwrite current",
+                        },
+                        {
+                          value: "merge",
+                          label: "Merge",
+                          desc: "Add to existing",
+                        },
+                      ].map((opt) => (
                         <label
-                          key={u.id}
-                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                            copyFromSourceId === String(u.id)
-                              ? 'bg-indigo-50'
-                              : 'hover:bg-gray-50'
+                          key={opt.value}
+                          className={`flex flex-col p-3 rounded-xl border cursor-pointer transition-all ${
+                            copyFromMerge === opt.value
+                              ? "border-indigo-400 bg-indigo-50"
+                              : "border-gray-200 hover:border-gray-300"
                           }`}
                         >
                           <input
                             type="radio"
-                            name="copySource"
-                            value={String(u.id)}
-                            checked={copyFromSourceId === String(u.id)}
-                            onChange={() => setCopyFromSourceId(String(u.id))}
-                            className="accent-indigo-500"
+                            name="copyMerge"
+                            value={opt.value}
+                            checked={copyFromMerge === opt.value}
+                            onChange={() => setCopyFromMerge(opt.value)}
+                            className="sr-only"
                           />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-700 truncate">{u.label || u.email}</p>
-                            <p className="text-xs text-gray-400">{u.email} · <span className="capitalize">{u.role}</span></p>
-                          </div>
+                          <span className="text-xs font-semibold text-gray-700">
+                            {opt.label}
+                          </span>
+                          <span className="text-[10px] text-gray-400 mt-0.5">
+                            {opt.desc}
+                          </span>
                         </label>
                       ))}
                     </div>
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1.5">Only permissions within your hierarchy will be transferred.</p>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1.5 block">Merge Mode</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { value: 'replace', label: 'Replace', desc: 'Overwrite current' },
-                      { value: 'merge', label: 'Merge', desc: 'Add to existing' },
-                    ].map((opt) => (
-                      <label
-                        key={opt.value}
-                        className={`flex flex-col p-3 rounded-xl border cursor-pointer transition-all ${
-                          copyFromMerge === opt.value
-                            ? 'border-indigo-400 bg-indigo-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <input type="radio" name="copyMerge" value={opt.value} checked={copyFromMerge === opt.value} onChange={() => setCopyFromMerge(opt.value)} className="sr-only" />
-                        <span className="text-xs font-semibold text-gray-700">{opt.label}</span>
-                        <span className="text-[10px] text-gray-400 mt-0.5">{opt.desc}</span>
-                      </label>
-                    ))}
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      onClick={() => setCopyFromTarget(null)}
+                      className="px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCopyFrom}
+                      disabled={!copyFromSourceId || copyFromLoading}
+                      className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <MdContentCopy size={14} />
+                      {copyFromLoading ? "Copying…" : "Copy Permissions"}
+                    </button>
                   </div>
-                </div>
-                <div className="flex items-center justify-end gap-2 pt-1">
-                  <button onClick={() => setCopyFromTarget(null)} className="px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50">
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCopyFrom}
-                    disabled={!copyFromSourceId || copyFromLoading}
-                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    <MdContentCopy size={14} />
-                    {copyFromLoading ? 'Copying…' : 'Copy Permissions'}
-                  </button>
                 </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* Apply-template modal */}
       {applyTemplateTarget && (
@@ -2159,27 +2305,36 @@ const AdminUsers = () => {
                   <MdDashboardCustomize className="text-teal-500" size={16} />
                   Apply Permission Template
                 </h3>
-                <p className="text-xs text-gray-400 mt-0.5">Target: {applyTemplateTarget.userName}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Target: {applyTemplateTarget.userName}
+                </p>
               </div>
-              <button onClick={() => setApplyTemplateTarget(null)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
+              <button
+                onClick={() => setApplyTemplateTarget(null)}
+                className="p-1.5 rounded hover:bg-gray-100 text-gray-400"
+              >
                 <MdClose size={18} />
               </button>
             </div>
             <div className="p-5 space-y-4">
               {templatesLoading ? (
-                <div className="py-6 text-center text-sm text-gray-400 animate-pulse">Loading templates…</div>
+                <div className="py-6 text-center text-sm text-gray-400 animate-pulse">
+                  Loading templates…
+                </div>
               ) : (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {templates.length === 0 && (
-                    <p className="text-sm text-gray-400 text-center py-4">No templates available</p>
+                    <p className="text-sm text-gray-400 text-center py-4">
+                      No templates available
+                    </p>
                   )}
                   {templates.map((tpl) => (
                     <label
                       key={tpl.id || tpl.slug}
                       className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                         selectedTemplate === (tpl.slug || tpl.id)
-                          ? 'border-teal-400 bg-teal-50'
-                          : 'border-gray-200 hover:border-teal-200'
+                          ? "border-teal-400 bg-teal-50"
+                          : "border-gray-200 hover:border-teal-200"
                       }`}
                     >
                       <input
@@ -2191,23 +2346,37 @@ const AdminUsers = () => {
                         className="mt-0.5 accent-teal-500"
                       />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-700">{tpl.name}</p>
-                        {tpl.description && <p className="text-xs text-gray-400 mt-0.5">{tpl.description}</p>}
-                        <p className="text-[10px] text-gray-300 mt-0.5 font-mono">{tpl.slug}</p>
+                        <p className="text-sm font-medium text-gray-700">
+                          {tpl.name}
+                        </p>
+                        {tpl.description && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {tpl.description}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-gray-300 mt-0.5 font-mono">
+                          {tpl.slug}
+                        </p>
                       </div>
                     </label>
                   ))}
                 </div>
               )}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Merge Mode</label>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">
+                  Merge Mode
+                </label>
                 <select
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
                   value={applyTemplateMerge}
                   onChange={(e) => setApplyTemplateMerge(e.target.value)}
                 >
-                  <option value="replace">Replace — overwrite current permissions</option>
-                  <option value="merge">Merge — add without removing existing</option>
+                  <option value="replace">
+                    Replace — overwrite current permissions
+                  </option>
+                  <option value="merge">
+                    Merge — add without removing existing
+                  </option>
                 </select>
               </div>
               <div className="flex items-center justify-end gap-2 pt-1">
@@ -2222,7 +2391,7 @@ const AdminUsers = () => {
                   disabled={!selectedTemplate || applyTemplateLoading}
                   className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 disabled:opacity-50"
                 >
-                  {applyTemplateLoading ? 'Applying…' : 'Apply Template'}
+                  {applyTemplateLoading ? "Applying…" : "Apply Template"}
                 </button>
               </div>
             </div>

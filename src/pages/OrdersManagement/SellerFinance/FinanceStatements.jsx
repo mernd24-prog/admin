@@ -27,7 +27,7 @@ export default function FinanceStatements() {
   const [downloading, setDownloading] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const load = useCallback(async () => {
     try {
       await dispatch(

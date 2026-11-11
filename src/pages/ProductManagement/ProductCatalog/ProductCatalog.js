@@ -13,7 +13,7 @@ import { useDispatch, useSelector } from "react-redux";
 import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import ImageGallery from "../../../components/Atoms/ImageGallery/ImageGallery";
 import SearchComponent from "../../../components/Atoms/New Table/NewTable";
-import AddButton from "../../../components/Button/AddButton";
+
 import { isSellerPanel } from "../../../_helpers/panelConfig";
 import { ACCESS_SCOPES, usePermission } from "../../../_helpers/usePermission";
 import { MdVisibility, MdRefresh, MdEdit, MdDelete } from "react-icons/md";
@@ -47,6 +47,7 @@ import {
 } from "../../../utils/formatters";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 import { RefreshButton } from "../../../components/Atoms/buttons/exportImport";
+import AddButton from "../../../components/Atoms/buttons/AddButton";
 
 const INITIAL_FILTERS = {
   search: "",

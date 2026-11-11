@@ -1,8 +1,8 @@
 import React from "react";
 import { IoMdAddCircleOutline } from "react-icons/io";
 import { useLocation } from "react-router-dom";
-import PermissionGuard from "../Atoms/PermissionGuard/PermissionGuard";
-import { getRouteModuleCandidates } from "../../_helpers/rbacRoutes";
+import PermissionGuard from "../PermissionGuard/PermissionGuard";
+import { getRouteModuleCandidates } from "../../../_helpers/rbacRoutes";
 
 const AddButton = React.memo(
   ({

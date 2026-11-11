@@ -1,6 +1,6 @@
 import React from "react";
-import ButtonTransparent from "../../ButtonTransparent/button";
-import NewButton from "../../Button/NewButton";
+import ButtonTransparent from "../ButtonTransparent/button";
+import NewButton from "../buttons/NewButton";
 
 const DeletePopup = ({
   isDeleteModalOpen,

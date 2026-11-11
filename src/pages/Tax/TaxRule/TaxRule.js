@@ -590,6 +590,8 @@ const TaxRule = () => {
                   label="Description"
                   name="description"
                   type="textarea"
+                  maxLength={100}
+                  limitMessage="Description must be less than 100 characters"
                   value={formik.values.description}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}

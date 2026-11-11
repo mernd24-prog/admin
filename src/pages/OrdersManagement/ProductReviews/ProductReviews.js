@@ -73,6 +73,30 @@ const getProductName = (row = {}) =>
   row.title ||
   "";
 
+const getProductImage = (row = {}) => {
+  const images = [
+    row.productImage,
+    row.product?.image,
+    row.product?.imageUrl,
+    row.product?.thumbnail,
+    row.product?.thumbnailUrl,
+    row.product?.images?.find(Boolean),
+    row.product?.commonImages?.find(Boolean),
+    row.image,
+    row.imageUrl,
+    row.thumbnail,
+    row.thumbnailUrl,
+    row.images?.find(Boolean),
+    row.commonImages?.find(Boolean),
+  ];
+
+  const image = images.find(Boolean);
+
+  return typeof image === "string"
+    ? image
+    : image?.url || image?.imageUrl || image?.src || "";
+};
+
 const cssImageUrl = (value) =>
   `url("${String(value || "").replace(/"/g, "%22")}")`;
 
@@ -475,6 +499,8 @@ const ProductReviews = () => {
   const reviewsData = useSelector((state) => state.adminCore);
 
   const [reviewDetailsTarget, setReviewDetailsTarget] = useState(null);
+  const [previewImage, setPreviewImage] = useState("");
+  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
 
   const list = useListPage({
     defaultPageSize: 10,
@@ -940,46 +966,59 @@ const ProductReviews = () => {
 
   const summaryColumns = [
     {
+      key: "productImage",
+      label: "Image",
+      headerClassName: "text-center",
+      cellClassName: "text-center",
+      render: (_, row) => {
+        const productImage = getProductImage(row);
+        const productName = getProductName(row) || "Product";
+
+        return productImage ? (
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-gray-200 bg-gray-50">
+              <img
+                src={productImage}
+                alt={productName}
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setPreviewImage(productImage);
+                setImagePreviewOpen(true);
+              }}
+              className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              View
+            </button>
+          </div>
+        ) : (
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-400">
+            <MdImageNotSupported size={19} />
+          </div>
+        );
+      },
+    },
+    ,
+    {
       key: "productId",
-      label: "Product",
-      render: (v, row) => {
-        const productImage =
-          row.productImage ||
-          row.product?.image ||
-          row.product?.imageUrl ||
-          row.product?.thumbnail ||
-          row.product?.thumbnailUrl ||
-          row.product?.images?.find(Boolean) ||
-          row.product?.commonImages?.find(Boolean) ||
-          row.image ||
-          row.imageUrl ||
-          row.thumbnail ||
-          row.thumbnailUrl ||
-          row.images?.find(Boolean) ||
-          row.commonImages?.find(Boolean);
+      label: "Product Name",
+      render: (_, row) => {
         const productName = getProductName(row) || "Product";
 
         return (
-          <div className="flex min-w-0 items-center gap-2.5">
+          <div className="min-w-0">
             <span
-              role="img"
-              aria-label={`${productName} image`}
-              className="h-9 w-9 flex-shrink-0 rounded-md border border-gray-200 bg-cover bg-center bg-gray-50"
-              style={
-                productImage
-                  ? { backgroundImage: cssImageUrl(productImage) }
-                  : undefined
-              }
-            />
-
-            <div className="min-w-0">
-              <span
-                className="block max-w-[200px] truncate text-xs font-semibold text-gray-800"
-                title={productName}
-              >
-                {productName}
-              </span>
-            </div>
+              className="block max-w-[220px] truncate text-xs font-semibold text-gray-800"
+              title={productName}
+            >
+              {productName}
+            </span>
           </div>
         );
       },
@@ -1492,6 +1531,43 @@ const ProductReviews = () => {
         onClose={() => setReviewDetailsTarget(null)}
         onModerate={handleReviewStatus}
       />
+
+      {imagePreviewOpen && previewImage && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-gray-950/70 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setImagePreviewOpen(false);
+              setPreviewImage("");
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Product image preview"
+            className="relative flex max-h-[85vh] w-full max-w-2xl items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white p-4 shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setImagePreviewOpen(false);
+                setPreviewImage("");
+              }}
+              aria-label="Close image preview"
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-100"
+            >
+              <MdClose size={21} />
+            </button>
+
+            <img
+              src={previewImage}
+              alt="Product preview"
+              className="max-h-[75vh] max-w-full rounded-lg object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

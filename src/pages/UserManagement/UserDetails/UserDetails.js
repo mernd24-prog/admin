@@ -71,9 +71,7 @@ const CopyableReferenceRow = ({ label, value }) => (
       <p className="min-w-0 flex-1 break-all font-mono text-sm text-gray-900">
         {value || "—"}
       </p>
-      {value && (
-        <CopyButton value={value} label={label} />
-      )}
+      {value && <CopyButton value={value} label={label} />}
     </div>
   </div>
 );
@@ -1851,12 +1849,14 @@ const UserDetails = () => {
                       </div>
 
                       <p className="mt-3 text-sm font-semibold text-gray-800">
-                        {[profile.firstName, profile.lastName]
-                          .filter(Boolean)
-                          .join(" ") ||
-                          editSeller.displayName ||
-                          sellerProfile.displayName ||
-                          "Seller"}
+                        {formatLabel(
+                          [profile.firstName, profile.lastName]
+                            .filter(Boolean)
+                            .join(" ") ||
+                            editSeller.displayName ||
+                            sellerProfile.displayName ||
+                            "Seller",
+                        )}
                       </p>
 
                       <p className="mt-1 max-w-full truncate text-xs text-gray-500">

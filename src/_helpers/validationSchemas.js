@@ -566,7 +566,7 @@ export const taxRuleValidationSchema = Yup.object({
     .trim()
     .required("Description is required")
     .min(3, "Min 3 characters")
-    .max(100, "Max 2500 characters"),
+    .max(100, "Description must be less than 100 characters"),
   tax_id: Yup.string().required("Tax is required"),
   subTaxes_id: Yup.array().of(Yup.string()).min(1, "Sub Tax is required"),
   category_id: Yup.string().required("Category is required"),

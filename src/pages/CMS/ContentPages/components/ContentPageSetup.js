@@ -3,7 +3,7 @@ import { FiChevronDown, FiChevronRight } from "react-icons/fi";
 
 import FormInput from "../../../../components/Atoms/FormInput/FormInput";
 import FormToggleRow from "../../../../components/Atoms/FormToggleRow/FormToggleRow";
-import NewButton from "../../../../components/Button/NewButton";
+
 import { TextEditor } from "../../../../components/Atoms/FormInput/TextEditor";
 import ImageUpload from "../../../../components/Atoms/ImageGallery/ImageUpload";
 import { uploadFile } from "../../../../_helpers/globalFunctions";
@@ -11,6 +11,7 @@ import { FormSection, PageHeader } from "../../../../components/Shared";
 import { toast } from "sonner";
 import { MdArrowBack } from "react-icons/md";
 import OrangeButton from "../../../../components/Atoms/buttons/OrangeButton";
+import NewButton from "../../../../components/Atoms/buttons/NewButton";
 
 const emptyImage = {
   url: "",
