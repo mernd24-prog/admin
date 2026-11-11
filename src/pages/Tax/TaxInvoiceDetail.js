@@ -9,6 +9,7 @@ import {
   MdLocalOffer,
   MdPayments,
   MdPercent,
+  MdRefresh,
   MdReceiptLong,
 } from "react-icons/md";
 import Loader from "../../components/Loader/Loader";
@@ -378,6 +379,14 @@ const TaxInvoiceDetail = () => {
             </button> */}
             <button
               type="button"
+              onClick={loadInvoice}
+              disabled={loading}
+              className="admin-btn-secondary"
+            >
+              <MdRefresh aria-hidden="true" size={16} /> Refresh
+            </button>
+            <button
+              type="button"
               onClick={downloadInvoice}
               disabled={downloading}
               className="admin-btn-primary"
@@ -534,22 +543,21 @@ const TaxInvoiceDetail = () => {
       </section>
 
       <section className="rounded-lg border border-gray-200 bg-white">
-        <div className="border-b border-gray-100 px-4 py-3">
+        <div className=" border-gray-100 px-4 py-3">
           <h2 className="text-sm font-semibold text-gray-900">Line Items</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <DataTable
-            columns={columns}
-            data={items}
-            loading={loading}
-            total={totalLineItems}
-            listPage={paginationList}
-            onRefresh={loadInvoice}
-            showSerialNumber
-            rowKey={(item) => item.orderItemId || item.productId || item.id}
-            emptyMessage="No line items available"
-            tableContainerClassName="overflow-x-auto"
-          />
+          <div className="overflow-x-auto">
+            <DataTable
+              columns={columns}
+              data={items}
+              loading={loading}
+              total={totalLineItems}
+              listPage={paginationList}
+              showSerialNumber
+              rowKey={(item) => item.orderItemId || item.productId || item.id}
+              emptyMessage="No line items available"
+              tableContainerClassName="overflow-x-auto"
+            />
+          </div>
         </div>
       </section>
     </div>

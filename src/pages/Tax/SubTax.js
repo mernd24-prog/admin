@@ -372,6 +372,10 @@ const SubTax = () => {
               {/* Name */}
               <FormInput
                 label="Name"
+                maxLength={100}
+                minLength={2}
+                limitMessage="Sub-tax name must be between 2 and 100 characters"
+                showLengthCount={false}
                 name="name"
                 value={formik.values.name}
                 onChange={formik.handleChange}
@@ -385,25 +389,21 @@ const SubTax = () => {
               <FormInput
                 label="Percentage (%)"
                 name="percentage"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={formik.values.percentage}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === "-" ||
-                    e.key === "e" ||
-                    e.key === "E" ||
-                    e.key === "+"
-                  ) {
-                    e.preventDefault();
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (/^(?:0|[1-9]\d{0,2})?(?:\.\d{0,2})?$/.test(value)) {
+                    formik.setFieldValue("percentage", value);
                   }
                 }}
+                onBlur={formik.handleBlur}
                 error={formik.touched.percentage && formik.errors.percentage}
                 placeholder="0-100"
-                min="0"
-                max="100"
-                step="0.01"
+                maxLength={3}
+                showLengthCount={false}
+                limitMessage="Percentage must be between 0 and 100"
                 required
               />
             </div>

@@ -533,7 +533,8 @@ export const taxValidationSchema = Yup.object({
   name: Yup.string()
     .trim()
     .required("Tax name is required")
-    .min(2, "Min 2 characters"),
+    .min(2, "Min 2 characters")
+    .max(100, "Max 100 characters"),
   country_code: Yup.string().required("Country is required"),
 });
 
@@ -549,15 +550,21 @@ export const subTaxValidationSchema = Yup.object({
   name: Yup.string()
     .trim()
     .required("Name is required")
-    .min(3, "Min 3 characters"),
-  percentage: Yup.number()
-    .transform((value, originalValue) =>
-      originalValue === "" || originalValue === null ? undefined : value,
-    )
-    .typeError("Only numbers are allowed")
+    .min(3, "Min 3 characters")
+    .max(100, "Max 100 characters"),
+  percentage: Yup.string()
     .required("Percentage is required")
-    .min(0, "Must be between 0 and 100")
-    .max(100, "Must be between 0 and 100"),
+    .matches(
+      /^(?:0|[1-9]\d{0,2})(?:\.\d{1,2})?$/,
+      "Enter a number with up to 2 decimal places and no unnecessary leading zeros",
+    )
+    .test("percentage-range", "Must be between 0 and 100", (value) => {
+      if (!value || !/^(?:0|[1-9]\d{0,2})(?:\.\d{1,2})?$/.test(value)) {
+        return true;
+      }
+      const percentage = Number(value);
+      return percentage >= 0 && percentage <= 100;
+    }),
   taxId: Yup.string().required("Parent tax is required"),
 });
 
@@ -566,7 +573,7 @@ export const taxRuleValidationSchema = Yup.object({
     .trim()
     .required("Description is required")
     .min(3, "Min 3 characters")
-    .max(100, "Max 2500 characters"),
+    .max(2000, "Max 2000 characters"),
   tax_id: Yup.string().required("Tax is required"),
   subTaxes_id: Yup.array().of(Yup.string()).min(1, "Sub Tax is required"),
   category_id: Yup.string().required("Category is required"),
@@ -3051,4 +3058,15 @@ export const collectionValidationSchema = Yup.object({
     .max(100, "Collection name must be no more than 100 characters"),
 
   type: Yup.string().trim().required("Collection type is required"),
+});
+
+export const sellerPayoutNoteValidationSchema = Yup.object({
+  note: Yup.string()
+    .trim()
+    .test(
+      "minimum-note-length",
+      "Note must be at least 3 characters",
+      (value) => !value || value.length >= 3,
+    )
+    .max(500, "Note cannot exceed 500 characters"),
 });

@@ -351,6 +351,10 @@ const Tax = () => {
               <FormInput
                 label="Tax Name"
                 name="name"
+                maxLength={100}
+                minLength={2}
+                limitMessage = "Tax name must be between 2 and 100 characters"
+                showLengthCount = {false}
                 value={formik.values.name}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}

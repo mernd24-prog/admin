@@ -140,7 +140,7 @@ export const getPayoutOperationsQueue = createApiThunkPrivate(
   ENDPOINTS.payouts.operationsQueue,
   "GET",
   true,
-  { transformParams: pickQuery(["sellerId", "organizationId", "status", "queue", "search", "fromDate", "toDate", "limit", "offset"]) }
+  { transformParams: pickQuery(["sellerId", "organizationId", "status", "queue", "search", "fromDate", "toDate", "sortBy", "sortOrder", "limit", "offset"]) }
 );
 
 export const getNegativeBalances = createApiThunkPrivate(

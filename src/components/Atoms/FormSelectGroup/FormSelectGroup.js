@@ -54,11 +54,11 @@ const FormSelectGroup = ({
         className={`w-full ${selectClassName}`}
       />
 
-      {error && (
-        <p className="mt-1 text-xs text-red-500">
+      {/* {error && (
+        <p className="mt-1 d text-xs text-red-500">
           {error}
         </p>
-      )}
+      )} */}
     </div>
   );
 };

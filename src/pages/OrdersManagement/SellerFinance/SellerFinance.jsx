@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormik } from "formik";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
@@ -54,6 +55,9 @@ import {
   truncateToWordBoundary,
 } from "../../../utils/formatters";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
+import FormSection from "../../../components/Atoms/FormSection/FormSection";
+import { sellerPayoutNoteValidationSchema } from "../../../_helpers/validationSchemas";
+import FormInput from "../../../components/Atoms/FormInput/FormInput";
 
 const unwrap = (payload) => payload?.data?.data || payload?.data || {};
 const listOf = (payload) => {
@@ -553,6 +557,7 @@ const SellerFinance = () => {
   const [processModal, setProcessModal] = useState({
     open: false,
     mode: "order",
+    lockSellerSelection: false,
     orderId: initialParams.get("orderId") || "",
     sellerId: detailSellerId || initialParams.get("sellerId") || "",
     organizationId: initialParams.get("organizationId") || "",
@@ -561,6 +566,11 @@ const SellerFinance = () => {
     periodStart: "",
     periodEnd: "",
     note: "",
+  });
+  const payoutNoteFormik = useFormik({
+    initialValues: { note: "" },
+    validationSchema: sellerPayoutNoteValidationSchema,
+    onSubmit: ({ note }) => handleProcessPayoutSubmit(note),
   });
 
   // Complete Payout modal
@@ -1020,7 +1030,7 @@ const SellerFinance = () => {
       ...(key === "sellerId" ? { organizationId: "" } : {}),
     }));
 
-  const handleProcessPayoutSubmit = async () => {
+  const handleProcessPayoutSubmit = async (noteValue = "") => {
     if (!processModal.sellerId.trim()) {
       toast.error("Seller ID is required");
       return;
@@ -1054,7 +1064,7 @@ const SellerFinance = () => {
           processModal.paymentMethod === "razorpayx"
             ? undefined
             : processModal.paymentReference.trim() || `admin_${Date.now()}`,
-        note: processModal.note.trim() || undefined,
+        note: noteValue.trim() || undefined,
         ...(selectedCommissions.length
           ? {
               commissionIds: selectedCommissions.map(
@@ -1080,6 +1090,7 @@ const SellerFinance = () => {
         periodEnd: "",
         note: "",
       });
+      payoutNoteFormik.resetForm();
       await loadFinance();
     } catch (error) {
       toast.error(error?.message || error || "Unable to process payout");
@@ -1149,11 +1160,14 @@ const SellerFinance = () => {
   };
 
   const openOrderPayoutModal = (commission) => {
-    const sellerId = commission.seller_id || commission.sellerId || "";
+    const sellerId = isSellerDetail
+      ? detailSellerId
+      : commission.seller_id || commission.sellerId || "";
     const orderId = commission.order_id || commission.orderId || "";
     setProcessModal({
       open: true,
       mode: "order",
+      lockSellerSelection: isSellerDetail,
       orderId,
       sellerId,
       organizationId:
@@ -1164,6 +1178,14 @@ const SellerFinance = () => {
       periodEnd: "",
       note: `Payout for order ${commission.order_number || commission.order_id || orderId}`,
     });
+    payoutNoteFormik.setValues(
+      {
+        note: `Payout for order ${commission.order_number || commission.order_id || orderId}`,
+      },
+      false,
+    );
+    payoutNoteFormik.setTouched({}, false);
+    payoutNoteFormik.setErrors({});
   };
 
   const handleCompletePayoutSubmit = async () => {
@@ -2125,199 +2147,225 @@ const SellerFinance = () => {
 
       {!isSeller && (
         <>
-          {/* Process Payout Modal */}
+          {/* Process Payout Side Drawer */}
           <DefaultModal
             isOpen={processModal.open}
-            onClose={() =>
-              setProcessModal((prev) => ({ ...prev, open: false }))
-            }
+            onClose={() => {
+              setProcessModal((prev) => ({ ...prev, open: false }));
+              payoutNoteFormik.resetForm();
+            }}
             title="Initiate Seller Payout"
-            onSubmit={handleProcessPayoutSubmit}
+            onSubmit={payoutNoteFormik.handleSubmit}
             loading={submitting}
             submitButtonText="Initiate Payout"
             closeButtonText="Cancel"
+            isButtonView={true}
             width="600px"
           >
-            <div className="space-y-3">
-              <FieldRow label="Payout Type *">
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    className={`rounded-md border px-3 py-2 text-sm font-semibold ${
-                      processModal.mode === "order"
-                        ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]"
-                        : "border-[#E6E6E6] text-[#65718b]"
-                    }`}
-                    onClick={() =>
-                      setProcessModal((prev) => ({
-                        ...prev,
-                        mode: "order",
-                      }))
-                    }
-                  >
-                    Particular Order
-                  </button>
+            <div className="space-y-5">
+              <FormSection
+                title="Payout Information"
+                description="Select the payout type and provide the seller and order details."
+              >
+                <div className="space-y-4">
+                  {!processModal.lockSellerSelection && (
+                    <FieldRow label="Payout Type *">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          className={`rounded-md border px-3 py-2 text-sm font-semibold ${
+                            processModal.mode === "order"
+                              ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]"
+                              : "border-[#E6E6E6] text-[#65718b]"
+                          }`}
+                          onClick={() =>
+                            setProcessModal((prev) => ({
+                              ...prev,
+                              mode: "order",
+                            }))
+                          }
+                        >
+                          Particular Order
+                        </button>
 
-                  <button
-                    type="button"
-                    className={`rounded-md border px-3 py-2 text-sm font-semibold ${
-                      processModal.mode === "bulk"
-                        ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]"
-                        : "border-[#E6E6E6] text-[#65718b]"
-                    }`}
-                    onClick={() =>
-                      setProcessModal((prev) => ({
-                        ...prev,
-                        mode: "bulk",
-                        orderId: "",
-                      }))
-                    }
-                  >
-                    Bulk Eligible Orders
-                  </button>
-                </div>
-              </FieldRow>
+                        <button
+                          type="button"
+                          className={`rounded-md border px-3 py-2 text-sm font-semibold ${
+                            processModal.mode === "bulk"
+                              ? "border-[#2f6fed] bg-blue-50 text-[#2f6fed]"
+                              : "border-[#E6E6E6] text-[#65718b]"
+                          }`}
+                          onClick={() =>
+                            setProcessModal((prev) => ({
+                              ...prev,
+                              mode: "bulk",
+                              orderId: "",
+                            }))
+                          }
+                        >
+                          Bulk Eligible Orders
+                        </button>
+                      </div>
+                    </FieldRow>
+                  )}
 
-              <FieldRow label="Seller *">
-                <FilterSelect
-                  name="sellerId"
-                  options={sellerOptions}
-                  value={
-                    sellerOptions.find(
-                      (option) => option.value === processModal.sellerId,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    setProcessModal((prev) => ({
-                      ...prev,
-                      sellerId: option?.value || "",
-                      organizationId: "",
-                      orderId: "",
-                    }))
-                  }
-                  placeholder="Search or select seller"
-                  isClearable
-                />
-              </FieldRow>
+                  <FieldRow label="Seller *">
+                    <FilterSelect
+                      name="sellerId"
+                      options={sellerOptions}
+                      value={
+                        sellerOptions.find(
+                          (option) => option.value === processModal.sellerId,
+                        ) || null
+                      }
+                      onChange={(option) =>
+                        setProcessModal((prev) => ({
+                          ...prev,
+                          sellerId: option?.value || "",
+                          organizationId: "",
+                          orderId: "",
+                        }))
+                      }
+                      placeholder="Search or select seller"
+                      isDisabled={processModal.lockSellerSelection}
+                      isClearable={!processModal.lockSellerSelection}
+                    />
+                  </FieldRow>
 
-              <FieldRow label="Organization">
-                <FilterSelect
-                  name="organizationId"
-                  options={processOrganizationOptions}
-                  value={
-                    processOrganizationOptions.find(
-                      (option) => option.value === processModal.organizationId,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    setProcessModal((prev) => ({
-                      ...prev,
-                      organizationId: option?.value || "",
-                    }))
-                  }
-                  placeholder={
-                    processModal.sellerId
-                      ? "Search or select organization"
-                      : "Select seller first"
-                  }
-                  isDisabled={!processModal.sellerId}
-                  isClearable
-                />
-              </FieldRow>
+                  <FieldRow label="Organization">
+                    <FilterSelect
+                      name="organizationId"
+                      options={processOrganizationOptions}
+                      value={
+                        processOrganizationOptions.find(
+                          (option) =>
+                            option.value === processModal.organizationId,
+                        ) || null
+                      }
+                      onChange={(option) =>
+                        setProcessModal((prev) => ({
+                          ...prev,
+                          organizationId: option?.value || "",
+                        }))
+                      }
+                      placeholder={
+                        processModal.sellerId
+                          ? "Search or select organization"
+                          : "Select seller first"
+                      }
+                      isDisabled={
+                        processModal.lockSellerSelection ||
+                        !processModal.sellerId
+                      }
+                      isClearable={!processModal.lockSellerSelection}
+                    />
+                  </FieldRow>
 
-              {processModal.mode === "order" ? (
-                <FieldRow label="Eligible Order *">
-                  <FilterSelect
-                    name="orderId"
-                    options={eligibleOrders.map((order) => ({
-                      value: order.id,
-                      label: `#${order.label} · ${money(order.amount)}`,
-                    }))}
-                    value={
-                      eligibleOrders
-                        .map((order) => ({
+                  {processModal.mode === "order" ? (
+                    <FieldRow label="Eligible Order *">
+                      <FilterSelect
+                        name="orderId"
+                        options={eligibleOrders.map((order) => ({
                           value: order.id,
                           label: `#${order.label} · ${money(order.amount)}`,
-                        }))
-                        .find(
-                          (option) => option.value === processModal.orderId,
-                        ) || null
-                    }
-                    onChange={(option) =>
-                      setProcessModal((prev) => ({
-                        ...prev,
-                        orderId: option?.value || "",
-                      }))
-                    }
-                    placeholder="Search or select eligible order"
-                    isClearable
-                  />
-                </FieldRow>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <FieldRow label="Period Start">
-                    <input
-                      type="date"
-                      className={inputCls}
-                      value={processModal.periodStart}
-                      onChange={(e) =>
-                        setProcessModal((prev) => ({
-                          ...prev,
-                          periodStart: e.target.value,
-                        }))
-                      }
-                    />
-                  </FieldRow>
+                        }))}
+                        value={
+                          eligibleOrders
+                            .map((order) => ({
+                              value: order.id,
+                              label: `#${order.label} · ${money(order.amount)}`,
+                            }))
+                            .find(
+                              (option) => option.value === processModal.orderId,
+                            ) || null
+                        }
+                        onChange={(option) =>
+                          setProcessModal((prev) => ({
+                            ...prev,
+                            orderId: option?.value || "",
+                          }))
+                        }
+                        placeholder="Search or select eligible order"
+                        isDisabled={processModal.lockSellerSelection}
+                        isClearable={!processModal.lockSellerSelection}
+                      />
+                    </FieldRow>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <FieldRow label="Period Start">
+                        <input
+                          type="date"
+                          className={inputCls}
+                          value={processModal.periodStart}
+                          onChange={(e) =>
+                            setProcessModal((prev) => ({
+                              ...prev,
+                              periodStart: e.target.value,
+                            }))
+                          }
+                        />
+                      </FieldRow>
 
-                  <FieldRow label="Period End">
-                    <input
-                      type="date"
-                      className={inputCls}
-                      value={processModal.periodEnd}
-                      onChange={(e) =>
+                      <FieldRow label="Period End">
+                        <input
+                          type="date"
+                          className={inputCls}
+                          value={processModal.periodEnd}
+                          onChange={(e) =>
+                            setProcessModal((prev) => ({
+                              ...prev,
+                              periodEnd: e.target.value,
+                            }))
+                          }
+                        />
+                      </FieldRow>
+                    </div>
+                  )}
+                </div>
+              </FormSection>
+
+              <FormSection
+                title="Payment Details"
+                description="Choose the payment method for processing the seller payout."
+              >
+                <div className="space-y-3">
+                  <FieldRow label="Payment Method">
+                    <FilterSelect
+                      name="processPaymentMethod"
+                      options={payoutMethods}
+                      value={
+                        payoutMethods.find(
+                          (method) =>
+                            method.value === processModal.paymentMethod,
+                        ) || null
+                      }
+                      onChange={(option) =>
                         setProcessModal((prev) => ({
                           ...prev,
-                          periodEnd: e.target.value,
+                          paymentMethod: option?.value || "",
                         }))
                       }
+                      placeholder="Select payment method"
+                      isClearable={false}
                     />
+
+                    {processModal.paymentMethod === "razorpayx" && (
+                      <p className="text-xs text-[#65718b]">
+                        Uses the seller's verified onboarding bank details and
+                        sends the payout through RazorpayX.
+                      </p>
+                    )}
+
+                    {!razorpayXEnabled && (
+                      <p className="text-xs text-amber-700">
+                        RazorpayX is disabled in backend env, so automatic bank
+                        payout is hidden. Enable live keys or mock mode to test
+                        it.
+                      </p>
+                    )}
                   </FieldRow>
                 </div>
-              )}
-
-              <FieldRow label="Payment Method">
-                <FilterSelect
-                  name="processPaymentMethod"
-                  options={payoutMethods}
-                  value={
-                    payoutMethods.find(
-                      (method) => method.value === processModal.paymentMethod,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    setProcessModal((prev) => ({
-                      ...prev,
-                      paymentMethod: option?.value || "",
-                    }))
-                  }
-                  placeholder="Select payment method"
-                  isClearable={false}
-                />
-
-                {processModal.paymentMethod === "razorpayx" && (
-                  <p className="text-xs text-[#65718b]">
-                    Uses the seller's verified onboarding bank details and sends
-                    the payout through RazorpayX.
-                  </p>
-                )}
-
-                {!razorpayXEnabled && (
-                  <p className="text-xs text-amber-700">
-                    RazorpayX is disabled in backend env, so automatic bank
-                    payout is hidden. Enable live keys or mock mode to test it.
-                  </p>
-                )}
-              </FieldRow>
+              </FormSection>
 
               <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
                 {processModal.mode === "order"
@@ -2327,24 +2375,35 @@ const SellerFinance = () => {
                 only when completing payment.
               </div>
 
-              <FieldRow label="Internal Note">
-                <textarea
-                  className={`${inputCls} resize-none py-2`}
-                  rows={2}
-                  placeholder="Optional note"
-                  value={processModal.note}
-                  onChange={(e) =>
-                    setProcessModal((prev) => ({
-                      ...prev,
-                      note: e.target.value,
-                    }))
-                  }
-                />
-              </FieldRow>
+              <FormSection
+                title="Additional Information"
+                description="Add an optional internal note for this payout."
+              >
+                <FieldRow label="Internal Note">
+                  <FormInput
+                    type="textarea"
+                    name="note"
+                    placeholder="Enter internal note"
+                    rows={3}
+                    minLength={3}
+                    maxLength={500}
+                    limitMessage="Internal note must be between 3 and 500 characters"
+                    showLengthCount
+                    value={payoutNoteFormik.values.note}
+                    onChange={payoutNoteFormik.handleChange}
+                    onBlur={payoutNoteFormik.handleBlur}
+                    error={
+                      payoutNoteFormik.touched.note &&
+                      payoutNoteFormik.errors.note
+                    }
+                    className="mb-0"
+                  />
+                </FieldRow>
+              </FormSection>
             </div>
           </DefaultModal>
 
-          {/* Complete Payout Modal */}
+          {/* Complete Payout Side Drawer */}
           <DefaultModal
             isOpen={completeModal.open}
             onClose={() =>
@@ -2355,109 +2414,128 @@ const SellerFinance = () => {
             loading={submitting}
             submitButtonText="Complete Payout"
             closeButtonText="Cancel"
+            isButtonView={true}
             width="600px"
           >
-            {completeModal.payout && (
-              <div className="mb-3 rounded-md bg-[#f8faff] p-3 text-xs text-[#65718b]">
-                <div>
-                  Seller:{" "}
-                  <span className="font-medium">
-                    {completeModal.payout.sellerName ||
-                      completeModal.payout.seller?.name ||
-                      sellerLabel(
-                        completeModal.payout.seller_id,
-                        sellerOptions,
-                      )}
-                  </span>
-                </div>
+            <div className="space-y-5">
+              {completeModal.payout && (
+                <FormSection
+                  title="Payout Summary"
+                  description="Review the seller and payout amount before completing payment."
+                >
+                  <div className="space-y-3 rounded-md border border-[#EEDFB9] bg-[#FFFDF8] p-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[#65718b]">Seller</span>
+                      <span className="font-medium text-[#2E2E2E]">
+                        {completeModal.payout.sellerName ||
+                          completeModal.payout.seller?.name ||
+                          sellerLabel(
+                            completeModal.payout.seller_id,
+                            sellerOptions,
+                          )}
+                      </span>
+                    </div>
 
-                <div>
-                  Net Amount:{" "}
-                  <span className="font-semibold text-[#208a3c]">
-                    {money(completeModal.payout.net_amount)}
-                  </span>
-                </div>
-              </div>
-            )}
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[#65718b]">Net Amount</span>
+                      <span className="font-semibold text-[#208a3c]">
+                        {money(completeModal.payout.net_amount)}
+                      </span>
+                    </div>
+                  </div>
+                </FormSection>
+              )}
 
-            <div className="space-y-3">
-              <FieldRow
-                label={
-                  completeModal.paymentMethod === "razorpayx"
-                    ? "Payment Reference"
-                    : "Payment Reference *"
-                }
+              <FormSection
+                title="Payment Details"
+                description="Enter the payment reference and select the payment method."
               >
-                <input
-                  className={inputCls}
-                  placeholder={
-                    completeModal.paymentMethod === "razorpayx"
-                      ? "Generated by RazorpayX"
-                      : "UTR / transaction ID / cheque no."
-                  }
-                  disabled={completeModal.paymentMethod === "razorpayx"}
-                  value={completeModal.paymentReference}
-                  onChange={(e) =>
-                    setCompleteModal((prev) => ({
-                      ...prev,
-                      paymentReference: e.target.value,
-                    }))
-                  }
-                />
-              </FieldRow>
+                <div className="space-y-4">
+                  <FieldRow
+                    label={
+                      completeModal.paymentMethod === "razorpayx"
+                        ? "Payment Reference"
+                        : "Payment Reference *"
+                    }
+                  >
+                    <input
+                      className={inputCls}
+                      placeholder={
+                        completeModal.paymentMethod === "razorpayx"
+                          ? "Generated by RazorpayX"
+                          : "UTR / transaction ID / cheque no."
+                      }
+                      disabled={completeModal.paymentMethod === "razorpayx"}
+                      value={completeModal.paymentReference}
+                      onChange={(e) =>
+                        setCompleteModal((prev) => ({
+                          ...prev,
+                          paymentReference: e.target.value,
+                        }))
+                      }
+                    />
+                  </FieldRow>
 
-              <FieldRow label="Payment Method">
-                <FilterSelect
-                  name="completePaymentMethod"
-                  options={payoutMethods}
-                  value={
-                    payoutMethods.find(
-                      (method) => method.value === completeModal.paymentMethod,
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    setCompleteModal((prev) => ({
-                      ...prev,
-                      paymentMethod: option?.value || "",
-                    }))
-                  }
-                  placeholder="Select payment method"
-                  isClearable={false}
-                />
+                  <FieldRow label="Payment Method">
+                    <FilterSelect
+                      name="completePaymentMethod"
+                      options={payoutMethods}
+                      value={
+                        payoutMethods.find(
+                          (method) =>
+                            method.value === completeModal.paymentMethod,
+                        ) || null
+                      }
+                      onChange={(option) =>
+                        setCompleteModal((prev) => ({
+                          ...prev,
+                          paymentMethod: option?.value || "",
+                        }))
+                      }
+                      placeholder="Select payment method"
+                      isClearable={false}
+                    />
 
-                {completeModal.paymentMethod === "razorpayx" && (
-                  <p className="text-xs text-[#65718b]">
-                    Starts RazorpayX payout; the provider payout ID is saved as
-                    the payment reference.
-                  </p>
-                )}
+                    {completeModal.paymentMethod === "razorpayx" && (
+                      <p className="text-xs text-[#65718b]">
+                        Starts RazorpayX payout; the provider payout ID is saved
+                        as the payment reference.
+                      </p>
+                    )}
 
-                {completeModal.paymentMethod !== "razorpayx" && (
-                  <p className="text-xs text-amber-700">
-                    Record this only after confirming the external transfer. The
-                    UTR or transaction reference is required.
-                  </p>
-                )}
-              </FieldRow>
+                    {completeModal.paymentMethod !== "razorpayx" && (
+                      <p className="text-xs text-amber-700">
+                        Record this only after confirming the external transfer.
+                        The UTR or transaction reference is required.
+                      </p>
+                    )}
+                  </FieldRow>
+                </div>
+              </FormSection>
 
-              <FieldRow label="Internal Note">
-                <textarea
-                  className={`${inputCls} resize-none py-2`}
-                  rows={2}
-                  placeholder="Optional note"
-                  value={completeModal.note}
-                  onChange={(e) =>
-                    setCompleteModal((prev) => ({
-                      ...prev,
-                      note: e.target.value,
-                    }))
-                  }
-                />
-              </FieldRow>
+              <FormSection
+                title="Additional Information"
+                description="Add an optional internal note for this payout."
+              >
+                <FieldRow label="Internal Note">
+                  <textarea
+                    className={`${inputCls} resize-none py-2`}
+                    rows={3}
+                    placeholder="Enter additional context"
+                    value={completeModal.note}
+                    onChange={(e) =>
+                      setCompleteModal((prev) => ({
+                        ...prev,
+                        note: e.target.value,
+                      }))
+                    }
+                  />
+                </FieldRow>
+              </FormSection>
             </div>
           </DefaultModal>
 
-          {/* Fail Payout Modal */}
+          {/* Fail Payout Side Drawer */}
           <DefaultModal
             isOpen={failModal.open}
             onClose={() => setFailModal((prev) => ({ ...prev, open: false }))}
@@ -2466,55 +2544,74 @@ const SellerFinance = () => {
             loading={submitting}
             submitButtonText="Confirm Failure"
             closeButtonText="Cancel"
+            isButtonView={true}
             width="600px"
           >
-            {failModal.payout && (
-              <div className="mb-3 rounded-md bg-[#fff8f0] p-3 text-xs text-[#b45309]">
-                <div>
-                  Seller:{" "}
-                  <span className="font-medium">
-                    {failModal.payout.sellerName ||
-                      failModal.payout.seller?.displayName ||
-                      sellerLabel(failModal.payout.seller_id, sellerOptions)}
-                  </span>
-                </div>
+            <div className="space-y-5">
+              {failModal.payout && (
+                <FormSection
+                  title="Payout Information"
+                  description="Review the seller details before marking this payout as failed."
+                >
+                  <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[#65718b]">Seller</span>
+                      <span className="font-medium text-[#2E2E2E]">
+                        {failModal.payout.sellerName ||
+                          failModal.payout.seller?.displayName ||
+                          sellerLabel(
+                            failModal.payout.seller_id,
+                            sellerOptions,
+                          )}
+                      </span>
+                    </div>
 
-                <div>
-                  This will release the payout back to <strong>pending</strong>{" "}
-                  status so it can be retried.
-                </div>
-              </div>
-            )}
+                    <p className="text-xs text-amber-700">
+                      This will release the payout back to{" "}
+                      <strong>pending</strong> status so it can be retried.
+                    </p>
+                  </div>
+                </FormSection>
+              )}
 
-            <div className="space-y-3">
-              <FieldRow label="Failure Reason *">
-                <input
-                  className={inputCls}
-                  placeholder="e.g. Incorrect bank details, payment bounced"
-                  value={failModal.reason}
-                  onChange={(e) =>
-                    setFailModal((prev) => ({
-                      ...prev,
-                      reason: e.target.value,
-                    }))
-                  }
-                />
-              </FieldRow>
+              <FormSection
+                title="Failure Details"
+                description="Provide the reason for the payout failure."
+              >
+                <FieldRow label="Failure Reason *">
+                  <input
+                    className={inputCls}
+                    placeholder="e.g. Incorrect bank details, payment bounced"
+                    value={failModal.reason}
+                    onChange={(e) =>
+                      setFailModal((prev) => ({
+                        ...prev,
+                        reason: e.target.value,
+                      }))
+                    }
+                  />
+                </FieldRow>
+              </FormSection>
 
-              <FieldRow label="Internal Note">
-                <textarea
-                  className={`${inputCls} resize-none py-2`}
-                  rows={2}
-                  placeholder="Optional additional context"
-                  value={failModal.note}
-                  onChange={(e) =>
-                    setFailModal((prev) => ({
-                      ...prev,
-                      note: e.target.value,
-                    }))
-                  }
-                />
-              </FieldRow>
+              <FormSection
+                title="Additional Information"
+                description="Add any optional context about the payout failure."
+              >
+                <FieldRow label="Internal Note">
+                  <textarea
+                    className={`${inputCls} resize-none py-2`}
+                    rows={3}
+                    placeholder="Enter additional context"
+                    value={failModal.note}
+                    onChange={(e) =>
+                      setFailModal((prev) => ({
+                        ...prev,
+                        note: e.target.value,
+                      }))
+                    }
+                  />
+                </FieldRow>
+              </FormSection>
             </div>
           </DefaultModal>
         </>

@@ -324,9 +324,11 @@ const TaxRule = () => {
 
   const handleTaxChange = (opt) => {
     setSelectedTax(opt);
-    formik.setFieldValue("tax_id", opt?.value || "");
-    formik.setFieldValue("subTaxes_id", []);
-    formik.setFieldTouched("tax_id", true, false);
+    formik.setFieldValue("tax_id", opt?.value || "", false);
+    formik.setFieldError("tax_id", undefined);
+    formik.setFieldTouched("tax_id", false, false);
+    formik.setFieldValue("subTaxes_id", [], false);
+    formik.setFieldError("subTaxes_id", undefined);
     setSelectedSubTax([]);
   };
 
@@ -546,7 +548,7 @@ const TaxRule = () => {
 
                 {/* Tax + Sub Tax */}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
                   <FilterSelect
                     options={taxOptions}
                     label="Select Tax"
@@ -556,8 +558,7 @@ const TaxRule = () => {
                     required
                     placeholder="Select tax"
                   />
-
-                  <FilterSelect
+                    <FilterSelect
                     options={filteredSubTaxOptions}
                     label="Select Sub Tax"
                     value={selectedSubTax}
@@ -572,7 +573,6 @@ const TaxRule = () => {
                       selectedTax ? "Select sub tax" : "Select tax first"
                     }
                   />
-                </div>
                 {/* Category */}
                 <FilterSelect
                   options={categoryOptions}
@@ -590,6 +590,10 @@ const TaxRule = () => {
                   label="Description"
                   name="description"
                   type="textarea"
+                  maxLength={2000}
+                  minLength={3}
+                  limitMessage="Description must be between 3 and 2000 characters"
+                  showLengthCount={true}
                   value={formik.values.description}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}

@@ -50,6 +50,7 @@ import {
   payoutCancellationValidationSchema,
   payoutReleaseValidationSchema,
   payoutRetryValidationSchema,
+  sellerPayoutNoteValidationSchema,
 } from "../../../_helpers/validationSchemas";
 
 const PAYOUT_STATUSES = [
@@ -261,10 +262,24 @@ const PayoutOpsQueue = () => {
   const canUpdate = can("sellers/commissions", ACTIONS.UPDATE);
   const selector = useSelector((state) => state.sellerCommissions);
   const payload = unwrapList(selector.payoutOperationsQueueData);
+  const payoutsNewestFirst = useMemo(
+    () =>
+      [...payload.list].sort((left, right) => {
+        const leftCreated = new Date(
+          valueOf(left, "createdAt", "created_at", "created"),
+        ).getTime();
+        const rightCreated = new Date(
+          valueOf(right, "createdAt", "created_at", "created"),
+        ).getTime();
+        return (Number.isFinite(rightCreated) ? rightCreated : 0) -
+          (Number.isFinite(leftCreated) ? leftCreated : 0);
+      }),
+    [payload.list],
+  );
   const list = useListPage({
     defaultPageSize: 10,
     defaultSortKey: "createdAt",
-    defaultSortDir: "asc",
+    defaultSortDir: "desc",
   });
   const { toQueryParams } = list;
 
@@ -282,11 +297,13 @@ const PayoutOpsQueue = () => {
       note: "",
     },
     validationSchema: () =>
-      action.type === "retry"
-        ? payoutRetryValidationSchema
-        : action.type === "release"
-          ? payoutReleaseValidationSchema
-          : payoutCancellationValidationSchema,
+      action.type === "approve"
+        ? sellerPayoutNoteValidationSchema
+        : action.type === "retry"
+          ? payoutRetryValidationSchema
+          : action.type === "release"
+            ? payoutReleaseValidationSchema
+            : payoutCancellationValidationSchema,
     validateOnBlur: true,
     validateOnChange: true,
     onSubmit: (values) => {
@@ -335,6 +352,7 @@ const PayoutOpsQueue = () => {
       await dispatch(
         getPayoutOperationsQueue({
           ...params,
+          sortOrder: params.sortDir,
           offset: (params.page - 1) * params.limit,
         }),
       ).unwrap();
@@ -428,7 +446,7 @@ const PayoutOpsQueue = () => {
   };
 
   const prepareAction = () => {
-    if (["retry", "cancel", "release"].includes(action.type)) {
+    if (["approve", "retry", "cancel", "release"].includes(action.type)) {
       actionFormik.handleSubmit();
       return;
     }
@@ -461,7 +479,7 @@ const PayoutOpsQueue = () => {
           const paymentMethod = action.paymentMethod || existingMethod;
           return {
             ...base,
-            note: action.note,
+            note: actionFormik.values.note.trim() || undefined,
             paymentMethod: paymentMethod || undefined,
             autoProcess: paymentMethod === "razorpayx",
           };
@@ -822,7 +840,7 @@ const PayoutOpsQueue = () => {
 
       <DataTable
         columns={columns}
-        data={payload.list}
+        data={payoutsNewestFirst}
         loading={loading}
         totalCount={payload.total || payload.list.length}
         page={list.page}
@@ -877,8 +895,8 @@ const PayoutOpsQueue = () => {
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                   <p className="admin-label">Seller</p>
                   <p className="mt-1 break-words text-sm font-medium text-gray-800">
-                    {action.payout.sellerName ||
-                      action.payout.seller?.displayName ||
+                    { formatLabel(action.payout.sellerName) ||
+                      formatLabel(action.payout.seller?.displayName) ||
                       "Seller"}
                   </p>
                 </div>
@@ -900,7 +918,7 @@ const PayoutOpsQueue = () => {
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                   <p className="admin-label">Current Status</p>
                   <p className="mt-1 text-sm font-medium text-gray-800">
-                    {display(action.payout.status)}
+                    {formatLabel(display(action.payout.status)) }
                   </p>
                 </div>
 
@@ -908,7 +926,7 @@ const PayoutOpsQueue = () => {
                   <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <p className="admin-label">Payment Method</p>
                     <p className="mt-1 break-words text-sm text-gray-800">
-                      {payoutMethodText(action.payout)}
+                      { formatLabel(payoutMethodText(action.payout))}
                     </p>
                   </div>
                 )}
@@ -964,29 +982,17 @@ const PayoutOpsQueue = () => {
               <div className="space-y-4">
                 <div>
                   <label className="admin-label">Payment Method</label>
-                  <FilterSelect
-                    options={[
-                      { value: "", label: "Select Payment Preference" },
-                      ...payoutMethods,
-                    ]}
+                  <input
+                    type="text"
+                    className="admin-input w-full"
                     value={
-                      [
-                        { value: "", label: "Select Payment Preference" },
-                        ...payoutMethods,
-                      ].find(
+                      payoutMethods.find(
                         (option) => option.value === action.paymentMethod,
-                      ) || null
+                      )?.label || formatLabel(action.paymentMethod)
                     }
-                    onChange={(selectedOption) =>
-                      setAction((prev) => ({
-                        ...prev,
-                        paymentMethod:
-                          typeof selectedOption === "object"
-                            ? (selectedOption?.value ?? "")
-                            : (selectedOption ?? ""),
-                      }))
-                    }
-                    placeholder="Select payment method"
+                    disabled
+                    readOnly
+                    aria-label="Payment method"
                   />
 
                   {action.paymentMethod === "razorpayx" && (
@@ -1018,10 +1024,17 @@ const PayoutOpsQueue = () => {
                 <Input
                   labelName="Note (optional)"
                   type="textarea"
-                  value={action.note}
-                  onChange={(e) =>
-                    setAction((prev) => ({ ...prev, note: e.target.value }))
+                  name="note"
+                  value={actionFormik.values.note}
+                  onChange={actionFormik.handleChange}
+                  onBlur={actionFormik.handleBlur}
+                  error={
+                    actionFormik.touched.note && actionFormik.errors.note
                   }
+                  minLength={3}
+                  maxLength={500}
+                  limitMessage="Note must be between 3 and 500 characters"
+                  showLengthCount
                 />
               </div>
             </FormSection>
