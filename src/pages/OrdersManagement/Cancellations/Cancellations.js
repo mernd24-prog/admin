@@ -1228,60 +1228,213 @@ const Cancellations = () => {
         )}
       </DefaultModal>
 
-      {/* Cancellation approval */}
-      <ConfirmModal
+      <DefaultModal
         isOpen={approveRequest.open}
-        title="Approve item cancellation"
-        description="Approve cancellation of the selected item quantities? Refund processing starts only after this approval."
-        onConfirm={handleApproveRequest}
-        onCancel={() =>
-          setApproveRequest({ open: false, item: null, note: "" })
-        }
+        onClose={() => setApproveRequest({ open: false, item: null, note: "" })}
+        onSubmit={handleApproveRequest}
+        title="Approve Cancellation"
+        width="650px"
+        isButtonView={true}
+        submitButtonText="Approve Cancellation"
+        closeButtonText="Cancel"
         loading={actionLoading}
-        confirmLabel="Approve"
       >
-        <div className={CLASS_MODAL_BODY}>
-          <label className="block text-sm font-semibold text-[#30384d]">
-            Approval note
-            <textarea
-              className="mt-2 min-h-[85px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
-              value={approveRequest.note}
-              onChange={(event) =>
-                setApproveRequest((p) => ({ ...p, note: event.target.value }))
-              }
-              maxLength={3000}
-              placeholder="Enter your approval note."
-            />
-          </label>
-        </div>
-      </ConfirmModal>
+        {approveRequest.item && (
+          <div className="space-y-5">
+            {(() => {
+              const item = approveRequest.item;
+              const items = Array.isArray(item.items) ? item.items : [];
 
-      <ConfirmModal
+              return (
+                <>
+                  {/* Cancellation Items */}
+                  <FormSection
+                    title="Requested Items"
+                    description={`${items.length} ${
+                      items.length === 1 ? "item" : "items"
+                    } included in this cancellation request.`}
+                  >
+                    <div className="space-y-3">
+                      {items.length > 0 ? (
+                        items.map((product, index) => (
+                          <div
+                            key={
+                              product.orderItemId ||
+                              product.order_item_id ||
+                              index
+                            }
+                            className="rounded-lg border border-gray-200 bg-white p-3"
+                          >
+                            <p className="text-sm font-semibold text-gray-900">
+                              {product.productTitle ||
+                                product.product_title ||
+                                "Product"}
+                            </p>
+
+                            <div className="mt-3 flex flex-row justify-between items-center">
+                              <div>
+                                <p className="text-xs text-gray-500">SKU</p>
+                                <p className="mt-1 break-all text-xs font-medium text-gray-800">
+                                  {product.variantSku ||
+                                    product.variant_sku ||
+                                    "—"}
+                                </p>
+                              </div>
+
+                              <div className="mx-auto">
+                                <p className="text-xs text-gray-500">
+                                  Quantity
+                                </p>
+                                <p className=" text-sm font-medium text-gray-800">
+                                  {product.quantity || 0}
+                                </p>
+                              </div>
+
+                              <div>
+                                <p className="text-xs text-gray-500">Refund</p>
+                                <p className="mt-1 text-sm font-semibold text-gray-900">
+                                  {money(
+                                    product.refundAmount ??
+                                      product.refund_amount ??
+                                      product.itemAmount ??
+                                      product.item_amount,
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <EmptyState>
+                          <p className="text-xs font-medium text-[#65718b]">
+                            No cancellation items found.
+                          </p>
+                        </EmptyState>
+                      )}
+                    </div>
+                  </FormSection>
+
+                  {/* Refund Information */}
+                  <FormSection
+                    title="Refund Information"
+                    description="Review the estimated customer refund amount."
+                  >
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-xs font-medium text-amber-800">
+                        Customer Refund Amount
+                      </p>
+                      <p className="mt-1 text-xl font-bold text-gray-900">
+                        {money(item.refundAmount ?? item.refund_amount)}
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-amber-800">
+                        Refund processing will start after cancellation
+                        approval.
+                      </p>
+                    </div>
+                  </FormSection>
+
+                  {/* Approval Note */}
+                  <FormSection
+                    title="Approval Note"
+                    description="Add an optional note for this cancellation approval."
+                  >
+                    <textarea
+                      className="min-h-[100px] w-full resize-y rounded-md border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-amber-200 "
+                      value={approveRequest.note}
+                      onChange={(event) =>
+                        setApproveRequest((previous) => ({
+                          ...previous,
+                          note: event.target.value,
+                        }))
+                      }
+                      maxLength={3000}
+                      placeholder="Enter your approval note (optional)..."
+                    />
+                  </FormSection>
+                </>
+              );
+            })()}
+          </div>
+        )}
+      </DefaultModal>
+
+      {/* Reject Cancellation Side Drawer */}
+      <DefaultModal
         isOpen={rejectRequest.open}
-        title="Reject item cancellation"
-        description="Reject the selected product cancellation request? No refund will be initiated."
-        onConfirm={handleRejectRequest}
-        onCancel={() =>
+        onClose={() =>
           setRejectRequest({ open: false, item: null, reason: "" })
         }
+        onSubmit={handleRejectRequest}
+        title="Reject Cancellation"
+        width="550px"
+        isButtonView
+        submitButtonText="Reject Cancellation"
+        closeButtonText="Cancel"
         loading={actionLoading}
-        confirmLabel="Reject"
+        submitDisabled={rejectRequest.reason.trim().length < 3}
       >
-        <div className={CLASS_MODAL_BODY}>
-          <label className="block text-sm font-semibold text-[#30384d]">
-            Rejection reason *
-            <textarea
-              className="mt-2 min-h-[85px] w-full resize-y rounded-md border border-[#E6E6E6] px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
-              value={rejectRequest.reason}
-              onChange={(event) =>
-                setRejectRequest((p) => ({ ...p, reason: event.target.value }))
-              }
-              maxLength={3000}
-              placeholder="Enter the reason for rejection."
-            />
-          </label>
-        </div>
-      </ConfirmModal>
+        {rejectRequest.item && (
+          <div className="space-y-4">
+            <FormSection
+              title="Cancellation Details"
+              description="Review the request before rejecting it."
+            >
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
+                <div>
+                  <p className="text-xs text-gray-500">Cancellation Number</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {rejectRequest.item.cancellationNumber ||
+                      rejectRequest.item.id ||
+                      "—"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-500">Order Number</p>
+                  <OrderLink
+                    orderId={
+                      rejectRequest.item.orderId || rejectRequest.item.order_id
+                    }
+                    orderNumber={
+                      rejectRequest.item.orderNumber ||
+                      rejectRequest.item.order_number
+                    }
+                  />
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-500">Requested By</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    {cancellationRequesterLabel(rejectRequest.item)}
+                  </p>
+                </div>
+              </div>
+            </FormSection>
+
+            <FormSection
+              title="Rejection Reason"
+              description="A rejection reason is required."
+            >
+              <textarea
+                className="min-h-[110px] w-full resize-y rounded-md border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-[#082f91] focus:ring-2 focus:ring-[#082f91]/10"
+                value={rejectRequest.reason}
+                onChange={(event) =>
+                  setRejectRequest((previous) => ({
+                    ...previous,
+                    reason: event.target.value,
+                  }))
+                }
+                maxLength={3000}
+                placeholder="Enter the reason for rejection..."
+              />
+
+              <p className="mt-1 text-right text-xs text-gray-500">
+                {rejectRequest.reason.length}/3000
+              </p>
+            </FormSection>
+          </div>
+        )}
+      </DefaultModal>
 
       {/* Refund approval */}
       <ConfirmModal

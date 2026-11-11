@@ -7,7 +7,6 @@ import ToggleButton from "../../../components/Atoms/ToggleButton/ToggleButton";
 import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import Input from "../../../components/Atoms/Input/Input";
-import AddButton from "../../../components/Button/AddButton";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -29,10 +28,8 @@ import { transformArray } from "../../../_helpers/globalFunctions";
 import moment from "moment-timezone";
 import DefaultMiddleModal from "../../../components/Atoms/Modal/DefaultMiddleModal ";
 import Pagination from "../../../components/Pagination/Pagination";
-import {
-  ACCESS_SCOPES,
-  usePermission,
-} from "../../../_helpers/usePermission";
+import { ACCESS_SCOPES, usePermission } from "../../../_helpers/usePermission";
+import AddButton from "../../../components/Atoms/buttons/AddButton";
 
 const PAGE_SIZE = 10;
 const INITIAL_FORM_STATE = {

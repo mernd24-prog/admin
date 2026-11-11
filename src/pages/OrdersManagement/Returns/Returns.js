@@ -1213,7 +1213,7 @@ const Returns = () => {
             <OrderLink
               orderId={row.orderId || row.order_id}
               orderNumber={row.orderNumber || row.order_number}
-              prefix="Order #"
+              prefix="#"
             />
           </div>
         ),

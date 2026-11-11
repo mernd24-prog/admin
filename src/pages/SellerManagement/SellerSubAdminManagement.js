@@ -32,13 +32,14 @@ import TableData from "../../components/Atoms/TableData/TableData";
 import SearchComponent from "../../components/Atoms/New Table/NewTable";
 import Loader from "../../components/Loader/Loader";
 import Pagination from "../../components/Pagination/Pagination";
-import AddButton from "../../components/Button/AddButton";
+
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import FormInput from "../../components/Atoms/FormInput/FormInput";
 import { ActionButtons } from "../../components/Atoms/TableActionButton/TableActionButton";
 import StatusPopup from "../../components/Atoms/PopupData/StatusPopup";
 import { PageHeader } from "../../components/Shared";
 import { formatDateTime12Hour } from "../../utils/formatters";
+import AddButton from "../../components/Atoms/buttons/AddButton";
 
 const PAGE_SIZE = 10;
 const emptyForm = {

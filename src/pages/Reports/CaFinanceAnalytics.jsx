@@ -141,7 +141,7 @@ export default function CaFinanceAnalytics() {
     provider: "",
     status: "",
     search: "",
-    limit: 20,
+    limit: 10,
     offset: 0,
   });
   const [summary, setSummary] = useState({ cards: {} });

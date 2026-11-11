@@ -1,5 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { MdEmail, MdInventory2, MdRefresh, MdSend } from "react-icons/md";
+import {
+  MdEmail,
+  MdInventory2,
+  MdRefresh,
+  MdSend,
+  MdClose,
+  MdImageNotSupported,
+} from "react-icons/md";
 import { toast } from "sonner";
 import {
   BulkActionBar,
@@ -35,31 +42,49 @@ const getPaginationTotal = (payload = {}, fallback = 0) =>
       fallback,
   );
 
-const productCell = (row = {}) => (
-  <div className="flex min-w-[260px] max-w-[520px] items-center gap-3">
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[var(--admin-line)] bg-white">
-      {row.productImage ? (
-        <img
-          src={row.productImage}
-          alt={row.productTitle || "Product"}
-          className="h-full w-full object-contain p-1"
-        />
-      ) : (
-        <MdInventory2
-          aria-hidden="true"
-          size={20}
-          className="text-[var(--admin-muted)]"
-        />
-      )}
-    </div>
-    <div className="min-w-0">
-      <p className="truncate font-semibold text-[var(--admin-ink)]">
-        {row.productTitle || "Untitled product"}
-      </p>
-      <p className="truncate text-xs text-[var(--admin-muted)]">
-        {row.variantTitle || row.sku || "Default variant"}
-      </p>
-    </div>
+const productImageCell = (row = {}, onPreview) => (
+  <div className="flex flex-col items-center gap-1">
+    {row.productImage ? (
+      <>
+        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-[var(--admin-line)] bg-white">
+          <img
+            src={row.productImage}
+            alt={row.productTitle || "Product"}
+            loading="lazy"
+            className="h-full w-full object-contain p-1"
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onPreview(row.productImage);
+          }}
+          className="text-xs font-medium text-[var(--admin-blue)] hover:underline"
+        >
+          View
+        </button>
+      </>
+    ) : (
+      <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--admin-line)] bg-white text-[var(--admin-muted)]">
+        <MdImageNotSupported size={20} />
+      </div>
+    )}
+  </div>
+);
+
+const productNameCell = (row = {}) => (
+  <div className="min-w-[180px] max-w-[300px]">
+    <p
+      className="truncate font-semibold text-[var(--admin-ink)]"
+      title={row.productTitle || "Untitled product"}
+    >
+      {row.productTitle || "Untitled product"}
+    </p>
+    <p className="truncate text-xs text-[var(--admin-muted)]">
+      {row.variantTitle || row.sku || "Default variant"}
+    </p>
   </div>
 );
 
@@ -80,7 +105,7 @@ const StockNotifications = () => {
   const [sendingId, setSendingId] = useState("");
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [bulkSending, setBulkSending] = useState(false);
-
+  const [previewImage, setPreviewImage] = useState("");
   const selectedStatusOption = useMemo(
     () =>
       STATUS_OPTIONS.find((option) => option.value === status) ||
@@ -215,11 +240,20 @@ const StockNotifications = () => {
 
   const columns = useMemo(
     () => [
+      {
+        key: "productImage",
+        label: "Image",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        render: (_, row) =>
+          productImageCell(row, (image) => setPreviewImage(image)),
+      },
       { key: "customer", label: "User", render: (_, row) => userCell(row) },
+
       {
         key: "product",
         label: "Product",
-        render: (_, row) => productCell(row),
+        render: (_, row) => productNameCell(row),
       },
       { key: "sku", label: "SKU" },
       {
@@ -381,6 +415,39 @@ const StockNotifications = () => {
           },
         ]}
       />
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-gray-950/70 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setPreviewImage("");
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Product image preview"
+            className="relative flex max-h-[85vh] w-full max-w-2xl items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white p-4 shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={() => setPreviewImage("")}
+              aria-label="Close image preview"
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-100"
+            >
+              <MdClose size={21} />
+            </button>
+
+            <img
+              src={previewImage}
+              alt="Product preview"
+              className="max-h-[75vh] max-w-full rounded-lg object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

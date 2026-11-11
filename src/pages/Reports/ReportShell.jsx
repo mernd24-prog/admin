@@ -877,7 +877,10 @@ const PerformanceOverview = ({
           </div>
         ) : composedRows.length ? (
           <div className="w-full min-w-0">
-            <ResponsiveContainer width="100%" height={productCategories ? 280 : 250}>
+            <ResponsiveContainer
+              width="100%"
+              height={productCategories ? 280 : 250}
+            >
               <ComposedChart
                 data={composedRows}
                 margin={{ left: 4, right: 8, top: 18, bottom: 0 }}
@@ -926,7 +929,11 @@ const PerformanceOverview = ({
                   dataKey={productCategories ? "title" : "label"}
                   interval={productCategories ? "preserveStartEnd" : 0}
                   height={productCategories ? 42 : 30}
-                  tickFormatter={productCategories ? (value) => truncateLabel(value, 18) : undefined}
+                  tickFormatter={
+                    productCategories
+                      ? (value) => truncateLabel(value, 18)
+                      : undefined
+                  }
                   tickMargin={12}
                   tick={{
                     fontSize: 11,
@@ -2416,8 +2423,8 @@ export const ProductAnalytics = () => {
           getRowLink={(row) =>
             row.id ? `/app/product-catalog/view/${row.id}` : null
           }
-           enablePagination
-          pageSize={20}
+          enablePagination
+          pageSize={10}
         />
       </div>
     </ReportShell>
@@ -2840,68 +2847,6 @@ export const InventoryAnalytics = () => {
           barFormatter={formatNumber}
           lineFormatter={formatNumber}
         />
-
-        {/* Product-level table */}
-        {/* <ReportTable
-          title={sellerView ? "Inventory Products" : "Low Stock Products"}
-          rows={lowStockRows}
-          emptyTitle={
-            sellerView ? "No inventory products" : "No low-stock products"
-          }
-          emptyText={
-            sellerView
-              ? "No products are available in your inventory yet."
-              : `Your inventory is healthy for the selected range. Products will appear here when available stock falls below ${LOW_STOCK_THRESHOLD} units.`
-          }
-          enablePagination
-          pageSize={10}
-          pageSizeOptions={[10, 20, 50, 100]}
-          columns={[
-            {
-              key: "productTitle",
-
-              label: "Product",
-
-              render: (value) => (
-                <span className="font-semibold text-[var(--admin-navy)] hover:text-[var(--admin-gold-dark)]">
-                  {value}
-                </span>
-              ),
-            },
-
-            {
-              key: "sku",
-              label: "SKU",
-            },
-
-            {
-              key: "stock",
-
-              label: "Stock",
-
-              render: (value) => formatNumber(value),
-            },
-
-            // {
-            //   key: "reservedStock",
-
-            //   label: "Reserved",
-
-            //   render: (value) => formatNumber(value),
-            // },
-
-            {
-              key: "availableStock",
-
-              label: "Available",
-
-              render: (value) => formatNumber(value),
-            },
-          ]}
-          getRowLink={(row) =>
-            row.id ? `/app/product-catalog/view/${row.id}` : null
-          }
-        /> */}
       </div>
     </ReportShell>
   );

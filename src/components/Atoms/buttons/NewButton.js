@@ -1,7 +1,7 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
-import PermissionGuard from "../Atoms/PermissionGuard/PermissionGuard";
-import { getRouteModuleCandidates } from "../../_helpers/rbacRoutes";
+import PermissionGuard from "../PermissionGuard/PermissionGuard";
+import { getRouteModuleCandidates } from "../../../_helpers/rbacRoutes";
 
 const NewButton = React.memo(
   ({

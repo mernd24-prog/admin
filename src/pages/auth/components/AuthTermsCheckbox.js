@@ -26,27 +26,7 @@ const AuthTermsCheckbox = ({ checked, onChange, className = "" }) => (
         >
           Terms
         </a>
-        {", "}
-        <a
-          href="https://staging.samglobal1.com/terms-of-use"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:underline"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Privacy
-        </a>
-        {" and "}
-        <a
-          href="https://staging.samglobal1.com/refund-policy"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:underline"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Cancellation Policies
-        </a>
-        .
+        {", Privacy Policy and Cancellation Policies."}
       </span>
     </span>
   </label>
