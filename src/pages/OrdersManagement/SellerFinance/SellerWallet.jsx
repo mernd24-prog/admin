@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { MdRefresh } from "react-icons/md";
+import { MdAccountBalanceWallet, MdRefresh } from "react-icons/md";
 import PageHeader from "../../../components/Shared/PageHeader";
 import StatusBadge from "../../../components/Shared/StatusBadge";
 import Loader from "../../../components/Loader/Loader";
 import DataTable from "../../../components/Shared/DataTable";
+import SummaryCard from "../../../components/Shared/SummaryCard";
+import ContentPanel from "../../../components/Shared/ContentPanel";
 import { OrderLink } from "../../../components/Shared/EntityLink";
 import {
   getMySellerWalletSummary,
@@ -294,207 +296,186 @@ export default function SellerWallet() {
       />
 
       {!isSeller && (
-        <div className="admin-card mb-4 max-w-xl p-4">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-            Seller
-          </label>
-          <FilterSelect
-            options={sellerOptions}
-            value={
-              sellerOptions.find(
-                (option) => String(option.value) === String(selectedSellerId),
-              ) || null
-            }
-            onChange={(option) => setSelectedSellerId(option?.value || "")}
-            placeholder="Select seller to view wallet"
-            isSearchable
-            isClearable
-          />
-        </div>
+        <ContentPanel className="mb-5" bodyClassName="p-4 sm:p-5">
+          <div className="max-w-xl">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--admin-ink)]">
+              Seller
+            </label>
+            <p className="mb-3 text-xs text-[var(--admin-muted)]">
+              Choose the seller whose earnings and payout activity you want to
+              review.
+            </p>
+            <FilterSelect
+              options={sellerOptions}
+              value={
+                sellerOptions.find(
+                  (option) => String(option.value) === String(selectedSellerId),
+                ) || null
+              }
+              onChange={(option) => setSelectedSellerId(option?.value || "")}
+              placeholder="Search or select a seller"
+              isSearchable
+              isClearable
+            />
+          </div>
+          {!selectedSellerId && (
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-[var(--admin-line)] bg-[#fffaf0] px-4 py-4 sm:px-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#ead8a9] bg-white text-[var(--admin-gold-dark)]">
+                <MdAccountBalanceWallet size={19} aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[var(--admin-ink)]">
+                  Seller wallet is ready to view
+                </p>
+                <p className="mt-0.5 text-xs leading-5 text-[var(--admin-muted)]">
+                  Select a seller above to see their earnings, balances, and
+                  payout activity.
+                </p>
+              </div>
+            </div>
+          )}
+        </ContentPanel>
       )}
 
-      {!isSeller && !selectedSellerId ? (
-        <div className="admin-card p-10 text-center text-sm text-[var(--admin-muted)]">
-          Select a seller above to view their wallet and balance movements.
-        </div>
-      ) : (
+      {isSeller || selectedSellerId ? (
         <>
-          <section className="admin-card mb-5 overflow-hidden">
-            <div className="border-b border-[var(--admin-line)] px-5 py-4">
-              <h2 className="text-base font-semibold text-[var(--admin-ink)]">
-                {isSeller
-                  ? "Where your money stands"
-                  : "Where this seller’s money stands"}
-              </h2>
-              <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                Only “Payable now” can be sent today. Waiting earnings are not
-                available until their release conditions are met.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 xl:grid-cols-4">
-              <div className="p-5 xl:border-r xl:border-[var(--admin-line)]">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-                  1. Waiting to be released
-                </div>
-                <div className="mt-2 text-2xl font-bold text-[var(--admin-navy)]">
-                  {money(pendingBalance, currency)}
-                </div>
-                <p className="mt-2 text-xs leading-5 text-[var(--admin-muted)]">
-                  From delivered orders still waiting for their payout date or
-                  return window.
-                </p>
-                {wallet.nextEligibleAt && (
-                  <p className="mt-1 text-xs font-medium text-[var(--admin-ink)]">
-                    Next expected release:{" "}
-                    {formatDateTime12Hour(wallet.nextEligibleAt)}
-                  </p>
-                )}
-              </div>
-              <div className="border-t border-[var(--admin-line)] p-5 md:border-l md:border-t-0 xl:border-l-0 xl:border-r">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-                  2. Available earnings
-                </div>
-                <div className="mt-2 text-2xl font-bold text-[var(--admin-navy)]">
-                  {money(balances.availableBalance, currency)}
-                </div>
-                <p className="mt-2 text-xs leading-5 text-[var(--admin-muted)]">
-                  Released earnings before amounts owed to the platform are
-                  deducted.
-                </p>
-              </div>
-              <div className="border-t border-[var(--admin-line)] bg-red-50/50 p-5 xl:border-r xl:border-t-0">
-                <div className="text-xs font-semibold uppercase tracking-wide text-red-700">
-                  3. {isSeller ? "You owe" : "Seller owes"}
-                </div>
-                <div className="mt-2 text-2xl font-bold text-red-700">
-                  {money(totalAmountOwed, currency)}
-                </div>
-                <p className="mt-2 text-xs leading-5 text-red-700/80">
-                  Deducted from available or future released earnings before a
-                  payout is sent.
-                </p>
-                {totalAmountOwed > 0 && (
-                  <p className="mt-1 text-xs text-red-700">
-                    COD: {owedMoney(codAmountOwed, currency)} · Other:{" "}
-                    {owedMoney(otherAmountOwed, currency)}
-                  </p>
-                )}
-              </div>
-              <div className="border-t border-[var(--admin-line)] bg-emerald-50/60 p-5 md:border-l xl:border-l-0 xl:border-t-0">
-                <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                  4. Payable now
-                </div>
-                <div className="mt-2 text-2xl font-bold text-emerald-700">
-                  {money(balances.effectiveAvailablePayout, currency)}
-                </div>
-                <p className="mt-2 text-xs leading-5 text-emerald-700/80">
-                  The amount currently eligible to be sent using your payout
-                  preference.
-                </p>
-              </div>
+          <ContentPanel
+            title={
+              isSeller
+                ? "Where your money stands"
+                : "Where this seller’s money stands"
+            }
+            description={
+              <>
+                Only “Payable now” can be sent today. Waiting earnings are
+                unavailable until their release conditions are met.
+              </>
+            }
+            action={
+              <span className="text-xs font-medium text-[var(--admin-muted)]">
+                {wallet.total || items.length} order{" "}
+                {(wallet.total || items.length) === 1 ? "entry" : "entries"}
+              </span>
+            }
+            className="mb-5"
+            bodyClassName="space-y-3 p-4"
+          >
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <SummaryCard
+                title="Waiting to be released"
+                value={money(pendingBalance, currency)}
+                description={
+                  <>
+                    <span>
+                      From delivered orders still waiting for their payout date
+                      or return window.
+                    </span>
+                    {wallet.nextEligibleAt && (
+                      <span className="mt-1 block font-medium text-[var(--admin-ink)]">
+                        Next expected release:{" "}
+                        {formatDateTime12Hour(wallet.nextEligibleAt)}
+                      </span>
+                    )}
+                  </>
+                }
+              />
+              <SummaryCard
+                title="Available earnings"
+                value={money(balances.availableBalance, currency)}
+                description="Released earnings before amounts owed to the platform are deducted."
+              />
+              <SummaryCard
+                title={isSeller ? "You owe" : "Seller owes"}
+                value={money(totalAmountOwed, currency)}
+                description={
+                  <>
+                    <span>
+                      Deducted from available or future released earnings
+                      before a payout is sent.
+                    </span>
+                    {totalAmountOwed > 0 && (
+                      <span className="mt-1 block font-medium text-[var(--admin-ink)]">
+                        COD: {owedMoney(codAmountOwed, currency)} · Other:{" "}
+                        {owedMoney(otherAmountOwed, currency)}
+                      </span>
+                    )}
+                  </>
+                }
+              />
+              <SummaryCard
+                title="Payable now"
+                value={money(balances.effectiveAvailablePayout, currency)}
+                description="The amount currently eligible to be sent using your payout preference."
+              />
             </div>
             {pendingBalance > 0 && (
-              <div className="border-t border-[var(--admin-line)] bg-[var(--admin-soft)] px-5 py-3 text-xs text-[var(--admin-muted)]">
+              <p className="rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-4 py-3 text-xs text-[var(--admin-muted)]">
                 If all waiting earnings are released without returns or further
                 adjustments, approximately{" "}
                 <strong className="text-[var(--admin-ink)]">
                   {money(estimatedAfterRelease, currency)}
                 </strong>{" "}
                 would remain after the current amount owed is recovered.
-              </div>
+              </p>
             )}
-          </section>
+          </ContentPanel>
 
           <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="admin-card p-4">
-              <span className="text-xs text-[var(--admin-muted)]">
-                Temporarily on hold
-              </span>
-              <strong className="mt-1 block text-lg text-[var(--admin-ink)]">
-                {money(balances.blockedBalance, currency)}
-              </strong>
-              <span className="text-xs text-[var(--admin-muted)]">
-                {counts.blocked || 0} order entries affected
-              </span>
-            </div>
-            <div className="admin-card p-4">
-              <span className="text-xs text-[var(--admin-muted)]">
-                Payout being processed
-              </span>
-              <strong className="mt-1 block text-lg text-[var(--admin-ink)]">
-                {money(balances.inProcessBalance, currency)}
-              </strong>
-              <span className="text-xs text-[var(--admin-muted)]">
-                {wallet.payouts?.inProcessCount || 0} payout requests
-              </span>
-            </div>
-            <div className="admin-card p-4">
-              <span className="text-xs text-[var(--admin-muted)]">
-                Paid to date
-              </span>
-              <strong className="mt-1 block text-lg text-[var(--admin-ink)]">
-                {money(balances.paidBalance, currency)}
-              </strong>
-              <span className="text-xs text-[var(--admin-muted)]">
-                {wallet.payouts?.paidCount || 0} completed payouts
-              </span>
-            </div>
-            <div className="admin-card p-4">
-              <span className="text-xs text-[var(--admin-muted)]">
-                Internal seller wallet
-              </span>
-              <strong className="mt-1 block text-lg text-[var(--admin-ink)]">
-                {money(sellerWallet.availableBalance, currency)}
-              </strong>
-              <span className="text-xs text-[var(--admin-muted)]">
-                Only used when “Seller Wallet” is the payout destination
-              </span>
-            </div>
+            <SummaryCard
+              title="Temporarily on hold"
+              value={money(balances.blockedBalance, currency)}
+              description={`${counts.blocked || 0} order entries affected`}
+            />
+            <SummaryCard
+              title="Payout being processed"
+              value={money(balances.inProcessBalance, currency)}
+              description={`${wallet.payouts?.inProcessCount || 0} payout requests`}
+            />
+            <SummaryCard
+              title="Paid to date"
+              value={money(balances.paidBalance, currency)}
+              description={`${wallet.payouts?.paidCount || 0} completed payouts`}
+            />
+            <SummaryCard
+              title="Internal seller wallet"
+              value={money(sellerWallet.availableBalance, currency)}
+              description="Only used when ‘Seller Wallet’ is the payout destination."
+            />
           </div>
 
           <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_320px]">
-            <section className="flex min-h-[550px] min-w-0 flex-col overflow-hidden rounded-xl border border-[#E7D9C4] bg-white">
-              <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3">
-                <div>
-                  <h2 className="text-[18px] font-medium text-gray-900">
-                    Earnings by order
-                  </h2>
-                  <p className="text-xs text-gray-500">
-                    See the release state and reason for every order earning.
-                  </p>
-                </div>
-
-                <span className="text-xs text-gray-500">
+            <ContentPanel
+              title="Earnings by order"
+              description="See the release state and reason for every order earning."
+              action={
+                <span className="text-xs text-[var(--admin-muted)]">
                   {wallet.total || items.length} entries
                 </span>
-              </div>
-
-              <div className="flex min-h-0 flex-1 flex-col [&>div]:flex-1">
-                <DataTable
-                  columns={ledgerColumns}
-                  data={items}
-                  loading={loading}
-                  totalCount={items.length}
-                  pageSize={Math.max(items.length, 1)}
-                  rowKey={(item) => item.commissionId || item.orderId}
-                  emptyText="No seller wallet entries yet."
-                  stretchEmptyState
-                  cardClassName="flex h-full flex-col overflow-hidden"
-                />
-              </div>
-            </section>
+              }
+              className="flex min-h-[550px] min-w-0 flex-col"
+              bodyClassName="flex min-h-0 flex-1 flex-col [&>div]:flex-1"
+            >
+              <DataTable
+                columns={ledgerColumns}
+                data={items}
+                loading={loading}
+                totalCount={items.length}
+                pageSize={Math.max(items.length, 1)}
+                rowKey={(item) => item.commissionId || item.orderId}
+                emptyText="No seller wallet entries yet."
+                stretchEmptyState
+                cardClassName="flex h-full flex-col overflow-hidden"
+              />
+            </ContentPanel>
 
             <aside className="space-y-4">
               {isSeller && (
                 <>
-                  <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <h2 className="text-[18px] font-medium text-gray-900">
-                      Payout preference
-                    </h2>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Choose where released seller earnings should go.
-                    </p>
-                    <div className="mt-3 space-y-2">
+                  <ContentPanel
+                    title="Payout preference"
+                    description="Choose where released seller earnings should go."
+                    bodyClassName="space-y-2 p-4"
+                  >
                       {[
                         {
                           value: "razorpayx",
@@ -534,7 +515,6 @@ export default function SellerWallet() {
                           </span>
                         </label>
                       ))}
-                    </div>
                     {payoutPreference.sellerCanChoose === false && (
                       <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
                         Admin has locked payout destination to{" "}
@@ -544,16 +524,13 @@ export default function SellerWallet() {
                         .
                       </p>
                     )}
-                  </div>
+                  </ContentPanel>
                   {payoutDestination === "razorpayx" && (
-                    <div className="rounded-xl border border-gray-200 bg-white p-4">
-                      <h2 className="text-[18px] font-medium text-gray-900">
-                        Payout bank account
-                      </h2>
-                      <p className="mt-1 text-xs text-gray-500">
-                        RazorpayX uses the verified bank details saved in your
-                        store profile.
-                      </p>
+                    <ContentPanel
+                      title="Payout bank account"
+                      description="RazorpayX uses the verified bank details saved in your store profile."
+                      bodyClassName="p-4"
+                    >
                       {organizations.length > 1 && (
                         <label className="mt-3 block text-xs font-medium text-gray-600">
                           Organization
@@ -623,17 +600,15 @@ export default function SellerWallet() {
                           .
                         </p>
                       )}
-                    </div>
+                    </ContentPanel>
                   )}
                 </>
               )}
 
-              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-base font-semibold text-gray-900">
-                    Payout readiness
-                  </h2>
-
+              <ContentPanel
+                title="Payout readiness"
+                bodyClassName="p-4"
+                action={
                   <span
                     className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                       wallet.canRequestPayout
@@ -649,10 +624,11 @@ export default function SellerWallet() {
                         ? "Adjustment pending"
                         : "Not eligible"}
                   </span>
-                </div>
+                }
+              >
 
                 <div
-                  className={`mt-4 rounded-lg border p-3 ${
+                  className={`rounded-lg border p-3 ${
                     wallet.canRequestPayout
                       ? "border-emerald-100 bg-emerald-50/70"
                       : totalAmountOwed > 0
@@ -692,13 +668,12 @@ export default function SellerWallet() {
                 >
                   View payouts
                 </button>
-              </div>
+              </ContentPanel>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <h2 className="text-[18px] font-medium text-gray-900">
-                  Wallet payout credits
-                </h2>
-                <div className="mt-3 space-y-2">
+              <ContentPanel
+                title="Wallet payout credits"
+                bodyClassName="space-y-2 p-4"
+              >
                   {walletTransactions.length ? (
                     walletTransactions.slice(0, 5).map((transaction) => (
                       <div
@@ -720,12 +695,11 @@ export default function SellerWallet() {
                   ) : (
                     <EmptyState>No wallet payout credits yet.</EmptyState>
                   )}
-                </div>
-              </div>
+              </ContentPanel>
             </aside>
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

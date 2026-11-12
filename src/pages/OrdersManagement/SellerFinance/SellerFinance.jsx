@@ -3,6 +3,7 @@ import { useFormik } from "formik";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
+import Loader from "../../../components/Loader/Loader";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   MdCalculate,
@@ -484,21 +485,22 @@ const SellerFinance = () => {
   };
   const isSellerDetail = Boolean(detailSellerId);
   useEffect(() => {
-    if (!detailSellerId) return;
+    const sellerId = detailSellerId || initialParams.get("sellerId") || "";
     const organizationId = initialParams.get("organizationId") || "";
     setFilters((previous) =>
-      previous.sellerId === detailSellerId &&
+      previous.sellerId === sellerId &&
       previous.organizationId === organizationId
         ? previous
         : {
             ...previous,
-            sellerId: detailSellerId,
+            sellerId,
             organizationId,
           },
     );
   }, [detailSellerId, initialParams]);
   const [orderId, setOrderId] = useState(initialParams.get("orderId") || "");
   const [submitting, setSubmitting] = useState(false);
+  const loading = Boolean(financeState.loading);
   const [sellerOptions, setSellerOptions] = React.useState([]);
   const [sellerLoading, setSellerLoading] = useState(false);
   const [orderOptions, setOrderOptions] = useState([]);
@@ -1475,6 +1477,7 @@ const SellerFinance = () => {
 
   return (
     <div className="min-h-screen bg-[#f4f6fb]">
+       <Loader loading={loading} />
       <PageHeader
         title={
           isSeller
@@ -1513,7 +1516,7 @@ const SellerFinance = () => {
                 disabled={submitting}
               >
                 <MdRefresh className={submitting ? "animate-spin" : ""} />
-                Refresh Payout Eligibility
+                {submitting ? "Refreshing..." : "Refresh"}
               </button>
             </PermissionGuard>
           ) : null
@@ -1868,7 +1871,6 @@ const SellerFinance = () => {
           onPageSizeChange={handleCommissionsPageSizeChange}
           rowKey={(row) => row.id}
           emptyText="No order payout records found for this seller"
-          cardClassName="overflow-x-auto"
           filterBar={
             isSeller || isSellerDetail ? (
               <FilterBar

@@ -19,6 +19,7 @@ import {
   StatusBadge,
   SummaryCard,
   DataTable,
+  ContentPanel,
 } from "../../components/Shared";
 import { getTaxInvoice } from "../../Redux/adminCoreSlice";
 import { downloadApiFile } from "../../_helpers/downloadApi";
@@ -542,24 +543,24 @@ const TaxInvoiceDetail = () => {
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-200 bg-white">
-        <div className=" border-gray-100 px-4 py-3">
-          <h2 className="text-sm font-semibold text-gray-900">Line Items</h2>
-          <div className="overflow-x-auto">
-            <DataTable
-              columns={columns}
-              data={items}
-              loading={loading}
-              total={totalLineItems}
-              listPage={paginationList}
-              showSerialNumber
-              rowKey={(item) => item.orderItemId || item.productId || item.id}
-              emptyMessage="No line items available"
-              tableContainerClassName="overflow-x-auto"
-            />
-          </div>
-        </div>
-      </section>
+      <ContentPanel
+  title="Line Items"
+  className="flex min-w-0 flex-col"
+  bodyClassName="flex min-h-0 flex-1 flex-col p-0 [&>div]:flex-1"
+>
+  <DataTable
+    columns={columns}
+    data={items}
+    loading={loading}
+    total={totalLineItems}
+    listPage={paginationList}
+    showSerialNumber
+    rowKey={(item) => item.orderItemId || item.productId || item.id}
+    emptyMessage="No line items available"
+    tableContainerClassName="overflow-x-auto"
+    cardClassName="flex h-full flex-col overflow-hidden"
+  />
+</ContentPanel>
     </div>
   );
 };

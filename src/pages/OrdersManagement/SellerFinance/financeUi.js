@@ -539,47 +539,6 @@ export const FinanceEmptyState = ({ title, description }) => (
 //   );
 // };
 
-export const FinanceMetricCard = ({
-  label,
-  value,
-  description,
-  tone = "neutral",
-  featured = false,
-  action,
-}) => {
-  const toneClass = {
-    green: "text-emerald-700",
-    red: "text-red-700",
-    amber: "text-amber-700",
-    blue: "text-[var(--admin-blue)]",
-    neutral: "text-[var(--admin-navy)]",
-  }[tone];
-  const accentClass = {
-    green: "bg-emerald-500",
-    red: "bg-red-500",
-    amber: "bg-amber-500",
-    blue: "bg-[var(--admin-blue)]",
-    neutral: "bg-[var(--admin-gold)]",
-  }[tone];
-  return (
-    <div
-      className={`finance-metric admin-card relative overflow-hidden p-5 ${featured ? "border-[var(--admin-gold)] bg-gradient-to-br from-[var(--admin-gold-soft)] to-white" : "bg-white"}`}
-    >
-      <span className={`absolute inset-y-0 left-0 w-1 ${accentClass}`} />
-      <div className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-        {label}
-      </div>
-      <div className={`mt-2 text-2xl font-bold ${toneClass}`}>{value}</div>
-      {description && (
-        <p className="mt-2 text-xs leading-5 text-[var(--admin-muted)]">
-          {description}
-        </p>
-      )}
-      {action && <div className="mt-3">{action}</div>}
-    </div>
-  );
-};
-
 export const MoneyEquation = ({
   available,
   owed,

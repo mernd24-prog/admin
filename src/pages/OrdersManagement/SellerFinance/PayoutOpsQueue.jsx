@@ -48,6 +48,7 @@ import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import {
   payoutCancellationValidationSchema,
+  payoutHoldValidationSchema,
   payoutReleaseValidationSchema,
   payoutRetryValidationSchema,
   sellerPayoutNoteValidationSchema,
@@ -299,11 +300,13 @@ const PayoutOpsQueue = () => {
     validationSchema: () =>
       action.type === "approve"
         ? sellerPayoutNoteValidationSchema
-        : action.type === "retry"
-          ? payoutRetryValidationSchema
-          : action.type === "release"
-            ? payoutReleaseValidationSchema
-            : payoutCancellationValidationSchema,
+        : action.type === "hold"
+          ? payoutHoldValidationSchema
+          : action.type === "retry"
+            ? payoutRetryValidationSchema
+            : action.type === "release"
+              ? payoutReleaseValidationSchema
+              : payoutCancellationValidationSchema,
     validateOnBlur: true,
     validateOnChange: true,
     onSubmit: (values) => {
@@ -406,8 +409,6 @@ const PayoutOpsQueue = () => {
 
   const validateAction = (values = action) => {
     if (!payoutId(values.payout)) return "Payout ID is missing";
-    if (values.type === "hold" && !values.reason.trim())
-      return "Hold reason is required";
     if (values.type === "fail" && !values.reason.trim())
       return "Failure reason is required";
     if (values.type === "cancel" && !values.reason.trim())
@@ -446,7 +447,11 @@ const PayoutOpsQueue = () => {
   };
 
   const prepareAction = () => {
-    if (["approve", "retry", "cancel", "release"].includes(action.type)) {
+    if (
+      ["approve", "hold", "retry", "cancel", "release"].includes(
+        action.type,
+      )
+    ) {
       actionFormik.handleSubmit();
       return;
     }
@@ -485,7 +490,7 @@ const PayoutOpsQueue = () => {
           };
         }
         case "hold":
-          return { ...base, reason: action.reason };
+          return { ...base, reason: actionFormik.values.reason.trim() };
         case "release":
           return {
             ...base,
@@ -1049,10 +1054,17 @@ const PayoutOpsQueue = () => {
               <Input
                 labelName="Hold Reason"
                 type="textarea"
-                value={action.reason}
-                onChange={(e) =>
-                  setAction((prev) => ({ ...prev, reason: e.target.value }))
+                name="reason"
+                value={actionFormik.values.reason}
+                onChange={actionFormik.handleChange}
+                onBlur={actionFormik.handleBlur}
+                error={
+                  actionFormik.touched.reason && actionFormik.errors.reason
                 }
+                minLength={3}
+                maxLength={500}
+                limitMessage="Hold reason must be between 3 and 500 characters"
+                showLengthCount
                 required
               />
             </FormSection>
@@ -1293,6 +1305,10 @@ const PayoutOpsQueue = () => {
                     ? "Cancellation Reason"
                     : "Failure Reason"
                 }
+                maxLength={500}
+                minLength={3}
+                limitMessage="Reason must be between 3 and 500 characters"
+                showLengthCount
                 type="textarea"
                 name={action.type === "cancel" ? "reason" : undefined}
                 value={

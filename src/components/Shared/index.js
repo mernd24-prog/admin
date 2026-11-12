@@ -17,6 +17,7 @@ export { default as NeedHelpCard } from "./NeedHelpCard";
 export { default as BulkActionBar } from "./BulkActionBar";
 export { default as FilterBar } from "./FilterBar";
 export { default as SummaryCard } from "./SummaryCard";
+export { default as ContentPanel } from "./ContentPanel";
 export { ExportButton, ImportButton } from "./TableTools";
 export { default as DateRangePickerModal } from "./DateRangePickerModal";
 export { default as DocumentPreviewModal } from "./DocumentPreviewModal";
