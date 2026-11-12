@@ -661,6 +661,14 @@ export const payoutRetryValidationSchema = Yup.object({
   }),
 });
 
+export const payoutHoldValidationSchema = Yup.object({
+  reason: Yup.string()
+    .trim()
+    .required("Hold reason is required.")
+    .min(3, "Hold reason must be at least 3 characters.")
+    .max(500, "Hold reason must be 500 characters or fewer."),
+});
+
 export const payoutCancellationValidationSchema = Yup.object({
   reason: Yup.string()
     .trim()
