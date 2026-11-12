@@ -1247,233 +1247,254 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
       </section>
 
       {/* Side Drawer Modal */}
-      <DefaultModal
-        isOpen={drawerOpen}
-        onClose={handleCloseDrawer}
-        onSubmit={save}
-        title={
-          isEditMode ? "Edit Product Override" : "Add Product Referral Pool"
-        }
-        submitButtonText={
-          isEditMode ? "Update Product Amount" : "Save Product Amount"
-        }
-        closeButtonText="Cancel"
-        isButtonView={true}
-        width="600px"
-        loading={loading}
+    
+<DefaultModal
+  isOpen={drawerOpen}
+  onClose={handleCloseDrawer}
+  onSubmit={save}
+  title={
+    isEditMode ? "Edit Product Override" : "Add Product Referral Pool"
+  }
+  submitButtonText={
+    isEditMode ? "Update Product Amount" : "Save Product Amount"
+  }
+  closeButtonText="Cancel"
+  isButtonView={true}
+  width="600px"
+  loading={loading}
+>
+  <div className="space-y-5">
+    {/* ==================== Product Information ==================== */}
+    <FormSection
+      title="Product Information"
+      description="Select the store and product for which you want to configure the referral pool."
+    >
+      <div className="space-y-4">
+        {/* Store */}
+        <FormSelectGroup
+          label="Store"
+          options={storeOptions}
+          value={
+            storeOptions.find(
+              (option) => String(option.value) === String(form.storeKey),
+            ) || null
+          }
+          onChange={(selectedOption) => {
+            const storeKey = selectedOption?.value || "";
+
+            setForm((current) => ({
+              ...current,
+              storeKey,
+              storeId: "",
+              productId: "",
+              productTitle: "",
+            }));
+          }}
+          placeholder="Select store"
+          isSearchable
+          isClearable
+          required
+          className="w-full"
+        />
+
+        {/* Product */}
+        <FormSelectGroup
+          label="Product"
+          options={productOptions}
+          value={
+            productOptions.find(
+              (option) => String(option.value) === String(form.productId),
+            ) || null
+          }
+          onChange={(selectedOption) => {
+            const productId = selectedOption?.value || "";
+
+            const product = storeProducts.find(
+              (item) => String(getId(item)) === String(productId),
+            );
+
+            setForm((current) => ({
+              ...current,
+              productId,
+              productTitle: getProductTitle(product),
+              storeId: getProductStoreId(product),
+            }));
+          }}
+          placeholder={
+            form.storeKey ? "Select product" : "Select store first"
+          }
+          isDisabled={!form.storeKey}
+          isSearchable
+          isClearable
+          required
+          className="w-full"
+        />
+      </div>
+    </FormSection>
+
+    {/* ==================== Referral Pool Configuration ==================== */}
+    <FormSection
+      title="Referral Pool Configuration"
+      description="Configure the amount type and maximum eligible referral pool for this product."
+    >
+      <div className="space-y-4">
+        {/* Amount Type */}
+        <FormSelectGroup
+          label="Amount Type"
+          options={amountTypeOptions}
+          value={
+            amountTypeOptions.find(
+              (option) => option.value === form.amountType,
+            ) || null
+          }
+          onChange={(selectedOption) => {
+            setForm((current) => ({
+              ...current,
+              amountType: selectedOption?.value || "fixed_amount",
+            }));
+          }}
+          placeholder="Select amount type"
+          isSearchable={false}
+          className="w-full"
+        />
+
+        {/* Pool Amount */}
+        <FormInput
+          label={
+            form.amountType === "percentage"
+              ? "Pool Percentage (%)"
+              : "Product Pool for Order (₹)"
+          }
+          name="amountValue"
+          type="number"
+          min="0"
+          max={form.amountType === "percentage" ? "100" : undefined}
+          step="0.01"
+          value={form.amountValue}
+          onChange={(event) => {
+            setForm((current) => ({
+              ...current,
+              amountValue: event.target.value,
+            }));
+          }}
+          placeholder={
+            form.amountType === "percentage" ? "e.g. 10" : "e.g. 50"
+          }
+          required
+          className="w-full"
+        />
+
+        {/* Maximum Amount */}
+        <FormInput
+          label="Maximum Product Pool (₹)"
+          name="maximumAmount"
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.maximumAmount}
+          onChange={(event) => {
+            setForm((current) => ({
+              ...current,
+              maximumAmount: event.target.value,
+            }));
+          }}
+          placeholder="0 means no additional limit"
+          hint="0 means no additional limit. The lowest positive eligible product pool applies once per order; quantities do not multiply it."
+          className="w-full"
+        />
+      </div>
+    </FormSection>
+
+    {/* ==================== Selected Product Details ==================== */}
+    {selectedProduct && (
+      <FormSection
+        title="Selected Product Details"
+        description="Review the store and product information before saving."
       >
-        <form onSubmit={save} className="space-y-4">
-          {/* Store */}
-          <FormSelectGroup
-            label="Store"
-            options={storeOptions}
-            value={
-              storeOptions.find(
-                (option) => String(option.value) === String(form.storeKey),
-              ) || null
-            }
-            onChange={(selectedOption) => {
-              const storeKey = selectedOption?.value || "";
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-[var(--admin-muted)]">
+              Store
+            </p>
+            <p className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]">
+              {selectedStore?.label ||
+                getProductStoreName(selectedProduct)}
+            </p>
+          </div>
 
-              setForm((current) => ({
-                ...current,
-                storeKey,
-                storeId: "",
-                productId: "",
-                productTitle: "",
-              }));
-            }}
-            placeholder="Select store"
-            isSearchable
-            isClearable
-            required
-            className="w-full"
-          />
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-[var(--admin-muted)]">
+              Product
+            </p>
+            <p
+              className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]"
+              title={getProductTitle(selectedProduct)}
+            >
+              {getProductTitle(selectedProduct)}
+            </p>
+          </div>
 
-          {/* Product */}
-          <FormSelectGroup
-            label="Product"
-            options={productOptions}
-            value={
-              productOptions.find(
-                (option) => String(option.value) === String(form.productId),
-              ) || null
-            }
-            onChange={(selectedOption) => {
-              const productId = selectedOption?.value || "";
-
-              const product = storeProducts.find(
-                (item) => String(getId(item)) === String(productId),
-              );
-
-              setForm((current) => ({
-                ...current,
-                productId,
-                productTitle: getProductTitle(product),
-                storeId: getProductStoreId(product),
-              }));
-            }}
-            placeholder={
-              form.storeKey ? "Select product" : "Select store first"
-            }
-            isDisabled={!form.storeKey}
-            isSearchable
-            isClearable
-            required
-            className="w-full"
-          />
-
-          {/* Amount Type */}
-          <FormSelectGroup
-            label="Amount Type"
-            options={amountTypeOptions}
-            value={
-              amountTypeOptions.find(
-                (option) => option.value === form.amountType,
-              ) || null
-            }
-            onChange={(selectedOption) => {
-              setForm((current) => ({
-                ...current,
-                amountType: selectedOption?.value || "fixed_amount",
-              }));
-            }}
-            placeholder="Select amount type"
-            isSearchable={false}
-            className="w-full"
-          />
-
-          {/* Pool Amount */}
-          <FormInput
-            label={
-              form.amountType === "percentage"
-                ? "Pool Percentage (%)"
-                : "Product Pool for Order (₹)"
-            }
-            name="amountValue"
-            type="number"
-            min="0"
-            max={form.amountType === "percentage" ? "100" : undefined}
-            step="0.01"
-            value={form.amountValue}
-            onChange={(event) => {
-              setForm((current) => ({
-                ...current,
-                amountValue: event.target.value,
-              }));
-            }}
-            placeholder={
-              form.amountType === "percentage" ? "e.g. 10" : "e.g. 50"
-            }
-            required
-            className="w-full"
-          />
-
-          {/* Maximum Amount */}
-          <FormInput
-            label="Maximum Product Pool (₹)"
-            name="maximumAmount"
-            type="number"
-            min="0"
-            step="0.01"
-            value={form.maximumAmount}
-            onChange={(event) => {
-              setForm((current) => ({
-                ...current,
-                maximumAmount: event.target.value,
-              }));
-            }}
-            placeholder="0 means no additional limit"
-            hint="0 means no additional limit. The lowest positive eligible product pool applies once per order; quantities do not multiply it."
-            className="w-full"
-          />
-
-          {/* Selected Product Information */}
-          {selectedProduct && (
-            <div className="rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-3.5">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div>
-                  <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                    Store
-                  </p>
-                  <p className="text-xs font-semibold text-[var(--admin-navy)] truncate">
-                    {selectedStore?.label ||
-                      getProductStoreName(selectedProduct)}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                    Product
-                  </p>
-                  <p
-                    className="text-xs font-semibold text-[var(--admin-navy)] truncate"
-                    title={getProductTitle(selectedProduct)}
-                  >
-                    {getProductTitle(selectedProduct)}
-                  </p>
-                </div>
-
-                {selectedProduct?.sku && (
-                  <div>
-                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                      SKU
-                    </p>
-                    <p className="text-xs font-semibold text-[var(--admin-navy)] truncate">
-                      {selectedProduct.sku}
-                    </p>
-                  </div>
-                )}
-
-                {selectedProduct?.price !== undefined && (
-                  <div>
-                    <p className="text-[11px] font-medium text-[var(--admin-muted)]">
-                      Price
-                    </p>
-                    <p className="text-xs font-semibold text-[var(--admin-navy)]">
-                      ₹{Number(selectedProduct.price).toLocaleString("en-IN")}
-                    </p>
-                  </div>
-                )}
-              </div>
+          {selectedProduct?.sku && (
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-[var(--admin-muted)]">
+                SKU
+              </p>
+              <p className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]">
+                {selectedProduct.sku}
+              </p>
             </div>
           )}
 
-          {/* Referral Pool Preview */}
-          {form.amountValue !== "" && (
-            <div className="rounded-lg border border-[var(--admin-line)] bg-white p-3.5 shadow-2xs">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-[var(--admin-navy)]">
-                    Referral Pool Preview
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">
-                    Estimated contribution based on the selected configuration.
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-sm font-bold text-[var(--admin-navy)]">
-                    {form.amountType === "percentage"
-                      ? `${Number(form.amountValue || 0)}%`
-                      : `₹${Number(form.amountValue || 0).toLocaleString(
-                          "en-IN",
-                          {
-                            minimumFractionDigits: 2,
-                          },
-                        )}`}
-                  </p>
-                  <p className="text-[11px] text-[var(--admin-muted)]">
-                    {form.amountType === "percentage"
-                      ? "of product line"
-                      : "once per order"}
-                  </p>
-                </div>
-              </div>
+          {selectedProduct?.price !== undefined && (
+            <div>
+              <p className="text-xs font-medium text-[var(--admin-muted)]">
+                Price
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">
+                ₹{Number(selectedProduct.price).toLocaleString("en-IN")}
+              </p>
             </div>
           )}
-        </form>
-      </DefaultModal>
+        </div>
+      </FormSection>
+    )}
+
+    {/* ==================== Referral Pool Preview ==================== */}
+    {form.amountValue !== "" && (
+      <FormSection
+        title="Referral Pool Preview"
+        description="Estimated contribution based on the selected configuration."
+      >
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4">
+          <div>
+            <p className="text-sm font-medium text-[var(--admin-ink)]">
+              Estimated Pool Amount
+            </p>
+            <p className="mt-1 text-xs text-[var(--admin-muted)]">
+              {form.amountType === "percentage"
+                ? "Calculated as a percentage of the product line."
+                : "Applied once per order."}
+            </p>
+          </div>
+
+          <div className="shrink-0 text-right">
+            <p className="text-lg font-bold text-[var(--admin-navy)]">
+              {form.amountType === "percentage"
+                ? `${Number(form.amountValue || 0)}%`
+                : `₹${Number(form.amountValue || 0).toLocaleString(
+                    "en-IN",
+                    {
+                      minimumFractionDigits: 2,
+                    },
+                  )}`}
+            </p>
+          </div>
+        </div>
+      </FormSection>
+    )}
+  </div>
+</DefaultModal>
+
     </>
   );
 };
