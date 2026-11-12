@@ -4825,11 +4825,9 @@ const ReferralCommerce = () => {
           {/* ==================== Admin Note ==================== */}
 
           <div>
-            <label className="admin-label">
-              Note{payoutAction?.action !== "paid" ? " *" : ""}
-            </label>
-
-            <textarea
+            <FormInput
+              label={`Note${payoutAction?.action !== "paid" ? " *" : ""}`}
+              type="textarea"
               rows={2}
               name="adminNote"
               value={
@@ -4849,7 +4847,7 @@ const ReferralCommerce = () => {
                   ? payoutPaymentFormik.handleBlur
                   : payoutDecisionFormik.handleBlur
               }
-              className="admin-input w-full min-h-[60px] resize-y !pt-5"
+              className="w-full min-h-[60px] resize-y !pt-5"
               placeholder="Add an audit note"
             />
 
