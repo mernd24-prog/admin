@@ -297,7 +297,7 @@ export default function MarketingSettings({ kind = "coupons" }) {
             hint={
               key === "minOrderAmount"
                 ? "Uses the whole order subtotal, including products without a referral pool, before discounts, tax and shipping."
-                : "Optional. Leave blank or enter 0 for no limit."
+                : ""
             }
             placeholder="0 — no limit"
             step={key.toLowerCase().includes("uses") ? "1" : "0.01"}

@@ -1254,7 +1254,7 @@ const DealManagement = () => {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6 mb-6">
         <Cards
           icon={<MdLocalOffer aria-hidden="true" size={18} />}
           label="Deal Products"
@@ -1861,34 +1861,144 @@ const DealManagement = () => {
           loading={actionLoading}
         />
       ) : (
-        <ConfirmModal
+        <DefaultModal
           isOpen={confirm.open}
           title={`${display(confirm.action)} Deal`}
-          description={`Are you sure you want to ${display(confirm.action).toLowerCase()} this deal?`}
-          onConfirm={submitAction}
-          onCancel={closeConfirm}
+          onClose={closeConfirm}
+          onSubmit={submitAction}
           loading={actionLoading}
-          confirmLabel={display(confirm.action)}
-          variant={confirm.action === "approve" ? "success" : "danger"}
+          submitButtonText={display(confirm.action)}
+          closeButtonText="Cancel"
+          width="520px"
         >
           {["reject", "cancel"].includes(confirm.action) && (
-            <div className="mt-3">
-              <Input
-                label="Reason *"
-                value={confirm.reason}
-                onChange={(event) =>
-                  setConfirm((current) => ({
-                    ...current,
-                    reason: event.target.value,
-                  }))
-                }
-              />
+            <div className="space-y-5">
+              {/* Product Summary */}
+              {confirm.action === "cancel" && confirm.deal && (
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b border-gray-100 bg-[#FFF9ED] px-4 py-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-800">
+                        Product Information
+                      </h3>
+                      <p className="text-[11px] text-gray-500">
+                        Deal product summary
+                      </p>
+                    </div>
+
+                    <StatusBadge
+                      status={confirm.deal.status}
+                      color={STATUS_COLOR[confirm.deal.status] || "gray"}
+                    />
+                  </div>
+
+                  <div className="p-4 space-y-4">
+                    {/* Product Name */}
+                    <div>
+                      <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-gray-800">
+                        Product Name
+                      </p>
+                      <p className="text-sm font-semibold truncate leading-5 text-gray-800">
+                        {confirm.deal.metadata?.productLabel ||
+                          confirm.deal.title ||
+                          "—"}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-5 gap-y-4">
+                      {[
+                        {
+                          label: "SKU",
+                          value:
+                            confirm.deal.metadata?.productSku ||
+                            confirm.deal.variantSku ||
+                            "—",
+                        },
+                        {
+                          label: "Category",
+                          value: confirm.deal.category || "—",
+                        },
+                        {
+                          label: "Seller",
+                          value:
+                            getRowSellerName(confirm.deal) ||
+                            sellerLookup[String(confirm.deal.sellerId || "")]
+                              ?.label ||
+                            "—",
+                        },
+                        {
+                          label: "Selling Price",
+                          value: money(confirm.deal.sellingPrice),
+                          highlight: true,
+                        },
+                        {
+                          label: "Allocated Quantity",
+                          value: num(confirm.deal.allocatedQuantity),
+                        },
+                        {
+                          label: "Sold Quantity",
+                          value: num(confirm.deal.soldQuantity),
+                        },
+                      ].map((item) => (
+                        <div key={item.label} className="min-w-0">
+                          <p className="mb-1 text-xs text-gray-800">
+                            {item.label}
+                          </p>
+                          <p
+                            className={`break-words text-sm font-semibold ${
+                              item.highlight
+                                ? "text-[#A47A20]"
+                                : "text-gray-700"
+                            }`}
+                          >
+                            {item.value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Reason Section */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-gray-800">
+                    {confirm.action === "cancel"
+                      ? "Cancellation Reason"
+                      : "Rejection Reason"}
+                  </h3>
+                  <span className="text-xs text-red-500">*</span>
+                </div>
+
+                <Input
+                  label=""
+                  type="textarea"
+                  value={confirm.reason}
+                  onChange={(event) =>
+                    setConfirm((current) => ({
+                      ...current,
+                      reason: event.target.value,
+                    }))
+                  }
+                  placeholder={
+                    confirm.action === "cancel"
+                      ? "Please provide a reason for cancelling this deal..."
+                      : "Please provide a reason for rejecting this deal..."
+                  }
+                />
+              </div>
             </div>
           )}
+
           {confirm.action === "approve" && (
-            <div className="mt-3">
+            <div className="space-y-2 py-2">
+              <h3 className="text-sm font-semibold text-gray-800">
+                Approval Note
+              </h3>
               <Input
-                label="Note"
+                label=""
                 value={confirm.note}
                 onChange={(event) =>
                   setConfirm((current) => ({
@@ -1896,10 +2006,11 @@ const DealManagement = () => {
                     note: event.target.value,
                   }))
                 }
+                placeholder="Enter an optional approval note..."
               />
             </div>
           )}
-        </ConfirmModal>
+        </DefaultModal>
       )}
     </div>
   );
