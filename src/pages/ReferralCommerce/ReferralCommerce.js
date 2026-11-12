@@ -4644,114 +4644,129 @@ const ReferralCommerce = () => {
       >
         <div className="space-y-5">
           {/* ==================== Payout Summary ==================== */}
+
           <FormSection
             title="Payout Summary"
             description="Review the partner and payout details before proceeding."
           >
-            <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 sm:grid-cols-2">
-              <div className="min-w-0">
-                <span className="mb-1 block text-xs text-gray-500">
-                  Partner
-                </span>
-                <div className="text-sm font-medium text-gray-800">
-                  {payoutAction
-                    ? renderInfluencerRef(payoutAction.payout.influencerId)
-                    : "-"}
-                </div>
-              </div>
-
-              <div className="min-w-0">
-                <span className="mb-1 block text-xs text-gray-500">
-                  Requested Coins
-                </span>
-                <strong className="text-sm text-gray-800">
-                  {formatCoins(
-                    payoutAction?.payout?.coinAmount ??
-                      payoutAction?.payout?.amount,
-                  )}
-                </strong>
-              </div>
-
-              <div className="min-w-0">
-                <span className="mb-1 block text-xs text-gray-500">
-                  Transfer Amount
-                </span>
-                <strong className="text-sm text-gray-800">
-                  {formatAmount(
-                    payoutAction?.payout?.currencyAmount ??
-                      Number(
-                        (payoutAction?.payout?.coinAmount ??
-                          payoutAction?.payout?.amount) ||
-                          0,
-                      ) * Number(payoutAction?.payout?.coinValue || 1),
-                  )}
-                </strong>
-              </div>
-
-              <div className="min-w-0">
-                <span className="mb-1 block text-xs text-gray-500">
-                  Transfer Destination
-                </span>
-                <strong className="break-words text-sm text-gray-800">
-                  {payoutAction?.payout?.destinationSnapshot?.accountNumber
-                    ? `${payoutAction.payout.destinationSnapshot.bankName || "Bank"} · ${payoutAction.payout.destinationSnapshot.accountNumber}`
-                    : payoutAction?.payout?.destinationSnapshot?.upiId ||
-                      payoutAction?.payout?.upiId ||
-                      payoutAction?.payout?.bankAccountId ||
-                      "Manual"}
-                </strong>
-              </div>
-
-              {payoutAction?.payout?.destinationSnapshot?.accountHolderName && (
-                <div className="min-w-0">
-                  <span className="mb-1 block text-xs text-gray-500">
-                    Account Holder
+            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+              <div className="grid grid-cols-1 sm:grid-cols-2">
+                {/* Partner */}
+                <div className="border-b border-gray-100 p-4 sm:border-r">
+                  <span className="mb-1.5 block text-xs font-medium text-gray-500">
+                    Partner
                   </span>
-                  <strong className="break-words text-sm text-gray-800">
-                    {payoutAction.payout.destinationSnapshot.accountHolderName}
+                  <div className="text-sm font-semibold text-gray-900">
+                    {payoutAction
+                      ? renderInfluencerRef(payoutAction.payout.influencerId)
+                      : "-"}
+                  </div>
+                </div>
+
+                {/* Requested Coins */}
+                <div className="border-b border-gray-100 p-4">
+                  <span className="mb-1.5 block text-xs font-medium text-gray-500">
+                    Requested Coins
+                  </span>
+                  <strong className="text-sm font-semibold text-gray-900">
+                    {formatCoins(
+                      payoutAction?.payout?.coinAmount ??
+                        payoutAction?.payout?.amount,
+                    )}
                   </strong>
                 </div>
-              )}
 
-              {payoutAction?.payout?.destinationSnapshot?.ifscCode && (
-                <div className="min-w-0">
-                  <span className="mb-1 block text-xs text-gray-500">
-                    IFSC Code
+                {/* Transfer Amount */}
+                <div className="border-b border-gray-100  p-4 sm:border-r">
+                  <span className="mb-1.5 block text-xs font-medium text-gray-500">
+                    Transfer Amount
                   </span>
-                  <strong className="text-sm text-gray-800">
-                    {payoutAction.payout.destinationSnapshot.ifscCode}
+                  <strong className="text-lg font-semibold text-[#805C13]">
+                    {formatAmount(
+                      payoutAction?.payout?.currencyAmount ??
+                        Number(
+                          (payoutAction?.payout?.coinAmount ??
+                            payoutAction?.payout?.amount) ||
+                            0,
+                        ) * Number(payoutAction?.payout?.coinValue || 1),
+                    )}
                   </strong>
                 </div>
-              )}
 
-              {payoutAction?.payout?.payoutQrUrl && (
-                <div className="min-w-0">
-                  <span className="mb-1 block text-xs text-gray-500">
-                    Submitted QR
+                {/* Transfer Destination */}
+                <div className="border-b border-gray-100 p-4">
+                  <span className="mb-1.5 block text-xs font-medium text-gray-500">
+                    Transfer Destination
                   </span>
-                  <a
-                    href={payoutAction.payout.payoutQrUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-blue-700 hover:underline"
-                  >
-                    <ExternalLink aria-hidden="true" size={13} />
-                    Review QR
-                  </a>
+                  <strong className="break-words text-sm font-medium text-gray-800">
+                    {payoutAction?.payout?.destinationSnapshot?.accountNumber
+                      ? `${payoutAction.payout.destinationSnapshot.bankName || "Bank"} · ${payoutAction.payout.destinationSnapshot.accountNumber}`
+                      : payoutAction?.payout?.destinationSnapshot?.upiId ||
+                        payoutAction?.payout?.upiId ||
+                        payoutAction?.payout?.bankAccountId ||
+                        "Manual"}
+                  </strong>
                 </div>
-              )}
 
-              <div className="min-w-0">
-                <span className="mb-1 block text-xs text-gray-500">
-                  Destination Source
-                </span>
-                <strong className="text-sm text-gray-800">
-                  {payoutAction?.payout?.destinationSource === "saved_profile"
-                    ? "Saved profile details"
-                    : payoutAction?.payout?.destinationSource === "one_time"
-                      ? "One-time details"
-                      : "Legacy request"}
-                </strong>
+                {/* Account Holder */}
+                {payoutAction?.payout?.destinationSnapshot
+                  ?.accountHolderName && (
+                  <div className="border-b border-gray-100 p-4 sm:border-r">
+                    <span className="mb-1.5 block text-xs font-medium text-gray-500">
+                      Account Holder
+                    </span>
+                    <strong className="break-words text-sm font-medium text-gray-800">
+                      {
+                        payoutAction.payout.destinationSnapshot
+                          .accountHolderName
+                      }
+                    </strong>
+                  </div>
+                )}
+
+                {/* IFSC Code */}
+                {payoutAction?.payout?.destinationSnapshot?.ifscCode && (
+                  <div className="border-b border-gray-100 p-4">
+                    <span className="mb-1.5 block text-xs font-medium text-gray-500">
+                      IFSC Code
+                    </span>
+                    <strong className="text-sm font-medium text-gray-800">
+                      {payoutAction.payout.destinationSnapshot.ifscCode}
+                    </strong>
+                  </div>
+                )}
+
+                {/* Submitted QR */}
+                {payoutAction?.payout?.payoutQrUrl && (
+                  <div className="border-b border-gray-100 p-4 sm:border-r">
+                    <span className="mb-2 block text-xs font-medium text-gray-500">
+                      Submitted QR
+                    </span>
+                    <a
+                      href={payoutAction.payout.payoutQrUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#9A7115] hover:underline"
+                    >
+                      <ExternalLink aria-hidden="true" size={14} />
+                      Review QR
+                    </a>
+                  </div>
+                )}
+
+                {/* Destination Source */}
+                <div className="p-4">
+                  <span className="mb-1.5 block text-xs font-medium text-gray-500">
+                    Destination Source
+                  </span>
+                  <strong className="text-sm font-medium text-gray-800">
+                    {payoutAction?.payout?.destinationSource === "saved_profile"
+                      ? "Saved profile details"
+                      : payoutAction?.payout?.destinationSource === "one_time"
+                        ? "One-time details"
+                        : "Legacy request"}
+                  </strong>
+                </div>
               </div>
             </div>
           </FormSection>

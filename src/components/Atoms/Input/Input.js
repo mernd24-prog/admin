@@ -132,6 +132,7 @@ const Input = ({
   max,
   step,
   children,
+  inputRef,
   ...rest
 }) => {
   const generatedId = useId();
@@ -326,6 +327,7 @@ const Input = ({
       return (
         <textarea
           {...commonProps}
+          ref={inputRef}
           rows={rows}
           maxLength={enforceMaxLength ? maxLength : undefined}
           minLength={minLength}
@@ -408,6 +410,7 @@ const Input = ({
     return (
       <input
         {...commonProps}
+        ref={inputRef}
         type={type === "password" ? passwordType : simpleType}
         min={type === "percentage" ? 0 : min}
         max={type === "percentage" ? 100 : max}

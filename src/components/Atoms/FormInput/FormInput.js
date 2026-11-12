@@ -2,7 +2,7 @@ import React from "react";
 import Input from "../Input/Input";
 
 // Kept as a compatibility alias so existing forms use the unified input system.
-const FormInput = ({
+const FormInput = React.forwardRef(({
   label,
   className = "",
   type,
@@ -12,8 +12,11 @@ const FormInput = ({
   onChange,
   error,
   required,
+  inputRef,
   ...props
-}) => {
+}, ref) => {
+  const targetRef = ref || inputRef;
+
   if (type === "select") {
     return (
       <div className={`admin-field mb-4 ${className}`}>
@@ -24,6 +27,7 @@ const FormInput = ({
           </label>
         )}
         <select
+          ref={targetRef}
           id={name}
           name={name}
           value={value}
@@ -57,6 +61,7 @@ const FormInput = ({
   }
   return (
     <Input
+      ref={targetRef}
       labelName={label}
       type={type}
       name={name}
@@ -68,6 +73,8 @@ const FormInput = ({
       {...props}
     />
   );
-};
+});
+
+FormInput.displayName = "FormInput";
 
 export default FormInput;

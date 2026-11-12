@@ -102,15 +102,7 @@ export function formatRelativeDate(value, fallback = "Not available") {
  *   "seller_kyc_PENDING" → "Seller Kyc Pending"
  *   ""                   → "Not available"
  */
-// export function formatLabel(value, fallback = "Not available") {
-//   if (value === null || value === undefined || value === "") return fallback;
-//   return String(value)
-//     .replace(/([a-z])([A-Z])/g, "$1 $2")
-//     .replace(/_+/g, " ")
-//     .replace(/\s+/g, " ")
-//     .trim()
-//     .replace(/\b\w/g, (char) => char.toUpperCase()) || fallback;
-// }
+
 export function formatLabel(value, fallback = "Not available") {
   if (
     value == null ||
@@ -138,8 +130,14 @@ export function formatLabel(value, fallback = "Not available") {
  * Truncate a string to a friendly word boundary instead of cutting through a word.
  * Example: "Titan Raga Moments Of Joy" → "Titan Raga Moments..."
  */
-export function truncateToWordBoundary(value = "", maxLength = 36, suffix = "...") {
-  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+export function truncateToWordBoundary(
+  value = "",
+  maxLength = 36,
+  suffix = "...",
+) {
+  const text = String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
 
   if (!text) return "N/A";
   if (text.length <= maxLength) return text;

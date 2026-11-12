@@ -13,7 +13,11 @@ import { DocumentPreviewModal, PageHeader } from "../../components/Shared";
 import {
   formatDate as formatDateOnly,
   formatDateTime12Hour,
+  formatLabel,
 } from "../../utils/formatters";
+import OrangeButton from "../../components/Atoms/buttons/OrangeButton";
+import TransparentButton from "../../components/Atoms/buttons/TransParentButton";
+import FormInput from "../../components/Atoms/FormInput/FormInput";
 
 const profileToForm = (user = {}) => {
   const profile = user.profile || {};
@@ -48,15 +52,6 @@ const parseDocumentMap = (value = {}) => {
     return {};
   }
 };
-
-// const isPdfDocument = (url = "") =>
-//   /\.pdf(\?.*)?$/i.test(String(url || "")) ||
-//   String(url || "")
-//     .toLowerCase()
-//     .includes("application/pdf");
-
-// const isImageDocument = (url = "") =>
-//   /\.(png|jpe?g|webp|gif|bmp|avif)(\?.*)?$/i.test(String(url || ""));
 
 const unwrapSellerProfileResponse = (response = {}) => {
   const root = response?.data?.data || response?.data || response || {};
@@ -152,23 +147,6 @@ const getAddressValue = (address = {}, key) =>
   (key === "line2" ? address.addressLine2 : "") ||
   (key === "postalCode" ? address.zipCode || address.pincode : "");
 
-const DetailField = ({ label, value, className = "", isEditing = false }) => (
-  <div className={className}>
-    <label className={`admin-label ${isEditing ? "text-slate-500" : ""}`}>
-      {label}
-    </label>
-    <input
-      className={`admin-input capitalize ${
-        isEditing
-          ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
-          : ""
-      }`}
-      value={formatValue(value)}
-      readOnly
-    />
-  </div>
-);
-
 const DocumentCard = ({
   title,
   hint = "JPG, PNG or PDF",
@@ -223,51 +201,28 @@ const EditableField = ({
   const isEditableNow = isEditing && !disabled;
   const isDisabledInEditMode = isEditing && disabled;
 
-  const inputClass = `admin-input transition-all ${
+  const inputClass = `transition-all ${
     isEditableNow
       ? "border-2 border-[var(--admin-gold)] bg-white !text-slate-900 font-medium shadow-sm ring-2 ring-[var(--admin-gold)]/30 focus:border-[var(--admin-gold)] focus:ring-4 focus:ring-[var(--admin-gold)]/20"
       : isDisabledInEditMode
         ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed font-normal"
         : ""
-  }`;
+  } ${multiline ? "min-h-[120px] resize-y py-3 leading-6" : ""}`;
 
   return (
-    <div className={className}>
-      <label
-        className={`admin-label ${
-          isDisabledInEditMode
-            ? "text-slate-500"
-            : isEditableNow
-              ? "text-slate-900 font-semibold"
-              : ""
-        }`}
-      >
-        {label}
-      </label>
-
-      {multiline ? (
-        <textarea
-          ref={inputRef}
-          className={`${inputClass} min-h-[120px] resize-y py-3 leading-6`}
-          name={name}
-          value={value || ""}
-          onChange={onChange}
-          disabled={disabled}
-          rows={rows}
-        />
-      ) : (
-        <input
-          type={type}
-          placeholder={placeholder}
-          ref={inputRef}
-          className={inputClass}
-          name={name}
-          value={value || ""}
-          onChange={onChange}
-          disabled={disabled}
-        />
-      )}
-    </div>
+    <FormInput
+      label={label}
+      name={name}
+      type={multiline ? "textarea" : type}
+      value={value || ""}
+      onChange={onChange}
+      disabled={disabled}
+      placeholder={placeholder}
+      rows={rows}
+      className={className}
+      inputClassName={inputClass}
+      inputRef={inputRef}
+    />
   );
 };
 
@@ -295,41 +250,77 @@ const AddressBlock = ({ title, address, isEditing = false }) => (
       {title}
     </p>
     <FieldGrid>
-      <DetailField
+      <FormInput
         label="Address Line 1"
-        value={getAddressValue(address, "line1")}
+        value={formatValue(getAddressValue(address, "line1"))}
         className={FIELD_COL_SPAN_6}
-        isEditing={isEditing}
+        readOnly
+        disabled={isEditing}
+        inputClassName={`capitalize ${
+          isEditing
+            ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+            : ""
+        }`}
       />
-      <DetailField
+      <FormInput
         label="Address Line 2"
-        value={getAddressValue(address, "line2")}
+        value={formatValue(getAddressValue(address, "line2"))}
         className={FIELD_COL_SPAN_6}
-        isEditing={isEditing}
+        readOnly
+        disabled={isEditing}
+        inputClassName={`capitalize ${
+          isEditing
+            ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+            : ""
+        }`}
       />
-      <DetailField
+      <FormInput
         label="City"
-        value={address.city}
+        value={formatValue(address.city)}
         className={FIELD_COL_SPAN_6}
-        isEditing={isEditing}
+        readOnly
+        disabled={isEditing}
+        inputClassName={`capitalize ${
+          isEditing
+            ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+            : ""
+        }`}
       />
-      <DetailField
+      <FormInput
         label="State"
-        value={address.state}
+        value={formatValue(address.state)}
         className={FIELD_COL_SPAN_3}
-        isEditing={isEditing}
+        readOnly
+        disabled={isEditing}
+        inputClassName={`capitalize ${
+          isEditing
+            ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+            : ""
+        }`}
       />
-      <DetailField
+      <FormInput
         label="Zip Code"
-        value={getAddressValue(address, "postalCode")}
+        value={formatValue(getAddressValue(address, "postalCode"))}
         className={FIELD_COL_SPAN_3}
-        isEditing={isEditing}
+        readOnly
+        disabled={isEditing}
+        inputClassName={`capitalize ${
+          isEditing
+            ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+            : ""
+        }`}
       />
-      <DetailField
+      <FormInput
         label="Country"
-        value={address.country}
+        value={formatValue(address.country)}
         className={FIELD_COL_SPAN_6}
-        isEditing={isEditing}
+        readOnly
+        disabled={isEditing}
+        inputClassName={`capitalize ${
+          isEditing
+            ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+            : ""
+        }`}
       />
     </FieldGrid>
   </div>
@@ -517,7 +508,9 @@ const Profile = () => {
   };
 
   const handleUpdate = async () => {
-    const businessWebsite = String(formData.sellerProfile?.businessWebsite || "").trim();
+    const businessWebsite = String(
+      formData.sellerProfile?.businessWebsite || "",
+    ).trim();
     if (SELLER_ROLES.has(formData.role) && businessWebsite) {
       try {
         const url = new URL(businessWebsite);
@@ -533,7 +526,9 @@ const Profile = () => {
         user_image: formData?.user_image,
         full_name: formData?.full_name,
         description: formData?.sellerProfile?.description || "",
-        ...(SELLER_ROLES.has(formData.role) ? { businessWebsite: businessWebsite || null } : {}),
+        ...(SELLER_ROLES.has(formData.role)
+          ? { businessWebsite: businessWebsite || null }
+          : {}),
         profile: {
           ...(formData?.profile || {}),
           firstName: formData?.profile?.firstName || "",
@@ -657,12 +652,13 @@ const Profile = () => {
                     <BsCamera className="h-5 w-5 text-white" />
                   </span>
 
-                  <input
+                  <FormInput
                     type="file"
+                    name="user_image"
                     accept=".png,.jpg,.jpeg,.webp"
                     onChange={handleImageChange}
-                    className="hidden"
                     disabled={loading}
+                    className="hidden"
                   />
                 </label>
 
@@ -695,39 +691,32 @@ const Profile = () => {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900">
-                  {formData.full_name || "Your Profile"}
+                  {formatLabel(formData.full_name, "Your Profile")}
                 </h2>
                 <p className="mt-1 text-xs text-slate-500">{formData.email}</p>
               </div>
             </div>
             {!isEditing ? (
-              <button
-                type="button"
-                onClick={handleStartEditing}
-                className={PRIMARY_BUTTON_CLASS}
-              >
+              <OrangeButton type="button" onClick={handleStartEditing}>
                 <FiEdit3 />
                 Edit Profile
-              </button>
+              </OrangeButton>
             ) : (
-              <div className="flex flex-wrap items-center gap-3">
-                <button
+              <div className="flex  flex-wrap items-center gap-3">
+                <TransparentButton
                   type="button"
                   onClick={handleCancel}
-                  className="admin-btn-secondary"
-                >
-                  <PiX />
-                  Cancel
-                </button>
-                <button
+                  label="Cancel"
+                  className="text-xs"
+                />
+                <OrangeButton
                   type="button"
                   onClick={handleUpdate}
                   disabled={updating}
-                  className={PRIMARY_BUTTON_CLASS}
                 >
                   <BsSave />
                   {updating ? "Saving..." : "Save Changes"}
-                </button>
+                </OrangeButton>
               </div>
             )}
           </div>
@@ -737,14 +726,6 @@ const Profile = () => {
             title="Personal / Owner Details"
           >
             <FieldGrid>
-              {/* <EditableField
-                label="Full Name"
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className={FIELD_COL_SPAN_6}
-              /> */}
               <EditableField
                 label="First Name"
                 name="profile.firstName"
@@ -765,59 +746,88 @@ const Profile = () => {
                 isEditing={isEditing}
                 onChange={handleChange}
               />
-              <DetailField
+              <FormInput
                 label="Email Address"
-                value={formData.email}
+                value={formatValue(formData.email)}
                 className={FIELD_COL_SPAN_6}
-                isEditing={isEditing}
+                readOnly
+                disabled={isEditing}
+                inputClassName={`capitalize ${
+                  isEditing
+                    ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                    : ""
+                }`}
               />
               {isSeller && (
                 <>
-                  <DetailField
+                  <FormInput
                     label="Date of Birth"
-                    value={formatDate(sellerProfile.dateOfBirth, false)}
+                    value={formatValue(
+                      formatDate(sellerProfile.dateOfBirth, false),
+                    )}
                     className={FIELD_COL_SPAN_6}
-                    isEditing={isEditing}
+                    readOnly
+                    disabled={isEditing}
+                    inputClassName={`capitalize ${
+                      isEditing
+                        ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                        : ""
+                    }`}
                   />
-                  <DetailField
+                  <FormInput
                     label="City"
-                    value={pickupAddress.city || businessAddress.city}
+                    value={formatValue(
+                      pickupAddress.city || businessAddress.city,
+                    )}
                     className={FIELD_COL_SPAN_3}
-                    isEditing={isEditing}
+                    readOnly
+                    disabled={isEditing}
+                    inputClassName={`capitalize ${
+                      isEditing
+                        ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                        : ""
+                    }`}
                   />
-                  <DetailField
+                  <FormInput
                     label="Zip Code"
-                    value={
-                      pickupAddress.postalCode || businessAddress.postalCode
-                    }
+                    value={formatValue(
+                      pickupAddress.postalCode || businessAddress.postalCode,
+                    )}
                     className={FIELD_COL_SPAN_3}
-                    isEditing={isEditing}
+                    readOnly
+                    disabled={isEditing}
+                    inputClassName={`capitalize ${
+                      isEditing
+                        ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                        : ""
+                    }`}
                   />
                 </>
               )}
-              <DetailField
+              <FormInput
                 label="Phone Number"
-                value={formData.phone}
+                value={formatValue(formData.phone)}
                 className={FIELD_COL_SPAN_6}
-                isEditing={isEditing}
+                readOnly
+                disabled={isEditing}
+                inputClassName={`capitalize ${
+                  isEditing
+                    ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                    : ""
+                }`}
               />
-              <DetailField
+              <FormInput
                 label="Referral Code"
-                value={formData.referralCode}
+                value={formatValue(formData.referralCode)}
                 className={FIELD_COL_SPAN_6}
-                isEditing={isEditing}
+                readOnly
+                disabled={isEditing}
+                inputClassName={`capitalize ${
+                  isEditing
+                    ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                    : ""
+                }`}
               />
-              {/* <DetailField
-                label="Primary Contact Name"
-                value={sellerProfile.primaryContactName}
-                className={FIELD_COL_SPAN_6}
-              /> */}
-
-              {/* <DetailField
-                label="Username"
-                value={formData.userName}
-                className={FIELD_COL_SPAN_6}
-              /> */}
             </FieldGrid>
           </ProfileSection>
 
@@ -827,30 +837,43 @@ const Profile = () => {
               title="Business & KYC Details"
             >
               <FieldGrid>
-                <DetailField
+                <FormInput
                   label="Display Name"
-                  value={sellerProfile.displayName}
+                  value={formatValue(sellerProfile.displayName)}
                   className={FIELD_COL_SPAN_6}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
-                <DetailField
+                <FormInput
                   label="Legal Business Name"
-                  value={sellerProfile.legalBusinessName}
+                  value={formatValue(sellerProfile.legalBusinessName)}
                   className={FIELD_COL_SPAN_6}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
-                <DetailField
+                <FormInput
                   label="Business Type"
-                  value={sellerProfile.businessType}
+                  value={formatValue(sellerProfile.businessType)}
                   className={FIELD_COL_SPAN_6}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
-                {/* <DetailField
-                  label="Registration Number"
-                  value={sellerProfile.registrationNumber}
-                  className={FIELD_COL_SPAN_3}
-                  isEditing={isEditing}
-                /> */}
+
                 <EditableField
                   label="Business Website"
                   name="sellerProfile.businessWebsite"
@@ -862,37 +885,67 @@ const Profile = () => {
                   className={FIELD_COL_SPAN_6}
                   isEditing={isEditing}
                 />
-                <DetailField
+                <FormInput
                   label="GST Number"
-                  value={sellerProfile.gstNumber}
+                  value={formatValue(sellerProfile.gstNumber)}
                   className={FIELD_COL_SPAN_6}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
-                <DetailField
+                <FormInput
                   label="PAN Number"
-                  value={sellerProfile.panNumber}
+                  value={formatValue(sellerProfile.panNumber)}
                   className={FIELD_COL_SPAN_6}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
 
-                <DetailField
+                <FormInput
                   label="Aadhaar Number"
-                  value={sellerProfile.aadhaarNumber}
+                  value={formatValue(sellerProfile.aadhaarNumber)}
                   className={FIELD_COL_SPAN_6}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
 
-                <DetailField
+                <FormInput
                   label="Support Email"
-                  value={sellerProfile.supportEmail}
+                  value={formatValue(sellerProfile.supportEmail)}
                   className={FIELD_COL_SPAN_6}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
-                <DetailField
+                <FormInput
                   label="Support Phone"
-                  value={sellerProfile.supportPhone}
+                  value={formatValue(sellerProfile.supportPhone)}
                   className={FIELD_COL_SPAN_6}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
                 <EditableField
                   label="Description"
@@ -936,41 +989,66 @@ const Profile = () => {
           {isSeller && hasValue(bankDetails) && (
             <ProfileSection number={nextSectionNumber()} title="Bank Details">
               <FieldGrid>
-                <DetailField
+                <FormInput
                   label="Account Holder Name"
-                  value={bankDetails.accountHolderName}
+                  value={formatValue(bankDetails.accountHolderName)}
                   className={FIELD_COL_SPAN_6}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
-                <DetailField
+                <FormInput
                   label="Account Number"
-                  value={bankDetails.accountNumber}
+                  value={formatValue(bankDetails.accountNumber)}
                   className={FIELD_COL_SPAN_6}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
-                <DetailField
+                <FormInput
                   label="IFSC Code"
-                  value={bankDetails.ifscCode}
+                  value={formatValue(bankDetails.ifscCode)}
                   className={FIELD_COL_SPAN_6}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
-                <DetailField
+                <FormInput
                   label="Bank Name"
-                  value={bankDetails.bankName}
+                  value={formatValue(bankDetails.bankName)}
                   className={FIELD_COL_SPAN_3}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
-                <DetailField
+                <FormInput
                   label="Branch Name"
-                  value={bankDetails.branchName}
+                  value={formatValue(bankDetails.branchName)}
                   className={FIELD_COL_SPAN_3}
-                  isEditing={isEditing}
+                  readOnly
+                  disabled={isEditing}
+                  inputClassName={`capitalize ${
+                    isEditing
+                      ? "!bg-slate-100/80 !text-slate-400 border-slate-200 cursor-not-allowed select-none font-normal"
+                      : ""
+                  }`}
                 />
-                {/* <DetailField
-                  label="Bank Rejection Reason"
-                  value={sellerProfile.bankRejectionReason}
-                  className={FIELD_COL_SPAN_12}
-                /> */}
               </FieldGrid>
             </ProfileSection>
           )}
@@ -990,28 +1068,6 @@ const Profile = () => {
               </div>
             </ProfileSection>
           )}
-
-          {/* {isEditing && (
-            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[var(--admin-line)] pt-5 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="admin-btn-secondary sm:min-w-[150px]"
-              >
-                <PiX />
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleUpdate}
-                disabled={updating}
-                className="admin-btn-primary sm:min-w-[220px]"
-              >
-                <BsSave />
-                {updating ? "Updating..." : "Update Profile"}
-              </button>
-            </div>
-          )} */}
         </div>
       </div>
       <DocumentPreviewModal
