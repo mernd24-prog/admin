@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { MdExpandMore, MdExpandLess } from "react-icons/md";
 
 /**
@@ -27,12 +27,17 @@ const FormSection = ({
   className = "",
 }) => {
   const [open, setOpen] = useState(defaultOpen);
+  const bodyId = useId();
+  const Header = collapsible ? "button" : "div";
 
   return (
     <div className={`admin-card overflow-hidden ${className}`}>
       {/* Header */}
-      <div
-        className={`flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] ${collapsible ? "cursor-pointer select-none hover:bg-[var(--admin-surface-soft)]" : ""}`}
+      <Header
+        type={collapsible ? "button" : undefined}
+        aria-expanded={collapsible ? open : undefined}
+        aria-controls={collapsible ? bodyId : undefined}
+        className={`flex w-full items-center justify-between px-5 py-4 text-left border-b border-[var(--admin-line)] ${collapsible ? "cursor-pointer select-none hover:bg-[var(--admin-surface-soft)]" : ""}`}
         onClick={collapsible ? () => setOpen((o) => !o) : undefined}
       >
         <div className="flex items-center gap-3">
@@ -63,10 +68,10 @@ const FormSection = ({
             {open ? <MdExpandLess size={20} /> : <MdExpandMore size={20} />}
           </span>
         )}
-      </div>
+      </Header>
 
       {/* Body */}
-      {(!collapsible || open) && <div className="px-5 py-4">{children}</div>}
+      {(!collapsible || open) && <div id={bodyId} className="px-5 py-4">{children}</div>}
     </div>
   );
 };

@@ -726,11 +726,13 @@ const DataTable = ({
                               : ""
                         }`}
                       >
-                        {renderCellValue(
-                          col.render
-                            ? col.render(row[col.key], row, index)
-                            : row[col.key],
-                        )}
+                        {col.format === false
+                          ? (col.render ? col.render(row[col.key], row, index) : row[col.key])
+                          : renderCellValue(
+                              col.render
+                                ? col.render(row[col.key], row, index)
+                                : row[col.key],
+                            )}
                       </div>
                     </td>
                   ))}

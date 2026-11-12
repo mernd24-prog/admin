@@ -28,6 +28,12 @@ import {
 } from "./financeUi";
 import { RefreshButton } from "../../../components/Atoms/buttons/exportImport";
 
+import CollapsibleSection from "../../../components/Shared/FormSection";
+import ContentPanel from "../../../components/Shared/ContentPanel";
+import SummaryCard from "../../../components/Shared/SummaryCard";
+import TransparentButton from "../../../components/Atoms/buttons/TransParentButton";
+import { SellerFinanceWalletDetails } from "./SellerFinance";
+
 const sectionClass = "admin-card overflow-hidden";
 const sectionHeaderClass =
   "flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] px-5 py-4";
@@ -227,6 +233,7 @@ export default function FinanceOverview() {
         }
       />
 
+
       {/* Payable balance — preserve original layout */}
       <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
         <Cards
@@ -238,76 +245,22 @@ export default function FinanceOverview() {
           iconColor="#1d9b50"
           onClick={() => navigate("/app/seller-payouts")}
         />
-        <MoneyEquation
-          available={balances.availableBalance}
-          owed={owed}
-          payable={balances.effectiveAvailablePayout}
-          currency={currency}
-        />
+        <CollapsibleSection title="How your payable balance is calculated" collapsible defaultOpen={false} className="self-start">
+          <MoneyEquation available={balances.availableBalance} owed={owed} payable={balances.effectiveAvailablePayout} currency={currency} />
+        </CollapsibleSection>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Cards
-          label="COD cash confirmed"
-          value={financeMoney(codSummary.collectedAmount, currency)}
-          description="Physical customer cash confirmed as retained by the seller."
-          icon={<MdPayments aria-hidden="true" size={18} />}
-          iconBg="#e8eefc"
-          iconColor="#3157a4"
-          onClick={() => navigate("/app/seller-cod-collections")}
-        />
-        <Cards
-          label="Recovered from payouts"
-          value={financeMoney(codSummary.recoveredAmount, currency)}
-          description={`Finalized recovery. ${financeMoney(codSummary.reservedAmount, currency)} is currently reserved in payouts.`}
-          icon={<MdCheckCircle aria-hidden="true" size={18} />}
-          iconBg="#cce8c9"
-          iconColor="#1d9b50"
-          onClick={() => navigate("/app/seller-payouts")}
-        />
-        <Cards
-          label="COD still owed"
-          value={financeMoney(codSummary.outstandingAmount, currency)}
-          description="Remaining amount that will carry forward into future payouts."
-          icon={<MdWarningAmber aria-hidden="true" size={18} />}
-          iconBg="#ffd4d2"
-          iconColor="#c7333c"
-          onClick={() => navigate("/app/seller-cod-collections")}
-        />
-      </div>
-
-      {/* Balance Overview — preserve original card layout */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Cards
-          label="Waiting"
-          value={financeMoney(balances.pendingBalance, currency)}
-          description="Earnings still inside the return or release period."
-          icon={<MdHourglassEmpty aria-hidden="true" size={18} />}
-          iconBg="#ffe5b5"
-          iconColor="#f5a300"
-          onClick={() => navigate("/app/finance-earnings?status=waiting")}
-        />
-
-        <Cards
-          label="On hold"
-          value={financeMoney(balances.blockedBalance, currency)}
-          description="Temporarily unavailable because of a return, refund, dispute, or another hold."
-          icon={<MdPauseCircle aria-hidden="true" size={18} />}
-          iconBg="#ffd4d2"
-          iconColor="#ff4b55"
-          onClick={() => navigate("/app/finance-earnings?status=held")}
-        />
-
-        <Cards
-          label="Paid"
-          value={financeMoney(balances.paidBalance, currency)}
-          description="Successfully transferred to your payout destination."
-          icon={<MdPayments aria-hidden="true" size={18} />}
-          iconBg="#cce8c9"
-          iconColor="#1d9b50"
-          onClick={() => navigate("/app/seller-payouts?status=paid")}
-        />
-      </div>
+      <ContentPanel title="COD collections" action={<TransparentButton label="Review collections" onClick={() => navigate("/app/seller-cod-collections")} />} bodyClassName="p-0">
+        <div className="grid gap-4 p-4 sm:grid-cols-3 sm:p-5">
+          {[
+            ["Cash confirmed", codSummary.collectedAmount, "Physical customer cash retained by the seller.", "/app/seller-cod-collections"],
+            ["Recovered from payouts", codSummary.recoveredAmount, `${financeMoney(codSummary.reservedAmount, currency)} reserved in payouts.`, "/app/seller-payouts"],
+            ["COD still owed", codSummary.outstandingAmount, "Carried forward into future payouts.", "/app/seller-cod-collections"],
+          ].map(([label, amount, detail, path]) => (
+            <SummaryCard key={label} title={label} value={financeMoney(amount, currency)} description={detail} onClick={() => navigate(path)} className="min-h-0 border-0 bg-none shadow-none" valueClassName="text-base" />
+          ))}
+        </div>
+      </ContentPanel>
 
       {/* COD reconciliation */}
       {Number(codReconciliation.totalOrders || 0) > 0 && (
@@ -477,7 +430,7 @@ export default function FinanceOverview() {
         </div>
 
         <div className="grid divide-y divide-[var(--admin-line)] sm:grid-cols-2 sm:divide-y-0 sm:divide-x sm:[&>*:nth-child(odd)]:border-r sm:[&>*:nth-child(even)]:border-r-0 lg:grid-cols-3 lg:[&>*]:border-r lg:[&>*:nth-child(3n)]:border-r-0 xl:grid-cols-5 xl:[&>*]:border-r xl:[&>*:nth-child(3n)]:border-r xl:[&>*:nth-child(5n)]:border-r-0">
-          {journey.map(([label, amount, count, detail]) => (
+          {journey.map(([label, amount, count, detail, status]) => (
             <div key={label} className="relative min-w-0 p-4 sm:p-5">
               <span className="text-xs font-semibold text-[var(--admin-muted)]">
                 {label}
@@ -497,10 +450,12 @@ export default function FinanceOverview() {
               <p className="mt-3 text-xs leading-5 text-[var(--admin-muted)]">
                 {detail}
               </p>
+              {status && <TransparentButton label={`View ${label.toLowerCase()}`} className="mt-3 px-2 py-1 text-xs" onClick={() => navigate(["processing", "paid"].includes(status) ? `/app/seller-payouts?status=${status}` : `/app/finance-earnings?status=${status}`)} />}
             </div>
           ))}
         </div>
       </section>
+
 
       {/* Attention required */}
       {(owed > 0 || Number(balances.blockedBalance || 0) > 0) && (
@@ -579,6 +534,8 @@ export default function FinanceOverview() {
           )}
         </section>
       )}
+
+      <SellerFinanceWalletDetails refreshKey={Boolean(state.loading)} />
 
       {/* Recent activity */}
       <section className={sectionClass}>

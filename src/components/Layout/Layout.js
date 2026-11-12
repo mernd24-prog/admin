@@ -262,9 +262,6 @@ const SubscriptionPlans = React.lazy(
 const SellerPayouts = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/SellerPayouts"),
 );
-const SellerWallet = React.lazy(
-  () => import("../../pages/OrdersManagement/SellerFinance/SellerWallet"),
-);
 const PayoutOpsQueue = React.lazy(
   () => import("../../pages/OrdersManagement/SellerFinance/PayoutOpsQueue"),
 );
@@ -615,7 +612,7 @@ function Layout() {
           isSellerPanel() ? (
             <Navigate to="/app/finance-overview" replace />
           ) : (
-            <SellerWallet />
+            <Navigate to={`/app/seller-finance${location.search}`} replace />
           ),
       },
       {
@@ -793,7 +790,7 @@ function Layout() {
       { path: "/messages", render: () => <UserMessages /> },
       { path: "/notifications", render: () => <UserMessages /> },
     ],
-    [setModuleName],
+    [setModuleName, location.search],
   );
 
   // Keep every known client route registered. Sidebar metadata controls which
