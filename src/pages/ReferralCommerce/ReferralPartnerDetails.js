@@ -21,11 +21,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import SharedDataTable from "../../components/Shared/DataTable";
 import CopyButton from "../../components/Atoms/CopyButton/CopyButton";
-import {
-  PageHeader,
-  StatusBadge,
-  SummaryCard,
-} from "../../components/Shared";
+import { PageHeader, StatusBadge, SummaryCard } from "../../components/Shared";
 import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
 import {
   getReferralBonusAchievements,
@@ -199,7 +195,12 @@ const documentEntries = (documents = {}) =>
 const CopyableValue = ({ value }) => (
   <span className="flex items-center gap-1.5">
     <span className="font-medium text-gray-800">{value || "-"}</span>
-    <CopyButton value={value} label="Account number" className="h-7 w-7 border-0" size={14} />
+    <CopyButton
+      value={value}
+      label="Account number"
+      className="h-7 w-7 border-0"
+      size={14}
+    />
   </span>
 );
 
@@ -878,16 +879,6 @@ const ReferralPartnerDetails = () => {
             >
               <Pencil size={16} /> Edit profile
             </button>
-            {/* <button
-              type="button"
-              className="admin-btn-primary"
-              onClick={handleBack}
-            >
-              <ArrowLeft size={16} />
-              {isAssociate && returnTo
-                ? "Back to Growth Partner"
-                : "Back to partners"}
-            </button> */}
           </div>
         }
       />
@@ -991,11 +982,7 @@ const ReferralPartnerDetails = () => {
         ))}
       </div>
 
-      <Tabs
-        tabs={detailTabs}
-        activeTab={activeTab}
-        onChange={setActiveTab}
-      />
+      <Tabs tabs={detailTabs} activeTab={activeTab} onChange={setActiveTab} />
 
       <div className="mt-4">
         {activeTab === "overview" && (
@@ -1027,9 +1014,7 @@ const ReferralPartnerDetails = () => {
               { key: "created", label: "Created" },
             ]}
             data={codeRows}
-            loading={
-              detailLoading || Boolean(referralState.codesData?.loading)
-            }
+            loading={detailLoading || Boolean(referralState.codesData?.loading)}
             rowKey="key"
             emptyText="No referral codes found for this partner."
             cardClassName="overflow-hidden"
@@ -1055,20 +1040,17 @@ const ReferralPartnerDetails = () => {
               }
               rowKey="key"
               onRowClick={(row) =>
-                navigate(
-                  `/app/referral-commerce/influencers/view/${row.key}`,
-                  {
-                    state: {
-                      influencer: brandAssociates.find(
-                        (item) => String(getId(item)) === String(row.key),
-                      ),
-                      returnTo: {
-                        pathname: `/app/referral-commerce/influencers/view/${id}`,
-                        state: { influencer },
-                      },
+                navigate(`/app/referral-commerce/influencers/view/${row.key}`, {
+                  state: {
+                    influencer: brandAssociates.find(
+                      (item) => String(getId(item)) === String(row.key),
+                    ),
+                    returnTo: {
+                      pathname: `/app/referral-commerce/influencers/view/${id}`,
+                      state: { influencer },
                     },
                   },
-                )
+                })
               }
               emptyText="No Brand Associates are linked to this Growth Partner."
               cardClassName="overflow-hidden"
@@ -1086,8 +1068,7 @@ const ReferralPartnerDetails = () => {
             ]}
             data={orderRows}
             loading={
-              detailLoading ||
-              Boolean(referralState.ordersData?.loading)
+              detailLoading || Boolean(referralState.ordersData?.loading)
             }
             rowKey="key"
             emptyText="No partner orders yet."
@@ -1105,8 +1086,7 @@ const ReferralPartnerDetails = () => {
             ]}
             data={commissionRows}
             loading={
-              detailLoading ||
-              Boolean(referralState.commissionsData?.loading)
+              detailLoading || Boolean(referralState.commissionsData?.loading)
             }
             rowKey="key"
             emptyText="No commission entries found."
@@ -1125,8 +1105,7 @@ const ReferralPartnerDetails = () => {
             ]}
             data={payoutRows}
             loading={
-              detailLoading ||
-              Boolean(referralState.payoutsData?.loading)
+              detailLoading || Boolean(referralState.payoutsData?.loading)
             }
             rowKey="key"
             emptyText="No payout requests for this partner."
@@ -1147,9 +1126,7 @@ const ReferralPartnerDetails = () => {
               key: `${getId(row.rule)}-${row.influencer?.id}-${row.cycleKey}`,
               rule: row.rule?.ruleName || "-",
               cycle: row.cycleKey || "-",
-              target: Number(row.targetValue || 0).toLocaleString(
-                "en-IN",
-              ),
+              target: Number(row.targetValue || 0).toLocaleString("en-IN"),
               progress: `${Number(row.progressPercent || 0).toFixed(2)}%`,
               status: row.existingAchievement ? (
                 <StatusBadge
@@ -1164,8 +1141,7 @@ const ReferralPartnerDetails = () => {
               ),
             }))}
             loading={
-              detailLoading ||
-              Boolean(referralState.bonusProgressData?.loading)
+              detailLoading || Boolean(referralState.bonusProgressData?.loading)
             }
             rowKey="key"
             emptyText="No bonus progress recorded."
@@ -1187,9 +1163,7 @@ const ReferralPartnerDetails = () => {
               rule: achievement.ruleName || "-",
               cycle: achievement.cycleKey || "-",
               bonus: `${Number(achievement.bonusCoins || 0).toLocaleString("en-IN")} coins`,
-              status: (
-                <StatusBadge status={achievement.status} size="sm" />
-              ),
+              status: <StatusBadge status={achievement.status} size="sm" />,
               achievedAt: formatDate(
                 achievement.achievedAt || achievement.createdAt,
               ),
@@ -1355,7 +1329,11 @@ const ReferralPartnerDetails = () => {
                       className="animate-spin"
                     />
                   ) : (
-                    <Check aria-hidden="true" size={14} className="stroke-[2.5]" />
+                    <Check
+                      aria-hidden="true"
+                      size={14}
+                      className="stroke-[2.5]"
+                    />
                   )}
                   Approve KYC
                 </button>
@@ -1395,7 +1373,11 @@ const ReferralPartnerDetails = () => {
                       className="animate-spin"
                     />
                   ) : (
-                    <Check aria-hidden="true" size={14} className="stroke-[2.5]" />
+                    <Check
+                      aria-hidden="true"
+                      size={14}
+                      className="stroke-[2.5]"
+                    />
                   )}
                   Verify Bank
                 </button>
@@ -1441,7 +1423,11 @@ const ReferralPartnerDetails = () => {
                 ) : influencer?.status === "active" ? (
                   <X aria-hidden="true" size={14} className="stroke-[2.5]" />
                 ) : (
-                  <Check aria-hidden="true" size={14} className="stroke-[2.5]" />
+                  <Check
+                    aria-hidden="true"
+                    size={14}
+                    className="stroke-[2.5]"
+                  />
                 )}
                 {influencer?.status === "pending"
                   ? "Approve account"

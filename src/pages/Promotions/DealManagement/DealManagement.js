@@ -1233,7 +1233,7 @@ const DealManagement = () => {
   );
 
   return (
-    <div className="space-y-5">
+    <div className="">
       <PageHeader
         title="Deal Management"
         subtitle="Convert existing products into temporary deals without changing Product Master pricing"
