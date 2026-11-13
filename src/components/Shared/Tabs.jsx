@@ -4,7 +4,7 @@ import React from "react";
 
 const Tabs = ({ tabs = [], activeTab, onChange }) => {
   return (
-    <div className="flex flex-wrap gap-2 rounded-xl border border-[var(--admin-navy)]/10 bg-[var(--admin-blue-soft)] p-1.5">
+    <div className="flex flex-wrap gap-2  rounded-xl border border-[var(--admin-navy)]/10 bg-[var(--admin-blue-soft)] p-1.5">
       {tabs.map((tab) => {
         const isActive = tab.value === activeTab;
 
