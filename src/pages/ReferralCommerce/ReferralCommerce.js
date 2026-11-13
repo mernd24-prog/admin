@@ -1534,6 +1534,7 @@ const ReferralCommerce = () => {
     useState(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [partnerRole, setPartnerRole] = useState("");
   const [payoutPartnerFilter, setPayoutPartnerFilter] = useState("");
   const [payoutMethodFilter, setPayoutMethodFilter] = useState("");
   const [hierarchySearch, setHierarchySearch] = useState("");
@@ -1833,7 +1834,7 @@ const ReferralCommerce = () => {
       dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
       dispatchReferralRead(
         getReferralInfluencers(
-          withStatus(["pending", "active", "suspended", "rejected"]),
+          { ...withStatus(["pending", "active", "suspended", "rejected"]), ...paginations.influencers, ...(partnerRole ? { influencerType: partnerRole } : {}) },
         ),
         "influencer-management",
       ),
@@ -1934,7 +1935,7 @@ const ReferralCommerce = () => {
       influencers: () =>
         Promise.all([
           dispatchReferralRead(
-            getReferralInfluencers({ ...query, influencerType: "parent" }),
+            getReferralInfluencers({ ...query, ...paginations.influencers, ...(partnerRole ? { influencerType: partnerRole } : {}) }),
             "influencer-management",
           ),
           dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
@@ -2028,14 +2029,14 @@ const ReferralCommerce = () => {
 
     return () => window.clearTimeout(timerId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, search, status]);
+  }, [activeTab, search, status, partnerRole, paginations.influencers.page, paginations.influencers.limit]);
 
   useEffect(() => {
     const refreshOnFocus = () => refreshActive();
     window.addEventListener("focus", refreshOnFocus);
     return () => window.removeEventListener("focus", refreshOnFocus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, search, status]);
+  }, [activeTab, search, status, partnerRole, paginations.influencers.page, paginations.influencers.limit]);
 
   useEffect(() => {
     const currentRules = rulesPayload?.current || rulesPayload;
@@ -2558,10 +2559,7 @@ const ReferralCommerce = () => {
     },
   ];
 
-  const growthPartners = influencers.filter(
-    (item) => item.influencerType === "parent",
-  );
-  const influencerRows = growthPartners.map((item) => ({
+  const influencerRows = influencers.map((item) => ({
     key: getId(item),
     influencer: (
       <div className="min-w-0">
@@ -4123,10 +4121,10 @@ const ReferralCommerce = () => {
             { key: "status", label: "Status" },
             { key: "actions", label: "Actions" },
           ]}
-          data={getPageData("influencers", influencerRows)}
+          data={influencerRows}
           page={paginations.influencers.page}
           pageSize={paginations.influencers.limit}
-          totalCount={influencerRows.length}
+          totalCount={getBranchPayload(referralState.influencersData)?.total ?? influencerRows.length}
           onPageChange={(page) => handlePageChange("influencers", page)}
           onPageSizeChange={(limit) =>
             handlePageSizeChange("influencers", limit)
@@ -4143,11 +4141,24 @@ const ReferralCommerce = () => {
               },
             })
           }
-          onSearch={setSearch}
+          onSearch={(value) => {
+            setSearch(value);
+            setPaginations((prev) => ({ ...prev, influencers: { ...prev.influencers, page: 1 } }));
+          }}
           searchPlaceholder="Search referral partners..."
           filterBar={
             <FilterBar
               filters={[
+                {
+                  key: "role",
+                  type: "select",
+                  label: "Role",
+                  width: "w-48",
+                  options: [
+                    { value: "parent", label: "Growth Partner" },
+                    { value: "child", label: "Brand Associate" },
+                  ],
+                },
                 {
                   key: "status",
                   type: "select",
@@ -4156,9 +4167,17 @@ const ReferralCommerce = () => {
                   options: activeStatusOptions,
                 },
               ]}
-              values={{ status }}
-              onChange={(_, value) => setStatus(value)}
-              onClear={() => setStatus("")}
+              values={{ status, role: partnerRole }}
+              onChange={(key, value) => {
+                if (key === "role") setPartnerRole(value);
+                else setStatus(value);
+                setPaginations((prev) => ({ ...prev, influencers: { ...prev.influencers, page: 1 } }));
+              }}
+              onClear={() => {
+                setStatus("");
+                setPartnerRole("");
+                setPaginations((prev) => ({ ...prev, influencers: { ...prev.influencers, page: 1 } }));
+              }}
               loading={loading}
             />
           }
