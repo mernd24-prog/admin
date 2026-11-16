@@ -63,7 +63,8 @@ const ToggleField = ({
   <Field label={label} hint={hint}>
     <label className="flex h-[36px] cursor-pointer items-center justify-between gap-3 rounded-[6px] border border-[var(--admin-field-line)] bg-[var(--admin-field)] px-3 text-xs font-medium text-gray-700 transition hover:border-[var(--admin-line-strong)]">
       <span>{checked ? activeLabel : inactiveLabel}</span>
-      <TextInput
+
+      <input
         type="checkbox"
         checked={Boolean(checked)}
         disabled={disabled}
@@ -92,7 +93,11 @@ export default function MarketingSettings({ kind = "coupons" }) {
     setBusy(true);
     try {
       const response = await axiosProvider.get(endpoint);
-      setPolicy({ ...DEFAULT_MARKETING, ...response.data.data.policy });
+      setPolicy({
+        ...DEFAULT_MARKETING,
+        ...response.data.data.policy,
+        enabled: false,
+      });
       setMarketingUsage(response.data.data.usage);
       setLoaded(true);
     } catch (error) {

@@ -1870,9 +1870,9 @@ const SellerFinance = () => {
                       dot
                     />
 
-                    <div className="mt-1 text-xs font-semibold">
+                    {/* <div className="mt-1 text-xs font-semibold">
                       {decision.label}
-                    </div>
+                    </div> */}
                   </div>
                 );
               },

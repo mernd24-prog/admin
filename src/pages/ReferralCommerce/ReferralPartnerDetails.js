@@ -16,12 +16,18 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
+import { useListPage } from "../../hooks/useListPage";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import SharedDataTable from "../../components/Shared/DataTable";
 import CopyButton from "../../components/Atoms/CopyButton/CopyButton";
-import { PageHeader, StatusBadge, SummaryCard } from "../../components/Shared";
+import {
+  DataTable,
+  PageHeader,
+  StatusBadge,
+  SummaryCard,
+} from "../../components/Shared";
 import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
 import {
   getReferralBonusAchievements,
@@ -204,13 +210,27 @@ const CopyableValue = ({ value }) => (
   </span>
 );
 
-const refreshPartner = (dispatch, id) => {
+const refreshPartner = (
+  dispatch,
+  id,
+  commissionsPage = 1,
+  commissionsPageSize = 10,
+) => {
   dispatch(getReferralInfluencers({ page: 1, limit: 200, influencerId: id }));
   dispatch(getReferralCodes({ page: 1, limit: 200, influencerId: id }));
   dispatch(getReferralOrders({ page: 1, limit: 200, influencerId: id }));
-  dispatch(getReferralCommissions({ page: 1, limit: 200, influencerId: id }));
+
+  dispatch(
+    getReferralCommissions({
+      page: commissionsPage,
+      limit: commissionsPageSize,
+      influencerId: id,
+    }),
+  );
+
   dispatch(getReferralPayouts({ page: 1, limit: 200, influencerId: id }));
   dispatch(getReferralBonusProgress({ page: 1, limit: 200, influencerId: id }));
+
   dispatch(
     getReferralBonusAchievements({ page: 1, limit: 200, influencerId: id }),
   );
@@ -310,6 +330,9 @@ const ReferralPartnerDetails = () => {
   const [loadedDetailId, setLoadedDetailId] = useState(null);
   const [loadingAction, setLoadingAction] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
+  const commissionsList = useListPage({
+    defaultPageSize: 10,
+  });
   const [editForm, setEditForm] = useState({
     firstName: "",
     lastName: "",
@@ -437,9 +460,6 @@ const ReferralPartnerDetails = () => {
       ),
       dispatch(getReferralCodes({ page: 1, limit: 200, influencerId: id })),
       dispatch(getReferralOrders({ page: 1, limit: 200, influencerId: id })),
-      dispatch(
-        getReferralCommissions({ page: 1, limit: 200, influencerId: id }),
-      ),
       dispatch(getReferralPayouts({ page: 1, limit: 200, influencerId: id })),
       dispatch(
         getReferralBonusProgress({ page: 1, limit: 200, influencerId: id }),
@@ -454,6 +474,32 @@ const ReferralPartnerDetails = () => {
     if (!id || influencer?.influencerType !== "parent") return;
     dispatch(getReferralBrandAssociates({ parentId: id, page: 1, limit: 200 }));
   }, [dispatch, id, influencer?.influencerType]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    dispatch(
+      getReferralCommissions({
+        page: commissionsList.page,
+        limit: commissionsList.pageSize,
+        influencerId: id,
+      }),
+    );
+  }, [dispatch, id, commissionsList.page, commissionsList.pageSize]);
+
+  const getBranchTotal = (branch = {}) => {
+    const payload = getBranchPayload(branch);
+
+    return Number(
+      payload?.total ??
+        payload?.totalCount ??
+        payload?.pagination?.total ??
+        payload?.meta?.total ??
+        payload?.meta?.totalItems ??
+        branch?.total ??
+        getBranchList(branch).length,
+    );
+  };
 
   const infoRows = useMemo(() => {
     if (!influencer) return [];
@@ -1077,7 +1123,7 @@ const ReferralPartnerDetails = () => {
         )}
 
         {activeTab === "commissions" && (
-          <SharedDataTable
+          <DataTable
             columns={[
               { key: "type", label: "Type" },
               { key: "basis", label: "Basis" },
@@ -1089,8 +1135,9 @@ const ReferralPartnerDetails = () => {
               detailLoading || Boolean(referralState.commissionsData?.loading)
             }
             rowKey="key"
+            total={getBranchTotal(referralState.commissionsData)}
+            listPage={commissionsList}
             emptyText="No commission entries found."
-            cardClassName="overflow-hidden"
           />
         )}
 

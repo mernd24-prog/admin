@@ -388,6 +388,8 @@ const getBranchList = (branch = {}) => {
 const getId = (record = {}) =>
   record.id ||
   record._id ||
+  record.ruleId ||
+  record.rule_id ||
   record.influencerId ||
   record.codeId ||
   record.payoutId;
@@ -524,7 +526,7 @@ const RowActions = ({ actions = [] }) => {
           if (!open) updatePosition();
           setOpen((value) => !value);
         }}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-indigo-50 hover:text-indigo-700"
+        className="inline-flex h-8 w-8items-center justify-center rounded-md text-gray-500 transition hover:bg-indigo-50 hover:text-indigo-700"
       >
         <MoreVertical aria-hidden="true" size={18} />
       </button>
@@ -776,7 +778,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
   const [products, setProducts] = useState([]);
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState({ page: 1, limit: 20 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 10 });
   const [totalCount, setTotalCount] = useState(0);
   const [togglingId, setTogglingId] = useState(null);
 
@@ -1247,254 +1249,253 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
       </section>
 
       {/* Side Drawer Modal */}
-    
-<DefaultModal
-  isOpen={drawerOpen}
-  onClose={handleCloseDrawer}
-  onSubmit={save}
-  title={
-    isEditMode ? "Edit Product Override" : "Add Product Referral Pool"
-  }
-  submitButtonText={
-    isEditMode ? "Update Product Amount" : "Save Product Amount"
-  }
-  closeButtonText="Cancel"
-  isButtonView={true}
-  width="600px"
-  loading={loading}
->
-  <div className="space-y-5">
-    {/* ==================== Product Information ==================== */}
-    <FormSection
-      title="Product Information"
-      description="Select the store and product for which you want to configure the referral pool."
-    >
-      <div className="space-y-4">
-        {/* Store */}
-        <FormSelectGroup
-          label="Store"
-          options={storeOptions}
-          value={
-            storeOptions.find(
-              (option) => String(option.value) === String(form.storeKey),
-            ) || null
-          }
-          onChange={(selectedOption) => {
-            const storeKey = selectedOption?.value || "";
 
-            setForm((current) => ({
-              ...current,
-              storeKey,
-              storeId: "",
-              productId: "",
-              productTitle: "",
-            }));
-          }}
-          placeholder="Select store"
-          isSearchable
-          isClearable
-          required
-          className="w-full"
-        />
-
-        {/* Product */}
-        <FormSelectGroup
-          label="Product"
-          options={productOptions}
-          value={
-            productOptions.find(
-              (option) => String(option.value) === String(form.productId),
-            ) || null
-          }
-          onChange={(selectedOption) => {
-            const productId = selectedOption?.value || "";
-
-            const product = storeProducts.find(
-              (item) => String(getId(item)) === String(productId),
-            );
-
-            setForm((current) => ({
-              ...current,
-              productId,
-              productTitle: getProductTitle(product),
-              storeId: getProductStoreId(product),
-            }));
-          }}
-          placeholder={
-            form.storeKey ? "Select product" : "Select store first"
-          }
-          isDisabled={!form.storeKey}
-          isSearchable
-          isClearable
-          required
-          className="w-full"
-        />
-      </div>
-    </FormSection>
-
-    {/* ==================== Referral Pool Configuration ==================== */}
-    <FormSection
-      title="Referral Pool Configuration"
-      description="Configure the amount type and maximum eligible referral pool for this product."
-    >
-      <div className="space-y-4">
-        {/* Amount Type */}
-        <FormSelectGroup
-          label="Amount Type"
-          options={amountTypeOptions}
-          value={
-            amountTypeOptions.find(
-              (option) => option.value === form.amountType,
-            ) || null
-          }
-          onChange={(selectedOption) => {
-            setForm((current) => ({
-              ...current,
-              amountType: selectedOption?.value || "fixed_amount",
-            }));
-          }}
-          placeholder="Select amount type"
-          isSearchable={false}
-          className="w-full"
-        />
-
-        {/* Pool Amount */}
-        <FormInput
-          label={
-            form.amountType === "percentage"
-              ? "Pool Percentage (%)"
-              : "Product Pool for Order (₹)"
-          }
-          name="amountValue"
-          type="number"
-          min="0"
-          max={form.amountType === "percentage" ? "100" : undefined}
-          step="0.01"
-          value={form.amountValue}
-          onChange={(event) => {
-            setForm((current) => ({
-              ...current,
-              amountValue: event.target.value,
-            }));
-          }}
-          placeholder={
-            form.amountType === "percentage" ? "e.g. 10" : "e.g. 50"
-          }
-          required
-          className="w-full"
-        />
-
-        {/* Maximum Amount */}
-        <FormInput
-          label="Maximum Product Pool (₹)"
-          name="maximumAmount"
-          type="number"
-          min="0"
-          step="0.01"
-          value={form.maximumAmount}
-          onChange={(event) => {
-            setForm((current) => ({
-              ...current,
-              maximumAmount: event.target.value,
-            }));
-          }}
-          placeholder="0 means no additional limit"
-          hint="0 means no additional limit. The lowest positive eligible product pool applies once per order; quantities do not multiply it."
-          className="w-full"
-        />
-      </div>
-    </FormSection>
-
-    {/* ==================== Selected Product Details ==================== */}
-    {selectedProduct && (
-      <FormSection
-        title="Selected Product Details"
-        description="Review the store and product information before saving."
+      <DefaultModal
+        isOpen={drawerOpen}
+        onClose={handleCloseDrawer}
+        onSubmit={save}
+        title={
+          isEditMode ? "Edit Product Override" : "Add Product Referral Pool"
+        }
+        submitButtonText={
+          isEditMode ? "Update Product Amount" : "Save Product Amount"
+        }
+        closeButtonText="Cancel"
+        isButtonView={true}
+        width="600px"
+        loading={loading}
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-[var(--admin-muted)]">
-              Store
-            </p>
-            <p className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]">
-              {selectedStore?.label ||
-                getProductStoreName(selectedProduct)}
-            </p>
-          </div>
+        <div className="space-y-5">
+          {/* ==================== Product Information ==================== */}
+          <FormSection
+            title="Product Information"
+            description="Select the store and product for which you want to configure the referral pool."
+          >
+            <div className="space-y-4">
+              {/* Store */}
+              <FormSelectGroup
+                label="Store"
+                options={storeOptions}
+                value={
+                  storeOptions.find(
+                    (option) => String(option.value) === String(form.storeKey),
+                  ) || null
+                }
+                onChange={(selectedOption) => {
+                  const storeKey = selectedOption?.value || "";
 
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-[var(--admin-muted)]">
-              Product
-            </p>
-            <p
-              className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]"
-              title={getProductTitle(selectedProduct)}
+                  setForm((current) => ({
+                    ...current,
+                    storeKey,
+                    storeId: "",
+                    productId: "",
+                    productTitle: "",
+                  }));
+                }}
+                placeholder="Select store"
+                isSearchable
+                isClearable
+                required
+                className="w-full"
+              />
+
+              {/* Product */}
+              <FormSelectGroup
+                label="Product"
+                options={productOptions}
+                value={
+                  productOptions.find(
+                    (option) => String(option.value) === String(form.productId),
+                  ) || null
+                }
+                onChange={(selectedOption) => {
+                  const productId = selectedOption?.value || "";
+
+                  const product = storeProducts.find(
+                    (item) => String(getId(item)) === String(productId),
+                  );
+
+                  setForm((current) => ({
+                    ...current,
+                    productId,
+                    productTitle: getProductTitle(product),
+                    storeId: getProductStoreId(product),
+                  }));
+                }}
+                placeholder={
+                  form.storeKey ? "Select product" : "Select store first"
+                }
+                isDisabled={!form.storeKey}
+                isSearchable
+                isClearable
+                required
+                className="w-full"
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Referral Pool Configuration ==================== */}
+          <FormSection
+            title="Referral Pool Configuration"
+            description="Configure the amount type and maximum eligible referral pool for this product."
+          >
+            <div className="space-y-4">
+              {/* Amount Type */}
+              <FormSelectGroup
+                label="Amount Type"
+                options={amountTypeOptions}
+                value={
+                  amountTypeOptions.find(
+                    (option) => option.value === form.amountType,
+                  ) || null
+                }
+                onChange={(selectedOption) => {
+                  setForm((current) => ({
+                    ...current,
+                    amountType: selectedOption?.value || "fixed_amount",
+                  }));
+                }}
+                placeholder="Select amount type"
+                isSearchable={false}
+                className="w-full"
+              />
+
+              {/* Pool Amount */}
+              <FormInput
+                label={
+                  form.amountType === "percentage"
+                    ? "Pool Percentage (%)"
+                    : "Product Pool for Order (₹)"
+                }
+                name="amountValue"
+                type="number"
+                min="0"
+                max={form.amountType === "percentage" ? "100" : undefined}
+                step="0.01"
+                value={form.amountValue}
+                onChange={(event) => {
+                  setForm((current) => ({
+                    ...current,
+                    amountValue: event.target.value,
+                  }));
+                }}
+                placeholder={
+                  form.amountType === "percentage" ? "e.g. 10" : "e.g. 50"
+                }
+                required
+                className="w-full"
+              />
+
+              {/* Maximum Amount */}
+              <FormInput
+                label="Maximum Product Pool (₹)"
+                name="maximumAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.maximumAmount}
+                onChange={(event) => {
+                  setForm((current) => ({
+                    ...current,
+                    maximumAmount: event.target.value,
+                  }));
+                }}
+                placeholder="0 means no additional limit"
+                hint="0 means no additional limit. The lowest positive eligible product pool applies once per order; quantities do not multiply it."
+                className="w-full"
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Selected Product Details ==================== */}
+          {selectedProduct && (
+            <FormSection
+              title="Selected Product Details"
+              description="Review the store and product information before saving."
             >
-              {getProductTitle(selectedProduct)}
-            </p>
-          </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-[var(--admin-muted)]">
+                    Store
+                  </p>
+                  <p className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]">
+                    {selectedStore?.label ||
+                      getProductStoreName(selectedProduct)}
+                  </p>
+                </div>
 
-          {selectedProduct?.sku && (
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-[var(--admin-muted)]">
-                SKU
-              </p>
-              <p className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]">
-                {selectedProduct.sku}
-              </p>
-            </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-[var(--admin-muted)]">
+                    Product
+                  </p>
+                  <p
+                    className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]"
+                    title={getProductTitle(selectedProduct)}
+                  >
+                    {getProductTitle(selectedProduct)}
+                  </p>
+                </div>
+
+                {selectedProduct?.sku && (
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-[var(--admin-muted)]">
+                      SKU
+                    </p>
+                    <p className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]">
+                      {selectedProduct.sku}
+                    </p>
+                  </div>
+                )}
+
+                {selectedProduct?.price !== undefined && (
+                  <div>
+                    <p className="text-xs font-medium text-[var(--admin-muted)]">
+                      Price
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">
+                      ₹{Number(selectedProduct.price).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </FormSection>
           )}
 
-          {selectedProduct?.price !== undefined && (
-            <div>
-              <p className="text-xs font-medium text-[var(--admin-muted)]">
-                Price
-              </p>
-              <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">
-                ₹{Number(selectedProduct.price).toLocaleString("en-IN")}
-              </p>
-            </div>
+          {/* ==================== Referral Pool Preview ==================== */}
+          {form.amountValue !== "" && (
+            <FormSection
+              title="Referral Pool Preview"
+              description="Estimated contribution based on the selected configuration."
+            >
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4">
+                <div>
+                  <p className="text-sm font-medium text-[var(--admin-ink)]">
+                    Estimated Pool Amount
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                    {form.amountType === "percentage"
+                      ? "Calculated as a percentage of the product line."
+                      : "Applied once per order."}
+                  </p>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <p className="text-lg font-bold text-[var(--admin-navy)]">
+                    {form.amountType === "percentage"
+                      ? `${Number(form.amountValue || 0)}%`
+                      : `₹${Number(form.amountValue || 0).toLocaleString(
+                          "en-IN",
+                          {
+                            minimumFractionDigits: 2,
+                          },
+                        )}`}
+                  </p>
+                </div>
+              </div>
+            </FormSection>
           )}
         </div>
-      </FormSection>
-    )}
-
-    {/* ==================== Referral Pool Preview ==================== */}
-    {form.amountValue !== "" && (
-      <FormSection
-        title="Referral Pool Preview"
-        description="Estimated contribution based on the selected configuration."
-      >
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4">
-          <div>
-            <p className="text-sm font-medium text-[var(--admin-ink)]">
-              Estimated Pool Amount
-            </p>
-            <p className="mt-1 text-xs text-[var(--admin-muted)]">
-              {form.amountType === "percentage"
-                ? "Calculated as a percentage of the product line."
-                : "Applied once per order."}
-            </p>
-          </div>
-
-          <div className="shrink-0 text-right">
-            <p className="text-lg font-bold text-[var(--admin-navy)]">
-              {form.amountType === "percentage"
-                ? `${Number(form.amountValue || 0)}%`
-                : `₹${Number(form.amountValue || 0).toLocaleString(
-                    "en-IN",
-                    {
-                      minimumFractionDigits: 2,
-                    },
-                  )}`}
-            </p>
-          </div>
-        </div>
-      </FormSection>
-    )}
-  </div>
-</DefaultModal>
-
+      </DefaultModal>
     </>
   );
 };
@@ -1543,13 +1544,13 @@ const ReferralCommerce = () => {
   );
 
   const [paginations, setPaginations] = useState({
-    influencers: { page: 1, limit: 20 },
-    orders: { page: 1, limit: 20 },
-    payouts: { page: 1, limit: 20 },
-    fraud: { page: 1, limit: 20 },
-    bonusRules: { page: 1, limit: 20 },
-    bonusProgress: { page: 1, limit: 20 },
-    bonusHistory: { page: 1, limit: 20 },
+    influencers: { page: 1, limit: 10 },
+    orders: { page: 1, limit: 10 },
+    payouts: { page: 1, limit: 10 },
+    fraud: { page: 1, limit: 10 },
+    bonusRules: { page: 1, limit: 10 },
+    bonusProgress: { page: 1, limit: 10 },
+    bonusHistory: { page: 1, limit: 10 },
   });
 
   const [paginationsLoading, setPaginationsLoading] = useState({});
@@ -1833,9 +1834,11 @@ const ReferralCommerce = () => {
       dispatchReferralRead(getReferralSummary(), "referral-overview"),
       dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
       dispatchReferralRead(
-        getReferralInfluencers(
-          { ...withStatus(["pending", "active", "suspended", "rejected"]), ...paginations.influencers, ...(partnerRole ? { influencerType: partnerRole } : {}) },
-        ),
+        getReferralInfluencers({
+          ...withStatus(["pending", "active", "suspended", "rejected"]),
+          ...paginations.influencers,
+          ...(partnerRole ? { influencerType: partnerRole } : {}),
+        }),
         "influencer-management",
       ),
       dispatchReferralRead(
@@ -1883,7 +1886,7 @@ const ReferralCommerce = () => {
         "referral-payouts",
       ),
       dispatchReferralRead(
-        getReferralRules({ page: 1, limit: 20 }),
+        getReferralRules({ page: 1, limit: 10 }),
         "referral-rules",
       ),
       dispatchReferralRead(
@@ -1935,7 +1938,11 @@ const ReferralCommerce = () => {
       influencers: () =>
         Promise.all([
           dispatchReferralRead(
-            getReferralInfluencers({ ...query, ...paginations.influencers, ...(partnerRole ? { influencerType: partnerRole } : {}) }),
+            getReferralInfluencers({
+              ...query,
+              ...paginations.influencers,
+              ...(partnerRole ? { influencerType: partnerRole } : {}),
+            }),
             "influencer-management",
           ),
           dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
@@ -1943,7 +1950,7 @@ const ReferralCommerce = () => {
 
       rules: () =>
         dispatchReferralRead(
-          getReferralRules({ page: 1, limit: 20 }),
+          getReferralRules({ page: 1, limit: 10 }),
           "referral-rules",
         ),
       bonuses: () =>
@@ -2029,14 +2036,28 @@ const ReferralCommerce = () => {
 
     return () => window.clearTimeout(timerId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, search, status, partnerRole, paginations.influencers.page, paginations.influencers.limit]);
+  }, [
+    activeTab,
+    search,
+    status,
+    partnerRole,
+    paginations.influencers.page,
+    paginations.influencers.limit,
+  ]);
 
   useEffect(() => {
     const refreshOnFocus = () => refreshActive();
     window.addEventListener("focus", refreshOnFocus);
     return () => window.removeEventListener("focus", refreshOnFocus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, search, status, partnerRole, paginations.influencers.page, paginations.influencers.limit]);
+  }, [
+    activeTab,
+    search,
+    status,
+    partnerRole,
+    paginations.influencers.page,
+    paginations.influencers.limit,
+  ]);
 
   useEffect(() => {
     const currentRules = rulesPayload?.current || rulesPayload;
@@ -2243,34 +2264,6 @@ const ReferralCommerce = () => {
     }
   };
 
-  const openBonusRuleModal = (rule = null) => {
-    setEditingBonusRule(rule);
-    setBonusRuleForm(
-      rule
-        ? {
-            ...emptyBonusRuleForm,
-            ruleName: rule.ruleName || "",
-            period: rule.period || "monthly",
-            customStartAt: rule.customStartAt
-              ? String(rule.customStartAt).slice(0, 10)
-              : "",
-            customEndAt: rule.customEndAt
-              ? String(rule.customEndAt).slice(0, 10)
-              : "",
-            targetType: rule.targetType || "order_value",
-            targetValue: rule.targetValue ?? "",
-            bonusType: rule.bonusType || "fixed_coins",
-            bonusValue: rule.bonusValue ?? "",
-            applyTo: rule.applyTo || "code_owner",
-            resetCycle: rule.resetCycle || "monthly",
-            releaseRule: rule.releaseRule || "instantly_available",
-            status: rule.status || "active",
-          }
-        : emptyBonusRuleForm,
-    );
-    setBonusRuleModalOpen(true);
-  };
-
   const submitBonusRule = async (values) => {
     const payload = compactPayload(
       numberize(values, ["targetValue", "bonusValue"]),
@@ -2281,7 +2274,10 @@ const ReferralCommerce = () => {
         await dispatch(
           updateReferralBonusRule({
             ...payload,
-            ruleId: getId(editingBonusRule),
+            ruleId:
+              getId(editingBonusRule) ||
+              editingBonusRule?.ruleId ||
+              editingBonusRule?.rule_id,
           }),
         ).unwrap();
 
@@ -2295,6 +2291,7 @@ const ReferralCommerce = () => {
       setBonusRuleModalOpen(false);
       setEditingBonusRule(null);
       setBonusRuleForm(emptyBonusRuleForm);
+      formik.resetForm({ values: emptyBonusRuleForm });
 
       await refreshAll();
     } catch (error) {
@@ -2303,13 +2300,62 @@ const ReferralCommerce = () => {
   };
 
   const formik = useFormik({
-    initialValues: emptyBonusRuleForm,
+    initialValues: bonusRuleForm,
     enableReinitialize: true,
     validationSchema: bonusRuleValidationSchema,
     validateOnChange: false,
     validateOnBlur: true,
     onSubmit: submitBonusRule,
   });
+
+  const openBonusRuleModal = (rule = null) => {
+    setEditingBonusRule(rule);
+    const nextValues = rule
+      ? {
+          ...emptyBonusRuleForm,
+          ruleName:
+            rule.ruleName || rule.name || rule.rule_name || "",
+          period: rule.period || "monthly",
+          customStartAt:
+            rule.customStartAt ||
+            rule.custom_start_at ||
+            rule.startDate ||
+            rule.start_date
+              ? String(
+                  rule.customStartAt ||
+                    rule.custom_start_at ||
+                    rule.startDate ||
+                    rule.start_date,
+                ).slice(0, 10)
+              : "",
+          customEndAt:
+            rule.customEndAt ||
+            rule.custom_end_at ||
+            rule.endDate ||
+            rule.end_date
+              ? String(
+                  rule.customEndAt ||
+                    rule.custom_end_at ||
+                    rule.endDate ||
+                    rule.end_date,
+                ).slice(0, 10)
+              : "",
+          targetType: rule.targetType || rule.target_type || "order_value",
+          targetValue: rule.targetValue ?? rule.target_value ?? "",
+          bonusType: rule.bonusType || rule.bonus_type || "fixed_coins",
+          bonusValue: rule.bonusValue ?? rule.bonus_value ?? "",
+          applyTo: rule.applyTo || rule.apply_to || "code_owner",
+          resetCycle: rule.resetCycle || rule.reset_cycle || "monthly",
+          releaseRule:
+            rule.releaseRule || rule.release_rule || "instantly_available",
+          status: rule.status || "active",
+        }
+      : emptyBonusRuleForm;
+
+    setBonusRuleForm(nextValues);
+    formik.resetForm({ values: nextValues });
+    setBonusRuleModalOpen(true);
+  };
 
   const toggleBonusRuleStatus = async (rule) => {
     try {
@@ -4124,7 +4170,10 @@ const ReferralCommerce = () => {
           data={influencerRows}
           page={paginations.influencers.page}
           pageSize={paginations.influencers.limit}
-          totalCount={getBranchPayload(referralState.influencersData)?.total ?? influencerRows.length}
+          totalCount={
+            getBranchPayload(referralState.influencersData)?.total ??
+            influencerRows.length
+          }
           onPageChange={(page) => handlePageChange("influencers", page)}
           onPageSizeChange={(limit) =>
             handlePageSizeChange("influencers", limit)
@@ -4143,7 +4192,10 @@ const ReferralCommerce = () => {
           }
           onSearch={(value) => {
             setSearch(value);
-            setPaginations((prev) => ({ ...prev, influencers: { ...prev.influencers, page: 1 } }));
+            setPaginations((prev) => ({
+              ...prev,
+              influencers: { ...prev.influencers, page: 1 },
+            }));
           }}
           searchPlaceholder="Search referral partners..."
           filterBar={
@@ -4171,12 +4223,18 @@ const ReferralCommerce = () => {
               onChange={(key, value) => {
                 if (key === "role") setPartnerRole(value);
                 else setStatus(value);
-                setPaginations((prev) => ({ ...prev, influencers: { ...prev.influencers, page: 1 } }));
+                setPaginations((prev) => ({
+                  ...prev,
+                  influencers: { ...prev.influencers, page: 1 },
+                }));
               }}
               onClear={() => {
                 setStatus("");
                 setPartnerRole("");
-                setPaginations((prev) => ({ ...prev, influencers: { ...prev.influencers, page: 1 } }));
+                setPaginations((prev) => ({
+                  ...prev,
+                  influencers: { ...prev.influencers, page: 1 },
+                }));
               }}
               loading={loading}
             />
@@ -4348,24 +4406,26 @@ const ReferralCommerce = () => {
                 error={parentFormik.touched.phone && parentFormik.errors.phone}
                 className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
               />
+              <div className="col-span-2">
+                <FormInput
+                  label="Temporary Password"
+                  name="password"
+                  type="password"
+                  required
+                  value={parentFormik.values.password}
+                  onChange={parentFormik.handleChange}
+                  onBlur={parentFormik.handleBlur}
+                  placeholder="Enter temporary password"
+                  hint="At least 8 characters. The influencer uses this for the first login."
+                  error={
+                    parentFormik.touched.password &&
+                    parentFormik.errors.password
+                  }
+                  className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+                />
+              </div>
 
-              <FormInput
-                label="Temporary Password"
-                name="password"
-                type="password"
-                required
-                value={parentFormik.values.password}
-                onChange={parentFormik.handleChange}
-                onBlur={parentFormik.handleBlur}
-                placeholder="Enter temporary password"
-                hint="At least 8 characters. The influencer uses this for the first login."
-                error={
-                  parentFormik.touched.password && parentFormik.errors.password
-                }
-                className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
-              />
-
-              <FormInput
+              {/* <FormInput
                 label="Referral Code"
                 name="code"
                 value={parentFormik.values.code}
@@ -4374,7 +4434,7 @@ const ReferralCommerce = () => {
                 placeholder="Enter referral code"
                 error={parentFormik.touched.code && parentFormik.errors.code}
                 className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
-              />
+              /> */}
             </div>
           </FormSection>
 
@@ -4508,24 +4568,25 @@ const ReferralCommerce = () => {
                 error={childFormik.touched.phone && childFormik.errors.phone}
                 placeholder="Enter phone number"
               />
-
-              {/* Password */}
-              <FormInput
-                label="Password"
-                name="password"
-                type="password"
-                value={childFormik.values.password}
-                onChange={childFormik.handleChange}
-                onBlur={childFormik.handleBlur}
-                error={
-                  childFormik.touched.password && childFormik.errors.password
-                }
-                required
-                placeholder="Enter password"
-              />
+              <div className="col-span-2">
+                {/* Password */}
+                <FormInput
+                  label="Password"
+                  name="password"
+                  type="password"
+                  value={childFormik.values.password}
+                  onChange={childFormik.handleChange}
+                  onBlur={childFormik.handleBlur}
+                  error={
+                    childFormik.touched.password && childFormik.errors.password
+                  }
+                  required
+                  placeholder="Enter password"
+                />
+              </div>
 
               {/* Referral Code */}
-              <FormInput
+              {/* <FormInput
                 label="Referral Code"
                 name="code"
                 value={childFormik.values.code}
@@ -4533,7 +4594,7 @@ const ReferralCommerce = () => {
                 onBlur={childFormik.handleBlur}
                 error={childFormik.touched.code && childFormik.errors.code}
                 placeholder="Enter referral code"
-              />
+              /> */}
             </div>
           </FormSection>
         </div>
@@ -4915,7 +4976,7 @@ const ReferralCommerce = () => {
           setBonusRuleModalOpen(false);
           setEditingBonusRule(null);
           setBonusRuleForm(emptyBonusRuleForm);
-          formik.resetForm();
+          formik.resetForm({ values: emptyBonusRuleForm });
         }}
         title={editingBonusRule ? "Edit Bonus Rule" : "Create Bonus Rule"}
         submitButtonText="Save Bonus Rule"
