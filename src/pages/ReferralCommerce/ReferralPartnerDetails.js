@@ -1,6 +1,7 @@
 import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { usePermission } from "../../_helpers/usePermission";
 import React, { useEffect, useMemo, useState } from "react";
+import { useFormik } from "formik";
 import {
   ArrowLeft,
   BadgeIndianRupee,
@@ -52,6 +53,8 @@ import DocumentPreviewModal from "../../components/Shared/DocumentPreviewModal";
 import Tabs from "../../components/Shared/Tabs";
 import VerificationDecisionModal from "../../components/Seller/VerificationDecisionModal";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
+import FormInput from "../../components/Atoms/FormInput/FormInput";
+import { referralPartnerEditProfileValidationSchema } from "../../_helpers/validationSchemas";
 
 const getBranchPayload = (branch = {}) =>
   branch?.normalized?.data || branch?.data?.data || branch?.data || {};
@@ -213,16 +216,21 @@ const CopyableValue = ({ value }) => (
   </span>
 );
 
-const refreshPartner = (dispatch, id, can) => Promise.all([
-  [getReferralInfluencers, "influencer-management"],
-  [getReferralCodes, "referral-codes"],
-  [getReferralOrders, "referral-orders"],
-  [getReferralCommissions, "referral-ledger"],
-  [getReferralPayouts, "referral-payouts"],
-  [getReferralBonusProgress, "referral-bonus-progress"],
-  [getReferralBonusAchievements, "referral-bonus-history"],
-].map(([action, module]) => can(module, "view")
-  ? dispatch(action({ page: 1, limit: 200, influencerId: id })) : Promise.resolve()));
+const refreshPartner = (dispatch, id, can) =>
+  Promise.all(
+    [
+      [getReferralInfluencers, "influencer-management"],
+      [getReferralCodes, "referral-codes"],
+      [getReferralOrders, "referral-orders"],
+      [getReferralPayouts, "referral-payouts"],
+      [getReferralBonusProgress, "referral-bonus-progress"],
+      [getReferralBonusAchievements, "referral-bonus-history"],
+    ].map(([action, module]) =>
+      can(module, "view")
+        ? dispatch(action({ page: 1, limit: 200, influencerId: id }))
+        : Promise.resolve(),
+    ),
+  );
 
 const partnerTypeLabel = (value) =>
   value === "parent"
@@ -324,12 +332,7 @@ const ReferralPartnerDetails = () => {
   const commissionsList = useListPage({
     defaultPageSize: 10,
   });
-  const [editForm, setEditForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-  });
+
   const [verificationModal, setVerificationModal] = useState({
     open: false,
     section: "kyc",
@@ -405,30 +408,31 @@ const ReferralPartnerDetails = () => {
   const openEditProfile = () => {
     if (!can("influencer-management", "update")) return;
     const user = influencer?.user || {};
-    setEditForm({
-      firstName: user.profile?.firstName || "",
-      lastName: user.profile?.lastName || "",
-      email: user.email || "",
-      phone: user.phone || user.profile?.phone || "",
+    profileFormik.resetForm({
+      values: {
+        firstName: user.profile?.firstName || "",
+        lastName: user.profile?.lastName || "",
+        email: user.email || "",
+        phone: user.phone || user.profile?.phone || "",
+      },
     });
+
     setEditOpen(true);
   };
 
-  const saveProfile = async (event) => {
-    event.preventDefault();
+  const saveProfile = async (values) => {
     if (!can("influencer-management", "update")) return;
-    if (!editForm.firstName.trim() || !editForm.email.trim()) {
-      toast.error("First name and email are required");
-      return;
-    }
+
     setLoadingAction("profile");
+
     try {
       await dispatch(
         updateReferralInfluencerProfile({
           influencerId: id,
-          ...editForm,
+          ...values,
         }),
       ).unwrap();
+
       toast.success("Referral partner profile updated");
       setEditOpen(false);
       refreshPartner(dispatch, id, can);
@@ -438,6 +442,19 @@ const ReferralPartnerDetails = () => {
       setLoadingAction(null);
     }
   };
+
+  const profileFormik = useFormik({
+    initialValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+    },
+    validationSchema: referralPartnerEditProfileValidationSchema,
+    validateOnBlur: true,
+    validateOnChange: true,
+    onSubmit: saveProfile,
+  });
 
   useEffect(() => {
     setActiveTab("overview");
@@ -452,7 +469,12 @@ const ReferralPartnerDetails = () => {
   }, [dispatch, id, permMap]);
 
   useEffect(() => {
-    if (!id || influencer?.influencerType !== "parent" || !can("influencer-management", "view")) return;
+    if (
+      !id ||
+      influencer?.influencerType !== "parent" ||
+      !can("influencer-management", "view")
+    )
+      return;
     dispatch(getReferralBrandAssociates({ parentId: id, page: 1, limit: 200 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, id, influencer?.influencerType, permMap]);
@@ -520,7 +542,13 @@ const ReferralPartnerDetails = () => {
   const verificationApproved = isKycApproved && isBankApproved;
 
   const runPartnerAction = async (action, actionKey) => {
-    if (!can("influencer-management", actionKey === "status" ? "status_change" : "update")) return;
+    if (
+      !can(
+        "influencer-management",
+        actionKey === "status" ? "status_change" : "update",
+      )
+    )
+      return;
     if (!influencer || loadingAction) return;
     setLoadingAction(actionKey || "action");
     try {
@@ -662,8 +690,14 @@ const ReferralPartnerDetails = () => {
         usage: `${code.usageCount || 0}${code.usageLimit ? ` / ${code.usageLimit}` : ""}`,
         created: formatDate(code.createdAt),
         actions: can("referral-codes", "update") ? (
-          <button type="button" className="admin-btn-secondary !px-2 !py-1"
-            onClick={() => { setEditingCode(code); setCodeLimit(code.usageLimit ?? ""); }}>
+          <button
+            type="button"
+            className="admin-btn-secondary !px-2 !py-1"
+            onClick={() => {
+              setEditingCode(code);
+              setCodeLimit(code.usageLimit ?? "");
+            }}
+          >
             <Pencil size={14} aria-hidden="true" /> Edit limit
           </button>
         ) : null,
@@ -803,44 +837,58 @@ const ReferralPartnerDetails = () => {
       accent: "#fef3c7",
       color: "#b45309",
     },
-  ].filter(card => card.label === "Total orders" ? can("referral-orders", "view") : card.label === "Referral codes" ? can("referral-codes", "view") : true);
+  ].filter((card) =>
+    card.label === "Total orders"
+      ? can("referral-orders", "view")
+      : card.label === "Referral codes"
+        ? can("referral-codes", "view")
+        : true,
+  );
 
   const detailTabs = useMemo(
-    () => [
-      { value: "overview", label: "Overview" },
-      { value: "codes", label: "Referral Codes", count: codeRows.length },
-      ...(influencer?.influencerType === "parent"
-        ? [
-            {
-              value: "associated-brands",
-              label: "Brand Associate",
-              count: brandAssociateRows.length,
-            },
-          ]
-        : []),
-      { value: "orders", label: "Orders", count: orderRows.length },
-      {
-        value: "commissions",
-        label: "Commissions",
-        count: commissionRows.length,
-      },
-      { value: "payouts", label: "Payouts", count: payoutRows.length },
-      {
-        value: "progress",
-        label: "Bonus Progress",
-        count: bonusProgress.length,
-      },
-      {
-        value: "achievements",
-        label: "Bonus History",
-        count: bonusAchievements.length,
-      },
-      { value: "verification", label: "Verification" },
-      { value: "actions", label: "Actions" },
-    ].filter(tab => {
-      const modules = { codes: "referral-codes", orders: "referral-orders", commissions: "referral-ledger", payouts: "referral-payouts", progress: "referral-bonus-progress", achievements: "referral-bonus-history" };
-      return !modules[tab.value] || can(modules[tab.value], "view");
-    }),
+    () =>
+      [
+        { value: "overview", label: "Overview" },
+        { value: "codes", label: "Referral Codes", count: codeRows.length },
+        ...(influencer?.influencerType === "parent"
+          ? [
+              {
+                value: "associated-brands",
+                label: "Brand Associate",
+                count: brandAssociateRows.length,
+              },
+            ]
+          : []),
+        { value: "orders", label: "Orders", count: orderRows.length },
+        {
+          value: "commissions",
+          label: "Commissions",
+          count: commissionRows.length,
+        },
+        { value: "payouts", label: "Payouts", count: payoutRows.length },
+        {
+          value: "progress",
+          label: "Bonus Progress",
+          count: bonusProgress.length,
+        },
+        {
+          value: "achievements",
+          label: "Bonus History",
+          count: bonusAchievements.length,
+        },
+        { value: "verification", label: "Verification" },
+        { value: "actions", label: "Actions" },
+      ].filter((tab) => {
+        const modules = {
+          codes: "referral-codes",
+          orders: "referral-orders",
+          commissions: "referral-ledger",
+          payouts: "referral-payouts",
+          progress: "referral-bonus-progress",
+          achievements: "referral-bonus-history",
+        };
+        return !modules[tab.value] || can(modules[tab.value], "view");
+      }),
     [
       can,
       codeRows.length,
@@ -912,13 +960,15 @@ const ReferralPartnerDetails = () => {
         ]}
         actions={
           <div className="flex flex-wrap gap-2">
-            <PermissionGuard module="influencer-management" action="update"><button
-              type="button"
-              className="admin-btn-secondary"
-              onClick={openEditProfile}
-            >
-              <Pencil size={16} /> Edit profile
-            </button></PermissionGuard>
+            <PermissionGuard module="influencer-management" action="update">
+              <button
+                type="button"
+                className="admin-btn-secondary"
+                onClick={openEditProfile}
+              >
+                <Pencil size={16} /> Edit profile
+              </button>
+            </PermissionGuard>
           </div>
         }
       />
@@ -951,35 +1001,67 @@ const ReferralPartnerDetails = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            {[
-              ["firstName", "First name", true],
-              ["lastName", "Last name", false],
-              ["email", "Email", true],
-              ["phone", "Phone", false],
-            ].map(([name, label, required]) => (
-              <label
-                key={name}
-                className="block text-sm font-medium text-gray-700"
-              >
-                {label}
-                {required && <span className="ml-1 text-red-500">*</span>}
+            <FormInput
+              label="First name"
+              name="firstName"
+              type="text"
+              required
+              maxLength={80}
+              limitMessage="First name cannot exceed 80 characters"
+              value={profileFormik.values.firstName}
+              error={
+                profileFormik.touched.firstName &&
+                profileFormik.errors.firstName
+              }
+              onChange={profileFormik.handleChange}
+              onBlur={profileFormik.handleBlur}
+              disabled={loadingAction === "profile"}
+            />
 
-                <input
-                  type={name === "email" ? "email" : "text"}
-                  name={name}
-                  required={required}
-                  value={editForm[name]}
-                  onChange={(event) =>
-                    setEditForm((current) => ({
-                      ...current,
-                      [name]: event.target.value,
-                    }))
-                  }
-                  disabled={loadingAction === "profile"}
-                  className="mt-1.5 w-full rounded-md border border-[var(--admin-field-line)] bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
-                />
-              </label>
-            ))}
+            <FormInput
+              label="Last name"
+              name="lastName"
+              type="text"
+              required
+              maxLength={80}
+              limitMessage="Last name cannot exceed 80 characters"
+              value={profileFormik.values.lastName}
+              error={
+                profileFormik.touched.lastName && profileFormik.errors.lastName
+              }
+              onChange={profileFormik.handleChange}
+              onBlur={profileFormik.handleBlur}
+              disabled={loadingAction === "profile"}
+            />
+            <FormInput
+              label="Email"
+              name="email"
+              type="email"
+              required
+              value={profileFormik.values.email}
+              error={profileFormik.touched.email && profileFormik.errors.email}
+              onChange={profileFormik.handleChange}
+              onBlur={profileFormik.handleBlur}
+              disabled={loadingAction === "profile"}
+            />
+
+            <FormInput
+              label="Phone"
+              name="phone"
+              type="text"
+              inputMode="numeric"
+              value={profileFormik.values.phone}
+              error={profileFormik.touched.phone && profileFormik.errors.phone}
+              onChange={(event) => {
+                const value = event.target.value.replace(/\D/g, "");
+
+                if (value.length > 10) return;
+
+                profileFormik.setFieldValue("phone", value);
+              }}
+              onBlur={profileFormik.handleBlur}
+              disabled={loadingAction === "profile"}
+            />
           </div>
 
           <div className="flex justify-end gap-2 border-t border-gray-200 pt-4">
@@ -994,7 +1076,7 @@ const ReferralPartnerDetails = () => {
 
             <button
               type="submit"
-              className="admin-btn-primary"
+              className="button-primary-white"
               disabled={loadingAction === "profile"}
             >
               {loadingAction === "profile" ? (
@@ -1052,7 +1134,9 @@ const ReferralPartnerDetails = () => {
               { key: "status", label: "Status" },
               { key: "usage", label: "Usage" },
               { key: "created", label: "Created" },
-              ...(can("referral-codes", "update") ? [{ key: "actions", label: "Actions" }] : []),
+              ...(can("referral-codes", "update")
+                ? [{ key: "actions", label: "Actions" }]
+                : []),
             ]}
             data={codeRows}
             loading={detailLoading || Boolean(referralState.codesData?.loading)}
@@ -1118,7 +1202,7 @@ const ReferralPartnerDetails = () => {
         )}
 
         {activeTab === "commissions" && can("referral-ledger", "view") && (
-          <SharedDataTable
+          <DataTable
             columns={[
               { key: "type", label: "Type" },
               { key: "basis", label: "Basis" },
@@ -1130,8 +1214,11 @@ const ReferralPartnerDetails = () => {
               detailLoading || Boolean(referralState.commissionsData?.loading)
             }
             rowKey="key"
-            total={getBranchTotal(referralState.commissionsData)}
-            listPage={commissionsList}
+            totalCount={getBranchTotal(referralState.commissionsData)}
+            page={commissionsList.page}
+            pageSize={commissionsList.pageSize}
+            onPageChange={commissionsList.setPage}
+            onPageSizeChange={commissionsList.setPageSize}
             emptyText="No commission entries found."
           />
         )}
@@ -1191,34 +1278,35 @@ const ReferralPartnerDetails = () => {
           />
         )}
 
-        {activeTab === "achievements" && can("referral-bonus-history", "view") && (
-          <SharedDataTable
-            columns={[
-              { key: "rule", label: "Rule" },
-              { key: "cycle", label: "Cycle" },
-              { key: "bonus", label: "Bonus Coins" },
-              { key: "status", label: "Status" },
-              { key: "achievedAt", label: "Achieved At" },
-            ]}
-            data={bonusAchievements.map((achievement) => ({
-              key: getId(achievement),
-              rule: achievement.ruleName || "-",
-              cycle: achievement.cycleKey || "-",
-              bonus: `${Number(achievement.bonusCoins || 0).toLocaleString("en-IN")} coins`,
-              status: <StatusBadge status={achievement.status} size="sm" />,
-              achievedAt: formatDate(
-                achievement.achievedAt || achievement.createdAt,
-              ),
-            }))}
-            loading={
-              detailLoading ||
-              Boolean(referralState.bonusAchievementsData?.loading)
-            }
-            rowKey="key"
-            emptyText="No bonus achievements for this partner."
-            cardClassName="overflow-hidden"
-          />
-        )}
+        {activeTab === "achievements" &&
+          can("referral-bonus-history", "view") && (
+            <SharedDataTable
+              columns={[
+                { key: "rule", label: "Rule" },
+                { key: "cycle", label: "Cycle" },
+                { key: "bonus", label: "Bonus Coins" },
+                { key: "status", label: "Status" },
+                { key: "achievedAt", label: "Achieved At" },
+              ]}
+              data={bonusAchievements.map((achievement) => ({
+                key: getId(achievement),
+                rule: achievement.ruleName || "-",
+                cycle: achievement.cycleKey || "-",
+                bonus: `${Number(achievement.bonusCoins || 0).toLocaleString("en-IN")} coins`,
+                status: <StatusBadge status={achievement.status} size="sm" />,
+                achievedAt: formatDate(
+                  achievement.achievedAt || achievement.createdAt,
+                ),
+              }))}
+              loading={
+                detailLoading ||
+                Boolean(referralState.bonusAchievementsData?.loading)
+              }
+              rowKey="key"
+              emptyText="No bonus achievements for this partner."
+              cardClassName="overflow-hidden"
+            />
+          )}
 
         {activeTab === "verification" && (
           <div className="admin-card p-5">
@@ -1358,150 +1446,176 @@ const ReferralPartnerDetails = () => {
             <div className="flex flex-wrap gap-2.5">
               {(influencer?.kycStatus === "submitted" ||
                 influencer?.kycStatus === "rejected") && (
-                <PermissionGuard module="influencer-management" action="update"><button
-                  type="button"
-                  className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`}
-                  disabled={!!loadingAction}
-                  onClick={() => reviewVerification("kyc", "verified")}
-                >
-                  {loadingAction === "kyc_verified" ? (
-                    <Loader2
-                      aria-hidden="true"
-                      size={14}
-                      className="animate-spin"
-                    />
-                  ) : (
-                    <Check
-                      aria-hidden="true"
-                      size={14}
-                      className="stroke-[2.5]"
-                    />
-                  )}
-                  Approve KYC
-                </button></PermissionGuard>
+                <PermissionGuard module="influencer-management" action="update">
+                  <button
+                    type="button"
+                    className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`}
+                    disabled={!!loadingAction}
+                    onClick={() => reviewVerification("kyc", "verified")}
+                  >
+                    {loadingAction === "kyc_verified" ? (
+                      <Loader2
+                        aria-hidden="true"
+                        size={14}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <Check
+                        aria-hidden="true"
+                        size={14}
+                        className="stroke-[2.5]"
+                      />
+                    )}
+                    Approve KYC
+                  </button>
+                </PermissionGuard>
               )}
               {(influencer?.kycStatus === "submitted" ||
                 influencer?.kycStatus === "verified") && (
-                <PermissionGuard module="influencer-management" action="update"><button
-                  type="button"
-                  className={`${baseActionButtonClass} ${rejectedActionButtonClass}`}
-                  disabled={!!loadingAction}
-                  onClick={() => reviewVerification("kyc", "rejected")}
-                >
-                  {loadingAction === "kyc_rejected" ? (
-                    <Loader2
-                      aria-hidden="true"
-                      size={14}
-                      className="animate-spin"
-                    />
-                  ) : (
-                    <X aria-hidden="true" size={14} className="stroke-[2.5]" />
-                  )}
-                  Reject KYC
-                </button></PermissionGuard>
+                <PermissionGuard module="influencer-management" action="update">
+                  <button
+                    type="button"
+                    className={`${baseActionButtonClass} ${rejectedActionButtonClass}`}
+                    disabled={!!loadingAction}
+                    onClick={() => reviewVerification("kyc", "rejected")}
+                  >
+                    {loadingAction === "kyc_rejected" ? (
+                      <Loader2
+                        aria-hidden="true"
+                        size={14}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <X
+                        aria-hidden="true"
+                        size={14}
+                        className="stroke-[2.5]"
+                      />
+                    )}
+                    Reject KYC
+                  </button>
+                </PermissionGuard>
               )}
               {(influencer?.payoutProfileStatus === "submitted" ||
                 influencer?.payoutProfileStatus === "rejected") && (
-                <PermissionGuard module="influencer-management" action="update"><button
+                <PermissionGuard module="influencer-management" action="update">
+                  <button
+                    type="button"
+                    className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`}
+                    disabled={!!loadingAction}
+                    onClick={() => reviewVerification("bank", "verified")}
+                  >
+                    {loadingAction === "bank_verified" ? (
+                      <Loader2
+                        aria-hidden="true"
+                        size={14}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <Check
+                        aria-hidden="true"
+                        size={14}
+                        className="stroke-[2.5]"
+                      />
+                    )}
+                    Verify Bank
+                  </button>
+                </PermissionGuard>
+              )}
+              {(influencer?.payoutProfileStatus === "submitted" ||
+                influencer?.payoutProfileStatus === "verified") && (
+                <PermissionGuard module="influencer-management" action="update">
+                  <button
+                    type="button"
+                    className={`${baseActionButtonClass} ${rejectedActionButtonClass}`}
+                    disabled={!!loadingAction}
+                    onClick={() => reviewVerification("bank", "rejected")}
+                  >
+                    {loadingAction === "bank_rejected" ? (
+                      <Loader2
+                        aria-hidden="true"
+                        size={14}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <X
+                        aria-hidden="true"
+                        size={14}
+                        className="stroke-[2.5]"
+                      />
+                    )}
+                    Reject Bank
+                  </button>
+                </PermissionGuard>
+              )}
+              <PermissionGuard
+                module="influencer-management"
+                action="status_change"
+              >
+                <button
                   type="button"
-                  className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`}
+                  className={`${baseActionButtonClass} ${
+                    influencer?.status === "active"
+                      ? "border-amber-200 bg-white text-amber-700 hover:bg-amber-50 hover:border-amber-300 hover:shadow-xs"
+                      : verificationApproved
+                        ? approvedActionButtonClass
+                        : pendingApprovalButtonClass
+                  }`}
                   disabled={!!loadingAction}
-                  onClick={() => reviewVerification("bank", "verified")}
+                  onClick={updatePartnerStatus}
                 >
-                  {loadingAction === "bank_verified" ? (
+                  {loadingAction === "status" ? (
                     <Loader2
                       aria-hidden="true"
                       size={14}
                       className="animate-spin"
                     />
+                  ) : influencer?.status === "active" ? (
+                    <X aria-hidden="true" size={14} className="stroke-[2.5]" />
                   ) : (
                     <Check
                       aria-hidden="true"
+                      grid
+                      grid-cols-1
+                      gap-4
                       size={14}
                       className="stroke-[2.5]"
                     />
                   )}
-                  Verify Bank
-                </button></PermissionGuard>
-              )}
-              {(influencer?.payoutProfileStatus === "submitted" ||
-                influencer?.payoutProfileStatus === "verified") && (
-                <PermissionGuard module="influencer-management" action="update"><button
+                  {influencer?.status === "pending"
+                    ? "Approve account"
+                    : influencer?.status === "active"
+                      ? "Suspend partner"
+                      : "Reactivate partner"}
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="influencer-management" action="update">
+                <button
                   type="button"
-                  className={`${baseActionButtonClass} ${rejectedActionButtonClass}`}
+                  className={`${baseActionButtonClass} ${
+                    influencer?.canCreateChildren
+                      ? "border-orange-200 bg-white text-orange-700 hover:bg-orange-50 hover:border-orange-300 hover:shadow-xs"
+                      : "border-sky-200 bg-sky-50/70 text-sky-700 hover:bg-sky-100 hover:border-sky-300 hover:shadow-xs"
+                  }`}
                   disabled={!!loadingAction}
-                  onClick={() => reviewVerification("bank", "rejected")}
+                  onClick={togglePermission}
                 >
-                  {loadingAction === "bank_rejected" ? (
+                  {loadingAction === "permission" ? (
                     <Loader2
                       aria-hidden="true"
                       size={14}
                       className="animate-spin"
                     />
-                  ) : (
+                  ) : influencer?.canCreateChildren ? (
                     <X aria-hidden="true" size={14} className="stroke-[2.5]" />
+                  ) : (
+                    <UserPlus aria-hidden="true" size={14} />
                   )}
-                  Reject Bank
-                </button></PermissionGuard>
-              )}
-              <PermissionGuard module="influencer-management" action="status_change"><button
-                type="button"
-                className={`${baseActionButtonClass} ${
-                  influencer?.status === "active"
-                    ? "border-amber-200 bg-white text-amber-700 hover:bg-amber-50 hover:border-amber-300 hover:shadow-xs"
-                    : verificationApproved
-                      ? approvedActionButtonClass
-                      : pendingApprovalButtonClass
-                }`}
-                disabled={!!loadingAction}
-                onClick={updatePartnerStatus}
-              >
-                {loadingAction === "status" ? (
-                  <Loader2
-                    aria-hidden="true"
-                    size={14}
-                    className="animate-spin"
-                  />
-                ) : influencer?.status === "active" ? (
-                  <X aria-hidden="true" size={14} className="stroke-[2.5]" />
-                ) : (
-                  <Check
-                    aria-hidden="true"
-                    size={14}
-                    className="stroke-[2.5]"
-                  />
-                )}
-                {influencer?.status === "pending"
-                  ? "Approve account"
-                  : influencer?.status === "active"
-                    ? "Suspend partner"
-                    : "Reactivate partner"}
-              </button></PermissionGuard>
-              <PermissionGuard module="influencer-management" action="update"><button
-                type="button"
-                className={`${baseActionButtonClass} ${
-                  influencer?.canCreateChildren
-                    ? "border-orange-200 bg-white text-orange-700 hover:bg-orange-50 hover:border-orange-300 hover:shadow-xs"
-                    : "border-sky-200 bg-sky-50/70 text-sky-700 hover:bg-sky-100 hover:border-sky-300 hover:shadow-xs"
-                }`}
-                disabled={!!loadingAction}
-                onClick={togglePermission}
-              >
-                {loadingAction === "permission" ? (
-                  <Loader2
-                    aria-hidden="true"
-                    size={14}
-                    className="animate-spin"
-                  />
-                ) : influencer?.canCreateChildren ? (
-                  <X aria-hidden="true" size={14} className="stroke-[2.5]" />
-                ) : (
-                  <UserPlus aria-hidden="true" size={14} />
-                )}
-                {influencer?.canCreateChildren
-                  ? "Revoke child creation"
-                  : "Grant child creation"}
-              </button></PermissionGuard>
+                  {influencer?.canCreateChildren
+                    ? "Revoke child creation"
+                    : "Grant child creation"}
+                </button>
+              </PermissionGuard>
               {influencer?.childRegistration?.shareable && (
                 <button
                   type="button"
@@ -1516,23 +1630,25 @@ const ReferralPartnerDetails = () => {
                 influencer?.influencerType === "parent" &&
                 influencer?.canCreateChildren
               ) && (
-                <PermissionGuard module="influencer-management" action="update"><button
-                  type="button"
-                  className={`${baseActionButtonClass} border-violet-200 bg-white text-violet-700 hover:bg-violet-50 hover:border-violet-300 hover:shadow-xs`}
-                  disabled={!!loadingAction}
-                  onClick={promotePartner}
-                >
-                  {loadingAction === "promote" ? (
-                    <Loader2
-                      aria-hidden="true"
-                      size={14}
-                      className="animate-spin"
-                    />
-                  ) : (
-                    <GitBranch aria-hidden="true" size={14} />
-                  )}
-                  Promote to Growth Partner
-                </button></PermissionGuard>
+                <PermissionGuard module="influencer-management" action="update">
+                  <button
+                    type="button"
+                    className={`${baseActionButtonClass} border-violet-200 bg-white text-violet-700 hover:bg-violet-50 hover:border-violet-300 hover:shadow-xs`}
+                    disabled={!!loadingAction}
+                    onClick={promotePartner}
+                  >
+                    {loadingAction === "promote" ? (
+                      <Loader2
+                        aria-hidden="true"
+                        size={14}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <GitBranch aria-hidden="true" size={14} />
+                    )}
+                    Promote to Growth Partner
+                  </button>
+                </PermissionGuard>
               )}
             </div>
           </div>
@@ -1541,42 +1657,83 @@ const ReferralPartnerDetails = () => {
 
       <DefaultModal
         isOpen={Boolean(editingCode) && can("referral-codes", "update")}
-        onClose={() => { if (loadingAction !== "code-limit") setEditingCode(null); }}
+        onClose={() => {
+          if (loadingAction !== "code-limit") setEditingCode(null);
+        }}
         title="Edit referral code limit"
-        onSubmit={() => document.getElementById("edit-code-limit-form")?.requestSubmit()}
+        onSubmit={() =>
+          document.getElementById("edit-code-limit-form")?.requestSubmit()
+        }
         submitButtonText="Save limit"
         loading={loadingAction === "code-limit"}
       >
-        <form id="edit-code-limit-form" className="space-y-4" onSubmit={async (event) => {
-          event.preventDefault();
-          if (!editingCode || !can("referral-codes", "update") || loadingAction === "code-limit") return;
-          const usageLimit = codeLimit === "" ? null : Number(codeLimit);
-          if (usageLimit !== null && (!Number.isSafeInteger(usageLimit) || usageLimit < Math.max(1, Number(editingCode.usageCount || 0)))) {
-            toast.error("Limit must be a whole number at least equal to current usage, or blank for unlimited.");
-            return;
-          }
-          setLoadingAction("code-limit");
-          try {
-            await dispatch(updateReferralCode({ codeId: getId(editingCode), usageLimit })).unwrap();
-            await refreshPartner(dispatch, id, can);
-            setEditingCode(null);
-            toast.success("Referral code limit updated");
-          } catch (error) {
-            toast.error(error?.message || error || "Unable to update referral code limit");
-          } finally { setLoadingAction(null); }
-        }}>
-          <p>{editingCode?.code} · Used {editingCode?.usageCount || 0} times</p>
-          <label className="admin-label" htmlFor="referral-code-limit">Total usage limit</label>
-          <input id="referral-code-limit" className="admin-input" type="number" step="1"
+        <form
+          id="edit-code-limit-form"
+          className="space-y-4"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (
+              !editingCode ||
+              !can("referral-codes", "update") ||
+              loadingAction === "code-limit"
+            )
+              return;
+            const usageLimit = codeLimit === "" ? null : Number(codeLimit);
+            if (
+              usageLimit !== null &&
+              (!Number.isSafeInteger(usageLimit) ||
+                usageLimit < Math.max(1, Number(editingCode.usageCount || 0)))
+            ) {
+              toast.error(
+                "Limit must be a whole number at least equal to current usage, or blank for unlimited.",
+              );
+              return;
+            }
+            setLoadingAction("code-limit");
+            try {
+              await dispatch(
+                updateReferralCode({ codeId: getId(editingCode), usageLimit }),
+              ).unwrap();
+              await refreshPartner(dispatch, id, can);
+              setEditingCode(null);
+              toast.success("Referral code limit updated");
+            } catch (error) {
+              toast.error(
+                error?.message ||
+                  error ||
+                  "Unable to update referral code limit",
+              );
+            } finally {
+              setLoadingAction(null);
+            }
+          }}
+        >
+          <p>
+            {editingCode?.code} · Used {editingCode?.usageCount || 0} times
+          </p>
+          <label className="admin-label" htmlFor="referral-code-limit">
+            Total usage limit
+          </label>
+          <input
+            id="referral-code-limit"
+            className="admin-input"
+            type="number"
+            step="1"
             min={Math.max(1, Number(editingCode?.usageCount || 0))}
-            value={codeLimit} onChange={(event) => setCodeLimit(event.target.value)}
-            disabled={loadingAction === "code-limit"} />
-          <p className="text-sm text-[var(--admin-muted)]">Leave blank for unlimited usage. Existing usage is preserved.</p>
+            value={codeLimit}
+            onChange={(event) => setCodeLimit(event.target.value)}
+            disabled={loadingAction === "code-limit"}
+          />
+          <p className="text-sm text-[var(--admin-muted)]">
+            Leave blank for unlimited usage. Existing usage is preserved.
+          </p>
         </form>
       </DefaultModal>
 
       <VerificationDecisionModal
-        isOpen={verificationModal.open && can("influencer-management", "update")}
+        isOpen={
+          verificationModal.open && can("influencer-management", "update")
+        }
         onClose={() =>
           setVerificationModal((current) => ({ ...current, open: false }))
         }

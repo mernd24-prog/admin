@@ -352,6 +352,46 @@ export const parentInfluencerValidationSchema = Yup.object({
     ),
 });
 
+export const referralPartnerEditProfileValidationSchema = Yup.object({
+  firstName: Yup.string()
+    .trim()
+    .required("First name is required.")
+    .min(2, "First name must be at least 2 characters.")
+    .max(80, "First name cannot exceed 80 characters.")
+    .matches(/^[\p{L}\s'-]+$/u, "First name contains invalid characters."),
+
+  lastName: Yup.string()
+    .trim()
+    .required("Last name is required.")
+    .min(2, "Last name must be at least 2 characters.")
+    .max(80, "Last name cannot exceed 80 characters."),
+
+  email: Yup.string()
+    .trim()
+    .required("Email is required.")
+    .email("Please enter a valid email address."),
+
+  phone: Yup.string()
+    .trim()
+    .transform((value) => (value === "" ? undefined : value))
+    .notRequired()
+    .matches(/^[6-9][0-9]{9}$/, "Enter a valid 10 digit mobile number"),
+});
+
+export const sendNotificationValidationSchema = Yup.object({
+  userId: Yup.string().trim().required("Recipient User ID is required."),
+
+  template: Yup.string().required("Template is required."),
+
+  subject: Yup.string()
+    .trim()
+    .max(100, "Subject cannot exceed 100 characters."),
+
+  message: Yup.string()
+    .trim()
+    .max(1000, "Message cannot exceed 1000 characters."),
+});
+
 export const brandAssociateValidationSchema =
   parentInfluencerValidationSchema.shape({
     parentId: Yup.string().required("Growth Partner is required"),
@@ -461,7 +501,9 @@ const returnEvidenceUrlsValidation = ({ required = false } = {}) => {
           .every(isValidHttpTrackingUrl),
     );
 
-  return required ? schema.required("Upload or enter at least one evidence URL.") : schema.notRequired();
+  return required
+    ? schema.required("Upload or enter at least one evidence URL.")
+    : schema.notRequired();
 };
 
 export const shipmentTrackingActionValidationSchema = Yup.object({
@@ -770,28 +812,22 @@ export const returnQualityControlValidationSchema = Yup.object({
         .typeError("QC quantity must be a number.")
         .required("QC quantity is required.")
         .integer("QC quantity must be a whole number.")
-        .min(
-          1,
-          "QC quantity must be between 1 and the received quantity.",
-        )
-        .test(
-          "qc-quantity-maximum",
-          function (value) {
-            if (value === undefined || value === null) return true;
-            const maximum = Number(
-              this.parent.receivedQuantity ||
-                this.parent.approvedQuantity ||
-                this.parent.quantity ||
-                0,
-            );
-            return (
-              value <= maximum ||
-              this.createError({
-                message: `QC quantity must be between 1 and ${maximum}.`,
-              })
-            );
-          },
-        ),
+        .min(1, "QC quantity must be between 1 and the received quantity.")
+        .test("qc-quantity-maximum", function (value) {
+          if (value === undefined || value === null) return true;
+          const maximum = Number(
+            this.parent.receivedQuantity ||
+              this.parent.approvedQuantity ||
+              this.parent.quantity ||
+              0,
+          );
+          return (
+            value <= maximum ||
+            this.createError({
+              message: `QC quantity must be between 1 and ${maximum}.`,
+            })
+          );
+        }),
       result: Yup.string()
         .oneOf(
           ["sellable", "damaged", "missing", "rejected"],
