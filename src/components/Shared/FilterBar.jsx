@@ -16,7 +16,6 @@ import {
 } from "react-icons/md";
 import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
 import DateRangePickerModal from "./DateRangePickerModal";
-import { RxCross2 } from "react-icons/rx";
 
 /**
  * FilterBar
@@ -696,9 +695,20 @@ export const DateRangeFilter = ({
             disabled={loading}
             aria-label="Clear date range"
             title="Clear date range"
-            className="absolute right-8 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-gray-300 hover:text-gray-600 transition-colors   disabled:cursor-not-allowed disabled:opacity-50"
+            className="absolute right-8 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center text-[#cccccc] transition-colors hover:text-[#999999] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <RxCross2 size={16} />
+            <svg
+              aria-hidden="true"
+              height="20"
+              width="20"
+              viewBox="0 0 20 20"
+              focusable="false"
+            >
+              <path
+                d="M14.348 14.849c-.469.469-1.229.469-1.697 0L10 11.819l-2.651 3.029c-.469.469-1.229.469-1.697 0-.469-.469-.469-1.229 0-1.697l2.758-3.15-2.759-3.152c-.469-.469-.469-1.228 0-1.697s1.228-.469 1.697 0L10 8.183l2.651-3.031c.469-.469 1.228-.469 1.697 0s.469 1.229 0 1.697l-2.758 3.152 2.758 3.15c.469.469.469 1.229 0 1.698z"
+                fill="currentColor"
+              />
+            </svg>
           </button>
         )}
       </div>

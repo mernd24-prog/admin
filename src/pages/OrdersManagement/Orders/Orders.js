@@ -28,7 +28,7 @@ import {
 
 import { ACTIONS, usePermission } from "../../../_helpers/usePermission";
 
-import { getOrderList } from "../../../Redux/orderSlice";
+import { getOrderInfo, getOrderList } from "../../../Redux/orderSlice";
 import { useListPage } from "../../../hooks/useListPage";
 
 import {
@@ -195,6 +195,15 @@ const normalizeJson = (value, fallback = {}) => {
   }
 };
 
+const orderItemsOf = (order = {}) => {
+  const candidates = [order.items, order.orderItems, order.order_items];
+  return (
+    candidates.find((items) => Array.isArray(items) && items.length) ||
+    candidates.find(Array.isArray) ||
+    []
+  );
+};
+
 /* =========================================================
    SELLER HELPERS
 ========================================================= */
@@ -330,13 +339,13 @@ const sellerIdentitiesOf = (row = {}) => {
           group.organization,
         {},
       );
-      const sellerName = firstDefined(
-        group.sellerName,
-        sellerNameOf(
-          normalizeJson(group.sellerSnapshot || group.seller_snapshot, {}),
-        ),
-        sellerNameOf(seller),
-      );
+     const sellerName = firstDefined(
+  sellerNameOf(seller),
+  sellerNameOf(
+    normalizeJson(group.sellerSnapshot || group.seller_snapshot, {}),
+  ),
+  group.sellerName,
+);
       return {
         sellerId: firstDefined(sellerId, seller.id, seller._id),
         organizationId,
@@ -355,6 +364,7 @@ const sellerIdentitiesOf = (row = {}) => {
     });
 };
 
+
 const buyerDisplayName = (...values) =>
   values.find(
     (value) =>
@@ -369,8 +379,9 @@ const buyerDisplayName = (...values) =>
 ========================================================= */
 
 const countItems = (row = {}) => {
-  if (Array.isArray(row.items)) {
-    return row.items.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
+  const items = orderItemsOf(row);
+  if (items.length) {
+    return items.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
   }
 
   const groups = sellerGroupsOf(row);
@@ -789,8 +800,12 @@ const excelNumber = (value) => {
 
 const productNameOf = (item = {}) =>
   firstDefined(
+    item.product_title,
+    item.productTitle,
     item.productName,
     item.product_name,
+    normalizeJson(firstDefined(item.product_snapshot, item.productSnapshot), {})
+      .title,
     item.product?.name,
     item.product?.title,
     item.name,
@@ -802,20 +817,45 @@ const skuOf = (item = {}) =>
   firstDefined(
     item.variantSku,
     item.variant_sku,
+    item.product_sku,
     item.sku,
+    normalizeJson(firstDefined(item.product_snapshot, item.productSnapshot), {})
+      .sku,
     item.variant?.sku,
     "—",
   );
 
-const variantNameOf = (item = {}) =>
-  firstDefined(
+const variantNameOf = (item = {}) => {
+  const directName = firstDefined(
+    item.variant_title,
+    item.variantTitle,
     item.variantName,
     item.variant_name,
+    normalizeJson(firstDefined(item.product_snapshot, item.productSnapshot), {})
+      .variantTitle,
+    normalizeJson(firstDefined(item.product_snapshot, item.productSnapshot), {})
+      .variant_title,
     item.variant?.name,
     item.variantTitle,
     item.variant_title,
-    "—",
   );
+  if (directName) return directName;
+
+  const attributes = normalizeJson(
+    firstDefined(
+      item.attributes,
+      item.variant_attributes,
+      item.variantAttributes,
+    ),
+    {},
+  );
+  const attributeLabel = Object.entries(attributes)
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(" · ");
+
+  return attributeLabel || "—";
+};
 
 const itemAmountOf = (item = {}) =>
   firstDefined(
@@ -912,9 +952,9 @@ const buildExportFilename = (fromDate, toDate) => {
 /* =========================================================
    EXPORT SELLER INFO
 ========================================================= */
-
 const sellerExportInfo = (order = {}) => {
   const identities = sellerIdentitiesOf(order);
+
   return {
     sellerName: identities
       .map((identity) => identity.sellerName || "—")
@@ -1144,7 +1184,7 @@ const buildOrderExportData = (orders = [], filters = {}) => {
   const detailRows = orders.flatMap((order, orderIndex) => {
     const seller = sellerExportInfo(order);
 
-    const items = Array.isArray(order.items) ? order.items : [];
+    const items = orderItemsOf(order);
 
     /*
      * Normalize pricingSummary because
@@ -1158,11 +1198,11 @@ const buildOrderExportData = (orders = [], filters = {}) => {
       : {};
 
     const base = {
-      serialNumber: orderIndex + 1,
-
       orderNumber: firstDefined(order.order_number, order.orderNumber, "—"),
 
-      orderDate: excelDate(firstDefined(order.created_at, order.createdAt)),
+      orderDate: formatDateTime12Hour(
+        firstDefined(order.created_at, order.createdAt),
+      ),
 
       buyer: buyerNameOf(order),
 
@@ -1296,6 +1336,7 @@ const Orders = () => {
     defaultSortDir: "desc",
     defaultFilters: getInitialQueryFilters(),
   });
+  const [exportLoading, setExportLoading] = useState(false);
 
   const { toQueryParams } = list;
 
@@ -1516,54 +1557,51 @@ const Orders = () => {
         ],
       },
 
-      {
-        name: "Order Details",
+     {
+  name: "Order Details",
+  title: "Order Details",
+  data: detailRows,
+  columns: [
+    {
+      key: "orderNumber",
+      label: "Order #",
+    },
+    {
+      key: "orderDate",
+      label: "Order Date",
+    },
+    {
+      key: "buyerEmail",
+      label: "Buyer Email",
+    },
+    {
+      key: "productName",
+      label: "Product Name",
+    },
+    {
+      key: "sku",
+      label: "SKU",
+    },
+    {
+      key: "variant",
+      label: "Variant",
+    },
+    {
+      key: "quantity",
+      label: "Quantity",
+    },
+    {
+      key: "productAmount",
+      label: "Product Amount",
+    },
+    {
+      key: "taxAmount",
+      label: "Tax Amount",
+    },
 
-        title: "Order Details",
-
-        data: detailRows,
-
-        columns: [
-          {
-            key: "serialNumber",
-            label: "S.No",
-          },
-          {
-            key: "orderNumber",
-            label: "Order #",
-          },
-          {
-            key: "orderDate",
-            label: "Order Date",
-          },
-          {
-            key: "buyerEmail",
-            label: "Buyer Email",
-          },
-          {
-            key: "productName",
-            label: "Product Name",
-          },
-          {
-            key: "sku",
-            label: "SKU",
-          },
-          {
-            key: "variant",
-            label: "Variant",
-          },
-          {
-            key: "quantity",
-            label: "Quantity",
-          },
-          {
-            key: "productAmount",
-            label: "Product Amount",
-          },
-          {
-            key: "taxAmount",
-            label: "Tax Amount",
-          },
+    // Show Seller and Organization only in Admin panel
+    ...(isAdmin
+      ? [
           {
             key: "seller",
             label: "Seller",
@@ -1572,48 +1610,81 @@ const Orders = () => {
             key: "organization",
             label: "Organization",
           },
-          {
-            key: "sellerCommission",
-            label: "Seller Commission",
-          },
-          {
-            key: "sellerPayout",
-            label: "Seller Payout",
-          },
-          {
-            key: "paymentType",
-            label: "Payment Type",
-          },
-          {
-            key: "paymentStatus",
-            label: "Payment Status",
-          },
-          {
-            key: "orderStatus",
-            label: "Order Status",
-          },
-          {
-            key: "shipmentStatus",
-            label: "Shipment Status",
-          },
-        ],
-      },
+        ]
+      : []),
+
+    {
+      key: "sellerCommission",
+      label: isAdmin ? "Seller Commission" : "Commission",
+    },
+    {
+      key: "sellerPayout",
+      label: isAdmin ? "Seller Payout" : "Payout",
+    },
+    {
+      key: "paymentType",
+      label: "Payment Type",
+    },
+    {
+      key: "paymentStatus",
+      label: "Payment Status",
+    },
+    {
+      key: "orderStatus",
+      label: "Order Status",
+    },
+    {
+      key: "shipmentStatus",
+      label: "Shipment Status",
+    },
+  ],
+},
     ],
-    [summaryRows, detailRows],
+  [summaryRows, detailRows, isAdmin],
   );
 
   /* =====================================================
      EXPORT HANDLER
   ===================================================== */
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!displayItems.length) {
       toast.info("No orders available to export.");
       return;
     }
 
+    if (exportLoading) return;
+
+    setExportLoading(true);
     try {
-      const exported = exportToExcelWorkbook(exportExcelSheets, exportFilename);
+      // The list endpoint may return only item counts. Fetch full order details
+      // for those rows so the workbook can include each product's SKU/variant.
+      const exportOrders = await Promise.all(
+        displayItems.map(async (order) => {
+          if (orderItemsOf(order).length) return order;
+
+          const orderId = orderIdOf(order);
+          if (!orderId) return order;
+
+          const response = await dispatch(getOrderInfo({ orderId })).unwrap();
+          const detail =
+            response?.data?.data?.order ||
+            response?.data?.order ||
+            response?.data?.data ||
+            response?.data;
+          return detail && typeof detail === "object"
+            ? { ...order, ...detail }
+            : order;
+        }),
+      );
+      const { summaryRows: exportSummaryRows, detailRows: exportDetailRows } =
+        buildOrderExportData(exportOrders, list.filters);
+      const sheets = exportExcelSheets.map((sheet) =>
+        sheet.name === "Order Summary"
+          ? { ...sheet, data: exportSummaryRows }
+          : { ...sheet, data: exportDetailRows },
+      );
+      const exported = exportToExcelWorkbook(sheets, exportFilename);
 
       if (exported) {
         toast.success("Orders report exported successfully.");
@@ -1622,8 +1693,9 @@ const Orders = () => {
       }
     } catch (error) {
       console.error("Orders export error:", error);
-
-      toast.error("Failed to export orders report.");
+      toast.error(error?.message || "Failed to export orders report.");
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -1756,7 +1828,7 @@ const Orders = () => {
         exportConfig={{
           onClick: handleExport,
           label: "Export",
-          disabled: loading || !displayItems.length,
+          disabled: loading || exportLoading || !displayItems.length,
         }}
         pageSize={list.pageSize}
         onPageChange={list.setPage}
