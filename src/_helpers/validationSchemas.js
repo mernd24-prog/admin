@@ -461,7 +461,9 @@ const returnEvidenceUrlsValidation = ({ required = false } = {}) => {
           .every(isValidHttpTrackingUrl),
     );
 
-  return required ? schema.required("Upload or enter at least one evidence URL.") : schema.notRequired();
+  return required
+    ? schema.required("Upload or enter at least one evidence URL.")
+    : schema.notRequired();
 };
 
 export const shipmentTrackingActionValidationSchema = Yup.object({
@@ -770,28 +772,22 @@ export const returnQualityControlValidationSchema = Yup.object({
         .typeError("QC quantity must be a number.")
         .required("QC quantity is required.")
         .integer("QC quantity must be a whole number.")
-        .min(
-          1,
-          "QC quantity must be between 1 and the received quantity.",
-        )
-        .test(
-          "qc-quantity-maximum",
-          function (value) {
-            if (value === undefined || value === null) return true;
-            const maximum = Number(
-              this.parent.receivedQuantity ||
-                this.parent.approvedQuantity ||
-                this.parent.quantity ||
-                0,
-            );
-            return (
-              value <= maximum ||
-              this.createError({
-                message: `QC quantity must be between 1 and ${maximum}.`,
-              })
-            );
-          },
-        ),
+        .min(1, "QC quantity must be between 1 and the received quantity.")
+        .test("qc-quantity-maximum", function (value) {
+          if (value === undefined || value === null) return true;
+          const maximum = Number(
+            this.parent.receivedQuantity ||
+              this.parent.approvedQuantity ||
+              this.parent.quantity ||
+              0,
+          );
+          return (
+            value <= maximum ||
+            this.createError({
+              message: `QC quantity must be between 1 and ${maximum}.`,
+            })
+          );
+        }),
       result: Yup.string()
         .oneOf(
           ["sellable", "damaged", "missing", "rejected"],
@@ -1590,7 +1586,8 @@ export const sellerHelpSupportValidationSchema = Yup.object({
       schema
         .trim()
         .required("Product number or ID is required.")
-        .min(1, "Product number or ID is required.")
+        .min(3, "Product ID must be at least 3 characters.")
+        .max(100, "Product ID must be at most 100 characters.")
         .test(
           "valid-product-id",
           "Enter a valid product ID.",
