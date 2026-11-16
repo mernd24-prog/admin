@@ -427,11 +427,21 @@ const DataTable = ({
     );
   };
 
+  const hasRowActions =
+    typeof rowActions === "function" &&
+    safeData.some((row) => {
+      const actionsForRow = rowActions(row);
+      return (
+        Array.isArray(actionsForRow) &&
+        actionsForRow.some((action) => action && action.hidden !== true)
+      );
+    });
+
   const colCount =
     safeColumns.length +
     (shouldShowSerialNumber ? 1 : 0) +
     (selectable ? 1 : 0) +
-    (rowActions ? 1 : 0);
+    (hasRowActions ? 1 : 0);
 
   const tools = (
     <>
@@ -604,7 +614,7 @@ const DataTable = ({
                 </th>
               ))}
 
-              {rowActions && (
+              {hasRowActions && (
                 <th className="w-24 whitespace-nowrap px-4 py-3 pr-8 text-right text-xs font-semibold text-[var(--admin-navy)]">
                   ACTIONS
                 </th>
@@ -727,7 +737,9 @@ const DataTable = ({
                         }`}
                       >
                         {col.format === false
-                          ? (col.render ? col.render(row[col.key], row, index) : row[col.key])
+                          ? col.render
+                            ? col.render(row[col.key], row, index)
+                            : row[col.key]
                           : renderCellValue(
                               col.render
                                 ? col.render(row[col.key], row, index)
@@ -737,7 +749,7 @@ const DataTable = ({
                     </td>
                   ))}
 
-                  {rowActions && (
+                  {hasRowActions && (
                     <td className="w-24 px-4 py-3 pr-8 align-middle">
                       <div className="flex h-full items-center justify-end">
                         <RowActionsMenu

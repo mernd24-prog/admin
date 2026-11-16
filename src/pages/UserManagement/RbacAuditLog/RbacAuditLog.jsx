@@ -1,10 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-  DataTable,
-  FilterBar,
-  PageHeader,
-} from "../../../components/Shared";
+import { DataTable, FilterBar, PageHeader } from "../../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
 
@@ -19,17 +15,6 @@ const ACTION_COLORS = {
   force_logout: "bg-pink-100 text-pink-700",
   copy_permissions: "bg-indigo-100 text-indigo-700",
 };
-
-const ACTION_OPTIONS = [
-  { value: "", label: "All actions" },
-  { value: "grant", label: "Grant" },
-  { value: "revoke", label: "Revoke" },
-  { value: "role_assign", label: "Role Assign" },
-  { value: "role_remove", label: "Role Remove" },
-  { value: "template_apply", label: "Template Apply" },
-  { value: "force_logout", label: "Force Logout" },
-  { value: "copy_permissions", label: "Copy Permissions" },
-];
 
 const EMPTY_FILTERS = {
   targetUserId: "",
@@ -55,7 +40,7 @@ const FILTER_FIELDS = [
     type: "select",
     label: "Action",
     placeholder: "All actions",
-    options: ACTION_OPTIONS,
+    options: [],
     isSearchable: false,
   },
   {
@@ -113,32 +98,35 @@ const RbacAuditLog = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [filters, setFilters] = useState(EMPTY_FILTERS);
-  const [search, setSearch] = useState("");
+  const [actions, setActions] = useState([]);
   const [expanded, setExpanded] = useState(null);
 
   const load = useCallback(
     async (currentPage = 1) => {
       setLoading(true);
+      setError("");
       try {
         const params = { page: currentPage, limit: PAGE_SIZE };
         Object.entries(filters).forEach(([key, value]) => {
           if (value) params[key] = value;
         });
-        if (search) params.search = search;
         const response = await axiosProvider.get("/rbac/audit-logs", {
           params,
         });
         const data = response.data?.data || {};
         setItems(data.items || []);
         setTotal(data.total || 0);
+        setActions(Array.isArray(data.actions) ? data.actions : []);
       } catch {
+        setError("Unable to load audit logs. Refresh to try again.");
         toast.error("Failed to load audit logs");
       } finally {
         setLoading(false);
       }
     },
-    [filters, search],
+    [filters],
   );
 
   useEffect(() => {
@@ -173,7 +161,11 @@ const RbacAuditLog = () => {
           </span>
         ),
       },
-      { key: "actor", label: "Actor", render: (_, row) => personCell(row, "actor") },
+      {
+        key: "actor",
+        label: "Actor",
+        render: (_, row) => personCell(row, "actor"),
+      },
       {
         key: "targetUser",
         label: "Target User",
@@ -238,7 +230,7 @@ const RbacAuditLog = () => {
     <div className="space-y-6">
       <PageHeader
         title="RBAC Audit Log"
-        subtitle="Track all permission grants, revocations, role changes, and force logouts"
+        subtitle="Review access changes within your permitted hierarchy"
         breadcrumbs={[{ label: "Users & Access" }, { label: "RBAC Audit Log" }]}
       />
 
@@ -249,18 +241,28 @@ const RbacAuditLog = () => {
         page={page}
         pageSize={PAGE_SIZE}
         loading={loading}
+        error={error}
+        onRefresh={() => load(page)}
         onPageChange={(nextPage) => {
           setPage(nextPage);
           load(nextPage);
         }}
-        onSearch={setSearch}
-        searchPlaceholder="Search audit logs…"
         rowKey={(row) => row.id}
         showSerialNumber={false}
         emptyMessage="No audit log entries found"
         filterBar={
           <FilterBar
-            fields={FILTER_FIELDS}
+            fields={FILTER_FIELDS.map((field) =>
+              field.key === "action"
+                ? {
+                    ...field,
+                    options: actions.map((action) => ({
+                      value: action,
+                      label: action.replace(/_/g, " "),
+                    })),
+                  }
+                : field,
+            )}
             values={filters}
             loading={loading}
             onChange={(key, value) =>

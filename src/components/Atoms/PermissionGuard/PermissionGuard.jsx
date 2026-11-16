@@ -14,7 +14,6 @@ import { usePermission } from "../../../_helpers/usePermission";
  *   fallback {React.ReactNode} — what to render when access is denied (default: null)
  *   hide     {boolean}         — if true, renders nothing on deny instead of fallback
  *   scope    {"any"|"platform"|"seller"} — required data/tenant scope
- *   allowSeller {boolean}      — legacy seller self-service override
  *
  * Examples:
  *   <PermissionGuard module="products" action="create">
@@ -33,12 +32,11 @@ const PermissionGuard = ({
   fallback = null,
   hide = false,
   scope = "any",
-  allowSeller = false,
   children,
 }) => {
-  const { can, canAny, canAll, canAccess, isSeller } = usePermission();
+  const { can, canAny, canAll, canAccess } = usePermission();
 
-  let allowed = allowSeller && isSeller;
+  let allowed = false;
 
   if (!allowed && scope !== "any") {
     const requestedActions = allOf?.length

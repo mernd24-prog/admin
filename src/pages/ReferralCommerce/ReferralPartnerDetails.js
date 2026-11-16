@@ -1,3 +1,5 @@
+import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
+import { usePermission } from "../../_helpers/usePermission";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -28,6 +30,7 @@ import {
   getReferralBonusProgress,
   getReferralBrandAssociates,
   getReferralCodes,
+  updateReferralCode,
   getReferralCommissions,
   getReferralInfluencers,
   getReferralOrders,
@@ -204,17 +207,16 @@ const CopyableValue = ({ value }) => (
   </span>
 );
 
-const refreshPartner = (dispatch, id) => {
-  dispatch(getReferralInfluencers({ page: 1, limit: 200, influencerId: id }));
-  dispatch(getReferralCodes({ page: 1, limit: 200, influencerId: id }));
-  dispatch(getReferralOrders({ page: 1, limit: 200, influencerId: id }));
-  dispatch(getReferralCommissions({ page: 1, limit: 200, influencerId: id }));
-  dispatch(getReferralPayouts({ page: 1, limit: 200, influencerId: id }));
-  dispatch(getReferralBonusProgress({ page: 1, limit: 200, influencerId: id }));
-  dispatch(
-    getReferralBonusAchievements({ page: 1, limit: 200, influencerId: id }),
-  );
-};
+const refreshPartner = (dispatch, id, can) => Promise.all([
+  [getReferralInfluencers, "influencer-management"],
+  [getReferralCodes, "referral-codes"],
+  [getReferralOrders, "referral-orders"],
+  [getReferralCommissions, "referral-ledger"],
+  [getReferralPayouts, "referral-payouts"],
+  [getReferralBonusProgress, "referral-bonus-progress"],
+  [getReferralBonusAchievements, "referral-bonus-history"],
+].map(([action, module]) => can(module, "view")
+  ? dispatch(action({ page: 1, limit: 200, influencerId: id })) : Promise.resolve()));
 
 const partnerTypeLabel = (value) =>
   value === "parent"
@@ -298,6 +300,7 @@ const ReferralPartnerDetailsSkeleton = ({ onBack }) => (
 );
 
 const ReferralPartnerDetails = () => {
+  const { can, permMap } = usePermission();
   const dispatch = useDispatch();
   const location = useLocation();
   const navigate = useNavigate();
@@ -310,6 +313,8 @@ const ReferralPartnerDetails = () => {
   const [loadedDetailId, setLoadedDetailId] = useState(null);
   const [loadingAction, setLoadingAction] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [editingCode, setEditingCode] = useState(null);
+  const [codeLimit, setCodeLimit] = useState("");
   const [editForm, setEditForm] = useState({
     firstName: "",
     lastName: "",
@@ -389,6 +394,7 @@ const ReferralPartnerDetails = () => {
   };
 
   const openEditProfile = () => {
+    if (!can("influencer-management", "update")) return;
     const user = influencer?.user || {};
     setEditForm({
       firstName: user.profile?.firstName || "",
@@ -401,6 +407,7 @@ const ReferralPartnerDetails = () => {
 
   const saveProfile = async (event) => {
     event.preventDefault();
+    if (!can("influencer-management", "update")) return;
     if (!editForm.firstName.trim() || !editForm.email.trim()) {
       toast.error("First name and email are required");
       return;
@@ -415,7 +422,7 @@ const ReferralPartnerDetails = () => {
       ).unwrap();
       toast.success("Referral partner profile updated");
       setEditOpen(false);
-      refreshPartner(dispatch, id);
+      refreshPartner(dispatch, id, can);
     } catch (error) {
       toast.error(error || "Unable to update referral partner");
     } finally {
@@ -431,29 +438,15 @@ const ReferralPartnerDetails = () => {
     if (!id) return;
 
     setLoadedDetailId(null);
-    Promise.all([
-      dispatch(
-        getReferralInfluencers({ page: 1, limit: 200, influencerId: id }),
-      ),
-      dispatch(getReferralCodes({ page: 1, limit: 200, influencerId: id })),
-      dispatch(getReferralOrders({ page: 1, limit: 200, influencerId: id })),
-      dispatch(
-        getReferralCommissions({ page: 1, limit: 200, influencerId: id }),
-      ),
-      dispatch(getReferralPayouts({ page: 1, limit: 200, influencerId: id })),
-      dispatch(
-        getReferralBonusProgress({ page: 1, limit: 200, influencerId: id }),
-      ),
-      dispatch(
-        getReferralBonusAchievements({ page: 1, limit: 200, influencerId: id }),
-      ),
-    ]).finally(() => setLoadedDetailId(id));
-  }, [dispatch, id]);
+    refreshPartner(dispatch, id, can).finally(() => setLoadedDetailId(id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, id, permMap]);
 
   useEffect(() => {
-    if (!id || influencer?.influencerType !== "parent") return;
+    if (!id || influencer?.influencerType !== "parent" || !can("influencer-management", "view")) return;
     dispatch(getReferralBrandAssociates({ parentId: id, page: 1, limit: 200 }));
-  }, [dispatch, id, influencer?.influencerType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, id, influencer?.influencerType, permMap]);
 
   const infoRows = useMemo(() => {
     if (!influencer) return [];
@@ -492,11 +485,12 @@ const ReferralPartnerDetails = () => {
   const verificationApproved = isKycApproved && isBankApproved;
 
   const runPartnerAction = async (action, actionKey) => {
+    if (!can("influencer-management", actionKey === "status" ? "status_change" : "update")) return;
     if (!influencer || loadingAction) return;
     setLoadingAction(actionKey || "action");
     try {
       await action();
-      refreshPartner(dispatch, id);
+      refreshPartner(dispatch, id, can);
     } catch (error) {
       toast.error(error || "Unable to update referral partner");
     } finally {
@@ -505,6 +499,7 @@ const ReferralPartnerDetails = () => {
   };
 
   const reviewVerification = (section, decision) => {
+    if (!can("influencer-management", "update")) return;
     if (decision === "rejected") {
       setVerificationModal({
         open: true,
@@ -559,7 +554,7 @@ const ReferralPartnerDetails = () => {
 
       toast.success(`${section === "kyc" ? "KYC" : "Bank"} ${decision}`);
       setVerificationModal((current) => ({ ...current, open: false }));
-      refreshPartner(dispatch, id);
+      refreshPartner(dispatch, id, can);
     } catch (error) {
       toast.error(
         error?.message || "Unable to update referral partner verification",
@@ -631,8 +626,14 @@ const ReferralPartnerDetails = () => {
         status: <StatusBadge status={code.status} size="sm" />,
         usage: `${code.usageCount || 0}${code.usageLimit ? ` / ${code.usageLimit}` : ""}`,
         created: formatDate(code.createdAt),
+        actions: can("referral-codes", "update") ? (
+          <button type="button" className="admin-btn-secondary !px-2 !py-1"
+            onClick={() => { setEditingCode(code); setCodeLimit(code.usageLimit ?? ""); }}>
+            <Pencil size={14} aria-hidden="true" /> Edit limit
+          </button>
+        ) : null,
       })),
-    [codes],
+    [codes, can],
   );
 
   const orderRows = useMemo(
@@ -767,7 +768,7 @@ const ReferralPartnerDetails = () => {
       accent: "#fef3c7",
       color: "#b45309",
     },
-  ];
+  ].filter(card => card.label === "Total orders" ? can("referral-orders", "view") : card.label === "Referral codes" ? can("referral-codes", "view") : true);
 
   const detailTabs = useMemo(
     () => [
@@ -801,8 +802,12 @@ const ReferralPartnerDetails = () => {
       },
       { value: "verification", label: "Verification" },
       { value: "actions", label: "Actions" },
-    ],
+    ].filter(tab => {
+      const modules = { codes: "referral-codes", orders: "referral-orders", commissions: "referral-ledger", payouts: "referral-payouts", progress: "referral-bonus-progress", achievements: "referral-bonus-history" };
+      return !modules[tab.value] || can(modules[tab.value], "view");
+    }),
     [
+      can,
       codeRows.length,
       influencer?.influencerType,
       brandAssociateRows.length,
@@ -872,19 +877,19 @@ const ReferralPartnerDetails = () => {
         ]}
         actions={
           <div className="flex flex-wrap gap-2">
-            <button
+            <PermissionGuard module="influencer-management" action="update"><button
               type="button"
               className="admin-btn-secondary"
               onClick={openEditProfile}
             >
               <Pencil size={16} /> Edit profile
-            </button>
+            </button></PermissionGuard>
           </div>
         }
       />
 
       <DefaultModal
-        isOpen={editOpen}
+        isOpen={editOpen && can("influencer-management", "update")}
         onClose={() => setEditOpen(false)}
         onSubmit={() =>
           document.getElementById("edit-referral-partner-form")?.requestSubmit()
@@ -1005,13 +1010,14 @@ const ReferralPartnerDetails = () => {
           </div>
         )}
 
-        {activeTab === "codes" && (
+        {activeTab === "codes" && can("referral-codes", "view") && (
           <SharedDataTable
             columns={[
               { key: "code", label: "Referral Code" },
               { key: "status", label: "Status" },
               { key: "usage", label: "Usage" },
               { key: "created", label: "Created" },
+              ...(can("referral-codes", "update") ? [{ key: "actions", label: "Actions" }] : []),
             ]}
             data={codeRows}
             loading={detailLoading || Boolean(referralState.codesData?.loading)}
@@ -1057,7 +1063,7 @@ const ReferralPartnerDetails = () => {
             />
           )}
 
-        {activeTab === "orders" && (
+        {activeTab === "orders" && can("referral-orders", "view") && (
           <SharedDataTable
             columns={[
               { key: "order", label: "Order" },
@@ -1076,7 +1082,7 @@ const ReferralPartnerDetails = () => {
           />
         )}
 
-        {activeTab === "commissions" && (
+        {activeTab === "commissions" && can("referral-ledger", "view") && (
           <SharedDataTable
             columns={[
               { key: "type", label: "Type" },
@@ -1094,7 +1100,7 @@ const ReferralPartnerDetails = () => {
           />
         )}
 
-        {activeTab === "payouts" && (
+        {activeTab === "payouts" && can("referral-payouts", "view") && (
           <SharedDataTable
             columns={[
               { key: "coins", label: "Coins" },
@@ -1113,7 +1119,7 @@ const ReferralPartnerDetails = () => {
           />
         )}
 
-        {activeTab === "progress" && (
+        {activeTab === "progress" && can("referral-bonus-progress", "view") && (
           <SharedDataTable
             columns={[
               { key: "rule", label: "Rule" },
@@ -1149,7 +1155,7 @@ const ReferralPartnerDetails = () => {
           />
         )}
 
-        {activeTab === "achievements" && (
+        {activeTab === "achievements" && can("referral-bonus-history", "view") && (
           <SharedDataTable
             columns={[
               { key: "rule", label: "Rule" },
@@ -1316,7 +1322,7 @@ const ReferralPartnerDetails = () => {
             <div className="flex flex-wrap gap-2.5">
               {(influencer?.kycStatus === "submitted" ||
                 influencer?.kycStatus === "rejected") && (
-                <button
+                <PermissionGuard module="influencer-management" action="update"><button
                   type="button"
                   className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`}
                   disabled={!!loadingAction}
@@ -1336,11 +1342,11 @@ const ReferralPartnerDetails = () => {
                     />
                   )}
                   Approve KYC
-                </button>
+                </button></PermissionGuard>
               )}
               {(influencer?.kycStatus === "submitted" ||
                 influencer?.kycStatus === "verified") && (
-                <button
+                <PermissionGuard module="influencer-management" action="update"><button
                   type="button"
                   className={`${baseActionButtonClass} ${rejectedActionButtonClass}`}
                   disabled={!!loadingAction}
@@ -1356,11 +1362,11 @@ const ReferralPartnerDetails = () => {
                     <X aria-hidden="true" size={14} className="stroke-[2.5]" />
                   )}
                   Reject KYC
-                </button>
+                </button></PermissionGuard>
               )}
               {(influencer?.payoutProfileStatus === "submitted" ||
                 influencer?.payoutProfileStatus === "rejected") && (
-                <button
+                <PermissionGuard module="influencer-management" action="update"><button
                   type="button"
                   className={`${baseActionButtonClass} ${pendingApprovalButtonClass}`}
                   disabled={!!loadingAction}
@@ -1380,11 +1386,11 @@ const ReferralPartnerDetails = () => {
                     />
                   )}
                   Verify Bank
-                </button>
+                </button></PermissionGuard>
               )}
               {(influencer?.payoutProfileStatus === "submitted" ||
                 influencer?.payoutProfileStatus === "verified") && (
-                <button
+                <PermissionGuard module="influencer-management" action="update"><button
                   type="button"
                   className={`${baseActionButtonClass} ${rejectedActionButtonClass}`}
                   disabled={!!loadingAction}
@@ -1400,9 +1406,9 @@ const ReferralPartnerDetails = () => {
                     <X aria-hidden="true" size={14} className="stroke-[2.5]" />
                   )}
                   Reject Bank
-                </button>
+                </button></PermissionGuard>
               )}
-              <button
+              <PermissionGuard module="influencer-management" action="status_change"><button
                 type="button"
                 className={`${baseActionButtonClass} ${
                   influencer?.status === "active"
@@ -1434,8 +1440,8 @@ const ReferralPartnerDetails = () => {
                   : influencer?.status === "active"
                     ? "Suspend partner"
                     : "Reactivate partner"}
-              </button>
-              <button
+              </button></PermissionGuard>
+              <PermissionGuard module="influencer-management" action="update"><button
                 type="button"
                 className={`${baseActionButtonClass} ${
                   influencer?.canCreateChildren
@@ -1459,7 +1465,7 @@ const ReferralPartnerDetails = () => {
                 {influencer?.canCreateChildren
                   ? "Revoke child creation"
                   : "Grant child creation"}
-              </button>
+              </button></PermissionGuard>
               {influencer?.childRegistration?.shareable && (
                 <button
                   type="button"
@@ -1474,7 +1480,7 @@ const ReferralPartnerDetails = () => {
                 influencer?.influencerType === "parent" &&
                 influencer?.canCreateChildren
               ) && (
-                <button
+                <PermissionGuard module="influencer-management" action="update"><button
                   type="button"
                   className={`${baseActionButtonClass} border-violet-200 bg-white text-violet-700 hover:bg-violet-50 hover:border-violet-300 hover:shadow-xs`}
                   disabled={!!loadingAction}
@@ -1490,15 +1496,51 @@ const ReferralPartnerDetails = () => {
                     <GitBranch aria-hidden="true" size={14} />
                   )}
                   Promote to Growth Partner
-                </button>
+                </button></PermissionGuard>
               )}
             </div>
           </div>
         )}
       </div>
 
+      <DefaultModal
+        isOpen={Boolean(editingCode) && can("referral-codes", "update")}
+        onClose={() => { if (loadingAction !== "code-limit") setEditingCode(null); }}
+        title="Edit referral code limit"
+        onSubmit={() => document.getElementById("edit-code-limit-form")?.requestSubmit()}
+        submitButtonText="Save limit"
+        loading={loadingAction === "code-limit"}
+      >
+        <form id="edit-code-limit-form" className="space-y-4" onSubmit={async (event) => {
+          event.preventDefault();
+          if (!editingCode || !can("referral-codes", "update") || loadingAction === "code-limit") return;
+          const usageLimit = codeLimit === "" ? null : Number(codeLimit);
+          if (usageLimit !== null && (!Number.isSafeInteger(usageLimit) || usageLimit < Math.max(1, Number(editingCode.usageCount || 0)))) {
+            toast.error("Limit must be a whole number at least equal to current usage, or blank for unlimited.");
+            return;
+          }
+          setLoadingAction("code-limit");
+          try {
+            await dispatch(updateReferralCode({ codeId: getId(editingCode), usageLimit })).unwrap();
+            await refreshPartner(dispatch, id, can);
+            setEditingCode(null);
+            toast.success("Referral code limit updated");
+          } catch (error) {
+            toast.error(error?.message || error || "Unable to update referral code limit");
+          } finally { setLoadingAction(null); }
+        }}>
+          <p>{editingCode?.code} · Used {editingCode?.usageCount || 0} times</p>
+          <label className="admin-label" htmlFor="referral-code-limit">Total usage limit</label>
+          <input id="referral-code-limit" className="admin-input" type="number" step="1"
+            min={Math.max(1, Number(editingCode?.usageCount || 0))}
+            value={codeLimit} onChange={(event) => setCodeLimit(event.target.value)}
+            disabled={loadingAction === "code-limit"} />
+          <p className="text-sm text-[var(--admin-muted)]">Leave blank for unlimited usage. Existing usage is preserved.</p>
+        </form>
+      </DefaultModal>
+
       <VerificationDecisionModal
-        isOpen={verificationModal.open}
+        isOpen={verificationModal.open && can("influencer-management", "update")}
         onClose={() =>
           setVerificationModal((current) => ({ ...current, open: false }))
         }

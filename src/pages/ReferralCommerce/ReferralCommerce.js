@@ -1,3 +1,4 @@
+import PermissionGuard from "../../components/Atoms/PermissionGuard/PermissionGuard";
 import { usePermission } from "../../_helpers/usePermission";
 import MarketingSettings from "../../components/Marketing/MarketingSettings";
 import React, {
@@ -191,7 +192,6 @@ const emptyInfluencerForm = {
   email: "",
   phone: "",
   password: "",
-  code: "",
   canCreateChildren: true,
 };
 
@@ -770,6 +770,7 @@ const Modal = ({ title, open, onClose, children, footer }) => {
   );
 };
 const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
+  const { can } = usePermission();
   const empty = emptyProductReferralAmountForm;
   const [form, setForm] = useState(empty);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -916,6 +917,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
     if (event?.preventDefault) {
       event.preventDefault();
     }
+    if (!can("referral", "update")) return;
 
     if (!form.storeKey) {
       toast.error("Please select a store");
@@ -994,6 +996,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
   };
 
   const remove = async (config) => {
+    if (!can("referral", "delete")) return;
     try {
       setLoading(true);
 
@@ -1015,6 +1018,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
   };
 
   const handleToggleStatus = async (row) => {
+    if (!can("referral", "update")) return;
     const rowId = getId(row) || row.productId;
     try {
       setTogglingId(rowId);
@@ -1066,6 +1070,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
   };
 
   const handleEdit = (row) => {
+    if (!can("referral", "update")) return;
     const product = products.find(
       (item) => String(getId(item)) === String(row.productId),
     );
@@ -1097,9 +1102,10 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
   };
 
   const handleOpenAdd = useCallback(() => {
+    if (!can("referral", "update")) return;
     setForm(empty);
     setDrawerOpen(true);
-  }, [empty]);
+  }, [empty, can]);
 
   useEffect(() => {
     onHeaderActionsChange?.({
@@ -1231,17 +1237,19 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
           }
           rowActions={(row) => [
             {
+              permission: "update",
               label: "Edit",
               icon: <Pencil aria-hidden="true" size={15} />,
               onClick: () => handleEdit(row),
             },
             {
+              permission: "delete",
               label: "Remove override",
               icon: <X aria-hidden="true" size={15} />,
               danger: true,
               onClick: () => remove(row),
             },
-          ]}
+          ].filter(action => can("referral", action.permission))}
           emptyText="No product referral amount found."
         />
       </section>
@@ -1399,7 +1407,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
             }));
           }}
           placeholder="0 means no additional limit"
-          hint="0 means no additional limit. The lowest positive eligible product pool applies once per order; quantities do not multiply it."
+          hint="0 means no additional limit. Eligible product pools are added together; each product contributes once per order, regardless of quantity."
           className="w-full"
         />
       </div>
@@ -1500,7 +1508,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
 };
 
 const ReferralCommerce = () => {
-  const { can, permMap } = usePermission();
+  const { can, canAny, permMap } = usePermission();
   const { section } = useParams();
   const navigate = useNavigate();
   const referralCodeStatuses = useDropdownOptions("referral-code-statuses");
@@ -1607,6 +1615,7 @@ const ReferralCommerce = () => {
     validationSchema: parentInfluencerValidationSchema,
     validateOnMount: true,
     onSubmit: async (values, { resetForm, setSubmitting }) => {
+      if (!can("influencer-management", "create")) return;
       setParentSubmitting(true);
       try {
         await dispatch(createReferralParent(compactPayload(values))).unwrap();
@@ -1626,6 +1635,7 @@ const ReferralCommerce = () => {
     initialValues: emptyChildForm,
     validationSchema: brandAssociateValidationSchema,
     onSubmit: async (values, { resetForm, setSubmitting }) => {
+      if (!can("influencer-management", "create")) return;
       try {
         await dispatch(
           createReferralChild({
@@ -1651,6 +1661,7 @@ const ReferralCommerce = () => {
         ? referralCodeValidationSchema.omit(["influencerId"])
         : referralCodeValidationSchema,
     onSubmit: async (values, { resetForm, setSubmitting }) => {
+      if (!can("referral-codes", editingCode ? "update" : "create")) return;
       const payload = compactPayload(numberize(values, ["usageLimit"]));
       try {
         if (editingCode) {
@@ -1767,6 +1778,7 @@ const ReferralCommerce = () => {
     return (
       <button
         type="button"
+        disabled={!can("influencer-management", "view")}
         className="block min-w-0 text-left transition hover:text-indigo-700"
         onClick={(event) => {
           event.stopPropagation();
@@ -2179,6 +2191,7 @@ const ReferralCommerce = () => {
 
   const submitRules = async (event) => {
     event.preventDefault();
+    if (!can("referral-rules", "update")) return;
     const validationErrors = validateRulesForm(rulesForm);
     setRulesErrors(validationErrors);
     if (Object.keys(validationErrors).length) {
@@ -2272,6 +2285,7 @@ const ReferralCommerce = () => {
   };
 
   const submitBonusRule = async (values) => {
+    if (!can("referral-bonus-rules", editingBonusRule ? "update" : "create")) return;
     const payload = compactPayload(
       numberize(values, ["targetValue", "bonusValue"]),
     );
@@ -2312,6 +2326,7 @@ const ReferralCommerce = () => {
   });
 
   const toggleBonusRuleStatus = async (rule) => {
+    if (!can("referral-bonus-rules", "update")) return;
     try {
       await dispatch(
         updateReferralBonusRule({
@@ -2327,6 +2342,7 @@ const ReferralCommerce = () => {
   };
 
   const evaluateBonuses = async () => {
+    if (!can("referral-bonus-rules", "create")) return;
     try {
       const result = await dispatch(evaluateReferralBonusRules({})).unwrap();
       const payload = result?.normalized?.data || result?.data || result || {};
@@ -2340,6 +2356,7 @@ const ReferralCommerce = () => {
   };
 
   const toggleCodeStatus = async (code) => {
+    if (!can("referral-codes", "update")) return;
     try {
       await dispatch(
         updateReferralCode({
@@ -2355,6 +2372,7 @@ const ReferralCommerce = () => {
   };
 
   const openPayoutAction = (payout, action) => {
+    if (!can("referral-payouts", action === "paid" ? "update" : action)) return;
     setPayoutAction({ payout, action });
     payoutDecisionFormik.resetForm({ values: { adminNote: "" } });
     payoutPaymentFormik.resetForm({
@@ -2384,6 +2402,7 @@ const ReferralCommerce = () => {
     onSubmit: async (values) => {
       if (!payoutAction || !["approve", "reject"].includes(payoutAction.action))
         return;
+      if (!can("referral-payouts", payoutAction.action)) return;
       const payoutId = getId(payoutAction.payout);
       try {
         if (payoutAction.action === "approve") {
@@ -2420,6 +2439,7 @@ const ReferralCommerce = () => {
     validateOnBlur: true,
     validateOnChange: true,
     onSubmit: async (values) => {
+      if (!can("referral-payouts", "update")) return;
       if (
         !payoutAction ||
         payoutAction.action !== "paid" ||
@@ -2696,14 +2716,14 @@ const ReferralCommerce = () => {
           {
             label: "Approve request",
             icon: <Check aria-hidden="true" size={14} />,
-            hidden: payout.status !== "pending",
+            hidden: !can("referral-payouts", "approve") || payout.status !== "pending",
             onClick: () => openPayoutAction(payout, "approve"),
           },
           {
             label: "Reject request",
             icon: <X aria-hidden="true" size={14} />,
             danger: true,
-            hidden: !["pending", "approved", "processing", "failed"].includes(
+            hidden: !can("referral-payouts", "reject") || !["pending", "approved", "processing", "failed"].includes(
               payout.status,
             ),
             onClick: () => openPayoutAction(payout, "reject"),
@@ -2711,14 +2731,14 @@ const ReferralCommerce = () => {
           {
             label: "Mark as paid",
             icon: <BadgeIndianRupee aria-hidden="true" size={14} />,
-            hidden: !["approved", "processing"].includes(payout.status),
+            hidden: !can("referral-payouts", "update") || !["approved", "processing"].includes(payout.status),
             onClick: () => openPayoutAction(payout, "paid"),
           },
         ]}
       />
     ),
   }));
-  const payoutHasActions = payouts.some((payout) =>
+  const payoutHasActions = canAny("referral-payouts", ["approve", "reject", "update"]) && payouts.some((payout) =>
     ["pending", "approved", "processing", "failed"].includes(payout.status),
   );
   const payoutHasReference = payouts.some(
@@ -2759,11 +2779,13 @@ const ReferralCommerce = () => {
       <RowActions
         actions={[
           {
+            hidden: !can("referral-bonus-rules", "update"),
             label: "Edit rule",
             icon: <Pencil aria-hidden="true" size={14} />,
             onClick: () => openBonusRuleModal(rule),
           },
           {
+            hidden: !can("referral-bonus-rules", "update"),
             label:
               rule.status === "active" ? "Deactivate rule" : "Activate rule",
             icon:
@@ -3057,7 +3079,7 @@ const ReferralCommerce = () => {
                 {
                   label: "Reversed",
                   value: summary?.wallets?.reversedBalance,
-                  helper: "Returned to wallet",
+                  helper: "Reversed earnings",
                   icon: <RefreshCw aria-hidden="true" size={18} />,
                 },
               ].map((item) => (
@@ -3733,7 +3755,7 @@ const ReferralCommerce = () => {
         </label> */}
 
           <div className="flex justify-end border-t border-[var(--admin-line)] pt-4 md:col-span-4">
-            <OrangeButton type="submit" disabled={rulesSubmitting || loading}>
+            <OrangeButton type="submit" disabled={!can("referral-rules", "update") || rulesSubmitting || loading}>
               <Check size={16} />
               {rulesSubmitting ? "Saving..." : "Save Rules"}
             </OrangeButton>
@@ -3962,7 +3984,7 @@ const ReferralCommerce = () => {
         actions={
           activeTab === "influencers" ? (
             <div className="flex flex-wrap gap-2">
-              <button
+              <PermissionGuard module="influencer-management" action="create"><button
                 type="button"
                 onClick={() => {
                   resetInfluencerForm();
@@ -3971,9 +3993,9 @@ const ReferralCommerce = () => {
               >
                 <UserPlus aria-hidden="true" size={16} />
                 Growth Partner
-              </button>
+              </button></PermissionGuard>
 
-              <button
+              <PermissionGuard module="influencer-management" action="create"><button
                 type="button"
                 onClick={() => {
                   resetInfluencerForm();
@@ -3983,8 +4005,8 @@ const ReferralCommerce = () => {
               >
                 <GitBranch aria-hidden="true" size={16} />
                 Brand Associate
-              </button>
-              <button
+              </button></PermissionGuard>
+              <PermissionGuard module="referral-codes" action="create"><button
                 type="button"
                 onClick={() => {
                   setEditingCode(null);
@@ -3994,29 +4016,29 @@ const ReferralCommerce = () => {
               >
                 <Plus aria-hidden="true" size={16} />
                 Referral Code
-              </button>
+              </button></PermissionGuard>
             </div>
           ) : activeTab === "productAmounts" && productAmountsHeaderActions ? (
             <div className="flex flex-wrap items-center gap-3">
-              <button
+              <PermissionGuard module="referral" action="update"><button
                 type="button"
                 onClick={productAmountsHeaderActions.onAdd}
                 className="admin-btn-primary inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold shadow-xs"
               >
                 <Plus aria-hidden="true" size={16} />
                 Add Product Referral Pool
-              </button>
+              </button></PermissionGuard>
             </div>
           ) : activeTab === "bonuses" && bonusView === "rules" ? (
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={evaluateBonuses}>
+              <PermissionGuard module="referral-bonus-rules" action="create"><button type="button" onClick={evaluateBonuses}>
                 <Check aria-hidden="true" size={16} />
                 Evaluate Bonuses
-              </button>
-              <button type="button" onClick={() => openBonusRuleModal()}>
+              </button></PermissionGuard>
+              <PermissionGuard module="referral-bonus-rules" action="create"><button type="button" onClick={() => openBonusRuleModal()}>
                 <Plus aria-hidden="true" size={16} />
                 Bonus Rule
-              </button>
+              </button></PermissionGuard>
             </div>
           ) : undefined
         }
@@ -4364,17 +4386,6 @@ const ReferralCommerce = () => {
                 }
                 className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
               />
-
-              <FormInput
-                label="Referral Code"
-                name="code"
-                value={parentFormik.values.code}
-                onChange={parentFormik.handleChange}
-                onBlur={parentFormik.handleBlur}
-                placeholder="Enter referral code"
-                error={parentFormik.touched.code && parentFormik.errors.code}
-                className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
-              />
             </div>
           </FormSection>
 
@@ -4524,16 +4535,6 @@ const ReferralCommerce = () => {
                 placeholder="Enter password"
               />
 
-              {/* Referral Code */}
-              <FormInput
-                label="Referral Code"
-                name="code"
-                value={childFormik.values.code}
-                onChange={childFormik.handleChange}
-                onBlur={childFormik.handleBlur}
-                error={childFormik.touched.code && childFormik.errors.code}
-                placeholder="Enter referral code"
-              />
             </div>
           </FormSection>
         </div>

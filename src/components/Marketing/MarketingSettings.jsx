@@ -240,9 +240,9 @@ export default function MarketingSettings({ kind = "coupons" }) {
         ))}
         {kind === "referrals" && (
           <p className="text-sm text-gray-600 md:col-span-2 xl:col-span-3">
-            One referral pool per order: the lowest positive eligible product
-            pool applies. Quantities do not multiply it. Products without a pool
-            are ignored. Percentage pools use one unit’s price.
+            Eligible product pools are added together. Each distinct product
+            contributes once per order; quantities do not multiply its pool.
+            Products without a pool are ignored. Percentage pools use one unit’s price.
           </p>
         )}
         <Field label="Customer eligibility">

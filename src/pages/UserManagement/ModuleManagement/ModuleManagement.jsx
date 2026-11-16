@@ -1,17 +1,8 @@
-import { usePermission, ACTIONS } from "../../../_helpers/usePermission";
+import { axiosPrivate } from "../../../_helpers/axiosProvider";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import {
-  MdAdd,
-  MdEdit,
-  MdDelete,
-  MdCheckCircle,
-  MdBlock,
-  MdViewModule,
-  MdSort,
-  MdClose,
-} from "react-icons/md";
+import { MdEdit, MdViewModule } from "react-icons/md";
 import {
   PageHeader,
   DataTable,
@@ -19,669 +10,607 @@ import {
   FilterBar,
 } from "../../../components/Shared";
 import {
-  createRbacModule,
-  deleteRbacModule,
   getRbacModules,
-  reorderRbacModules,
   updateRbacModule,
   updateRbacModuleStatus,
+  createRbacPermission,
+  updateRbacPermission,
 } from "../../../Redux/adminCoreSlice";
-import useDropdownOptions from "../../../hooks/useDropdownOptions";
+import { usePermission, ACTIONS } from "../../../_helpers/usePermission";
 import OrangeButton from "../../../components/Atoms/buttons/OrangeButton";
-import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 
-const emptyForm = {
-  moduleName: "",
-  moduleKey: "",
-  moduleSlug: "",
-  description: "",
-  icon: "",
-  routePath: "",
-  parentModuleId: "",
-  moduleType: "page",
-  order: 0,
-  status: "active",
-  isVisibleInSidebar: true,
-  permissionsText: "view",
+const panels = {
+  platform: "Admin",
+  seller: "Seller",
+  both: "Admin and Seller",
+  none: "No sidebar",
 };
-
-const FILTER_FIELDS = [
+const FILTERS = [
   {
-    key: "status",
+    key: "panel",
     type: "select",
-    label: "Status",
-    width: "w-36",
+    label: "Available to",
     options: [
-      { value: "active", label: "Active" },
-      { value: "inactive", label: "Inactive" },
+      { value: "platform", label: "Admin" },
+      { value: "seller", label: "Seller" },
+    ],
+  },
+  {
+    key: "visibility",
+    type: "select",
+    label: "Sidebar",
+    options: [
+      { value: "visible", label: "Shown" },
+      { value: "hidden", label: "Hidden" },
+      { value: "none", label: "No sidebar entry" },
     ],
   },
 ];
-
-const getPayload = (sliceData = {}) => {
+const getRows = (data) => {
   const payload =
-    sliceData?.data?.data ||
-    sliceData?.data?.normalized?.data ||
-    sliceData?.normalized?.data ||
-    sliceData?.data ||
+    data?.data?.data ||
+    data?.data?.normalized?.data ||
+    data?.normalized?.data ||
+    data?.data ||
     {};
-  return Array.isArray(payload)
-    ? { list: payload, total: payload.length }
-    : payload;
+  return Array.isArray(payload) ? payload : payload.list || payload.items || [];
 };
-
-const idOf = (item = {}) => item.id || item._id || "";
-const slugify = (value = "") =>
-  String(value)
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9/_-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
+const entriesOf = (row) => row.navigationEntries || [];
+const isShown = (entry) =>
+  entry.configured !== false &&
+  entry.active !== false &&
+  entry.isVisibleInSidebar !== false;
 
 export default function ModuleManagement() {
-  const { can } = usePermission();
   const dispatch = useDispatch();
-  const selector = useSelector((state) => state.adminCore);
+  const { can } = usePermission();
+  const state = useSelector((state) => state.adminCore);
   const [search, setSearch] = useState("");
-  const [moduleScope, setModuleScope] = useState("backend");
   const [filters, setFilters] = useState({});
-  const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const recordStatuses = useDropdownOptions("record-statuses");
-  const moduleTypes = useDropdownOptions("module-types");
-
-  const payload = useMemo(
-    () => getPayload(selector?.rbacModulesData),
-    [selector?.rbacModulesData],
-  );
-  const rawModules = useMemo(
-    () => payload.list || payload.items || [],
-    [payload],
-  );
-  const loading =
-    !!selector?.loading ||
-    (!selector?.rbacModulesData?.data && !selector?.rbacModulesData?.error);
-
-  const modules = useMemo(() => {
-    let result = rawModules;
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      result = result.filter(
-        (m) =>
-          (m.moduleName || m.name || "").toLowerCase().includes(q) ||
-          (m.moduleKey || m.slug || "").toLowerCase().includes(q) ||
-          (m.routePath || "").toLowerCase().includes(q),
-      );
-    }
-    if (filters.status) {
-      result = result.filter((m) => (m.status || "active") === filters.status);
-    }
-    return result;
-  }, [rawModules, search, filters]);
-
-  const parentOptions = useMemo(
+  const [roles, setRoles] = useState([]);
+  const [rolesError, setRolesError] = useState("");
+  const [selectedEntry, setSelectedEntry] = useState(null);
+  const [form, setForm] = useState({});
+  const load = useCallback(
     () =>
-      rawModules
-        .filter((item) =>
-          ["group", "module"].includes(item.moduleType || "module"),
-        )
-        .map((item) => ({
-          value: idOf(item),
-          label: item.moduleName || item.name,
-        })),
-    [rawModules],
+      dispatch(
+        getRbacModules({
+          scope: "backend",
+          includeNavigation: true,
+          includeInactive: true,
+          limit: 1000,
+        }),
+      ),
+    [dispatch],
   );
-
-  const load = useCallback(() => {
-    dispatch(
-      getRbacModules({
-        limit: 1000,
-        includeInactive: true,
-        scope: moduleScope,
-      }),
-    );
-  }, [dispatch, moduleScope]);
-
   useEffect(() => {
     load();
   }, [load]);
-
-  const openCreate = () => {
-    setEditing(null);
-    setForm(emptyForm);
-    setModalOpen(true);
-  };
-
-  const getPermissionsText = (row) => {
-    const mp = row.modulePermissions;
-    if (Array.isArray(mp) && mp.every((p) => typeof p === "string"))
-      return mp.join(", ");
-    const perms = row.permissions;
-    if (Array.isArray(perms) && perms.length) {
-      const actions = perms
-        .map((p) => (typeof p === "string" ? p : p.action))
-        .filter(Boolean);
-      if (actions.length) return actions.join(", ");
-    }
-    return "view";
-  };
-
-  const openEdit = useCallback((row) => {
-    setEditing(row);
+  useEffect(() => {
+    if (!editing) return;
+    let active = true;
+    setRolesError("");
+    axiosPrivate
+      .get("/rbac/roles", { params: { includeInactive: true, limit: 1000 } })
+      .then((response) => {
+        if (active)
+          setRoles(
+            (response.data?.data || []).filter(
+              (role) => role.id && role.type === "system",
+            ),
+          );
+      })
+      .catch(() => {
+        if (active)
+          setRolesError(
+            "Unable to load account roles. Existing restrictions will be preserved.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [editing]);
+  const rows = useMemo(
+    () => getRows(state?.rbacModulesData),
+    [state?.rbacModulesData],
+  );
+  const data = useMemo(
+    () =>
+      rows.filter((row) => {
+        if (row.presentation?.linked === false) return false;
+        if (filters.group && row.presentation?.group !== filters.group)
+          return false;
+        if (
+          search.trim() &&
+          !`${row.moduleName || row.name} ${row.description || ""}`
+            .toLowerCase()
+            .includes(search.trim().toLowerCase())
+        )
+          return false;
+        if (
+          filters.panel &&
+          (row.presentation?.panel || row.panel) !== filters.panel &&
+          (row.presentation?.panel || row.panel) !== "both"
+        )
+          return false;
+        const entries = entriesOf(row);
+        if (filters.visibility === "none" && entries.length) return false;
+        if (filters.visibility === "visible" && !entries.some(isShown))
+          return false;
+        if (
+          filters.visibility === "hidden" &&
+          (!entries.length || entries.some(isShown))
+        )
+          return false;
+        return true;
+      }),
+    [rows, search, filters],
+  );
+  const selectEntry = (entry) => {
+    setSelectedEntry(entry);
     setForm({
-      moduleName: row.moduleName || row.name || "",
-      moduleKey: row.moduleKey || row.slug || "",
-      moduleSlug: row.moduleSlug || row.slug || "",
-      description: row.description || "",
-      icon: row.icon || "",
-      routePath: row.routePath || "",
-      parentModuleId: row.parentModuleId || (row.parentModule?.id ?? ""),
-      moduleType: row.moduleType || "page",
-      order: row.order || 0,
-      status: row.status || (row.active === false ? "inactive" : "active"),
-      isVisibleInSidebar: row.isVisibleInSidebar !== false,
-      permissionsText: getPermissionsText(row),
+      moduleName: entry.moduleName || entry.name || "",
+      order: entry.order || 0,
+      isVisibleInSidebar: entry.isVisibleInSidebar !== false,
+      allowedRoles: entry.allowedRoles || entry.metadata?.allowedRoles || [],
     });
-    setModalOpen(true);
-  }, []);
-
-  const closeModal = () => {
-    setModalOpen(false);
-    setEditing(null);
-    setForm(emptyForm);
   };
-
-  const updateName = (value) => {
-    const key = slugify(value);
-    setForm((prev) => ({
-      ...prev,
-      moduleName: value,
-      moduleKey: prev.moduleKey || key,
-      moduleSlug: prev.moduleSlug || key,
-    }));
+  const edit = (row) => {
+    setEditing(row);
+    selectEntry(
+      entriesOf(row).find((entry) => entry.id && entry.configured !== false),
+    );
   };
-
-  const toBody = () => ({
-    moduleName: form.moduleName.trim(),
-    moduleKey: slugify(form.moduleKey || form.moduleName),
-    moduleSlug: slugify(form.moduleSlug || form.moduleKey || form.moduleName),
-    description: form.description,
-    icon: form.icon,
-    routePath: form.routePath,
-    parentModuleId: form.parentModuleId || null,
-    moduleType: form.moduleType,
-    order: Number(form.order || 0),
-    status: form.status,
-    isVisibleInSidebar: Boolean(form.isVisibleInSidebar),
-    modulePermissions: String(form.permissionsText || "")
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean),
-  });
-
-  const handleSave = async () => {
-    if (!form.moduleName.trim()) return toast.error("Module name is required");
-    const key = slugify(form.moduleKey || form.moduleName);
-    if (!key) return toast.error("Module key is required");
-    if (
-      form.isVisibleInSidebar &&
-      form.moduleType !== "group" &&
-      !form.routePath.trim()
-    ) {
-      return toast.error(
-        "Route path is required for sidebar-visible modules (or set type to 'group')",
-      );
+  const close = () => {
+    if (!saving) {
+      setEditing(null);
+      setSelectedEntry(null);
     }
+  };
+  const save = async (event) => {
+    event.preventDefault();
+    if (!selectedEntry?.id || !can("rbac", ACTIONS.UPDATE)) return;
+    if (!form.moduleName.trim()) return toast.error("Menu label is required");
+    if (!Number.isInteger(Number(form.order)) || Number(form.order) < 0)
+      return toast.error("Position must be a whole number of zero or more");
     setSaving(true);
     try {
-      if (editing) {
-        await dispatch(
-          updateRbacModule({ id: idOf(editing), ...toBody() }),
-        ).unwrap();
-        toast.success("Module updated");
-      } else {
-        await dispatch(createRbacModule(toBody())).unwrap();
-        toast.success("Module created");
-      }
-      closeModal();
+      await dispatch(
+        updateRbacModule({
+          id: selectedEntry.id,
+          moduleName: form.moduleName.trim(),
+          order: Number(form.order),
+          isVisibleInSidebar: form.isVisibleInSidebar,
+          allowedRoles: form.allowedRoles,
+        }),
+      ).unwrap();
+      toast.success("Sidebar updated");
+      setEditing(null);
+      setSelectedEntry(null);
       load();
     } catch (error) {
-      toast.error(error?.message || error || "Failed to save module");
+      toast.error(error?.message || "Unable to update sidebar");
     } finally {
       setSaving(false);
     }
   };
-
-  const handleDelete = useCallback(
-    async (row) => {
-      if (!window.confirm(`Archive ${row.moduleName || row.name}?`)) return;
-      try {
-        await dispatch(deleteRbacModule({ id: idOf(row) })).unwrap();
-        toast.success("Module archived");
-        load();
-      } catch (error) {
-        toast.error(error?.message || error || "Failed to delete module");
-      }
+  const columns = [
+    {
+      key: "featureGroup",
+      label: "Feature",
+      render: (_, row) => row.presentation?.group || "—",
     },
-    [dispatch, load],
-  );
-
-  const toggleStatus = useCallback(
-    async (row) => {
-      const next =
-        (row.status || "active") === "active" ? "inactive" : "active";
-      try {
-        await dispatch(
-          updateRbacModuleStatus({ id: idOf(row), status: next }),
-        ).unwrap();
-        toast.success("Status updated");
-        load();
-      } catch (error) {
-        toast.error(error?.message || error || "Failed to update status");
-      }
+    {
+      key: "moduleName",
+      label: "Module",
+      sortable: true,
+      render: (name, row) => (
+        <div>
+          <p className="font-medium text-gray-800">{name || row.name}</p>
+          <p className="text-xs text-gray-500 whitespace-normal">
+            {row.description}
+          </p>
+        </div>
+      ),
     },
-    [dispatch, load],
-  );
-
-  const normalizeOrders = async () => {
-    try {
-      await dispatch(
-        reorderRbacModules({
-          modules: rawModules.map((item, index) => ({
-            id: idOf(item),
-            order: (index + 1) * 10,
-          })),
-        }),
-      ).unwrap();
-      toast.success("Module order normalized");
-      load();
-    } catch (error) {
-      toast.error(error?.message || error || "Failed to reorder modules");
-    }
-  };
-
-  const columns = useMemo(
-    () => [
-      {
-        key: "moduleName",
-        label: "Module",
-        sortable: true,
-        render: (value, row) => (
-          <div>
-            <p className="font-medium text-gray-800">{value || row.name}</p>
-            {row.description && (
-              <p className="text-xs text-gray-400 truncate max-w-xs">
-                {row.description}
+    {
+      key: "panel",
+      label: "Available to",
+      render: (value, row) => panels[row.presentation?.panel || value] || "—",
+    },
+    {
+      key: "navigationEntries",
+      label: "Linked pages / menus",
+      render: (_, row) =>
+        entriesOf(row).length ? (
+          <div className="space-y-1">
+            {entriesOf(row).map((entry) => (
+              <p key={entry.id || entry.moduleSlug} className="text-sm">
+                {entry.moduleName || entry.name}{" "}
+                <span className="text-xs text-gray-500">
+                  ({panels[entry.panel] || "Admin"} ·{" "}
+                  {entry.configured === false
+                    ? "Not configured"
+                    : isShown(entry)
+                      ? "Shown"
+                      : "Hidden"}
+                  )
+                </span>
               </p>
-            )}
+            ))}
           </div>
+        ) : row.presentation?.links?.length ? (
+          <div className="space-y-1">
+            {row.presentation.links.map((link) => (
+              <p key={`${link.path}:${link.name}`} className="text-sm">
+                {link.name}
+                <span className="block text-xs text-gray-500">
+                  Inside linked page
+                </span>
+              </p>
+            ))}
+          </div>
+        ) : (
+          <span className="text-gray-500">No sidebar entry</span>
         ),
-      },
-      {
-        key: "moduleKey",
-        label: "Key",
-        sortable: true,
-        render: (value, row) => (
-          <span className="font-mono text-xs text-gray-600">
-            {value || row.slug || "—"}
-          </span>
-        ),
-      },
-      {
-        key: "parentModule",
-        label: "Parent",
-        render: (_, row) => (
-          <span className="text-sm text-gray-600">
-            {row.parentModule?.moduleName || row.parentModule?.name || "—"}
-          </span>
-        ),
-      },
-      {
-        key: "routePath",
-        label: "Route",
-        render: (value) => (
-          <span className="font-mono text-xs text-gray-600">
-            {value || "—"}
-          </span>
-        ),
-      },
-      {
-        key: "moduleType",
-        label: "Type",
-        render: (value) => (
-          <span className="capitalize text-xs text-gray-600">
-            {value || "module"}
-          </span>
-        ),
-      },
-      {
-        key: "order",
-        label: "Order",
-        sortable: true,
-        render: (value) => <span className="text-xs font-mono">{value}</span>,
-      },
-      {
-        key: "isVisibleInSidebar",
-        label: "Sidebar",
-        render: (value) => (
-          <span
-            className={`text-xs px-2 py-0.5 rounded font-medium ${value !== false ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-500"}`}
-          >
-            {value !== false ? "Yes" : "No"}
-          </span>
-        ),
-      },
-      {
-        key: "status",
-        label: "Status",
-        render: (value, row) => (
-          <button
-            type="button"
-            onClick={() => toggleStatus(row)}
-            disabled={!can("rbac", ACTIONS.STATUS_CHANGE)}
-            title="Click to toggle status"
-          >
-            <StatusBadge
-              status={value || (row.active === false ? "inactive" : "active")}
-              dot
-            />
-          </button>
-        ),
-      },
-    ],
-    [toggleStatus, can],
-  );
-
-  const rowActions = useCallback(
-    (row) => [
-      {
-        label: "Edit Module",
-        permission: ACTIONS.UPDATE,
-        icon: <MdEdit size={16} className="text-amber-600" />,
-        onClick: () => openEdit(row),
-      },
-      {
-        label:
-          (row.status || "active") === "active"
-            ? "Deactivate Module"
-            : "Activate Module",
-        icon:
-          (row.status || "active") === "active" ? (
-            <MdBlock size={16} className="text-amber-600" />
-          ) : (
-            <MdCheckCircle size={16} className="text-green-600" />
-          ),
-        onClick: () => toggleStatus(row),
-        permission: ACTIONS.STATUS_CHANGE,
-      },
-      {
-        label: "Archive Module",
-        permission: ACTIONS.DELETE,
-        icon: <MdDelete size={16} className="text-red-600" />,
-        onClick: () => handleDelete(row),
-        danger: true,
-      },
-    ].filter(action => can("rbac", action.permission)),
-    [openEdit, toggleStatus, handleDelete, can],
-  );
-
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (status, row) => (
+        <StatusBadge
+          status={
+            row.configured === false
+              ? "unconfigured"
+              : status || (row.active === false ? "inactive" : "active")
+          }
+          dot
+        />
+      ),
+    },
+  ];
   return (
     <div className="space-y-4">
       <PageHeader
         title="Module Management"
-        subtitle="Manage backend/admin modules, routes, sidebar visibility, and parent-child structure"
+        subtitle="Find application modules and manage their sidebar menus. Assign access from User Permissions."
         breadcrumbs={[
           { label: "User Management" },
           { label: "Module Management" },
         ]}
-        actions={
-          <div className="flex items-center gap-2">
-            <select className="admin-input" aria-label="Module listing" value={moduleScope} onChange={event => setModuleScope(event.target.value)}>
-              <option value="backend">Permission modules</option>
-              <option value="sidebar">Navigation entries</option>
-            </select>
-            <button
-              onClick={normalizeOrders}
-              disabled={!can("rbac", ACTIONS.UPDATE)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
-            >
-              <MdSort size={16} /> Normalize Order
-            </button>
-            <OrangeButton onClick={openCreate} disabled={!can("rbac", ACTIONS.CREATE)}>
-              <MdAdd size={16} /> Add Module
-            </OrangeButton>
-          </div>
-        }
       />
-
+      {state?.rbacModulesData?.error && (
+        <div role="alert" className="text-red-600">
+          Unable to load modules. <button onClick={load}>Retry</button>
+        </div>
+      )}
       <DataTable
         columns={columns}
-        data={modules}
-        loading={loading}
-        totalCount={modules.length}
-        onSearch={(val) => setSearch(val)}
-        rowActions={rowActions}
-        searchPlaceholder="Search modules by name, key, or route..."
+        data={data}
+        rowKey="moduleSlug"
+        loading={!!state?.loading}
+        totalCount={data.length}
+        onSearch={setSearch}
+        searchPlaceholder="Search modules..."
         emptyText="No modules found."
-        emptyIcon={<MdViewModule size={40} className="text-gray-200" />}
+        emptyIcon={<MdViewModule size={40} />}
+        rowActions={(row) =>
+          can("rbac", ACTIONS.UPDATE) &&
+          entriesOf(row).some((entry) => entry.id && entry.configured !== false)
+            ? [
+                {
+                  label: "Edit Sidebar",
+                  icon: <MdEdit size={16} />,
+                  onClick: () => edit(row),
+                },
+              ]
+            : []
+        }
         filterBar={
           <FilterBar
-            filters={FILTER_FIELDS}
+            filters={[
+              {
+                key: "group",
+                type: "select",
+                label: "Feature",
+                options: [
+                  ...new Set(
+                    rows
+                      .filter((row) => row.presentation?.linked !== false)
+                      .map((row) => row.presentation?.group)
+                      .filter(Boolean),
+                  ),
+                ].map((group) => ({ value: group, label: group })),
+              },
+              ...FILTERS,
+            ]}
             values={filters}
-            onChange={(key, val) =>
-              setFilters((prev) => ({ ...prev, [key]: val }))
+            onChange={(key, value) =>
+              setFilters((previous) => ({ ...previous, [key]: value }))
             }
             onClear={() => setFilters({})}
-            loading={loading}
-            activeCount={
-              Object.keys(filters).filter((k) => Boolean(filters[k])).length
-            }
+            activeCount={Object.values(filters).filter(Boolean).length}
           />
         }
       />
-
-      {modalOpen && (
+      {editing && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl bg-white rounded-lg shadow-xl p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">
-                {editing ? "Edit Module" : "Create Module"}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-400 hover:text-gray-700"
-              >
-                X
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="text-sm">
-                Module Name
-                <input
-                  value={form.moduleName}
-                  disabled={Boolean(editing?.identityLocked && editing?.metadata?.source !== "sidebar-seed")}
-                  onChange={(e) => updateName(e.target.value)}
-                  className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                />
-              </label>
-              <label className="text-sm">
-                Module Key
-                <input
-                  value={form.moduleKey}
-                  disabled={Boolean(editing?.identityLocked)}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, moduleKey: e.target.value }))
-                  }
-                  className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                />
-              </label>
-              <label className="text-sm">
-                Module Slug
-                <input
-                  value={form.moduleSlug}
-                  disabled={Boolean(editing?.identityLocked)}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, moduleSlug: e.target.value }))
-                  }
-                  className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                />
-              </label>
-              <label className="text-sm">
-                Icon
-                <input
-                  value={form.icon}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, icon: e.target.value }))
-                  }
-                  placeholder="MdViewModule"
-                  className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                />
-              </label>
-              <label className="text-sm">
-                Route Path
-                <input
-                  value={form.routePath}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, routePath: e.target.value }))
-                  }
-                  placeholder="/app/module-management"
-                  className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                />
-              </label>
-              <FilterSelect
-                label="Parent Module"
-                name="parentModuleId"
-                inputId="parentModuleId"
-                placeholder="Select Parent Module"
-                isClearable
-                isSearchable
-                options={[
-                  {
-                    value: "",
-                    label: "No parent",
-                  },
-                  ...parentOptions.filter(
-                    (item) => item.value !== idOf(editing || {}),
-                  ),
-                ]}
-                value={
-                  [
-                    {
-                      value: "",
-                      label: "No parent",
-                    },
-                    ...parentOptions.filter(
-                      (item) => item.value !== idOf(editing || {}),
+          <form
+            onSubmit={save}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sidebar-editor-title"
+            className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl space-y-4"
+          >
+            <h2 id="sidebar-editor-title" className="text-lg font-semibold">
+              {editing.moduleName || editing.name} — Sidebar
+            </h2>
+            <label className="block text-sm">
+              Menu
+              <select
+                className="admin-input mt-1 w-full"
+                value={selectedEntry?.id || ""}
+                disabled={saving}
+                onChange={(event) =>
+                  selectEntry(
+                    entriesOf(editing).find(
+                      (entry) => entry.id === event.target.value,
                     ),
-                  ].find((option) => option.value === form.parentModuleId) ||
-                  null
+                  )
                 }
-                onChange={(selectedOption) =>
-                  setForm((p) => ({
-                    ...p,
-                    parentModuleId: selectedOption?.value || "",
+              >
+                {entriesOf(editing)
+                  .filter((entry) => entry.id && entry.configured !== false)
+                  .map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.moduleName || entry.name} (
+                      {panels[entry.panel] || "Admin"})
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              Menu label
+              <input
+                className="admin-input mt-1 w-full"
+                value={form.moduleName}
+                disabled={saving}
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    moduleName: event.target.value,
+                  }))
+                }
+                required
+              />
+            </label>
+            <label className="block text-sm">
+              Position
+              <input
+                type="number"
+                min="0"
+                step="1"
+                className="admin-input mt-1 w-full"
+                value={form.order}
+                disabled={saving}
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    order: event.target.value,
+                  }))
+                }
+                required
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.isVisibleInSidebar}
+                disabled={saving}
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    isVisibleInSidebar: event.target.checked,
                   }))
                 }
               />
-              <FilterSelect
-                label="Module Type"
-                name="moduleType"
-                inputId="moduleType"
-                placeholder="Select Module Type"
-                options={moduleTypes.options}
-                value={
-                  moduleTypes.options.find(
-                    (option) => option.value === form.moduleType,
-                  ) || null
-                }
-                onChange={(selectedOption) =>
-                  setForm((p) => ({
-                    ...p,
-                    moduleType: selectedOption?.value || "",
-                  }))
-                }
-                isSearchable={false}
-                isClearable={false}
-              />
-              <label className="text-sm">
-                Order
-                <input
-                  type="number"
-                  value={form.order}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, order: e.target.value }))
+              Show in sidebar
+            </label>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">
+                Visible for account roles
+              </legend>
+              <p className="text-xs text-gray-500">
+                An empty selection allows any account role that has the required
+                permission.
+              </p>
+              {rolesError && (
+                <p role="alert" className="text-xs text-red-600">
+                  {rolesError}
+                </p>
+              )}
+              {roles.map((role) => (
+                <label
+                  key={role.id}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    disabled={saving}
+                    checked={form.allowedRoles.includes(role.slug)}
+                    onChange={(event) =>
+                      setForm((previous) => ({
+                        ...previous,
+                        allowedRoles: event.target.checked
+                          ? [...previous.allowedRoles, role.slug]
+                          : previous.allowedRoles.filter(
+                              (slug) => slug !== role.slug,
+                            ),
+                      }))
+                    }
+                  />
+                  {role.name || role.slug}
+                </label>
+              ))}
+              {form.allowedRoles.length > 0 && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() =>
+                    setForm((previous) => ({ ...previous, allowedRoles: [] }))
                   }
-                  className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                />
-              </label>
-              <FilterSelect
-                label="Status"
-                name="status"
-                inputId="status"
-                placeholder="Select Status"
-                options={recordStatuses.options}
-                value={
-                  recordStatuses.options.find(
-                    (option) => option.value === form.status,
-                  ) || null
-                }
-                onChange={(selectedOption) =>
-                  setForm((p) => ({
-                    ...p,
-                    status: selectedOption?.value || "",
-                  }))
-                }
-                isSearchable={false}
-                isClearable={false}
-              />
-              <label className="text-sm">
-                Permissions
-                <input
-                  value={form.permissionsText}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, permissionsText: e.target.value }))
-                  }
-                  placeholder="view, add, update"
-                  className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                />
-              </label>
-              <label className="md:col-span-2 text-sm">
-                Description
-                <textarea
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, description: e.target.value }))
-                  }
-                  className="mt-1 w-full border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[var(--admin-blue)]"
-                  rows={3}
-                />
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.isVisibleInSidebar}
-                  onChange={(e) =>
-                    setForm((p) => ({
-                      ...p,
-                      isVisibleInSidebar: e.target.checked,
-                    }))
-                  }
-                />
-                Visible in sidebar
-              </label>
+                >
+                  Remove role restriction
+                </button>
+              )}
+              {form.allowedRoles
+                .filter((slug) => !roles.some((role) => role.slug === slug))
+                .map((slug) => (
+                  <p key={slug} className="text-xs">
+                    Saved restriction: {slug}
+                  </p>
+                ))}
+            </fieldset>
+            <div className="rounded border p-3 text-sm space-y-2">
+              <p>
+                Required access:{" "}
+                <strong>{editing.moduleName || editing.name} → View</strong>
+              </p>
+              <p className="text-xs">
+                Permission key:{" "}
+                <code>
+                  {(editing.permissions || []).find(
+                    (permission) =>
+                      permission.action === "view" &&
+                      permission.active !== false,
+                  )?.slug || `${editing.moduleSlug || editing.slug}:view`}
+                </code>
+              </p>
+              {!(editing.permissions || []).some(
+                (permission) =>
+                  permission.id &&
+                  permission.action === "view" &&
+                  permission.active !== false,
+              ) && (
+                <div className="space-y-2">
+                  <p className="text-xs text-amber-700">
+                    No active View permission is saved for this module. It
+                    cannot be assigned until configured.
+                  </p>
+                  {editing.id && can("rbac", ACTIONS.CREATE) && (
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={async () => {
+                        setSaving(true);
+                        try {
+                          const response = await axiosPrivate.get(
+                            `/rbac/modules/${editing.id}`,
+                          );
+                          const module = response.data?.data;
+                          if (!module?.slug)
+                            throw new Error(
+                              "Unable to resolve the saved module",
+                            );
+                          const existingView = (module.permissions || []).find(
+                            (permission) => permission.action === "view",
+                          );
+                          if (existingView?.id) {
+                            if (!can("rbac", ACTIONS.UPDATE))
+                              throw new Error(
+                                "Permission update access is required",
+                              );
+                            await dispatch(
+                              updateRbacPermission({
+                                id: existingView.id,
+                                active: true,
+                              }),
+                            ).unwrap();
+                          } else {
+                            await dispatch(
+                              createRbacPermission({
+                                moduleId: editing.id,
+                                name: `View ${module.moduleName || module.name}`,
+                                slug: `${module.slug}:view`,
+                                action: "view",
+                              }),
+                            ).unwrap();
+                          }
+                          toast.success(
+                            "View permission configured. Assign it through user permissions.",
+                          );
+                          setEditing(null);
+                          load();
+                        } catch (error) {
+                          toast.error(
+                            error?.message ||
+                              "Unable to configure View permission",
+                          );
+                        } finally {
+                          setSaving(false);
+                        }
+                      }}
+                    >
+                      Configure View Permission
+                    </button>
+                  )}
+                </div>
+              )}
+              <p className="text-xs text-gray-500">
+                Assign this from Admin Users → Assign Permissions. Sidebar
+                visibility does not grant module access.
+              </p>
+              <p className="text-xs">
+                Menu status:{" "}
+                {selectedEntry?.status ||
+                  (selectedEntry?.active === false ? "inactive" : "active")}
+              </p>
+              {selectedEntry?.active === false &&
+                can("rbac", ACTIONS.STATUS_CHANGE) && (
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={async () => {
+                      setSaving(true);
+                      try {
+                        await dispatch(
+                          updateRbacModuleStatus({
+                            id: selectedEntry.id,
+                            status: "active",
+                          }),
+                        ).unwrap();
+                        toast.success("Menu activated");
+                        setEditing(null);
+                        load();
+                      } catch (error) {
+                        toast.error(
+                          error?.message || "Unable to activate menu",
+                        );
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                  >
+                    Activate Menu
+                  </button>
+                )}
             </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <button onClick={closeModal} className="px-4 py-2 rounded border">
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={close}
+                disabled={saving}
+                className="px-4 py-2 rounded border"
+              >
                 Cancel
               </button>
-              <OrangeButton disabled={saving} onClick={handleSave}>
-                {saving ? "Saving..." : "Save"}
+              <OrangeButton type="submit" disabled={saving}>
+                {saving ? "Saving..." : "Save Sidebar"}
               </OrangeButton>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

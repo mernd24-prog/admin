@@ -18,29 +18,6 @@ import TransparentButton from "../../../components/Atoms/buttons/TransParentButt
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 
-const CANONICAL_ACTIONS = [
-  "view",
-  "create",
-  "update",
-  "delete",
-  "approve",
-  "reject",
-  "assign",
-  "export",
-  "import",
-  "status_change",
-  "restore",
-  "bulk_action",
-  "adjust",
-];
-const ROLE_OPTIONS = [
-  "admin",
-  "sub-admin",
-  "seller",
-  "seller-admin",
-  "seller-sub-admin",
-];
-
 const ACTION_PILL = {
   view: "bg-blue-50 text-blue-600 border-blue-200",
   create: "bg-green-50 text-green-600 border-green-200",
@@ -80,41 +57,108 @@ const PermissionBuilder = ({ value = [], onChange }) => {
   const [module, setModule] = useState("");
   const [picked, setPicked] = useState([]);
   const [modules, setModules] = useState([]);
+  const [modulesLoading, setModulesLoading] = useState(true);
+  const [modulesError, setModulesError] = useState("");
+  const [reload, setReload] = useState(0);
   useEffect(() => {
     let active = true;
-    axiosProvider.get("/rbac/permission-management/modules")
-      .then(response => { if (active) setModules(response.data?.data?.modules || []); })
-      .catch(() => toast.error("Unable to load permission modules"));
-    return () => { active = false; };
-  }, []);
-  const availableActions = (modules.find(item => item.slug === module)?.permissions || [])
-    .map(permission => permission.action)
-    .filter(action => CANONICAL_ACTIONS.includes(action));
+    setModulesLoading(true);
+    setModulesError("");
+    axiosProvider
+      .get("/rbac/permission-management/modules")
+      .then((response) => {
+        if (active)
+          setModules(
+            (response.data?.data?.modules || []).filter(item => item.presentation?.linked !== false).filter((item) =>
+              (item.permissions || []).some(
+                (permission) =>
+                  permission.id &&
+                  permission.active !== false &&
+                  permission.assignable !== false,
+              ),
+            ),
+          );
+      })
+      .catch(() => {
+        if (active) {
+          setModules([]);
+          setModulesError("Unable to load assignable permissions.");
+        }
+      })
+      .finally(() => {
+        if (active) setModulesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [reload]);
+  const availablePermissions = (
+    modules.find((item) => item.slug === module)?.permissions || []
+  ).filter(
+    (permission) =>
+      permission.id &&
+      permission.slug &&
+      permission.active !== false &&
+      permission.assignable !== false,
+  );
+  const availableActions = [
+    ...new Set(availablePermissions.map((permission) => permission.action)),
+  ];
+  const selectedSlugs = picked
+    .map(
+      (action) =>
+        availablePermissions.find((permission) => permission.action === action)
+          ?.slug,
+    )
+    .filter(Boolean);
+  const canAdd = selectedSlugs.some((slug) => !value.includes(slug));
 
   const byModule = useMemo(() => groupSlugsByModule(value), [value]);
   const allMods = useMemo(() => Object.keys(byModule), [byModule]);
 
   const add = () => {
-    const mod = module.trim().toLowerCase().replace(/\s+/g, "-");
-    if (!mod || !picked.length) return;
-    const newSlugs = picked
-      .map((a) => `${mod}:${a}`)
-      .filter((s) => !value.includes(s));
-    if (newSlugs.length) onChange([...value, ...newSlugs]);
+    if (!canAdd || modulesLoading || modulesError) return;
+    onChange([...new Set([...value, ...selectedSlugs])]);
     setModule("");
     setPicked([]);
   };
 
   const removeMod = (mod) =>
-    onChange(value.filter((s) => !s.startsWith(`${mod}:`)));
-
-  const toggleAction = (a) =>
-    setPicked((prev) =>
-      prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a],
-    );
+    onChange(value.filter((slug) => !slug.startsWith(`${mod}:`)));
+  const toggleAction = (action) => {
+    if (!availableActions.includes(action)) return;
+    setPicked((previous) => {
+      if (action === "view" && previous.includes(action)) return [];
+      if (previous.includes(action))
+        return previous.filter((item) => item !== action);
+      return [
+        ...new Set([
+          ...previous,
+          ...(availableActions.includes("view") ? ["view"] : []),
+          action,
+        ]),
+      ];
+    });
+  };
 
   return (
     <div className="space-y-3">
+      {modulesError && (
+        <div role="alert">
+          <p className="text-sm text-red-600">{modulesError}</p>
+          <button type="button" onClick={() => setReload((index) => index + 1)}>
+            Retry permissions
+          </button>
+        </div>
+      )}
+      {modulesLoading && (
+        <p className="text-sm text-gray-500">Loading assignable permissions…</p>
+      )}
+      {!modulesLoading && !modulesError && !modules.length && (
+        <p className="text-sm text-gray-500">
+          No assignable permissions available.
+        </p>
+      )}
       {/* Builder row */}
       <div className="bg-[var(--admin-surface-soft)] rounded-xl border border-[var(--admin-line)] p-3 space-y-2">
         <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
@@ -122,18 +166,28 @@ const PermissionBuilder = ({ value = [], onChange }) => {
         </p>
         <div className="flex gap-2">
           <select
+            disabled={
+              modulesLoading || Boolean(modulesError) || !modules.length
+            }
             className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm"
             aria-label="Permission module"
             value={module}
-            onChange={event => { setModule(event.target.value); setPicked([]); }}
+            onChange={(event) => {
+              setModule(event.target.value);
+              setPicked([]);
+            }}
           >
             <option value="">Choose a module</option>
-            {modules.map(item => <option key={item.id || item.slug} value={item.slug}>{item.moduleName || item.name}</option>)}
+            {modules.map((item) => (
+              <option key={item.id || item.slug} value={item.slug}>
+                {item.moduleName || item.name}
+              </option>
+            ))}
           </select>
           <button
             type="button"
             onClick={add}
-            disabled={!module.trim() || !picked.length}
+            disabled={!canAdd || modulesLoading || Boolean(modulesError)}
             className="px-3 py-1.5 text-sm font-medium text-white bg-[var(--admin-blue)] rounded-lg hover:bg-[#323580] disabled:opacity-40"
           >
             Add
@@ -184,6 +238,7 @@ const PermissionBuilder = ({ value = [], onChange }) => {
               <button
                 type="button"
                 onClick={() => removeMod(mod)}
+                aria-label={`Remove ${mod} permissions`}
                 className="p-1 text-gray-300 hover:text-red-400 shrink-0"
               >
                 <MdClose size={14} />
@@ -214,6 +269,42 @@ const TemplateModal = ({ template, onClose, onSave }) => {
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
+  const [rolesError, setRolesError] = useState("");
+  const [reloadRoles, setReloadRoles] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setRolesLoading(true);
+    setRolesError("");
+    axiosProvider
+      .get("/rbac/roles", { params: { includeInactive: true, limit: 1000 } })
+      .then((response) => {
+        if (active)
+          setRoles(
+            (Array.isArray(response.data?.data)
+              ? response.data.data
+              : []
+            ).filter(
+              (role) =>
+                role.id &&
+                !role.isSuperAdmin &&
+                (role.active !== false || form.roleScope.includes(role.slug)),
+            ),
+          );
+      })
+      .catch(() => {
+        if (active) setRolesError("Unable to load role choices.");
+      })
+      .finally(() => {
+        if (active) setRolesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+    // The form selection changes locally; reload choices only on open/retry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadRoles]);
 
   const set = (k, v) => {
     setForm((p) => ({ ...p, [k]: v }));
@@ -335,19 +426,34 @@ const TemplateModal = ({ template, onClose, onSave }) => {
                   (empty = all roles)
                 </span>
               </label>
+              {rolesLoading && (
+                <p className="text-xs text-gray-500">Loading roles…</p>
+              )}
+              {rolesError && (
+                <div role="alert">
+                  <p className="text-xs text-red-600">{rolesError}</p>
+                  <button
+                    type="button"
+                    onClick={() => setReloadRoles((index) => index + 1)}
+                  >
+                    Retry roles
+                  </button>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
-                {ROLE_OPTIONS.map((role) => {
-                  const on = form.roleScope.includes(role);
+                {roles.map((role) => {
+                  const on = form.roleScope.includes(role.slug);
                   return (
                     <button
-                      key={role}
+                      key={role.id}
                       type="button"
+                      aria-pressed={on}
                       onClick={() =>
                         set(
                           "roleScope",
                           on
-                            ? form.roleScope.filter((r) => r !== role)
-                            : [...form.roleScope, role],
+                            ? form.roleScope.filter((r) => r !== role.slug)
+                            : [...form.roleScope, role.slug],
                         )
                       }
                       className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
@@ -357,11 +463,30 @@ const TemplateModal = ({ template, onClose, onSave }) => {
                       }`}
                     >
                       {on && <MdCheck size={12} />}
-                      {role}
+                      {role.name || role.slug}
                     </button>
                   );
                 })}
               </div>
+              {!rolesLoading &&
+                !rolesError &&
+                form.roleScope
+                  .filter((slug) => !roles.some((role) => role.slug === slug))
+                  .map((slug) => (
+                    <button
+                      key={slug}
+                      type="button"
+                      className="text-xs text-red-600"
+                      onClick={() =>
+                        set(
+                          "roleScope",
+                          form.roleScope.filter((value) => value !== slug),
+                        )
+                      }
+                    >
+                      Remove unavailable role: {slug}
+                    </button>
+                  ))}
             </div>
 
             {/* Permissions */}
@@ -380,16 +505,12 @@ const TemplateModal = ({ template, onClose, onSave }) => {
               )}
             </div>
 
-            {/* Active toggle */}
             <label className="flex items-center gap-3 cursor-pointer">
-              <div
-                onClick={() => set("isActive", !form.isActive)}
-                className={`relative w-9 h-5 rounded-full transition-colors ${form.isActive ? "bg-teal-500" : "bg-gray-300"}`}
-              >
-                <div
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.isActive ? "translate-x-4" : "translate-x-0"}`}
-                />
-              </div>
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) => set("isActive", event.target.checked)}
+              />
               <span className="text-xs font-medium text-gray-600">Active</span>
             </label>
           </div>
@@ -447,6 +568,8 @@ const PermissionTemplates = () => {
     async (form) => {
       const isEdit = Boolean(modal?.id);
       try {
+        if (!can("rbac", isEdit ? ACTIONS.UPDATE : ACTIONS.CREATE))
+          throw new Error("Permission denied");
         if (isEdit) {
           await axiosProvider.patch(`/rbac/templates/${modal.id}`, form);
           toast.success("Template updated");
@@ -461,24 +584,31 @@ const PermissionTemplates = () => {
         throw err;
       }
     },
-    [modal, fetch],
+    [modal, fetch, can],
   );
 
-  const toggleActive = useCallback(async (tpl) => {
-    try {
-      await axiosProvider.patch(`/rbac/templates/${tpl.id}`, {
-        isActive: !tpl.isActive,
-      });
-      setTemplates((prev) =>
-        prev.map((t) =>
-          t.id === tpl.id ? { ...t, isActive: !tpl.isActive } : t,
-        ),
-      );
-      toast.success(tpl.isActive ? "Deactivated" : "Activated");
-    } catch {
-      toast.error("Failed");
-    }
-  }, []);
+  const toggleActive = useCallback(
+    async (tpl) => {
+      if (!can("rbac", ACTIONS.UPDATE)) return;
+      try {
+        await axiosProvider.patch(`/rbac/templates/${tpl.id}`, {
+          isActive: !tpl.isActive,
+        });
+        setTemplates((prev) =>
+          prev.map((t) =>
+            t.id === tpl.id ? { ...t, isActive: !tpl.isActive } : t,
+          ),
+        );
+        toast.success(tpl.isActive ? "Deactivated" : "Activated");
+      } catch (error) {
+        toast.error(
+          error?.response?.data?.error?.message ||
+            "Unable to update template status",
+        );
+      }
+    },
+    [can],
+  );
 
   const filtered = useMemo(() => {
     let list = templates;
@@ -510,7 +640,7 @@ const PermissionTemplates = () => {
 
       <PageHeader
         title="Permission Templates"
-        subtitle="Reusable permission bundles — apply to any user in one click"
+        subtitle="Manage reusable permission bundles and their role scope"
         breadcrumbs={[
           { label: "Users & Access" },
           { label: "Permission Templates" },
@@ -520,10 +650,12 @@ const PermissionTemplates = () => {
             <button onClick={fetch} title="Refresh">
               <MdRefresh size={18} className={loading ? "animate-spin" : ""} />
             </button>
-            <button disabled={!can("rbac", ACTIONS.CREATE)} onClick={() => setModal(null)}>
-              <MdAdd size={16} />
-              New Template
-            </button>
+            {can("rbac", ACTIONS.CREATE) && (
+              <button onClick={() => setModal(null)}>
+                <MdAdd size={16} />
+                New Template
+              </button>
+            )}
           </div>
         }
       />
@@ -573,10 +705,9 @@ const PermissionTemplates = () => {
               ? "No templates match"
               : "No templates yet"}
           </p>
-          {!search && filterActive === "all" && (
+          {!search && filterActive === "all" && can("rbac", ACTIONS.CREATE) && (
             <button
               onClick={() => setModal(null)}
-              disabled={!can("rbac", ACTIONS.CREATE)}
               className="mt-3 text-sm text-[var(--admin-blue)] hover:underline"
             >
               Create your first template →
@@ -624,32 +755,34 @@ const PermissionTemplates = () => {
                   </div>
                   {/* Actions */}
                   <div className="flex items-center gap-0.5 shrink-0">
-                    <button
-                      title={tpl.isActive ? "Deactivate" : "Activate"}
-                      onClick={() => toggleActive(tpl)}
-                      disabled={!can("rbac", ACTIONS.UPDATE)}
-                      className={`p-1.5 rounded-lg transition-colors ${
-                        tpl.isActive
-                          ? "text-teal-400 hover:text-teal-600 hover:bg-teal-50"
-                          : "text-gray-300 hover:text-teal-400 hover:bg-gray-50"
-                      }`}
-                    >
-                      <div
-                        className={`w-8 h-4 rounded-full relative transition-colors ${tpl.isActive ? "bg-teal-400" : "bg-gray-300"}`}
+                    {can("rbac", ACTIONS.UPDATE) && (
+                      <button
+                        title={tpl.isActive ? "Deactivate" : "Activate"}
+                        onClick={() => toggleActive(tpl)}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          tpl.isActive
+                            ? "text-teal-400 hover:text-teal-600 hover:bg-teal-50"
+                            : "text-gray-300 hover:text-teal-400 hover:bg-gray-50"
+                        }`}
                       >
                         <div
-                          className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${tpl.isActive ? "translate-x-4" : "translate-x-0.5"}`}
-                        />
-                      </div>
-                    </button>
-                    <button
-                      title="Edit"
-                      onClick={() => setModal(tpl)}
-                      disabled={!can("rbac", ACTIONS.UPDATE)}
-                      className="p-1.5 text-gray-400 hover:text-[var(--admin-blue)] rounded-lg hover:bg-[var(--admin-blue-soft)] transition-colors"
-                    >
-                      <MdEdit size={15} />
-                    </button>
+                          className={`w-8 h-4 rounded-full relative transition-colors ${tpl.isActive ? "bg-teal-400" : "bg-gray-300"}`}
+                        >
+                          <div
+                            className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${tpl.isActive ? "translate-x-4" : "translate-x-0.5"}`}
+                          />
+                        </div>
+                      </button>
+                    )}
+                    {can("rbac", ACTIONS.UPDATE) && (
+                      <button
+                        title="Edit"
+                        onClick={() => setModal(tpl)}
+                        className="p-1.5 text-gray-400 hover:text-[var(--admin-blue)] rounded-lg hover:bg-[var(--admin-blue-soft)] transition-colors"
+                      >
+                        <MdEdit size={15} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -724,15 +857,17 @@ const PermissionTemplates = () => {
       </div>
 
       {/* Create / Edit modal */}
-      {modal !== undefined && (
-        <TemplateModal
-          template={modal}
-          onClose={() => setModal(undefined)}
-          onSave={save}
-        />
-      )}
+      {modal !== undefined &&
+        can("rbac", modal?.id ? ACTIONS.UPDATE : ACTIONS.CREATE) && (
+          <TemplateModal
+            template={modal}
+            onClose={() => setModal(undefined)}
+            onSave={save}
+          />
+        )}
     </div>
   );
 };
 
+export { PermissionBuilder, TemplateModal };
 export default PermissionTemplates;

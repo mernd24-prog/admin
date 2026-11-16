@@ -83,6 +83,8 @@ export default function FinanceStatements() {
         payoutId,
         financeDateTime(periodStart),
         financeDateTime(periodEnd),
+        payoutAmount,
+        adjustments,
         financeMoney(payoutAmount, row.currency),
         financeMoney(adjustments, row.currency),
         row.status,

@@ -297,7 +297,7 @@ export const toManagedUserCreateBody = (payload = {}, options = {}) => ({
     ? {
         allowedModules: normalizeAllowedModules(
           payload.allowedModules,
-          options.allowedModules,
+          Array.isArray(payload.allowedModules) ? [] : options.allowedModules,
         ),
       }
     : {}),

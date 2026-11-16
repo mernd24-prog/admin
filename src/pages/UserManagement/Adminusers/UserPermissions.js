@@ -1,3 +1,4 @@
+import { visiblePermissionRows, configuredModuleActions } from "../../../_helpers/permissionPresentation";
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import SearchComponent from '../../../components/Atoms/New Table/NewTable';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -103,13 +104,7 @@ const getListItems = (sliceData) => {
     return payload?.list || payload?.items || [];
 };
 
-const getModuleActions = (module) => {
-    const actions = (module.permissions || [])
-        .map((permission) => normalizeAction(permission.action))
-        .filter(Boolean);
-    const unique = Array.from(new Set(['view', ...actions]));
-    return unique.filter((action) => BACKEND_PERMISSION_ACTIONS.includes(action));
-};
+const getModuleActions = module => configuredModuleActions(module, BACKEND_PERMISSION_ACTIONS, normalizeAction);
 
 const getAssignedModuleActions = (module) => {
     const assigned = (module.permissions || [])
@@ -407,11 +402,7 @@ const EffectivePermissionsModal = ({ userId, userName, onClose }) => {
           )}
         </div>
 
-        <div className="px-6 py-3 border-t border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-b-2xl shrink-0">
-          <p className="text-[10px] text-gray-400">
-            Formula: Role permissions + User direct grants + Sidebar expansions − Denied permissions
-          </p>
-        </div>
+
       </div>
     </div>
   );
@@ -581,9 +572,8 @@ const UserPermissions = ({ setModuleName }) => {
             )
             : getPayload(selector?.getAdminUserDetailsData);
         const modules = modulePayload?.modules || modulePayload?.list || [];
-        const allowedModules = Array.isArray(user?.allowedModules)
-            ? user.allowedModules.map(normalizeModuleCode)
-            : [];
+        const scopeModules = modulePayload?.user?.inheritParentPermissions ? modules.filter(module => module.assigned).map(module => module.slug) : user?.allowedModules;
+        const allowedModules = Array.isArray(scopeModules) ? scopeModules.map(normalizeModuleCode) : [];
         const userUsesModuleScope = ['sub-admin', 'seller-admin', 'seller-sub-admin'].includes(user?.role);
         const label = user?.full_name || user?.userName || user?.email || '';
 
@@ -626,7 +616,7 @@ const UserPermissions = ({ setModuleName }) => {
                 .find(Boolean);
             const availablePermissions = getModuleActions(module);
             const actorModuleActions = getActorActionsForModule(actorPermissionMap, moduleSlug);
-            const effectiveAssignablePermissions = canAssignPermissions
+            const effectiveAssignablePermissions = canAssignPermissions && !modulePayload?.user?.inheritParentPermissions
                 ? (hasActorPermissionCeiling
                     ? availablePermissions.filter((action) =>
                         action === 'view'
@@ -645,7 +635,9 @@ const UserPermissions = ({ setModuleName }) => {
             return {
                 id: moduleSlug,
                 module: module.name || moduleSlug,
-                tab: sidebarTabName || module.tab || module.metadata?.tab || moduleSlug,
+                tab: module.presentation?.group || sidebarTabName || module.tab || module.metadata?.tab || moduleSlug,
+                linked: module.presentation?.linked !== false && (module.permissions || []).some(permission => permission.id && permission.active !== false),
+                linkedPages: module.presentation?.links || [],
                 availablePermissions,
                 assignablePermissions: effectiveAssignablePermissions,
                 canAssign: canAssignPermissions && effectiveAssignablePermissions.includes('view'),
@@ -699,7 +691,7 @@ const UserPermissions = ({ setModuleName }) => {
         const allowedModules = assignedModules(next);
         const modulePermissions = assignedModulePermissions(next);
 
-        if (!canAssignPermissions) {
+        if (!canAssignPermissions || modulePayload?.user?.inheritParentPermissions) {
             toast.error('You do not have permission to assign module permissions.');
             return;
         }
@@ -715,7 +707,7 @@ const UserPermissions = ({ setModuleName }) => {
                 toast.error(error || 'Failed to update permissions');
                 setPermissions(previous);
             });
-    }, [canAssignPermissions, dispatch, id, refreshUserPermissions]);
+    }, [canAssignPermissions, dispatch, id, refreshUserPermissions, modulePayload]);
 
     const normalizeSelectedPermissions = (item, newPermissions) => {
         const allowedForAssigner = new Set(item.assignablePermissions || []);
@@ -739,13 +731,10 @@ const UserPermissions = ({ setModuleName }) => {
         persistPermissionChanges(next, previous);
     }, [permissions, persistPermissionChanges]);
 
-    const filteredPermissions = useMemo(() => {
-        return permissions.filter(permission =>
-            String(permission.module || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-            String(permission.tab || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-            String(permission.id || '').toLowerCase().includes(filters.search.toLowerCase())
-        );
-    }, [permissions, filters.search]);
+    const filteredPermissions = useMemo(
+        () => visiblePermissionRows(permissions, filters.search),
+        [permissions, filters.search],
+    );
 
     const groupedPermissions = useMemo(() => {
         const grouped = filteredPermissions.reduce((acc, permission) => {
@@ -779,7 +768,8 @@ const UserPermissions = ({ setModuleName }) => {
         }
         const selectedExists = groupedPermissions.some((group) => group.tabName === selectedTabName);
         if (!selectedExists) {
-            setSelectedTabName(groupedPermissions[0].tabName);
+            const assignedGroup = groupedPermissions.find(group => group.items.some(item => item.permissions.length && !item.permissions.includes('none')));
+            setSelectedTabName((assignedGroup || groupedPermissions[0]).tabName);
         }
     }, [groupedPermissions, selectedTabName]);
 
@@ -888,9 +878,9 @@ const UserPermissions = ({ setModuleName }) => {
                     <div>
                         <p className="text-sm font-semibold text-gray-800">{userName}</p>
                         <p className="mt-0.5 text-xs text-gray-500">
-                            {canAssignPermissions
-                                ? 'You can update access for modules you are allowed to manage.'
-                                : 'You can view this user\'s module permissions. Contact an admin to make changes.'}
+                            {modulePayload?.user?.inheritParentPermissions
+                                ? "Access is inherited from the parent admin. Update the parent’s permissions to change this sub-admin’s access."
+                                : canAssignPermissions ? "You can update access for modules you are allowed to manage." : "You can view this user's module permissions. Contact an admin to make changes."}
                         </p>
                     </div>
                 </div>
@@ -958,6 +948,7 @@ const UserPermissions = ({ setModuleName }) => {
                                             {activeItems.length} module{activeItems.length !== 1 ? 's' : ''}
                                         </p>
                                     </div>
+                                    {!modulePayload?.user?.inheritParentPermissions && (
                                     <div className="flex flex-wrap items-center gap-3">
                                         <div className="inline-flex items-center gap-2 text-sm text-gray-700">
                                             <AccessCheckbox
@@ -994,6 +985,7 @@ const UserPermissions = ({ setModuleName }) => {
                                             Clear
                                         </button>
                                     </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -1012,7 +1004,7 @@ const UserPermissions = ({ setModuleName }) => {
                                             />
                                             <div>
                                                 <p className="text-sm font-medium capitalize text-gray-700">{permission.module}</p>
-                                                <p className="text-xs text-gray-400">{permission.id}</p>
+                                                <p className="text-xs text-gray-400">{permission.linkedPages.length ? permission.linkedPages.map(page => page.name).join(" · ") : permission.id}</p>
                                             </div>
                                         </div>
                                         <PermissionsSelector

@@ -2086,7 +2086,7 @@ export default function BasicDetailsTab({
                 />
               </div>
 
-              <PermissionGuard module="brands" action="create" allowSeller hide>
+              <PermissionGuard module={isSellerPanelUser ? "products" : "brands"} action="create" hide>
                 <button
                   type="button"
                   className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
@@ -2200,7 +2200,7 @@ export default function BasicDetailsTab({
                   />
                 </div>
 
-                <PermissionGuard module="tax" action="create" allowSeller hide>
+                <PermissionGuard module={isSellerPanelUser ? "products" : "tax"} action="create" hide>
                   <button
                     type="button"
                     className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"

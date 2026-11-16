@@ -15,10 +15,9 @@ import { useSessionHeartbeat } from "../../_helpers/useSessionHeartbeat";
 import {
   getRouteModuleCandidates,
   isSelfServiceRoute,
-  isSellerBlockedModule,
-  isSellerBlockedRoute,
   routeCodeFromPath,
 } from "../../_helpers/rbacRoutes";
+import { usePermission } from "../../_helpers/usePermission";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 import ProductOptionValue from "../../pages/ProductManagement/ProductOptions/ProductOptionValue";
 
@@ -356,28 +355,6 @@ const normalizeRoutePattern = (routePath = "") => {
   return code ? `/${code}` : "";
 };
 
-const collectBackendRoutePatterns = (items = []) => {
-  const routes = new Set();
-
-  const visit = (nodes = []) => {
-    nodes.forEach((item = {}) => {
-      [
-        item.routePath,
-        ...(Array.isArray(item.metadata?.supportedRoutes)
-          ? item.metadata.supportedRoutes
-          : []),
-      ]
-        .map(normalizeRoutePattern)
-        .filter(Boolean)
-        .forEach((route) => routes.add(route));
-      visit(item.children || []);
-    });
-  };
-
-  visit(items);
-  return routes;
-};
-
 const getSidebarModulePayload = (sliceData = {}) => {
   const payload =
     sliceData?.data?.normalized?.data ||
@@ -399,6 +376,7 @@ const flattenSidebarModules = (items = []) =>
 
 function Layout() {
   useSessionHeartbeat();
+  const { canRoute } = usePermission();
 
   const location = useLocation();
   const [navbarOpen, setNavbarOpen] = useState(getInitialSidebarState);
@@ -408,7 +386,6 @@ function Layout() {
   const [socket, setSocket] = useState(null);
   const selector = useSelector((state) => state.user);
   const adminCoreSelector = useSelector((state) => state.adminCore);
-  const permissions = selector?.getMyModulePermissionData?.data?.data;
   const [hasPermanentOpen, setHasPermanentOpen] = useState(() => {
     if (typeof window === "undefined") return getInitialSidebarState();
     return window.matchMedia("(min-width: 1024px)").matches
@@ -451,59 +428,6 @@ function Layout() {
     };
   }, []);
 
-  const modulePermissions = useMemo(() => {
-    const permMap = {};
-    const normalizeModule = (value = "") =>
-      String(value || "")
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/_/g, "-");
-    const modules = Array.isArray(permissions?.modules)
-      ? permissions.modules
-      : Array.isArray(permissions)
-        ? permissions
-        : [];
-
-    if (modules.length) {
-      modules.forEach((module) => {
-        const moduleCode = normalizeModule(
-          module.slug ||
-            module.moduleKey ||
-            module.moduleSlug ||
-            module.module ||
-            module.module_code?.module_code ||
-            module.module_code ||
-            module.metadata?.requiredModule,
-        );
-
-        if (!moduleCode) return;
-
-        const hasViewAction = Array.isArray(module.permissions)
-          ? module.permissions.some(
-              (permission) =>
-                String(permission.action || "").toLowerCase() === "view" &&
-                permission.assigned === true,
-            )
-          : module.assigned !== false;
-        const isAssigned = module.assigned !== false && hasViewAction;
-
-        [
-          moduleCode,
-          normalizeModule(module.slug),
-          normalizeModule(module.moduleKey),
-          normalizeModule(module.moduleSlug),
-          normalizeModule(module.metadata?.requiredModule),
-        ]
-          .filter(Boolean)
-          .forEach((code) => {
-            permMap[code] = isAssigned;
-          });
-      });
-    }
-    return permMap;
-  }, [permissions]);
-
   const accessModules = useMemo(() => {
     const sd = adminCoreSelector?.accessModulesData;
     const payload =
@@ -523,11 +447,6 @@ function Layout() {
   const sidebarModules = useMemo(
     () => getSidebarModulePayload(adminCoreSelector?.rbacSidebarModulesData),
     [adminCoreSelector?.rbacSidebarModulesData],
-  );
-
-  const backendRoutePatterns = useMemo(
-    () => collectBackendRoutePatterns(sidebarModules),
-    [sidebarModules],
   );
 
   const routePermissionModules = useMemo(
@@ -809,41 +728,10 @@ function Layout() {
     };
   }, [socket]);
 
-  const hasPermission = (path) => {
-    if (isSelfServiceRoute(path)) return true;
-    if (isSellerPanel() && isSellerBlockedRoute(path)) return false;
-
-    const normalizedRoute = normalizeRoutePattern(path);
-    if (backendRoutePatterns.has(normalizedRoute)) return true;
-
-    const moduleCandidates = getRouteModuleCandidates(
-      path,
-      routePermissionModules,
-      {
-        sellerPanel: isSellerPanel(),
-      },
-    );
-    if (!moduleCandidates.length) return true;
-    if (!backendRoutePatterns.size && !Object.keys(modulePermissions).length) {
-      return true;
-    }
-
-    return moduleCandidates.some((moduleCode) => {
-      const normalizedModuleCode = String(moduleCode || "")
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/_/g, "-");
-      if (isSellerPanel() && isSellerBlockedModule(normalizedModuleCode)) {
-        return false;
-      }
-      if (modulePermissions[normalizedModuleCode] === true) return true;
-      return false;
-    });
-  };
+  const hasPermission = (path) => canRoute(path, routePermissionModules);
 
   const renderRoute = (path, element) => {
-    if (!hasPermission(path)) {
+    if (!canRoute(path, routePermissionModules, location.pathname)) {
       const permissionLoading = Boolean(
         selector?.loading ||
         adminCoreSelector?.loading ||
@@ -853,11 +741,7 @@ function Layout() {
       );
 
       if (permissionLoading) {
-        return path.startsWith("/referral-commerce") ? (
-          element
-        ) : (
-          <PageSkeletonLoader />
-        );
+        return <PageSkeletonLoader />;
       }
 
       // Restricted admins are commonly sent to /app/home after login even
@@ -875,12 +759,11 @@ function Layout() {
             !route.path.includes(":") &&
             !route.redirectTo &&
             !isSelfServiceRoute(route.path) &&
-            (backendRoutePatterns.has(normalizeRoutePattern(route.path)) ||
-              getRouteModuleCandidates(
-                route.permissionPath || route.path,
-                routePermissionModules,
-                { sellerPanel: isSellerPanel() },
-              ).length > 0) &&
+            getRouteModuleCandidates(
+              route.permissionPath || route.path,
+              routePermissionModules,
+              { sellerPanel: isSellerPanel() },
+            ).length > 0 &&
             hasPermission(route.permissionPath || route.path),
         );
         if (firstAllowedRoute) {
@@ -963,7 +846,9 @@ function Layout() {
                     route.render()
                   );
 
-                  const permissionPath = route.permissionPath || route.path;
+                  const permissionPath =
+                    route.permissionPath ||
+                    normalizeRoutePattern(location.pathname);
 
                   return (
                     <Route

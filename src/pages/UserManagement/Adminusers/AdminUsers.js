@@ -1,16 +1,9 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import {
-  MdLogout,
-  MdClose,
-  MdSecurity,
-  MdContentCopy,
-  MdDashboardCustomize,
-} from "react-icons/md";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import {
   getAdmins,
@@ -18,11 +11,8 @@ import {
   getPlatformSubAdmins,
   createPlatformSubAdmin,
   createAdmin,
-  getAccessModules,
   updateAdminUser,
-  updatePlatformSubAdminModules,
 } from "../../../Redux/adminCoreSlice";
-import { getMyModulePermission } from "../../../Redux/userManagementSlice";
 import TableData from "../../../components/Atoms/TableData/TableData";
 import SearchComponent from "../../../components/Atoms/New Table/NewTable";
 import Loader from "../../../components/Loader/Loader";
@@ -33,385 +23,11 @@ import { ActionButtons } from "../../../components/Atoms/TableActionButton/Table
 import StatusPopup from "../../../components/Atoms/PopupData/StatusPopup";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
-import {
-  getStoredRole,
-  getStoredUser,
-  normalizeRole,
-} from "../../../_helpers/authStorage";
-import {
-  getModuleLabel,
-  getModuleMeta,
-  MODULE_TAB_ORDER,
-} from "../../../_helpers/rbacRoutes";
+import { getStoredRole, normalizeRole } from "../../../_helpers/authStorage";
 import { usePermission } from "../../../_helpers/usePermission";
 import AddButton from "../../../components/Atoms/buttons/AddButton";
 
 const PAGE_SIZE = 10;
-
-/* ── Effective Permissions Drawer ────────────────────────────────────────── */
-const EffectivePermissionsDrawer = ({ userId, userName, onClose }) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!userId) return;
-    setLoading(true);
-    axiosProvider
-      .get(`/rbac/users/${userId}/permissions/effective`)
-      .then((res) => setData(res.data?.data || null))
-      .catch(() => toast.error("Failed to load effective permissions"))
-      .finally(() => setLoading(false));
-  }, [userId]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
-      <div className="bg-white w-full max-w-lg h-full overflow-y-auto shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] sticky top-0">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <MdSecurity className="text-[var(--admin-blue)]" size={16} />
-              Effective Permissions
-            </h3>
-            <p className="text-xs text-gray-400 mt-0.5">{userName}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded hover:bg-gray-100 text-gray-400"
-          >
-            <MdClose size={18} />
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="p-6 space-y-3 animate-pulse">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="h-10 bg-[var(--admin-surface-soft)] rounded"
-              />
-            ))}
-          </div>
-        ) : !data ? (
-          <div className="p-8 text-center text-sm text-gray-400">
-            No data available
-          </div>
-        ) : (
-          <div className="p-5 space-y-5 flex-1">
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
-                <p className="text-gray-400 mb-0.5">Role</p>
-                <p className="font-semibold text-gray-700 capitalize">
-                  {data.role || "—"}
-                </p>
-              </div>
-              <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
-                <p className="text-gray-400 mb-0.5">Total Permissions</p>
-                <p className="font-semibold text-gray-700">
-                  {(data.assignedPermissions || []).length}
-                </p>
-              </div>
-              <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
-                <p className="text-gray-400 mb-0.5">Modules</p>
-                <p className="font-semibold text-gray-700">
-                  {(data.assignedModules || []).length}
-                </p>
-              </div>
-              <div className="bg-[var(--admin-surface-soft)] rounded-lg p-3">
-                <p className="text-gray-400 mb-0.5">Denied</p>
-                <p className="font-semibold text-red-500">
-                  {(data.deniedPermissions || []).length}
-                </p>
-              </div>
-            </div>
-
-            {Object.entries(data.permissionsByAction || {}).length > 0 && (
-              <div>
-                <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
-                  By Module
-                </h4>
-                <div className="space-y-1">
-                  {Object.entries(data.permissionsByAction).map(
-                    ([mod, actions]) => (
-                      <div
-                        key={mod}
-                        className="flex items-start gap-2 text-xs py-1.5 border-b border-[#f7efde] last:border-0"
-                      >
-                        <span className="font-medium text-gray-700 w-32 shrink-0 capitalize">
-                          {mod}
-                        </span>
-                        <div className="flex flex-wrap gap-1">
-                          {Object.keys(actions).map((action) => (
-                            <span
-                              key={action}
-                              className="px-1.5 py-0.5 bg-[var(--admin-blue)]/10 text-[var(--admin-blue)] rounded text-[10px] font-medium"
-                            >
-                              {action}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ),
-                  )}
-                </div>
-              </div>
-            )}
-
-            {(data.deniedPermissions || []).length > 0 && (
-              <div>
-                <h4 className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-2">
-                  Explicitly Denied
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {data.deniedPermissions.map((s) => (
-                    <span
-                      key={s}
-                      className="px-2 py-0.5 bg-red-50 text-red-500 border border-red-100 rounded text-[10px] font-mono"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const MODULE_LABELS = {
-  users: "User Management",
-  products: "Product Management",
-  orders: "Order Management",
-  payments: "Payment Management",
-  sellers: "Seller Management",
-  "seller-management": "Seller Admin Management",
-  "sellers/commissions": "Seller Commissions",
-  platform: "Platform Catalog",
-  cms: "CMS Management",
-  warranty: "Warranty",
-  carts: "Cart Management",
-  returns: "Return Management",
-  delivery: "Delivery Management",
-  wallets: "Wallet Management",
-  reports: "Report Management",
-  tax: "Tax Management",
-  locations: "Location Management",
-  categories: "Category Management",
-  sub_categories: "Sub Category Management",
-  sub_sub_categories: "Sub Sub Category Management",
-  brands: "Brand Management",
-  option_masters: "Option Master Management",
-  option_values: "Option Value Management",
-  coupons: "Coupon Management",
-  banners: "Banner Management",
-  reviews: "Review & Rating Management",
-  cms_pages: "CMS/Page Management",
-  subscriptions: "Subscriptions",
-  pricing: "Pricing & Promotions",
-  "dynamic-pricing": "Dynamic Pricing",
-  loyalty: "Loyalty",
-  referral: "Referral Commerce",
-  recommendations: "Recommendations",
-  notifications: "Notifications",
-  analytics: "Analytics",
-  fraud: "Fraud Management",
-  rbac: "RBAC Management",
-  admin: "Admin Dashboard",
-};
-
-const MODULE_TABS = {
-  rbac: "Users & Access",
-  admin: "Dashboard",
-  users: "Users & Access",
-  sellers: "Users & Access",
-  seller_kyc: "Users & Access",
-  seller_bank: "Users & Access",
-  "seller-management": "Users & Access",
-  "sellers/commissions": "Orders Management",
-  products: "Catalog Management",
-  categories: "Catalog Management",
-  sub_categories: "Catalog Management",
-  sub_sub_categories: "Catalog Management",
-  brands: "Catalog Management",
-  option_masters: "Catalog Management",
-  option_values: "Catalog Management",
-  platform: "Catalog Management",
-  cms: "Settings",
-  cms_pages: "Settings",
-  warranty: "Catalog Management",
-  reviews: "Catalog Management",
-  carts: "Orders Management",
-  orders: "Orders Management",
-  returns: "Returns & Cancellations",
-  delivery: "Shipping & Fulfilment",
-  payments: "Payments & Finance",
-  wallets: "Payments & Finance",
-  tax: "Invoices & Taxation",
-  locations: "Location Management",
-  countries: "Location Management",
-  states: "Location Management",
-  cities: "Location Management",
-  zip_codes: "Location Management",
-  subscriptions: "Orders Management",
-  pricing: "Marketing",
-  "dynamic-pricing": "Marketing",
-  loyalty: "Marketing",
-  referral: "Marketing",
-  recommendations: "Marketing",
-  coupons: "Marketing",
-  banners: "Marketing",
-  notifications: "Marketing",
-  analytics: "Reports & Analytics",
-  reports: "Reports & Analytics",
-  fraud: "Settings",
-};
-
-const TAB_ORDER = MODULE_TAB_ORDER;
-
-const getModuleSlug = (module = {}) =>
-  module?.slug ||
-  module?.module ||
-  module?.module_code?.module_code ||
-  module?.module_code ||
-  module?.id;
-
-const toModuleOption = (module) => {
-  if (typeof module === "string") {
-    const meta = getModuleMeta(module);
-    return {
-      slug: module,
-      name: MODULE_LABELS[module] || meta.name || module,
-      tab: meta.tab || MODULE_TABS[module] || "Settings",
-    };
-  }
-
-  const slug = getModuleSlug(module);
-  return {
-    slug,
-    name: module?.name || getModuleLabel(slug) || MODULE_LABELS[slug] || slug,
-    tab:
-      module?.tab ||
-      module?.metadata?.tab ||
-      getModuleMeta(slug).tab ||
-      MODULE_TABS[slug] ||
-      "Settings",
-    permissions: module?.permissions || [],
-    assignableActions: module?.assignableActions || undefined,
-  };
-};
-
-const hasAssignedModuleAccess = (module = {}) => {
-  if (module.assigned) return true;
-  return (module.permissions || []).some((permission) => permission?.assigned);
-};
-
-const groupModuleOptions = (modules = []) => {
-  const groups = modules
-    .map(toModuleOption)
-    .filter((module) => module.slug)
-    .reduce((acc, module) => {
-      if (!acc[module.tab]) acc[module.tab] = [];
-      acc[module.tab].push(module);
-      return acc;
-    }, {});
-
-  return Object.entries(groups);
-};
-
-const getSelectedModuleOptions = (modules = [], selected = []) => {
-  const selectedSet = new Set(selected || []);
-  return (modules || []).filter((module) => selectedSet.has(module.slug));
-};
-
-const ModuleSelector = ({
-  selected,
-  onChange,
-  modules = [],
-  disabled = false,
-}) => {
-  const groupedModules = groupModuleOptions(modules)
-    .map(([tabName, tabModules]) => [
-      tabName,
-      tabModules.map((module) => ({
-        ...module,
-        selected: selected.includes(module.slug),
-      })),
-    ])
-    .sort(([tabA], [tabB]) => {
-      const indexA = TAB_ORDER.indexOf(tabA);
-      const indexB = TAB_ORDER.indexOf(tabB);
-      const safeA = indexA === -1 ? TAB_ORDER.length : indexA;
-      const safeB = indexB === -1 ? TAB_ORDER.length : indexB;
-      if (safeA !== safeB) return safeA - safeB;
-      return tabA.localeCompare(tabB);
-    });
-
-  const toggleGroup = (tabModules) => {
-    if (disabled) return;
-    const groupSlugs = tabModules.map((module) => module.slug);
-    const allSelected = groupSlugs.every((slug) => selected.includes(slug));
-    const next = allSelected
-      ? selected.filter((slug) => !groupSlugs.includes(slug))
-      : Array.from(new Set([...selected, ...groupSlugs]));
-    if (next.length === 0) return;
-    onChange(next);
-  };
-
-  return (
-    <div className="max-h-64 overflow-y-auto pr-1 space-y-3">
-      {groupedModules.map(([tabName, tabModules]) => (
-        <div key={tabName} className="space-y-1.5">
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => toggleGroup(tabModules)}
-            className={`w-full rounded-md border px-3 py-2.5 text-left text-xs transition-colors ${
-              tabModules.some((module) => module.selected)
-                ? "border-[var(--admin-blue)] bg-[var(--admin-blue)]/10 text-[var(--admin-blue)]"
-                : "border-gray-200 text-gray-600 hover:border-gray-300"
-            } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-          >
-            <span className="block text-sm font-semibold">{tabName}</span>
-            <span className="mt-1 block text-[11px] text-gray-500">
-              {tabModules.length} access area
-              {tabModules.length !== 1 ? "s" : ""} included
-            </span>
-          </button>
-          <div className="grid grid-cols-1 gap-1 pl-2 sm:grid-cols-2">
-            {tabModules.map((module) => (
-              <label
-                key={module.slug}
-                className={`flex items-center gap-2 rounded-md border px-2.5 py-2 text-xs ${
-                  module.selected
-                    ? "border-[var(--admin-blue)]/40 bg-[var(--admin-blue)]/5 text-gray-800"
-                    : "border-gray-100 bg-white text-gray-600"
-                } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
-              >
-                <input
-                  type="checkbox"
-                  checked={module.selected}
-                  disabled={disabled}
-                  onChange={() => {
-                    if (disabled) return;
-                    const next = module.selected
-                      ? selected.filter((slug) => slug !== module.slug)
-                      : Array.from(new Set([...selected, module.slug]));
-                    if (next.length === 0) return;
-                    onChange(next);
-                  }}
-                  className="h-3.5 w-3.5 accent-[var(--admin-blue)]"
-                />
-                <span className="min-w-0 truncate">{module.name}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 const emptyUser = {
   fullName: "",
@@ -428,208 +44,8 @@ const emptySubAdmin = {
   confirmPassword: "",
   phone: "",
   role: "sub-admin",
-  allowedModules: ["products", "orders"],
-};
-
-const PERMISSION_ACTIONS = [
-  "view",
-  "create",
-  "update",
-  "delete",
-  "status_change",
-  "approve",
-  "reject",
-  "assign",
-  "export",
-  "import",
-  "bulk_action",
-  "restore",
-  "adjust",
-];
-const ACTION_SHORT_LABELS = {
-  view: "View",
-  create: "Create",
-  update: "Update",
-  delete: "Delete",
-  status_change: "Status",
-  export: "Export",
-  import: "Import",
-  assign: "Assign",
-  approve: "Approve",
-  reject: "Reject",
-  bulk_action: "Bulk",
-  restore: "Restore",
-  adjust: "Adjust",
-};
-
-const normalizeActionsForAssignment = (actions = []) =>
-  Array.from(new Set(["view", ...(actions || [])])).filter((action) =>
-    PERMISSION_ACTIONS.includes(action),
-  );
-
-const getAssignableActionsForModule = (module = {}) => {
-  if (!module || typeof module === "string") return PERMISSION_ACTIONS;
-
-  if (
-    Array.isArray(module.assignableActions) &&
-    module.assignableActions.length
-  ) {
-    return normalizeActionsForAssignment(module.assignableActions);
-  }
-
-  if (Array.isArray(module.permissions) && module.permissions.length) {
-    const actions = module.permissions
-      .filter((permission) => permission.assignable !== false)
-      .map((permission) => permission.action)
-      .filter(Boolean);
-    return actions.length ? normalizeActionsForAssignment(actions) : ["view"];
-  }
-
-  return PERMISSION_ACTIONS;
-};
-
-const buildModulePermissions = (
-  modules = [],
-  actionsMap = {},
-  fallbackActions = ["view"],
-  moduleOptions = [],
-) =>
-  modules.map((mod) => {
-    const module = typeof mod === "string" ? mod : mod.slug || mod;
-    const moduleOption =
-      moduleOptions.find((option) => option?.slug === module) || mod;
-    const assignableActions = new Set(
-      getAssignableActionsForModule(moduleOption),
-    );
-    const actions = normalizeActionsForAssignment(
-      actionsMap[module] || fallbackActions,
-    ).filter((action) => action === "view" || assignableActions.has(action));
-    return {
-      module,
-      actions: actions.length ? actions : ["view"],
-    };
-  });
-
-const buildActionsMapFromUser = (user = {}) => {
-  const map = {};
-
-  if (Array.isArray(user.modulePermissions)) {
-    user.modulePermissions.forEach((item) => {
-      const module = item.module || item.slug;
-      if (!module) return;
-      map[module] = normalizeActionsForAssignment(item.actions || ["view"]);
-    });
-  }
-
-  const permissionSlugs = user.permissionSummary?.permissions || [];
-  if (Array.isArray(permissionSlugs)) {
-    permissionSlugs.forEach((permission) => {
-      const [module, action] = String(permission || "").split(":");
-      if (!module || !action || !PERMISSION_ACTIONS.includes(action)) return;
-      map[module] = normalizeActionsForAssignment([
-        ...(map[module] || []),
-        action,
-      ]);
-    });
-  }
-
-  return map;
-};
-
-const fullModuleActionMap = (modules = []) =>
-  modules.reduce((lookup, module) => {
-    const slug = typeof module === "string" ? module : module.slug || module;
-    if (slug) lookup[slug] = PERMISSION_ACTIONS;
-    return lookup;
-  }, {});
-
-const ModuleActionsSelector = ({
-  modules = [],
-  actionsMap = {},
-  onChange,
-  disabled = false,
-}) => {
-  if (!modules.length) return null;
-  return (
-    <div className="border border-[var(--admin-line)] rounded-lg overflow-hidden mt-1">
-      <div className="bg-[var(--admin-surface-soft)] px-3 py-2 border-b border-[var(--admin-line)] flex items-center gap-2">
-        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-          Actions per Module
-        </span>
-        <span className="text-[10px] text-gray-400 ml-auto">
-          view is always included
-        </span>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-white border-b border-[#f7efde]">
-              <th className="px-3 py-2 text-left text-gray-500 font-medium w-32">
-                Module
-              </th>
-              {PERMISSION_ACTIONS.map((a) => (
-                <th
-                  key={a}
-                  className="px-2 py-2 text-center text-gray-400 font-medium capitalize whitespace-nowrap"
-                >
-                  {ACTION_SHORT_LABELS[a] || a}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#faf6ee]">
-            {modules.map((mod) => {
-              const slug = typeof mod === "string" ? mod : mod.slug || mod;
-              const label =
-                typeof mod === "string" ? mod : mod.name || mod.slug || mod;
-              const assignableActions = getAssignableActionsForModule(mod);
-              const currentActions = actionsMap[slug] || ["view"];
-              return (
-                <tr
-                  key={slug}
-                  className="hover:bg-[var(--admin-surface-soft)]/60"
-                >
-                  <td className="px-3 py-2 font-medium text-gray-700 capitalize">
-                    {label}
-                  </td>
-                  {PERMISSION_ACTIONS.map((action) => {
-                    const canAssignAction =
-                      action === "view" || assignableActions.includes(action);
-                    const checked =
-                      action === "view"
-                        ? true
-                        : currentActions.includes(action);
-                    return (
-                      <td key={action} className="px-2 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={checked && canAssignAction}
-                          disabled={
-                            disabled || action === "view" || !canAssignAction
-                          }
-                          onChange={(e) => {
-                            if (!canAssignAction) return;
-                            const next = e.target.checked
-                              ? Array.from(new Set([...currentActions, action]))
-                              : currentActions.filter((a) => a !== action);
-                            onChange?.({
-                              ...actionsMap,
-                              [slug]: next.length ? next : ["view"],
-                            });
-                          }}
-                          className="w-3.5 h-3.5 accent-[var(--admin-blue)] cursor-pointer disabled:cursor-default"
-                        />
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+  parentAdminId: "",
+  allowedModules: [],
 };
 
 const getUserDisplayName = (user = {}) => {
@@ -724,7 +140,6 @@ const AdminUsers = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const selector = useSelector((s) => s.adminCore);
-  const userSelector = useSelector((s) => s.user);
   const { canAny } = usePermission();
 
   const storedRole = normalizeRole(getStoredRole());
@@ -743,190 +158,40 @@ const AdminUsers = () => {
   const [refresh, setRefresh] = useState(false);
   const [filters, setFilters] = useState({ search: "" });
 
-  // Effective permissions drawer + force logout
-  const [permDrawer, setPermDrawer] = useState(null); // { userId, userName }
-  const [forceLogoutTarget, setForceLogoutTarget] = useState(null);
-  const [forceLogoutConfirm, setForceLogoutConfirm] = useState(false);
-
-  const handleForceLogout = useCallback(async () => {
-    if (!forceLogoutTarget) return;
-    try {
-      await axiosProvider.post(
-        `/rbac/users/${forceLogoutTarget.userId}/force-logout`,
-      );
-      toast.success(`${forceLogoutTarget.userName} has been logged out`);
-    } catch (err) {
-      toast.error(err?.response?.data?.error?.message || "Force logout failed");
-    } finally {
-      setForceLogoutConfirm(false);
-      setForceLogoutTarget(null);
-    }
-  }, [forceLogoutTarget]);
-
-  // Copy-from modal state
-  const [copyFromTarget, setCopyFromTarget] = useState(null); // { userId, userName }
-  const [copyFromSourceId, setCopyFromSourceId] = useState("");
-  const [copyFromMerge, setCopyFromMerge] = useState("replace");
-  const [copyFromLoading, setCopyFromLoading] = useState(false);
-
-  const handleCopyFrom = useCallback(async () => {
-    if (!copyFromTarget || !copyFromSourceId) return;
-    setCopyFromLoading(true);
-    try {
-      await axiosProvider.post(
-        `/rbac/users/${copyFromTarget.userId}/copy-from`,
-        {
-          sourceUserId: copyFromSourceId,
-          mergeMode: copyFromMerge,
-        },
-      );
-      toast.success(`Permissions copied to ${copyFromTarget.userName}`);
-      setCopyFromTarget(null);
-      setCopyFromSourceId("");
-      setRefresh((r) => !r);
-    } catch (err) {
-      toast.error(err?.response?.data?.error?.message || "Copy failed");
-    } finally {
-      setCopyFromLoading(false);
-    }
-  }, [copyFromTarget, copyFromSourceId, copyFromMerge]);
-
-  // Apply-template modal state
-  const [applyTemplateTarget, setApplyTemplateTarget] = useState(null); // { userId, userName }
-  const [templates, setTemplates] = useState([]);
-  const [templatesLoading, setTemplatesLoading] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState("");
-  const [applyTemplateMerge, setApplyTemplateMerge] = useState("replace");
-  const [applyTemplateLoading, setApplyTemplateLoading] = useState(false);
-
-  useEffect(() => {
-    if (!applyTemplateTarget) return;
-    setTemplatesLoading(true);
-    axiosProvider
-      .get("/rbac/templates")
-      .then((res) =>
-        setTemplates(res.data?.data?.items || res.data?.data || []),
-      )
-      .catch(() => setTemplates([]))
-      .finally(() => setTemplatesLoading(false));
-  }, [applyTemplateTarget]);
-
-  const handleApplyTemplate = useCallback(async () => {
-    if (!applyTemplateTarget || !selectedTemplate) return;
-    setApplyTemplateLoading(true);
-    try {
-      await axiosProvider.post(
-        `/rbac/users/${applyTemplateTarget.userId}/apply-template`,
-        {
-          templateSlug: selectedTemplate,
-          mergeMode: applyTemplateMerge,
-        },
-      );
-      toast.success(`Template applied to ${applyTemplateTarget.userName}`);
-      setApplyTemplateTarget(null);
-      setSelectedTemplate("");
-      setRefresh((r) => !r);
-    } catch (err) {
-      toast.error(
-        err?.response?.data?.error?.message || "Apply template failed",
-      );
-    } finally {
-      setApplyTemplateLoading(false);
-    }
-  }, [applyTemplateTarget, selectedTemplate, applyTemplateMerge]);
-
-  // Modals
+  const [viewing, setViewing] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [parentOptions, setParentOptions] = useState([]);
+  const [parentsLoading, setParentsLoading] = useState(false);
+  const [parentsError, setParentsError] = useState("");
+  const [parentReload, setParentReload] = useState(0);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [addAdminOpen, setAddAdminOpen] = useState(false);
   const [addSubAdminOpen, setAddSubAdminOpen] = useState(false);
-  const [editAdminOpen, setEditAdminOpen] = useState(false);
-  const [editSubAdminOpen, setEditSubAdminOpen] = useState(false);
-  const [editingTarget, setEditingTarget] = useState(null);
   const [toggleTarget, setToggleTarget] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Forms
   const [adminForm, setAdminForm] = useState(emptyUser);
   const [subAdminForm, setSubAdminForm] = useState(emptySubAdmin);
-  const [moduleActionsMap, setModuleActionsMap] = useState({}); // { [moduleSlug]: string[] }
-  const [showModuleActions, setShowModuleActions] = useState(false);
   const [errors, setErrors] = useState({});
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
-  const { list: legacyAdmins, total: legacyAdminsTotal } = extractListPayload(
-    selector?.adminUsersData,
-  );
   const { list: hierarchyAdmins, total: hierarchyAdminsTotal } =
     extractListPayload(selector?.adminsData);
   const { list: allSubAdmins, total: platformSubAdminsTotal } =
     extractListPayload(selector?.platformSubAdminsData);
-  const admins = (
-    hierarchyAdmins.length ? hierarchyAdmins : legacyAdmins
-  ).filter((user) => normalizeRole(user?.role) === "admin");
-  const rawAdmins = hierarchyAdmins.length ? hierarchyAdmins : legacyAdmins;
-  const rawAdminsTotal = hierarchyAdmins.length
-    ? hierarchyAdminsTotal
-    : legacyAdminsTotal;
+  const admins = hierarchyAdmins.filter(
+    (user) => normalizeRole(user?.role) === "admin",
+  );
   const adminsTotal =
-    rawAdmins.length === admins.length ? rawAdminsTotal : admins.length;
+    hierarchyAdmins.length === admins.length
+      ? hierarchyAdminsTotal
+      : admins.length;
   const subAdminPool = (Array.isArray(allSubAdmins) ? allSubAdmins : []).filter(
     (user) => normalizeRole(user?.role) === "sub-admin",
-  );
-  const sidebarModules =
-    userSelector?.getMyModulePermissionData?.data?.data?.modules || [];
-  const sidebarModuleSlugs = useMemo(
-    () =>
-      new Set(
-        (Array.isArray(sidebarModules) ? sidebarModules : [])
-          .filter(hasAssignedModuleAccess)
-          .map(getModuleSlug)
-          .filter(Boolean),
-      ),
-    [sidebarModules],
-  );
-  const accessModulesPayload =
-    selector?.accessModulesData?.data?.data ||
-    selector?.accessModulesData?.normalized?.data ||
-    {};
-  const accessModules = Array.isArray(accessModulesPayload?.modules)
-    ? accessModulesPayload.modules
-    : [];
-  const moduleOptions = useMemo(() => {
-    const fromApi = accessModules
-      .filter((module) => module?.assignable !== false)
-      .map(toModuleOption)
-      .filter((module) => module.slug);
-    const options = fromApi.length
-      ? fromApi
-      : Array.from(sidebarModuleSlugs).map(toModuleOption);
-    return Array.from(
-      new Map(options.map((module) => [module.slug, module])).values(),
-    );
-  }, [accessModules, sidebarModuleSlugs]);
-  const moduleOptionSlugs = useMemo(
-    () =>
-      moduleOptions.map((module) =>
-        typeof module === "string" ? module : module.slug,
-      ),
-    [moduleOptions],
-  );
-  const selectedModuleOptions = useMemo(
-    () => getSelectedModuleOptions(moduleOptions, subAdminForm.allowedModules),
-    [moduleOptions, subAdminForm.allowedModules],
-  );
-  const selectedGroupCount = useMemo(
-    () => groupModuleOptions(selectedModuleOptions).length,
-    [selectedModuleOptions],
-  );
-  const defaultSubAdminModules = useMemo(() => {
-    const preferred = moduleOptionSlugs.filter((mod) =>
-      ["products", "orders"].includes(mod),
-    );
-    return preferred.length ? preferred : moduleOptionSlugs.slice(0, 1);
-  }, [moduleOptionSlugs]);
-  const defaultAdminModules = useMemo(
-    () => moduleOptionSlugs,
-    [moduleOptionSlugs],
   );
   const filteredSubAdmins = useMemo(
     () => filterUsers(subAdminPool, filters.search),
@@ -967,34 +232,47 @@ const AdminUsers = () => {
   }, [tab, pageSubAdmin, refresh, filters.search]);
 
   useEffect(() => {
-    if (isAdmin) {
-      dispatch(
-        getAccessModules({ role: "sub-admin", includePermissions: true }),
-      );
-    }
-  }, [dispatch, isAdmin]);
-
-  useEffect(() => {
-    if (!isAdmin || sidebarModules.length) return;
-    const currentUser = getStoredUser() || {};
-    const currentUserId =
-      currentUser?._id || currentUser?.id || currentUser?.userId;
-    dispatch(getMyModulePermission({ _id: currentUserId, role: storedRole }));
-  }, [dispatch, isAdmin, sidebarModules.length, storedRole]);
-
-  useEffect(() => {
-    setSubAdminForm((form) => {
-      const allowedModules = form.allowedModules?.filter((mod) =>
-        moduleOptionSlugs.includes(mod),
-      );
-      return {
-        ...form,
-        allowedModules: allowedModules?.length
-          ? allowedModules
-          : defaultSubAdminModules,
-      };
-    });
-  }, [defaultSubAdminModules, moduleOptionSlugs]);
+    if (!addSubAdminOpen || !isSuperAdmin) return;
+    let active = true;
+    setParentsLoading(true);
+    setParentsError("");
+    (async () => {
+      const parents = [];
+      let page = 1;
+      let total;
+      do {
+        const response = await axiosProvider.get("/admin/access/admins", {
+          params: { page, limit: 100 },
+        });
+        const payload = response.data?.data;
+        const items = Array.isArray(payload)
+          ? payload
+          : payload?.items || payload?.list || [];
+        parents.push(...items);
+        total = Number(
+          response.data?.meta?.total ?? payload?.total ?? parents.length,
+        );
+        if (!items.length) break;
+        page += 1;
+      } while (parents.length < total);
+      if (active)
+        setParentOptions(
+          parents.filter(
+            (parent) =>
+              parent.role === "admin" && parent.accountStatus === "active",
+          ),
+        );
+    })()
+      .catch(() => {
+        if (active) setParentsError("Unable to load parent admins.");
+      })
+      .finally(() => {
+        if (active) setParentsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [addSubAdminOpen, isSuperAdmin, parentReload]);
 
   // ── Validation ───────────────────────────────────────────────────────────────
 
@@ -1015,218 +293,45 @@ const AdminUsers = () => {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
-  const handleCreateAdmin = async (e) => {
-    e.preventDefault();
-    const errs = validateUserForm(adminForm);
-    const allowedModules = (adminForm.allowedModules || []).filter((mod) =>
-      defaultAdminModules.includes(mod),
-    );
-    if (!allowedModules.length)
-      errs.allowedModules = "Select at least one module";
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
-    const modulePermissions = buildModulePermissions(
-      allowedModules,
-      moduleActionsMap,
-      PERMISSION_ACTIONS,
-      moduleOptions,
-    );
+  const createAccount = async (event, form, creator, close, reset, label) => {
+    event.preventDefault();
+    const validation = validateUserForm(form);
+    if (Object.keys(validation).length) return setErrors(validation);
     try {
       await dispatch(
-        createAdmin({ ...adminForm, allowedModules, modulePermissions }),
+        creator({ ...form, allowedModules: [], modulePermissions: [] }),
       ).unwrap();
-      toast.success("Admin created successfully");
-      setAddAdminOpen(false);
-      setAdminForm(emptyUser);
-      setModuleActionsMap({});
-      setShowModuleActions(false);
+      toast.success(
+        label === "Sub-admin" && (form.parentAdminId || storedRole === "admin")
+          ? "Sub-admin created with inherited parent access."
+          : `${label} created. Assign access using Permissions in the table.`,
+      );
+      close(false);
+      reset();
       setErrors({});
-      setRefresh((r) => !r);
-    } catch (err) {
-      toast.error(err?.message || "Failed to create admin");
+      setRefresh((value) => !value);
+    } catch (error) {
+      toast.error(error?.message || `Failed to create ${label.toLowerCase()}`);
     }
   };
-
-  const handleCreateSubAdmin = async (e) => {
-    e.preventDefault();
-    const errs = validateUserForm(subAdminForm);
-    const allowedModules = subAdminForm.allowedModules.filter((mod) =>
-      moduleOptionSlugs.includes(mod),
+  const handleCreateAdmin = (event) =>
+    createAccount(
+      event,
+      adminForm,
+      createAdmin,
+      setAddAdminOpen,
+      () => setAdminForm(emptyUser),
+      "Admin",
     );
-    if (!allowedModules.length)
-      errs.allowedModules = "Select at least one module";
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
-    const modulePermissions = buildModulePermissions(
-      allowedModules,
-      moduleActionsMap,
-      ["view"],
-      moduleOptions,
+  const handleCreateSubAdmin = (event) =>
+    createAccount(
+      event,
+      subAdminForm,
+      createPlatformSubAdmin,
+      setAddSubAdminOpen,
+      () => setSubAdminForm(emptySubAdmin),
+      "Sub-admin",
     );
-    try {
-      await dispatch(
-        createPlatformSubAdmin({
-          ...subAdminForm,
-          allowedModules,
-          modulePermissions,
-        }),
-      ).unwrap();
-      toast.success("Sub-admin created successfully");
-      setAddSubAdminOpen(false);
-      setSubAdminForm({
-        ...emptySubAdmin,
-        allowedModules: defaultSubAdminModules,
-      });
-      setModuleActionsMap({});
-      setShowModuleActions(false);
-      setErrors({});
-      setRefresh((r) => !r);
-    } catch (err) {
-      toast.error(err?.message || "Failed to create sub-admin");
-    }
-  };
-
-  const openEditAdmin = (user) => {
-    setEditingTarget(user);
-    setErrors({});
-    setAdminForm({
-      ...emptyUser,
-      fullName: getUserDisplayName(user),
-      email: user.email || "",
-      phone: user.phone || "",
-      allowedModules: (user.allowedModules || []).filter((mod) =>
-        defaultAdminModules.includes(mod),
-      ),
-    });
-    const existingActions = buildActionsMapFromUser(user);
-    setModuleActionsMap(existingActions);
-    setShowModuleActions(Object.keys(existingActions).length > 0);
-    setEditAdminOpen(true);
-  };
-
-  const openEditSubAdmin = (user) => {
-    const selectedModules = (user.allowedModules || []).filter((mod) =>
-      moduleOptionSlugs.includes(mod),
-    );
-    setEditingTarget(user);
-    setErrors({});
-    // Build actionsMap from existing modulePermissions if available
-    const existingActions = buildActionsMapFromUser(user);
-    setModuleActionsMap(existingActions);
-    setShowModuleActions(Object.keys(existingActions).length > 0);
-    setSubAdminForm({
-      ...emptySubAdmin,
-      fullName: getUserDisplayName(user),
-      email: user.email || "",
-      phone: user.phone || "",
-      role: user.role || "sub-admin",
-      allowedModules: selectedModules.length
-        ? selectedModules
-        : defaultSubAdminModules,
-    });
-    setEditSubAdminOpen(true);
-  };
-
-  const handleUpdateAdmin = async (e) => {
-    e.preventDefault();
-    if (!editingTarget) return;
-    const errs = validateUserForm(adminForm, false);
-    const allowedModules = (adminForm.allowedModules || []).filter((mod) =>
-      defaultAdminModules.includes(mod),
-    );
-    if (!allowedModules.length)
-      errs.allowedModules = "Select at least one module";
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
-    const modulePermissions = buildModulePermissions(
-      allowedModules,
-      moduleActionsMap,
-      ["view"],
-      moduleOptions,
-    );
-    try {
-      await dispatch(
-        updateAdminUser({
-          userId: editingTarget._id || editingTarget.id,
-          fullName: adminForm.fullName,
-          phone: adminForm.phone,
-        }),
-      ).unwrap();
-      await dispatch(
-        updatePlatformSubAdminModules({
-          userId: editingTarget._id || editingTarget.id,
-          allowedModules,
-          modulePermissions,
-        }),
-      ).unwrap();
-      toast.success("Admin modules and permissions updated");
-      setEditAdminOpen(false);
-      setEditingTarget(null);
-      setAdminForm(emptyUser);
-      setModuleActionsMap({});
-      setShowModuleActions(false);
-      setErrors({});
-      setRefresh((r) => !r);
-    } catch (err) {
-      toast.error(err?.message || "Failed to update admin");
-    }
-  };
-
-  const handleUpdateSubAdmin = async (e) => {
-    e.preventDefault();
-    if (!editingTarget) return;
-    const errs = validateUserForm(subAdminForm, false);
-    const allowedModules = subAdminForm.allowedModules.filter((mod) =>
-      moduleOptionSlugs.includes(mod),
-    );
-    if (!allowedModules.length)
-      errs.allowedModules = "Select at least one module";
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
-    const modulePermissions = buildModulePermissions(
-      allowedModules,
-      moduleActionsMap,
-      ["view"],
-      moduleOptions,
-    );
-    try {
-      await dispatch(
-        updateAdminUser({
-          userId: editingTarget._id || editingTarget.id,
-          fullName: subAdminForm.fullName,
-          phone: subAdminForm.phone,
-        }),
-      ).unwrap();
-      await dispatch(
-        updatePlatformSubAdminModules({
-          userId: editingTarget._id || editingTarget.id,
-          allowedModules,
-          modulePermissions,
-        }),
-      ).unwrap();
-      toast.success("Sub-admin modules and permissions updated");
-      setEditSubAdminOpen(false);
-      setEditingTarget(null);
-      setSubAdminForm({
-        ...emptySubAdmin,
-        allowedModules: defaultSubAdminModules,
-      });
-      setModuleActionsMap({});
-      setShowModuleActions(false);
-      setErrors({});
-      setRefresh((r) => !r);
-    } catch (err) {
-      toast.error(err?.message || "Failed to update sub-admin");
-    }
-  };
 
   const handleToggleStatus = (user) => {
     setToggleTarget(user);
@@ -1240,7 +345,7 @@ const AdminUsers = () => {
     try {
       if (isActive) {
         await dispatch(
-          deactivateAdminUser({ userId, reason: "deactivated by admin" }),
+          updateAdminUser({ userId, accountStatus: "suspended" }),
         ).unwrap();
       } else {
         await dispatch(
@@ -1265,7 +370,7 @@ const AdminUsers = () => {
   // ── Table data ───────────────────────────────────────────────────────────────
 
   const getParentAdminLabel = (user = {}) => {
-    const parent = user.parentAdmin || user.createdByUser || {};
+    const parent = user.parentAdmin || {};
     const nameFromParent =
       [parent?.profile?.firstName, parent?.profile?.lastName]
         .filter(Boolean)
@@ -1309,59 +414,21 @@ const AdminUsers = () => {
           />,
           <div key={`actions-${userId}`} className="flex items-center gap-1">
             <ActionButtons
-              onEdit={() => openEditAdmin(user)}
-              showDeleteButton={false}
-              showPasswordButton={false}
-              showLinkButton={false}
+              showEditButton={false}
+              showDeleteButton={true}
+              onDelete={() => setDeleteTarget(user)}
               viewButton={true}
-              onViewClick={() => navigate(`/app/admin-users/view/${userId}`)}
+              onViewClick={() => {
+                setViewing(user);
+                setPassword("");
+                setConfirmPassword("");
+              }}
               userPermissions={true}
               onPermissionClick={() =>
                 navigate(`/app/user-permissions/${userId}`)
               }
               requiredModule="rbac"
             />
-            <button
-              title="View effective permissions"
-              onClick={() => setPermDrawer({ userId, userName: name })}
-              className="p-1.5 text-gray-400 hover:text-[var(--admin-blue)] rounded hover:bg-[var(--admin-surface-soft)] transition-colors"
-            >
-              <MdSecurity size={15} />
-            </button>
-            {isSuperAdmin && (
-              <>
-                <button
-                  title="Copy permissions from another user"
-                  onClick={() => {
-                    setCopyFromTarget({ userId, userName: name });
-                    setCopyFromSourceId("");
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-indigo-500 rounded hover:bg-indigo-50 transition-colors"
-                >
-                  <MdContentCopy size={15} />
-                </button>
-                <button
-                  title="Apply permission template"
-                  onClick={() => {
-                    setApplyTemplateTarget({ userId, userName: name });
-                    setSelectedTemplate("");
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-teal-500 rounded hover:bg-teal-50 transition-colors"
-                >
-                  <MdDashboardCustomize size={15} />
-                </button>
-                <button
-                  title="Force logout"
-                  onClick={() => {
-                    setForceLogoutTarget({ userId, userName: name });
-                    setForceLogoutConfirm(true);
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
-                >
-                  <MdLogout size={15} />
-                </button>
-              </>
-            )}
           </div>,
         ];
       }),
@@ -1405,59 +472,21 @@ const AdminUsers = () => {
           />,
           <div key={`actions-${userId}`} className="flex items-center gap-1">
             <ActionButtons
-              onEdit={() => openEditSubAdmin(user)}
-              showDeleteButton={false}
-              showPasswordButton={false}
-              showLinkButton={false}
+              showEditButton={false}
+              showDeleteButton={true}
+              onDelete={() => setDeleteTarget(user)}
               viewButton={true}
-              onViewClick={() => navigate(`/app/admin-users/view/${userId}`)}
+              onViewClick={() => {
+                setViewing(user);
+                setPassword("");
+                setConfirmPassword("");
+              }}
               userPermissions={true}
               onPermissionClick={() =>
                 navigate(`/app/user-permissions/${userId}`)
               }
               requiredModule="rbac"
             />
-            <button
-              title="View effective permissions"
-              onClick={() => setPermDrawer({ userId, userName: name })}
-              className="p-1.5 text-gray-400 hover:text-[var(--admin-blue)] rounded hover:bg-[var(--admin-surface-soft)] transition-colors"
-            >
-              <MdSecurity size={15} />
-            </button>
-            {isAdmin && (
-              <>
-                <button
-                  title="Copy permissions from another user"
-                  onClick={() => {
-                    setCopyFromTarget({ userId, userName: name });
-                    setCopyFromSourceId("");
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-indigo-500 rounded hover:bg-indigo-50 transition-colors"
-                >
-                  <MdContentCopy size={15} />
-                </button>
-                <button
-                  title="Apply permission template"
-                  onClick={() => {
-                    setApplyTemplateTarget({ userId, userName: name });
-                    setSelectedTemplate("");
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-teal-500 rounded hover:bg-teal-50 transition-colors"
-                >
-                  <MdDashboardCustomize size={15} />
-                </button>
-                <button
-                  title="Force logout"
-                  onClick={() => {
-                    setForceLogoutTarget({ userId, userName: name });
-                    setForceLogoutConfirm(true);
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
-                >
-                  <MdLogout size={15} />
-                </button>
-              </>
-            )}
           </div>,
         ];
       }),
@@ -1490,10 +519,8 @@ const AdminUsers = () => {
                   setErrors({});
                   setAdminForm({
                     ...emptyUser,
-                    allowedModules: defaultAdminModules,
+                    allowedModules: [],
                   });
-                  setModuleActionsMap(fullModuleActionMap(defaultAdminModules));
-                  setShowModuleActions(false);
                   setAddAdminOpen(true);
                 }}
               >
@@ -1508,10 +535,8 @@ const AdminUsers = () => {
                   setErrors({});
                   setSubAdminForm({
                     ...emptySubAdmin,
-                    allowedModules: defaultSubAdminModules,
+                    allowedModules: [],
                   });
-                  setModuleActionsMap({});
-                  setShowModuleActions(false);
                   setAddSubAdminOpen(true);
                 }}
               >
@@ -1612,8 +637,6 @@ const AdminUsers = () => {
         isOpen={addAdminOpen}
         onClose={() => {
           setAddAdminOpen(false);
-          setModuleActionsMap({});
-          setShowModuleActions(false);
         }}
         onSubmit={handleCreateAdmin}
         isButtonView={true}
@@ -1681,157 +704,10 @@ const AdminUsers = () => {
               required
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">
-              Assign Modules <span className="text-red-500">*</span>
-            </label>
-            <p className="text-xs text-gray-400">
-              Admin will only see and manage the modules selected here.
-            </p>
-            <ModuleSelector
-              selected={adminForm.allowedModules}
-              onChange={(mods) => {
-                setAdminForm((f) => ({ ...f, allowedModules: mods }));
-                setModuleActionsMap((prev) => {
-                  const next = {};
-                  mods.forEach((mod) => {
-                    next[mod] = prev[mod] || PERMISSION_ACTIONS;
-                  });
-                  return next;
-                });
-              }}
-              modules={defaultAdminModules.map(toModuleOption)}
-            />
-            {errors.allowedModules && (
-              <p className="text-xs text-red-500">{errors.allowedModules}</p>
-            )}
-          </div>
-          {adminForm.allowedModules.length > 0 && (
-            <div className="space-y-1.5">
-              <button
-                type="button"
-                onClick={() => setShowModuleActions((v) => !v)}
-                className="flex items-center gap-2 text-xs font-medium text-[var(--admin-blue)] hover:underline"
-              >
-                {showModuleActions ? "▾" : "▸"} Configure actions per module
-              </button>
-              {showModuleActions && (
-                <ModuleActionsSelector
-                  modules={defaultAdminModules
-                    .map(toModuleOption)
-                    .filter((module) =>
-                      adminForm.allowedModules.includes(module.slug),
-                    )}
-                  actionsMap={moduleActionsMap}
-                  onChange={setModuleActionsMap}
-                />
-              )}
-              {!showModuleActions && (
-                <p className="text-[10px] text-gray-400">
-                  By default, all management actions are granted for selected
-                  admin modules.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </DefaultModal>
-
-      {/* Edit Admin modal */}
-      <DefaultModal
-        isOpen={editAdminOpen}
-        onClose={() => {
-          setEditAdminOpen(false);
-          setEditingTarget(null);
-          setModuleActionsMap({});
-          setShowModuleActions(false);
-        }}
-        onSubmit={handleUpdateAdmin}
-        isButtonView={true}
-        submitButtonText="Update Admin"
-        closeButtonText="Cancel"
-        title="Edit Admin"
-        titleClassName="mt-5 font-medium"
-      >
-        <div className="p-4 space-y-4">
-          <FormInput
-            label="Full Name *"
-            name="fullName"
-            value={adminForm.fullName}
-            onChange={(e) =>
-              setAdminForm((f) => ({ ...f, fullName: e.target.value }))
-            }
-            error={errors.fullName}
-            maxLength={60}
-            required
-          />
-          <FormInput
-            label="Email"
-            name="email"
-            type="email"
-            value={adminForm.email}
-            onChange={() => {}}
-            disabled
-            maxLength={80}
-          />
-          <FormInput
-            label="Phone"
-            name="phone"
-            value={adminForm.phone}
-            onChange={(e) =>
-              setAdminForm((f) => ({ ...f, phone: e.target.value }))
-            }
-            maxLength={15}
-          />
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">
-              Assign Modules <span className="text-red-500">*</span>
-            </label>
-            <ModuleSelector
-              selected={adminForm.allowedModules}
-              onChange={(mods) => {
-                setAdminForm((f) => ({ ...f, allowedModules: mods }));
-                setModuleActionsMap((prev) => {
-                  const next = {};
-                  mods.forEach((mod) => {
-                    next[mod] = prev[mod] || ["view"];
-                  });
-                  return next;
-                });
-              }}
-              modules={defaultAdminModules.map(toModuleOption)}
-            />
-            {errors.allowedModules && (
-              <p className="text-xs text-red-500">{errors.allowedModules}</p>
-            )}
-          </div>
-          {adminForm.allowedModules.length > 0 && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">
-                  Actions per Module
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowModuleActions((v) => !v)}
-                  className="text-xs text-[var(--admin-blue)] hover:underline"
-                >
-                  {showModuleActions ? "Hide" : "Show"}
-                </button>
-              </div>
-              {showModuleActions && (
-                <ModuleActionsSelector
-                  modules={defaultAdminModules
-                    .map(toModuleOption)
-                    .filter((module) =>
-                      adminForm.allowedModules.includes(module.slug),
-                    )}
-                  actionsMap={moduleActionsMap}
-                  onChange={setModuleActionsMap}
-                />
-              )}
-            </div>
-          )}
+          <p className="text-sm text-gray-500">
+            Manage module access and actions from the user’s Permissions button
+            in the table.
+          </p>
         </div>
       </DefaultModal>
 
@@ -1840,8 +716,6 @@ const AdminUsers = () => {
         isOpen={addSubAdminOpen}
         onClose={() => {
           setAddSubAdminOpen(false);
-          setModuleActionsMap({});
-          setShowModuleActions(false);
         }}
         onSubmit={handleCreateSubAdmin}
         isButtonView={true}
@@ -1851,6 +725,56 @@ const AdminUsers = () => {
         titleClassName="mt-5 font-medium"
       >
         <div className="p-4 space-y-4">
+          {isSuperAdmin ? (
+            <div className="space-y-2">
+              <label className="block text-sm">
+                Parent Admin (optional)
+                <select
+                  aria-label="Parent Admin (optional)"
+                  className="admin-input w-full mt-1"
+                  value={subAdminForm.parentAdminId || ""}
+                  disabled={parentsLoading || Boolean(parentsError)}
+                  onChange={(event) =>
+                    setSubAdminForm((form) => ({
+                      ...form,
+                      parentAdminId: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="">No parent — assign access separately</option>
+                  {parentOptions.map((parent) => (
+                    <option
+                      key={parent.id || parent._id}
+                      value={parent.id || parent._id}
+                    >
+                      {getUserDisplayName(parent)} ({parent.email})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {parentsLoading && <p className="text-xs">Loading admins…</p>}
+              {parentsError && (
+                <div role="alert">
+                  {parentsError}
+                  <button
+                    type="button"
+                    onClick={() => setParentReload((value) => value + 1)}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+              <p className="text-xs text-gray-500">
+                With a parent selected, this sub-admin inherits only that
+                admin’s current modules and permissions.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">
+              This sub-admin will inherit your current modules and permissions.
+            </p>
+          )}
+
           <FormInput
             label="Full Name *"
             name="fullName"
@@ -1921,191 +845,11 @@ const AdminUsers = () => {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">
-              Assign Modules <span className="text-red-500">*</span>
-            </label>
-            <p className="text-xs text-gray-400">
-              The sub-admin can only access modules you select. You can only
-              grant modules you yourself have access to.
-            </p>
-            <ModuleSelector
-              selected={subAdminForm.allowedModules}
-              onChange={(mods) => {
-                setSubAdminForm((f) => ({ ...f, allowedModules: mods }));
-                // Remove actions for de-selected modules
-                setModuleActionsMap((prev) => {
-                  const next = {};
-                  mods.forEach((mod) => {
-                    next[mod] = prev[mod] || ["view"];
-                  });
-                  return next;
-                });
-              }}
-              modules={moduleOptions}
-            />
-            {errors.allowedModules && (
-              <p className="text-xs text-red-500">{errors.allowedModules}</p>
-            )}
-            <p className="text-xs text-gray-400 mt-1">
-              {selectedGroupCount} sidebar group
-              {selectedGroupCount !== 1 ? "s" : ""} selected. Click a group to
-              toggle it.
-            </p>
-          </div>
-
-          {subAdminForm.allowedModules.length > 0 && (
-            <div className="space-y-1.5">
-              <button
-                type="button"
-                onClick={() => setShowModuleActions((v) => !v)}
-                className="flex items-center gap-2 text-xs font-medium text-[var(--admin-blue)] hover:underline"
-              >
-                {showModuleActions ? "▾" : "▸"} Configure actions per module
-                (optional)
-              </button>
-              {showModuleActions && (
-                <ModuleActionsSelector
-                  modules={moduleOptions.filter((m) =>
-                    subAdminForm.allowedModules.includes(
-                      typeof m === "string" ? m : m.slug,
-                    ),
-                  )}
-                  actionsMap={moduleActionsMap}
-                  onChange={setModuleActionsMap}
-                />
-              )}
-              {!showModuleActions && (
-                <p className="text-[10px] text-gray-400">
-                  By default, only <em>view</em> is granted. Expand to assign
-                  create/update/delete actions.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </DefaultModal>
-
-      {/* Edit Sub-Admin modal */}
-      <DefaultModal
-        isOpen={editSubAdminOpen}
-        onClose={() => {
-          setEditSubAdminOpen(false);
-          setEditingTarget(null);
-          setModuleActionsMap({});
-          setShowModuleActions(false);
-        }}
-        onSubmit={handleUpdateSubAdmin}
-        isButtonView={true}
-        submitButtonText="Update Permissions"
-        closeButtonText="Cancel"
-        title="Edit Sub-Admin Modules & Actions"
-        titleClassName="mt-5 font-medium"
-      >
-        <div className="p-4 space-y-4">
-          <FormInput
-            label="Full Name"
-            name="fullName"
-            value={subAdminForm.fullName}
-            onChange={(e) =>
-              setSubAdminForm((f) => ({ ...f, fullName: e.target.value }))
-            }
-            error={errors.fullName}
-            maxLength={60}
-          />
-          <FormInput
-            label="Email"
-            name="email"
-            type="email"
-            value={subAdminForm.email}
-            onChange={() => {}}
-            disabled
-            maxLength={80}
-          />
-          <FormInput
-            label="Phone"
-            name="phone"
-            value={subAdminForm.phone}
-            onChange={(e) =>
-              setSubAdminForm((f) => ({ ...f, phone: e.target.value }))
-            }
-            maxLength={15}
-          />
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Role</label>
-            <select
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-gray-50"
-              value={subAdminForm.role}
-              disabled
-            >
-              <option value={subAdminForm.role}>
-                {formatRole(subAdminForm.role)}
-              </option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">
-              Assign Modules <span className="text-red-500">*</span>
-            </label>
-            <p className="text-xs text-gray-400">
-              Only modules available in your admin/sidebar access can be
-              assigned.
-            </p>
-            <ModuleSelector
-              selected={subAdminForm.allowedModules}
-              onChange={(mods) => {
-                setSubAdminForm((f) => ({ ...f, allowedModules: mods }));
-                setModuleActionsMap((prev) => {
-                  const next = {};
-                  mods.forEach((mod) => {
-                    next[mod] = prev[mod] || ["view"];
-                  });
-                  return next;
-                });
-              }}
-              modules={moduleOptions}
-            />
-            {errors.allowedModules && (
-              <p className="text-xs text-red-500">{errors.allowedModules}</p>
-            )}
-            <p className="text-xs text-gray-400 mt-1">
-              {selectedGroupCount} sidebar group
-              {selectedGroupCount !== 1 ? "s" : ""} selected.
-            </p>
-          </div>
-
-          {subAdminForm.allowedModules.length > 0 && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">
-                  Actions per Module
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowModuleActions((v) => !v)}
-                  className="text-xs text-[var(--admin-blue)] hover:underline"
-                >
-                  {showModuleActions ? "Hide" : "Show"}
-                </button>
-              </div>
-              <p className="text-xs text-gray-400">
-                Control which actions this sub-admin can perform in each module.{" "}
-                <em>View</em> is always granted.
-              </p>
-              {showModuleActions && (
-                <ModuleActionsSelector
-                  modules={moduleOptions.filter((m) =>
-                    subAdminForm.allowedModules.includes(
-                      typeof m === "string" ? m : m.slug,
-                    ),
-                  )}
-                  actionsMap={moduleActionsMap}
-                  onChange={setModuleActionsMap}
-                />
-              )}
-            </div>
-          )}
+          <p className="text-sm text-gray-500">
+            {subAdminForm.parentAdminId || storedRole === "admin"
+              ? "Access is managed through the parent admin. This sub-admin cannot receive additional permissions."
+              : "Assign access afterward using Permissions in the table."}
+          </p>
         </div>
       </DefaultModal>
 
@@ -2122,282 +866,109 @@ const AdminUsers = () => {
         } this user?`}
       />
 
-      {/* Force logout confirm */}
       <StatusPopup
-        isOpen={forceLogoutConfirm}
-        onClose={() => {
-          setForceLogoutConfirm(false);
-          setForceLogoutTarget(null);
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          try {
+            await dispatch(
+              deactivateAdminUser({
+                userId: deleteTarget.id || deleteTarget._id,
+                reason: "deleted by admin",
+              }),
+            ).unwrap();
+            toast.success("Account deleted");
+            setDeleteTarget(null);
+            setRefresh((value) => !value);
+          } catch (error) {
+            toast.error(error?.message || "Unable to delete account");
+          }
         }}
-        onConfirm={handleForceLogout}
-        heading={`Force logout ${forceLogoutTarget?.userName || "this user"}? Their active session will be invalidated immediately.`}
+        heading={`Delete ${deleteTarget ? getUserDisplayName(deleteTarget) : "account"}? This removes account access.`}
       />
-
-      {/* Effective permissions drawer */}
-      {permDrawer && (
-        <EffectivePermissionsDrawer
-          userId={permDrawer.userId}
-          userName={permDrawer.userName}
-          onClose={() => setPermDrawer(null)}
-        />
-      )}
-
-      {/* Copy-from modal */}
-      {copyFromTarget &&
-        (() => {
-          const sourceUsers = [
-            ...admins.map((u) => ({
-              id: u._id || u.id,
-              label: getUserDisplayName(u),
-              role: "admin",
-              email: u.email,
-            })),
-            ...subAdminPool.map((u) => ({
-              id: u._id || u.id,
-              label: getUserDisplayName(u),
-              role: u.role,
-              email: u.email,
-            })),
-          ].filter((u) => String(u.id) !== String(copyFromTarget.userId));
-
-          return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-[var(--admin-line)]">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-t-2xl">
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                      <MdContentCopy className="text-indigo-500" size={16} />
-                      Copy Permissions From
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Target:{" "}
-                      <span className="font-medium text-gray-600">
-                        {copyFromTarget.userName}
-                      </span>
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setCopyFromTarget(null)}
-                    className="p-1.5 rounded hover:bg-gray-100 text-gray-400"
-                  >
-                    <MdClose size={18} />
-                  </button>
-                </div>
-                <div className="p-5 space-y-4">
-                  <div>
-                    <label className="text-xs font-medium text-gray-600 mb-2 block">
-                      Select source user <span className="text-red-400">*</span>
-                    </label>
-                    <div className="border border-gray-200 rounded-xl overflow-hidden">
-                      <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
-                        {sourceUsers.length === 0 && (
-                          <p className="py-6 text-center text-sm text-gray-400">
-                            No other users available
-                          </p>
-                        )}
-                        {sourceUsers.map((u) => (
-                          <label
-                            key={u.id}
-                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                              copyFromSourceId === String(u.id)
-                                ? "bg-indigo-50"
-                                : "hover:bg-gray-50"
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="copySource"
-                              value={String(u.id)}
-                              checked={copyFromSourceId === String(u.id)}
-                              onChange={() => setCopyFromSourceId(String(u.id))}
-                              className="accent-indigo-500"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-gray-700 truncate">
-                                {u.label || u.email}
-                              </p>
-                              <p className="text-xs text-gray-400">
-                                {u.email} ·{" "}
-                                <span className="capitalize">{u.role}</span>
-                              </p>
-                            </div>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-gray-400 mt-1.5">
-                      Only permissions within your hierarchy will be
-                      transferred.
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-600 mb-1.5 block">
-                      Merge Mode
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        {
-                          value: "replace",
-                          label: "Replace",
-                          desc: "Overwrite current",
-                        },
-                        {
-                          value: "merge",
-                          label: "Merge",
-                          desc: "Add to existing",
-                        },
-                      ].map((opt) => (
-                        <label
-                          key={opt.value}
-                          className={`flex flex-col p-3 rounded-xl border cursor-pointer transition-all ${
-                            copyFromMerge === opt.value
-                              ? "border-indigo-400 bg-indigo-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="copyMerge"
-                            value={opt.value}
-                            checked={copyFromMerge === opt.value}
-                            onChange={() => setCopyFromMerge(opt.value)}
-                            className="sr-only"
-                          />
-                          <span className="text-xs font-semibold text-gray-700">
-                            {opt.label}
-                          </span>
-                          <span className="text-[10px] text-gray-400 mt-0.5">
-                            {opt.desc}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-end gap-2 pt-1">
-                    <button
-                      onClick={() => setCopyFromTarget(null)}
-                      className="px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleCopyFrom}
-                      disabled={!copyFromSourceId || copyFromLoading}
-                      className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      <MdContentCopy size={14} />
-                      {copyFromLoading ? "Copying…" : "Copy Permissions"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-      {/* Apply-template modal */}
-      {applyTemplateTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-[var(--admin-line)]">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] rounded-t-2xl">
+      <DefaultModal
+        isOpen={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title="Account Details"
+        onSubmit={(event) => event.preventDefault()}
+        isButtonView={false}
+      >
+        {viewing && (
+          <div className="p-4 space-y-4">
+            <dl className="space-y-3 text-sm">
               <div>
-                <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                  <MdDashboardCustomize className="text-teal-500" size={16} />
-                  Apply Permission Template
-                </h3>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Target: {applyTemplateTarget.userName}
-                </p>
+                <dt>Name</dt>
+                <dd>{getUserDisplayName(viewing)}</dd>
               </div>
-              <button
-                onClick={() => setApplyTemplateTarget(null)}
-                className="p-1.5 rounded hover:bg-gray-100 text-gray-400"
-              >
-                <MdClose size={18} />
-              </button>
-            </div>
-            <div className="p-5 space-y-4">
-              {templatesLoading ? (
-                <div className="py-6 text-center text-sm text-gray-400 animate-pulse">
-                  Loading templates…
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {templates.length === 0 && (
-                    <p className="text-sm text-gray-400 text-center py-4">
-                      No templates available
-                    </p>
-                  )}
-                  {templates.map((tpl) => (
-                    <label
-                      key={tpl.id || tpl.slug}
-                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                        selectedTemplate === (tpl.slug || tpl.id)
-                          ? "border-teal-400 bg-teal-50"
-                          : "border-gray-200 hover:border-teal-200"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="template"
-                        value={tpl.slug || tpl.id}
-                        checked={selectedTemplate === (tpl.slug || tpl.id)}
-                        onChange={() => setSelectedTemplate(tpl.slug || tpl.id)}
-                        className="mt-0.5 accent-teal-500"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-700">
-                          {tpl.name}
-                        </p>
-                        {tpl.description && (
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {tpl.description}
-                          </p>
-                        )}
-                        <p className="text-[10px] text-gray-300 mt-0.5 font-mono">
-                          {tpl.slug}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">
-                  Merge Mode
-                </label>
-                <select
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
-                  value={applyTemplateMerge}
-                  onChange={(e) => setApplyTemplateMerge(e.target.value)}
-                >
-                  <option value="replace">
-                    Replace — overwrite current permissions
-                  </option>
-                  <option value="merge">
-                    Merge — add without removing existing
-                  </option>
-                </select>
+                <dt>Email</dt>
+                <dd>{viewing.email}</dd>
               </div>
-              <div className="flex items-center justify-end gap-2 pt-1">
+              <div>
+                <dt>Role</dt>
+                <dd>{formatRole(viewing.role)}</dd>
+              </div>
+              <div>
+                <dt>Parent admin</dt>
+                <dd>{getParentAdminLabel(viewing)}</dd>
+              </div>
+            </dl>
+            {isAdmin && (
+              <div className="space-y-3 border-t pt-4">
+                <h3 className="font-medium">Change Password</h3>
+                <FormInput
+                  label="New Password"
+                  name="newPassword"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  maxLength={64}
+                />
+                <FormInput
+                  label="Confirm Password"
+                  name="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  maxLength={64}
+                />
                 <button
-                  onClick={() => setApplyTemplateTarget(null)}
-                  className="px-4 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50"
+                  type="button"
+                  className="admin-btn-primary"
+                  disabled={passwordSaving}
+                  onClick={async () => {
+                    if (password.length < 8 || password.length > 64)
+                      return toast.error("Password must be 8 to 64 characters");
+                    if (password !== confirmPassword)
+                      return toast.error("Passwords do not match");
+                    setPasswordSaving(true);
+                    try {
+                      await dispatch(
+                        updateAdminUser({
+                          userId: viewing.id || viewing._id,
+                          password,
+                        }),
+                      ).unwrap();
+                      toast.success("Password changed");
+                      setPassword("");
+                      setConfirmPassword("");
+                    } catch (error) {
+                      toast.error(
+                        error?.message || "Unable to change password",
+                      );
+                    } finally {
+                      setPasswordSaving(false);
+                    }
+                  }}
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleApplyTemplate}
-                  disabled={!selectedTemplate || applyTemplateLoading}
-                  className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 disabled:opacity-50"
-                >
-                  {applyTemplateLoading ? "Applying…" : "Apply Template"}
+                  {passwordSaving ? "Saving…" : "Change Password"}
                 </button>
               </div>
-            </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </DefaultModal>
     </>
   );
 };

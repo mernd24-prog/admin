@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { getStoredRole, getStoredUser, normalizeRole } from "./authStorage";
 import { isSellerPanel } from "./panelConfig";
 import {
   getRouteModuleCandidates,
+  getRouteAction,
   isSelfServiceRoute,
   isSellerAllowedModule,
   isSellerBlockedModule,
@@ -102,9 +103,9 @@ const normalizeModuleCode = (value = "") =>
     .replace(/_/g, "-");
 
 const MODULE_ALIASES = {
-  admin: ["seller-dashboard"],
-  dashboard: ["seller-dashboard", "admin"],
-  home: ["seller-dashboard", "admin"],
+  admin: [],
+  dashboard: ["admin"],
+  home: ["admin"],
   seller: ["sellers"],
   sellers: ["seller-management"],
   "seller-management": ["sellers"],
@@ -139,65 +140,6 @@ const expandModuleCandidates = (moduleSlug = "") => {
   return Array.from(new Set([normalized, ...aliases.map(normalizeModuleCode)]));
 };
 
-const safeParseStorage = (storage, key, fallback = null) => {
-  try {
-    return storage?.getItem
-      ? JSON.parse(storage.getItem(key) || "null") || fallback
-      : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const permissionLikeToSlug = (permission) => {
-  if (typeof permission === "string") return permission;
-  if (!permission || typeof permission !== "object") return "";
-  return (
-    permission.slug || permission.permission || permission.permissionSlug || ""
-  );
-};
-
-const getStoredPermissionSlugs = () => {
-  const localUser = getStoredUser() || {};
-  const sessionUser =
-    typeof window === "undefined"
-      ? {}
-      : safeParseStorage(window.sessionStorage, "EcomAdmin", {});
-  return [
-    localUser.permissions,
-    localUser.effectivePermissions,
-    localUser.assignedPermissions,
-    localUser.permissionSummary?.permissions,
-    sessionUser?.permissions,
-    sessionUser?.effectivePermissions,
-    sessionUser?.assignedPermissions,
-    sessionUser?.permissionSummary?.permissions,
-  ]
-    .flatMap((value) => (Array.isArray(value) ? value : []))
-    .map(permissionLikeToSlug)
-    .map((permission) =>
-      String(permission || "")
-        .trim()
-        .toLowerCase(),
-    )
-    .filter((permission) => permission.includes(":"));
-};
-
-const applyPermissionSlugToMap = (map, permissionSlug) => {
-  const [moduleSlug, actionSlug] = String(permissionSlug || "").split(":");
-  const slug = normalizeModuleCode(moduleSlug);
-  const action = normalizeAction(actionSlug);
-  if (!slug || !action) return;
-
-  if (!map[slug]) map[slug] = { _assigned: false };
-  map[slug]._assigned = true;
-  map[slug][action] = true;
-
-  if (action !== ACTIONS.VIEW) {
-    map[slug][ACTIONS.VIEW] = true;
-  }
-};
-
 /**
  * ROLE constants — mirrors backend roles.js
  */
@@ -224,33 +166,30 @@ export const ROLES = {
  */
 export function usePermission() {
   const selector = useSelector((state) => state.user);
-  const adminCoreSelector = useSelector((state) => state.adminCore);
-  const permissions = selector?.getMyModulePermissionData?.data?.data?.modules;
-  const accessModules = useMemo(() => {
-    const accessModulePayload =
-      adminCoreSelector?.accessModulesData?.data?.data ||
-      adminCoreSelector?.accessModulesData?.normalized?.data ||
-      adminCoreSelector?.accessModulesData?.data?.normalized?.data ||
-      adminCoreSelector?.accessModulesData?.data ||
-      {};
-    return Array.isArray(accessModulePayload?.modules)
-      ? accessModulePayload.modules
-      : Array.isArray(accessModulePayload?.list)
-        ? accessModulePayload.list
-        : Array.isArray(accessModulePayload?.items)
-          ? accessModulePayload.items
-          : Array.isArray(accessModulePayload)
-            ? accessModulePayload
-            : [];
-  }, [adminCoreSelector?.accessModulesData]);
+  const permissionState = selector?.getMyModulePermissionData;
+  const permissions = permissionState?.data?.data?.modules;
   const role = normalizeRole(getStoredRole());
+  const currentUser = getStoredUser() || {};
+  const currentUserId = String(
+    currentUser.id || currentUser._id || currentUser.userId || "",
+  );
+  const matrixUserId = String(permissionState?.data?.data?.user?.id || "");
+  const matrixRole = normalizeRole(permissionState?.data?.data?.role);
+  const wrongIdentity = Boolean(
+    (currentUserId && matrixUserId && currentUserId !== matrixUserId) ||
+    (matrixRole && role && matrixRole !== role),
+  );
   // Build a fast lookup: { moduleSlug: { action: bool } }
   const permMap = useMemo(() => {
     const map = {};
-    const moduleSources = [
-      ...(Array.isArray(permissions) ? permissions : []),
-      ...(Array.isArray(accessModules) ? accessModules : []),
-    ];
+    // Only the server's current user matrix can grant access. Browser storage
+    // and management catalogs may contain stale or another user's grants.
+    const moduleSources =
+      permissionState?.error || permissionState?.loading || wrongIdentity
+        ? []
+        : Array.isArray(permissions)
+          ? permissions
+          : [];
 
     if (moduleSources.length) {
       moduleSources.forEach((mod) => {
@@ -266,16 +205,18 @@ export function usePermission() {
         if (!slug) return;
 
         if (!map[slug]) map[slug] = { _assigned: false };
-        if (mod.assigned === true && !Array.isArray(mod.permissions)) {
-          map[slug]._assigned = true;
-          map[slug].view = true;
-        }
-
+        if (
+          mod.active === false ||
+          mod.status === "inactive" ||
+          mod.assigned === false
+        )
+          return;
         if (Array.isArray(mod.permissions)) {
           mod.permissions.forEach((p) => {
             const action = normalizeAction(p.action);
             if (!action) return;
-            const assigned = p.assigned === true;
+            const assigned =
+              p.assigned === true && p.denied !== true && p.active !== false;
             map[slug][action] = map[slug][action] === true || assigned;
             if (action === "view" && assigned) {
               map[slug]._assigned = true;
@@ -285,61 +226,65 @@ export function usePermission() {
       });
     }
 
-    getStoredPermissionSlugs().forEach((permissionSlug) =>
-      applyPermissionSlugToMap(map, permissionSlug),
-    );
-
     return map;
-  }, [permissions, accessModules]);
+  }, [
+    permissions,
+    permissionState?.error,
+    permissionState?.loading,
+    wrongIdentity,
+  ]);
 
   /**
    * can(moduleSlug, action?)
    *
-   * Super-admin / admin always returns true.
+   * Super-admin retains the existing bypass; other staff use effective grants.
    * For restricted roles, checks the permission matrix.
    * If action is omitted, checks module-level assignment only.
    */
-  const can = (moduleSlug, action) => {
-    const moduleCandidates = expandModuleCandidates(moduleSlug);
-    // Super-admin bypasses permission matrix checks. Admin, sub-admin, and
-    // seller delegated users are permission-driven.
-    if (role === ROLES.SUPER_ADMIN) return true;
-    if (
-      isSellerPanel() &&
-      moduleCandidates.some((candidate) => isSellerBlockedModule(candidate))
-    ) {
+  const can = useCallback(
+    (moduleSlug, action) => {
+      const moduleCandidates = expandModuleCandidates(moduleSlug);
+      // Super-admin bypasses permission matrix checks. Admin, sub-admin, and
+      // seller delegated users are permission-driven.
+      if (role === ROLES.SUPER_ADMIN) return true;
+      if (
+        isSellerPanel() &&
+        moduleCandidates.some((candidate) => isSellerBlockedModule(candidate))
+      ) {
+        return false;
+      }
+      if (
+        role === ROLES.SELLER &&
+        isSellerPanel() &&
+        moduleCandidates.some((candidate) => isSellerAllowedModule(candidate))
+      ) {
+        return true;
+      }
+
+      const mod = moduleCandidates
+        .map((candidate) => permMap[candidate])
+        .find(Boolean);
+      const normalizedAction = action ? normalizeAction(action) : ACTIONS.VIEW;
+
+      // Module/page access is view access. Route bootstrap is handled by Layout;
+      // component guards should only trust the backend permission matrix.
+      if (!action || normalizedAction === ACTIONS.VIEW) {
+        if (mod) return mod.view === true || mod._assigned === true;
+        return false;
+      }
+
+      if (!mod || !mod._assigned) return false;
+
+      const actionCandidates = expandActionCandidates(normalizedAction);
+      const hasExplicitGrant = actionCandidates.some(
+        (candidate) => mod[candidate] === true,
+      );
+      if (hasExplicitGrant) return true;
+
       return false;
-    }
-    if (
-      role === ROLES.SELLER &&
-      isSellerPanel() &&
-      moduleCandidates.some((candidate) => isSellerAllowedModule(candidate))
-    ) {
-      return true;
-    }
-
-    const mod = moduleCandidates
-      .map((candidate) => permMap[candidate])
-      .find(Boolean);
-    const normalizedAction = action ? normalizeAction(action) : ACTIONS.VIEW;
-
-    // Module/page access is view access. Route bootstrap is handled by Layout;
-    // component guards should only trust the backend permission matrix.
-    if (!action || normalizedAction === ACTIONS.VIEW) {
-      if (mod) return mod.view === true || mod._assigned === true;
-      return false;
-    }
-
-    if (!mod || !mod._assigned) return false;
-
-    const actionCandidates = expandActionCandidates(normalizedAction);
-    const hasExplicitGrant = actionCandidates.some(
-      (candidate) => mod[candidate] === true,
-    );
-    if (hasExplicitGrant) return true;
-
-    return false;
-  };
+    },
+    [role, permMap],
+  );
 
   /**
    * canAny(moduleSlug, actions[])
@@ -390,12 +335,15 @@ export function usePermission() {
    * canRoute(path)
    * Returns true if the user can access the given route path.
    */
-  const canRoute = (path) => {
+  const canRoute = (path, modules = [], actionPath = path) => {
     if (isSelfServiceRoute(path)) return true;
     if (isSellerPanel() && isSellerBlockedRoute(path)) return false;
-    const candidates = getRouteModuleCandidates(path);
-    if (!candidates.length) return true;
-    return candidates.some((mod) => can(mod));
+    const candidates = getRouteModuleCandidates(path, modules, {
+      sellerPanel: isSellerPanel(),
+    });
+    if (!candidates.length) return false;
+    const action = getRouteAction(actionPath);
+    return candidates.some((mod) => can(mod, "view") && can(mod, action));
   };
 
   /** isRole(roleSlug) — exact role match */

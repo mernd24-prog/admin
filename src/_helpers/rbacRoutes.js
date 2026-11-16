@@ -1,6 +1,7 @@
 const trimRoute = (value = "") =>
   `/${String(value || "")
-    .replace(/^\/app/, "")
+    .split(/[?#]/)[0]
+    .replace(/^\/app(?=\/|$)/, "")
     .replace(/\/:\w+\??/g, "")
     .replace(/\/+$/, "")
     .replace(/^\/+/, "")}`.replace(/\/$/, "") || "/";
@@ -544,7 +545,7 @@ const ROUTE_MODULES = [
 
   // Users & Access — admin_users is its own module per RBAC guide
   [["/admin-users"], ["admin_users", "rbac"]],
-  [["/user-permissions"], ["admin_users", "rbac"]],
+  [["/user-permissions"], ["rbac"]],
   [["/roles-permissions"], ["rbac"]],
   [["/module-management"], ["rbac"]],
   [["/activity-logs"], ["rbac"]],
@@ -651,7 +652,7 @@ const ROUTE_MODULES = [
 
   // Returns & Cancellations
   [["/returns"], ["returns", "orders"]],
-  [["/cancellations"], ["orders", "cancellations"]],
+  [["/cancellations"], ["cancellations"]],
   [["/queries", "/help-support"], ["queries"]],
 
   // Seller Finance & Payouts
@@ -745,7 +746,11 @@ const ROUTE_MODULES = [
   [["/warranty"], ["warranty", "products"]],
 
   // Analytics
-  [["/analytics"], ["analytics", "reports"]],
+  [["/analytics"], ["reports"]],
+  [["/collections"], ["platform"]],
+  [["/shipping-profiles"], ["delivery"]],
+  [["/ca-finance-analytics"], ["ca-analytics"]],
+  [["/notifications"], ["notifications"]],
 
   // Notifications
   [["/messages"], ["notifications", "users"]],
@@ -934,10 +939,30 @@ export const getRouteModuleCandidates = (path, modules = [], options = {}) => {
     modules,
     options,
   );
-  const matched = ROUTE_MODULES.find(([prefixes]) =>
-    prefixes.some((p) => route === p || route.startsWith(`${p}/`)),
-  );
-  return Array.from(
-    new Set([...(matched ? matched[1] : []), ...dynamicCandidates]),
-  );
+  const matched = ROUTE_MODULES.flatMap(([prefixes, candidates]) =>
+    prefixes.map((prefix) => ({ prefix, candidates })),
+  )
+    .filter(({ prefix }) => route === prefix || route.startsWith(`${prefix}/`))
+    .sort((a, b) => b.prefix.length - a.prefix.length)[0];
+  if (route === "/home")
+    return [options.sellerPanel ? "seller-dashboard" : "admin"];
+  // Separate capabilities are not substitutes for each other. For example,
+  // Orders must not authorize Returns or Payments, or Referral Rules Payouts.
+  if (matched) {
+    if (route === "/referral-commerce/bonuses")
+      return matched.candidates.filter((code) => code !== "referral");
+    return [matched.candidates[0]];
+  }
+  return Array.from(new Set(dynamicCandidates));
+};
+
+export const getRouteAction = (path = "") => {
+  const route = trimRoute(path);
+  if (/^\/product-catalog\/form(?:\/|$)/.test(route)) {
+    return route === "/product-catalog/form" ? "create" : "update";
+  }
+  if (/^\/inventory-adjustment(?:\/|$)/.test(route)) return "adjust";
+  if (/(?:^|\/)(?:add|create|new)(?:\/|$)/i.test(route)) return "create";
+  if (/(?:^|\/)(?:edit|update)(?:\/|$)/i.test(route)) return "update";
+  return "view";
 };
