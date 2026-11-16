@@ -26,7 +26,12 @@ import {
 
 import { getStoredRole, normalizeRole } from "../../../../_helpers/authStorage";
 import Breadcrumb from "./Breadcrumb";
-import { DataTable, ImageThumbnail } from "../../../../components/Shared";
+import {
+  ContentPanel,
+  DataTable,
+  ImageThumbnail,
+  StatusBadge,
+} from "../../../../components/Shared";
 import Cards from "../../../../components/Cards/Cards";
 
 /* -------------------------------------------------------------------------- */
@@ -1252,55 +1257,53 @@ const ProductAdminDetails = () => {
 
                     <Row label="OG Title" value={product.seo.ogTitle} />
                   </div>
-
-                  {product.seo.keywords?.length > 0 && (
-                    <div className="border-t border-gray-100 px-5 py-5">
-                      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                        Keywords
-                      </p>
-
-                      <div className="flex flex-wrap gap-2">
-                        {product.seo.keywords.map((keyword) => (
-                          <span
-                            key={keyword}
-                            className="rounded-full border border-[var(--admin-gold)]/25 bg-[var(--admin-gold)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--admin-blue)]"
-                          >
-                            {keyword}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </section>
               )}
+
+            {product.seo?.keywords?.length > 0 && (
+              <ContentPanel
+                title="Keywords"
+                description="Search engine optimization"
+                action={
+                  <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
+                    {product.seo.keywords.length} keywords
+                  </span>
+                }
+                bodyClassName="flex flex-wrap gap-2 bg-gray-50/50 p-4 sm:p-5"
+              >
+                {product.seo.keywords.map((keyword) => (
+                  <StatusBadge
+                    key={keyword}
+                    status={keyword}
+                    label={keyword}
+                    size="sm"
+                  />
+                ))}
+              </ContentPanel>
+            )}
 
             {/* Tags ------------------------------------------------------ */}
 
             {product.tags?.length > 0 && (
-              <section className={sectionClass}>
-                <div className={sectionHeaderClass}>
-                  <div>
-                    <p className={sectionEyebrowClass}>Product organization</p>
-
-                    <h2 className={sectionTitleClass}>Tags</h2>
-                  </div>
-
+              <ContentPanel
+                title="Tags"
+                description="Product organization"
+                action={
                   <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
                     {product.tags.length} tags
                   </span>
-                </div>
-
-                <div className="flex flex-wrap gap-2 bg-gray-50/50 p-4 sm:p-5">
-                  {product.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-[var(--admin-gold)]/25 bg-[var(--admin-gold)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--admin-blue)] transition-colors hover:border-[var(--admin-gold)]/50 hover:bg-[var(--admin-gold)]/20"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </section>
+                }
+                bodyClassName="flex flex-wrap gap-2 bg-gray-50/50 p-4 sm:p-5"
+              >
+                {product.tags.map((tag) => (
+                  <StatusBadge
+                    key={tag}
+                    status={tag}
+                    label={`#${tag}`}
+                    size="sm"
+                  />
+                ))}
+              </ContentPanel>
             )}
           </>
         )}
