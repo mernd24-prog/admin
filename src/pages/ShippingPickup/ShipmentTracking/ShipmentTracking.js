@@ -1,3 +1,4 @@
+import { reverseTrackingOptions } from "../../../utils/returnTrackingOptions";
 import React, {
   useCallback,
   useEffect,
@@ -154,7 +155,9 @@ const isCancelledBeforeShipment = (shipment = {}) =>
     shipment?.delivered_at ||
     shipment?.deliveredAt
   );
-const getTrackingActionOptions = (currentStatus = "initiated") => {
+const getTrackingActionOptions = (currentStatus = "initiated", direction = "forward") => {
+  if (direction === "reverse") return reverseTrackingOptions({ reverseShipment: { status: currentStatus } })
+    .map(option => option.value === "pickup_failed" ? { ...option, value: "failed" } : option);
   const nextStatuses = FULFILLMENT_TRANSITIONS[currentStatus] || [];
   const options = FULFILLMENT_STATUS_OPTIONS.filter(
     (option) =>
@@ -168,8 +171,8 @@ const getTrackingActionOptions = (currentStatus = "initiated") => {
   }
   return options;
 };
-const getDefaultTrackingStatus = (currentStatus = "initiated") =>
-  getTrackingActionOptions(currentStatus)[0]?.value || currentStatus;
+const getDefaultTrackingStatus = (currentStatus = "initiated", direction = "forward") =>
+  getTrackingActionOptions(currentStatus, direction)[0]?.value || currentStatus;
 const getInitialQuery = (key) =>
   new URLSearchParams(window.location.search).get(key) || "";
 const initialShipmentId = getInitialQuery("shipmentId");
@@ -578,15 +581,16 @@ const ShipmentTracking = () => {
       "",
   ).toLowerCase();
   const selectedShipmentPaid =
+    selectedShipment?.direction === "reverse" ||
     selectedPaymentStatus === "captured" ||
     (selectedPaymentProvider === "cod" &&
       selectedPaymentStatus === "authorized");
   const trackingActionOptions = useMemo(
     () =>
       selectedShipmentPaid
-        ? getTrackingActionOptions(selectedShipment?.status || "initiated")
+        ? getTrackingActionOptions(selectedShipment?.status || "initiated", selectedShipment?.direction)
         : [],
-    [selectedShipment?.status, selectedShipmentPaid],
+    [selectedShipment?.status, selectedShipment?.direction, selectedShipmentPaid],
   );
   const trackingFormik = useFormik({
     initialValues: {
@@ -729,7 +733,7 @@ const ShipmentTracking = () => {
       setDetailModal(true);
       setTrackingSubmitAttempted(false);
       const initialAction = {
-        status: getDefaultTrackingStatus(row.status || "initiated"),
+        status: getDefaultTrackingStatus(row.status || "initiated", row.direction),
         note: "",
         location: "",
         courierName: row.courier_name || "",
@@ -749,7 +753,7 @@ const ShipmentTracking = () => {
         const nextShipment = unwrapResult(response);
         setSelectedShipment(nextShipment);
         const nextAction = {
-          status: getDefaultTrackingStatus(nextShipment.status || "initiated"),
+          status: getDefaultTrackingStatus(nextShipment.status || "initiated", nextShipment.direction),
           note: "",
           location: "",
           courierName: nextShipment.courier_name || "",
@@ -787,7 +791,7 @@ const ShipmentTracking = () => {
       const nextShipment = unwrapResult(response);
       setSelectedShipment(nextShipment);
       const nextStatus = getDefaultTrackingStatus(
-        nextShipment.status || "initiated",
+        nextShipment.status || "initiated", nextShipment.direction,
       );
       setTrackingAction((prev) => ({
         ...prev,

@@ -1,3 +1,5 @@
+import { reverseTrackingOptions } from "../../../utils/returnTrackingOptions";
+import useRealtimeRefresh from "../../../hooks/useRealtimeRefresh";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormik } from "formik";
 import { toast } from "../../../utils/toast";
@@ -246,28 +248,7 @@ const sellerName = (item = {}, row = {}) =>
   personName(item?.seller) ||
   row?.sellerName ||
   personName(row?.seller);
-const REVERSE_TRACKING_OPTIONS = {
-  scheduled: [
-    { value: "picked_up", label: "Picked up" },
-    { value: "in_transit", label: "In reverse transit" },
-    { value: "pickup_failed", label: "Pickup failed" },
-    { value: "delivered", label: "Received at warehouse" },
-  ],
-  picked_up: [
-    { value: "in_transit", label: "In reverse transit" },
-    { value: "pickup_failed", label: "Pickup failed" },
-    { value: "delivered", label: "Received at warehouse" },
-  ],
-  in_transit: [
-    { value: "delivered", label: "Received at warehouse" },
-    { value: "pickup_failed", label: "Pickup failed" },
-  ],
-  pickup_failed: [
-    { value: "picked_up", label: "Picked up" },
-    { value: "in_transit", label: "In reverse transit" },
-    { value: "delivered", label: "Received at warehouse" },
-  ],
-};
+
 
 const splitEvidenceUrls = (value = "") =>
   String(value || "")
@@ -429,22 +410,7 @@ function QCEvidenceUploader({
   );
 }
 
-const reverseTrackingOptions = (returnRequest = {}) => {
-  const shipmentStatus = String(
-    returnRequest?.reverseShipment?.status || "",
-  ).toLowerCase();
-  if (["picked_up"].includes(shipmentStatus))
-    return REVERSE_TRACKING_OPTIONS.picked_up;
-  if (["in_transit", "out_for_delivery"].includes(shipmentStatus))
-    return REVERSE_TRACKING_OPTIONS.in_transit;
-  if (
-    ["failed", "pickup_failed"].includes(shipmentStatus) ||
-    returnRequest?.status === "pickup_failed"
-  ) {
-    return REVERSE_TRACKING_OPTIONS.pickup_failed;
-  }
-  return REVERSE_TRACKING_OPTIONS.scheduled;
-};
+
 
 const sellerQcGuidance = (row = {}) => {
   if (!row) return null;
@@ -775,6 +741,7 @@ const Returns = () => {
     },
   });
   const { toQueryParams } = list;
+  const realtimeRevision = useRealtimeRefresh(["return", "shipment"]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -845,7 +812,7 @@ const Returns = () => {
 
   useEffect(() => {
     fetchReturns();
-  }, [fetchReturns]);
+  }, [fetchReturns, realtimeRevision]);
 
   const openDetail = useCallback(
     async (row) => {
@@ -1519,7 +1486,8 @@ const Returns = () => {
               "pickup_failed",
               "in_reverse_transit",
             ].includes(row.status) &&
-            row.reverseShipment?.shipmentId
+            row.reverseShipment?.shipmentId &&
+            reverseTrackingOptions(row).length > 0
           ) {
             actions.push({
               label: "Update Tracking",

@@ -638,7 +638,9 @@ export const getDealPayouts = createApiThunkPrivate("adminCore/getDealPayouts", 
 export const generateDealPayout = createApiThunkPrivate("adminCore/generateDealPayout", ENDPOINTS.deals.generatePayout, "POST", false, { transformBody: (payload = {}) => pickPayload(payload, ["fromDate", "toDate", "sellerId", "dealIds"]) });
 export const processDealPayout = createApiThunkPrivate("adminCore/processDealPayout", (payload) => ENDPOINTS.deals.processPayout(payload.payoutId || payload.id), "PATCH", false, { transformBody: (payload = {}) => omitPayload(payload, ["payoutId", "id"]) });
 
-const register = (builder, thunk, key) => createExtraReducersForThunk(builder, thunk, key);
+const register = (builder, thunk, key) => createExtraReducersForThunk(builder, thunk, key, {
+  latestOnly: ["adminReturnsData", "adminReturnData"].includes(key),
+});
 
 const adminCoreSlice = createSlice({
   name: "adminCore",
