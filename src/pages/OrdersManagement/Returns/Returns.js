@@ -68,6 +68,9 @@ import {
   approveReturnValidationSchema,
   rejectReturnValidationSchema,
   replacementRequestValidationSchema,
+  reverseShipmentTrackingValidationSchema,
+  returnQualityControlValidationSchema,
+  returnQcEvidenceValidationSchema,
   scheduleReturnValidationSchema,
 } from "../../../_helpers/validationSchemas";
 import { useListPage } from "../../../hooks/useListPage";
@@ -269,7 +272,13 @@ const splitEvidenceUrls = (value = "") =>
 const joinEvidenceUrls = (urls = []) =>
   [...new Set((urls || []).filter(Boolean))].join("\n");
 
-function QCEvidenceUploader({ value = "", required = false, onChange }) {
+function QCEvidenceUploader({
+  value = "",
+  required = false,
+  onChange,
+  onBlur,
+  error = "",
+}) {
   const [uploading, setUploading] = useState(false);
   const urls = splitEvidenceUrls(value);
 
@@ -400,9 +409,14 @@ function QCEvidenceUploader({ value = "", required = false, onChange }) {
 
       <Input
         type="textarea"
-        labelName="Manual evidence image URLs (optional, one per line)"
+        labelName={`Manual evidence image URLs (${required ? "required" : "optional"}, one per line)`}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
+        maxLength={2048}
+        showLengthCount={true}
+        limitMessage="Each evidence URL must be a valid HTTP/HTTPS URL of at most 2048 characters."
+        error={error}
         required={required}
       />
     </div>
@@ -760,6 +774,7 @@ const Returns = () => {
   const [error, setError] = useState("");
   const [detailReturn, setDetailReturn] = useState(null);
   const [action, setAction] = useState(EMPTY_ACTION);
+  const [qcInitialItemActions, setQcInitialItemActions] = useState([]);
   const [closeFormVersion, setCloseFormVersion] = useState(0);
   const closeReturnInitialValues = useMemo(
     () => ({ reason: "", note: "" }),
@@ -782,9 +797,19 @@ const Returns = () => {
   );
   const [replacementRequestFormVersion, setReplacementRequestFormVersion] =
     useState(0);
+  const [reverseTrackingFormVersion, setReverseTrackingFormVersion] =
+    useState(0);
   const replacementRequestInitialValues = useMemo(
     () => ({ note: "" }),
     [replacementRequestFormVersion],
+  );
+  const reverseTrackingInitialValues = useMemo(
+    () => ({ note: "" }),
+    [reverseTrackingFormVersion],
+  );
+  const qcInitialValues = useMemo(
+    () => ({ note: "", itemActions: qcInitialItemActions }),
+    [qcInitialItemActions],
   );
   const [confirmAction, setConfirmAction] = useState({ open: false });
   const visibleReturns = payload.list;
@@ -858,6 +883,45 @@ const Returns = () => {
       if (type === "replacement_request") {
         setReplacementRequestFormVersion((version) => version + 1);
       }
+      if (type === "tracking") {
+        setReverseTrackingFormVersion((version) => version + 1);
+      }
+      const itemActions = (returnRequest?.items || []).map((item) => ({
+        orderItemId: item.orderItemId || "",
+        productId: item.productId || "",
+        variantSku: item.variantSku || "",
+        label: item.productTitle || item.productId || "Item",
+        approvedQuantity: Number(
+          item.approvedQuantity ||
+            item.requestedQuantity ||
+            item.quantity ||
+            0,
+        ),
+        receivedQuantity: Number(
+          item.receivedQuantity ||
+            item.approvedQuantity ||
+            item.requestedQuantity ||
+            item.quantity ||
+            0,
+        ),
+        quantity: Number(
+          item.receivedQuantity ||
+            item.approvedQuantity ||
+            item.requestedQuantity ||
+            item.quantity ||
+            0,
+        ),
+        result:
+          item.qcResult === "pending" || !item.qcResult
+            ? "sellable"
+            : item.qcResult,
+        condition: item.condition || "",
+        notes: item.qcNotes || "",
+        photos: (item.qcPhotos || []).join("\n"),
+      }));
+      if (["qc", "qc_evidence", "qc_decision"].includes(type)) {
+        setQcInitialItemActions(itemActions);
+      }
       setAction({
         ...EMPTY_ACTION,
         open: true,
@@ -889,39 +953,7 @@ const Returns = () => {
         walletAmount: returnRequest?.refundBreakup?.walletRefundAmount || "",
         providerAmount:
           returnRequest?.refundBreakup?.originalPaymentRefundAmount || "",
-        itemActions: (returnRequest?.items || []).map((item) => ({
-          orderItemId: item.orderItemId || "",
-          productId: item.productId || "",
-          variantSku: item.variantSku || "",
-          label: item.productTitle || item.productId || "Item",
-          approvedQuantity: Number(
-            item.approvedQuantity ||
-              item.requestedQuantity ||
-              item.quantity ||
-              0,
-          ),
-          receivedQuantity: Number(
-            item.receivedQuantity ||
-              item.approvedQuantity ||
-              item.requestedQuantity ||
-              item.quantity ||
-              0,
-          ),
-          quantity: Number(
-            item.receivedQuantity ||
-              item.approvedQuantity ||
-              item.requestedQuantity ||
-              item.quantity ||
-              0,
-          ),
-          result:
-            item.qcResult === "pending" || !item.qcResult
-              ? "sellable"
-              : item.qcResult,
-          condition: item.condition || "",
-          notes: item.qcNotes || "",
-          photos: (item.qcPhotos || []).join("\n"),
-        })),
+        itemActions,
       });
       if (type === "approve") {
         approveReturnFormik.resetForm({
@@ -940,6 +972,9 @@ const Returns = () => {
   );
 
   const updateItemAction = (index, key, value) => {
+    if (["qc", "qc_evidence", "qc_decision"].includes(action.type)) {
+      qcFormik.setFieldValue(`itemActions[${index}].${key}`, value);
+    }
     setAction((prev) => ({
       ...prev,
       itemActions: prev.itemActions.map((item, itemIndex) =>
@@ -1047,6 +1082,21 @@ const Returns = () => {
     validationSchema: replacementRequestValidationSchema,
     onSubmit: prepareAction,
   });
+  const reverseTrackingFormik = useFormik({
+    initialValues: reverseTrackingInitialValues,
+    enableReinitialize: true,
+    validationSchema: reverseShipmentTrackingValidationSchema,
+    onSubmit: prepareAction,
+  });
+  const qcFormik = useFormik({
+    initialValues: qcInitialValues,
+    enableReinitialize: true,
+    validationSchema:
+      action.type === "qc_evidence"
+        ? returnQcEvidenceValidationSchema
+        : returnQualityControlValidationSchema,
+    onSubmit: prepareAction,
+  });
   const approveReturnFormik = useFormik({
     initialValues: { refundAmount: "", itemActions: [], note: "" },
     validationSchema: approveReturnValidationSchema,
@@ -1058,6 +1108,8 @@ const Returns = () => {
     scheduleReturnFormik.resetForm();
     replacementRequestFormik.resetForm();
     approveReturnFormik.resetForm();
+    reverseTrackingFormik.resetForm();
+    qcFormik.resetForm();
     setAction(EMPTY_ACTION);
   }, [
     closeReturnFormik.resetForm,
@@ -1065,6 +1117,8 @@ const Returns = () => {
     replacementRequestFormik.resetForm,
     scheduleReturnFormik.resetForm,
     approveReturnFormik.resetForm,
+    reverseTrackingFormik.resetForm,
+    qcFormik.resetForm,
   ]);
 
   const executeAction = useCallback(async () => {
@@ -2417,7 +2471,13 @@ const Returns = () => {
                   ? rejectReturnFormik.handleSubmit
                   : action.type === "replacement_request"
                     ? replacementRequestFormik.handleSubmit
-                    : prepareAction
+                    : action.type === "tracking"
+                      ? reverseTrackingFormik.handleSubmit
+                      : ["qc", "qc_evidence", "qc_decision"].includes(
+                            action.type,
+                          )
+                        ? qcFormik.handleSubmit
+                        : prepareAction
         }
         submitButtonText="Continue"
         closeButtonText="Cancel"
@@ -2829,6 +2889,10 @@ const Returns = () => {
                     <FormInput
                       label="Courier"
                       name="courierName"
+                      maxLength={100}
+                      minLength={3}
+                     limitMessage="Courier name must be between 3 and 100 characters."
+                      showLengthCount = {false}
                       value={action.courierName}
                       onChange={(event) => {
                         scheduleReturnFormik.handleChange(event);
@@ -2850,6 +2914,10 @@ const Returns = () => {
                     <FormInput
                       label="Tracking / AWB"
                       name="trackingNumber"
+                      maxLength={100}
+                      minLength={3}
+                      limitMessage="Tracking number must be between 3 and 100 characters."
+                      showLengthCount = {false}
                       value={action.trackingNumber}
                       onChange={(event) => {
                         scheduleReturnFormik.handleChange(event);
@@ -3050,13 +3118,21 @@ const Returns = () => {
                           }`}
                           name={`qcQuantity-${index}`}
                           type="number"
-                          min="0"
+                          min="1"
+                          maxLength={10}
+                          showLengthCount={false}
+                          step="1"
                           max={
                             item.receivedQuantity ||
                             item.approvedQuantity ||
                             item.quantity ||
                             undefined
                           }
+                          helperText={`Enter a whole number from 1 to ${
+                            item.receivedQuantity ||
+                            item.approvedQuantity ||
+                            item.quantity
+                          }.`}
                           value={item.quantity}
                           onChange={(event) =>
                             updateItemAction(
@@ -3064,6 +3140,17 @@ const Returns = () => {
                               "quantity",
                               event.target.value,
                             )
+                          }
+                          onBlur={() =>
+                            qcFormik.setFieldTouched(
+                              `itemActions[${index}].quantity`,
+                              true,
+                            )
+                          }
+                          error={
+                            qcFormik.touched.itemActions?.[index]?.quantity
+                              ? qcFormik.errors.itemActions?.[index]?.quantity
+                              : ""
                           }
                           required
                         />
@@ -3096,9 +3183,14 @@ const Returns = () => {
                               selectedOption?.value || selectedOption || "",
                             )
                           }
+                          error={
+                            qcFormik.touched.itemActions?.[index]?.result
+                              ? qcFormik.errors.itemActions?.[index]?.result
+                              : ""
+                          }
+                          required
                           placeholder="Select disposition"
                         />
-
                         <FormInput
                           label="Condition"
                           name={`condition-${index}`}
@@ -3110,6 +3202,20 @@ const Returns = () => {
                               event.target.value,
                             )
                           }
+                          onBlur={() =>
+                            qcFormik.setFieldTouched(
+                              `itemActions[${index}].condition`,
+                              true,
+                            )
+                          }
+                          minLength={3}
+                          maxLength={200}
+                          limitMessage="Condition must be between 3 and 200 characters."
+                          error={
+                            qcFormik.touched.itemActions?.[index]?.condition
+                              ? qcFormik.errors.itemActions?.[index]?.condition
+                              : ""
+                          }
                           placeholder="Enter item condition"
                         />
 
@@ -3120,6 +3226,21 @@ const Returns = () => {
                           onChange={(event) =>
                             updateItemAction(index, "notes", event.target.value)
                           }
+                          onBlur={() =>
+                            qcFormik.setFieldTouched(
+                              `itemActions[${index}].notes`,
+                              true,
+                            )
+                          }
+                          minLength={3}
+                          maxLength={500}
+                          showLengthCount={false}
+                          limitMessage="Item note must be between 3 and 500 characters."
+                          error={
+                            qcFormik.touched.itemActions?.[index]?.notes
+                              ? qcFormik.errors.itemActions?.[index]?.notes
+                              : ""
+                          }
                           placeholder="Add inspection notes"
                         />
 
@@ -3128,6 +3249,17 @@ const Returns = () => {
                             value={item.photos}
                             onChange={(value) =>
                               updateItemAction(index, "photos", value)
+                            }
+                            onBlur={() =>
+                              qcFormik.setFieldTouched(
+                                `itemActions[${index}].photos`,
+                                true,
+                              )
+                            }
+                            error={
+                              qcFormik.touched.itemActions?.[index]?.photos
+                                ? qcFormik.errors.itemActions?.[index]?.photos
+                                : ""
                             }
                           />
                         </div>
@@ -3144,6 +3276,20 @@ const Returns = () => {
                           onChange={(event) =>
                             updateItemAction(index, "notes", event.target.value)
                           }
+                          onBlur={() =>
+                            qcFormik.setFieldTouched(
+                              `itemActions[${index}].notes`,
+                              true,
+                            )
+                          }
+                          minLength={3}
+                          maxLength={500}
+                          limitMessage="Inspection note must be between 3 and 500 characters."
+                          error={
+                            qcFormik.touched.itemActions?.[index]?.notes
+                              ? qcFormik.errors.itemActions?.[index]?.notes
+                              : ""
+                          }
                           placeholder="Enter additional inspection notes"
                           required
                         />
@@ -3152,6 +3298,17 @@ const Returns = () => {
                           value={item.photos}
                           onChange={(value) =>
                             updateItemAction(index, "photos", value)
+                          }
+                          onBlur={() =>
+                            qcFormik.setFieldTouched(
+                              `itemActions[${index}].photos`,
+                              true,
+                            )
+                          }
+                          error={
+                            qcFormik.touched.itemActions?.[index]?.photos
+                              ? qcFormik.errors.itemActions?.[index]?.photos
+                              : ""
                           }
                           required
                         />
@@ -3391,6 +3548,10 @@ const Returns = () => {
                 label="Note"
                 name="note"
                 type="textarea"
+                maxLength={500}
+                minLength={3}
+                limitMessage="Note must be between 3 and 500 characters."
+                showLengthCount={true}
                 value={action.note}
                 onChange={(event) => {
                   if (action.type === "approve") {
@@ -3408,6 +3569,12 @@ const Returns = () => {
                   if (action.type === "replacement_request") {
                     replacementRequestFormik.handleChange(event);
                   }
+                  if (action.type === "tracking") {
+                    reverseTrackingFormik.handleChange(event);
+                  }
+                  if (["qc", "qc_evidence", "qc_decision"].includes(action.type)) {
+                    qcFormik.handleChange(event);
+                  }
                   setAction((prev) => ({
                     ...prev,
                     note: event.target.value,
@@ -3424,7 +3591,13 @@ const Returns = () => {
                           ? rejectReturnFormik.handleBlur
                           : action.type === "replacement_request"
                             ? replacementRequestFormik.handleBlur
-                            : undefined
+                            : action.type === "tracking"
+                              ? reverseTrackingFormik.handleBlur
+                              : ["qc", "qc_evidence", "qc_decision"].includes(
+                                    action.type,
+                                  )
+                                ? qcFormik.handleBlur
+                                : undefined
                 }
                 error={
                   action.type === "approve" && approveReturnFormik.touched.note
@@ -3441,7 +3614,14 @@ const Returns = () => {
                           : action.type === "replacement_request" &&
                               replacementRequestFormik.touched.note
                             ? replacementRequestFormik.errors.note
-                            : ""
+                            : action.type === "tracking" &&
+                                reverseTrackingFormik.touched.note
+                              ? reverseTrackingFormik.errors.note
+                              : ["qc", "qc_evidence", "qc_decision"].includes(
+                                    action.type,
+                                  ) && qcFormik.touched.note
+                                ? qcFormik.errors.note
+                                : ""
                 }
                 placeholder="Add an optional note..."
               />

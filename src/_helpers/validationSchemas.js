@@ -421,6 +421,49 @@ const shipmentTrackingNoteSchema = Yup.string().when("status", {
       ),
 });
 
+const isValidHttpTrackingUrl = (value) => {
+  try {
+    const parsedUrl = new URL(String(value || "").trim());
+    return (
+      ["http:", "https:"].includes(parsedUrl.protocol) &&
+      Boolean(parsedUrl.hostname) &&
+      (parsedUrl.hostname.includes(".") || parsedUrl.hostname === "localhost")
+    );
+  } catch {
+    return false;
+  }
+};
+
+const returnEvidenceUrlsValidation = ({ required = false } = {}) => {
+  let schema = Yup.string()
+    .transform((value) => (typeof value === "string" ? value.trim() : value))
+    .max(20480, "Evidence URL list must be at most 20480 characters.")
+    .test(
+      "evidence-url-length",
+      "Each evidence URL must be at most 2048 characters.",
+      (value) =>
+        !value ||
+        value
+          .split(/[\n,]/)
+          .map((url) => url.trim())
+          .filter(Boolean)
+          .every((url) => url.length <= 2048),
+    )
+    .test(
+      "valid-evidence-urls",
+      "Enter valid evidence URLs starting with http:// or https://.",
+      (value) =>
+        !value ||
+        value
+          .split(/[\n,]/)
+          .map((url) => url.trim())
+          .filter(Boolean)
+          .every(isValidHttpTrackingUrl),
+    );
+
+  return required ? schema.required("Upload or enter at least one evidence URL.") : schema.notRequired();
+};
+
 export const shipmentTrackingActionValidationSchema = Yup.object({
   status: Yup.string().required("Select a shipment status."),
   location: Yup.string()
@@ -479,22 +522,7 @@ export const shipmentTrackingActionValidationSchema = Yup.object({
     .test(
       "valid-tracking-url",
       "Please enter a valid URL starting with http:// or https://.",
-      (value) => {
-        if (!value) return true;
-
-        try {
-          const parsedUrl = new URL(value);
-
-          return (
-            ["http:", "https:"].includes(parsedUrl.protocol) &&
-            Boolean(parsedUrl.hostname) &&
-            (parsedUrl.hostname.includes(".") ||
-              parsedUrl.hostname === "localhost")
-          );
-        } catch {
-          return false;
-        }
-      },
+      (value) => !value || isValidHttpTrackingUrl(value),
     ),
 });
 
@@ -633,6 +661,17 @@ export const categoryValidationSchema = Yup.object({
     .max(50, "Category name must be less than 50 characters"),
 });
 
+const returnNoteValidation = (label = "Note", { required = false } = {}) => {
+  let schema = Yup.string()
+    .transform((value) => (value?.trim() ? value.trim() : undefined))
+    .min(3, `${label} must be at least 3 characters`)
+    .max(500, `${label} must be at most 500 characters`);
+
+  return required
+    ? schema.required(`${label} is required`)
+    : schema.notRequired();
+};
+
 export const closeReturnValidationSchema = Yup.object({
   reason: Yup.string()
     .trim()
@@ -640,11 +679,7 @@ export const closeReturnValidationSchema = Yup.object({
     .min(3, "Close reason must be at least 3 characters")
     .max(250, "Close reason must be at most 250 characters"),
 
-  note: Yup.string()
-    .transform((value) => (value?.trim() ? value.trim() : undefined))
-    .notRequired()
-    .min(3, "Note must be at least 3 characters")
-    .max(500, "Note must be at most 500 characters"),
+  note: returnNoteValidation(),
 });
 
 export const payoutRetryValidationSchema = Yup.object({
@@ -721,11 +756,67 @@ export const rejectReturnValidationSchema = Yup.object({
     .required("Rejection reason is required")
     .min(3, "Rejection reason must be at least 3 characters")
     .max(250, "Rejection reason must be at most 250 characters"),
-  note: Yup.string()
-    .transform((value) => (value?.trim() ? value.trim() : undefined))
-    .notRequired()
-    .min(3, "Note must be at least 3 characters")
-    .max(500, "Note must be at most 500 characters"),
+  note: returnNoteValidation(),
+});
+
+export const returnQualityControlValidationSchema = Yup.object({
+  note: returnNoteValidation(),
+  itemActions: Yup.array().of(
+    Yup.object({
+      quantity: Yup.number()
+        .transform((value, originalValue) =>
+          originalValue === "" || originalValue == null ? undefined : value,
+        )
+        .typeError("QC quantity must be a number.")
+        .required("QC quantity is required.")
+        .integer("QC quantity must be a whole number.")
+        .min(
+          1,
+          "QC quantity must be between 1 and the received quantity.",
+        )
+        .test(
+          "qc-quantity-maximum",
+          function (value) {
+            if (value === undefined || value === null) return true;
+            const maximum = Number(
+              this.parent.receivedQuantity ||
+                this.parent.approvedQuantity ||
+                this.parent.quantity ||
+                0,
+            );
+            return (
+              value <= maximum ||
+              this.createError({
+                message: `QC quantity must be between 1 and ${maximum}.`,
+              })
+            );
+          },
+        ),
+      result: Yup.string()
+        .oneOf(
+          ["sellable", "damaged", "missing", "rejected"],
+          "Select a valid disposition.",
+        )
+        .required("Disposition is required."),
+      condition: Yup.string()
+        .transform((value) => (value?.trim() ? value.trim() : undefined))
+        .notRequired()
+        .min(3, "Condition must be at least 3 characters.")
+        .max(200, "Condition must be at most 200 characters."),
+      notes: returnNoteValidation("Item note"),
+      photos: returnEvidenceUrlsValidation(),
+    }),
+  ),
+});
+
+export const returnQcEvidenceValidationSchema = Yup.object({
+  note: returnNoteValidation(),
+  itemActions: Yup.array().of(
+    Yup.object({
+      notes: returnNoteValidation("Inspection note", { required: true }),
+      photos: returnEvidenceUrlsValidation({ required: true }),
+    }),
+  ),
 });
 
 export const approveReturnValidationSchema = Yup.object({
@@ -739,11 +830,7 @@ export const approveReturnValidationSchema = Yup.object({
   itemActions: Yup.array()
     .min(1, "At least one return item is required")
     .required("Return items are required"),
-  note: Yup.string()
-    .transform((value) => (value?.trim() ? value.trim() : undefined))
-    .notRequired()
-    .min(3, "Note must be at least 3 characters")
-    .max(500, "Note must be at most 500 characters"),
+  note: returnNoteValidation(),
 });
 
 export const orderNoteValidationSchema = Yup.object({
@@ -1174,7 +1261,11 @@ const optionalTextWithLength = (label, max) =>
     .max(max, `${label} must be at most ${max} characters`);
 
 export const replacementRequestValidationSchema = Yup.object({
-  note: optionalTextWithLength("Note", 500),
+  note: returnNoteValidation(),
+});
+
+export const reverseShipmentTrackingValidationSchema = Yup.object({
+  note: returnNoteValidation(),
 });
 
 export const scheduleReturnValidationSchema = Yup.object({
@@ -1199,7 +1290,7 @@ export const scheduleReturnValidationSchema = Yup.object({
         .max(100, "Tracking / AWB must be at most 100 characters"),
     otherwise: () => optionalTextWithLength("Tracking / AWB", 100),
   }),
-  note: optionalTextWithLength("Note", 500),
+  note: returnNoteValidation(),
 });
 
 export const codCollectionValidationSchema = Yup.object({
