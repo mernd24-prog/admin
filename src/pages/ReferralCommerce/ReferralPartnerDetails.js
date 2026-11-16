@@ -18,12 +18,18 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
+import { useListPage } from "../../hooks/useListPage";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import SharedDataTable from "../../components/Shared/DataTable";
 import CopyButton from "../../components/Atoms/CopyButton/CopyButton";
-import { PageHeader, StatusBadge, SummaryCard } from "../../components/Shared";
+import {
+  DataTable,
+  PageHeader,
+  StatusBadge,
+  SummaryCard,
+} from "../../components/Shared";
 import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
 import {
   getReferralBonusAchievements,
@@ -447,6 +453,32 @@ const ReferralPartnerDetails = () => {
     dispatch(getReferralBrandAssociates({ parentId: id, page: 1, limit: 200 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, id, influencer?.influencerType, permMap]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    dispatch(
+      getReferralCommissions({
+        page: commissionsList.page,
+        limit: commissionsList.pageSize,
+        influencerId: id,
+      }),
+    );
+  }, [dispatch, id, commissionsList.page, commissionsList.pageSize]);
+
+  const getBranchTotal = (branch = {}) => {
+    const payload = getBranchPayload(branch);
+
+    return Number(
+      payload?.total ??
+        payload?.totalCount ??
+        payload?.pagination?.total ??
+        payload?.meta?.total ??
+        payload?.meta?.totalItems ??
+        branch?.total ??
+        getBranchList(branch).length,
+    );
+  };
 
   const infoRows = useMemo(() => {
     if (!influencer) return [];
@@ -1095,8 +1127,9 @@ const ReferralPartnerDetails = () => {
               detailLoading || Boolean(referralState.commissionsData?.loading)
             }
             rowKey="key"
+            total={getBranchTotal(referralState.commissionsData)}
+            listPage={commissionsList}
             emptyText="No commission entries found."
-            cardClassName="overflow-hidden"
           />
         )}
 
