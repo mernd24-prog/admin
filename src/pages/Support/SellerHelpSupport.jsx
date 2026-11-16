@@ -447,6 +447,7 @@ const SellerHelpSupport = () => {
                   }
                   required
                   maxLength={100}
+                  limitMessage="Maximum 100 characters allowed."
                   placeholder="e.g. Technical Issue, Feature Request"
                 />
               )}
@@ -457,6 +458,9 @@ const SellerHelpSupport = () => {
                 <FormInput
                   label="Order ID"
                   name="orderNumber"
+                  maxLength = {24}
+                  limitMessage = "Maximum 24 characters allowed."
+                  showLengthCount = {false }
                   type="text"
                   value={formik.values.orderNumber}
                   onChange={formik.handleChange}
@@ -476,6 +480,9 @@ const SellerHelpSupport = () => {
                   label="Product ID"
                   name="product"
                   type="text"
+                  minLength={3}
+                  maxLength={100}
+                  limitMessage="Product ID must be between 3 and 100 characters."
                   value={formik.values.product}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}

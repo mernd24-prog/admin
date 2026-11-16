@@ -87,6 +87,12 @@ const INFO_CARD_CLASS = "rounded-lg border border-gray-100 bg-gray-50 p-3";
 const ITEM_CARD_CLASS = "rounded-lg border border-gray-200 bg-white p-3";
 const LABEL_CLASS = "text-xs text-gray-500";
 const VALUE_CLASS = "mt-1 font-regular text-[#252238] font-inter";
+const QC_DISPOSITION_OPTIONS = [
+  { value: "sellable", label: "Sellable - restock" },
+  { value: "damaged", label: "Damaged - quarantine" },
+  { value: "missing", label: "Missing" },
+  { value: "rejected", label: "Rejected by QC" },
+];
 
 const ACTION_TITLES = {
   approve: "Approve Return",
@@ -913,7 +919,7 @@ const Returns = () => {
         ),
         result:
           item.qcResult === "pending" || !item.qcResult
-            ? "sellable"
+            ? ""
             : item.qcResult,
         condition: item.condition || "",
         notes: item.qcNotes || "",
@@ -3134,6 +3140,7 @@ const Returns = () => {
                             item.quantity
                           }.`}
                           value={item.quantity}
+                          disabled
                           onChange={(event) =>
                             updateItemAction(
                               index,
@@ -3155,42 +3162,35 @@ const Returns = () => {
                           required
                         />
 
-                        <FormSelectGroup
-                          label="Disposition"
-                          value={item.result}
-                          options={[
-                            {
-                              value: "sellable",
-                              label: "Sellable - restock",
-                            },
-                            {
-                              value: "damaged",
-                              label: "Damaged - quarantine",
-                            },
-                            {
-                              value: "missing",
-                              label: "Missing",
-                            },
-                            {
-                              value: "rejected",
-                              label: "Rejected by QC",
-                            },
-                          ]}
-                          onChange={(selectedOption) =>
-                            updateItemAction(
-                              index,
-                              "result",
-                              selectedOption?.value || selectedOption || "",
-                            )
-                          }
-                          error={
-                            qcFormik.touched.itemActions?.[index]?.result
-                              ? qcFormik.errors.itemActions?.[index]?.result
-                              : ""
-                          }
-                          required
-                          placeholder="Select disposition"
-                        />
+                        <div>
+                          <FormSelectGroup
+                            label="Disposition"
+                            value={
+                              QC_DISPOSITION_OPTIONS.find(
+                                (option) => option.value === item.result,
+                              ) || null
+                            }
+                            options={QC_DISPOSITION_OPTIONS}
+                            onChange={(selectedOption) => {
+                              qcFormik.setFieldTouched(
+                                `itemActions[${index}].result`,
+                                true,
+                              );
+                              updateItemAction(
+                                index,
+                                "result",
+                                selectedOption?.value || selectedOption || "",
+                              );
+                            }}
+                            error={
+                              qcFormik.touched.itemActions?.[index]?.result
+                                ? qcFormik.errors.itemActions?.[index]?.result
+                                : ""
+                            }
+                            required
+                            placeholder="Select disposition"
+                          />
+                        </div>
                         <FormInput
                           label="Condition"
                           name={`condition-${index}`}
@@ -3211,6 +3211,7 @@ const Returns = () => {
                           minLength={3}
                           maxLength={200}
                           limitMessage="Condition must be between 3 and 200 characters."
+                          showLengthCount={false}
                           error={
                             qcFormik.touched.itemActions?.[index]?.condition
                               ? qcFormik.errors.itemActions?.[index]?.condition

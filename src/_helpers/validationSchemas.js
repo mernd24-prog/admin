@@ -1626,7 +1626,8 @@ export const sellerHelpSupportValidationSchema = Yup.object({
       schema
         .trim()
         .required("Product number or ID is required.")
-        .min(1, "Product number or ID is required.")
+        .min(3, "Product ID must be at least 3 characters.")
+        .max(100, "Product ID must be at most 100 characters.")
         .test(
           "valid-product-id",
           "Enter a valid product ID.",
