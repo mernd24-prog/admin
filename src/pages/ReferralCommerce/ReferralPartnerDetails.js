@@ -321,6 +321,9 @@ const ReferralPartnerDetails = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editingCode, setEditingCode] = useState(null);
   const [codeLimit, setCodeLimit] = useState("");
+  const commissionsList = useListPage({
+    defaultPageSize: 10,
+  });
   const [editForm, setEditForm] = useState({
     firstName: "",
     lastName: "",
