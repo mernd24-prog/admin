@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFormik } from "formik";
 import {
   MdDoneAll,
   MdMarkEmailRead,
@@ -33,6 +34,8 @@ import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal"
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
+import { userNotificationValidationSchema } from "../../../_helpers/validationSchemas";
+import Input from "../../../components/Atoms/Input/Input";
 
 const TEMPLATE_OPTIONS = [
   { value: "order_update", label: "Order Update" },
@@ -441,8 +444,42 @@ const UserMessages = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
   const [sending, setSending] = useState(false);
+
+  const formik = useFormik({
+    initialValues: EMPTY_FORM,
+    validationSchema: userNotificationValidationSchema,
+    onSubmit: async (values, { resetForm }) => {
+      if (isSeller) {
+        toast.error("Sending notifications is admin-only");
+        return;
+      }
+
+      setSending(true);
+
+      try {
+        await axiosProvider.post(ENDPOINTS.notifications.send, {
+          userId: values.userId.trim(),
+          channel: values.channel,
+          template: values.template,
+          subject: values.subject.trim() || undefined,
+          payload: values.message ? { message: values.message.trim() } : {},
+        });
+
+        toast.success("Notification sent");
+
+        setModalOpen(false);
+        resetForm();
+        fetchNotifications();
+      } catch (err) {
+        toast.error(
+          err?.response?.data?.message || "Failed to send notification",
+        );
+      } finally {
+        setSending(false);
+      }
+    },
+  });
 
   // Keep channel and date filters in one controlled state.
   const [filters, setFilters] = useState(INITIAL_FILTERS);
@@ -538,44 +575,6 @@ const UserMessages = () => {
     dispatch(setNotificationsSeenAt(Date.now()));
     toast.success("All notifications marked as seen");
   }, [dispatch, markAsSeen, notifications]);
-
-  const handleSend = async () => {
-    if (isSeller) {
-      toast.error("Sending notifications is admin-only");
-      return;
-    }
-
-    if (!form.userId.trim()) {
-      return toast.error("Recipient User ID is required");
-    }
-
-    if (!form.template) {
-      return toast.error("Template is required");
-    }
-
-    setSending(true);
-
-    try {
-      await axiosProvider.post(ENDPOINTS.notifications.send, {
-        userId: form.userId.trim(),
-        channel: form.channel,
-        template: form.template,
-        subject: form.subject.trim() || undefined,
-        payload: form.message ? { message: form.message.trim() } : {},
-      });
-
-      toast.success("Notification sent");
-      setModalOpen(false);
-      setForm(EMPTY_FORM);
-      fetchNotifications();
-    } catch (err) {
-      toast.error(
-        err?.response?.data?.message || "Failed to send notification",
-      );
-    } finally {
-      setSending(false);
-    }
-  };
 
   const hasUnread = notifications.some((notification) =>
     isNotificationUnread(
@@ -738,7 +737,7 @@ const UserMessages = () => {
       <DefaultModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        onSubmit={handleSend}
+        onSubmit={formik.handleSubmit}
         title="Send Notification"
         submitButtonText={sending ? "Sending…" : "Send Notification"}
         closeButtonText="Cancel"
@@ -754,15 +753,13 @@ const UserMessages = () => {
               <FormInput
                 label="Recipient User ID"
                 name="userId"
-                value={form.userId}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    userId: e.target.value,
-                  }))
-                }
+                value={formik.values.userId}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                maxLength={100}
                 placeholder="Enter user ID or email"
                 required
+                error={formik.touched.userId && formik.errors.userId}
               />
             </div>
           </FormSection>
@@ -777,16 +774,15 @@ const UserMessages = () => {
                 options={TEMPLATE_OPTIONS}
                 value={
                   TEMPLATE_OPTIONS.find(
-                    (item) => item.value === form.template,
+                    (item) => item.value === formik.values.template,
                   ) || null
                 }
                 onChange={(selectedOption) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    template: selectedOption?.value ?? "",
-                  }))
+                  formik.setFieldValue("template", selectedOption?.value ?? "")
                 }
+                onBlur={() => formik.setFieldTouched("template", true)}
                 placeholder="Select template"
+                error={formik.touched.template && formik.errors.template}
               />
             </div>
           </FormSection>
@@ -796,36 +792,32 @@ const UserMessages = () => {
             description="Add the subject and message for the notification."
           >
             <div className="space-y-4">
-              <FormInput
+              <Input
                 label="Subject"
                 name="subject"
-                value={form.subject}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    subject: e.target.value,
-                  }))
-                }
+                type="text"
+                value={formik.values.subject}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                maxLength={120}
+                limitMessage="Subject cannot exceed 120 characters."
                 placeholder="Notification subject"
+                error={formik.touched.subject && formik.errors.subject}
               />
-
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Message
-                </label>
-
-                <textarea
+                <Input
+                  label="Message"
                   name="message"
-                  value={form.message}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      message: e.target.value,
-                    }))
-                  }
+                  type="textarea"
+                  value={formik.values.message}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   rows={5}
-                  className={`${CLASS_FORM_INPUT} resize-none`}
+                  maxLength={1000}
+                  showLengthCount
+                  limitMessage="Message cannot exceed 1000 characters."
                   placeholder="Notification message (optional for templated notifications)"
+                  error={formik.touched.message && formik.errors.message}
                 />
               </div>
             </div>

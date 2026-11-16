@@ -53,6 +53,7 @@ import {
   payoutRetryValidationSchema,
   sellerPayoutNoteValidationSchema,
 } from "../../../_helpers/validationSchemas";
+import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
 
 const PAYOUT_STATUSES = [
   "pending",
@@ -128,46 +129,69 @@ const EMPTY_ACTION = {
 };
 
 const unwrapList = (payload = {}) => {
-  const data = payload?.data?.data;
-  if (Array.isArray(data)) return { list: data, total: data.length };
+  const data =
+    payload?.data?.data ??
+    payload?.data ??
+    payload?.normalized?.data ??
+    payload?.normalized ??
+    payload;
+
+  // Direct array response
+  if (Array.isArray(data)) {
+    return { list: data, total: data.length };
+  }
+
+  // Grouped payout response
   if (data && typeof data === "object") {
-    const list = [
-      ...(data.pendingApproval || []).map((row) => ({
-        ...row,
-        status: row.status || "pending",
-      })),
-      ...(data.processing || []).map((row) => ({
-        ...row,
-        status: row.status || "processing",
-      })),
-      ...(data.onHold || []).map((row) => ({
-        ...row,
-        status: row.status || "on_hold",
-      })),
-      ...(data.failed || []).map((row) => ({
-        ...row,
-        status: row.status || "failed",
-      })),
-    ];
-    if (list.length || data.counts) {
+    const hasGroupedData = [
+      "pendingApproval",
+      "processing",
+      "onHold",
+      "failed",
+    ].some((key) => Array.isArray(data[key]));
+
+    if (hasGroupedData) {
+      const list = [
+        ...(data.pendingApproval || []).map((row) => ({
+          ...row,
+          status: row.status || "pending",
+        })),
+        ...(data.processing || []).map((row) => ({
+          ...row,
+          status: row.status || "processing",
+        })),
+        ...(data.onHold || []).map((row) => ({
+          ...row,
+          status: row.status || "on_hold",
+        })),
+        ...(data.failed || []).map((row) => ({
+          ...row,
+          status: row.status || "failed",
+        })),
+      ];
+
+      const counts = data.counts || {};
+
       return {
         list,
         total:
-          Number(
-            (data.counts?.pendingApproval || 0) +
-              (data.counts?.processing || 0) +
-              (data.counts?.onHold || 0) +
-              (data.counts?.failed || 0),
-          ) || list.length,
+          Number(counts.pendingApproval || 0) +
+            Number(counts.processing || 0) +
+            Number(counts.onHold || 0) +
+            Number(counts.failed || 0) || Number(data.total || list.length),
       };
     }
+
+    // Normal list response
+    const list = data.list || data.items || [];
+
+    return {
+      list: Array.isArray(list) ? list : [],
+      total: Number(data.total ?? list.length),
+    };
   }
-  return {
-    list: data?.items || data?.list || data || [],
-    total: Number(
-      data?.total || data?.items?.length || data?.list?.length || 0,
-    ),
-  };
+
+  return { list: [], total: 0 };
 };
 
 const display = (value = "") => String(value || "N/A").replace(/_/g, " ");
@@ -259,6 +283,7 @@ const payoutFailureReason = (row = {}) => {
 
 const PayoutOpsQueue = () => {
   const dispatch = useDispatch();
+  const [exportLoading, setExportLoading] = useState(false);
   const { can } = usePermission();
   const canUpdate = can("sellers/commissions", ACTIONS.UPDATE);
   const selector = useSelector((state) => state.sellerCommissions);
@@ -272,8 +297,10 @@ const PayoutOpsQueue = () => {
         const rightCreated = new Date(
           valueOf(right, "createdAt", "created_at", "created"),
         ).getTime();
-        return (Number.isFinite(rightCreated) ? rightCreated : 0) -
-          (Number.isFinite(leftCreated) ? leftCreated : 0);
+        return (
+          (Number.isFinite(rightCreated) ? rightCreated : 0) -
+          (Number.isFinite(leftCreated) ? leftCreated : 0)
+        );
       }),
     [payload.list],
   );
@@ -448,9 +475,7 @@ const PayoutOpsQueue = () => {
 
   const prepareAction = () => {
     if (
-      ["approve", "hold", "retry", "cancel", "release"].includes(
-        action.type,
-      )
+      ["approve", "hold", "retry", "cancel", "release"].includes(action.type)
     ) {
       actionFormik.handleSubmit();
       return;
@@ -673,6 +698,96 @@ const PayoutOpsQueue = () => {
     [],
   );
 
+  const handleExportPayouts = useCallback(async () => {
+    try {
+      setExportLoading(true);
+
+      const params = toQueryParams();
+
+      const response = await dispatch(
+        getPayoutOperationsQueue({
+          ...params,
+          page: 1,
+          limit: Math.max(Number(payload.total) || 0, payload.list.length, 10),
+          offset: 0,
+        }),
+      ).unwrap();
+
+      const exportPayload = unwrapList(response);
+      const allPayouts = exportPayload.list;
+
+      if (!allPayouts.length) {
+        toast.info("No payout records available to export.");
+        return;
+      }
+
+      const exportColumns = [
+        { key: "sellerName", label: "Seller Store Name" },
+        { key: "amount", label: "Amount" },
+        { key: "status", label: "Status" },
+        { key: "paymentMethod", label: "Payment Method" },
+        { key: "paymentReference", label: "Payment Reference" },
+        { key: "providerPayoutId", label: "RazorpayX Provider ID" },
+        { key: "createdAt", label: "Created" },
+        { key: "failureReason", label: "Failure Reason" },
+      ];
+
+      const exportRows = allPayouts.map((row) => {
+        const metadata = metadataOf(row);
+        const razorpayX = razorpayXOf(row);
+
+        const sellerName =
+          row.sellerName ||
+          row.seller?.displayName ||
+          row.seller?.name ||
+          row.seller?.businessName ||
+          "N/A";
+
+        return {
+          sellerName,
+          amount: formatIndianNumber(
+            valueOf(row, "net_amount", "netAmount", "amount"),
+          ),
+          status: replacementPayoutIdOf(row)
+            ? "Superseded"
+            : display(row.status),
+          paymentMethod: payoutMethodText(row),
+          paymentReference:
+            valueOf(row, "paymentReference", "payment_reference") || "N/A",
+          providerPayoutId: razorpayX.payoutId || "N/A",
+          createdAt: formatDateTime12Hour(
+            valueOf(row, "createdAt", "created_at", "created"),
+            "N/A",
+          ),
+          failureReason: payoutFailureReason(row) || "N/A",
+        };
+      });
+
+      const exported = exportToExcelWorkbook(
+        [
+          {
+            name: "Payout Operations",
+            title: "Payout Operations",
+            data: exportRows,
+            columns: exportColumns,
+          },
+        ],
+        "Payout-Operations-Queue.xlsx",
+      );
+
+      if (exported) {
+        toast.success(`${allPayouts.length} payouts exported successfully.`);
+      } else {
+        toast.error("Unable to export payout records.");
+      }
+    } catch (error) {
+      console.error("Payout export error:", error);
+      toast.error(error?.message || "Failed to export payout records.");
+    } finally {
+      setExportLoading(false);
+    }
+  }, [dispatch, toQueryParams, payload.total, payload.list.length]);
+
   const rowActions = useCallback(
     (row) => {
       if (!canUpdate) return [];
@@ -873,9 +988,9 @@ const PayoutOpsQueue = () => {
         }
         requiredModule="sellers/commissions"
         exportConfig={{
-          filename: "payout-ops-queue",
-          columns,
-          data: payload.list,
+          onClick: handleExportPayouts,
+          label: exportLoading ? "Exporting..." : "Export",
+          disabled: loading || exportLoading || !payload.list.length,
         }}
       />
 
@@ -900,7 +1015,7 @@ const PayoutOpsQueue = () => {
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                   <p className="admin-label">Seller</p>
                   <p className="mt-1 break-words text-sm font-medium text-gray-800">
-                    { formatLabel(action.payout.sellerName) ||
+                    {formatLabel(action.payout.sellerName) ||
                       formatLabel(action.payout.seller?.displayName) ||
                       "Seller"}
                   </p>
@@ -923,7 +1038,7 @@ const PayoutOpsQueue = () => {
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                   <p className="admin-label">Current Status</p>
                   <p className="mt-1 text-sm font-medium text-gray-800">
-                    {formatLabel(display(action.payout.status)) }
+                    {formatLabel(display(action.payout.status))}
                   </p>
                 </div>
 
@@ -931,7 +1046,7 @@ const PayoutOpsQueue = () => {
                   <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <p className="admin-label">Payment Method</p>
                     <p className="mt-1 break-words text-sm text-gray-800">
-                      { formatLabel(payoutMethodText(action.payout))}
+                      {formatLabel(payoutMethodText(action.payout))}
                     </p>
                   </div>
                 )}
@@ -1033,9 +1148,7 @@ const PayoutOpsQueue = () => {
                   value={actionFormik.values.note}
                   onChange={actionFormik.handleChange}
                   onBlur={actionFormik.handleBlur}
-                  error={
-                    actionFormik.touched.note && actionFormik.errors.note
-                  }
+                  error={actionFormik.touched.note && actionFormik.errors.note}
                   minLength={3}
                   maxLength={500}
                   limitMessage="Note must be between 3 and 500 characters"

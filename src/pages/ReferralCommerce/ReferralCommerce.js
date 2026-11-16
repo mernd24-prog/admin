@@ -4469,6 +4469,17 @@ const ReferralCommerce = () => {
                 }
                 className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
               />
+
+              <FormInput
+                label="Referral Code"
+                name="code"
+                value={parentFormik.values.code}
+                onChange={parentFormik.handleChange}
+                onBlur={parentFormik.handleBlur}
+                placeholder="Enter referral code"
+                error={parentFormik.touched.code && parentFormik.errors.code}
+                className="border-[var(--admin-field-line)] focus:border-[var(--admin-gold)] focus:ring-1 focus:ring-[var(--admin-gold)]"
+              />
             </div>
           </FormSection>
 
@@ -4616,6 +4627,15 @@ const ReferralCommerce = () => {
                 }
                 required
                 placeholder="Enter password"
+              />
+              <FormInput
+                label="Referral Code"
+                name="code"
+                value={childFormik.values.code}
+                onChange={childFormik.handleChange}
+                onBlur={childFormik.handleBlur}
+                error={childFormik.touched.code && childFormik.errors.code}
+                placeholder="Enter referral code"
               />
             </div>
           </FormSection>

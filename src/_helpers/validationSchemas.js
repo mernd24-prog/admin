@@ -378,14 +378,28 @@ export const referralPartnerEditProfileValidationSchema = Yup.object({
     .matches(/^[6-9][0-9]{9}$/, "Enter a valid 10 digit mobile number"),
 });
 
-export const sendNotificationValidationSchema = Yup.object({
-  userId: Yup.string().trim().required("Recipient User ID is required."),
+export const userNotificationValidationSchema = Yup.object({
+  userId: Yup.string()
+    .trim()
+    .required("Recipient User ID is required.")
+    .max(100, "Recipient User ID cannot exceed 100 characters."),
 
-  template: Yup.string().required("Template is required."),
+  template: Yup.string()
+    .trim()
+    .oneOf(
+      [
+        "order_update",
+        "payment_confirmation",
+        "shipment_update",
+        "review_request",
+        "custom",
+      ],
+      "Please select a valid notification template.",
+    ),
 
   subject: Yup.string()
     .trim()
-    .max(100, "Subject cannot exceed 100 characters."),
+    .max(120, "Subject cannot exceed 120 characters."),
 
   message: Yup.string()
     .trim()

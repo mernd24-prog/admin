@@ -22,6 +22,7 @@ import {
   getPromotionFundingLedger,
 } from "../../../Redux/sellerCommissionsSlice";
 import { truncateToWordBoundary } from "../../../utils/formatters";
+import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
 
 const money = (value, currency = "INR") =>
   new Intl.NumberFormat("en-IN", {
@@ -72,6 +73,7 @@ const PromotionFundingLedger = () => {
   const [loading, setLoading] = useState(false);
   const [sellerOptions, setSellerOptions] = useState([]);
   const [storeMap, setStoreMap] = useState({});
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Fetch seller dropdown options
   useEffect(() => {
@@ -218,7 +220,6 @@ const PromotionFundingLedger = () => {
         render: (value, row) => {
           const orderId = row?.orderId || row?.order_id;
           const orderDisplay = row?.orderNumber || value || "—";
-          const productName = row?.productTitle || "Order item";
 
           return (
             <div className="flex flex-col">
@@ -228,14 +229,25 @@ const PromotionFundingLedger = () => {
               >
                 {orderDisplay}
               </OrderLink>
+            </div>
+          );
+        },
+      },
 
-              <div title={productName}>
+      {
+        key: "productTitle",
+        label: "Product Name",
+        render: (value, row) => {
+          const productName = row?.productTitle || "Order item";
+          const productSku = row?.productSku || row?.product_sku || "No SKU";
+
+          return (
+            <div className="flex flex-col">
+              <span className="font-medium text-gray-800" title={productName}>
                 {truncateToWordBoundary(productName)}
-              </div>
+              </span>
 
-              <div className="text-xs text-gray-500">
-                {row?.productSku || "No SKU"} · Qty {row?.quantity ?? 0}
-              </div>
+              <span className="text-xs text-gray-500">SKU: {productSku}</span>
             </div>
           );
         },
@@ -364,6 +376,193 @@ const PromotionFundingLedger = () => {
     }
   }, [dispatch, filters, sellerMode]);
 
+  const handleExportLedger = useCallback(async () => {
+    setExportLoading(true);
+
+    try {
+      const action = sellerMode
+        ? getMyPromotionFundingLedger
+        : getPromotionFundingLedger;
+
+      // Use the current result count to request all matching records.
+      const totalRecords = Number(
+        payload?.totalCount || payload?.total || payload?.count || rows.length,
+      );
+
+      if (!totalRecords) {
+        toast.info("No promotion funding records available to export.");
+        return;
+      }
+
+      // Preserve the current search and funding-type filters.
+      // Reset pagination so the export fetch starts from the first record.
+      const response = await dispatch(
+        action({
+          ...filters,
+          limit: totalRecords,
+          offset: 0,
+        }),
+      ).unwrap();
+
+      const exportPayload =
+        response?.data?.data || response?.data || response || {};
+
+      const allRows = Array.isArray(exportPayload?.items)
+        ? exportPayload.items
+        : [];
+
+      if (!allRows.length) {
+        toast.info("No promotion funding records available to export.");
+        return;
+      }
+
+      // Resolve seller store names for all exported records.
+      const exportStoreMap = {};
+
+      if (!sellerMode) {
+        const sellerIds = [
+          ...new Set(
+            allRows
+              .map((row) => row.sellerId || row.seller_id)
+              .filter(Boolean)
+              .map(String),
+          ),
+        ];
+
+        const organizationResults = await Promise.all(
+          sellerIds.map(async (sellerId) => {
+            try {
+              const organizations =
+                await dropdownApi.getSellerOrganizations(sellerId);
+
+              return {
+                sellerId,
+                organizations: Array.isArray(organizations)
+                  ? organizations
+                  : [],
+              };
+            } catch (error) {
+              console.error(
+                `Failed to fetch organizations for seller ${sellerId}:`,
+                error,
+              );
+
+              return { sellerId, organizations: [] };
+            }
+          }),
+        );
+
+        organizationResults.forEach(({ sellerId, organizations }) => {
+          const storeNames = organizations
+            .map((organization) => organization?.label)
+            .filter(Boolean);
+
+          if (storeNames.length) {
+            exportStoreMap[sellerId] = [...new Set(storeNames)].join(", ");
+          }
+        });
+      }
+
+      const exportRows = allRows.map((row) => {
+        const sellerId = row.sellerId || row.seller_id;
+
+        const sellerName =
+          row?.sellerName ||
+          row?.seller?.name ||
+          row?.seller?.displayName ||
+          row?.seller?.businessName ||
+          (sellerId ? sellerMap.get(String(sellerId)) : "") ||
+          "—";
+
+        const storeName = sellerId
+          ? exportStoreMap[String(sellerId)] ||
+            storeMap[String(sellerId)] ||
+            "—"
+          : "—";
+
+        const currency = row.currency || "INR";
+
+        return {
+          orderNumber:
+            row.orderNumber ||
+            row.order_number ||
+            row.orderId ||
+            row.order_id ||
+            "—",
+          productName: row.productTitle || "Order item",
+          productSku: row.productSku || row.product_sku || "—",
+          sellerName: sellerMode ? "—" : sellerName,
+          storeName: sellerMode ? "—" : storeName,
+          fundingType: String(row.fundingType || "").replace(/_/g, " "),
+          customerDiscount: money(row.customerDiscountAmount, currency),
+          sellerFunded: money(row.sellerFundedDiscountAmount, currency),
+          platformPartner: money(
+            Number(row.marketplaceContributionAmount || 0) +
+              Number(row.paymentPartnerContributionAmount || 0),
+            currency,
+          ),
+          reversed: money(row.reversalAmount, currency),
+          netContribution: money(row.netPlatformContributionAmount, currency),
+          status: row.status || "—",
+          payout: row.payoutId || "Not batched",
+        };
+      });
+
+      const exportColumns = [
+        { header: "Order / Item", key: "orderNumber" },
+        { header: "Product Name", key: "productName" },
+        { header: "Product SKU", key: "productSku" },
+        ...(!sellerMode
+          ? [
+              { header: "Seller", key: "sellerName" },
+              { header: "Store Name", key: "storeName" },
+            ]
+          : []),
+        { header: "Funding", key: "fundingType" },
+        { header: "Customer Discount", key: "customerDiscount" },
+        { header: "Seller-funded", key: "sellerFunded" },
+        { header: "Platform / Partner", key: "platformPartner" },
+        { header: "Reversed", key: "reversed" },
+        { header: "Net Contribution", key: "netContribution" },
+        { header: "Status", key: "status" },
+        { header: "Payout", key: "payout" },
+      ];
+
+      const exported = exportToExcelWorkbook(
+        [
+          {
+            name: "Promotion Funding Ledger",
+            title: "Promotion Funding Ledger",
+            data: exportRows,
+            columns: exportColumns,
+          },
+        ],
+        "Promotion_Funding_Ledger.xlsx",
+      );
+
+      if (exported) {
+        toast.success("Promotion funding ledger exported successfully.");
+      } else {
+        toast.error("Failed to export promotion funding ledger.");
+      }
+    } catch (error) {
+      console.error("Promotion funding ledger export failed:", error);
+      toast.error(
+        error?.message || "Failed to export promotion funding ledger.",
+      );
+    } finally {
+      setExportLoading(false);
+    }
+  }, [
+    dispatch,
+    filters,
+    sellerMode,
+    payload,
+    rows.length,
+    sellerMap,
+    storeMap,
+  ]);
+
   useEffect(() => {
     load();
   }, [load]);
@@ -490,6 +689,11 @@ const PromotionFundingLedger = () => {
             offset: 0,
           }))
         }
+        exportConfig={{
+          onClick: handleExportLedger,
+          label: "Export",
+          disabled: loading || exportLoading || !rows.length,
+        }}
         searchPlaceholder="Search order, product, or SKU"
         filterBar={
           <FilterBar
