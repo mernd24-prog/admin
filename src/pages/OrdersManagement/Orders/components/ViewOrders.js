@@ -2,7 +2,7 @@ import { itemDisplayStatus, orderDisplayStatus } from "../../../../utils/orderDi
 import { boxLabelUnavailableReason } from "../../../../utils/boxLabelAvailability";
 import { cancellationRequesterLabel } from "../../../../utils/cancellationRequester";
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormik } from "formik";
 import { FaFile, FaRegNoteSticky } from "react-icons/fa6";
 import {
@@ -2736,17 +2736,20 @@ const selectedCount = Object.keys(formData.cancelItems).length;
     [],
   );
 
+  const orderInfoRequest = useRef(0);
   const fetchOrderInfo = useCallback(async () => {
     if (!id) return;
+    const request = ++orderInfoRequest.current;
     try {
       setLoading(true);
       const res = await dispatch(getOrderInfo({ orderId: id })).unwrap();
+      if (request !== orderInfoRequest.current) return;
       if (!res?.data) throw new Error("Invalid order response");
       setState((prev) => ({ ...prev, orderInfo: res.data }));
     } catch (error) {
-      handleError(error, "Failed to fetch order information");
+      if (request === orderInfoRequest.current) handleError(error, "Failed to fetch order information");
     } finally {
-      setLoading(false);
+      if (request === orderInfoRequest.current) setLoading(false);
     }
   }, [id, dispatch, handleError, setLoading]);
 
@@ -2762,6 +2765,7 @@ const selectedCount = Object.keys(formData.cancelItems).length;
   useEffect(() => {
     fetchOrderInfo();
     fetchUserData();
+    return () => { orderInfoRequest.current += 1; };
   }, [fetchOrderInfo, fetchUserData, realtimeRevision]);
 
   const fetchOrderReturns = useCallback(async () => {

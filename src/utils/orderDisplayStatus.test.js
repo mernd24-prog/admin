@@ -53,3 +53,19 @@ test('all remaining items delivered and empty orders have stable summaries', () 
   expect(orderDisplayStatus({ status: 'shipped', items: [a, b] })).toBe('delivered');
   expect(orderDisplayStatus({ status: 'confirmed' })).toBe('confirmed');
 });
+
+test('creating an initiated package does not pack a confirmed order', () => {
+  const a = item('a', 'seller-a');
+  const order = { status: 'confirmed', items: [a], relations: { shipments: [shipment('seller-a', 'initiated')] } };
+  expect(itemDisplayStatus(a, order)).toBe('confirmed');
+  expect(orderDisplayStatus(order)).toBe('confirmed');
+});
+test('the API aggregate is retained when a seller sees only their delivered item', () => {
+  const a = { ...item('a', 'seller-a'), effective_status: 'delivered' };
+  expect(orderDisplayStatus({ status: 'shipped', display_status: 'partially_delivered', items: [a] })).toBe('partially_delivered');
+});
+test('explicitly packed and ready packages retain their real fulfillment stages', () => {
+  const a = item('a', 'seller-a');
+  expect(itemDisplayStatus(a, { status: 'packed', relations: { shipments: [shipment('seller-a', 'initiated')] } })).toBe('packed');
+  expect(itemDisplayStatus(a, { status: 'confirmed', relations: { shipments: [shipment('seller-a', 'manifested')] } })).toBe('ready_to_ship');
+});

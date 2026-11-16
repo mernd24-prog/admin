@@ -133,8 +133,8 @@ const orderSlice = createSlice({
     name: 'order',
     initialState,
     extraReducers: builder => {
-createExtraReducersForThunk(builder, getOrderList, 'getOrderListData')
-        createExtraReducersForThunk(builder, getOrderInfo, 'getOrderInfoData')
+createExtraReducersForThunk(builder, getOrderList, 'getOrderListData', { latestOnly: true })
+        createExtraReducersForThunk(builder, getOrderInfo, 'getOrderInfoData', { latestOnly: true })
         createExtraReducersForThunk(builder, createOrder, 'createOrderData')
         createExtraReducersForThunk(builder, updateOrderStatus, 'updateOrderStatusData')
         createExtraReducersForThunk(builder, deleteOrder, 'deleteOrderData')

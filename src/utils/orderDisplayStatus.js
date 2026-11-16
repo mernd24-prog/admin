@@ -18,7 +18,9 @@ export function itemDisplayStatus(item = {}, order = {}) {
   const quantity = Number(item.quantity || 0);
   const cancelled = Number(item.cancelled_quantity || item.cancelledQuantity || 0);
   if (quantity > 0 && cancelled >= quantity) return "cancelled";
-  const lifecycle = key(item.return_status || item.returnStatus || item.effective_status || item.effectiveStatus);
+  const effective = key(item.effective_status || item.effectiveStatus);
+  if (effective && effective !== "initiated") return effective;
+  const lifecycle = key(item.return_status || item.returnStatus);
   if (["return_requested", "return_approved", "returned", "partially_returned", "refunded", "partially_refunded", "refund_pending", "refund_failed"].includes(lifecycle)) return lifecycle;
   const itemId = String(item.id || item._id || "");
   const shipments = (order.relations?.shipments || []).filter((shipment) => {
@@ -50,12 +52,23 @@ export function itemDisplayStatus(item = {}, order = {}) {
   if (shipmentStatus === "out_for_delivery") return "out_for_delivery";
   if (["in_transit", "picked_up"].includes(shipmentStatus)) return "shipped";
   // A newly created package is not evidence that the item was shipped.
-  if (["initiated", "manifested"].includes(shipmentStatus)) return "packed";
+  if (shipmentStatus === "manifested") return "ready_to_ship";
+  if (shipmentStatus === "initiated") {
+    const stages = ["confirmed", "processing", "packed", "ready_to_ship"];
+    const explicit = active.map(shipment => {
+      const metadata = json(shipment.metadata);
+      return metadata.orderStatus || (metadata.source === "order_auto_shipment" ? "confirmed" : null);
+    }).filter(status => stages.includes(status));
+    if (explicit.length) return explicit.sort((a, b) => stages.indexOf(a) - stages.indexOf(b))[0];
+    const stored = key(item.status || item.order_status || order.status);
+    return stages.includes(stored) ? stored : "confirmed";
+  }
   if (!shipments.length && (item.delivered_at || item.deliveredAt)) return "delivered";
   return key(item.effective_status || item.effectiveStatus || item.status || item.order_status || order.status) || "pending";
 }
 
 export function orderDisplayStatus(order = {}) {
+  if (order.display_status || order.displayStatus) return key(order.display_status || order.displayStatus);
   const stored = key(order.status || order.order_status);
   if (["cancelled", "refunded", "payment_failed", "pending_payment", "fulfilled", "on_hold", "return_requested", "return_approved", "returned", "partially_returned"].includes(stored)) return stored;
   const items = Array.isArray(order.items) ? order.items : [];

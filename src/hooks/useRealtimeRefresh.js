@@ -27,12 +27,19 @@ export default function useRealtimeRefresh(domains = [], options = {}) {
     });
     const leaveOrderRoom = orderId ? joinOrderRoom(orderId) : () => {};
     const recoverMissedEvents = () => setRevision((current) => current + 1);
+    const refreshVisiblePage = () => {
+      if (document.visibilityState !== "hidden") recoverMissedEvents();
+    };
     window.addEventListener("realtime:connected", recoverMissedEvents);
+    window.addEventListener("focus", refreshVisiblePage);
+    document.addEventListener("visibilitychange", refreshVisiblePage);
     return () => {
       window.clearTimeout(timerRef.current);
       unsubscribe();
       leaveOrderRoom();
       window.removeEventListener("realtime:connected", recoverMissedEvents);
+      window.removeEventListener("focus", refreshVisiblePage);
+      document.removeEventListener("visibilitychange", refreshVisiblePage);
     };
   }, [domainKey, orderId, options.debounceMs]);
 

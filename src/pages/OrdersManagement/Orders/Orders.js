@@ -408,6 +408,7 @@ const countItems = (row = {}) => {
 ========================================================= */
 
 const shipmentStatusOf = (row = {}) => {
+  if (row.shipment_status || row.shipmentStatus) return row.shipment_status || row.shipmentStatus;
   const forwardShipments = (
     Array.isArray(row.relations?.shipments) ? row.relations.shipments : []
   ).filter((shipment) => String(shipment.direction || "forward") !== "reverse");
@@ -1223,6 +1224,7 @@ const buildOrderExportData = (orders = [], filters = {}) => {
       orderStatus: orderDisplayStatus(order) || "—",
 
       shipmentStatus: firstDefined(
+        shipmentStatusOf(order),
         order.delivery_status,
         order.deliveryStatus,
         order.shipmentStatus,
@@ -1475,21 +1477,6 @@ const Orders = () => {
       }),
     )
       .unwrap()
-      .then((response) => {
-        console.log("========== ORDERS API RESPONSE ==========");
-        console.log("Complete Response:", response);
-        console.log(
-          "Orders List:",
-          response?.data?.list || response?.data?.items,
-        );
-        console.log(
-          "First Order:",
-          response?.data?.list?.[0] || response?.data?.items?.[0],
-        );
-        console.log("=========================================");
-
-        return response;
-      })
       .catch((err) => {
         console.error("Orders API Error:", err);
         toast.error(err?.message || "Failed to fetch orders");

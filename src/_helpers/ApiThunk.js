@@ -285,18 +285,21 @@ export const createExtraReducersForThunk = (
   builder,
   thunkAction,
   sliceName,
+  { latestOnly = false } = {},
 ) => {
   builder
-    .addCase(thunkAction.pending, (state) => {
+    .addCase(thunkAction.pending, (state, action) => {
       state.loading = true;
       state.error = null;
       if (!state[sliceName]) {
         state[sliceName] = {};
       }
+      if (latestOnly) state[sliceName].requestId = action.meta.requestId;
       state[sliceName].loading = true;
       state[sliceName].error = null;
     })
     .addCase(thunkAction.fulfilled, (state, action) => {
+      if (latestOnly && state[sliceName]?.requestId !== action.meta.requestId) return;
       state.loading = false;
       if (!state[sliceName]) {
         state[sliceName] = {};
@@ -307,6 +310,7 @@ export const createExtraReducersForThunk = (
       state[sliceName].normalized = action?.payload || {};
     })
     .addCase(thunkAction.rejected, (state, action) => {
+      if (latestOnly && state[sliceName]?.requestId !== action.meta.requestId) return;
       state.loading = false;
       if (!state[sliceName]) {
         state[sliceName] = {};
