@@ -1235,274 +1235,275 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
           onPageSizeChange={(limit) =>
             setPagination((prev) => ({ ...prev, limit, page: 1 }))
           }
-          rowActions={(row) => [
-            {
-              permission: "update",
-              label: "Edit",
-              icon: <Pencil aria-hidden="true" size={15} />,
-              onClick: () => handleEdit(row),
-            },
-            {
-              permission: "delete",
-              label: "Remove override",
-              icon: <X aria-hidden="true" size={15} />,
-              danger: true,
-              onClick: () => remove(row),
-            },
-          ].filter(action => can("referral", action.permission))}
+          rowActions={(row) =>
+            [
+              {
+                permission: "update",
+                label: "Edit",
+                icon: <Pencil aria-hidden="true" size={15} />,
+                onClick: () => handleEdit(row),
+              },
+              {
+                permission: "delete",
+                label: "Remove override",
+                icon: <X aria-hidden="true" size={15} />,
+                danger: true,
+                onClick: () => remove(row),
+              },
+            ].filter((action) => can("referral", action.permission))
+          }
           emptyText="No product referral amount found."
         />
       </section>
 
       {/* Side Drawer Modal */}
-    
-<DefaultModal
-  isOpen={drawerOpen}
-  onClose={handleCloseDrawer}
-  onSubmit={save}
-  title={
-    isEditMode ? "Edit Product Override" : "Add Product Referral Pool"
-  }
-  submitButtonText={
-    isEditMode ? "Update Product Amount" : "Save Product Amount"
-  }
-  closeButtonText="Cancel"
-  isButtonView={true}
-  width="600px"
-  loading={loading}
->
-  <div className="space-y-5">
-    {/* ==================== Product Information ==================== */}
-    <FormSection
-      title="Product Information"
-      description="Select the store and product for which you want to configure the referral pool."
-    >
-      <div className="space-y-4">
-        {/* Store */}
-        <FormSelectGroup
-          label="Store"
-          options={storeOptions}
-          value={
-            storeOptions.find(
-              (option) => String(option.value) === String(form.storeKey),
-            ) || null
-          }
-          onChange={(selectedOption) => {
-            const storeKey = selectedOption?.value || "";
 
-            setForm((current) => ({
-              ...current,
-              storeKey,
-              storeId: "",
-              productId: "",
-              productTitle: "",
-            }));
-          }}
-          placeholder="Select store"
-          isSearchable
-          isClearable
-          required
-          className="w-full"
-        />
-
-        {/* Product */}
-        <FormSelectGroup
-          label="Product"
-          options={productOptions}
-          value={
-            productOptions.find(
-              (option) => String(option.value) === String(form.productId),
-            ) || null
-          }
-          onChange={(selectedOption) => {
-            const productId = selectedOption?.value || "";
-
-            const product = storeProducts.find(
-              (item) => String(getId(item)) === String(productId),
-            );
-
-            setForm((current) => ({
-              ...current,
-              productId,
-              productTitle: getProductTitle(product),
-              storeId: getProductStoreId(product),
-            }));
-          }}
-          placeholder={
-            form.storeKey ? "Select product" : "Select store first"
-          }
-          isDisabled={!form.storeKey}
-          isSearchable
-          isClearable
-          required
-          className="w-full"
-        />
-      </div>
-    </FormSection>
-
-    {/* ==================== Referral Pool Configuration ==================== */}
-    <FormSection
-      title="Referral Pool Configuration"
-      description="Configure the amount type and maximum eligible referral pool for this product."
-    >
-      <div className="space-y-4">
-        {/* Amount Type */}
-        <FormSelectGroup
-          label="Amount Type"
-          options={amountTypeOptions}
-          value={
-            amountTypeOptions.find(
-              (option) => option.value === form.amountType,
-            ) || null
-          }
-          onChange={(selectedOption) => {
-            setForm((current) => ({
-              ...current,
-              amountType: selectedOption?.value || "fixed_amount",
-            }));
-          }}
-          placeholder="Select amount type"
-          isSearchable={false}
-          className="w-full"
-        />
-
-        {/* Pool Amount */}
-        <FormInput
-          label={
-            form.amountType === "percentage"
-              ? "Pool Percentage (%)"
-              : "Product Pool for Order (₹)"
-          }
-          name="amountValue"
-          type="number"
-          min="0"
-          max={form.amountType === "percentage" ? "100" : undefined}
-          step="0.01"
-          value={form.amountValue}
-          onChange={(event) => {
-            setForm((current) => ({
-              ...current,
-              amountValue: event.target.value,
-            }));
-          }}
-          placeholder={
-            form.amountType === "percentage" ? "e.g. 10" : "e.g. 50"
-          }
-          required
-          className="w-full"
-        />
-
-        {/* Maximum Amount */}
-        <FormInput
-          label="Maximum Product Pool (₹)"
-          name="maximumAmount"
-          type="number"
-          min="0"
-          step="0.01"
-          value={form.maximumAmount}
-          onChange={(event) => {
-            setForm((current) => ({
-              ...current,
-              maximumAmount: event.target.value,
-            }));
-          }}
-          placeholder="0 means no additional limit"
-          hint="0 means no additional limit. Eligible product pools are added together; each product contributes once per order, regardless of quantity."
-          className="w-full"
-        />
-      </div>
-    </FormSection>
-
-    {/* ==================== Selected Product Details ==================== */}
-    {selectedProduct && (
-      <FormSection
-        title="Selected Product Details"
-        description="Review the store and product information before saving."
+      <DefaultModal
+        isOpen={drawerOpen}
+        onClose={handleCloseDrawer}
+        onSubmit={save}
+        title={
+          isEditMode ? "Edit Product Override" : "Add Product Referral Pool"
+        }
+        submitButtonText={
+          isEditMode ? "Update Product Amount" : "Save Product Amount"
+        }
+        closeButtonText="Cancel"
+        isButtonView={true}
+        width="600px"
+        loading={loading}
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-[var(--admin-muted)]">
-              Store
-            </p>
-            <p className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]">
-              {selectedStore?.label ||
-                getProductStoreName(selectedProduct)}
-            </p>
-          </div>
+        <div className="space-y-5">
+          {/* ==================== Product Information ==================== */}
+          <FormSection
+            title="Product Information"
+            description="Select the store and product for which you want to configure the referral pool."
+          >
+            <div className="space-y-4">
+              {/* Store */}
+              <FormSelectGroup
+                label="Store"
+                options={storeOptions}
+                value={
+                  storeOptions.find(
+                    (option) => String(option.value) === String(form.storeKey),
+                  ) || null
+                }
+                onChange={(selectedOption) => {
+                  const storeKey = selectedOption?.value || "";
 
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-[var(--admin-muted)]">
-              Product
-            </p>
-            <p
-              className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]"
-              title={getProductTitle(selectedProduct)}
+                  setForm((current) => ({
+                    ...current,
+                    storeKey,
+                    storeId: "",
+                    productId: "",
+                    productTitle: "",
+                  }));
+                }}
+                placeholder="Select store"
+                isSearchable
+                isClearable
+                required
+                className="w-full"
+              />
+
+              {/* Product */}
+              <FormSelectGroup
+                label="Product"
+                options={productOptions}
+                value={
+                  productOptions.find(
+                    (option) => String(option.value) === String(form.productId),
+                  ) || null
+                }
+                onChange={(selectedOption) => {
+                  const productId = selectedOption?.value || "";
+
+                  const product = storeProducts.find(
+                    (item) => String(getId(item)) === String(productId),
+                  );
+
+                  setForm((current) => ({
+                    ...current,
+                    productId,
+                    productTitle: getProductTitle(product),
+                    storeId: getProductStoreId(product),
+                  }));
+                }}
+                placeholder={
+                  form.storeKey ? "Select product" : "Select store first"
+                }
+                isDisabled={!form.storeKey}
+                isSearchable
+                isClearable
+                required
+                className="w-full"
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Referral Pool Configuration ==================== */}
+          <FormSection
+            title="Referral Pool Configuration"
+            description="Configure the amount type and maximum eligible referral pool for this product."
+          >
+            <div className="space-y-4">
+              {/* Amount Type */}
+              <FormSelectGroup
+                label="Amount Type"
+                options={amountTypeOptions}
+                value={
+                  amountTypeOptions.find(
+                    (option) => option.value === form.amountType,
+                  ) || null
+                }
+                onChange={(selectedOption) => {
+                  setForm((current) => ({
+                    ...current,
+                    amountType: selectedOption?.value || "fixed_amount",
+                  }));
+                }}
+                placeholder="Select amount type"
+                isSearchable={false}
+                className="w-full"
+              />
+
+              {/* Pool Amount */}
+              <FormInput
+                label={
+                  form.amountType === "percentage"
+                    ? "Pool Percentage (%)"
+                    : "Product Pool for Order (₹)"
+                }
+                name="amountValue"
+                type="number"
+                min="0"
+                max={form.amountType === "percentage" ? "100" : undefined}
+                step="0.01"
+                value={form.amountValue}
+                onChange={(event) => {
+                  setForm((current) => ({
+                    ...current,
+                    amountValue: event.target.value,
+                  }));
+                }}
+                placeholder={
+                  form.amountType === "percentage" ? "e.g. 10" : "e.g. 50"
+                }
+                required
+                className="w-full"
+              />
+
+              {/* Maximum Amount */}
+              <FormInput
+                label="Maximum Product Pool (₹)"
+                name="maximumAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.maximumAmount}
+                onChange={(event) => {
+                  setForm((current) => ({
+                    ...current,
+                    maximumAmount: event.target.value,
+                  }));
+                }}
+                placeholder="0 means no additional limit"
+                hint="0 means no additional limit. Eligible product pools are added together; each product contributes once per order, regardless of quantity."
+                className="w-full"
+              />
+            </div>
+          </FormSection>
+
+          {/* ==================== Selected Product Details ==================== */}
+          {selectedProduct && (
+            <FormSection
+              title="Selected Product Details"
+              description="Review the store and product information before saving."
             >
-              {getProductTitle(selectedProduct)}
-            </p>
-          </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-[var(--admin-muted)]">
+                    Store
+                  </p>
+                  <p className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]">
+                    {selectedStore?.label ||
+                      getProductStoreName(selectedProduct)}
+                  </p>
+                </div>
 
-          {selectedProduct?.sku && (
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-[var(--admin-muted)]">
-                SKU
-              </p>
-              <p className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]">
-                {selectedProduct.sku}
-              </p>
-            </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-[var(--admin-muted)]">
+                    Product
+                  </p>
+                  <p
+                    className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]"
+                    title={getProductTitle(selectedProduct)}
+                  >
+                    {getProductTitle(selectedProduct)}
+                  </p>
+                </div>
+
+                {selectedProduct?.sku && (
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-[var(--admin-muted)]">
+                      SKU
+                    </p>
+                    <p className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]">
+                      {selectedProduct.sku}
+                    </p>
+                  </div>
+                )}
+
+                {selectedProduct?.price !== undefined && (
+                  <div>
+                    <p className="text-xs font-medium text-[var(--admin-muted)]">
+                      Price
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">
+                      ₹{Number(selectedProduct.price).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </FormSection>
           )}
 
-          {selectedProduct?.price !== undefined && (
-            <div>
-              <p className="text-xs font-medium text-[var(--admin-muted)]">
-                Price
-              </p>
-              <p className="mt-1 text-sm font-semibold text-[var(--admin-ink)]">
-                ₹{Number(selectedProduct.price).toLocaleString("en-IN")}
-              </p>
-            </div>
+          {/* ==================== Referral Pool Preview ==================== */}
+          {form.amountValue !== "" && (
+            <FormSection
+              title="Referral Pool Preview"
+              description="Estimated contribution based on the selected configuration."
+            >
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4">
+                <div>
+                  <p className="text-sm font-medium text-[var(--admin-ink)]">
+                    Estimated Pool Amount
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
+                    {form.amountType === "percentage"
+                      ? "Calculated as a percentage of the product line."
+                      : "Applied once per order."}
+                  </p>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <p className="text-lg font-bold text-[var(--admin-navy)]">
+                    {form.amountType === "percentage"
+                      ? `${Number(form.amountValue || 0)}%`
+                      : `₹${Number(form.amountValue || 0).toLocaleString(
+                          "en-IN",
+                          {
+                            minimumFractionDigits: 2,
+                          },
+                        )}`}
+                  </p>
+                </div>
+              </div>
+            </FormSection>
           )}
         </div>
-      </FormSection>
-    )}
-
-    {/* ==================== Referral Pool Preview ==================== */}
-    {form.amountValue !== "" && (
-      <FormSection
-        title="Referral Pool Preview"
-        description="Estimated contribution based on the selected configuration."
-      >
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] p-4">
-          <div>
-            <p className="text-sm font-medium text-[var(--admin-ink)]">
-              Estimated Pool Amount
-            </p>
-            <p className="mt-1 text-xs text-[var(--admin-muted)]">
-              {form.amountType === "percentage"
-                ? "Calculated as a percentage of the product line."
-                : "Applied once per order."}
-            </p>
-          </div>
-
-          <div className="shrink-0 text-right">
-            <p className="text-lg font-bold text-[var(--admin-navy)]">
-              {form.amountType === "percentage"
-                ? `${Number(form.amountValue || 0)}%`
-                : `₹${Number(form.amountValue || 0).toLocaleString(
-                    "en-IN",
-                    {
-                      minimumFractionDigits: 2,
-                    },
-                  )}`}
-            </p>
-          </div>
-        </div>
-      </FormSection>
-    )}
-  </div>
-</DefaultModal>
-
+      </DefaultModal>
     </>
   );
 };
@@ -1551,13 +1552,13 @@ const ReferralCommerce = () => {
   );
 
   const [paginations, setPaginations] = useState({
-    influencers: { page: 1, limit: 20 },
-    orders: { page: 1, limit: 20 },
-    payouts: { page: 1, limit: 20 },
-    fraud: { page: 1, limit: 20 },
-    bonusRules: { page: 1, limit: 20 },
-    bonusProgress: { page: 1, limit: 20 },
-    bonusHistory: { page: 1, limit: 20 },
+    influencers: { page: 1, limit: 10 },
+    orders: { page: 1, limit: 10 },
+    payouts: { page: 1, limit: 10 },
+    fraud: { page: 1, limit: 10 },
+    bonusRules: { page: 1, limit: 10 },
+    bonusProgress: { page: 1, limit: 10 },
+    bonusHistory: { page: 1, limit: 10 },
   });
 
   const [paginationsLoading, setPaginationsLoading] = useState({});
@@ -1845,9 +1846,11 @@ const ReferralCommerce = () => {
       dispatchReferralRead(getReferralSummary(), "referral-overview"),
       dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
       dispatchReferralRead(
-        getReferralInfluencers(
-          { ...withStatus(["pending", "active", "suspended", "rejected"]), ...paginations.influencers, ...(partnerRole ? { influencerType: partnerRole } : {}) },
-        ),
+        getReferralInfluencers({
+          ...withStatus(["pending", "active", "suspended", "rejected"]),
+          ...paginations.influencers,
+          ...(partnerRole ? { influencerType: partnerRole } : {}),
+        }),
         "influencer-management",
       ),
       dispatchReferralRead(
@@ -1947,7 +1950,11 @@ const ReferralCommerce = () => {
       influencers: () =>
         Promise.all([
           dispatchReferralRead(
-            getReferralInfluencers({ ...query, ...paginations.influencers, ...(partnerRole ? { influencerType: partnerRole } : {}) }),
+            getReferralInfluencers({
+              ...query,
+              ...paginations.influencers,
+              ...(partnerRole ? { influencerType: partnerRole } : {}),
+            }),
             "influencer-management",
           ),
           dispatchReferralRead(getReferralHierarchy(), "referral-hierarchy"),
@@ -2041,14 +2048,28 @@ const ReferralCommerce = () => {
 
     return () => window.clearTimeout(timerId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, search, status, partnerRole, paginations.influencers.page, paginations.influencers.limit]);
+  }, [
+    activeTab,
+    search,
+    status,
+    partnerRole,
+    paginations.influencers.page,
+    paginations.influencers.limit,
+  ]);
 
   useEffect(() => {
     const refreshOnFocus = () => refreshActive();
     window.addEventListener("focus", refreshOnFocus);
     return () => window.removeEventListener("focus", refreshOnFocus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, search, status, partnerRole, paginations.influencers.page, paginations.influencers.limit]);
+  }, [
+    activeTab,
+    search,
+    status,
+    partnerRole,
+    paginations.influencers.page,
+    paginations.influencers.limit,
+  ]);
 
   useEffect(() => {
     const currentRules = rulesPayload?.current || rulesPayload;
@@ -2256,36 +2277,9 @@ const ReferralCommerce = () => {
     }
   };
 
-  const openBonusRuleModal = (rule = null) => {
-    setEditingBonusRule(rule);
-    setBonusRuleForm(
-      rule
-        ? {
-            ...emptyBonusRuleForm,
-            ruleName: rule.ruleName || "",
-            period: rule.period || "monthly",
-            customStartAt: rule.customStartAt
-              ? String(rule.customStartAt).slice(0, 10)
-              : "",
-            customEndAt: rule.customEndAt
-              ? String(rule.customEndAt).slice(0, 10)
-              : "",
-            targetType: rule.targetType || "order_value",
-            targetValue: rule.targetValue ?? "",
-            bonusType: rule.bonusType || "fixed_coins",
-            bonusValue: rule.bonusValue ?? "",
-            applyTo: rule.applyTo || "code_owner",
-            resetCycle: rule.resetCycle || "monthly",
-            releaseRule: rule.releaseRule || "instantly_available",
-            status: rule.status || "active",
-          }
-        : emptyBonusRuleForm,
-    );
-    setBonusRuleModalOpen(true);
-  };
-
   const submitBonusRule = async (values) => {
-    if (!can("referral-bonus-rules", editingBonusRule ? "update" : "create")) return;
+    if (!can("referral-bonus-rules", editingBonusRule ? "update" : "create"))
+      return;
     const payload = compactPayload(
       numberize(values, ["targetValue", "bonusValue"]),
     );
@@ -2295,7 +2289,10 @@ const ReferralCommerce = () => {
         await dispatch(
           updateReferralBonusRule({
             ...payload,
-            ruleId: getId(editingBonusRule),
+            ruleId:
+              getId(editingBonusRule) ||
+              editingBonusRule?.ruleId ||
+              editingBonusRule?.rule_id,
           }),
         ).unwrap();
 
@@ -2309,6 +2306,7 @@ const ReferralCommerce = () => {
       setBonusRuleModalOpen(false);
       setEditingBonusRule(null);
       setBonusRuleForm(emptyBonusRuleForm);
+      formik.resetForm({ values: emptyBonusRuleForm });
 
       await refreshAll();
     } catch (error) {
@@ -2317,13 +2315,61 @@ const ReferralCommerce = () => {
   };
 
   const formik = useFormik({
-    initialValues: emptyBonusRuleForm,
+    initialValues: bonusRuleForm,
     enableReinitialize: true,
     validationSchema: bonusRuleValidationSchema,
     validateOnChange: false,
     validateOnBlur: true,
     onSubmit: submitBonusRule,
   });
+
+  const openBonusRuleModal = (rule = null) => {
+    const nextFormValues = rule
+      ? {
+          ...emptyBonusRuleForm,
+          ruleName: rule.ruleName || rule.name || rule.rule_name || "",
+          period: rule.period || "monthly",
+          customStartAt:
+            rule.customStartAt ||
+            rule.custom_start_at ||
+            rule.startDate ||
+            rule.start_date
+              ? String(
+                  rule.customStartAt ||
+                    rule.custom_start_at ||
+                    rule.startDate ||
+                    rule.start_date,
+                ).slice(0, 10)
+              : "",
+          customEndAt:
+            rule.customEndAt ||
+            rule.custom_end_at ||
+            rule.endDate ||
+            rule.end_date
+              ? String(
+                  rule.customEndAt ||
+                    rule.custom_end_at ||
+                    rule.endDate ||
+                    rule.end_date,
+                ).slice(0, 10)
+              : "",
+          targetType: rule.targetType || rule.target_type || "order_value",
+          targetValue: rule.targetValue ?? rule.target_value ?? "",
+          bonusType: rule.bonusType || rule.bonus_type || "fixed_coins",
+          bonusValue: rule.bonusValue ?? rule.bonus_value ?? "",
+          applyTo: rule.applyTo || rule.apply_to || "code_owner",
+          resetCycle: rule.resetCycle || rule.reset_cycle || "monthly",
+          releaseRule:
+            rule.releaseRule || rule.release_rule || "instantly_available",
+          status: rule.status || "active",
+        }
+      : emptyBonusRuleForm;
+
+    setEditingBonusRule(rule);
+    setBonusRuleForm(nextFormValues);
+    formik.resetForm({ values: nextFormValues });
+    setBonusRuleModalOpen(true);
+  };
 
   const toggleBonusRuleStatus = async (rule) => {
     if (!can("referral-bonus-rules", "update")) return;
@@ -2716,31 +2762,39 @@ const ReferralCommerce = () => {
           {
             label: "Approve request",
             icon: <Check aria-hidden="true" size={14} />,
-            hidden: !can("referral-payouts", "approve") || payout.status !== "pending",
+            hidden:
+              !can("referral-payouts", "approve") ||
+              payout.status !== "pending",
             onClick: () => openPayoutAction(payout, "approve"),
           },
           {
             label: "Reject request",
             icon: <X aria-hidden="true" size={14} />,
             danger: true,
-            hidden: !can("referral-payouts", "reject") || !["pending", "approved", "processing", "failed"].includes(
-              payout.status,
-            ),
+            hidden:
+              !can("referral-payouts", "reject") ||
+              !["pending", "approved", "processing", "failed"].includes(
+                payout.status,
+              ),
             onClick: () => openPayoutAction(payout, "reject"),
           },
           {
             label: "Mark as paid",
             icon: <BadgeIndianRupee aria-hidden="true" size={14} />,
-            hidden: !can("referral-payouts", "update") || !["approved", "processing"].includes(payout.status),
+            hidden:
+              !can("referral-payouts", "update") ||
+              !["approved", "processing"].includes(payout.status),
             onClick: () => openPayoutAction(payout, "paid"),
           },
         ]}
       />
     ),
   }));
-  const payoutHasActions = canAny("referral-payouts", ["approve", "reject", "update"]) && payouts.some((payout) =>
-    ["pending", "approved", "processing", "failed"].includes(payout.status),
-  );
+  const payoutHasActions =
+    canAny("referral-payouts", ["approve", "reject", "update"]) &&
+    payouts.some((payout) =>
+      ["pending", "approved", "processing", "failed"].includes(payout.status),
+    );
   const payoutHasReference = payouts.some(
     (payout) => payout.transactionReference,
   );
@@ -3755,7 +3809,12 @@ const ReferralCommerce = () => {
         </label> */}
 
           <div className="flex justify-end border-t border-[var(--admin-line)] pt-4 md:col-span-4">
-            <OrangeButton type="submit" disabled={!can("referral-rules", "update") || rulesSubmitting || loading}>
+            <OrangeButton
+              type="submit"
+              disabled={
+                !can("referral-rules", "update") || rulesSubmitting || loading
+              }
+            >
               <Check size={16} />
               {rulesSubmitting ? "Saving..." : "Save Rules"}
             </OrangeButton>
@@ -3984,61 +4043,73 @@ const ReferralCommerce = () => {
         actions={
           activeTab === "influencers" ? (
             <div className="flex flex-wrap gap-2">
-              <PermissionGuard module="influencer-management" action="create"><button
-                type="button"
-                onClick={() => {
-                  resetInfluencerForm();
-                  setParentModalOpen(true);
-                }}
-              >
-                <UserPlus aria-hidden="true" size={16} />
-                Growth Partner
-              </button></PermissionGuard>
+              <PermissionGuard module="influencer-management" action="create">
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetInfluencerForm();
+                    setParentModalOpen(true);
+                  }}
+                >
+                  <UserPlus aria-hidden="true" size={16} />
+                  Growth Partner
+                </button>
+              </PermissionGuard>
 
-              <PermissionGuard module="influencer-management" action="create"><button
-                type="button"
-                onClick={() => {
-                  resetInfluencerForm();
-                  childFormik.resetForm({ values: emptyChildForm });
-                  setChildModalOpen(true);
-                }}
-              >
-                <GitBranch aria-hidden="true" size={16} />
-                Brand Associate
-              </button></PermissionGuard>
-              <PermissionGuard module="referral-codes" action="create"><button
-                type="button"
-                onClick={() => {
-                  setEditingCode(null);
-                  codeFormik.resetForm({ values: emptyCodeForm });
-                  setCodeModalOpen(true);
-                }}
-              >
-                <Plus aria-hidden="true" size={16} />
-                Referral Code
-              </button></PermissionGuard>
+              <PermissionGuard module="influencer-management" action="create">
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetInfluencerForm();
+                    childFormik.resetForm({ values: emptyChildForm });
+                    setChildModalOpen(true);
+                  }}
+                >
+                  <GitBranch aria-hidden="true" size={16} />
+                  Brand Associate
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="referral-codes" action="create">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingCode(null);
+                    codeFormik.resetForm({ values: emptyCodeForm });
+                    setCodeModalOpen(true);
+                  }}
+                >
+                  <Plus aria-hidden="true" size={16} />
+                  Referral Code
+                </button>
+              </PermissionGuard>
             </div>
           ) : activeTab === "productAmounts" && productAmountsHeaderActions ? (
             <div className="flex flex-wrap items-center gap-3">
-              <PermissionGuard module="referral" action="update"><button
-                type="button"
-                onClick={productAmountsHeaderActions.onAdd}
-                className="admin-btn-primary inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold shadow-xs"
-              >
-                <Plus aria-hidden="true" size={16} />
-                Add Product Referral Pool
-              </button></PermissionGuard>
+              <PermissionGuard module="referral" action="update">
+                <button
+                  type="button"
+                  onClick={productAmountsHeaderActions.onAdd}
+                  className=" inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold shadow-xs"
+                >
+                  <Plus aria-hidden="true" size={16} />
+                  Add Product Referral Pool
+                </button>
+              </PermissionGuard>
             </div>
           ) : activeTab === "bonuses" && bonusView === "rules" ? (
             <div className="flex flex-wrap items-center gap-2">
-              <PermissionGuard module="referral-bonus-rules" action="create"><button type="button" onClick={evaluateBonuses}>
-                <Check aria-hidden="true" size={16} />
-                Evaluate Bonuses
-              </button></PermissionGuard>
-              <PermissionGuard module="referral-bonus-rules" action="create"><button type="button" onClick={() => openBonusRuleModal()}>
-                <Plus aria-hidden="true" size={16} />
-                Bonus Rule
-              </button></PermissionGuard>
+              <PermissionGuard module="referral-bonus-rules" action="create">
+                <button type="button" onClick={evaluateBonuses}>
+                  <Check aria-hidden="true" size={16} />
+                  Evaluate Bonuses
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="referral-bonus-rules" action="create">
+                <button type="button" onClick={() => openBonusRuleModal()}>
+                  <Plus aria-hidden="true" size={16} />
+                  Bonus Rule
+                </button>
+              </PermissionGuard>
             </div>
           ) : undefined
         }
@@ -4146,7 +4217,10 @@ const ReferralCommerce = () => {
           data={influencerRows}
           page={paginations.influencers.page}
           pageSize={paginations.influencers.limit}
-          totalCount={getBranchPayload(referralState.influencersData)?.total ?? influencerRows.length}
+          totalCount={
+            getBranchPayload(referralState.influencersData)?.total ??
+            influencerRows.length
+          }
           onPageChange={(page) => handlePageChange("influencers", page)}
           onPageSizeChange={(limit) =>
             handlePageSizeChange("influencers", limit)
@@ -4165,7 +4239,10 @@ const ReferralCommerce = () => {
           }
           onSearch={(value) => {
             setSearch(value);
-            setPaginations((prev) => ({ ...prev, influencers: { ...prev.influencers, page: 1 } }));
+            setPaginations((prev) => ({
+              ...prev,
+              influencers: { ...prev.influencers, page: 1 },
+            }));
           }}
           searchPlaceholder="Search referral partners..."
           filterBar={
@@ -4193,12 +4270,18 @@ const ReferralCommerce = () => {
               onChange={(key, value) => {
                 if (key === "role") setPartnerRole(value);
                 else setStatus(value);
-                setPaginations((prev) => ({ ...prev, influencers: { ...prev.influencers, page: 1 } }));
+                setPaginations((prev) => ({
+                  ...prev,
+                  influencers: { ...prev.influencers, page: 1 },
+                }));
               }}
               onClear={() => {
                 setStatus("");
                 setPartnerRole("");
-                setPaginations((prev) => ({ ...prev, influencers: { ...prev.influencers, page: 1 } }));
+                setPaginations((prev) => ({
+                  ...prev,
+                  influencers: { ...prev.influencers, page: 1 },
+                }));
               }}
               loading={loading}
             />
@@ -4534,7 +4617,6 @@ const ReferralCommerce = () => {
                 required
                 placeholder="Enter password"
               />
-
             </div>
           </FormSection>
         </div>
@@ -4916,7 +4998,7 @@ const ReferralCommerce = () => {
           setBonusRuleModalOpen(false);
           setEditingBonusRule(null);
           setBonusRuleForm(emptyBonusRuleForm);
-          formik.resetForm();
+          formik.resetForm({ values: emptyBonusRuleForm });
         }}
         title={editingBonusRule ? "Edit Bonus Rule" : "Create Bonus Rule"}
         submitButtonText="Save Bonus Rule"

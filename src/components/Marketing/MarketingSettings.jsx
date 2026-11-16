@@ -159,7 +159,7 @@ export default function MarketingSettings({ kind = "coupons" }) {
           >
             <button
               type="button"
-              className="admin-btn-primary"
+              className="button-primary-white text-xs"
               onClick={save}
               disabled={busy || !loaded}
             >
@@ -247,7 +247,8 @@ export default function MarketingSettings({ kind = "coupons" }) {
           <p className="text-sm text-gray-600 md:col-span-2 xl:col-span-3">
             Eligible product pools are added together. Each distinct product
             contributes once per order; quantities do not multiply its pool.
-            Products without a pool are ignored. Percentage pools use one unit’s price.
+            Products without a pool are ignored. Percentage pools use one unit’s
+            price.
           </p>
         )}
         <Field label="Customer eligibility">
