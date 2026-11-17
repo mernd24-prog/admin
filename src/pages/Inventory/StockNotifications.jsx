@@ -24,6 +24,7 @@ import { isSellerPanel } from "../../_helpers/panelConfig";
 import { formatDateTime12Hour } from "../../utils/formatters";
 import { useNavigate } from "react-router-dom";
 import { Upload } from "lucide-react";
+import DefaultMiddleModal from "../../components/Atoms/Modal/DefaultMiddleModal ";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Active" },
@@ -33,6 +34,9 @@ const STATUS_OPTIONS = [
   { value: "failed", label: "Failed" },
   { value: "cancelled", label: "Cancelled" },
 ];
+
+const DEFAULT_EMAIL_MESSAGE =
+  "Your requested product is back in stock. Order soon while it is available.";
 
 const getPaginationTotal = (payload = {}, fallback = 0) =>
   Number(
@@ -95,6 +99,7 @@ const userCell = (row = {}) => (
 const StockNotifications = () => {
   const navigate = useNavigate();
   const sellerView = isSellerPanel();
+
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -106,12 +111,18 @@ const StockNotifications = () => {
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [bulkSending, setBulkSending] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
+
+  // Queue emails modal states
+  const [isQueueModalOpen, setIsQueueModalOpen] = useState(false);
+  const [emailMessage, setEmailMessage] = useState(DEFAULT_EMAIL_MESSAGE);
+
   const selectedStatusOption = useMemo(
     () =>
       STATUS_OPTIONS.find((option) => option.value === status) ||
       STATUS_OPTIONS[0],
     [status],
   );
+
   const handleViewInventory = useCallback(
     (row) => {
       if (!row?.productId) {
@@ -129,9 +140,11 @@ const StockNotifications = () => {
     },
     [navigate],
   );
+
   const fetchRows = useCallback(async () => {
     try {
       setLoading(true);
+
       const response = await axiosProvider.get(
         ENDPOINTS.stockNotifications.list,
         {
@@ -143,8 +156,10 @@ const StockNotifications = () => {
           },
         },
       );
+
       const payload = response?.data || {};
       const list = Array.isArray(payload.data) ? payload.data : [];
+
       setRows(list);
       setTotal(getPaginationTotal(payload, list.length));
     } catch (error) {
@@ -158,17 +173,21 @@ const StockNotifications = () => {
     fetchRows();
   }, [fetchRows]);
 
+  // Single customer notification
   const notifyUser = useCallback(
     async (row) => {
       if (!row?.productId) return;
+
       const message = window.prompt(
         "Optional message for the customer email",
-        "Your requested product is back in stock. Order soon while it is available.",
+        DEFAULT_EMAIL_MESSAGE,
       );
+
       if (message === null) return;
 
       try {
         setSendingId(row.id);
+
         const response = await axiosProvider.post(
           ENDPOINTS.stockNotifications.notify,
           {
@@ -177,10 +196,13 @@ const StockNotifications = () => {
             message,
           },
         );
+
         const result = response?.data?.data || {};
+
         toast.success(
           `Email queued: ${result.queued || 0} queued, ${result.failed || 0} failed`,
         );
+
         await fetchRows();
       } catch (error) {
         toast.error(error?.message || "Failed to send stock email");
@@ -196,47 +218,65 @@ const StockNotifications = () => {
     [rows, selectedKeys],
   );
 
-  const notifySelected = useCallback(async () => {
+  // Open bulk email modal
+  const notifySelected = useCallback(() => {
     if (!selectedRows.length) return;
+
+    setEmailMessage(DEFAULT_EMAIL_MESSAGE);
+    setIsQueueModalOpen(true);
+  }, [selectedRows]);
+
+  // Submit bulk notification emails
+  const handleQueueEmails = useCallback(async () => {
+    if (!selectedRows.length) return;
+
     const items = Array.from(
       new Map(
         selectedRows
           .filter((row) => row?.productId)
           .map((row) => [
             `${row.productId}:${row.variantId || ""}`,
-            { productId: row.productId, variantId: row.variantId || null },
+            {
+              productId: row.productId,
+              variantId: row.variantId || null,
+            },
           ]),
       ).values(),
     );
-    if (!items.length) return;
 
-    const message = window.prompt(
-      "Optional message for the customer email",
-      "Your requested product is back in stock. Order soon while it is available.",
-    );
-    if (message === null) return;
+    if (!items.length) {
+      toast.error("No valid products found in selected requests");
+      return;
+    }
 
     try {
       setBulkSending(true);
+
       const response = await axiosProvider.post(
         ENDPOINTS.stockNotifications.notifyBulk,
         {
           items,
-          message,
+          message: emailMessage,
         },
       );
+
       const result = response?.data?.data || {};
+
       toast.success(
         `Batch queued: ${result.queued || 0} emails, ${result.skipped || 0} products skipped, ${result.failed || 0} failed`,
       );
+
       setSelectedKeys([]);
+      setIsQueueModalOpen(false);
+      setEmailMessage(DEFAULT_EMAIL_MESSAGE);
+
       await fetchRows();
     } catch (error) {
       toast.error(error?.message || "Failed to queue selected stock emails");
     } finally {
       setBulkSending(false);
     }
-  }, [fetchRows, selectedRows]);
+  }, [selectedRows, emailMessage, fetchRows]);
 
   const columns = useMemo(
     () => [
@@ -249,7 +289,6 @@ const StockNotifications = () => {
           productImageCell(row, (image) => setPreviewImage(image)),
       },
       { key: "customer", label: "User", render: (_, row) => userCell(row) },
-
       {
         key: "product",
         label: "Product",
@@ -320,6 +359,7 @@ const StockNotifications = () => {
       options: STATUS_OPTIONS,
     },
   ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -393,11 +433,8 @@ const StockNotifications = () => {
         emptyText="No stock notification requests found."
         exportConfig={{
           filename: "stock-notifications",
-
           columns: exportColumns,
-
           data: rows,
-
           icon: (
             <Upload
               size={15}
@@ -416,6 +453,59 @@ const StockNotifications = () => {
         ]}
       />
 
+      {/* Queue Stock Notification Emails Modal */}
+      <DefaultMiddleModal
+        isOpen={isQueueModalOpen}
+        onClose={() => {
+          if (bulkSending) return;
+
+          setIsQueueModalOpen(false);
+          setEmailMessage(DEFAULT_EMAIL_MESSAGE);
+        }}
+        onSubmit={handleQueueEmails}
+        title="Queue Stock Notification Emails"
+        submitButtonText="Queue Emails"
+        closeButtonText="Cancel"
+        loading={bulkSending}
+        isButtonView={true}
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-medium text-[var(--admin-ink)]">
+              Selected Requests
+            </p>
+
+            <p className="mt-1 text-sm text-[var(--admin-muted)]">
+              You are about to queue emails for{" "}
+              <span>{selectedRows.length}</span> selected customer requests.
+            </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="stock-notification-message"
+              className="mb-2 block text-sm font-medium text-[var(--admin-ink)]"
+            >
+              Email Message
+              <span className="ml-1 text-xs font-normal text-[var(--admin-muted)]">
+                (Optional)
+              </span>
+            </label>
+
+            <textarea
+              id="stock-notification-message"
+              rows={4}
+              value={emailMessage}
+              onChange={(event) => setEmailMessage(event.target.value)}
+              placeholder="Enter an optional message for the customer email..."
+              disabled={bulkSending}
+              className="w-full resize-y rounded-lg border border-[var(--admin-line)] bg-white px-3 py-2.5 text-sm text-[var(--admin-ink)] outline-none transition focus:border-[var(--admin-blue)] focus:ring-2 focus:ring-[var(--admin-blue)]/10 disabled:cursor-not-allowed disabled:bg-gray-50"
+            />
+          </div>
+        </div>
+      </DefaultMiddleModal>
+
+      {/* Product Image Preview Modal */}
       {previewImage && (
         <div
           className="fixed inset-0 z-[110] flex items-center justify-center bg-gray-950/70 p-4 backdrop-blur-sm"

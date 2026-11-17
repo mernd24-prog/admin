@@ -339,13 +339,13 @@ const sellerIdentitiesOf = (row = {}) => {
           group.organization,
         {},
       );
-     const sellerName = firstDefined(
-  sellerNameOf(seller),
-  sellerNameOf(
-    normalizeJson(group.sellerSnapshot || group.seller_snapshot, {}),
-  ),
-  group.sellerName,
-);
+      const sellerName = firstDefined(
+        sellerNameOf(seller),
+        sellerNameOf(
+          normalizeJson(group.sellerSnapshot || group.seller_snapshot, {}),
+        ),
+        group.sellerName,
+      );
       return {
         sellerId: firstDefined(sellerId, seller.id, seller._id),
         organizationId,
@@ -363,7 +363,6 @@ const sellerIdentitiesOf = (row = {}) => {
       return true;
     });
 };
-
 
 const buyerDisplayName = (...values) =>
   values.find(
@@ -408,7 +407,8 @@ const countItems = (row = {}) => {
 ========================================================= */
 
 const shipmentStatusOf = (row = {}) => {
-  if (row.shipment_status || row.shipmentStatus) return row.shipment_status || row.shipmentStatus;
+  if (row.shipment_status || row.shipmentStatus)
+    return row.shipment_status || row.shipmentStatus;
   const forwardShipments = (
     Array.isArray(row.relations?.shipments) ? row.relations.shipments : []
   ).filter((shipment) => String(shipment.direction || "forward") !== "reverse");
@@ -733,12 +733,14 @@ const createColumns = (
   {
     key: "delivery_status",
     label: "Shipment Status",
-
     render: (value, row) => {
       const status = firstDefined(shipmentStatusOf(row), value);
 
       return status ? (
-        <StatusBadge status={status} dot />
+        <StatusBadge
+          status={String(status).toLowerCase() === "rto" ? "RTO" : status}
+          dot
+        />
       ) : (
         <span className="text-gray-400">N/A</span>
       );
@@ -851,7 +853,9 @@ const variantNameOf = (item = {}) => {
     {},
   );
   const attributeLabel = Object.entries(attributes)
-    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .filter(
+      ([, value]) => value !== undefined && value !== null && value !== "",
+    )
     .map(([key, value]) => `${key}: ${value}`)
     .join(" · ");
 
@@ -1544,90 +1548,90 @@ const Orders = () => {
         ],
       },
 
-     {
-  name: "Order Details",
-  title: "Order Details",
-  data: detailRows,
-  columns: [
-    {
-      key: "orderNumber",
-      label: "Order #",
-    },
-    {
-      key: "orderDate",
-      label: "Order Date",
-    },
-    {
-      key: "buyerEmail",
-      label: "Buyer Email",
-    },
-    {
-      key: "productName",
-      label: "Product Name",
-    },
-    {
-      key: "sku",
-      label: "SKU",
-    },
-    {
-      key: "variant",
-      label: "Variant",
-    },
-    {
-      key: "quantity",
-      label: "Quantity",
-    },
-    {
-      key: "productAmount",
-      label: "Product Amount",
-    },
-    {
-      key: "taxAmount",
-      label: "Tax Amount",
-    },
-
-    // Show Seller and Organization only in Admin panel
-    ...(isAdmin
-      ? [
+      {
+        name: "Order Details",
+        title: "Order Details",
+        data: detailRows,
+        columns: [
           {
-            key: "seller",
-            label: "Seller",
+            key: "orderNumber",
+            label: "Order #",
           },
           {
-            key: "organization",
-            label: "Organization",
+            key: "orderDate",
+            label: "Order Date",
           },
-        ]
-      : []),
+          {
+            key: "buyerEmail",
+            label: "Buyer Email",
+          },
+          {
+            key: "productName",
+            label: "Product Name",
+          },
+          {
+            key: "sku",
+            label: "SKU",
+          },
+          {
+            key: "variant",
+            label: "Variant",
+          },
+          {
+            key: "quantity",
+            label: "Quantity",
+          },
+          {
+            key: "productAmount",
+            label: "Product Amount",
+          },
+          {
+            key: "taxAmount",
+            label: "Tax Amount",
+          },
 
-    {
-      key: "sellerCommission",
-      label: isAdmin ? "Seller Commission" : "Commission",
-    },
-    {
-      key: "sellerPayout",
-      label: isAdmin ? "Seller Payout" : "Payout",
-    },
-    {
-      key: "paymentType",
-      label: "Payment Type",
-    },
-    {
-      key: "paymentStatus",
-      label: "Payment Status",
-    },
-    {
-      key: "orderStatus",
-      label: "Order Status",
-    },
-    {
-      key: "shipmentStatus",
-      label: "Shipment Status",
-    },
-  ],
-},
+          // Show Seller and Organization only in Admin panel
+          ...(isAdmin
+            ? [
+                {
+                  key: "seller",
+                  label: "Seller",
+                },
+                {
+                  key: "organization",
+                  label: "Organization",
+                },
+              ]
+            : []),
+
+          {
+            key: "sellerCommission",
+            label: isAdmin ? "Seller Commission" : "Commission",
+          },
+          {
+            key: "sellerPayout",
+            label: isAdmin ? "Seller Payout" : "Payout",
+          },
+          {
+            key: "paymentType",
+            label: "Payment Type",
+          },
+          {
+            key: "paymentStatus",
+            label: "Payment Status",
+          },
+          {
+            key: "orderStatus",
+            label: "Order Status",
+          },
+          {
+            key: "shipmentStatus",
+            label: "Shipment Status",
+          },
+        ],
+      },
     ],
-  [summaryRows, detailRows, isAdmin],
+    [summaryRows, detailRows, isAdmin],
   );
 
   /* =====================================================

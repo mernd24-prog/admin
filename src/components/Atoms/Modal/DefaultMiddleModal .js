@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { RxCross2 } from "react-icons/rx";
 import Button from "../buttons/button";
 import TransparentButton from "../buttons/TransParentButton";
@@ -30,10 +31,12 @@ const DefaultMiddleModal = ({
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [isOpen, loading, onClose]);
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <>
       <div
-        className={`fixed inset-0 z-40 transition-all duration-300 ease-in-out 
+        className={`fixed inset-0 z-[10000] transition-all duration-300 ease-in-out
                     ${isOpen ? "bg-[rgba(31,27,95,0.32)] backdrop-blur-sm" : "bg-transparent backdrop-blur-0 pointer-events-none"}
                 `}
         onClick={!loading && closeOnOutsideClick ? onClose : undefined}
@@ -43,7 +46,7 @@ const DefaultMiddleModal = ({
         className={`
                     fixed left-1/2 top-1/2 transform
                     ${isOpen ? "-translate-y-1/2 opacity-100 scale-100" : "-translate-y-1/2 opacity-0 scale-95 pointer-events-none"}
-                    -translate-x-1/2 admin-card bg-white z-50 flex flex-col overflow-hidden
+                    -translate-x-1/2 admin-card bg-white z-[10001] flex flex-col overflow-hidden
                     transition-all duration-200 ease-in-out
                     w-[calc(100%-2rem)] md:w-[600px] lg:w-[700px]
                     max-h-[calc(100vh-4rem)]
@@ -91,7 +94,8 @@ const DefaultMiddleModal = ({
           </div>
         )}
       </div>
-    </>
+    </>,
+    document.body,
   );
 };
 

@@ -249,7 +249,6 @@ const sellerName = (item = {}, row = {}) =>
   row?.sellerName ||
   personName(row?.seller);
 
-
 const splitEvidenceUrls = (value = "") =>
   String(value || "")
     .split(/[\n,]/)
@@ -409,8 +408,6 @@ function QCEvidenceUploader({
     </div>
   );
 }
-
-
 
 const sellerQcGuidance = (row = {}) => {
   if (!row) return null;
@@ -865,10 +862,7 @@ const Returns = () => {
         variantSku: item.variantSku || "",
         label: item.productTitle || item.productId || "Item",
         approvedQuantity: Number(
-          item.approvedQuantity ||
-            item.requestedQuantity ||
-            item.quantity ||
-            0,
+          item.approvedQuantity || item.requestedQuantity || item.quantity || 0,
         ),
         receivedQuantity: Number(
           item.receivedQuantity ||
@@ -885,9 +879,7 @@ const Returns = () => {
             0,
         ),
         result:
-          item.qcResult === "pending" || !item.qcResult
-            ? ""
-            : item.qcResult,
+          item.qcResult === "pending" || !item.qcResult ? "" : item.qcResult,
         condition: item.condition || "",
         notes: item.qcNotes || "",
         photos: (item.qcPhotos || []).join("\n"),
@@ -2470,6 +2462,7 @@ const Returns = () => {
               <div className="space-y-4">
                 <FormInput
                   label="Refund Amount"
+                  disabled
                   name="refundAmount"
                   type="number"
                   min="0"
@@ -2865,8 +2858,8 @@ const Returns = () => {
                       name="courierName"
                       maxLength={100}
                       minLength={3}
-                     limitMessage="Courier name must be between 3 and 100 characters."
-                      showLengthCount = {false}
+                      limitMessage="Courier name must be between 3 and 100 characters."
+                      showLengthCount={false}
                       value={action.courierName}
                       onChange={(event) => {
                         scheduleReturnFormik.handleChange(event);
@@ -2891,7 +2884,7 @@ const Returns = () => {
                       maxLength={100}
                       minLength={3}
                       limitMessage="Tracking number must be between 3 and 100 characters."
-                      showLengthCount = {false}
+                      showLengthCount={false}
                       value={action.trackingNumber}
                       onChange={(event) => {
                         scheduleReturnFormik.handleChange(event);
@@ -3541,7 +3534,9 @@ const Returns = () => {
                   if (action.type === "tracking") {
                     reverseTrackingFormik.handleChange(event);
                   }
-                  if (["qc", "qc_evidence", "qc_decision"].includes(action.type)) {
+                  if (
+                    ["qc", "qc_evidence", "qc_decision"].includes(action.type)
+                  ) {
                     qcFormik.handleChange(event);
                   }
                   setAction((prev) => ({
