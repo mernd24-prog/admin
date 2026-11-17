@@ -280,7 +280,7 @@ export default function FinanceEarnings() {
 
       {
         key: "net",
-        label: "Your earning",
+        label: "Item net before COD",
         sortable: true,
         render: (_, row) => (
           <strong>
@@ -648,7 +648,7 @@ export default function FinanceEarnings() {
                 {/* YOUR EARNING */}
                 <div>
                   <span className="text-xs text-[var(--admin-muted)]">
-                    Your earning
+                    Item net before COD
                   </span>
 
                   <strong className="mt-1 block text-base font-bold text-emerald-700">

@@ -563,7 +563,7 @@ export default function FinanceOverview() {
           <>
             <div className="hidden grid-cols-[minmax(0,1fr)_9rem_8rem_11.5rem] items-center gap-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-5 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)] lg:grid">
               <span>Order / Details</span>
-              <span className="text-right">Net Amount</span>
+              <span className="text-right">Item Net Before COD</span>
               <span className="text-center">Status</span>
               <span className="text-right">Last Updated</span>
             </div>
@@ -598,7 +598,7 @@ export default function FinanceOverview() {
 
                     <div className="flex items-center justify-between gap-2 lg:justify-end">
                       <span className="text-xs text-[var(--admin-muted)] lg:hidden">
-                        Net amount
+                        Item net before COD
                       </span>
                       <strong className="whitespace-nowrap text-sm font-semibold tabular-nums text-[var(--admin-navy)]">
                         {financeMoney(

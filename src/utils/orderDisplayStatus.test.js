@@ -1,5 +1,20 @@
 import { itemDisplayStatus, orderDisplayStatus } from './orderDisplayStatus';
 
+test('a received return updates the item and order display without changing stored workflow state', () => {
+  const a = { ...item('a', 'seller-a'), effective_status: 'received' };
+  const order = { status: 'return_approved', display_status: 'return_approved', items: [a] };
+  expect(itemDisplayStatus(a, order)).toBe('return_received');
+  expect(orderDisplayStatus(order)).toBe('return_received');
+  expect(order.status).toBe('return_approved');
+});
+
+test('a return on only one item remains an in-progress aggregate, and API aggregates retain seller scope', () => {
+  const a = { ...item('a', 'seller-a'), effective_status: 'return_received' };
+  const b = { ...item('b', 'seller-b'), effective_status: 'delivered' };
+  expect(orderDisplayStatus({ status: 'return_approved', items: [a, b] })).toBe('return_in_progress');
+  expect(orderDisplayStatus({ status: 'return_approved', display_status: 'return_in_progress', items: [a] })).toBe('return_in_progress');
+});
+
 const item = (id, seller, org = seller) => ({ id, seller_id: seller, organization_id: org, quantity: 1 });
 const shipment = (seller, status, org = seller) => ({ seller_id: seller, organization_id: org, status, direction: 'forward' });
 

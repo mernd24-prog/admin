@@ -202,6 +202,18 @@ const payoutDecision = (row = {}) => {
       reason:
         row.payoutHoldReason || "Return, refund, dispute, or payment hold",
     };
+  const orderStatus = String(row.orderStatus || row.order_status || "").toLowerCase();
+  if (
+    ["return_received", "received", "qc_pending", "return_in_transit"].some(
+      (value) => orderStatus === value || orderStatus.endsWith(`_${value}`),
+    )
+  ) {
+    return {
+      allowed: false,
+      label: "Held",
+      reason: "Return received; waiting for QC/refund decision",
+    };
+  }
   if (row.releaseReason === "waiting_for_item_return_window")
     return {
       allowed: false,
@@ -950,7 +962,7 @@ const SellerFinance = () => {
         hint: `${financeBuckets.count} item settlement rows`,
       },
       {
-        label: "Eligible earnings",
+        label: "Eligible item earnings",
         value: money(financeBuckets.payableNow),
         hint: `${financeBuckets.eligibleCount} eligible unpaid row(s)`,
       },
@@ -1638,7 +1650,7 @@ const SellerFinance = () => {
               },
               {
                 key: "payableNow",
-                label: "Eligible earnings",
+                label: "Eligible item earnings",
                 render: (value) => (
                   <div>
                     <div className="font-semibold text-[#208a3c]">
@@ -1842,11 +1854,18 @@ const SellerFinance = () => {
             ...(isSellerDetail ? remainingFinancialColumns : []),
             {
               key: "net_amount",
-              label: "Net Payable",
+              label: "Item Net Before COD",
               render: (_, row) => (
-                <span className="font-semibold text-[#208a3c]">
-                  {money(Math.max(rowMoney(row, "net_amount", "netAmount"), 0))}
-                </span>
+                <div>
+                  <span className="font-semibold text-[#208a3c]">
+                    {money(Math.max(rowMoney(row, "net_amount", "netAmount"), 0))}
+                  </span>
+                  {row.payment_provider === "cod" || row.paymentProvider === "cod" ? (
+                    <div className="mt-1 text-[10px] text-amber-700">
+                      COD recovery is applied separately
+                    </div>
+                  ) : null}
+                </div>
               ),
             },
             {
@@ -2107,7 +2126,7 @@ const SellerFinance = () => {
               },
               {
                 key: "net_amount",
-                label: "Net Payable",
+                label: "Item Net Before COD",
                 render: (_, row) => (
                   <span className="font-semibold text-[#208a3c]">
                     {money(

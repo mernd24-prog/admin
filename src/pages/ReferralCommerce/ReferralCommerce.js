@@ -3076,15 +3076,15 @@ const ReferralCommerce = () => {
             ))}
       </div>
 
-      {/* Wallet Balances */}
+      {/* Referral Coin Summary */}
       <section className="admin-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-line)] px-4 py-3.5">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--admin-navy)]">
-              Wallet Balances
+              Referral Coin Summary
             </h2>
             <p className="mt-0.5 text-xs text-[var(--admin-muted)]">
-              Current referral coin allocation by wallet state
+              Referral coin totals by earning and payout status.
             </p>
           </div>
         </div>

@@ -1,4 +1,12 @@
 const key = (value) => String(value || "").toLowerCase().replace(/[\s-]+/g, "_");
+const returnDisplay = status => ({ received: "return_received", reverse_pickup_scheduled: "return_pickup_scheduled", pickup_failed: "return_pickup_failed", manual_ship_back: "return_ship_back_required", shipped_back: "return_shipped_back", in_reverse_transit: "return_in_transit", qc_passed: "return_qc_passed", qc_completed: "return_qc_passed", qc_failed: "return_qc_failed" })[status] || status;
+
+export function returnProgressDisplayStatus(items = [], order = {}) {
+  const statuses = items.map(item => itemDisplayStatus(item, order)).filter(status => status !== "cancelled");
+  const isReturn = status => /^(return_|refund_|replacement_)/.test(status) || ["refunded", "partially_refunded", "returned", "partially_returned", "replaced"].includes(status);
+  if (!statuses.some(isReturn)) return null;
+  return statuses.every(status => status === statuses[0]) ? statuses[0] : "return_in_progress";
+}
 const json = (value) => {
   if (value && typeof value === "object") return value;
   try { return JSON.parse(value || "{}"); } catch { return {}; }
@@ -19,7 +27,7 @@ export function itemDisplayStatus(item = {}, order = {}) {
   const cancelled = Number(item.cancelled_quantity || item.cancelledQuantity || 0);
   if (quantity > 0 && cancelled >= quantity) return "cancelled";
   const effective = key(item.effective_status || item.effectiveStatus);
-  if (effective && effective !== "initiated") return effective;
+  if (effective && effective !== "initiated") return returnDisplay(effective);
   const lifecycle = key(item.return_status || item.returnStatus);
   if (["return_requested", "return_approved", "returned", "partially_returned", "refunded", "partially_refunded", "refund_pending", "refund_failed"].includes(lifecycle)) return lifecycle;
   const itemId = String(item.id || item._id || "");
@@ -68,8 +76,14 @@ export function itemDisplayStatus(item = {}, order = {}) {
 }
 
 export function orderDisplayStatus(order = {}) {
-  if (order.display_status || order.displayStatus) return key(order.display_status || order.displayStatus);
+  const apiStatus = key(order.display_status || order.displayStatus);
+  if (apiStatus && !["return_requested", "return_approved"].includes(apiStatus)) return apiStatus;
   const stored = key(order.status || order.order_status);
+  if (!["cancelled", "refunded", "payment_failed", "pending_payment", "on_hold"].includes(stored)) {
+    const progress = returnProgressDisplayStatus(order.items || [], order);
+    if (progress) return progress;
+  }
+  if (order.display_status || order.displayStatus) return key(order.display_status || order.displayStatus);
   if (["cancelled", "refunded", "payment_failed", "pending_payment", "fulfilled", "on_hold", "return_requested", "return_approved", "returned", "partially_returned"].includes(stored)) return stored;
   const items = Array.isArray(order.items) ? order.items : [];
   if (!items.length) return stored;

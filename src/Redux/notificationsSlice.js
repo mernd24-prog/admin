@@ -4,6 +4,7 @@ import {
   createExtraReducersForThunk,
 } from "../_helpers/ApiThunk";
 import { ENDPOINTS } from "../_helpers/endpoints";
+import { axiosPrivate } from "../_helpers/axiosProvider";
 
 const READ_NOTIFICATION_IDS_KEY = "readNotificationIds";
 const NOTIFICATION_READ_BASELINE_KEY = "notificationReadBaselineAt";
@@ -125,7 +126,7 @@ const notificationsSlice = createSlice({
         String(action.payload)
       );
     },
-    markNotificationRead: (state, action) => {
+    markNotificationReadLocally: (state, action) => {
       const notificationKey = getNotificationKey(action.payload);
       if (!notificationKey || state.readNotificationIds.includes(notificationKey)) {
         return;
@@ -163,8 +164,18 @@ const notificationsSlice = createSlice({
 });
 
 export const {
-  markNotificationRead,
   setNotificationsSeenAt,
 } = notificationsSlice.actions;
+
+export const markNotificationRead = (notification) => async (dispatch) => {
+  const id = notification?._id || notification?.id || notification;
+  if (typeof id !== "string" || !/^[a-f\d]{24}$/i.test(id)) return;
+  try {
+    await axiosPrivate.patch(`${ENDPOINTS.notifications.mine.replace(/\/me$/, "")}/${encodeURIComponent(id)}/read`);
+    dispatch(notificationsSlice.actions.markNotificationReadLocally(notification));
+  } catch {
+    // Retain unread state on failure; navigation is independent of read receipts.
+  }
+};
 
 export default notificationsSlice.reducer;

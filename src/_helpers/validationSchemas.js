@@ -1539,7 +1539,11 @@ export const dealProductValidationSchema = Yup.object({
     )
     .typeError("Maximum quantity must be a number")
     .integer("Maximum quantity must be a whole number")
-    .required("Maximum quantity per customer is required")
+    .when("mode", {
+      is: "edit",
+      then: (schema) => schema.notRequired(),
+      otherwise: (schema) => schema.required("Maximum quantity per customer is required"),
+    })
     .min(1, "Maximum quantity must be at least 1")
     .max(999999999, "Maximum quantity cannot exceed 9 digits"),
   startAt: Yup.string().required("Please select the deal period"),

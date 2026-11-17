@@ -367,8 +367,10 @@ const NegativeBalances = () => {
                 : "Other adjustment"}
             </div>
 
-            {row.orderId && (
-              <div className="text-xs text-gray-500">Order: {row.orderId}</div>
+            {(row.orderNumber || row.order_number || row.orderId) && (
+              <div className="text-xs text-gray-500">
+                Order: {row.orderNumber || row.order_number || row.orderId}
+              </div>
             )}
           </div>
         ),
@@ -563,8 +565,9 @@ const NegativeBalances = () => {
         });
 
         // Include order reference in the Type / Order column.
-        if (row.orderId) {
-          exportRow.liabilityType = `${exportRow.liabilityType} | Order: ${row.orderId}`;
+        const orderReference = row.orderNumber || row.order_number || row.orderId;
+        if (orderReference) {
+          exportRow.liabilityType = `${exportRow.liabilityType} | Order: ${orderReference}`;
         }
 
         return exportRow;

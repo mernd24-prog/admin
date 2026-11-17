@@ -623,11 +623,14 @@ export const CalculationRows = ({ row }) => {
           </div>
         ))}
       <div className="flex justify-between border-t border-[var(--admin-line)] pt-3 text-base font-bold">
-        <span>Your earning</span>
+        <span>Item net before COD</span>
         <span className="text-emerald-700">
           {financeMoney(amounts.net, currency)}
         </span>
       </div>
+      <p className="text-xs text-[var(--admin-muted)]">
+        COD collection recovery is applied separately to the actual payable balance.
+      </p>
       {/* <p className="rounded-lg bg-blue-50 p-3 text-xs leading-5 text-blue-800">
         Shipping is shown from the backend settlement snapshot. A reimbursement
         is added to your earning; only an actual shipping deduction is

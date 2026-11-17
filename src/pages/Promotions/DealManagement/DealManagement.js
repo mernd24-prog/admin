@@ -59,7 +59,7 @@ import { formatDateTime12Hour } from "../../../utils/formatters";
 import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import Tabs from "../../../components/Shared/Tabs";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
-import { DateRangeFilter } from "../../../components/Shared/FilterBar";
+
 import { dealProductValidationSchema } from "../../../_helpers/validationSchemas";
 
 const DEAL_TYPES = [
@@ -233,8 +233,8 @@ const FILTER_FIELDS = [
     label: "Type",
     options: DEAL_TYPES,
   },
-  { key: "fromDate", type: "date", label: "From" },
-  { key: "toDate", type: "date", label: "To" },
+  { key: "fromDate", type: "date", label: "From", disableFuture: false },
+  { key: "toDate", type: "date", label: "To", disableFuture: false },
 ];
 
 const unwrapList = (payload = {}) => {
@@ -644,7 +644,8 @@ const DealManagement = () => {
       price: deal.sellingPrice,
       variantId: deal.variantId,
       variantSku: deal.variantSku,
-      stock: deal.allocatedQuantity,
+      // Current stock is validated by the backend; allocation is not stock.
+      stock: null,
       sku: metadata.productSku || deal.variantSku || "",
     });
     formik.resetForm({
@@ -778,7 +779,8 @@ const DealManagement = () => {
     if (num(form.allocatedQuantity) < 0)
       return "Deal quantity cannot be negative.";
     if (
-      selectedProduct?.stock !== "" &&
+      selectedProduct?.stock != null &&
+      selectedProduct.stock !== "" &&
       num(form.allocatedQuantity) > num(selectedProduct?.stock)
     ) {
       return "Deal quantity cannot exceed available stock.";
@@ -1155,7 +1157,8 @@ const DealManagement = () => {
           icon: (
             <MdEdit aria-hidden="true" size={16} className="text-amber-600" />
           ),
-          hidden: !can("deals", ACTIONS.UPDATE),
+          hidden: !can("deals", ACTIONS.UPDATE) ||
+            (!isAdminPanel() && !["draft", "rejected"].includes(status)),
           onClick: () => openEditDeal(row),
         },
         {
@@ -1495,7 +1498,7 @@ const DealManagement = () => {
 
                 <Input
                   label="Maximum Quantity Per Customer"
-                  required
+                  required={!editingDeal}
                   name="maxQuantityPerOrder"
                   type="number"
                   min="1"
@@ -1513,7 +1516,7 @@ const DealManagement = () => {
                       ? formik.errors.maxQuantityPerOrder
                       : ""
                   }
-                  limitMessage="Required. Whole numbers only, maximum 9 digits (1 to 999,999,999)."
+                  limitMessage={editingDeal ? "Optional. Leave blank for no per-order limit; otherwise enter 1 to 999,999,999." : "Required. Whole numbers only, maximum 9 digits (1 to 999,999,999)."}
                   showLengthCount={false}
                   onKeyDown={(event) => {
                     if (["-", "+", ".", "e", "E"].includes(event.key)) {
@@ -1524,45 +1527,18 @@ const DealManagement = () => {
               </div>
 
               <div>
-                <DateRangeFilter
-                  field={{
-                    key: "dateRange",
-                    type: "daterange",
-                    label: "Deal Period",
-                    required: true,
-                    startKey: "startAt",
-                    endKey: "endAt",
-                    width: "w-full",
-                    placeholder: "Select deal period",
-                    disableFuture: false,
-                  }}
-                  values={form}
-                  onChange={(key, value) => {
-                    // Handle individual start/end date updates.
-                    if (key === "startAt" || key === "endAt") {
-                      formik.setFieldValue(key, value);
-                      return;
-                    }
-
-                    // Handle date-range objects, if returned by the picker.
-                    if (
-                      key === "dateRange" &&
-                      value &&
-                      typeof value === "object"
-                    ) {
-                      const startAt =
-                        value.startAt ?? value.startDate ?? value.start ?? "";
-                      const endAt =
-                        value.endAt ?? value.endDate ?? value.end ?? "";
-
-                      formik.setValues((current) => ({
-                        ...current,
-                        startAt,
-                        endAt,
-                      }));
-                    }
-                  }}
-                />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Input name="startAt" type="datetime-local" label="Deal start" required
+                    value={form.startAt} onChange={formik.handleChange} onBlur={formik.handleBlur}
+                    error={formik.touched.startAt ? formik.errors.startAt : ""} />
+                  <Input name="endAt" type="datetime-local" label="Deal end" required
+                    value={form.endAt} onChange={formik.handleChange} onBlur={formik.handleBlur}
+                    error={formik.touched.endAt ? formik.errors.endAt : ""} />
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Select dates and times in your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).
+                  Approved deals start at the selected time.
+                </p>
 
                 {(formik.touched.startAt || formik.touched.endAt) &&
                   (formik.errors.startAt || formik.errors.endAt) && (

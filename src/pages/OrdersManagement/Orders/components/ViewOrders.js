@@ -1,4 +1,4 @@
-import { itemDisplayStatus, orderDisplayStatus } from "../../../../utils/orderDisplayStatus";
+import { itemDisplayStatus, orderDisplayStatus, returnProgressDisplayStatus } from "../../../../utils/orderDisplayStatus";
 import { boxLabelUnavailableReason } from "../../../../utils/boxLabelAvailability";
 import { cancellationRequesterLabel } from "../../../../utils/cancellationRequester";
 /* eslint-disable react-hooks/exhaustive-deps */
@@ -3575,7 +3575,7 @@ const selectedCount = Object.keys(formData.cancelItems).length;
                               Returns:{" "}
                               {formatLabel(
                                 displayStatus(
-                                  firstDefined(returnLifecycle.status, "none"),
+                                  firstDefined(returnProgressDisplayStatus(group.items, order), returnLifecycle.status, "none"),
                                 ),
                               )}
                             </span>
@@ -3626,7 +3626,7 @@ const selectedCount = Object.keys(formData.cancelItems).length;
                       <div className="hidden grid-cols-12 gap-3 border-b border-[#e6ebf7] bg-[#eef2fb] px-4 py-2 text-xs font-semibold uppercase text-[#65718b] md:grid">
                         <span className="col-span-5">Product</span>
                         <span className="col-span-1 text-center">Qty</span>
-                        <span className="col-span-2">Order status</span>
+                        <span className="col-span-2">Item / return status</span>
                         <span className="col-span-2 text-right">Price</span>
                         <span className="col-span-2 text-right">Total</span>
                       </div>
