@@ -14,6 +14,7 @@ import Cards from "../../../components/Cards/Cards";
 import Loader from "../../../components/Loader/Loader";
 import PageHeader from "../../../components/Shared/PageHeader";
 import DataTable from "../../../components/Shared/DataTable";
+import FormSection from "../../../components/Shared/FormSection";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import { OrderLink } from "../../../components/Shared/EntityLink";
@@ -32,6 +33,7 @@ import {
   unwrapFinance,
 } from "./financeUi";
 import Tabs from "../../../components/Shared/Tabs";
+import { formatDateTime12Hour } from "../../../utils/formatters";
 
 const CATEGORIES = [
   { value: "", label: "All" },
@@ -114,7 +116,7 @@ export default function FinanceAdjustments() {
     const cod = codRows.map((row) => ({
       ...row,
       adjustmentType: "cod",
-      title: "COD amount collected",
+      title: "COD Amount Collected",
       amount: -Math.abs(
         Number(row.collected_amount || row.expected_amount || 0),
       ),
@@ -130,7 +132,7 @@ export default function FinanceAdjustments() {
       .map((row) => ({
         ...row,
         adjustmentType: "holds",
-        title: "Temporary hold",
+        title: "Temporary Hold",
         amount: Number(row.netAmount || row.net_amount || 0),
         description:
           "This earning is temporarily unavailable while a return, refund, dispute, or another hold is active.",
@@ -287,7 +289,9 @@ export default function FinanceAdjustments() {
         label: "Date",
         cellClassName: "align-top",
         render: (_, row) =>
-          financeDateTime(row.createdAt || row.created_at || row.updatedAt),
+          formatDateTime12Hour(
+            row.createdAt || row.created_at || row.updatedAt,
+          ),
       },
       {
         key: "action",
@@ -448,65 +452,97 @@ export default function FinanceAdjustments() {
         isButtonView={false}
       >
         {detail && (
-          <div className="space-y-4 p-2">
-            <div className="rounded-lg bg-[var(--admin-soft)] p-4">
-              <div className="flex justify-between gap-4">
-                <span className="text-sm text-[var(--admin-muted)]">
-                  Amount
-                </span>
-                <strong
-                  className={`text-xl ${Number(detail.amount) > 0 ? "text-emerald-700" : Number(detail.amount) < 0 ? "text-red-700" : "text-[var(--admin-ink)]"}`}
-                >
-                  {signedFinanceMoney(detail.amount, detail.currency)}
-                </strong>
+          <div className="space-y-5">
+            <FormSection
+              title="Adjustment details"
+              subtitle="Summary of this change to your earnings."
+            >
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-sm text-[var(--admin-muted)]">
+                    Amount
+                  </span>
+                  <strong
+                    className={`text-xl ${Number(detail.amount) > 0 ? "text-emerald-700" : Number(detail.amount) < 0 ? "text-red-700" : "text-[var(--admin-ink)]"}`}
+                  >
+                    {signedFinanceMoney(detail.amount, detail.currency)}
+                  </strong>
+                </div>
+                <div className="flex items-center justify-between gap-4 border-t border-[var(--admin-line)] pt-3 text-sm">
+                  <span className="text-[var(--admin-muted)]">Category</span>
+                  <span className="font-medium capitalize text-[var(--admin-ink)]">
+                    {CATEGORIES.find(
+                      (item) => item.value === detail.adjustmentType,
+                    )?.label || "Other"}
+                  </span>
+                </div>
+                {(detail.orderNumber ||
+                  detail.order_number ||
+                  detail.orderId ||
+                  detail.order_id) && (
+                  <div className="flex items-center justify-between gap-4 border-t border-[var(--admin-line)] pt-3 text-sm">
+                    <span className="text-[var(--admin-muted)]">Order</span>
+                    <OrderLink
+                      orderId={detail.orderId || detail.order_id}
+                      orderNumber={detail.orderNumber || detail.order_number}
+                    />
+                  </div>
+                )}
+                <p className="border-t border-[var(--admin-line)] pt-3 text-sm leading-6 text-[var(--admin-muted)]">
+                  {detail.description}
+                </p>
               </div>
-              <p className="mt-3 text-sm leading-6">{detail.description}</p>
-            </div>
+            </FormSection>
             {detail.adjustmentType === "promotions" && (
-              <div className="space-y-2 rounded-lg border border-[var(--admin-line)] p-4 text-sm">
-                <div className="flex justify-between">
-                  <span>Customer Discount</span>
-                  <span>
-                    {financeMoney(
-                      detail.customerDiscountAmount,
-                      detail.currency,
-                    )}
-                  </span>
+              <FormSection
+                title="Funding breakdown"
+                subtitle="How this promotion was funded."
+              >
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span>Customer Discount</span>
+                    <span>
+                      {financeMoney(
+                        detail.customerDiscountAmount,
+                        detail.currency,
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Marketplace Funded</span>
+                    <span>
+                      {financeMoney(
+                        detail.marketplaceContributionAmount,
+                        detail.currency,
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Seller Funded</span>
+                    <span>
+                      {financeMoney(
+                        detail.sellerFundedDiscountAmount,
+                        detail.currency,
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Payment Partner Funded</span>
+                    <span>
+                      {financeMoney(
+                        detail.paymentPartnerContributionAmount,
+                        detail.currency,
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Reversed</span>
+                    <span>
+                      {financeMoney(detail.reversalAmount, detail.currency)}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span>Marketplace Funded</span>
-                  <span>
-                    {financeMoney(
-                      detail.marketplaceContributionAmount,
-                      detail.currency,
-                    )}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Seller Funded</span>
-                  <span>
-                    {financeMoney(
-                      detail.sellerFundedDiscountAmount,
-                      detail.currency,
-                    )}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Payment Partner Funded</span>
-                  <span>
-                    {financeMoney(
-                      detail.paymentPartnerContributionAmount,
-                      detail.currency,
-                    )}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Reversed</span>
-                  <span>
-                    {financeMoney(detail.reversalAmount, detail.currency)}
-                  </span>
-                </div>
-              </div>
+              </FormSection>
             )}
           </div>
         )}
