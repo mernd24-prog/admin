@@ -644,16 +644,16 @@ const TaxInvoices = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={isSellerPanel() ? "Invoice Documents" : "Tax Invoices"}
+        title={isSellerPanel() ? "Tax Invoices" : "Tax Invoices"}
         subtitle={
           isSellerPanel()
             ? "Download product invoices, platform commission invoices, and customer fee documents linked to your orders."
             : "View and manage tax invoices for orders, sellers, customers, and platform services."
         }
         breadcrumbs={[
-          { label: "Invoices & Taxation" },
+          { label: isSellerPanel() ? "Invoices" : "Invoices & Taxation" },
           {
-            label: isSellerPanel() ? "Invoice Documents" : "Tax Invoices",
+            label: isSellerPanel() ? "Tax Invoices" : "Tax Invoices",
           },
         ]}
       />
