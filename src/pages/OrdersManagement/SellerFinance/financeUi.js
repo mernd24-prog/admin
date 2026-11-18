@@ -262,6 +262,12 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
     row.releaseReason || row.release_reason || row.payoutHoldReason || "",
   );
   const reason = rawReason.toLowerCase();
+  const isPayoutRecord = Boolean(
+    row.payment_method !== undefined ||
+    row.paymentMethod !== undefined ||
+    row.payment_reference !== undefined ||
+    row.paymentReference !== undefined,
+  );
   if (["refunded", "reversed", "adjusted"].includes(raw))
     return {
       key: "adjusted",
@@ -273,21 +279,24 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
       key: "failed",
       label: "Failed",
       detail:
-        row.failureReason || row.failure_reason || "Transfer unsuccessful; review the failure reason before retrying.",
+        row.failureReason || row.failure_reason || "The transfer failed; Admin must review the failure and retry or create a replacement payout.",
     };
   if (["cancelled", "canceled"].includes(raw))
     return {
       key: "cancelled",
       label: "Cancelled",
-      detail: rawReason || "This transfer was cancelled and will not be sent unless a new payout is created.",
+      detail: rawReason || "Admin cancelled this transfer; it will not be sent unless a new payout is created.",
     };
   if (["completed", "processed", "paid", "released", "settled"].includes(raw))
     return { key: "paid", label: "Paid", detail: "Successfully transferred to the selected payout destination." };
   if (["processing", "approved", "in_process"].includes(raw))
     return {
       key: "processing",
-      label: "Processing",
-      detail: "Included in a payout being processed; it becomes Paid after the transfer succeeds.",
+      label: raw === "approved" ? "Approved" : "Processing",
+      detail:
+        raw === "approved"
+          ? "Admin approved this payout; it is waiting to be submitted using the selected payment method."
+          : "Admin submitted this payout and the payment provider is processing it; it becomes Paid after confirmation.",
     };
   if (
     [
@@ -314,7 +323,9 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
             ? "Refund decision in progress."
             : reason.includes("dispute") || raw === "disputed"
               ? "Dispute review in progress."
-              : rawReason || "Temporarily unavailable; it becomes eligible after the hold is resolved.",
+              : rawReason || (isPayoutRecord
+                ? "Admin placed this payout on hold; it will continue after the hold reason is resolved and Admin releases it."
+                : "This earning is temporarily unavailable; it becomes eligible after the hold is resolved."),
     };
   if (["eligible", "available"].includes(raw))
     return {
@@ -324,9 +335,11 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
     };
   return {
     key: "waiting",
-    label: "Waiting",
+    label: isPayoutRecord ? "Pending Admin Review" : "Waiting",
     detail:
-      row.eligibleAt || row.returnWindowEndsAt
+      isPayoutRecord
+        ? rawReason || "The payout request is waiting for Admin review and approval. No transfer has started yet."
+        : row.eligibleAt || row.returnWindowEndsAt
         ? `Available after ${financeDateTime(row.eligibleAt || row.returnWindowEndsAt)}`
         : rawReason || "Waiting for delivery, return-window closure, or another release condition.",
   };
