@@ -426,11 +426,12 @@ const NegativeBalances = () => {
         label: "Status",
         sortable: true,
         render: (value) => (
-          <StatusBadge
-            status={value}
-            label={value === "pending" ? "Auto recovery active" : undefined}
-            dot
-          />
+          <div className="max-w-[240px] whitespace-normal">
+            <StatusBadge status={value} label={value === "pending" ? "Auto recovery active" : undefined} dot />
+            <p className="mt-1 text-xs leading-4 text-[var(--admin-muted)]">
+              {value === "pending" ? "Outstanding balance will be recovered automatically from current or future eligible payouts." : value === "resolved" ? "The outstanding balance has been fully recovered." : value === "waived" ? "An authorized administrator waived the remaining balance." : "Review the balance record for its current recovery state."}
+            </p>
+          </div>
         ),
       },
       {

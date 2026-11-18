@@ -50,7 +50,7 @@ export const financeAmounts = (row = {}) => {
   };
 };
 
- 
+
 export const financeBreakdown = (row = {}) =>
   financeMetadata(row).financialBreakdown || financeMetadata(row);
 
@@ -252,41 +252,42 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
   ];
   const raw = String(
     (terminalPayoutStatuses.includes(payoutRaw) && payoutRaw) ||
-      row.releaseStatus ||
-      row.lifecycleStatus ||
-      row.status ||
-      payoutRaw ||
-      "pending",
+    row.releaseStatus ||
+    row.lifecycleStatus ||
+    row.status ||
+    payoutRaw ||
+    "pending",
   ).toLowerCase();
-  const reason = String(
+  const rawReason = String(
     row.releaseReason || row.release_reason || row.payoutHoldReason || "",
-  ).toLowerCase();
+  );
+  const reason = rawReason.toLowerCase();
   if (["refunded", "reversed", "adjusted"].includes(raw))
     return {
       key: "adjusted",
       label: "Adjusted",
-      detail: "The earning was changed by a refund, return, or adjustment.",
+      detail: rawReason || "The earning was changed by a refund, return, recovery, or another settlement adjustment.",
     };
   if (["failed"].includes(raw))
     return {
       key: "failed",
       label: "Failed",
       detail:
-        row.failureReason || row.failure_reason || "Transfer unsuccessful",
+        row.failureReason || row.failure_reason || "Transfer unsuccessful; review the failure reason before retrying.",
     };
   if (["cancelled", "canceled"].includes(raw))
     return {
       key: "cancelled",
       label: "Cancelled",
-      detail: "This transfer was cancelled.",
+      detail: rawReason || "This transfer was cancelled and will not be sent unless a new payout is created.",
     };
   if (["completed", "processed", "paid", "released", "settled"].includes(raw))
-    return { key: "paid", label: "Paid", detail: "Successfully transferred." };
+    return { key: "paid", label: "Paid", detail: "Successfully transferred to the selected payout destination." };
   if (["processing", "approved", "in_process"].includes(raw))
     return {
       key: "processing",
       label: "Processing",
-      detail: "Included in a payout being processed.",
+      detail: "Included in a payout being processed; it becomes Paid after the transfer succeeds.",
     };
   if (
     [
@@ -313,13 +314,13 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
             ? "Refund decision in progress."
             : reason.includes("dispute") || raw === "disputed"
               ? "Dispute review in progress."
-              : "Temporarily unavailable.",
+              : rawReason || "Temporarily unavailable; it becomes eligible after the hold is resolved.",
     };
   if (["eligible", "available"].includes(raw))
     return {
       key: "available",
       label: "Available",
-      detail: "Ready for payout.",
+      detail: "Release conditions are complete and this earning is ready for payout.",
     };
   return {
     key: "waiting",
@@ -327,7 +328,7 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
     detail:
       row.eligibleAt || row.returnWindowEndsAt
         ? `Available after ${financeDateTime(row.eligibleAt || row.returnWindowEndsAt)}`
-        : "Waiting for release conditions.",
+        : rawReason || "Waiting for delivery, return-window closure, or another release condition.",
   };
 };
 
@@ -339,8 +340,8 @@ export const earningAmounts = (row = {}) => {
     products.reduce((sum, product) => sum + Number(product?.[key] || 0), 0);
   const shippingCredit = Number(
     breakdown.shippingReimbursementAmount ??
-      metadata.shippingReimbursementAmount ??
-      0,
+    metadata.shippingReimbursementAmount ??
+    0,
   );
   const shippingDeduction = Number(
     breakdown.shippingDeductionAmount ?? metadata.shippingDeductionAmount ?? 0,
@@ -517,7 +518,23 @@ export const FinanceChoiceFilters = ({
 
 export const FinanceStatusBadge = ({ row, status }) => {
   const mapped = sellerFinanceStatus(row || status);
-  return <StatusBadge status={mapped.key} label={mapped.label} dot />;
+  return (
+    <span title={mapped.detail} className="inline-flex">
+      <StatusBadge status={mapped.key} label={mapped.label} dot />
+    </span>
+  );
+};
+
+export const FinanceStatusCell = ({ row, status }) => {
+  const mapped = sellerFinanceStatus(row || status);
+  return (
+    <div className="min-w-[150px] max-w-[260px] whitespace-normal">
+      <FinanceStatusBadge row={row} status={status} />
+      <p className="mt-1 break-words text-xs leading-4 text-[var(--admin-muted)]">
+        {mapped.detail}
+      </p>
+    </div>
+  );
 };
 
 export const FinanceEmptyState = ({ title, description }) => (
@@ -634,14 +651,7 @@ export const CalculationRows = ({ row }) => {
   ];
   return (
     <div className="space-y-2">
-      {amounts.marketplacePromotion > 0 && (
-        <div className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">
-          Marketplace-Funded Promotion:{" "}
-          <span className="font-medium">
-            {financeMoney(amounts.marketplacePromotion, currency)} (Included)
-          </span>
-        </div>
-      )}
+
       {lines
         .filter(([, amount], index) => index === 0 || Math.abs(amount) >= 0.005)
         .map(([label, amount, tone]) => (

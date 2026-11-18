@@ -281,6 +281,24 @@ const payoutFailureReason = (row = {}) => {
     .join(" · ");
 };
 
+const payoutStatusReason = (row = {}) => {
+  const status = String(row.status || "pending").toLowerCase();
+  const metadata = metadataOf(row);
+  const explicitReason = payoutFailureReason(row) || metadata.holdReason || metadata.reason || row.notes;
+  if (explicitReason) return explicitReason;
+  if (replacementPayoutIdOf(row)) return "A replacement payout was created; this record cannot be retried.";
+  if (status === "pending") return "Waiting for payout review and approval.";
+  if (status === "approved") return "Approved and ready to be sent using the selected payment method.";
+  if (["processing", "in_process"].includes(status)) return "Transfer submitted; waiting for the payment provider result.";
+  if (["completed", "paid", "processed"].includes(status)) return Number(valueOf(row, "net_amount", "netAmount", "amount")) > 0
+    ? "Transfer completed successfully."
+    : "No bank transfer was made because the amount was fully used for recovery or adjustment.";
+  if (["on_hold", "held"].includes(status)) return "Payout is paused until the recorded hold reason is resolved.";
+  if (["cancelled", "canceled"].includes(status)) return "Payout was cancelled; create a new payout after resolving the reason.";
+  if (status === "failed") return "Transfer failed; review the failure reason before retrying.";
+  return "Review this payout before taking the next action.";
+};
+
 const PayoutOpsQueue = () => {
   const dispatch = useDispatch();
   const [exportLoading, setExportLoading] = useState(false);
@@ -648,17 +666,9 @@ const PayoutOpsQueue = () => {
               label={replacementPayoutIdOf(row) ? "Superseded" : undefined}
               dot
             />
-            {replacementPayoutIdOf(row) && (
-              <div className="mt-1 break-words text-xs leading-4 text-gray-500">
-                Replacement: {replacementPayoutIdOf(row)}. Further retries are
-                blocked.
-              </div>
-            )}
-            {payoutFailureReason(row) && (
-              <div className="mt-1 break-words whitespace-normal text-xs leading-4 text-red-600">
-                {payoutFailureReason(row)}
-              </div>
-            )}
+            <div className={`mt-1 break-words whitespace-normal text-xs leading-4 ${String(row.status).toLowerCase() === "failed" ? "text-red-600" : "text-gray-500"}`}>
+              {payoutStatusReason(row)}
+            </div>
           </div>
         ),
       },

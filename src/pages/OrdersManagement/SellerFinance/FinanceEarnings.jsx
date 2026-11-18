@@ -26,6 +26,7 @@ import {
   FinanceDateRangeFilter,
   // FinanceNav,
   FinanceStatusBadge,
+  FinanceStatusCell,
   financeDateTime,
   financeAmounts,
   financeList,
@@ -296,7 +297,7 @@ export default function FinanceEarnings() {
       {
         key: "status",
         label: "Status",
-        render: (_, row) => <FinanceStatusBadge row={row} />,
+        render: (_, row) => <FinanceStatusCell row={row} />,
       },
 
       {
@@ -313,10 +314,6 @@ export default function FinanceEarnings() {
                   row.returnWindowEndsAt ||
                   row.return_window_ends_at,
               )}
-            </span>
-
-            <span className="mt-1 block text-[var(--admin-muted)]">
-              {sellerFinanceStatus(row).detail}
             </span>
           </div>
         ),
@@ -631,6 +628,9 @@ export default function FinanceEarnings() {
 
                 <div className="mt-2">
                   <FinanceStatusBadge row={detail} />
+                  <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--admin-muted)]">
+                    {sellerFinanceStatus(detail).detail}
+                  </p>
                 </div>
               </div>
             </div>

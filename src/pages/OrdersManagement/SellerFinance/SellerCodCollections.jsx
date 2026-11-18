@@ -62,10 +62,10 @@ export default function SellerCodCollections() {
       <div><OrderLink orderId={row.order_id} orderNumber={row.order_number} /><div className="text-xs text-gray-500">{row.awb_number || "Shipment"}</div></div>
     ) },
     { key: "expected_amount", label: "COD cash", render: (value) => money(value) },
-    { key: "status", label: "Collection", render: (value) => <StatusBadge status={value} label={label(value)} /> },
+    { key: "status", label: "Collection", render: (value, row) => <span title={row.status === "pending" ? "Awaiting seller confirmation that the COD cash was collected and retained." : row.status === "verified" ? "Collection verified by Admin." : "Collection status requires review."}><StatusBadge status={value} label={label(value)} /></span> },
     { key: "recovered_amount", label: "Recovered", render: (value) => money(value) },
     { key: "remaining_amount", label: "Still owed", render: (value) => <span className={Number(value) > 0 ? "font-semibold text-red-700" : "text-emerald-700"}>{money(value)}</span> },
-    { key: "recovery_status", label: "Recovery", render: (value) => <StatusBadge status={value} label={label(value)} /> },
+    { key: "recovery_status", label: "Recovery", render: (value, row) => <span title={Number(row.remaining_amount) > 0 ? "The remaining COD balance will be recovered from current or future eligible payouts." : "The COD balance has been fully recovered."}><StatusBadge status={value} label={label(value)} /></span> },
   ], []);
 
   return <div>

@@ -435,12 +435,11 @@ const SellerPayouts = () => {
       return [
         {
           key: "id",
-          label: "Payout",
-          render: (value, row) => (
-            <span className="font-mono text-xs">
-              {shortReference(value || row.payoutId, "#")}
-            </span>
-          ),
+          label: "Payout record",
+          render: (value, row) =>
+            Number(valueOf(row, "net_amount", "netAmount")) === 0
+              ? <span className="text-xs font-medium text-[var(--admin-muted)]">COD recovery adjustment</span>
+              : <span className="text-xs font-medium text-[var(--admin-ink)]">Bank transfer</span>,
         },
 
         {
@@ -495,10 +494,16 @@ const SellerPayouts = () => {
           label: "Status",
           render: (_, row) => (
             <div>
-              <FinanceStatusBadge row={row} />
+              <FinanceStatusBadge
+                row={Number(valueOf(row, "net_amount", "netAmount")) === 0 && row.status === "completed"
+                  ? { ...row, lifecycleStatus: "adjusted", releaseReason: "No bank transfer; amount fully applied to COD recovery." }
+                  : row}
+              />
 
               <div className="mt-1 text-xs text-[var(--admin-muted)]">
-                {sellerFinanceStatus(row).detail}
+                {Number(valueOf(row, "net_amount", "netAmount")) === 0 && row.status === "completed"
+                  ? "No bank transfer; amount fully applied to COD recovery."
+                  : sellerFinanceStatus(row).detail}
               </div>
             </div>
           ),

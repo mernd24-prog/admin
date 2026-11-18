@@ -9,7 +9,7 @@ import { getMySellerSettlements } from "../../../Redux/sellerCommissionsSlice";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import { downloadApiFile } from "../../../_helpers/downloadApi";
 import {
-  FinanceStatusBadge,
+  FinanceStatusCell,
   financeDateTime,
   financeList,
   financeMoney,
@@ -120,14 +120,13 @@ export default function FinanceStatements() {
       },
       {
         key: "reference",
-        label: "Reference",
+        label: "Record",
         render: (_, row) => (
           <div>
-            <strong className="font-mono">{shortReference(row.id, "#")}</strong>
-            {/* <span className="mt-1 block text-xs text-[var(--admin-muted)]">
-              Payout{" "}
-              {shortReference(financeValue(row, "payout_id", "payoutId"), "#")}
-            </span> */}
+            <strong>Settlement statement</strong>
+            <span className="mt-1 block text-xs text-[var(--admin-muted)]">
+              Earnings, deductions, recovery, and payout movement for this period.
+            </span>
           </div>
         ),
       },
@@ -155,7 +154,7 @@ export default function FinanceStatements() {
       {
         key: "status",
         label: "Status",
-        render: (_, row) => <FinanceStatusBadge row={row} />,
+        render: (_, row) => <FinanceStatusCell row={row} />,
       },
       {
         key: "generated",

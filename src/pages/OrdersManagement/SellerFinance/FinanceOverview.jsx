@@ -134,6 +134,8 @@ export default function FinanceOverview() {
   const itemDeductions =
     sumItems(["commissionAmount", "commission_amount"]) +
     sumItems(["taxAmount", "tax_amount"]) +
+    sumItems(["tcsAmount", "gstTcsAmount", "gst_tcs_amount"]) +
+    sumItems(["tdsAmount", "incomeTaxTdsAmount", "income_tax_tds_amount"]) +
     Math.abs(sumItems(["refundAmount", "refund_amount"])) +
     Math.abs(sumItems(["adjustmentAmount", "adjustment_amount"]));
 
@@ -188,35 +190,45 @@ export default function FinanceOverview() {
       "Delivered",
       wallet.deliveredAmount ?? balances.deliveredBalance,
       counts.delivered || 0,
-      "Order items delivered",
+      Number(balances.pendingBalance || 0) > 0
+        ? "Delivered items; payout remains pending until the return window closes."
+        : "Delivered items included in the selected period.",
       "",
     ],
     [
       "Return window",
       balances.pendingBalance,
       counts.pending || 0,
-      "Delivered earnings waiting for the return period to close",
+      Number(counts.pending || 0) > 0
+        ? "Return window is open; funds stay pending to cover a possible return, refund, or dispute."
+        : "No delivered earnings are currently inside a return window.",
       "waiting",
     ],
     [
       "Eligible",
       balances.availableBalance,
       counts.available || counts.eligible || 0,
-      "Return window closed with no active hold",
+      Number(counts.available || counts.eligible || 0) > 0
+        ? "Return window closed with no active hold; eligible for payout."
+        : "No earnings are currently eligible for payout.",
       "available",
     ],
     [
       "Payout processing",
       balances.inProcessBalance,
       payouts.inProcessCount || 0,
-      "Transfer is being processed",
+      Number(payouts.inProcessCount || 0) > 0
+        ? "Payout approved and being transferred to the selected account."
+        : "No payout transfer is currently processing.",
       "processing",
     ],
     [
       "Paid",
       balances.paidBalance,
       payouts.paidCount || 0,
-      "Successfully transferred",
+      Number(payouts.paidCount || 0) > 0
+        ? "Funds were successfully transferred to the selected payout account."
+        : "No positive payout transfer has been completed.",
       "paid",
     ],
   ];
@@ -392,19 +404,20 @@ export default function FinanceOverview() {
         <div className="grid gap-0 sm:grid-cols-2 xl:grid-cols-4">
           {[
             {
-              label: "Gross Earnings",
+              label: "Gross Earnings (Product amount)",
               value: financeMoney(grossEarnings, currency),
               color: "text-[var(--admin-navy)]",
               marker: "bg-[var(--admin-gold)]",
             },
             {
-              label: "Deductions / Adjustments",
+              label: "Fees & Tax Deductions",
               value: financeMoney(deductions, currency),
               color: "text-amber-700",
               marker: "bg-amber-500",
+              detail: "Platform fee, GST, TCS, TDS, refunds, and other adjustments.",
             },
             {
-              label: "Net Earnings Before COD",
+              label: "Net Earnings (After deduction and settlement)",
               value: financeMoney(netEarnings, currency),
               color: "text-emerald-700",
               marker: "bg-emerald-500",
@@ -446,6 +459,11 @@ export default function FinanceOverview() {
               >
                 {metric.value}
               </strong>
+              {metric.detail && (
+                <span className="mt-1 block text-[11px] leading-4 text-[var(--admin-muted)]">
+                  {metric.detail}
+                </span>
+              )}
             </div>
           ))}
         </div>

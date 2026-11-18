@@ -26,7 +26,7 @@ import {
   getMySellerWalletSummary,
 } from "../../../Redux/sellerCommissionsSlice";
 import {
-  FinanceStatusBadge,
+  FinanceStatusCell,
   financeDateTime,
   financeMoney,
   financeAmounts,
@@ -305,7 +305,7 @@ export default function FinanceAdjustments() {
         key: "status",
         label: "Status",
         cellClassName: "align-top",
-        render: (_, row) => <FinanceStatusBadge row={row} />,
+        render: (_, row) => <FinanceStatusCell row={row} />,
       },
       {
         key: "created",

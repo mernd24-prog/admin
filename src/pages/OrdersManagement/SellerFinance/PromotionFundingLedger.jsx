@@ -339,21 +339,21 @@ const PromotionFundingLedger = () => {
         key: "status",
         label: "Status",
         render: (value) => (
-          <span
-            className={`rounded-full px-2 py-1 text-xs font-semibold ${
-              statusClass[value] || statusClass.reserved
-            }`}
-          >
-            {value}
-          </span>
+          <div className="max-w-[240px]">
+            <span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusClass[value] || statusClass.reserved}`}>
+              {value}
+            </span>
+            <p className="mt-1 text-xs leading-4 text-[var(--admin-muted)]">
+              {value === "reversed" ? "Contribution was reversed after the related order adjustment." : value === "settled" ? "Contribution was included in a completed settlement." : value === "applied" ? "Contribution is applied to this order earning." : "Contribution is reserved until the order reaches its settlement condition."}
+            </p>
+          </div>
         ),
       },
 
       {
         key: "payoutId",
-        label: "Payout",
-        cellClassName: "font-mono text-xs",
-        render: (value) => value || "Not batched",
+        label: "Settlement",
+        render: (value) => value ? "Included in payout" : "Not yet included",
       },
     ],
     [sellerMode, sellerMap, storeMap],
