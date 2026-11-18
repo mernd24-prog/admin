@@ -23,14 +23,9 @@ import { useListPage } from "../../hooks/useListPage";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import SharedDataTable from "../../components/Shared/DataTable";
+import DataTable from "../../components/Shared/DataTable";
 import CopyButton from "../../components/Atoms/CopyButton/CopyButton";
-import {
-  DataTable,
-  PageHeader,
-  StatusBadge,
-  SummaryCard,
-} from "../../components/Shared";
+import { PageHeader, StatusBadge, SummaryCard } from "../../components/Shared";
 import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
 import {
   getReferralBonusAchievements,
@@ -1128,7 +1123,7 @@ const ReferralPartnerDetails = () => {
         )}
 
         {activeTab === "codes" && can("referral-codes", "view") && (
-          <SharedDataTable
+          <DataTable
             columns={[
               { key: "code", label: "Referral Code" },
               { key: "status", label: "Status" },
@@ -1148,7 +1143,7 @@ const ReferralPartnerDetails = () => {
 
         {influencer?.influencerType === "parent" &&
           activeTab === "associated-brands" && (
-            <SharedDataTable
+            <DataTable
               columns={[
                 { key: "associate", label: "Brand Associate" },
                 { key: "code", label: "Referral Code" },
@@ -1183,7 +1178,7 @@ const ReferralPartnerDetails = () => {
           )}
 
         {activeTab === "orders" && can("referral-orders", "view") && (
-          <SharedDataTable
+          <DataTable
             columns={[
               { key: "order", label: "Order" },
               { key: "code", label: "Code" },
@@ -1224,7 +1219,7 @@ const ReferralPartnerDetails = () => {
         )}
 
         {activeTab === "payouts" && can("referral-payouts", "view") && (
-          <SharedDataTable
+          <DataTable
             columns={[
               { key: "coins", label: "Coins" },
               { key: "payable", label: "Payable" },
@@ -1243,7 +1238,7 @@ const ReferralPartnerDetails = () => {
         )}
 
         {activeTab === "progress" && can("referral-bonus-progress", "view") && (
-          <SharedDataTable
+          <DataTable
             columns={[
               { key: "rule", label: "Rule" },
               { key: "cycle", label: "Cycle" },
@@ -1280,7 +1275,7 @@ const ReferralPartnerDetails = () => {
 
         {activeTab === "achievements" &&
           can("referral-bonus-history", "view") && (
-            <SharedDataTable
+            <DataTable
               columns={[
                 { key: "rule", label: "Rule" },
                 { key: "cycle", label: "Cycle" },
