@@ -23,7 +23,7 @@ import { ENDPOINTS } from "../../_helpers/endpoints";
 import { isSellerPanel } from "../../_helpers/panelConfig";
 import { formatDateTime12Hour } from "../../utils/formatters";
 import { useNavigate } from "react-router-dom";
-import { Upload } from "lucide-react";
+import { exportToExcelWorkbook } from "../../_helpers/exportToCsv";
 import DefaultMiddleModal from "../../components/Atoms/Modal/DefaultMiddleModal ";
 
 const STATUS_OPTIONS = [
@@ -111,6 +111,7 @@ const StockNotifications = () => {
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [bulkSending, setBulkSending] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Queue emails modal states
   const [isQueueModalOpen, setIsQueueModalOpen] = useState(false);
@@ -333,6 +334,7 @@ const StockNotifications = () => {
     [sellerView],
   );
 
+  // Excel export columns
   const exportColumns = useMemo(
     () => [
       { key: "name", label: "Name" },
@@ -343,13 +345,69 @@ const StockNotifications = () => {
       { key: "variantTitle", label: "Variant" },
       { key: "sku", label: "SKU" },
       { key: "price", label: "Price" },
-      { key: "sellerId", label: "Seller ID" },
+      ...(!sellerView ? [{ key: "sellerId", label: "Seller ID" }] : []),
       { key: "status", label: "Status" },
       { key: "requestedAt", label: "Requested At" },
       { key: "notifiedAt", label: "Notified At" },
     ],
-    [],
+    [sellerView],
   );
+
+  // Format export data
+  const exportData = useMemo(
+    () =>
+      rows.map((row) => ({
+        ...row,
+        price:
+          row.price === null || row.price === undefined
+            ? "N/A"
+            : Number(row.price || 0).toLocaleString("en-IN", {
+                style: "currency",
+                currency: "INR",
+              }),
+        status: row.status || "pending",
+        requestedAt: formatDateTime12Hour(row.requestedAt) || "—",
+        notifiedAt: formatDateTime12Hour(row.notifiedAt) || "—",
+      })),
+    [rows],
+  );
+
+  // Export to Excel
+  const handleExport = async () => {
+    if (!rows.length) {
+      toast.info("No stock notifications available to export.");
+      return;
+    }
+
+    if (exportLoading) return;
+
+    setExportLoading(true);
+
+    try {
+      const exported = exportToExcelWorkbook(
+        [
+          {
+            name: "Stock Notifications",
+            title: "Stock Notifications",
+            data: exportData,
+            columns: exportColumns,
+          },
+        ],
+        "Stock_Notifications.xlsx",
+      );
+
+      if (exported) {
+        toast.success("Stock notifications exported successfully.");
+      } else {
+        toast.error("Unable to export stock notifications.");
+      }
+    } catch (error) {
+      console.error("Stock notifications export error:", error);
+      toast.error(error?.message || "Failed to export stock notifications.");
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   const FILTER_FIELDS = [
     {
@@ -432,16 +490,9 @@ const StockNotifications = () => {
         onRefresh={fetchRows}
         emptyText="No stock notification requests found."
         exportConfig={{
-          filename: "stock-notifications",
-          columns: exportColumns,
-          data: rows,
-          icon: (
-            <Upload
-              size={15}
-              className="shrink-0 text-[var(--admin-blue)]"
-              aria-hidden="true"
-            />
-          ),
+          onClick: handleExport,
+          label: "Export",
+          disabled: loading || exportLoading || !rows.length,
         }}
         rowActions={(row) => [
           {

@@ -13,12 +13,12 @@ const ContentPanel = ({
       <header className="flex items-start justify-between gap-4 border-b border-[var(--admin-line)] px-4 py-3.5">
         <div className="min-w-0">
           {title && (
-            <h2 className="text-base font-semibold text-[var(--admin-ink)]">
+            <h2 className="text-base font-semibold leading-tight text-[var(--admin-ink)]">
               {title}
             </h2>
           )}
           {description && (
-            <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
+            <p className="mt-0 text-xs leading-4 text-[var(--admin-muted)]">
               {description}
             </p>
           )}

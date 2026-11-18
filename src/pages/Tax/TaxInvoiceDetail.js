@@ -131,7 +131,13 @@ const TaxInvoiceDetail = () => {
   const dispatch = useDispatch();
   const selector = useSelector((state) => state.adminCore);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const list = useListPage({
+    defaultPageSize: 10,
+    defaultSortKey: "created_at",
+    defaultSortDir: "desc",
+  });
   const stateInvoice = location.state?.invoice || null;
   const fetchedInvoice = unwrap(selector.taxInvoiceData);
 
@@ -159,7 +165,7 @@ const TaxInvoiceDetail = () => {
   const copy = invoiceCopy[invoiceType] || invoiceCopy.order_customer;
   const currency = pick(invoice, "currency") || "INR";
   const amountMeta = metadata.amounts || {};
-  const items =
+  const allItems =
     invoiceType === "platform_commission" && metadata.itemReferences?.length
       ? metadata.itemReferences.map((item) => ({
           ...item,
@@ -179,10 +185,14 @@ const TaxInvoiceDetail = () => {
     metadata.lineItemsPagination ||
     {};
 
-  const totalLineItems =
-    Number(lineItemsPagination.total) > 0
-      ? Number(lineItemsPagination.total)
-      : items.length;
+  const totalLineItems = Number(lineItemsPagination.total) || allItems.length;
+  const isServerPaginated = Boolean(
+    Number(lineItemsPagination.total) > allItems.length &&
+      Number(lineItemsPagination.limit || lineItemsPagination.pageSize),
+  );
+  const items = isServerPaginated
+    ? allItems
+    : allItems.slice((list.page - 1) * list.pageSize, list.page * list.pageSize);
 
   const columns = useMemo(() => {
     const baseColumns = [
@@ -292,14 +302,6 @@ const TaxInvoiceDetail = () => {
     ? pick(invoice, "gstin_marketplace")
     : pick(invoice, "gstin_seller") || metadata.seller?.gstNumber;
 
-  const list = useListPage({
-    defaultPageSize: 10,
-    defaultSortKey: "created_at",
-    defaultSortDir: "desc",
-  });
-
-  const { toQueryParams } = list;
-
   const paginationList = useMemo(() => {
     const { setSearch, ...pagination } = list;
     return pagination;
@@ -311,13 +313,12 @@ const TaxInvoiceDetail = () => {
     try {
       setLoading(true);
 
-      const params = toQueryParams();
-
       await dispatch(
         getTaxInvoice({
           invoiceId,
-          page: params.page,
-          limit: params.limit,
+          page: list.page,
+          limit: list.pageSize,
+          offset: (list.page - 1) * list.pageSize,
         }),
       ).unwrap();
     } catch (error) {
@@ -327,10 +328,19 @@ const TaxInvoiceDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, invoiceId, toQueryParams]);
+  }, [dispatch, invoiceId, list.page, list.pageSize]);
 
   useEffect(() => {
     loadInvoice();
+  }, [loadInvoice]);
+
+  const refreshInvoice = useCallback(async () => {
+    setPageLoading(true);
+    try {
+      await loadInvoice();
+    } finally {
+      setPageLoading(false);
+    }
   }, [loadInvoice]);
 
   const downloadInvoice = async () => {
@@ -352,12 +362,13 @@ const TaxInvoiceDetail = () => {
     }
   };
 
-  if (loading && !pick(invoice, "id", "invoice_id")) {
-    return <Loader />;
-  }
+//   if (loading) {
+//   return <Loader />;
+// }
 
   return (
     <div className="space-y-6">
+      <Loader loading={pageLoading} />
       <PageHeader
         title={copy.title}
         subtitle={copy.description}
@@ -378,14 +389,19 @@ const TaxInvoiceDetail = () => {
             >
               <MdArrowBack aria-hidden="true" size={16} /> Back
             </button> */}
-            <button
-              type="button"
-              onClick={loadInvoice}
-              disabled={loading}
-              className="admin-btn-secondary"
-            >
-              <MdRefresh aria-hidden="true" size={16} /> Refresh
-            </button>
+          <button
+  type="button"
+  onClick={refreshInvoice}
+  disabled={loading}
+  className="admin-btn-secondary"
+>
+  <MdRefresh
+    aria-hidden="true"
+    size={16}
+    className={loading ? "animate-spin" : ""}
+  />
+  {loading ? "Refreshing..." : "Refresh"}
+</button>
             <button
               type="button"
               onClick={downloadInvoice}
@@ -398,29 +414,23 @@ const TaxInvoiceDetail = () => {
         }
       />
 
-      <section className="rounded-lg border border-[var(--admin-line)] bg-white p-4">
-        <div className="mb-4 flex items-center justify-between border-b border-[var(--admin-line)] pb-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--admin-muted)]">
-              Invoice Number
-            </p>
-            <h3 className="mt-1 text-base font-semibold text-[var(--admin-ink)]">
+      <ContentPanel
+        title="Invoice Details"
+        description="Overview of the invoice, order, issue date, and billing information."
+        action={
+          <div className="flex flex-col items-end gap-1">
+            <StatusBadge
+              status={
+                pick(invoice, "state", "status", "invoice_state") || "issued"
+              }
+              dot
+            />
+            <span className="text-xs font-semibold text-[var(--admin-ink)]">
               {pick(invoice, "invoiceNumber", "invoice_number") || "—"}
-            </h3>
+            </span>
           </div>
-
-          <StatusBadge
-            status={
-              pick(invoice, "state", "status", "invoice_state") || "issued"
-            }
-            dot
-          />
-        </div>
-
-        <h3 className="mb-3 text-sm font-semibold text-[var(--admin-ink)]">
-          Invoice Details
-        </h3>
-
+        }
+      >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Field
             label="Order"
@@ -452,9 +462,13 @@ const TaxInvoiceDetail = () => {
 
           <Field label={partyGstinLabel} value={partyGstin} mono />
         </div>
-      </section>
+      </ContentPanel>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <ContentPanel
+        title="Invoice Amount Summary"
+        description="Summary of taxable amount, applicable taxes, TCS, and final invoice total."
+        bodyClassName="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-4"
+      >
         <AmountCard
           label="Taxable Amount"
           value={money(
@@ -463,16 +477,19 @@ const TaxInvoiceDetail = () => {
             currency,
           )}
         />
+
         <AmountCard
           label="GST / Tax"
           value={money(pick(invoice, "taxAmount", "tax_amount"), currency)}
           tone="red"
         />
+
         <AmountCard
           label="TCS"
           value={money(pick(invoice, "tcsAmount", "tcs_amount"), currency)}
           tone="red"
         />
+
         <AmountCard
           label="Total"
           value={money(
@@ -482,85 +499,82 @@ const TaxInvoiceDetail = () => {
           )}
           tone="green"
         />
-      </section>
+      </ContentPanel>
       {invoiceType === "seller_customer" && (
-        <section className="rounded-lg border border-gray-200 bg-white p-4">
-          <h2 className="text-sm font-semibold text-gray-900">
-            Invoice payment allocation
-          </h2>
-          <p className="mt-1 text-xs text-gray-600">
-            Marketplace and payment-partner promotions pay part of this seller
-            invoice; they do not reduce its taxable value.
-          </p>
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
-            <AmountCard
-              label="Seller-funded discount"
-              value={money(amountMeta.sellerFundedDiscountAmount, currency)}
-            />
-            <AmountCard
-              label="Paid by customer"
-              value={money(
-                amountMeta.customerPaidTowardInvoiceAmount,
-                currency,
-              )}
-            />
-            <AmountCard
-              label="Marketplace contribution"
-              value={money(
-                amountMeta.marketplaceFundedDiscountAmount,
-                currency,
-              )}
-              tone="green"
-            />
-            <AmountCard
-              label="Payment partner contribution"
-              value={money(
-                amountMeta.paymentPartnerFundedDiscountAmount,
-                currency,
-              )}
-              tone="green"
-            />
-          </div>
-        </section>
+        <ContentPanel
+          title="Invoice Payment Allocation"
+          description="Marketplace and payment-partner promotions pay part of this seller invoice; they do not reduce its taxable value."
+          bodyClassName="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-4"
+        >
+          <AmountCard
+            label="Seller-funded discount"
+            value={money(amountMeta.sellerFundedDiscountAmount, currency)}
+          />
+
+          <AmountCard
+            label="Paid by customer"
+            value={money(amountMeta.customerPaidTowardInvoiceAmount, currency)}
+          />
+
+          <AmountCard
+            label="Marketplace contribution"
+            value={money(amountMeta.marketplaceFundedDiscountAmount, currency)}
+            tone="green"
+          />
+
+          <AmountCard
+            label="Payment partner contribution"
+            value={money(
+              amountMeta.paymentPartnerFundedDiscountAmount,
+              currency,
+            )}
+            tone="green"
+          />
+        </ContentPanel>
       )}
-      <section className="rounded-lg border border-gray-200 bg-white">
-        <div className="border-b border-gray-100 px-4 py-3">
-          <h2 className="text-sm font-semibold text-gray-900">Tax Breakup</h2>
-        </div>
-        <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
-          <AmountCard
-            label="CGST"
-            value={money(pick(invoice, "cgstAmount", "cgst_amount"), currency)}
-          />
-          <AmountCard
-            label="SGST"
-            value={money(pick(invoice, "sgstAmount", "sgst_amount"), currency)}
-          />
-          <AmountCard
-            label="IGST"
-            value={money(pick(invoice, "igstAmount", "igst_amount"), currency)}
-          />
-        </div>
-      </section>
+      <ContentPanel
+        title="Tax Breakup"
+        description="Breakdown of CGST, SGST, and IGST amounts for this invoice."
+        bodyClassName="grid grid-cols-1 gap-4 p-4 md:grid-cols-3"
+      >
+        <AmountCard
+          label="CGST"
+          value={money(pick(invoice, "cgstAmount", "cgst_amount"), currency)}
+        />
+        <AmountCard
+          label="SGST"
+          value={money(pick(invoice, "sgstAmount", "sgst_amount"), currency)}
+        />
+        <AmountCard
+          label="IGST"
+          value={money(pick(invoice, "igstAmount", "igst_amount"), currency)}
+        />
+      </ContentPanel>
 
       <ContentPanel
-  title="Line Items"
-  className="flex min-w-0 flex-col"
-  bodyClassName="flex min-h-0 flex-1 flex-col p-0 [&>div]:flex-1"
->
-  <DataTable
-    columns={columns}
-    data={items}
-    loading={loading}
-    total={totalLineItems}
-    listPage={paginationList}
-    showSerialNumber
-    rowKey={(item) => item.orderItemId || item.productId || item.id}
-    emptyMessage="No line items available"
-    tableContainerClassName="overflow-x-auto"
-    cardClassName="flex h-full flex-col overflow-hidden"
-  />
-</ContentPanel>
+        title="Line Items"
+        description="Detailed list of line items included in this invoice."
+        className="flex min-w-0 flex-col"
+        bodyClassName="flex min-h-0 flex-1 flex-col p-0 [&>div]:flex-1"
+      >
+        <DataTable
+          columns={columns}
+          data={items}
+          loading={loading}
+          total={totalLineItems}
+          page={list.page}
+          pageSize={list.pageSize}
+          onPageChange={list.setPage}
+          onPageSizeChange={list.setPageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+          listPage={paginationList}
+          showSerialNumber
+          rowKey={(item) => item.orderItemId || item.productId || item.id}
+          emptyMessage="No line items available"
+          tableContainerClassName="overflow-x-auto"
+          cardClassName="flex h-full flex-col overflow-hidden"
+        />
+      </ContentPanel>
     </div>
   );
 };
