@@ -56,7 +56,11 @@ import {
   updateReferralBonusRule,
   updateReferralRules,
 } from "../../Redux/referralCommerceSlice";
-import { formatDateTime12Hour, formatLabel } from "../../utils/formatters";
+import {
+  formatDateTime12Hour,
+  formatIndianNumber,
+  formatLabel,
+} from "../../utils/formatters";
 import { uploadDocumentFile } from "../../_helpers/globalFunctions";
 import {
   approveReferralPayoutValidationSchema,
@@ -78,7 +82,7 @@ import {
   StatusBadge,
   SummaryCard,
 } from "../../components/Shared";
-import SharedDataTable from "../../components/Shared/DataTable";
+import DataTable from "../../components/Shared/DataTable";
 import DefaultModal from "../../components/Atoms/Modal/DefaultRightSideModal";
 import FormSection from "../../components/Atoms/FormSection/FormSection";
 import FormInput from "../../components/Atoms/FormInput/FormInput";
@@ -402,11 +406,6 @@ const fullName = (user = {}) => {
   );
 };
 
-const formatAmount = (value) =>
-  `INR ${Number(value || 0).toLocaleString("en-IN", {
-    maximumFractionDigits: 2,
-  })}`;
-
 const formatCoins = (value) =>
   formatLabel(
     `${Number(value || 0).toLocaleString("en-IN", {
@@ -427,10 +426,6 @@ const optionList = (options = [], fallbackValues = []) =>
   options.length
     ? options
     : fallbackValues.map((value) => ({ value, label: humanize(value) }));
-
-const StatusPill = ({ value }) => (
-  <StatusBadge status={value} label={value ? undefined : "-"} size="sm" dot />
-);
 
 const IconButton = ({
   title,
@@ -564,211 +559,6 @@ const RowActions = ({ actions = [] }) => {
   );
 };
 
-export const TextInput = ({
-  label,
-  name,
-  value,
-  onChange,
-  type = "text",
-  placeholder = "",
-  min,
-  max,
-  minLength,
-  maxLength,
-  pattern,
-  step,
-  hint = "",
-  required = false,
-  nativeRequired = required,
-  error = "",
-  onBlur,
-}) => (
-  <label className="block">
-    <span className="mb-1 block text-xs font-medium uppercase text-gray-500">
-      {label}
-      {required ? <span className="admin-required">*</span> : null}
-    </span>
-
-    <input
-      type={type}
-      name={name}
-      value={value}
-      onKeyDown={(event) => {
-        if (type === "number" && ["-", "e", "E"].includes(event.key)) {
-          event.preventDefault();
-        }
-      }}
-      onPaste={(event) => {
-        if (
-          type === "number" &&
-          /-/.test(event.clipboardData.getData("text"))
-        ) {
-          event.preventDefault();
-        }
-      }}
-      onChange={(event) => {
-        if (type === "number") {
-          const inputValue = event.target.value;
-
-          if (inputValue !== "" && Number(inputValue) < 0) return;
-        }
-
-        onChange?.(event);
-      }}
-      placeholder={placeholder}
-      min={type === "number" ? (min ?? 0) : min}
-      max={max}
-      minLength={minLength}
-      maxLength={maxLength}
-      pattern={pattern}
-      step={step}
-      required={nativeRequired}
-      onBlur={onBlur}
-      aria-invalid={Boolean(error)}
-      className={`h-10 w-full rounded border bg-white px-3 text-sm text-gray-800 outline-none focus:border-golden-400 ${
-        error ? "border-red-400" : "border-gray-200"
-      }`}
-    />
-
-    {error ? (
-      <span className="admin-field-error" role="alert">
-        {error}
-      </span>
-    ) : hint ? (
-      <span className="mt-1 block text-xs font-normal text-gray-500">
-        {hint}
-      </span>
-    ) : null}
-  </label>
-);
-
-const SelectInput = ({
-  label,
-  name,
-  value,
-  onChange,
-  options,
-  children,
-  required,
-  placeholder,
-  className = "",
-  disabled = false,
-  formatOptionLabel,
-  error = "",
-  onBlur,
-}) => {
-  const parsedOptions = useMemo(() => {
-    if (options && Array.isArray(options)) return options;
-    const flatChildren = [];
-    const extractOptions = (nodes) => {
-      React.Children.forEach(nodes, (child) => {
-        if (!child) return;
-        if (Array.isArray(child)) {
-          extractOptions(child);
-        } else if (React.isValidElement(child)) {
-          let childLabel = child.props.children;
-          if (Array.isArray(childLabel)) {
-            childLabel = childLabel.join("");
-          }
-          flatChildren.push({
-            value: child.props.value !== undefined ? child.props.value : "",
-            label: String(
-              childLabel !== undefined && childLabel !== null
-                ? childLabel
-                : child.props.value || "",
-            ),
-          });
-        }
-      });
-    };
-    extractOptions(children);
-    return flatChildren;
-  }, [options, children]);
-
-  const selectedValue = useMemo(() => {
-    return (
-      parsedOptions.find((opt) => String(opt.value) === String(value ?? "")) ||
-      null
-    );
-  }, [parsedOptions, value]);
-
-  const handleChange = (selected) => {
-    if (onChange) {
-      onChange({
-        target: {
-          name,
-          value: selected ? selected.value : "",
-        },
-      });
-    }
-  };
-
-  return (
-    <FilterSelect
-      label={label}
-      name={name}
-      options={parsedOptions}
-      value={selectedValue}
-      onChange={handleChange}
-      required={required}
-      isDisabled={disabled}
-      placeholder={
-        placeholder ||
-        (label ? `Select ${label.toLowerCase()}` : "Select option")
-      }
-      isSearchable={true}
-      formatOptionLabel={
-        formatOptionLabel ||
-        ((option) => (
-          <span className="block truncate text-[13px] leading-5">
-            {option.label}
-          </span>
-        ))
-      }
-      error={error}
-      onBlur={onBlur}
-      className={className}
-    />
-  );
-};
-
-const Modal = ({ title, open, onClose, children, footer }) => {
-  useEffect(() => {
-    if (!open) return undefined;
-    const closeOnEscape = (event) => event.key === "Escape" && onClose?.();
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [onClose, open]);
-  if (!open) return null;
-  return (
-    <div
-      className="fixed inset-0 z-[10000] flex items-center justify-center bg-[rgba(31,27,95,0.35)] px-4 backdrop-blur-[2px]"
-      onMouseDown={(event) =>
-        event.target === event.currentTarget && onClose?.()
-      }
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="admin-card max-h-[90vh] w-full max-w-2xl overflow-hidden shadow-2xl"
-      >
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-          <IconButton title="Close" onClick={onClose}>
-            <X size={16} />
-          </IconButton>
-        </div>
-        <div className="max-h-[65vh] overflow-y-auto p-5">{children}</div>
-        {footer && (
-          <div className="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-5 py-4">
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
   const { can } = usePermission();
   const empty = emptyProductReferralAmountForm;
@@ -1152,7 +942,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
         </div>
 
         {/* Existing Overrides Table */}
-        <SharedDataTable
+        <DataTable
           columns={[
             {
               key: "storeId",
@@ -2601,7 +2391,7 @@ const ReferralCommerce = () => {
     },
     {
       label: "Referral Sales",
-      value: formatAmount(summary?.orders?.eligibleAmount),
+      value: formatIndianNumber(summary?.orders?.eligibleAmount),
       sub: `${summary?.orders?.total || 0} orders`,
       icon: <BadgeIndianRupee aria-hidden="true" size={18} />,
       iconBg: "#ffe7b8",
@@ -2696,9 +2486,30 @@ const ReferralCommerce = () => {
         </div>
       );
     })(),
-    kyc: <StatusPill value={item.kycStatus || "not_submitted"} />,
-    bank: <StatusPill value={item.payoutProfileStatus || "not_submitted"} />,
-    status: <StatusPill value={item.status} />,
+    kyc: (
+      <StatusBadge
+        status={item.kycStatus || "not_submitted"}
+        label={item.kycStatus ? undefined : "-"}
+        size="sm"
+        dot
+      />
+    ),
+    bank: (
+      <StatusBadge
+        status={item.payoutProfileStatus || "not_submitted"}
+        label={item.payoutProfileStatus ? undefined : "-"}
+        size="sm"
+        dot
+      />
+    ),
+    status: (
+      <StatusBadge
+        status={item.status}
+        label={item.status ? undefined : "-"}
+        size="sm"
+        dot
+      />
+    ),
     actions: (
       <TransparentButton
         type="button"
@@ -2728,9 +2539,16 @@ const ReferralCommerce = () => {
     ),
     code: order.code,
     customer: renderCustomerDetails(order),
-    amount: formatAmount(order.eligibleAmount),
-    discount: formatAmount(order.discountAmount),
-    status: <StatusPill value={order.status} />,
+    amount: formatIndianNumber(order.eligibleAmount),
+    discount: formatIndianNumber(order.discountAmount),
+    status: (
+      <StatusBadge
+        status={order.status}
+        label={order.status ? undefined : "-"}
+        size="sm"
+        dot
+      />
+    ),
     created: formatDate(order.createdAt),
   }));
 
@@ -2739,7 +2557,7 @@ const ReferralCommerce = () => {
     influencerId: payout.influencerId,
     influencer: renderInfluencerRef(payout.influencerId),
     coins: formatCoins(payout.coinAmount ?? payout.amount),
-    payable: formatAmount(
+    payable: formatIndianNumber(
       payout.currencyAmount ??
         Number((payout.coinAmount ?? payout.amount) || 0) *
           Number(payout.coinValue || 1),
@@ -2753,7 +2571,14 @@ const ReferralCommerce = () => {
         : payout.payoutMethod === "bank"
           ? payout.bankAccountId || "-"
           : "Manual",
-    status: <StatusPill value={payout.status} />,
+    status: (
+      <StatusBadge
+        status={payout.status}
+        label={payout.status ? undefined : "-"}
+        size="sm"
+        dot
+      />
+    ),
     requested: formatDate(payout.requestedAt || payout.createdAt),
     reference: payout.transactionReference || "-",
     actions: (
@@ -2828,7 +2653,14 @@ const ReferralCommerce = () => {
         : formatCoins(rule.bonusValue),
     applyTo: String(rule.applyTo || "").replace(/_/g, " "),
     release: String(rule.releaseRule || "").replace(/_/g, " "),
-    status: <StatusPill value={rule.status} />,
+    status: (
+      <StatusBadge
+        status={rule.status}
+        label={rule.status ? undefined : "-"}
+        size="sm"
+        dot
+      />
+    ),
     actions: (
       <RowActions
         actions={[
@@ -2861,9 +2693,19 @@ const ReferralCommerce = () => {
     achieved: Number(row.achievedValue || 0).toLocaleString("en-IN"),
     progress: `${Number(row.progressPercent || 0).toFixed(2)}%`,
     status: row.existingAchievement ? (
-      <StatusPill value={row.existingAchievement.status} />
+      <StatusBadge
+        status={row.existingAchievement.status}
+        label={row.existingAchievement.status ? undefined : "-"}
+        size="sm"
+        dot
+      />
     ) : (
-      <StatusPill value={row.achieved ? "achieved" : "in_progress"} />
+      <StatusBadge
+        status={row.achieved ? "achieved" : "in_progress"}
+        label={row.achieved ? undefined : "-"}
+        size="sm"
+        dot
+      />
     ),
   }));
 
@@ -2874,7 +2716,14 @@ const ReferralCommerce = () => {
     cycle: achievement.cycleKey,
     target: `${String(achievement.targetType || "").replace(/_/g, " ")} ${Number(achievement.achievedValue || 0).toLocaleString("en-IN")} / ${Number(achievement.targetValue || 0).toLocaleString("en-IN")}`,
     bonus: formatCoins(achievement.bonusCoins),
-    status: <StatusPill value={achievement.status} />,
+    status: (
+      <StatusBadge
+        status={achievement.status}
+        label={achievement.status ? undefined : "-"}
+        size="sm"
+        dot
+      />
+    ),
     achievedAt: formatDate(achievement.achievedAt || achievement.createdAt),
   }));
 
@@ -2883,8 +2732,22 @@ const ReferralCommerce = () => {
     reason: review.reason,
     influencer: renderInfluencerRef(review.influencerId),
     code: review.code || "-",
-    severity: <StatusPill value={review.severity} />,
-    status: <StatusPill value={review.status} />,
+    severity: (
+      <StatusBadge
+        status={review.severity}
+        label={review.severity ? undefined : "-"}
+        size="sm"
+        dot
+      />
+    ),
+    status: (
+      <StatusBadge
+        status={review.status}
+        label={review.status ? undefined : "-"}
+        size="sm"
+        dot
+      />
+    ),
     created: formatDate(review.createdAt),
   }));
 
@@ -2985,7 +2848,12 @@ const ReferralCommerce = () => {
           </div>
 
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
-            <StatusPill value={partnerTypeLabel(node.influencerType)} />
+            <StatusBadge
+              status={partnerTypeLabel(node.influencerType)}
+              label={partnerTypeLabel(node.influencerType) ? undefined : "-"}
+              size="sm"
+              dot
+            />
             <span className="text-xs font-medium text-gray-500">
               Level {node.level || depth + 1}
             </span>
@@ -3159,19 +3027,21 @@ const ReferralCommerce = () => {
           </h2>
 
           <div className="flex items-center gap-2">
-            <button
+            <TransparentButton
               type="button"
-              onClick={() => refreshActive()}
+              label={loading ? "Refreshing..." : "Refresh"}
               disabled={loading}
-              className="admin-btn-secondary inline-flex min-h-7 items-center gap-2 px-3 text-[11px]"
-            >
-              <RefreshCw
-                aria-hidden="true"
-                size={15}
-                className={loading ? "animate-spin" : ""}
-              />
-              {loading ? "Refreshing..." : "Refresh"}
-            </button>
+              className="min-h-7 rounded px-3 py-0 text-[11px] font-semibold"
+              onClick={() => refreshActive()}
+              icon={
+                <RefreshCw
+                  aria-hidden="true"
+                  size={15}
+                  className={loading ? "animate-spin" : ""}
+                />
+              }
+            />
+
             <TransparentButton
               type="button"
               label="See All"
@@ -3181,132 +3051,70 @@ const ReferralCommerce = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="admin-table-head font-inter text-[12px]">
-              <tr>
-                <th className="px-4 py-3 font-semibold">S. No.</th>
-                <th className="px-4 py-3 font-semibold">Order ID</th>
-                <th className="px-4 py-3 font-semibold">Customer</th>
-                <th className="px-4 py-3 font-semibold">Amount</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-              </tr>
-            </thead>
+        <DataTable
+          columns={[
+            {
+              key: "orderNumber",
+              label: "Order ID",
+              render: (_, order, index) => {
+                const orderId =
+                  order.orderId || order.order_id || order.id || order._id;
 
-            {loading ? (
-              <tbody className="text-[12px]">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <tr
-                    key={index}
-                    className="border-b border-[#f0e8dc] last:border-0"
-                  >
-                    {/* S. No. */}
-                    <td className="px-4 py-4">
-                      <div className="h-4 w-6 animate-pulse rounded bg-gray-200" />
-                    </td>
+                const orderNumber =
+                  order.orderNumber ||
+                  order.order_number ||
+                  String(orderId || index + 1).slice(0, 10);
 
-                    {/* Order ID */}
-                    <td className="px-4 py-4">
-                      <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-                    </td>
+                return renderOrderLink(orderId, orderNumber);
+              },
+            },
+            {
+              key: "customer",
+              label: "Customer",
+              render: (_, order) => renderCustomerDetails(order),
+            },
+            {
+              key: "amount",
+              label: "Amount",
+              render: (_, order) => {
+                const amountVal =
+                  order.eligibleAmount ??
+                  order.seller_order_total ??
+                  order.payable_amount ??
+                  order.totalAmount ??
+                  order.total ??
+                  0;
 
-                    {/* Customer */}
-                    <td className="px-4 py-4">
-                      <div className="space-y-2">
-                        <div className="h-4 w-28 animate-pulse rounded bg-gray-200" />
-                        <div className="h-3 w-40 animate-pulse rounded bg-gray-200" />
-                      </div>
-                    </td>
-
-                    {/* Amount */}
-                    <td className="px-4 py-4">
-                      <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-4">
-                      <div className="h-7 w-20 animate-pulse rounded-md bg-gray-200" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            ) : (
-              <tbody className="text-[12px] text-slate-600">
-                {orders.slice(0, 5).length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-6">
-                      <div className="mx-auto flex flex-col items-center gap-2 rounded-lg bg-[var(--admin-surface-soft)] px-4 py-8 text-center text-gray-400">
-                        <img
-                          src="/Img/noData.png"
-                          alt="No recent orders"
-                          className="h-24 w-24 max-w-full object-contain sm:h-32 sm:w-32 md:h-[150px] md:w-[150px]"
-                        />
-                        <span className="text-sm font-medium">
-                          No Recent Orders Found.
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  orders.slice(0, 5).map((order, index) => {
-                    const status = order.status || "Pending";
-
-                    const orderId =
-                      order.orderId || order.order_id || order.id || order._id;
-
-                    const orderNumber =
-                      order.orderNumber ||
-                      order.order_number ||
-                      String(orderId || index + 1).slice(0, 10);
-
-                    const amountVal =
-                      order.eligibleAmount ??
-                      order.seller_order_total ??
-                      order.payable_amount ??
-                      order.totalAmount ??
-                      order.total ??
-                      0;
-
-                    const formattedAmount = `₹${Number(
-                      amountVal,
-                    ).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
-
-                    return (
-                      <tr
-                        key={orderId || index}
-                        className="border-b border-[#f0e8dc] last:border-0 hover:bg-[var(--admin-surface-soft)]"
-                      >
-                        <td className="px-4 py-3 text-start tabular-nums">
-                          {index + 1}.
-                        </td>
-
-                        <td className="px-4 py-3 font-medium">
-                          {renderOrderLink(orderId, orderNumber)}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          {renderCustomerDetails(order)}
-                        </td>
-
-                        <td className="px-4 py-3 font-medium text-gray-900">
-                          {formattedAmount}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          <StatusBadge
-                            status={status}
-                            appearance="order"
-                            size="sm"
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            )}
-          </table>
-        </div>
+                return `₹${Number(amountVal).toLocaleString("en-IN", {
+                  maximumFractionDigits: 0,
+                })}`;
+              },
+              cellClassName: "font-medium text-gray-900",
+            },
+            {
+              key: "status",
+              label: "Status",
+              render: (_, order) => (
+                <StatusBadge
+                  status={order.status || "Pending"}
+                  appearance="order"
+                  size="sm"
+                />
+              ),
+            },
+          ]}
+          data={orders.slice(0, 5)}
+          loading={loading}
+          totalCount={orders.slice(0, 5).length}
+          page={1}
+          pageSize={5}
+          showSerialNumber
+          searchValue=""
+          cardClassName="border-0 shadow-none"
+          emptyText="No Recent Orders Found."
+          stretchEmptyState={false}
+          tableContainerClassName="overflow-x-auto"
+        />
       </section>
     </div>
   );
@@ -3350,7 +3158,7 @@ const ReferralCommerce = () => {
               </p>
             </div>
           </div>
-          <TextInput
+          <FormInput
             label="INR per Coin"
             name="coinValue"
             type="number"
@@ -3361,7 +3169,8 @@ const ReferralCommerce = () => {
             required
             error={rulesErrors.coinValue}
           />
-          <TextInput
+
+          <FormInput
             label="Coin Expiry Days"
             name="coinExpiryDays"
             type="number"
@@ -3372,25 +3181,28 @@ const ReferralCommerce = () => {
             required
             error={rulesErrors.coinExpiryDays}
           />
-          <SelectInput
+          <FilterSelect
             label="Coin Usage"
+            isClearable
             name="coinUsage"
             value={rulesForm.coinUsage}
-            onChange={handleRulesField}
+            onChange={(option) =>
+              handleRulesField({
+                target: {
+                  name: "coinUsage",
+                  value: option?.value ?? "",
+                },
+              })
+            }
             required
             error={rulesErrors.coinUsage}
-          >
-            {optionList(referralCoinUsageModes.options, [
+            options={optionList(referralCoinUsageModes.options, [
               "wallet",
               "discount",
               "both",
-            ]).map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectInput>
-          <TextInput
+            ])}
+          />
+          <FormInput
             label="Minimum Eligible Order Amount"
             name="minOrderAmount"
             type="number"
@@ -3416,7 +3228,7 @@ const ReferralCommerce = () => {
               </p>
             </div>
           </div>
-          <TextInput
+          <FormInput
             label="Customer Discount Share %"
             name="customerSharePercent"
             type="number"
@@ -3428,7 +3240,8 @@ const ReferralCommerce = () => {
             required
             error={rulesErrors.customerSharePercent}
           />
-          <TextInput
+
+          <FormInput
             label="Code Owner Commission Share %"
             name="childSharePercent"
             type="number"
@@ -3440,7 +3253,8 @@ const ReferralCommerce = () => {
             required
             error={rulesErrors.childSharePercent}
           />
-          <TextInput
+
+          <FormInput
             label="Code Owner Parent Commission Share %"
             name="parentSharePercent"
             type="number"
@@ -3533,7 +3347,7 @@ const ReferralCommerce = () => {
               </p>
             </div>
           </div>
-          <TextInput
+          <FormInput
             label="Minimum Withdrawal Coins"
             name="minimumWithdrawalCoins"
             type="number"
@@ -3544,7 +3358,8 @@ const ReferralCommerce = () => {
             required
             error={rulesErrors.minimumWithdrawalCoins}
           />
-          <TextInput
+
+          <FormInput
             label="Maximum Withdrawal Coins"
             name="maximumWithdrawalCoins"
             type="number"
@@ -3555,7 +3370,8 @@ const ReferralCommerce = () => {
             required
             error={rulesErrors.maximumWithdrawalCoins}
           />
-          <TextInput
+
+          <FormInput
             label="Daily Withdrawal Limit"
             name="dailyWithdrawalLimitCoins"
             type="number"
@@ -3566,7 +3382,7 @@ const ReferralCommerce = () => {
             required
             error={rulesErrors.dailyWithdrawalLimitCoins}
           />
-          <TextInput
+          <FormInput
             label="Monthly Withdrawal Limit"
             name="monthlyWithdrawalLimitCoins"
             type="number"
@@ -3577,7 +3393,8 @@ const ReferralCommerce = () => {
             required
             error={rulesErrors.monthlyWithdrawalLimitCoins}
           />
-          <TextInput
+
+          <FormInput
             label="Coin Release Delay Days"
             name="releaseDelayDays"
             type="number"
@@ -3589,23 +3406,33 @@ const ReferralCommerce = () => {
             error={rulesErrors.releaseDelayDays}
             hint="Whole days before earned referral coins become available."
           />
-          <SelectInput
+          <FilterSelect
             label="Approval Mode"
             name="withdrawalApprovalMode"
-            value={rulesForm.withdrawalApprovalMode}
-            onChange={handleRulesField}
+            value={
+              optionList(referralWithdrawalApprovalModes.options, [
+                "manual",
+                "auto",
+              ]).find(
+                (option) => option.value === rulesForm.withdrawalApprovalMode,
+              ) || null
+            }
+            onChange={(option) =>
+              handleRulesField({
+                target: {
+                  name: "withdrawalApprovalMode",
+                  value: option?.value ?? "",
+                },
+              })
+            }
             required
             error={rulesErrors.withdrawalApprovalMode}
-          >
-            {optionList(referralWithdrawalApprovalModes.options, [
+            options={optionList(referralWithdrawalApprovalModes.options, [
               "manual",
               "auto",
-            ]).map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectInput>
+            ])}
+          />
+
           <label className="admin-switch mt-6 h-10 rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-3">
             <input
               type="checkbox"
@@ -3673,7 +3500,7 @@ const ReferralCommerce = () => {
               </p>
             </div>
           </div>
-          <TextInput
+          <FormInput
             label="Code Prefix"
             name="referralCodePrefix"
             value={rulesForm.referralCodePrefix}
@@ -3681,9 +3508,10 @@ const ReferralCommerce = () => {
             maxLength="8"
             pattern="[A-Za-z0-9]*"
             error={rulesErrors.referralCodePrefix}
-            hint="Optional; up to 8 uppercase letters or numbers, for example SAM."
+            helperText="Optional; up to 8 uppercase letters or numbers, for example SAM."
           />
-          <TextInput
+
+          <FormInput
             label="Random Character Length"
             name="referralCodeRandomLength"
             type="number"
@@ -3695,18 +3523,35 @@ const ReferralCommerce = () => {
             required
             error={rulesErrors.referralCodeRandomLength}
           />
-          <SelectInput
+          <FilterSelect
             label="Character Set"
             name="referralCodeCharacterSet"
-            value={rulesForm.referralCodeCharacterSet}
-            onChange={handleRulesField}
+            isClearable
+            value={
+              [
+                { value: "alphanumeric", label: "Letters and numbers" },
+                { value: "alphabetic", label: "Letters only" },
+                { value: "numeric", label: "Numbers only" },
+              ].find(
+                (option) => option.value === rulesForm.referralCodeCharacterSet,
+              ) || null
+            }
+            onChange={(option) =>
+              handleRulesField({
+                target: {
+                  name: "referralCodeCharacterSet",
+                  value: option?.value ?? "",
+                },
+              })
+            }
             required
             error={rulesErrors.referralCodeCharacterSet}
-          >
-            <option value="alphanumeric">Letters and numbers</option>
-            <option value="alphabetic">Letters only</option>
-            <option value="numeric">Numbers only</option>
-          </SelectInput>
+            options={[
+              { value: "alphanumeric", label: "Letters and numbers" },
+              { value: "alphabetic", label: "Letters only" },
+              { value: "numeric", label: "Numbers only" },
+            ]}
+          />
           <div className="relative">
             <label className="mb-1.5 block text-xs font-semibold text-[var(--admin-navy)]">
               Example
@@ -3784,29 +3629,6 @@ const ReferralCommerce = () => {
             <span className="font-semibold">Rule active</span>
           </label>
           <div />
-          {/* <label className="block md:col-span-4">
-          <span className="mb-1 block text-xs font-medium uppercase text-gray-500">
-            Metadata (JSON object)
-          </span>
-          <textarea
-            name="metadata"
-            rows="4"
-            value={rulesForm.metadata}
-            onChange={handleRulesField}
-            aria-invalid={Boolean(rulesErrors.metadata)}
-            className={`w-full rounded border bg-white px-3 py-2 font-mono text-sm outline-none focus:border-indigo-400 ${rulesErrors.metadata ? "border-red-400" : "border-gray-200"}`}
-            placeholder='{"campaign": "default"}'
-          />
-          {rulesErrors.metadata ? (
-            <span className="admin-field-error" role="alert">
-              {rulesErrors.metadata}
-            </span>
-          ) : (
-            <span className="mt-1 block text-xs text-gray-500">
-              Optional backend metadata. Enter an object or keep {"{}"}.
-            </span>
-          )}
-        </label> */}
 
           <div className="flex justify-end border-t border-[var(--admin-line)] pt-4 md:col-span-4">
             <OrangeButton
@@ -3921,7 +3743,7 @@ const ReferralCommerce = () => {
   );
 
   const renderBonusRules = () => (
-    <SharedDataTable
+    <DataTable
       columns={[
         { key: "name", label: "Rule" },
         { key: "period", label: "Period" },
@@ -3954,7 +3776,7 @@ const ReferralCommerce = () => {
   );
 
   const renderBonusProgress = () => (
-    <SharedDataTable
+    <DataTable
       columns={[
         { key: "rule", label: "Rule" },
         { key: "influencer", label: "Referral Partner" },
@@ -3986,7 +3808,7 @@ const ReferralCommerce = () => {
   );
 
   const renderBonusHistory = () => (
-    <SharedDataTable
+    <DataTable
       columns={[
         { key: "rule", label: "Rule" },
         { key: "influencer", label: "Referral Partner" },
@@ -4204,7 +4026,7 @@ const ReferralCommerce = () => {
 
       {activeTab === "overview" && renderOverview()}
       {activeTab === "influencers" && (
-        <SharedDataTable
+        <DataTable
           columns={[
             { key: "influencer", label: "Referral Partner" },
             { key: "type", label: "Type" },
@@ -4299,7 +4121,7 @@ const ReferralCommerce = () => {
       )}
       {activeTab === "bonuses" && renderBonuses()}
       {activeTab === "orders" && (
-        <SharedDataTable
+        <DataTable
           columns={[
             { key: "order", label: "Order" },
             { key: "code", label: "Referral Code" },
@@ -4326,7 +4148,7 @@ const ReferralCommerce = () => {
       )}
 
       {activeTab === "payouts" && (
-        <SharedDataTable
+        <DataTable
           columns={[
             { key: "influencer", label: "Referral Partner" },
             { key: "coins", label: "Requested Coins" },
@@ -4355,7 +4177,7 @@ const ReferralCommerce = () => {
       )}
 
       {activeTab === "fraud" && (
-        <SharedDataTable
+        <DataTable
           columns={[
             { key: "reason", label: "Reason" },
             { key: "influencer", label: "Referral Partner" },
@@ -4825,7 +4647,7 @@ const ReferralCommerce = () => {
                     Transfer Amount
                   </span>
                   <strong className="text-lg font-semibold text-[#805C13]">
-                    {formatAmount(
+                    {formatIndianNumber(
                       payoutAction?.payout?.currencyAmount ??
                         Number(
                           (payoutAction?.payout?.coinAmount ??
@@ -4921,7 +4743,7 @@ const ReferralCommerce = () => {
               description="Enter the transaction reference and upload proof of payment."
             >
               <div className="space-y-4">
-                <TextInput
+                <FormInput
                   required
                   nativeRequired={false}
                   label="Bank / UPI Transaction Reference"

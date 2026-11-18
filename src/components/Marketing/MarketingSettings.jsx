@@ -5,7 +5,7 @@ import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../_helpers/endpoints";
 import { toast } from "../../utils/toast";
 import FilterSelect from "../Atoms/FilterSelect/FilterSelect";
-import { TextInput } from "../../pages/ReferralCommerce/ReferralCommerce";
+import FormInput from "../Atoms/FormInput/FormInput";
 const DEFAULT_MARKETING = {
   enabled: false,
   campaignKey: "default",
@@ -158,8 +158,8 @@ export default function MarketingSettings({ kind = "coupons" }) {
             hide
           >
             <button
+              className="bg-golden text-white text-sm px-4 rounded-md"
               type="button"
-              className="button-primary-white text-xs"
               onClick={save}
               disabled={busy || !loaded}
             >
@@ -209,17 +209,17 @@ export default function MarketingSettings({ kind = "coupons" }) {
         className={`grid min-w-0 grid-cols-1 gap-4 border-0 p-0 md:grid-cols-2 xl:grid-cols-3 ${!policy.enabled ? "opacity-50" : ""}`}
       >
         <legend className="sr-only">Marketing limits</legend>
-        <TextInput
+        <FormInput
           label="Campaign key"
           value={policy.campaignKey}
           onChange={(event) => patchField("campaignKey", event.target.value)}
-          hint="Keep this key to retain usage history. A new key starts new limits; reusing a key restores its history."
+          helperText="Keep this key to retain usage history. A new key starts new limits; reusing a key restores its history."
         />
         {[
           ["startsAt", "Campaign start"],
           ["endsAt", "Campaign end"],
         ].map(([key, label]) => (
-          <TextInput
+          <FormInput
             key={key}
             label={`${label} (local time)`}
             type="datetime-local"
@@ -258,6 +258,7 @@ export default function MarketingSettings({ kind = "coupons" }) {
               { value: "new", label: "First order only" },
               { value: "returning", label: "Returning customers only" },
             ]}
+            isClearable
             value={{
               value: policy.firstOrderOnly ? "new" : policy.customerEligibility,
               label:
@@ -295,12 +296,12 @@ export default function MarketingSettings({ kind = "coupons" }) {
               key,
             ),
         ).map(([key, label]) => (
-          <TextInput
+          <FormInput
             key={key}
             label={label}
             type="number"
             min="0"
-            hint={
+            helperText={
               key === "minOrderAmount"
                 ? "Uses the whole order subtotal, including products without a referral pool, before discounts, tax and shipping."
                 : ""
