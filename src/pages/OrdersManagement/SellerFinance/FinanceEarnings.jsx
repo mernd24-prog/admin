@@ -28,6 +28,7 @@ import {
   // FinanceNav,
   FinanceStatusBadge,
   financeDateTime,
+  financeAmounts,
   financeList,
   financeMoney,
   financeValue,
@@ -280,12 +281,13 @@ export default function FinanceEarnings() {
 
       {
         key: "net",
-        label: "Item net before COD",
+        label: "Your earning",
         sortable: true,
         render: (_, row) => (
           <strong>
             {financeMoney(
-              financeValue(row, "net_amount", "netAmount"),
+              financeAmounts(row).sellerEarning ??
+                financeValue(row, "net_amount", "netAmount"),
               row.currency,
             )}
           </strong>
@@ -648,12 +650,13 @@ export default function FinanceEarnings() {
                 {/* YOUR EARNING */}
                 <div>
                   <span className="text-xs text-[var(--admin-muted)]">
-                    Item net before COD
+                    Your earning
                   </span>
 
                   <strong className="mt-1 block text-base font-bold text-emerald-700">
                     {financeMoney(
-                      financeValue(detail, "net_amount", "netAmount"),
+                      financeAmounts(detail).sellerEarning ??
+                        financeValue(detail, "net_amount", "netAmount"),
                       detail.currency,
                     )}
                   </strong>

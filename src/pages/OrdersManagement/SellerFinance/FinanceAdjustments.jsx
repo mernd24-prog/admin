@@ -28,6 +28,7 @@ import {
   FinanceStatusBadge,
   financeDateTime,
   financeMoney,
+  financeAmounts,
   sellerFinanceStatus,
   signedFinanceMoney,
   unwrapFinance,
@@ -133,7 +134,7 @@ export default function FinanceAdjustments() {
         ...row,
         adjustmentType: "holds",
         title: "Temporary Hold",
-        amount: Number(row.netAmount || row.net_amount || 0),
+        amount: Number(financeAmounts(row).sellerEarning ?? row.netAmount ?? row.net_amount ?? 0),
         description:
           "This earning is temporarily unavailable while a return, refund, dispute, or another hold is active.",
       }));
@@ -143,20 +144,20 @@ export default function FinanceAdjustments() {
         ...row,
         adjustmentType: "returns",
         title: "Return or refund adjustment",
-        amount: -Math.abs(Number(row.refundAmount || row.refund_amount || 0)),
+        amount: -Math.abs(Number(financeAmounts(row).refundAdjustment ?? row.refundAmount ?? row.refund_amount ?? 0)),
         description:
           "The related earning was reduced because an item was returned or refunded.",
       }));
     const other = walletItems
       .filter(
         (row) =>
-          Number(row.adjustmentAmount || row.adjustment_amount || 0) !== 0,
+          Number(financeAmounts(row).otherAdjustment ?? row.adjustmentAmount ?? row.adjustment_amount ?? 0) !== 0,
       )
       .map((row) => ({
         ...row,
         adjustmentType: "other",
         title: "Other adjustment",
-        amount: Number(row.adjustmentAmount || row.adjustment_amount || 0),
+        amount: Number(financeAmounts(row).otherAdjustment ?? row.adjustmentAmount ?? row.adjustment_amount ?? 0),
         description:
           "An adjustment recorded by the existing settlement calculation.",
       }));

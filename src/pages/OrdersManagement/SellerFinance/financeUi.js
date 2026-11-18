@@ -39,6 +39,16 @@ export const financeMetadata = (row = {}) => {
     return {};
   }
 };
+export const financePresentation = (row = {}) => row.finance || {};
+export const financeAmounts = (row = {}) => {
+  const presentation = financePresentation(row);
+  return {
+    ...(presentation.transaction || {}),
+    ...(presentation.earnings || {}),
+    ...(presentation.recovery || {}),
+    ...(presentation.payout || {}),
+  };
+};
 export const financeBreakdown = (row = {}) =>
   financeMetadata(row).financialBreakdown || financeMetadata(row);
 
@@ -623,14 +633,11 @@ export const CalculationRows = ({ row }) => {
           </div>
         ))}
       <div className="flex justify-between border-t border-[var(--admin-line)] pt-3 text-base font-bold">
-        <span>Item net before COD</span>
+        <span>Your earning</span>
         <span className="text-emerald-700">
           {financeMoney(amounts.net, currency)}
         </span>
       </div>
-      <p className="text-xs text-[var(--admin-muted)]">
-        COD collection recovery is applied separately to the actual payable balance.
-      </p>
       {/* <p className="rounded-lg bg-blue-50 p-3 text-xs leading-5 text-blue-800">
         Shipping is shown from the backend settlement snapshot. A reimbursement
         is added to your earning; only an actual shipping deduction is

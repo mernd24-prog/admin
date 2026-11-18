@@ -962,7 +962,7 @@ const SellerFinance = () => {
         hint: `${financeBuckets.count} item settlement rows`,
       },
       {
-        label: "Eligible item earnings",
+        label: "Eligible earnings",
         value: money(financeBuckets.payableNow),
         hint: `${financeBuckets.eligibleCount} eligible unpaid row(s)`,
       },
@@ -1650,7 +1650,7 @@ const SellerFinance = () => {
               },
               {
                 key: "payableNow",
-                label: "Eligible item earnings",
+                label: "Eligible earnings",
                 render: (value) => (
                   <div>
                     <div className="font-semibold text-[#208a3c]">
@@ -1854,17 +1854,12 @@ const SellerFinance = () => {
             ...(isSellerDetail ? remainingFinancialColumns : []),
             {
               key: "net_amount",
-              label: "Item Net Before COD",
+              label: "Net Payable",
               render: (_, row) => (
                 <div>
                   <span className="font-semibold text-[#208a3c]">
                     {money(Math.max(rowMoney(row, "net_amount", "netAmount"), 0))}
                   </span>
-                  {row.payment_provider === "cod" || row.paymentProvider === "cod" ? (
-                    <div className="mt-1 text-[10px] text-amber-700">
-                      COD recovery is applied separately
-                    </div>
-                  ) : null}
                 </div>
               ),
             },
@@ -2126,7 +2121,7 @@ const SellerFinance = () => {
               },
               {
                 key: "net_amount",
-                label: "Item Net Before COD",
+                label: "Net Payable",
                 render: (_, row) => (
                   <span className="font-semibold text-[#208a3c]">
                     {money(
