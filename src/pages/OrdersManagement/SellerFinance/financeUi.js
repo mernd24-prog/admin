@@ -49,6 +49,8 @@ export const financeAmounts = (row = {}) => {
     ...(presentation.payout || {}),
   };
 };
+
+ 
 export const financeBreakdown = (row = {}) =>
   financeMetadata(row).financialBreakdown || financeMetadata(row);
 
@@ -235,17 +237,37 @@ export const FinanceDateRangeFilter = ({ dateRange, loading = false }) => (
 export const sellerFinanceStatus = (rowOrStatus = {}) => {
   const row =
     typeof rowOrStatus === "object" ? rowOrStatus : { status: rowOrStatus };
+  const payoutRaw = String(row.payoutStatus || "").toLowerCase();
+  const terminalPayoutStatuses = [
+    "processing",
+    "in_process",
+    "approved",
+    "completed",
+    "processed",
+    "paid",
+    "settled",
+    "failed",
+    "cancelled",
+    "canceled",
+  ];
   const raw = String(
-    row.lifecycleStatus ||
+    (terminalPayoutStatuses.includes(payoutRaw) && payoutRaw) ||
       row.releaseStatus ||
-      row.payoutStatus ||
+      row.lifecycleStatus ||
       row.status ||
+      payoutRaw ||
       "pending",
   ).toLowerCase();
   const reason = String(
     row.releaseReason || row.release_reason || row.payoutHoldReason || "",
   ).toLowerCase();
-  if (["failed", "reversed"].includes(raw))
+  if (["refunded", "reversed", "adjusted"].includes(raw))
+    return {
+      key: "adjusted",
+      label: "Adjusted",
+      detail: "The earning was changed by a refund, return, or adjustment.",
+    };
+  if (["failed"].includes(raw))
     return {
       key: "failed",
       label: "Failed",
@@ -267,7 +289,16 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
       detail: "Included in a payout being processed.",
     };
   if (
-    ["held", "blocked", "on_hold"].includes(raw) ||
+    [
+      "held",
+      "blocked",
+      "on_hold",
+      "return_received",
+      "return_in_transit",
+      "qc_pending",
+      "refund_pending",
+      "disputed",
+    ].includes(raw) ||
     reason.includes("return") ||
     reason.includes("refund") ||
     reason.includes("dispute")
@@ -275,21 +306,20 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
     return {
       key: "held",
       label: "On hold",
-      detail: reason.includes("return")
-        ? "Return in progress"
-        : "Temporarily unavailable.",
+      detail:
+        reason.includes("return") || raw.includes("return") || raw === "qc_pending"
+          ? "Return or quality check in progress."
+          : reason.includes("refund") || raw === "refund_pending"
+            ? "Refund decision in progress."
+            : reason.includes("dispute") || raw === "disputed"
+              ? "Dispute review in progress."
+              : "Temporarily unavailable.",
     };
   if (["eligible", "available"].includes(raw))
     return {
       key: "available",
       label: "Available",
       detail: "Ready for payout.",
-    };
-  if (["reversed", "adjusted", "refunded"].includes(raw))
-    return {
-      key: "adjusted",
-      label: "Adjusted",
-      detail: "Affected by an adjustment.",
     };
   return {
     key: "waiting",
@@ -558,7 +588,7 @@ export const MoneyEquation = ({
   <div className="finance-equation admin-card grid items-center gap-3 p-5 text-center sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
     <div>
       <span className="text-xs text-[var(--admin-muted)]">
-        Available earnings
+        Eligible earnings before recovery
       </span>
       <strong className="mt-1 block text-xl">
         {financeMoney(available, currency)}
@@ -566,7 +596,7 @@ export const MoneyEquation = ({
     </div>
     <span className="text-xl text-[var(--admin-muted)]">−</span>
     <div>
-      <span className="text-xs text-[var(--admin-muted)]">Amount you owe</span>
+      <span className="text-xs text-[var(--admin-muted)]">COD / other balance recovered</span>
       <strong className="mt-1 block text-xl text-red-700">
         {financeMoney(owed, currency)}
       </strong>
@@ -585,7 +615,7 @@ export const CalculationRows = ({ row }) => {
   const amounts = earningAmounts(row);
   const currency = row.currency || "INR";
   const lines = [
-    ["Order Earnings Before Deductions", amounts.product, "neutral"],
+    ["Order amount before seller deductions", amounts.product, "neutral"],
     [
       "Shipping Collected / Reimbursed",
       amounts.shippingNet,

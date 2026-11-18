@@ -1009,7 +1009,6 @@ const SellerPayouts = () => {
         ]}
       />
 
-      {/* {isSeller && <FinanceNav />} */}
 
       {/* {isSeller && (
         <FinancePageGuide

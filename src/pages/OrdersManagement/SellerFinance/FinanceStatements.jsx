@@ -194,7 +194,6 @@ export default function FinanceStatements() {
           { label: "Statements" },
         ]}
       />
-      {/* <FinanceNav /> */}
 
       <DataTable
         columns={columns}

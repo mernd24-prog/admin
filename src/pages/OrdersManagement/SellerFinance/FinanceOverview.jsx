@@ -33,7 +33,6 @@ import CollapsibleSection from "../../../components/Shared/FormSection";
 import ContentPanel from "../../../components/Shared/ContentPanel";
 import SummaryCard from "../../../components/Shared/SummaryCard";
 import TransparentButton from "../../../components/Atoms/buttons/TransParentButton";
-import { SellerFinanceWalletDetails } from "./SellerFinance";
 
 const sectionClass = "admin-card overflow-hidden";
 const sectionHeaderClass =
@@ -100,7 +99,13 @@ export default function FinanceOverview() {
     items.reduce((total, item) => {
       const canonical = financeAmounts(item);
       if (keys.includes("netAmount") || keys.includes("net_amount")) {
-        return total + Number(canonical.sellerEarning || 0);
+        const netValue =
+          canonical.sellerEarning ??
+          item?.netAmount ??
+          item?.net_amount ??
+          item?.payableAmount ??
+          item?.payable_amount;
+        return total + Number(netValue || 0);
       }
       const value = keys.find(
         (key) => item?.[key] !== undefined && item?.[key] !== null,
@@ -110,31 +115,53 @@ export default function FinanceOverview() {
 
   const grossEarnings = Number(
     financeSummary.grossEarnings ??
-      wallet.grossEarnings ??
-      balances.grossEarnings ??
-      sumItems(["grossAmount", "gross_amount", "amount"]),
+    wallet.grossEarnings ??
+    balances.grossEarnings ??
+    sumItems(["grossAmount", "gross_amount", "amount"]),
   );
 
   const netEarnings = Number(
     financeSummary.netEarnings ??
-      wallet.netEarnings ??
-      balances.netEarnings ??
-      sumItems(["netAmount", "net_amount"]),
+    wallet.netEarnings ??
+    balances.netEarnings ??
+    sumItems(["netAmount", "net_amount"]),
   );
+
+  // Commission rows already contain the fee/tax amounts that produced the
+  // seller earning.  Do not infer deductions from gross minus net alone:
+  // shipping reimbursement is included in net earnings and would otherwise
+  // make the deduction card read zero (or become negative).
+  const itemDeductions =
+    sumItems(["commissionAmount", "commission_amount"]) +
+    sumItems(["taxAmount", "tax_amount"]) +
+    Math.abs(sumItems(["refundAmount", "refund_amount"])) +
+    Math.abs(sumItems(["adjustmentAmount", "adjustment_amount"]));
+
+  const breakdown = {
+    platformFee: sumItems(["commissionAmount", "commission_amount"]),
+    gstOnPlatformFee: sumItems(["commissionGstAmount", "commission_gst_amount"]),
+    tcs: sumItems(["tcsAmount", "gstTcsAmount", "gst_tcs_amount"]),
+    tds: sumItems(["tdsAmount", "incomeTaxTdsAmount", "income_tax_tds_amount"]),
+    shipping: sumItems(["shippingAmount", "shipping_amount"]),
+    shippingDeduction: sumItems(["shippingDeduction", "shipping_deduction"]),
+    promotion: sumItems(["promotionFundedAmount", "promotion_funded_amount"]),
+    refund: Math.abs(sumItems(["refundAmount", "refund_amount"])),
+    other: Math.abs(sumItems(["adjustmentAmount", "adjustment_amount"])),
+  };
 
   const deductions = Number(
     financeSummary.deductions ??
-      financeSummary.adjustments ??
-      wallet.deductions ??
-      wallet.adjustments ??
-      Math.max(0, grossEarnings - netEarnings),
+    financeSummary.adjustments ??
+    wallet.deductions ??
+    wallet.adjustments ??
+    (itemDeductions || Math.max(0, grossEarnings - netEarnings)),
   );
 
   const previousNetEarnings = Number(
     previousSummary.netEarnings ??
-      previousSummary.net ??
-      wallet.previousNetEarnings ??
-      financeSummary.previousNetEarnings,
+    previousSummary.net ??
+    wallet.previousNetEarnings ??
+    financeSummary.previousNetEarnings,
   );
 
   const percentageChangeValue =
@@ -153,7 +180,7 @@ export default function FinanceOverview() {
     ? percentageChange
     : previousNetEarnings
       ? ((netEarnings - previousNetEarnings) / Math.abs(previousNetEarnings)) *
-        100
+      100
       : null;
 
   const journey = [
@@ -165,21 +192,21 @@ export default function FinanceOverview() {
       "",
     ],
     [
-      "Waiting",
+      "Return window",
       balances.pendingBalance,
       counts.pending || 0,
-      "Waiting for the return period to close",
+      "Delivered earnings waiting for the return period to close",
       "waiting",
     ],
     [
-      "Available",
+      "Eligible",
       balances.availableBalance,
       counts.available || counts.eligible || 0,
-      "Ready before current deductions",
+      "Return window closed with no active hold",
       "available",
     ],
     [
-      "Processing",
+      "Payout processing",
       balances.inProcessBalance,
       payouts.inProcessCount || 0,
       "Transfer is being processed",
@@ -216,7 +243,7 @@ export default function FinanceOverview() {
   );
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="flex flex-col gap-6 pb-4">
       <Loader loading={Boolean(state.loading)} />
 
       <PageHeader
@@ -238,9 +265,8 @@ export default function FinanceOverview() {
         }
       />
 
-
       {/* Payable balance — preserve original layout */}
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
+      <div className="order-1 grid gap-4 lg:grid-cols-[1.2fr_2fr]">
         <Cards
           label="Payable now"
           value={financeMoney(balances.effectiveAvailablePayout, currency)}
@@ -250,26 +276,30 @@ export default function FinanceOverview() {
           iconColor="#1d9b50"
           onClick={() => navigate("/app/seller-payouts")}
         />
-        <CollapsibleSection title="How your payable balance is calculated" collapsible defaultOpen={false} className="self-start">
-          <MoneyEquation available={balances.availableBalance} owed={owed} payable={balances.effectiveAvailablePayout} currency={currency} />
-        </CollapsibleSection>
+        <MoneyEquation available={balances.availableBalance} owed={owed} payable={balances.effectiveAvailablePayout} currency={currency} />
       </div>
 
-      <ContentPanel title="COD collections" action={<TransparentButton label="Review collections" onClick={() => navigate("/app/seller-cod-collections")} />} bodyClassName="p-0">
-        <div className="grid gap-4 p-4 sm:grid-cols-3 sm:p-5">
-          {[
-            ["Cash confirmed", codSummary.collectedAmount, "Physical customer cash retained by the seller.", "/app/seller-cod-collections"],
-            ["Recovered from payouts", codSummary.recoveredAmount, `${financeMoney(codSummary.reservedAmount, currency)} reserved in payouts.`, "/app/seller-payouts"],
-            ["COD still owed", codSummary.outstandingAmount, "Carried forward into future payouts.", "/app/seller-cod-collections"],
-          ].map(([label, amount, detail, path]) => (
-            <SummaryCard key={label} title={label} value={financeMoney(amount, currency)} description={detail} onClick={() => navigate(path)} className="min-h-0 border-0 bg-none shadow-none" valueClassName="text-base" />
-          ))}
-        </div>
-      </ContentPanel>
+      {(Number(codReconciliation.totalOrders || 0) > 0 ||
+        Number(codSummary.collectedAmount || 0) > 0 ||
+        Number(codSummary.outstandingAmount || 0) > 0) && (
+          <div className="order-6">
+            <ContentPanel title="COD collections"   bodyClassName="p-0">
+              <div className="grid gap-4 p-4 sm:grid-cols-3 sm:p-5">
+                {[
+                  ["Cash confirmed", codSummary.collectedAmount, "Physical customer cash retained by the seller.", "/app/seller-cod-collections"],
+                  ["Recovered from payouts", codSummary.recoveredAmount, `${financeMoney(codSummary.reservedAmount, currency)} reserved in payouts.`, "/app/seller-payouts"],
+                  ["COD still owed", codSummary.outstandingAmount, "Carried forward into future payouts.", "/app/seller-cod-collections"],
+                ].map(([label, amount, detail, path]) => (
+                  <SummaryCard key={label} title={label} value={financeMoney(amount, currency)} description={detail} onClick={() => navigate(path)} className="min-h-0 border-0 bg-none shadow-none" valueClassName="text-base" />
+                ))}
+              </div>
+            </ContentPanel>
+          </div>
+        )}
 
       {/* COD reconciliation */}
       {Number(codReconciliation.totalOrders || 0) > 0 && (
-        <section className={sectionClass}>
+        <section className={`order-5 ${sectionClass}`}>
           <div className={sectionHeaderClass}>
             <div className="min-w-0">
               <h2 className="text-base font-semibold text-[var(--admin-navy)]">
@@ -347,7 +377,7 @@ export default function FinanceOverview() {
       )}
 
       {/* Earnings summary */}
-      <section className={sectionClass}>
+      <section className={`order-2 ${sectionClass}`}>
         <div className={sectionHeaderClass}>
           <div>
             <h2 className="text-base font-semibold text-[var(--admin-navy)]">
@@ -362,12 +392,6 @@ export default function FinanceOverview() {
         <div className="grid gap-0 sm:grid-cols-2 xl:grid-cols-4">
           {[
             {
-              label: "Net Earnings",
-              value: financeMoney(netEarnings, currency),
-              color: "text-emerald-700",
-              marker: "bg-emerald-500",
-            },
-            {
               label: "Gross Earnings",
               value: financeMoney(grossEarnings, currency),
               color: "text-[var(--admin-navy)]",
@@ -378,6 +402,12 @@ export default function FinanceOverview() {
               value: financeMoney(deductions, currency),
               color: "text-amber-700",
               marker: "bg-amber-500",
+            },
+            {
+              label: "Net Earnings Before COD",
+              value: financeMoney(netEarnings, currency),
+              color: "text-emerald-700",
+              marker: "bg-emerald-500",
             },
             {
               label: "Change vs Previous Period",
@@ -421,8 +451,34 @@ export default function FinanceOverview() {
         </div>
       </section>
 
+      <section className={`order-3 ${sectionClass}`}>
+        <div className={sectionHeaderClass}>
+          <div>
+            <h2 className="text-base font-semibold text-[var(--admin-navy)]">Earnings breakdown</h2>
+            <p className={`mt-1 ${mutedTextClass}`}>How gross sales become net earnings before COD recovery.</p>
+          </div>
+        </div>
+        <div className="grid gap-0 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Platform fee", breakdown.platformFee, "text-red-700"],
+            ["GST on platform fee", breakdown.gstOnPlatformFee, "text-red-700"],
+            ["TCS", breakdown.tcs, "text-red-700"],
+            ["TDS", breakdown.tds, "text-red-700"],
+            ["Shipping credited", breakdown.shipping, "text-emerald-700"],
+            ["Shipping deduction", breakdown.shippingDeduction, "text-red-700"],
+            ["Promotion funded", breakdown.promotion, "text-emerald-700"],
+            ["Refund / other adjustment", breakdown.refund + breakdown.other, "text-red-700"],
+          ].map(([label, value, color]) => (
+            <div key={label} className="border-b border-[var(--admin-line)] p-4 last:border-b-0 sm:border-r lg:p-5">
+              <span className="text-xs font-medium text-[var(--admin-muted)]">{label}</span>
+              <strong className={`mt-2 block text-lg tabular-nums ${color}`}>{financeMoney(value, currency)}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Money journey */}
-      <section className={sectionClass}>
+      <section className={`order-4 ${sectionClass}`}>
         <div className={sectionHeaderClass}>
           <div>
             <h2 className="text-base font-semibold text-[var(--admin-navy)]">
@@ -436,7 +492,7 @@ export default function FinanceOverview() {
 
         <div className="grid divide-y divide-[var(--admin-line)] sm:grid-cols-2 sm:divide-y-0 sm:divide-x sm:[&>*:nth-child(odd)]:border-r sm:[&>*:nth-child(even)]:border-r-0 lg:grid-cols-3 lg:[&>*]:border-r lg:[&>*:nth-child(3n)]:border-r-0 xl:grid-cols-5 xl:[&>*]:border-r xl:[&>*:nth-child(3n)]:border-r xl:[&>*:nth-child(5n)]:border-r-0">
           {journey.map(([label, amount, count, detail, status]) => (
-            <div key={label} className="relative min-w-0 p-4 sm:p-5">
+            <div key={label} className="relative flex min-h-[220px] min-w-0 flex-col p-4 sm:p-5">
               <span className="text-xs font-semibold text-[var(--admin-muted)]">
                 {label}
               </span>
@@ -447,15 +503,15 @@ export default function FinanceOverview() {
 
               <span className="mt-2 inline-flex items-center rounded-md bg-[var(--admin-surface-soft)] px-2 py-1 text-xs font-medium text-[var(--admin-muted)]">
                 {count}{" "}
-                {label === "Processing" || label === "Paid"
+                {label === "Payout processing" || label === "Paid"
                   ? "payouts"
                   : "earnings"}
               </span>
 
-              <p className="mt-3 text-xs leading-5 text-[var(--admin-muted)]">
+              <p className="mt-3 min-h-10 text-xs leading-5 text-[var(--admin-muted)]">
                 {detail}
               </p>
-              {status && <TransparentButton label={`View ${label.toLowerCase()}`} className="mt-3 px-2 py-1 text-xs" onClick={() => navigate(["processing", "paid"].includes(status) ? `/app/seller-payouts?status=${status}` : `/app/finance-earnings?status=${status}`)} />}
+              {status && <TransparentButton label={`View ${label.toLowerCase()}`} className="mt-auto self-start px-2 py-1 text-xs" onClick={() => navigate(["processing", "paid"].includes(status) ? `/app/seller-payouts?status=${status}` : `/app/finance-earnings?status=${status}`)} />}
             </div>
           ))}
         </div>
@@ -464,7 +520,7 @@ export default function FinanceOverview() {
 
       {/* Attention required */}
       {(owed > 0 || Number(balances.blockedBalance || 0) > 0) && (
-        <section className="space-y-3 bg-white p-6 border border-golden/30 rounded-lg">
+        <section className="order-7 space-y-3 rounded-lg border border-golden/30 bg-white p-6">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
               <MdWarningAmber aria-hidden="true" size={19} />
@@ -540,118 +596,7 @@ export default function FinanceOverview() {
         </section>
       )}
 
-      <SellerFinanceWalletDetails refreshKey={Boolean(state.loading)} />
 
-      {/* Recent activity */}
-      <section className={sectionClass}>
-        <div className={sectionHeaderClass}>
-          <div>
-            <h2 className="text-base font-semibold text-[var(--admin-navy)]">
-              Recent Money Activity
-            </h2>
-            <p className={`mt-1 ${mutedTextClass}`}>
-              The latest changes to your earnings.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-[var(--admin-navy)] hover:bg-[var(--admin-soft)] ${interactiveClass}`}
-            onClick={() => navigate("/app/finance-earnings")}
-          >
-            View all activity
-            <MdArrowForward aria-hidden="true" size={17} />
-          </button>
-        </div>
-
-        {items.length ? (
-          <>
-            <div className="hidden grid-cols-[minmax(0,1fr)_9rem_8rem_11.5rem] items-center gap-4 border-b border-[var(--admin-line)] bg-[var(--admin-surface-soft)] px-5 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)] lg:grid">
-              <span>Order / Details</span>
-              <span className="text-right">Net Amount</span>
-              <span className="text-center">Status</span>
-              <span className="text-right">Last Updated</span>
-            </div>
-
-            <div className="divide-y divide-[var(--admin-line)]">
-              {items.map((item) => {
-                const status = sellerFinanceStatus(item);
-
-                return (
-                  <button
-                    type="button"
-                    onClick={() => navigate("/app/finance-earnings")}
-                    key={item.id || item.commissionId || item.orderId}
-                    className={`grid w-full grid-cols-2 items-center gap-x-3 gap-y-3 px-4 py-4 text-left sm:px-5 lg:grid-cols-[minmax(0,1fr)_9rem_8rem_11.5rem] lg:gap-4 ${interactiveClass}`}
-                  >
-                    <div className="col-span-2 flex min-w-0 items-center gap-3 lg:col-span-1">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface-soft)] text-[var(--admin-navy)]">
-                        <MdPayments aria-hidden="true" size={20} />
-                      </span>
-
-                      <div className="min-w-0">
-                        <strong className="block truncate text-sm font-semibold text-[var(--admin-navy)]">
-                          Order #
-                          {item.orderNumber ||
-                            String(item.orderId || "").slice(0, 12)}
-                        </strong>
-                        <span className="mt-1 block truncate text-xs text-[var(--admin-muted)]">
-                          {status.detail}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 lg:justify-end">
-                      <span className="text-xs text-[var(--admin-muted)] lg:hidden">
-                        Net amount
-                      </span>
-                      <strong className="whitespace-nowrap text-sm font-semibold tabular-nums text-[var(--admin-navy)]">
-                        {financeMoney(
-                          item.netAmount ?? item.net_amount,
-                          item.currency || currency,
-                        )}
-                      </strong>
-                    </div>
-
-                    <div className="flex items-center justify-end lg:justify-center">
-                      <FinanceStatusBadge row={item} />
-                    </div>
-
-                    <div className="col-span-2 flex items-center justify-between gap-3 border-t border-[var(--admin-line)]/70 pt-3 text-xs text-[var(--admin-muted)] lg:col-span-1 lg:justify-end lg:border-0 lg:pt-0">
-                      <span className="lg:hidden">Last updated</span>
-                      <span className="whitespace-nowrap tabular-nums">
-                        {financeDateTime(item.eligibleAt || item.updatedAt)}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="border-t border-[var(--admin-line)] px-4 py-3">
-              <Pagination
-                totalPages={Math.max(
-                  1,
-                  Math.ceil(Number(wallet.total || 0) / activityPageSize),
-                )}
-                currentPage={activityPage}
-                onPageChange={setActivityPage}
-                totalRecords={Number(wallet.total || 0)}
-                pageSize={activityPageSize}
-                pageSizeOptions={[10, 20, 50, 100]}
-                onPageSizeChange={(size) => {
-                  setActivityPageSize(size);
-                  setActivityPage(1);
-                }}
-              />
-            </div>
-          </>
-        ) : (
-          <EmptyPanel
-            title="No money activity yet."
-            text="No earnings activity found for the selected period."
-          />
-        )}
-      </section>
     </div>
   );
 }

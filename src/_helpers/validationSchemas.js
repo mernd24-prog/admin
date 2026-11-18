@@ -537,7 +537,7 @@ export const shipmentTrackingActionValidationSchema = Yup.object({
     ),
   note: shipmentTrackingNoteSchema,
   courierName: Yup.string().when("status", {
-    is: "in_transit",
+    is: (status) => ["picked_up", "in_transit"].includes(status),
     then: (schema) =>
       schema
         .trim()
@@ -546,7 +546,7 @@ export const shipmentTrackingActionValidationSchema = Yup.object({
     otherwise: (schema) => schema,
   }),
   awbNumber: Yup.string().when("status", {
-    is: "in_transit",
+    is: (status) => ["picked_up", "in_transit"].includes(status),
     then: (schema) =>
       schema
         .trim()
@@ -560,7 +560,7 @@ export const shipmentTrackingActionValidationSchema = Yup.object({
     otherwise: (schema) => schema,
   }),
   expectedDeliveryAt: Yup.string().when("status", {
-    is: "in_transit",
+    is: (status) => ["picked_up", "in_transit"].includes(status),
     then: (schema) =>
       schema
         .required("Expected delivery date is required.")

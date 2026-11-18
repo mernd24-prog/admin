@@ -9,7 +9,6 @@ import {
   MdPauseCircle,
   MdPayments,
   MdVisibility,
-  MdWarningAmber,
 } from "react-icons/md";
 import Cards from "../../../components/Cards/Cards";
 import Loader from "../../../components/Loader/Loader";
@@ -252,7 +251,7 @@ export default function FinanceEarnings() {
 
       {
         key: "orderAmount",
-        label: "Order amount",
+        label: "Before deductions",
         sortable: true,
         render: (_, row) => {
           const amountKey = [
@@ -281,7 +280,7 @@ export default function FinanceEarnings() {
 
       {
         key: "net",
-        label: "Your earning",
+        label: "Net earning",
         sortable: true,
         render: (_, row) => (
           <strong>
@@ -302,7 +301,7 @@ export default function FinanceEarnings() {
 
       {
         key: "date",
-        label: "Available / paid on",
+        label: "Next status date",
         render: (_, row) => (
           <div className="text-xs">
             <span>
@@ -376,84 +375,18 @@ export default function FinanceEarnings() {
         }
       />
 
-      {/* <FinanceNav /> */}
 
       {Number(codReconciliation.totalOrders || 0) > 0 && (
-        <section>
-          <div className="rounded-xl border border-[#EADDBF] bg-[#FFFCF5] px-5 py-4">
-            <div className="grid grid-cols-1 items-center gap-5 lg:grid-cols-[1.8fr_2.2fr]">
-              {/* Heading & Description */}
-              <div className="min-w-0">
-                <h2 className="text-base font-semibold text-[var(--admin-text)]">
-                  COD order reconciliation
-                </h2>
-
-                <p className="mt-1.5 max-w-xl text-xs leading-5 text-[var(--admin-muted)]">
-                  COD orders and earnings are different records. Earnings are
-                  created after delivery, while collected cash is tracked
-                  separately as a COD liability.
-                </p>
-              </div>
-
-              {/* Statistics */}
-              <div className="grid grid-cols-2 gap-y-4 lg:grid-cols-4">
-                {/* COD Orders */}
-                <div className="text-center lg:border-l lg:border-[#EADDBF] lg:px-3">
-                  <p className="text-2xl font-semibold tabular-nums text-[var(--admin-text)]">
-                    {codReconciliation.totalOrders || 0}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                    COD orders
-                  </p>
-                </div>
-
-                {/* Delivered */}
-                <div className="text-center lg:border-l lg:border-[#EADDBF] lg:px-3">
-                  <p className="text-2xl font-semibold tabular-nums text-[var(--admin-success)]">
-                    {codReconciliation.deliveredOrders || 0}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                    Delivered
-                  </p>
-                </div>
-
-                {/* Awaiting Delivery */}
-                <div className="text-center lg:border-l lg:border-[#EADDBF] lg:px-3">
-                  <p className="text-2xl font-semibold tabular-nums text-[var(--admin-text)]">
-                    {codReconciliation.awaitingDeliveryOrders || 0}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                    Awaiting delivery
-                  </p>
-                </div>
-
-                {/* Cash Liabilities */}
-                <div className="text-center lg:border-l lg:border-[#EADDBF] lg:px-3">
-                  <p className="text-2xl font-semibold tabular-nums text-[var(--admin-gold-dark)]">
-                    {codReconciliation.ordersWithLiability || 0}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--admin-muted)]">
-                    Cash liabilities
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
+        <div className="rounded-lg border border-[#EADDBF] bg-[#FFFCF5] px-4 py-3 text-xs leading-5 text-[var(--admin-muted)]">
+          COD collection is tracked separately from earnings. Open Overview to
+          see delivery, cash collected, recovery, and the balance still owed.
           {Number(codReconciliation.missingEarningOrders || 0) > 0 && (
-            <div className="mt-4 flex items-start gap-2 border-t border-amber-200 pt-3 text-xs text-amber-800">
-              <MdWarningAmber className="mt-0.5 shrink-0" size={15} />
-              <p className="leading-relaxed">
-                <strong>
-                  {codReconciliation.missingEarningOrders} delivered COD
-                  order(s)
-                </strong>{" "}
-                still need an earning calculation. Refresh to retry; if this
-                remains, an administrator should review the order pricing data.
-              </p>
-            </div>
+            <span className="ml-1 font-semibold text-amber-800">
+              {codReconciliation.missingEarningOrders} delivered COD order(s)
+              still need an earning calculation.
+            </span>
           )}
-        </section>
+        </div>
       )}
 
       {/* SUMMARY CARDS */}
@@ -621,10 +554,7 @@ export default function FinanceEarnings() {
             return next;
           });
         }}
-        title={`Order #${
-          detail?.orderNumber ||
-          String(detail?.orderId || detail?.order_id || "").slice(0, 12)
-        }`}
+        title={detail?.orderNumber ? `Order #${detail.orderNumber}` : "Order earning details"}
         isButtonView={false}
       >
         {detail && (
@@ -650,7 +580,7 @@ export default function FinanceEarnings() {
                 {/* YOUR EARNING */}
                 <div>
                   <span className="text-xs text-[var(--admin-muted)]">
-                    Your earning
+                    Net earning
                   </span>
 
                   <strong className="mt-1 block text-base font-bold text-emerald-700">
@@ -679,7 +609,7 @@ export default function FinanceEarnings() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-lg border border-golden/45 p-3">
                 <span className="text-xs text-[var(--admin-muted)]">
-                  Available / Paid On
+                  Next status date
                 </span>
 
                 <p className="mt-1 text-sm font-semibold">

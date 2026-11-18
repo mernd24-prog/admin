@@ -22,6 +22,7 @@ import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
 import {
   getMyPromotionFundingLedger,
+  getSellerPayouts,
   getMySellerWalletSummary,
 } from "../../../Redux/sellerCommissionsSlice";
 import {
@@ -56,8 +57,12 @@ export default function FinanceAdjustments() {
   const walletState = useSelector(
     (store) => store.sellerCommissions?.walletSummaryData || {},
   );
+  const payoutsState = useSelector(
+    (store) => store.sellerCommissions?.myPayoutsData || {},
+  );
   const promotionPayload = unwrapFinance(promotionState);
   const wallet = unwrapFinance(walletState);
+  const payoutPayload = unwrapFinance(payoutsState);
   const totals = promotionPayload.totals || {};
   const balances = wallet.balances || {};
   const [codRows, setCodRows] = useState([]);
@@ -71,11 +76,12 @@ export default function FinanceAdjustments() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [, , codResponse] = await Promise.all([
+      const [, , , codResponse] = await Promise.all([
         dispatch(
           getMyPromotionFundingLedger({ limit: 100, offset: 0 }),
         ).unwrap(),
         dispatch(getMySellerWalletSummary({ limit: 100, offset: 0 })).unwrap(),
+        dispatch(getSellerPayouts({ limit: 100, offset: 0 })).unwrap(),
         axiosProvider.get(ENDPOINTS.payments.myCodCollections),
       ]);
       const codData = codResponse?.data?.data;
@@ -103,6 +109,7 @@ export default function FinanceAdjustments() {
       ? promotionPayload.items
       : [];
     const walletItems = Array.isArray(wallet.items) ? wallet.items : [];
+    const payoutItems = Array.isArray(payoutPayload.items) ? payoutPayload.items : [];
     const promotions = promotionRows.map((row) => ({
       ...row,
       adjustmentType: "promotions",
@@ -122,7 +129,7 @@ export default function FinanceAdjustments() {
         Number(row.collected_amount || row.expected_amount || 0),
       ),
       description:
-        "You collected this amount directly from the customer. Once verified, it is recovered from available or future earnings.",
+        `You collected this amount directly from the customer. ${financeMoney(Math.abs(Number(balances.codLiabilityBalance || 0)), row.currency || "INR")} remains to be recovered. Once the COD balance is fully recovered, the remaining eligible earnings can be paid to you.`,
     }));
     const holds = walletItems
       .filter((row) =>
@@ -161,10 +168,21 @@ export default function FinanceAdjustments() {
         description:
           "An adjustment recorded by the existing settlement calculation.",
       }));
-    return [...refunds, ...promotions, ...cod, ...holds, ...other].filter(
+    const recoveries = payoutItems
+      .filter((row) => Number(row.adjustment_amount ?? row.adjustmentAmount ?? 0) < 0)
+      .map((row) => ({
+        ...row,
+        adjustmentType: "recoveries",
+        title: "COD recovery from payout",
+        orderNumber: row.orderNumber || row.order_number || row.earningsBreakdown?.orderNumber || null,
+        amount: Number(row.adjustment_amount ?? row.adjustmentAmount ?? 0),
+        description:
+          "This amount was recovered from a seller payout against collected COD. The remaining COD balance will be recovered from future eligible earnings.",
+      }));
+    return [...refunds, ...promotions, ...cod, ...recoveries, ...holds, ...other].filter(
       (row) => !category || row.adjustmentType === category,
     );
-  }, [category, codRows, promotionPayload.items, wallet.items]);
+  }, [balances.codLiabilityBalance, category, codRows, payoutPayload.items, promotionPayload.items, wallet.items]);
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return rows.filter((row) => {
@@ -254,8 +272,12 @@ export default function FinanceAdjustments() {
               orderId={row.orderId || row.order_id}
               orderNumber={row.orderNumber || row.order_number}
             />
+          ) : row.orderNumber || row.order_number ? (
+            row.orderNumber || row.order_number
           ) : (
-            "—"
+            row.adjustmentType === "recoveries"
+              ? "Multiple orders"
+              : "—"
           ),
       },
       {
@@ -322,7 +344,6 @@ export default function FinanceAdjustments() {
           { label: "Adjustments" },
         ]}
       />
-      {/* <FinanceNav /> */}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Cards
@@ -346,7 +367,7 @@ export default function FinanceAdjustments() {
         <Cards
           label="COD amount owed"
           value={financeMoney(owed)}
-          description="Seller-collected customer cash still owed to the platform."
+          description={`${financeMoney(owed)} remains to be recovered from available or future earnings. After full recovery, eligible earnings can be paid out.`}
           icon={<MdAccountBalanceWallet aria-hidden="true" size={18} />}
           iconBg="#ffd4d2"
           iconColor="#ff4b55"

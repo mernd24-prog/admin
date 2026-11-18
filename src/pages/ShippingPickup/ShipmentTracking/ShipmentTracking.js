@@ -49,7 +49,9 @@ import { ENDPOINTS } from "../../../_helpers/endpoints";
 
 const STATUS_OPTIONS = [
   "initiated",
+  "picked_up",
   "in_transit",
+  "out_for_delivery",
   "delivered",
   "failed",
   "cancelled",
@@ -59,7 +61,9 @@ const STATUS_OPTIONS = [
 ];
 const FULFILLMENT_STATUS_OPTIONS = [
   { value: "initiated", label: "Initiated" },
+  { value: "picked_up", label: "Picked Up / Handed to Courier" },
   { value: "in_transit", label: "In Transit" },
+  { value: "out_for_delivery", label: "Out for Delivery" },
   { value: "delivered", label: "Delivered" },
   { value: "failed", label: "Failed delivery" },
   { value: "rto", label: "Return to origin" },
@@ -77,10 +81,10 @@ const DELIVERY_METHOD_OPTIONS = [
   { value: "Ecom Express", label: "Ecom Express" },
 ];
 const FULFILLMENT_TRANSITIONS = {
-  initiated: ["in_transit", "failed"],
-  manifested: ["in_transit", "failed"],
+  initiated: ["picked_up", "failed"],
+  manifested: ["picked_up", "failed"],
   picked_up: ["in_transit", "failed", "rto"],
-  in_transit: ["delivered", "failed", "rto"],
+  in_transit: ["out_for_delivery", "delivered", "failed", "rto"],
   out_for_delivery: ["delivered", "failed", "rto"],
   failed: ["in_transit", "rto"],
 };
@@ -137,6 +141,24 @@ const sellerNameFromSnapshot = (snapshot = {}) =>
 const shipmentStepLabel = (value = "") =>
   FULFILLMENT_STATUS_OPTIONS.find((option) => option.value === value)?.label ||
   displayStatus(value);
+const trackingEventPayload = (event = {}) => {
+  const raw = event.raw_payload || event.rawPayload || {};
+  let payload = raw;
+  if (typeof raw === "string") {
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      payload = {};
+    }
+  }
+  return payload;
+};
+const trackingEventType = (event = {}) =>
+  event.eventType || event.event_type || trackingEventPayload(event).eventType;
+const trackingEventLabel = (event = {}) =>
+  trackingEventType(event) === "eta_updated"
+    ? "ETA Updated"
+    : shipmentStepLabel(event.status);
 const isCodPayment = (codValue, row = {}) =>
   Boolean(codValue) ||
   codValue === "true" ||
@@ -597,15 +619,26 @@ const ShipmentTracking = () => {
     selectedPaymentStatus === "captured" ||
     (selectedPaymentProvider === "cod" &&
       selectedPaymentStatus === "authorized");
+  const shipmentHasStarted = Boolean(
+    selectedShipment?.shipped_at ||
+      selectedShipment?.shippedAt ||
+      ["picked_up", "in_transit", "out_for_delivery", "delivered", "failed", "rto", "lost", "damaged"].includes(
+        selectedShipment?.status,
+      ),
+  );
+  const shipmentPaymentGateApplies =
+    !selectedShipment?.direction || selectedShipment.direction === "forward"
+      ? !selectedShipmentPaid && !shipmentHasStarted
+      : false;
   const trackingActionOptions = useMemo(
     () =>
-      selectedShipmentPaid
+      !shipmentPaymentGateApplies
         ? getTrackingActionOptions(
             selectedShipment?.status || "initiated",
             selectedShipment?.direction,
           )
         : [],
-    [
+      [
       selectedShipment?.status,
       selectedShipment?.direction,
       selectedShipmentPaid,
@@ -629,6 +662,18 @@ const ShipmentTracking = () => {
       try {
         setLoading(true);
         const eventTime = new Date().toISOString();
+        const currentEta =
+          selectedShipment.expected_delivery_at ||
+          selectedShipment.expectedDeliveryAt;
+        const nextEta = values.expectedDeliveryAt
+          ? new Date(values.expectedDeliveryAt).toISOString()
+          : undefined;
+        const etaOnlyUpdate = Boolean(
+          values.status === selectedShipment.status &&
+            nextEta &&
+            new Date(nextEta).getTime() !==
+              new Date(currentEta || 0).getTime(),
+        );
         await dispatch(
           addShipmentTracking({
             shipmentId: selectedShipment.id,
@@ -640,19 +685,22 @@ const ShipmentTracking = () => {
             awbNumber: values.awbNumber.trim(),
             trackingNumber: values.awbNumber.trim(),
             trackingUrl: values.trackingUrl.trim(),
-            expectedDeliveryAt: values.expectedDeliveryAt
-              ? new Date(values.expectedDeliveryAt).toISOString()
-              : undefined,
+            expectedDeliveryAt: nextEta,
+            eventType: etaOnlyUpdate ? "eta_updated" : "status_updated",
             eventTime,
-            shippedAt: values.status === "in_transit" ? eventTime : undefined,
+            shippedAt: ["picked_up", "in_transit"].includes(values.status)
+              ? eventTime
+              : undefined,
           }),
         ).unwrap();
 
         toast.success(
-          `Shipment status updated to ${shipmentStepLabel(values.status)}.`,
+          etaOnlyUpdate
+            ? "Expected delivery date updated. Shipment status was not changed."
+            : `Shipment status updated to ${shipmentStepLabel(values.status)}.`,
         );
         await refreshSelectedShipment(selectedShipment.id);
-        if (["in_transit", "delivered"].includes(values.status)) {
+        if (["picked_up", "in_transit", "delivered"].includes(values.status)) {
           setDetailModal(false);
         }
       } catch (requestError) {
@@ -1361,7 +1409,9 @@ const ShipmentTracking = () => {
                   )}
 
                   {/* Dispatch Details */}
-                  {trackingAction.status === "in_transit" && (
+                  {["picked_up", "in_transit"].includes(
+                    trackingAction.status,
+                  ) && (
                     <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-4">
                       <div className="mb-4 flex items-center gap-3">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-blue-700 ring-1 ring-gray-200">
@@ -1370,10 +1420,14 @@ const ShipmentTracking = () => {
 
                         <div>
                           <h4 className="font-semibold text-gray-900">
-                            Dispatch Details
+                            {trackingAction.status === "picked_up"
+                              ? "Courier Handover Details"
+                              : "Transit & ETA Details"}
                           </h4>
                           <p className="mt-0.5 text-xs text-gray-500">
-                            Enter courier and tracking information.
+                            {trackingAction.status === "picked_up"
+                              ? "Record the courier handover. This marks the order as shipped."
+                              : "Update the current transit details or expected delivery date."}
                           </p>
                         </div>
                       </div>
@@ -1530,7 +1584,7 @@ const ShipmentTracking = () => {
                 </div>
               ) : (
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  {!selectedShipmentPaid ? (
+                  {shipmentPaymentGateApplies ? (
                     <div>
                       <p className="font-semibold text-amber-800">
                         Awaiting Payment
@@ -1642,7 +1696,7 @@ const ShipmentTracking = () => {
                   <span className="absolute -left-[7px] top-1 h-3 w-3 rounded-full border-2 border-white bg-blue-500 ring-2 ring-blue-100" />
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="font-semibold text-gray-800">
-                      {shipmentStepLabel(event.status)}
+                      {trackingEventLabel(event)}
                     </div>
                     <time className="text-xs text-gray-500">
                       {formatDateTime12Hour(
@@ -1663,6 +1717,15 @@ const ShipmentTracking = () => {
                       {formatLabel(event.note)}
                     </div>
                   )}
+                  {trackingEventType(event) === "eta_updated" &&
+                    trackingEventPayload(event).expectedDeliveryAt && (
+                      <div className="mt-2 text-xs font-medium text-blue-700">
+                        New expected delivery: {formatDateTime12Hour(
+                          trackingEventPayload(event).expectedDeliveryAt,
+                          "Date not available",
+                        )}
+                      </div>
+                    )}
                 </div>
               ))}
               {!selectedShipment?.trackingEvents?.length && (

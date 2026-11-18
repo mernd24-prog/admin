@@ -69,7 +69,9 @@ export default function SellerCodCollections() {
   ], []);
 
   return <div>
+    <>
     <PageHeader title="COD Collections" subtitle="Confirm customer COD cash retained by you. It remains owed and is recovered automatically from current or future payouts." breadcrumbs={[{ label: "Seller Finance" }, { label: "COD Collections" }]} />
+    </>
     {items.some((row) => row.seller_action_required) && <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
       <strong>Confirmation required</strong><p className="mt-1 text-xs leading-5">Confirm the full COD amount after delivery. Confirmation does not clear the amount owed; payout recovery remains automatic.</p>
     </div>}
