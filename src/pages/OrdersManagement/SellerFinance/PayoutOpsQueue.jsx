@@ -1372,28 +1372,31 @@ const PayoutOpsQueue = () => {
                 />
 
                 <div>
-                  <label className="admin-label">
-                    Payment Method (optional)
-                  </label>
-                  <select
-                    className="admin-input w-full"
-                    value={actionFormik.values.paymentMethod}
-                    onChange={(e) =>
-                      actionFormik.setFieldValue(
-                        "paymentMethod",
-                        e.target.value,
-                      )
-                    }
-                  >
-                    <option value="">-- Select --</option>
-                    {payoutMethods
-                      .filter((m) => m.value !== "razorpayx")
-                      .map((m) => (
-                        <option key={m.value} value={m.value}>
-                          {m.label}
-                        </option>
-                      ))}
-                  </select>
+                  <div>
+                    <FilterSelect
+                      label="Payment Method (optional)"
+                      value={
+                        payoutMethods
+                          .filter((m) => m.value !== "razorpayx")
+                          .find(
+                            (m) =>
+                              m.value === actionFormik.values.paymentMethod,
+                          ) || null
+                      }
+                      onChange={(option) =>
+                        actionFormik.setFieldValue(
+                          "paymentMethod",
+                          option?.value || "",
+                        )
+                      }
+                      options={[
+                        { value: "", label: "Select payment menthod" },
+                        ...payoutMethods.filter((m) => m.value !== "razorpayx"),
+                      ]}
+                      placeholder="Select payment menthod"
+                      isClearable
+                    />
+                  </div>
                 </div>
 
                 <Input
