@@ -1,3 +1,4 @@
+import ReturnDurationInput from "../../../components/Shared/ReturnDurationInput";
 import MarketingSettings from "../../../components/Marketing/MarketingSettings";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -1075,11 +1076,9 @@ export default function CommerceSettings() {
         </Section>
         <Section title="Return & Settlement Policy">
           <div className="grid gap-4 md:grid-cols-2">
-            <InputField
-              label="Global Return Window (Days)"
-              type="number"
-              min="1"
-              max="60"
+            <ReturnDurationInput
+              label="Global Return Window"
+              maxDays={60}
               value={settings.returns.defaultWindowDays}
               onChange={(value) =>
                 patchSettings("returns", { defaultWindowDays: value })
@@ -1093,11 +1092,9 @@ export default function CommerceSettings() {
               }
             />
             {settings.returns.allowSellerOverrides && (
-              <InputField
-                label="Maximum Seller Override (Days)"
-                type="number"
-                min="1"
-                max="60"
+              <ReturnDurationInput
+              label="Maximum Seller Override"
+              maxDays={60}
                 value={settings.returns.maxSellerOverrideDays}
                 onChange={(value) =>
                   patchSettings("returns", { maxSellerOverrideDays: value })

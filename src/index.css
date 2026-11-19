@@ -455,6 +455,20 @@ body
   min-width: 0;
 }
 
+.product-catalog-form [data-error-field="warranty.returnPolicy.returnWindowDays"] .admin-field {
+  display: flex;
+  min-height: 80px;
+  flex-direction: column;
+}
+
+.product-catalog-form [data-error-field="warranty.returnPolicy.returnWindowDays"] .admin-field > .flex {
+  min-height: 18px;
+}
+
+.product-catalog-form [data-error-field="warranty.returnPolicy.returnWindowDays"] .admin-input {
+  width: 100%;
+}
+
 @media (max-width: 639px) {
   .product-catalog-form .product-form-section {
     padding: 18px 16px;

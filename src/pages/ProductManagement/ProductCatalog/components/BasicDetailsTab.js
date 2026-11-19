@@ -1,3 +1,4 @@
+import ReturnDurationInput from "../../../../components/Shared/ReturnDurationInput";
 import "react-quill/dist/quill.snow.css";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -2585,55 +2586,16 @@ export default function BasicDetailsTab({
                 </div>
               </div>
               {isReturnable ? (
-                <div className="grid gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
-                  <Input
-                    labelName="Return Window Days"
-                    required
-                    name="warranty.returnPolicy.returnWindowDays"
-                    type="number"
-                    min={1}
-                    max={365}
-                    disabled={!isReturnable}
-                    value={
-                      formData.warranty?.returnPolicy?.returnWindowDays ?? ""
-                    }
-                    onBlur={() =>
-                      handleFieldBlur("warranty.returnPolicy.returnWindowDays")
-                    }
-                    onKeyDown={preventNegativeNumericKey}
-                    onPaste={preventNegativeNumericPaste}
-                    error={
-                      formikTouched?.warranty?.returnPolicy?.returnWindowDays &&
-                      formikErrors?.warranty?.returnPolicy?.returnWindowDays
-                    }
-                    helperText={
-                      isReturnable
-                        ? "Use a return window between 1 and 365 days."
-                        : "Enable Returnable to set the return window."
-                    }
-                    onChange={(event) => {
-                      if (isNegativeNumericValue(event.target.value)) return;
-                      if (
-                        event.target.value !== "" &&
-                        Number(event.target.value) > 365
-                      )
-                        return;
-                      const value =
-                        event.target.value === ""
-                          ? ""
-                          : Number(event.target.value);
-
-                      const nextValue = Number.isNaN(value) ? 0 : value;
-
-                      handleNestedChange(
-                        "warranty.returnPolicy.returnWindowDays",
-                        nextValue,
-                      );
-
-                      handleNestedChange(
-                        "warranty.returnPolicy.days",
-                        nextValue,
-                      );
+                <div className="grid grid-cols-1 items-start gap-x-4 gap-y-5 md:grid-cols-3">
+                  <ReturnDurationInput
+                    showDateTimePicker
+                    minMinutes={1}
+                    value={formData.warranty?.returnPolicy?.returnWindowDays ?? formData.warranty?.returnPolicy?.days ?? 0}
+                    onBlur={() => handleFieldBlur("warranty.returnPolicy.returnWindowDays")}
+                    error={formikTouched?.warranty?.returnPolicy?.returnWindowDays && formikErrors?.warranty?.returnPolicy?.returnWindowDays}
+                    onChange={(value) => {
+                      handleNestedChange("warranty.returnPolicy.returnWindowDays", value);
+                      handleNestedChange("warranty.returnPolicy.days", value);
                     }}
                   />
 

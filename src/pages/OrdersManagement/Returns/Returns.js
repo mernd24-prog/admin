@@ -1,3 +1,4 @@
+import { formatReturnDuration } from "../../../components/Shared/ReturnDurationInput";
 import { reverseTrackingOptions } from "../../../utils/returnTrackingOptions";
 import useRealtimeRefresh from "../../../hooks/useRealtimeRefresh";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -1949,7 +1950,7 @@ const Returns = () => {
                 {
                   label: "Return Window",
                   value: detailReturn?.policySnapshot?.returnWindowDays
-                    ? `${detailReturn.policySnapshot.returnWindowDays} days`
+                    ? formatReturnDuration(detailReturn.policySnapshot.returnWindowDays)
                     : "Not available",
                 },
                 {
@@ -2017,9 +2018,9 @@ const Returns = () => {
                   item.policySnapshot || item.policy_snapshot || {};
 
                 const itemReturnWindow =
-                  item.returnWindowDays ||
-                  item.return_window_days ||
-                  itemPolicy.returnWindowDays ||
+                  item.returnWindowDays ??
+                  item.return_window_days ??
+                  itemPolicy.returnWindowDays ??
                   itemPolicy.return_window_days;
 
                 const itemEligibleUntil =
@@ -2044,7 +2045,7 @@ const Returns = () => {
                   {
                     label: "Return Window",
                     value: itemReturnWindow
-                      ? `${itemReturnWindow} days`
+                      ? formatReturnDuration(itemReturnWindow)
                       : "Not available",
                   },
                   {

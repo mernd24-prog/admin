@@ -1,3 +1,4 @@
+import { formatReturnDuration } from "../../../components/Shared/ReturnDurationInput";
 import { orderDisplayStatus } from "../../../utils/orderDisplayStatus";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -514,15 +515,7 @@ const returnWindowLabel = (deadline) => {
     return "Return window closed";
   }
 
-  const hours = Math.ceil(remaining / 3600000);
-
-  if (hours <= 48) {
-    return `${hours} hour${hours === 1 ? "" : "s"} remaining`;
-  }
-
-  const days = Math.ceil(hours / 24);
-
-  return `${days} days remaining`;
+  return `${formatReturnDuration(Math.ceil(remaining / 60000) / 1440)} remaining`;
 };
 
 /* =========================================================

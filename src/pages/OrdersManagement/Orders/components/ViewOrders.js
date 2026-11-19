@@ -1,3 +1,4 @@
+import { formatReturnDuration } from "../../../../components/Shared/ReturnDurationInput";
 import { itemDisplayStatus, orderDisplayStatus, returnProgressDisplayStatus } from "../../../../utils/orderDisplayStatus";
 import { boxLabelUnavailableReason } from "../../../../utils/boxLabelAvailability";
 import { cancellationRequesterLabel } from "../../../../utils/cancellationRequester";
@@ -3765,13 +3766,15 @@ const OrderSummary = () => {
               />
               <InfoRow
                 label="Return Window"
-                value={formatDateTime12Hour(
-                  firstDefined(
-                    order.return_eligible_until,
-                    order.returnEligibleUntil,
+                value={[
+                  firstDefined(order.return_window_days, order.returnWindowDays, order.return_policy_snapshot?.returnWindowDays) != null
+                    ? formatReturnDuration(firstDefined(order.return_window_days, order.returnWindowDays, order.return_policy_snapshot?.returnWindowDays))
+                    : null,
+                  formatDateTime12Hour(
+                    firstDefined(order.return_eligible_until, order.returnEligibleUntil),
+                    "Starts after delivery",
                   ),
-                  "Starts after delivery",
-                )}
+                ].filter(Boolean).join(" · ")}
               />
               <InfoRow
                 label={isSeller ? "Payment Collection" : "Payment Method"}

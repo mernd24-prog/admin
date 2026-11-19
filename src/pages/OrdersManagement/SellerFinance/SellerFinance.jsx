@@ -1,3 +1,4 @@
+import { formatReturnDuration } from "../../../components/Shared/ReturnDurationInput";
 import React, {
   useCallback,
   useEffect,
@@ -162,10 +163,7 @@ const eligibilityCountdown = (value) => {
   if (!value) return "Waiting for delivery";
   const remaining = new Date(value).getTime() - Date.now();
   if (remaining <= 0) return "Window closed";
-  const hours = Math.ceil(remaining / 3600000);
-  return hours <= 48
-    ? `${hours} hour${hours === 1 ? "" : "s"} left`
-    : `${Math.ceil(hours / 24)} days left`;
+  return `${formatReturnDuration(Math.ceil(remaining / 60000) / 1440)} left`;
 };
 const payoutDecision = (row = {}) => {
   const status = String(

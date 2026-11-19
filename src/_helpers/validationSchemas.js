@@ -273,7 +273,7 @@ export const productBasicDetailsValidationSchema = Yup.object({
         .transform((value, originalValue) =>
           originalValue === "" || originalValue == null ? undefined : value,
         )
-        .typeError("Return window must be between 1 and 365 days.")
+        .typeError("Return window must be between 1 minute and 365 days.")
         .when("returnable", {
           is: true,
           then: (schema) =>
@@ -294,12 +294,13 @@ export const productBasicDetailsValidationSchema = Yup.object({
 
                 const numberOfDays = Number(windowDays);
                 if (
-                  !Number.isInteger(numberOfDays) ||
-                  numberOfDays < 1 ||
-                  numberOfDays > 365
+                  !Number.isFinite(numberOfDays) ||
+                  numberOfDays < 1 / 1440 ||
+                  numberOfDays > 365 ||
+                  Math.abs(numberOfDays * 1440 - Math.round(numberOfDays * 1440)) > 1e-7
                 ) {
                   return this.createError({
-                    message: "Return window must be between 1 and 365 days.",
+                    message: "Return window must be between 1 minute and 365 days.",
                   });
                 }
 

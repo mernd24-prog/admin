@@ -1,3 +1,4 @@
+import { formatReturnDuration } from "../../../../components/Shared/ReturnDurationInput";
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -952,11 +953,10 @@ const ProductAdminDetails = () => {
                     label="Return Policy"
                     value={
                       product.warranty.returnPolicy.eligible
-                        ? `Eligible — ${
-                            product.warranty.returnPolicy.days ??
+                        ? `Eligible — ${formatReturnDuration(
                             product.warranty.returnPolicy.returnWindowDays ??
-                            0
-                          } days`
+                            product.warranty.returnPolicy.days ?? 0
+                          )}`
                         : "Not eligible"
                     }
                   />
