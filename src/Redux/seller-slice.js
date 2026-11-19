@@ -1,13 +1,13 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { apiRequest } from "../_helpers/apiConfig";
 import { ENDPOINTS } from "../_helpers/endpoints";
+import { setSelectedSellerOrganizationId } from "../_helpers/sellerOrganizationContext";
 
 const ONBOARDING_TOKEN_KEY = "sellerOnboardingToken";
 const ONBOARDING_USER_KEY = "sellerOnboardingUser";
 const AUTH_FLOW_STATE_KEY = "authFlowState";
 const AUTH_MODE_KEY = "authMode";
 const REFRESH_TOKEN_KEY = "refreshToken";
-const SELLER_ORGANIZATION_KEY = "sellerSelectedOrganizationId";
 
 const getStoredJson = (key) => {
   try {
@@ -27,16 +27,7 @@ const getFlowStateSelectedOrganizationId = (flowState = {}) =>
 
 const syncSelectedOrganizationFromFlowState = (flowState = {}) => {
   const organizationId = String(getFlowStateSelectedOrganizationId(flowState) || "");
-  if (organizationId) {
-    localStorage.setItem(SELLER_ORGANIZATION_KEY, organizationId);
-  } else {
-    localStorage.removeItem(SELLER_ORGANIZATION_KEY);
-  }
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("seller:organizationChanged", {
-      detail: { organizationId },
-    }));
-  }
+  setSelectedSellerOrganizationId(organizationId);
 };
 
 const normalizeError = (error, fallback) => {

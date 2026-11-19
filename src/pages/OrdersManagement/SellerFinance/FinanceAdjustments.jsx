@@ -8,6 +8,7 @@ import {
   MdAssignmentReturn,
   MdLocalOffer,
   MdPauseCircle,
+  MdWarningAmber,
   MdVisibility,
 } from "react-icons/md";
 import Cards from "../../../components/Cards/Cards";
@@ -124,12 +125,16 @@ export default function FinanceAdjustments() {
     const cod = codRows.map((row) => ({
       ...row,
       adjustmentType: "cod",
-      title: "COD Amount Collected",
+      title: "COD cash collected by you",
       amount: -Math.abs(
-        Number(row.collected_amount || row.expected_amount || 0),
+        Number(row.expected_amount ?? row.collected_amount ?? 0),
       ),
       description:
-        `You collected this amount directly from the customer. ${financeMoney(Math.abs(Number(balances.codLiabilityBalance || 0)), row.currency || "INR")} remains to be recovered. Once the COD balance is fully recovered, the remaining eligible earnings can be paid to you.`,
+        "You received this cash directly from the customer. The same amount is owed to the marketplace and is recovered from your eligible earnings.",
+      nextStep:
+        Number(row.remaining_amount || 0) > 0
+          ? "The remaining amount will be recovered from future eligible earnings."
+          : "No action is required for this collection.",
     }));
     const holds = walletItems
       .filter((row) =>
@@ -140,10 +145,18 @@ export default function FinanceAdjustments() {
       .map((row) => ({
         ...row,
         adjustmentType: "holds",
-        title: "Temporary Hold",
+        title: "Earning temporarily held",
         amount: Number(financeAmounts(row).sellerEarning ?? row.netAmount ?? row.net_amount ?? 0),
-        description:
-          "This earning is temporarily unavailable while a return, refund, dispute, or another hold is active.",
+        description: String(
+          row.releaseReason || row.reason || "",
+        ).includes("cod_collection")
+          ? "This is not another COD charge. This earning is unavailable while the related COD recovery is active."
+          : "This earning is temporarily unavailable while a return, refund, dispute, or another hold is active.",
+        nextStep: String(
+          row.releaseReason || row.reason || "",
+        ).includes("cod_collection")
+          ? "The COD amount is recovered automatically when earnings become eligible."
+          : "Resolve the hold condition before this earning can become payable.",
       }));
     const refunds = walletItems
       .filter((row) => Number(row.refundAmount || row.refund_amount || 0) !== 0)
@@ -154,6 +167,7 @@ export default function FinanceAdjustments() {
         amount: -Math.abs(Number(financeAmounts(row).refundAdjustment ?? row.refundAmount ?? row.refund_amount ?? 0)),
         description:
           "The related earning was reduced because an item was returned or refunded.",
+        nextStep: "Open the related order to review the return or refund.",
       }));
     const other = walletItems
       .filter(
@@ -167,6 +181,7 @@ export default function FinanceAdjustments() {
         amount: Number(financeAmounts(row).otherAdjustment ?? row.adjustmentAmount ?? row.adjustment_amount ?? 0),
         description:
           "An adjustment recorded by the existing settlement calculation.",
+        nextStep: "Open the details to review the recorded adjustment.",
       }));
     const recoveries = payoutItems
       .filter((row) => Number(row.adjustment_amount ?? row.adjustmentAmount ?? 0) < 0)
@@ -178,11 +193,13 @@ export default function FinanceAdjustments() {
         amount: Number(row.adjustment_amount ?? row.adjustmentAmount ?? 0),
         description:
           "This amount was recovered from a seller payout against collected COD. The remaining COD balance will be recovered from future eligible earnings.",
+        nextStep:
+          "This recovery is complete. Check COD collections for any amount still owed.",
       }));
     return [...refunds, ...promotions, ...cod, ...recoveries, ...holds, ...other].filter(
       (row) => !category || row.adjustmentType === category,
     );
-  }, [balances.codLiabilityBalance, category, codRows, payoutPayload.items, promotionPayload.items, wallet.items]);
+  }, [category, codRows, payoutPayload.items, promotionPayload.items, wallet.items]);
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return rows.filter((row) => {
@@ -245,6 +262,53 @@ export default function FinanceAdjustments() {
     ];
   }, [rows]);
   const owed = Math.abs(Number(balances.codLiabilityBalance || 0));
+  const availableEarnings = Math.max(
+    0,
+    Number(balances.availableBalance || 0),
+  );
+  const payableNow = Math.max(
+    0,
+    Number(balances.effectiveAvailablePayout || 0),
+  );
+  const deductionsApplied = Math.max(0, availableEarnings - payableNow);
+  const codStatus = (row) => {
+    const status = String(row.status || "").toLowerCase();
+    if (status === "pending") {
+      return {
+        label: "Automatic verification pending",
+        className: "border-amber-200 bg-amber-50 text-amber-700",
+      };
+    }
+    if (["confirmed", "submitted"].includes(status)) {
+      return {
+        label: "Automatic verification pending",
+        className: "border-amber-200 bg-amber-50 text-amber-700",
+      };
+    }
+    if (["verified", "remitted"].includes(status)) {
+      return {
+        label:
+          Number(row.remaining_amount || 0) > 0
+            ? "Recovery in progress"
+            : "Reconciled",
+        className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      };
+    }
+    return null;
+  };
+  const adjustmentStatus = (row) => {
+    if (row.adjustmentType === "cod") return codStatus(row);
+    if (row.adjustmentType === "holds") {
+      const reason = String(row.releaseReason || row.reason || "");
+      return {
+        label: reason.includes("cod_collection")
+          ? "Held for COD recovery"
+          : "Temporarily on hold",
+        className: "border-amber-200 bg-amber-50 text-amber-700",
+      };
+    }
+    return null;
+  };
   const columns = useMemo(
     () => [
       {
@@ -264,25 +328,35 @@ export default function FinanceAdjustments() {
       },
       {
         key: "order",
-        label: "Order",
+        label: "Reference",
         cellClassName: "align-top",
-        render: (_, row) =>
-          row.orderId || row.order_id ? (
-            <OrderLink
-              orderId={row.orderId || row.order_id}
-              orderNumber={row.orderNumber || row.order_number}
-            />
-          ) : row.orderNumber || row.order_number ? (
-            row.orderNumber || row.order_number
-          ) : (
-            row.adjustmentType === "recoveries"
-              ? "Multiple orders"
-              : "—"
-          ),
+        render: (_, row) => (
+          <div className="min-w-[140px]">
+            <div>
+              {row.orderId || row.order_id ? (
+                <OrderLink
+                  orderId={row.orderId || row.order_id}
+                  orderNumber={row.orderNumber || row.order_number}
+                />
+              ) : row.orderNumber || row.order_number ? (
+                row.orderNumber || row.order_number
+              ) : row.adjustmentType === "recoveries" ? (
+                "Multiple orders"
+              ) : (
+                "—"
+              )}
+            </div>
+            <span className="mt-1 block text-xs text-[var(--admin-muted)]">
+              {formatDateTime12Hour(
+                row.createdAt || row.created_at || row.updatedAt,
+              )}
+            </span>
+          </div>
+        ),
       },
       {
         key: "amount",
-        label: "Amount",
+        label: "Financial effect",
         sortable: true,
         cellClassName: "align-top",
         render: (value, row) => (
@@ -295,26 +369,40 @@ export default function FinanceAdjustments() {
                   : "text-emerald-700"
             }
           >
-            {row.adjustmentType === "holds"
-              ? financeMoney(value, row.currency)
-              : signedFinanceMoney(value, row.currency)}
+            {row.adjustmentType === "cod"
+              ? `${financeMoney(Math.abs(Number(value || 0)), row.currency)} owed`
+              : row.adjustmentType === "holds"
+                ? `${financeMoney(value, row.currency)} unavailable`
+                : signedFinanceMoney(value, row.currency)}
           </strong>
         ),
       },
       {
         key: "status",
-        label: "Status",
+        label: "Current state",
         cellClassName: "align-top",
-        render: (_, row) => <FinanceStatusCell row={row} />,
+        render: (_, row) => {
+          const status = adjustmentStatus(row);
+          return status ? (
+            <span
+              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${status.className}`}
+            >
+              {status.label}
+            </span>
+          ) : (
+            <FinanceStatusCell row={row} />
+          );
+        },
       },
       {
-        key: "created",
-        label: "Date",
-        cellClassName: "align-top",
-        render: (_, row) =>
-          formatDateTime12Hour(
-            row.createdAt || row.created_at || row.updatedAt,
-          ),
+        key: "nextStep",
+        label: "What happens next",
+        cellClassName: "whitespace-normal align-top",
+        render: (value) => (
+          <p className="min-w-[200px] max-w-xs whitespace-normal text-xs leading-5 text-[var(--admin-muted)]">
+            {value || "No further action is required."}
+          </p>
+        ),
       },
       {
         key: "action",
@@ -338,12 +426,83 @@ export default function FinanceAdjustments() {
       <Loader loading={Boolean(loading)} />
       <PageHeader
         title="Adjustments"
-        subtitle="Understand why your earnings changed."
+        subtitle="See what reduced, delayed, or recovered your earnings and what happens next."
         breadcrumbs={[
           { label: "My Finance & Payouts" },
           { label: "Adjustments" },
         ]}
       />
+
+      {(owed > 0 || deductionsApplied > 0) && (
+        <section className="rounded-lg border border-red-200 bg-red-50/60 p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-700">
+              <MdWarningAmber aria-hidden="true" size={20} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-semibold text-[var(--admin-ink)]">
+                Why your payable balance is lower
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
+                COD cash collected directly from customers is money already held
+                by you. It is recorded as an amount owed and recovered from your
+                eligible earnings.
+              </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
+                <div className="rounded-md border border-[var(--admin-line)] bg-white p-3">
+                  <span className="block text-xs text-[var(--admin-muted)]">
+                    Eligible earnings
+                  </span>
+                  <strong className="mt-1 block text-base text-[var(--admin-ink)]">
+                    {financeMoney(availableEarnings)}
+                  </strong>
+                </div>
+                <span className="hidden text-lg font-semibold text-[var(--admin-muted)] sm:block">
+                  −
+                </span>
+                <div className="rounded-md border border-red-200 bg-white p-3">
+                  <span className="block text-xs text-[var(--admin-muted)]">
+                    Adjustments applied now
+                  </span>
+                  <strong className="mt-1 block text-base text-red-700">
+                    {financeMoney(deductionsApplied)}
+                  </strong>
+                </div>
+                <span className="hidden text-lg font-semibold text-[var(--admin-muted)] sm:block">
+                  =
+                </span>
+                <div className="rounded-md border border-emerald-200 bg-white p-3">
+                  <span className="block text-xs text-[var(--admin-muted)]">
+                    Payable now
+                  </span>
+                  <strong className="mt-1 block text-base text-emerald-700">
+                    {financeMoney(payableNow)}
+                  </strong>
+                </div>
+              </div>
+              {owed > 0 && (
+                <div className="mt-3 flex flex-col gap-2 rounded-md bg-white p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+                  <span className="leading-5 text-[var(--admin-muted)]">
+                    <strong className="text-red-700">
+                      {financeMoney(owed)} COD still owed.
+                    </strong>{" "}
+                    Any amount not recovered now carries forward to future
+                    eligible earnings.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/app/seller-cod-collections")}
+                    className="admin-btn-secondary shrink-0 !px-3 !py-1.5"
+                  >
+                    Review COD collections
+                    <MdArrowForward aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Cards
@@ -365,9 +524,9 @@ export default function FinanceAdjustments() {
           onClick={() => setParams({ type: "promotions" })}
         />
         <Cards
-          label="COD amount owed"
+          label="COD cash still owed"
           value={financeMoney(owed)}
-          description={`${financeMoney(owed)} remains to be recovered from available or future earnings. After full recovery, eligible earnings can be paid out.`}
+          description="Customer cash held by you that still needs to be recovered from eligible earnings."
           icon={<MdAccountBalanceWallet aria-hidden="true" size={18} />}
           iconBg="#ffd4d2"
           iconColor="#ff4b55"
@@ -395,9 +554,10 @@ export default function FinanceAdjustments() {
           className="admin-card flex w-full items-center justify-between p-4 text-left"
         >
           <div>
-            <strong>Submit or manage a COD collection</strong>
+            <strong>Review COD collections</strong>
             <p className="mt-1 text-xs text-[var(--admin-muted)]">
-              Upload collection proof and send it for Admin verification.
+              See automatically verified customer cash and track how much
+              remains to be recovered.
             </p>
           </div>
           <MdArrowForward aria-hidden="true" />
@@ -482,12 +642,20 @@ export default function FinanceAdjustments() {
               <div className="space-y-4">
                 <div className="flex items-start justify-between gap-4">
                   <span className="text-sm text-[var(--admin-muted)]">
-                    Amount
+                    {detail.adjustmentType === "cod"
+                      ? "COD amount owed"
+                      : detail.adjustmentType === "holds"
+                        ? "Earning affected"
+                        : "Amount"}
                   </span>
                   <strong
                     className={`text-xl ${Number(detail.amount) > 0 ? "text-emerald-700" : Number(detail.amount) < 0 ? "text-red-700" : "text-[var(--admin-ink)]"}`}
                   >
-                    {signedFinanceMoney(detail.amount, detail.currency)}
+                    {detail.adjustmentType === "cod"
+                      ? financeMoney(Math.abs(Number(detail.amount || 0)), detail.currency)
+                      : detail.adjustmentType === "holds"
+                        ? financeMoney(detail.amount, detail.currency)
+                        : signedFinanceMoney(detail.amount, detail.currency)}
                   </strong>
                 </div>
                 <div className="flex items-center justify-between gap-4 border-t border-[var(--admin-line)] pt-3 text-sm">
@@ -563,6 +731,66 @@ export default function FinanceAdjustments() {
                       {financeMoney(detail.reversalAmount, detail.currency)}
                     </span>
                   </div>
+                </div>
+              </FormSection>
+            )}
+            {detail.adjustmentType === "cod" && (
+              <FormSection
+                title="COD recovery breakdown"
+                subtitle="How customer cash held by you affects your payouts."
+              >
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[var(--admin-muted)]">
+                      COD cash collected
+                    </span>
+                    <strong>
+                      {financeMoney(
+                        detail.expected_amount ?? detail.collected_amount,
+                        detail.currency,
+                      )}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between gap-4 border-t border-[var(--admin-line)] pt-3">
+                    <span className="text-[var(--admin-muted)]">
+                      Recovered from earnings
+                    </span>
+                    <strong className="text-emerald-700">
+                      {financeMoney(detail.recovered_amount, detail.currency)}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between gap-4 border-t border-[var(--admin-line)] pt-3">
+                    <span className="text-[var(--admin-muted)]">
+                      Still owed
+                    </span>
+                    <strong className="text-red-700">
+                      {financeMoney(
+                        detail.remaining_amount ??
+                          detail.expected_amount ??
+                          detail.collected_amount,
+                        detail.currency,
+                      )}
+                    </strong>
+                  </div>
+                  <div className="border-t border-[var(--admin-line)] pt-3">
+                    <span className="block text-xs font-medium uppercase tracking-wide text-[var(--admin-muted)]">
+                      Next step
+                    </span>
+                    <p className="mt-1 leading-6 text-[var(--admin-ink)]">
+                      {detail.nextStep}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="admin-btn-secondary w-full justify-center"
+                    onClick={() => {
+                      setDetail(null);
+                      navigate("/app/seller-cod-collections");
+                    }}
+                  >
+                    Review COD collections
+                    <MdArrowForward aria-hidden="true" />
+                  </button>
                 </div>
               </FormSection>
             )}

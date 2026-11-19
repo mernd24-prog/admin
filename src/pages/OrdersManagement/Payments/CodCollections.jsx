@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { MdCheckCircle } from "react-icons/md";
 import { toast } from "sonner";
-import DefaultModal from "../../../components/Atoms/Modal/DefaultRightSideModal";
 import {
   DataTable,
   OrderLink,
@@ -11,10 +9,7 @@ import {
 } from "../../../components/Shared";
 import { axiosPrivate as axiosProvider } from "../../../_helpers/axiosProvider";
 import { ENDPOINTS } from "../../../_helpers/endpoints";
-import { ACTIONS } from "../../../_helpers/usePermission";
 import { dropdownApi } from "../../../_helpers/dropdownApi";
-import FormInput from "../../../components/Atoms/FormInput/FormInput";
-import FormSection from "../../../components/Atoms/FormSection/FormSection";
 import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
 import { formatDateTime12Hour } from "../../../utils/formatters";
 
@@ -54,12 +49,6 @@ export default function CodCollections() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [sellerMap, setSellerMap] = useState({});
   const [totalCount, setTotalCount] = useState(0);
-
-  const [decision, setDecision] = useState({
-    open: false,
-    row: null,
-    notes: "",
-  });
 
   const load = useCallback(
     async (page = pagination.page, pageSize = pagination.pageSize) => {
@@ -229,35 +218,6 @@ export default function CodCollections() {
     }
   }, [totalCount, sellerMap]);
 
-  const verify = useCallback(async () => {
-    if (!decision.row?.id) return;
-
-    try {
-      setLoading(true);
-
-      await axiosProvider.post(
-        ENDPOINTS.payments.verifyCodCollection(decision.row.id),
-        { notes: decision.notes.trim() || null },
-      );
-
-      toast.success("COD collection verified; payout recovery remains active");
-
-      setDecision({
-        open: false,
-        row: null,
-        notes: "",
-      });
-
-      setRefreshKey((value) => value + 1);
-    } catch (error) {
-      toast.error(
-        error?.response?.data?.message || "Unable to verify COD collection",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [decision]);
-
   const columns = useMemo(
     () => [
       {
@@ -329,7 +289,7 @@ export default function CodCollections() {
     <div>
       <PageHeader
         title="COD Collections"
-        subtitle="Verify seller-retained COD cash. Verification confirms collection but never clears the amount owed; payouts recover it automatically."
+        subtitle="COD collection is confirmed and verified automatically at delivery. Seller-held cash remains recoverable through payouts."
         breadcrumbs={[
           { label: "Payments & Finance" },
           { label: "COD Collections" },
@@ -363,81 +323,7 @@ export default function CodCollections() {
           label: "Export",
           disabled: loading || !totalCount,
         }}
-        rowActions={(row) =>
-          ["confirmed", "submitted"].includes(row.status)
-            ? [
-                {
-                  label: "Verify collection",
-                  icon: <MdCheckCircle size={16} className="text-blue-600" />,
-                  requiredModule: "payments",
-                  requiredAction: ACTIONS.APPROVE,
-                  onClick: () =>
-                    setDecision({
-                      open: true,
-                      row,
-                      notes: row.notes || "",
-                    }),
-                },
-              ]
-            : []
-        }
       />
-
-      <DefaultModal
-        isOpen={decision.open}
-        onClose={() =>
-          !loading &&
-          setDecision({
-            open: false,
-            row: null,
-            notes: "",
-          })
-        }
-        title="Verify COD collection"
-        onSubmit={verify}
-        submitButtonText={loading ? "Verifying..." : "Verify collection"}
-      >
-        <div className="space-y-5">
-          <FormSection
-            title="Seller-retained cash"
-            description="Verify that delivery and the seller's full-amount confirmation are present. This action does not clear the liability."
-          >
-            <div className="space-y-4">
-              <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                <div className="text-xs font-medium uppercase text-gray-500">
-                  Expected and confirmed COD
-                </div>
-                <div className="mt-1 text-lg font-semibold">
-                  {money(decision.row?.expected_amount)}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
-                After verification,{" "}
-                {money(
-                  decision.row?.remaining_amount ??
-                    decision.row?.expected_amount,
-                )}{" "}
-                remains owed and will be recovered from payouts.
-              </div>
-
-              <FormInput
-                label="Internal verification note (optional)"
-                name="notes"
-                type="textarea"
-                value={decision.notes}
-                onChange={(event) =>
-                  setDecision((current) => ({
-                    ...current,
-                    notes: event.target.value,
-                  }))
-                }
-                placeholder="Add audit context"
-              />
-            </div>
-          </FormSection>
-        </div>
-      </DefaultModal>
     </div>
   );
 }

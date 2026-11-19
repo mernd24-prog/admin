@@ -1,4 +1,6 @@
 const SELLER_ORGANIZATION_KEY = "sellerSelectedOrganizationId";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ORGANIZATION_HEADER_EXCLUDED_PREFIXES = [
   "/sellers/me/status",
   "/sellers/me/profile",
@@ -42,7 +44,15 @@ export const shouldAttachSellerOrganizationHeader = (endpoint = "") => {
 
 export const getSelectedSellerOrganizationId = () => {
   if (typeof window === "undefined") return "";
-  return window.localStorage.getItem(SELLER_ORGANIZATION_KEY) || "";
+  const value = String(
+    window.localStorage.getItem(SELLER_ORGANIZATION_KEY) || "",
+  ).trim();
+  if (!value) return "";
+  if (!UUID_PATTERN.test(value)) {
+    window.localStorage.removeItem(SELLER_ORGANIZATION_KEY);
+    return "";
+  }
+  return value;
 };
 
 export const getSelectedSellerOrganizationHeader = (endpoint = "") => {
@@ -53,15 +63,16 @@ export const getSelectedSellerOrganizationHeader = (endpoint = "") => {
 
 export const setSelectedSellerOrganizationId = (organizationId = "") => {
   if (typeof window === "undefined") return;
-  const value = String(organizationId || "");
-  if (value) {
-    window.localStorage.setItem(SELLER_ORGANIZATION_KEY, value);
+  const value = String(organizationId || "").trim();
+  const selectedValue = value && UUID_PATTERN.test(value) ? value : "";
+  if (selectedValue) {
+    window.localStorage.setItem(SELLER_ORGANIZATION_KEY, selectedValue);
   } else {
     window.localStorage.removeItem(SELLER_ORGANIZATION_KEY);
   }
   window.dispatchEvent(
     new CustomEvent("seller:organizationChanged", {
-      detail: { organizationId: value },
+      detail: { organizationId: selectedValue },
     }),
   );
 };
