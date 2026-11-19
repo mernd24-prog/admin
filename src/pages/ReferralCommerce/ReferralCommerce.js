@@ -736,10 +736,14 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
       return;
     }
 
-    const maximumAmount =
-      form.maximumAmount === "" ? 0 : Number(form.maximumAmount);
+    const maximumAmount = form.amountType === "percentage"
+      ? form.maximumAmount === "" ? 0 : Number(form.maximumAmount)
+      : 0;
 
-    if (Number.isNaN(maximumAmount) || maximumAmount < 0) {
+    if (
+      form.amountType === "percentage" &&
+      (Number.isNaN(maximumAmount) || maximumAmount < 0)
+    ) {
       toast.error("Maximum pool amount must be a valid number");
       return;
     }
@@ -880,7 +884,8 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
       productTitle: row.productTitle || getProductTitle(product) || "",
       amountType: row.amountType || "fixed_amount",
       amountValue: row.amountValue ?? "",
-      maximumAmount: row.maximumAmount ?? "",
+      maximumAmount:
+        row.amountType === "percentage" ? row.maximumAmount ?? "" : "",
       active: row.active !== false,
     });
     setDrawerOpen(true);
@@ -986,13 +991,16 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
 
                 return `₹${Number(value || 0).toLocaleString("en-IN", {
                   minimumFractionDigits: 2,
-                })} / unit`;
+                })} per order`;
               },
             },
             {
               key: "maximumAmount",
               label: "Maximum",
-              render: (value) => {
+              render: (value, row) => {
+                if (row.amountType !== "percentage") {
+                  return "Not applicable";
+                }
                 if (Number(value || 0) === 0) {
                   return "No Limit";
                 }
@@ -1135,7 +1143,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
           {/* ==================== Referral Pool Configuration ==================== */}
           <FormSection
             title="Referral Pool Configuration"
-            description="Configure the amount type and maximum eligible referral pool for this product."
+            description="Each distinct product contributes once per order, regardless of quantity."
           >
             <div className="space-y-4">
               {/* Amount Type */}
@@ -1148,9 +1156,12 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
                   ) || null
                 }
                 onChange={(selectedOption) => {
+                  const amountType = selectedOption?.value || "fixed_amount";
                   setForm((current) => ({
                     ...current,
-                    amountType: selectedOption?.value || "fixed_amount",
+                    amountType,
+                    maximumAmount:
+                      amountType === "percentage" ? current.maximumAmount : "",
                   }));
                 }}
                 placeholder="Select amount type"
@@ -1180,28 +1191,35 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
                 placeholder={
                   form.amountType === "percentage" ? "e.g. 10" : "e.g. 50"
                 }
+                hint={
+                  form.amountType === "percentage"
+                    ? "Calculated from one unit price. Buying more quantity does not multiply the product pool."
+                    : "Applied once for this distinct product in an order, regardless of quantity."
+                }
                 required
                 className="w-full"
               />
 
               {/* Maximum Amount */}
-              <FormInput
-                label="Maximum Product Pool (₹)"
-                name="maximumAmount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.maximumAmount}
-                onChange={(event) => {
-                  setForm((current) => ({
-                    ...current,
-                    maximumAmount: event.target.value,
-                  }));
-                }}
-                placeholder="0 means no additional limit"
-                hint="0 means no additional limit. Eligible product pools are added together; each product contributes once per order, regardless of quantity."
-                className="w-full"
-              />
+              {form.amountType === "percentage" && (
+                <FormInput
+                  label="Maximum Product Pool (₹)"
+                  name="maximumAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.maximumAmount}
+                  onChange={(event) => {
+                    setForm((current) => ({
+                      ...current,
+                      maximumAmount: event.target.value,
+                    }));
+                  }}
+                  placeholder="0 means no additional limit"
+                  hint="Caps this product's percentage-based pool. It still contributes only once per order, regardless of quantity."
+                  className="w-full"
+                />
+              )}
             </div>
           </FormSection>
 
@@ -1272,8 +1290,8 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
                   </p>
                   <p className="mt-1 text-xs text-[var(--admin-muted)]">
                     {form.amountType === "percentage"
-                      ? "Calculated as a percentage of the product line."
-                      : "Applied once per order."}
+                      ? "Calculated from one unit price, capped by the maximum when configured."
+                      : "Applied once per distinct product per order."}
                   </p>
                 </div>
 
