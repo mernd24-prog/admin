@@ -611,7 +611,7 @@ export const FinanceEmptyState = ({ title, description }) => (
 
 export const MoneyEquation = ({
   available,
-  owed,
+  applied,
   payable,
   currency = "INR",
 }) => (
@@ -626,9 +626,11 @@ export const MoneyEquation = ({
     </div>
     <span className="text-xl text-[var(--admin-muted)]">−</span>
     <div>
-      <span className="text-xs text-[var(--admin-muted)]">COD / other balance recovered</span>
+      <span className="text-xs text-[var(--admin-muted)]">
+        Recovery and adjustments applied now
+      </span>
       <strong className="mt-1 block text-xl text-red-700">
-        {financeMoney(owed, currency)}
+        {financeMoney(applied, currency)}
       </strong>
     </div>
     <span className="text-xl text-[var(--admin-muted)]">=</span>

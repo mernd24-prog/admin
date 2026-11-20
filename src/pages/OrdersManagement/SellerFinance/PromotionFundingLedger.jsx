@@ -308,7 +308,7 @@ const PromotionFundingLedger = () => {
 
       {
         key: "marketplaceContributionAmount",
-        label: "Platform / Partner",
+        label: "Platform / Payment Partner",
         headerClassName: "text-right",
         cellClassName: "text-right text-blue-700",
         render: (value, row) =>
@@ -496,7 +496,7 @@ const PromotionFundingLedger = () => {
           fundingType: String(row.fundingType || "").replace(/_/g, " "),
           customerDiscount: money(row.customerDiscountAmount, currency),
           sellerFunded: money(row.sellerFundedDiscountAmount, currency),
-          platformPartner: money(
+          platformPaymentPartner: money(
             Number(row.marketplaceContributionAmount || 0) +
               Number(row.paymentPartnerContributionAmount || 0),
             currency,
@@ -521,7 +521,10 @@ const PromotionFundingLedger = () => {
         { header: "Funding", key: "fundingType" },
         { header: "Customer Discount", key: "customerDiscount" },
         { header: "Seller-funded", key: "sellerFunded" },
-        { header: "Platform / Partner", key: "platformPartner" },
+        {
+          header: "Platform / Payment Partner",
+          key: "platformPaymentPartner",
+        },
         { header: "Reversed", key: "reversed" },
         { header: "Net Contribution", key: "netContribution" },
         { header: "Status", key: "status" },
@@ -581,12 +584,7 @@ const PromotionFundingLedger = () => {
       "Platform-funded seller invoice payment",
       MdStorefront,
     ],
-    [
-      "Payment Partner Contribution",
-      totals.paymentPartnerContributionAmount,
-      "Bank/payment-partner-funded payment",
-      MdAccountBalance,
-    ],
+
     [
       "Contribution Reversals",
       totals.reversalAmount,
@@ -625,6 +623,8 @@ const PromotionFundingLedger = () => {
         <p className="mt-1 leading-6">
           Marketplace contribution is not an additional commission. It covers
           part of the seller invoice through platform-funded promotion.
+          Referral partner commissions are tracked separately in Referral
+          Commerce and do not reduce the seller's payout.
         </p>
         <div className="mt-3 rounded-md border border-amber-200/70 bg-white/80 px-3 py-2.5">
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">

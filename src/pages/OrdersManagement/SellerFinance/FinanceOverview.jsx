@@ -63,9 +63,18 @@ export default function FinanceOverview() {
   const dateRange = useFinanceDateRange();
   const { dateFilters } = dateRange;
 
-  const owed =
-    Math.abs(Number(balances.codLiabilityBalance || 0)) +
-    Math.abs(Number(balances.otherAdjustmentBalance || 0));
+  const availableEarnings = Math.max(
+    0,
+    Number(balances.availableBalance || 0),
+  );
+  const payableNow = Math.max(
+    0,
+    Number(balances.effectiveAvailablePayout || 0),
+  );
+  const recoveryAppliedNow = Math.max(
+    0,
+    availableEarnings - payableNow,
+  );
 
   const load = useCallback(async () => {
     try {
@@ -288,7 +297,12 @@ export default function FinanceOverview() {
           iconColor="#1d9b50"
           onClick={() => navigate("/app/seller-payouts")}
         />
-        <MoneyEquation available={balances.availableBalance} owed={owed} payable={balances.effectiveAvailablePayout} currency={currency} />
+        <MoneyEquation
+          available={availableEarnings}
+          applied={recoveryAppliedNow}
+          payable={payableNow}
+          currency={currency}
+        />
       </div>
 
       {(Number(codReconciliation.totalOrders || 0) > 0 ||
@@ -298,13 +312,18 @@ export default function FinanceOverview() {
             <ContentPanel title="COD collections"   bodyClassName="p-0">
               <div className="grid gap-4 p-4 sm:grid-cols-3 sm:p-5">
                 {[
-                  ["Cash confirmed", codSummary.collectedAmount, "Physical customer cash retained by the seller.", "/app/seller-cod-collections"],
-                  ["Recovered from payouts", codSummary.recoveredAmount, `${financeMoney(codSummary.reservedAmount, currency)} reserved in payouts.`, "/app/seller-payouts"],
-                  ["COD still owed", codSummary.outstandingAmount, "Carried forward into future payouts.", "/app/seller-cod-collections"],
+                  ["COD cash held by seller", codSummary.collectedAmount, "Full customer cash retained by the seller, including any customer platform fee.", "/app/seller-cod-collections"],
+                  ["Recovered from earnings", codSummary.recoveredAmount, `${financeMoney(codSummary.reservedAmount, currency)} is currently reserved for recovery.`, "/app/seller-payouts"],
+                  ["COD balance still owed", codSummary.outstandingAmount, "The unrecovered balance will be taken from future eligible earnings.", "/app/seller-cod-collections"],
                 ].map(([label, amount, detail, path]) => (
                   <SummaryCard key={label} title={label} value={financeMoney(amount, currency)} description={detail} onClick={() => navigate(path)} className="min-h-0 border-0 bg-none shadow-none" valueClassName="text-base" />
                 ))}
               </div>
+              <p className="border-t border-[var(--admin-line)] px-4 py-3 text-xs leading-5 text-[var(--admin-muted)] sm:px-5">
+                Seller-direct COD cash is separate from seller earnings. The
+                platform offsets eligible earnings against the cash held and
+                carries any unpaid balance forward automatically.
+              </p>
             </ContentPanel>
           </div>
         )}

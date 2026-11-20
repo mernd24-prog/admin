@@ -248,7 +248,7 @@ export default function CodCollections() {
       },
       {
         key: "expected_amount",
-        label: "COD cash",
+        label: "COD cash held",
         render: (value) => money(value),
       },
       {
@@ -289,7 +289,7 @@ export default function CodCollections() {
     <div>
       <PageHeader
         title="COD Collections"
-        subtitle="COD collection is confirmed and verified automatically at delivery. Seller-held cash remains recoverable through payouts."
+        subtitle="Each row belongs to one seller shipment. Seller-held cash includes that seller's allocated customer payment and charges, and is recovered through seller earnings."
         breadcrumbs={[
           { label: "Payments & Finance" },
           { label: "COD Collections" },

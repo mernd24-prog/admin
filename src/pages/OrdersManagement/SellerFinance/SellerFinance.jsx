@@ -330,7 +330,7 @@ const MetricCard = ({ label, value, hint }) => {
       "Refund Adjustments": MdUndo,
       "Seller-funded Discount": MdLocalOffer,
       "Marketplace Promotion Contribution": MdLocalOffer,
-      "Payment Partner Contribution": MdAccountBalance,
+      
       "Shipping Collected from Customer": MdLocalShipping,
       "Shipping Deduction": MdLocalShipping,
       "Other Adjustments": MdCalculate,

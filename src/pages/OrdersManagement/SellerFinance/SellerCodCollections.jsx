@@ -37,7 +37,7 @@ export default function SellerCodCollections() {
     { key: "order_number", label: "Order / Shipment", render: (_, row) => (
       <div><OrderLink orderId={row.order_id} orderNumber={row.order_number} /><div className="text-xs text-gray-500">{row.awb_number || "Shipment"}</div></div>
     ) },
-    { key: "expected_amount", label: "COD cash", render: (value) => money(value) },
+    { key: "expected_amount", label: "COD cash held", render: (value) => money(value) },
     { key: "status", label: "Collection", render: (value, row) => <span title={row.status === "verified" ? "Automatically recorded when delivery was confirmed." : row.status === "disputed" ? "This collection is under review." : "Collection status requires review."}><StatusBadge status={value} label={label(value)} /></span> },
     { key: "recovered_amount", label: "Recovered", render: (value) => money(value) },
     { key: "remaining_amount", label: "Still owed", render: (value) => <span className={Number(value) > 0 ? "font-semibold text-red-700" : "text-emerald-700"}>{money(value)}</span> },
@@ -46,7 +46,7 @@ export default function SellerCodCollections() {
 
   return <div>
     <>
-    <PageHeader title="COD Collections" subtitle="COD cash is recorded automatically at delivery. Seller-held amounts are recovered from current or future eligible payouts." breadcrumbs={[{ label: "Seller Finance" }, { label: "COD Collections" }]} />
+    <PageHeader title="COD Collections" subtitle="The cash held includes the seller's allocated customer payment, such as product value and customer platform fee. It is recovered from current or future eligible earnings." breadcrumbs={[{ label: "Seller Finance" }, { label: "COD Collections" }]} />
     </>
     <DataTable columns={columns} data={filteredItems} loading={loading} totalCount={filteredItems.length}
       page={pagination.page} pageSize={pagination.pageSize}

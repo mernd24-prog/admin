@@ -111,7 +111,7 @@ const AmountCard = ({ label: cardLabel, value, tone = "default" }) => {
       "Seller-funded discount": MdLocalOffer,
       "Paid by customer": MdPayments,
       "Marketplace contribution": MdLocalOffer,
-      "Payment partner contribution": MdAccountBalance,
+     
     }[cardLabel] || MdReceiptLong;
 
   return (
@@ -522,14 +522,7 @@ const TaxInvoiceDetail = () => {
             tone="green"
           />
 
-          <AmountCard
-            label="Payment partner contribution"
-            value={money(
-              amountMeta.paymentPartnerFundedDiscountAmount,
-              currency,
-            )}
-            tone="green"
-          />
+        
         </ContentPanel>
       )}
       <ContentPanel

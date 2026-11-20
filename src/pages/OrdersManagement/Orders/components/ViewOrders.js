@@ -2943,6 +2943,42 @@ const OrderSummary = () => {
     Math.max(0, customerTotalAmount - walletDiscountAmount).toFixed(2),
   );
   const relations = order.relations || {};
+  const orderMetadata = normalizeJson(order.metadata, {});
+  const referralSummary = normalizeJson(orderMetadata.referral, {});
+  const codCollections = Array.isArray(relations.codCollections)
+    ? relations.codCollections
+    : [];
+  const referralAllocations = Array.isArray(relations.referralAllocations)
+    ? relations.referralAllocations
+    : [];
+  const referralPartnerAmount = money(
+    referralAllocations
+      .filter(
+        (allocation) =>
+          !["reversed", "expired"].includes(
+            String(allocation.status || "").toLowerCase(),
+          ),
+      )
+      .reduce(
+      (total, allocation) => total + Number(allocation.payableAmount || 0),
+      0,
+      ),
+  );
+  const referralPoolAmount = money(referralSummary.referralPoolAmount);
+  const referralCustomerDiscount = money(
+    referralSummary.customerDiscountAmount,
+  );
+  const referralUnallocatedAmount = Math.max(
+    0,
+    money(
+      referralPoolAmount -
+        referralCustomerDiscount -
+        referralPartnerAmount,
+    ),
+  );
+  const isCodOrder =
+    String(firstDefined(order.payment_provider, order.paymentProvider, ""))
+      .toLowerCase() === "cod";
   const buyer = relations.buyer || order.buyer || order.buyerSnapshot || {};
   const buyerId = firstDefined(
     buyer.id,
@@ -3519,6 +3555,48 @@ const OrderSummary = () => {
                     sellerSettlements.find((settlement) =>
                       sameSellerGroup(settlement, group),
                     ) || {};
+                  const groupCodCollections = codCollections.filter(
+                    (collection) => sameSellerGroup(collection, group),
+                  );
+                  const sellerHeldCod = money(
+                    groupCodCollections
+                      .filter(
+                        (collection) =>
+                          String(collection.collected_by || "").toLowerCase() ===
+                          "seller",
+                      )
+                      .reduce(
+                        (total, collection) =>
+                          total +
+                          Number(
+                            collection.collected_amount ||
+                              collection.expected_amount ||
+                              0,
+                          ),
+                        0,
+                      ),
+                  );
+                  const allocatedCod = money(
+                    groupCodCollections.reduce(
+                      (total, collection) =>
+                        total +
+                        Number(
+                          collection.expected_amount ||
+                            collection.collected_amount ||
+                            0,
+                        ),
+                      0,
+                    ),
+                  );
+                  const sellerEarning = money(groupSettlement.sellerPayout);
+                  const transferToSeller = Math.max(
+                    0,
+                    money(sellerEarning - sellerHeldCod),
+                  );
+                  const sellerBalanceOwed = Math.max(
+                    0,
+                    money(sellerHeldCod - sellerEarning),
+                  );
                   const packageStatus = firstDefined(
                     fulfillmentGroup.deliveryStatus,
                     fulfillmentGroup.shipmentStatus,
@@ -3624,6 +3702,64 @@ const OrderSummary = () => {
                           </span>
                         </div>
                       </div>
+                      {isCodOrder && groupCodCollections.length > 0 && (
+                        <div className="border-b border-[#efe6cd] bg-[#fffdf8] px-4 py-3">
+                          <div className="mb-2 text-xs font-bold uppercase tracking-wide text-[#65718b]">
+                            COD settlement for this seller
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                            {[
+                              [
+                                "Customer COD allocated",
+                                allocatedCod,
+                                "Includes this seller's share of customer charges.",
+                                "text-[#202337]",
+                              ],
+                              [
+                                "Seller earning",
+                                sellerEarning,
+                                "After commission and statutory deductions.",
+                                "text-emerald-700",
+                              ],
+                              [
+                                "Cash held by seller",
+                                sellerHeldCod,
+                                "Already collected from the customer.",
+                                "text-blue-700",
+                              ],
+                              [
+                                "Transfer to seller",
+                                transferToSeller,
+                                "Additional bank or wallet payout for this order.",
+                                "text-emerald-700",
+                              ],
+                              [
+                                "Seller still owes",
+                                sellerBalanceOwed,
+                                "Recovered from current or future earnings.",
+                                sellerBalanceOwed > 0
+                                  ? "text-red-700"
+                                  : "text-emerald-700",
+                              ],
+                            ].map(([label, value, note, tone]) => (
+                              <div
+                                key={label}
+                                className="rounded-lg border border-[#efe6cd] bg-white p-2.5"
+                              >
+                                <div className="text-[11px] font-semibold text-[#65718b]">
+                                  {label}
+                                </div>
+                                <div className={`mt-1 text-sm font-bold ${tone}`}>
+                                  {formatIndianNumber(value)}
+                                </div>
+                                <div className="mt-1 text-[11px] leading-4 text-[#65718b]">
+                                  {note}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div className="hidden grid-cols-12 gap-3 border-b border-[#e6ebf7] bg-[#eef2fb] px-4 py-2 text-xs font-semibold uppercase text-[#65718b] md:grid">
                         <span className="col-span-5">Product</span>
                         <span className="col-span-1 text-center">Qty</span>
@@ -3870,6 +4006,74 @@ const OrderSummary = () => {
                 </div>
               )}
             </Panel>
+            {!isSeller &&
+              (referralAllocations.length > 0 || referralPoolAmount > 0) && (
+                <Panel title="Referral Partner Allocation">
+                  <InfoRow
+                    label="Referral pool"
+                    value={formatIndianNumber(referralPoolAmount)}
+                  />
+                  <InfoRow
+                    label="Customer discount"
+                    value={formatIndianNumber(referralCustomerDiscount)}
+                  />
+                  <InfoRow
+                    label="Partner commissions"
+                    value={formatIndianNumber(referralPartnerAmount)}
+                    strong
+                  />
+                  {referralUnallocatedAmount > 0 && (
+                    <InfoRow
+                      label="Retained / unallocated"
+                      value={formatIndianNumber(referralUnallocatedAmount)}
+                    />
+                  )}
+                  <div className="mt-3 space-y-2 border-t border-[#efe6cd] pt-3">
+                    {referralAllocations.map((allocation) => (
+                      <div
+                        key={allocation.id || allocation.influencerId}
+                        className="rounded-lg border border-[#efe6cd] bg-[#fffdf8] p-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <DetailLink
+                              onClick={() =>
+                                navigate(
+                                  `/app/referral-commerce/influencers/view/${allocation.influencerId}`,
+                                )
+                              }
+                              className="font-semibold"
+                            >
+                              {allocation.recipientName || "Partner"}
+                            </DetailLink>
+                            <div className="mt-1 text-xs text-[#65718b]">
+                              {formatLabel(
+                                allocation.recipientPartnerType ||
+                                  allocation.commissionType,
+                              )}
+                              {allocation.referralCode
+                                ? ` · Code ${allocation.referralCode}`
+                                : ""}
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <div className="font-bold text-emerald-700">
+                              {formatIndianNumber(allocation.payableAmount)}
+                            </div>
+                            <div className="text-xs text-[#65718b]">
+                              {formatLabel(allocation.status)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-[#65718b]">
+                    Partner commissions come from the referral pool and do not
+                    reduce either seller's payout.
+                  </p>
+                </Panel>
+              )}
           </aside>
         </div>
 

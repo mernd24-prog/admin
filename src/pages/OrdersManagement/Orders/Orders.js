@@ -43,6 +43,10 @@ import { dropdownApi } from "../../../_helpers/dropdownApi";
 import useRealtimeRefresh from "../../../hooks/useRealtimeRefresh";
 import { exportToExcelWorkbook } from "../../../_helpers/exportToCsv";
 import { ExportButton } from "../../../components/Atoms/buttons/exportImport";
+import {
+  paymentPresentationOf,
+  payoutWindowOf,
+} from "../../../utils/orderFinancialPresentation";
 
 /* =========================================================
    PAYMENT TYPE OPTIONS
@@ -451,56 +455,6 @@ const shipmentStatusOf = (row = {}) => {
 };
 
 /* =========================================================
-   PAYOUT WINDOW
-========================================================= */
-
-const payoutWindowOf = (row = {}) => {
-  const items = Array.isArray(row.items) ? row.items : [];
-
-  const commissions = Array.isArray(row.relations?.sellerCommissions)
-    ? row.relations.sellerCommissions
-    : [];
-
-  const deadlines = items
-    .map((item) =>
-      firstDefined(
-        item.payout_eligible_at,
-        item.payoutEligibleAt,
-        item.return_eligible_until,
-        item.returnEligibleUntil,
-      ),
-    )
-    .filter(Boolean);
-
-  const latestDeadline = deadlines.length
-    ? deadlines.reduce((latest, value) =>
-        new Date(value).getTime() > new Date(latest).getTime() ? value : latest,
-      )
-    : null;
-
-  const held = items.some(
-    (item) =>
-      String(item.payout_status || item.payoutStatus || "").toLowerCase() ===
-      "held",
-  );
-
-  const paid =
-    commissions.length > 0 &&
-    commissions.every(
-      (commission) => String(commission.status || "").toLowerCase() === "paid",
-    );
-
-  const fulfilled = String(row.status || "").toLowerCase() === "fulfilled";
-
-  return {
-    latestDeadline,
-    held,
-    paid,
-    fulfilled,
-  };
-};
-
-/* =========================================================
    RETURN WINDOW LABEL
 ========================================================= */
 
@@ -709,9 +663,24 @@ const createColumns = (
     key: "payment_status",
     label: "Payment Status",
 
-    render: (value, row) => (
-      <OrderStatusBadge status={firstDefined(value, row.paymentStatus)} dot />
-    ),
+    render: (_value, row) => {
+      const payment = paymentPresentationOf(row);
+
+      return (
+        <div className="flex min-w-[180px] flex-col items-start">
+          <OrderStatusBadge
+            status={payment.status}
+            label={payment.label}
+            dot
+          />
+          {payment.detail && (
+            <div className="mt-1 text-[11px] leading-4 text-gray-500">
+              {payment.detail}
+            </div>
+          )}
+        </div>
+      );
+    },
   },
 
   {
@@ -1719,6 +1688,17 @@ const Orders = () => {
 
         if (payout.paid) {
           return <StatusBadge status="paid" dot />;
+        }
+
+        if (payout.noPayout) {
+          return (
+            <div className="flex flex-col items-start">
+              <StatusBadge status="not_created" label="No Payout" dot />
+              <div className="mt-1 text-[11px] leading-4 text-gray-500">
+                {payout.noPayoutReason}
+              </div>
+            </div>
+          );
         }
 
         if (payout.held) {
