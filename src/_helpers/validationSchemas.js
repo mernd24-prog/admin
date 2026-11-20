@@ -160,6 +160,7 @@ export const productBasicDetailsValidationSchema = Yup.object({
       );
     },
   ),
+  productFamilyCode: Yup.string().notRequired(),
   warranty: Yup.object({
     enabled: Yup.boolean(),
     period: Yup.number()
