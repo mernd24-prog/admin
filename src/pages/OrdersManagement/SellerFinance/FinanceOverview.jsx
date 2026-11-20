@@ -556,7 +556,7 @@ export default function FinanceOverview() {
 
 
       {/* Attention required */}
-      {(owed > 0 || Number(balances.blockedBalance || 0) > 0) && (
+      {(Number(codSummary.outstandingAmount || 0) > 0 || Number(balances.blockedBalance || 0) > 0) && (
         <section className="order-7 space-y-3 rounded-lg border border-golden/30 bg-white p-6">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
@@ -572,7 +572,7 @@ export default function FinanceOverview() {
             </div>
           </div>
 
-          {owed > 0 && (
+          {Number(codSummary.outstandingAmount || 0) > 0 && (
             <button
               type="button"
               onClick={() => navigate("/app/seller-cod-collections")}
@@ -584,7 +584,7 @@ export default function FinanceOverview() {
 
               <div className="min-w-0 flex-1">
                 <strong className="block text-sm font-semibold leading-6 text-[var(--admin-navy)]">
-                  {financeMoney(owed, currency)} COD amount needs to be
+                  {financeMoney(codSummary.outstandingAmount, currency)} COD amount needs to be
                   recovered
                 </strong>
                 <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">
