@@ -201,6 +201,33 @@ const toOptionalNumber = (value) => {
   return Number.isFinite(number) ? number : undefined;
 };
 
+const getStoredSpecialPrice = (source = {}, fallbackRegularPrice) => {
+  const specialPrice = source.salePrice ?? source.specialPrice;
+  if (
+    specialPrice === undefined ||
+    specialPrice === null ||
+    specialPrice === ""
+  ) {
+    return "";
+  }
+
+  const amount = Number(specialPrice);
+  const regularPrice = Number(source.price ?? fallbackRegularPrice);
+  // Some existing product records mirror the regular price into salePrice
+  // even when no discount was entered. Treat that redundant value as empty;
+  // a special price equal to the regular price is invalid and has no effect.
+  if (
+    Number.isFinite(amount) &&
+    Number.isFinite(regularPrice) &&
+    regularPrice > 0 &&
+    amount === regularPrice
+  ) {
+    return "";
+  }
+
+  return specialPrice;
+};
+
 const normalizeVariantSortOrder = (value, fallbackIndex) => {
   if (value === null || value === undefined || value === "")
     return fallbackIndex;
@@ -469,6 +496,7 @@ export default function ProductManagementUI() {
   const initialPrefillStartedRef = useRef(false);
   const requestedProductIdRef = useRef(null);
   const [saving, setSaving] = useState(false);
+  const [validationAttempted, setValidationAttempted] = useState(false);
   const [checkingMedia, setCheckingMedia] = useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const initialFormSnapshotRef = useRef(null);
@@ -994,7 +1022,7 @@ export default function ProductManagementUI() {
             stock: productData?.stock ?? "",
             price: productData?.price ?? "",
             mrp: productData?.mrp ?? "",
-            salePrice: productData?.salePrice ?? "",
+            salePrice: getStoredSpecialPrice(productData),
             isDisable: productData?.status !== "active",
             isApproved:
               productData?.approvalStatus === "approved" ||
@@ -1048,7 +1076,10 @@ export default function ProductManagementUI() {
               packaging: option.packaging || "",
               mrp: option.mrp || "",
               discount: option.discount || "",
-              salePrice: option.salePrice || option.price || "",
+              // A missing special price must remain empty. Falling back to
+              // the regular price made the optional field appear populated
+              // when reopening older products for editing.
+              salePrice: getStoredSpecialPrice(option, productData?.price),
               stock: option.stock || "",
               images: option.images || [],
             }));
@@ -1062,6 +1093,7 @@ export default function ProductManagementUI() {
             setVariantsData(
               productData.variants.map((variant, index) => ({
                 ...variant,
+                salePrice: getStoredSpecialPrice(variant, productData?.price),
                 isDefault:
                   variant.isDefault === true ||
                   (!productData.variants.some((item) => item.isDefault) &&
@@ -1080,7 +1112,7 @@ export default function ProductManagementUI() {
                     : "Default",
                 price: productData?.price ?? "",
                 mrp: productData?.mrp ?? "",
-                salePrice: productData?.salePrice ?? "",
+                salePrice: getStoredSpecialPrice(productData),
                 stock: productData?.stock ?? 0,
                 attributes:
                   productData?.color && productData.color !== "default"
@@ -1240,10 +1272,13 @@ export default function ProductManagementUI() {
   }, [loading, dispatch]);
 
   useEffect(() => {
-    if (id && requestedProductIdRef.current !== String(id)) {
-      requestedProductIdRef.current = String(id);
-      fetchProductById(id);
-    }
+    const nextProductId = id ? String(id) : null;
+    if (requestedProductIdRef.current === nextProductId) return;
+
+    requestedProductIdRef.current = nextProductId;
+    setValidationAttempted(false);
+    setError(null);
+    if (id) fetchProductById(id);
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -3753,6 +3788,7 @@ export default function ProductManagementUI() {
               errors={error?.variants}
               onClearError={handleVariantErrorClear}
               onUploadingChange={setVariantBuilderBusy}
+              validationAttempted={validationAttempted}
             />
           </div>
         ),
@@ -4781,6 +4817,7 @@ export default function ProductManagementUI() {
 
   const handleValidateAndSubmit = useCallback(async () => {
     if (saving || checkingMedia) return;
+    setValidationAttempted(true);
     const isBasicFormValid = await validateForm();
 
     const seoErrors = await seoFormik.validateForm();

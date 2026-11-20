@@ -127,6 +127,7 @@ const VariantBuilder = ({
   errors = {},
   onClearError,
   onUploadingChange,
+  validationAttempted = false,
 }) => {
   const productStatuses = useDropdownOptions("product-statuses");
   const [optionSearch, setOptionSearch] = useState("");
@@ -144,7 +145,6 @@ const VariantBuilder = ({
   const dragVariantIdx = useRef(null);
   const [bulkFieldErrors, setBulkFieldErrors] = useState({});
   const [touchedDescriptionFields, setTouchedDescriptionFields] = useState({});
-
   const touchDescriptionField = (idx, field) => {
     setTouchedDescriptionFields((prev) => ({
       ...prev,
@@ -213,8 +213,9 @@ const VariantBuilder = ({
     const isTouched = touchedVariants[idx]?.[field];
     const existingError = errors?.[idx]?.[field];
 
-    // Show errors either when focused or when submitted
-    if (!isTouched && !existingError) return "";
+    // Parent validation may run while edit data is being initialized. Keep
+    // its errors hidden until the user touches the field or submits the form.
+    if (!isTouched && !validationAttempted) return "";
 
     const value = variants[idx]?.[field];
 
