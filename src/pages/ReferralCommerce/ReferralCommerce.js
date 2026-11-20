@@ -3203,7 +3203,13 @@ const ReferralCommerce = () => {
             label="Coin Usage"
             isClearable
             name="coinUsage"
-            value={rulesForm.coinUsage}
+            value={
+              optionList(referralCoinUsageModes.options, [
+                "wallet",
+                "discount",
+                "both",
+              ]).find((option) => option.value === rulesForm.coinUsage) || null
+            }
             onChange={(option) =>
               handleRulesField({
                 target: {
@@ -3220,6 +3226,7 @@ const ReferralCommerce = () => {
               "both",
             ])}
           />
+
           <FormInput
             label="Minimum Eligible Order Amount"
             name="minOrderAmount"
