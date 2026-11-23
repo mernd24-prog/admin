@@ -1031,7 +1031,7 @@ const SellerPayouts = () => {
       {isSeller && (
         <div className="grid gap-3 sm:grid-cols-3">
           <Cards
-            label="Paid to date"
+            label="Paid"
             value={financeMoney(
               payload.summary?.paidAmount ||
                 payload.list

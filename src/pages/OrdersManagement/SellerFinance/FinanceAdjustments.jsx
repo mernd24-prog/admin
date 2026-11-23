@@ -506,7 +506,7 @@ export default function FinanceAdjustments() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Cards
-          label="Returns & refunds"
+          label="Returns & Refunds"
           value={financeMoney(wallet.refundAdjustmentTotal || 0)}
           description="Earnings reversed because of returns or refunds."
           icon={<MdAssignmentReturn aria-hidden="true" size={18} />}
@@ -515,7 +515,7 @@ export default function FinanceAdjustments() {
           onClick={() => setParams({ type: "returns" })}
         />
         <Cards
-          label="Promotion contribution"
+          label="Promotion Contribution"
           value={financeMoney(totals.netPlatformContributionAmount)}
           description="Marketplace contribution remaining after reversals."
           icon={<MdLocalOffer aria-hidden="true" size={18} />}
@@ -524,7 +524,7 @@ export default function FinanceAdjustments() {
           onClick={() => setParams({ type: "promotions" })}
         />
         <Cards
-          label="COD cash still owed"
+          label="COD Cash Still Owed"
           value={financeMoney(owed)}
           description="Customer cash held by you that still needs to be recovered from eligible earnings."
           icon={<MdAccountBalanceWallet aria-hidden="true" size={18} />}
@@ -533,7 +533,7 @@ export default function FinanceAdjustments() {
           onClick={() => setParams({ type: "cod" })}
         />
         <Cards
-          label="Temporary holds"
+          label="Temporary Holds"
           value={financeMoney(balances.blockedBalance)}
           description="Unavailable while an issue is active."
           icon={<MdPauseCircle aria-hidden="true" size={18} />}

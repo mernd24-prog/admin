@@ -227,7 +227,7 @@ export default function FinanceOverview() {
       "",
     ],
     [
-      "Return window",
+      "Return Window",
       balances.pendingBalance,
       counts.pending || 0,
       Number(counts.pending || 0) > 0
@@ -245,7 +245,7 @@ export default function FinanceOverview() {
       "available",
     ],
     [
-      "Payout processing",
+      "Payout Processing",
       balances.inProcessBalance,
       payouts.inProcessCount || 0,
       Number(payouts.inProcessCount || 0) > 0
@@ -322,7 +322,7 @@ export default function FinanceOverview() {
         >
           <div className="order-1 grid gap-4 lg:grid-cols-[1.2fr_2fr]">
             <Cards
-              label="Payable now"
+              label="Payable Now"
               value={financeMoney(balances.effectiveAvailablePayout, currency)}
               description="Available to be transferred to your selected payout account."
               icon={<MdAccountBalanceWallet aria-hidden="true" size={18} />}
@@ -355,19 +355,19 @@ export default function FinanceOverview() {
                 <div className="grid gap-4 p-4 sm:grid-cols-3 sm:p-5">
                   {[
                     [
-                      "COD cash held by seller",
+                      "COD Cash Held by Seller",
                       codSummary.collectedAmount,
                       "Full customer cash retained by the seller, including any customer platform fee.",
                       "/app/seller-cod-collections",
                     ],
                     [
-                      "Recovered from earnings",
+                      "Recovered from Earnings",
                       codSummary.recoveredAmount,
                       `${financeMoney(codSummary.reservedAmount, currency)} is currently reserved for recovery.`,
                       "/app/seller-payouts",
                     ],
                     [
-                      "COD balance still owed",
+                      "COD Balance Still Owed",
                       codSummary.outstandingAmount,
                       "The unrecovered balance will be taken from future eligible earnings.",
                       "/app/seller-cod-collections",
@@ -413,7 +413,7 @@ export default function FinanceOverview() {
                 <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
                   {[
                     {
-                      label: "COD orders",
+                      label: "COD Orders",
                       value: codReconciliation.totalOrders,
                       icon: (
                         <MdAccountBalanceWallet aria-hidden="true" size={18} />
@@ -429,14 +429,14 @@ export default function FinanceOverview() {
                       iconColor: "#1d9b50",
                     },
                     {
-                      label: "Awaiting delivery",
+                      label: "Awaiting Delivery",
                       value: codReconciliation.awaitingDeliveryOrders,
                       icon: <MdHourglassEmpty aria-hidden="true" size={18} />,
                       iconBg: "#ffe5b5",
                       iconColor: "#f5a300",
                     },
                     {
-                      label: "Cash liabilities",
+                      label: "Cash Liabilities",
                       value: codReconciliation.ordersWithLiability,
                       icon: <MdPauseCircle aria-hidden="true" size={18} />,
                       iconBg: "#ffd4d2",
@@ -481,11 +481,21 @@ export default function FinanceOverview() {
             title="Earnings Summary"
             description="Earnings and deductions for the selected date range."
             bodyClassName="p-4"
+            action={
+              <button
+                type="button"
+                className="admin-btn-secondary inline-flex items-center justify-center gap-2"
+                onClick={() => navigate("/app/finance-earnings")}
+              >
+                Review Earnings
+                <MdArrowForward aria-hidden="true" />
+              </button>
+            }
           >
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 {
-                  title: "Gross Earnings (Product amount)",
+                  title: "Gross Earnings (Product Amount)",
                   value: financeMoney(grossEarnings, currency),
                   valueClassName: "text-[var(--admin-navy)]",
                 },
@@ -497,7 +507,7 @@ export default function FinanceOverview() {
                     "Platform fee, GST, TCS, TDS, refunds, and other adjustments.",
                 },
                 {
-                  title: "Net Earnings (After deduction and settlement)",
+                  title: "Net Earnings (After Deduction and Settlement)",
                   value: financeMoney(netEarnings, currency),
                   valueClassName: "text-emerald-700",
                 },
@@ -535,12 +545,12 @@ export default function FinanceOverview() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 {
-                  title: "Platform fee",
+                  title: "Platform Fee",
                   value: financeMoney(breakdown.platformFee, currency),
                   valueClassName: "text-red-700",
                 },
                 {
-                  title: "GST on platform fee",
+                  title: "GST On Platform Fee",
                   value: financeMoney(breakdown.gstOnPlatformFee, currency),
                   valueClassName: "text-red-700",
                 },
@@ -555,22 +565,22 @@ export default function FinanceOverview() {
                   valueClassName: "text-red-700",
                 },
                 {
-                  title: "Shipping credited",
+                  title: "Shipping Credited",
                   value: financeMoney(breakdown.shipping, currency),
                   valueClassName: "text-emerald-700",
                 },
                 {
-                  title: "Shipping deduction",
+                  title: "Shipping Deduction",
                   value: financeMoney(breakdown.shippingDeduction, currency),
                   valueClassName: "text-red-700",
                 },
                 {
-                  title: "Promotion funded",
+                  title: "Promotion Funded",
                   value: financeMoney(breakdown.promotion, currency),
                   valueClassName: "text-emerald-700",
                 },
                 {
-                  title: "Refund / other adjustment",
+                  title: "Refund / Other Adjustment",
                   value: financeMoney(
                     breakdown.refund + breakdown.other,
                     currency,

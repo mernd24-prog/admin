@@ -38,6 +38,7 @@ import {
   FilterBar,
   SellerIdentity,
   StatusBadge,
+  ContentPanel,
 } from "../../../../components/Shared";
 import ProductStatusBadge from "../../../../components/Product/ProductStatusBadge";
 import Loader from "../../../../components/Loader/Loader";
@@ -1438,8 +1439,12 @@ const SellerSpecialPriceManager = () => {
 
         {/* Product Summary Header Card */}
         {detailProduct && (
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-4">
+          <ContentPanel
+            title={detailProduct.title || detailProduct.name || "Product"}
+            description="Product information and variant overview."
+            bodyClassName="p-4"
+          >
+            <div className="flex flex-wrap items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
                 {getProductImage(detailProduct) ? (
                   <img
@@ -1451,10 +1456,8 @@ const SellerSpecialPriceManager = () => {
                   <span className="text-xs text-gray-400">No Image</span>
                 )}
               </div>
-              <div>
-                <h2 className="text-base font-semibold text-black max-w-3xl line-clamp-2">
-                  {detailProduct.title || detailProduct.name || "Product"}
-                </h2>
+
+              <div className="min-w-0 flex-1">
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                   <span>
                     SKU:{" "}
@@ -1462,6 +1465,7 @@ const SellerSpecialPriceManager = () => {
                       {detailProduct.sku || "-"}
                     </strong>
                   </span>
+
                   {!sellerView &&
                     (detailProduct.sellerName ||
                       detailProduct.seller?.name) && (
@@ -1473,6 +1477,7 @@ const SellerSpecialPriceManager = () => {
                         </strong>
                       </span>
                     )}
+
                   <span>
                     Total Variants:{" "}
                     <strong className="text-gray-700">{rows.length}</strong>
@@ -1480,7 +1485,7 @@ const SellerSpecialPriceManager = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </ContentPanel>
         )}
         {/* Unified Special Price Guidelines & Import/Export Guide */}
         <SpecialPriceGuide />

@@ -389,7 +389,7 @@ export default function FinanceEarnings() {
       {/* SUMMARY CARDS */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Cards
-          label="Total earnings"
+          label="Total Earnings"
           value={financeMoney(filteredSummary.total, rows[0]?.currency)}
           helper={`${filtered.length} earning${filtered.length !== 1 ? "s" : ""}`}
           icon={<MdAccountBalanceWallet aria-hidden="true" size={18} />}
@@ -443,7 +443,7 @@ export default function FinanceEarnings() {
         />
 
         <Cards
-          label="On hold"
+          label="On Hold"
           value={financeMoney(filteredSummary.held.amount, rows[0]?.currency)}
           helper={`${filteredSummary.held.count} earning${filteredSummary.held.count !== 1 ? "s" : ""}`}
           icon={<MdPauseCircle aria-hidden="true" size={18} />}

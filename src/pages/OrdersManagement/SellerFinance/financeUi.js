@@ -618,7 +618,7 @@ export const MoneyEquation = ({
   <div className="finance-equation admin-card grid items-center gap-3 p-5 text-center sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
     <div>
       <span className="text-xs text-[var(--admin-muted)]">
-        Eligible earnings before recovery
+        Eligible Earnings Before Recovery
       </span>
       <strong className="mt-1 block text-xl">
         {financeMoney(available, currency)}
@@ -627,7 +627,7 @@ export const MoneyEquation = ({
     <span className="text-xl text-[var(--admin-muted)]">−</span>
     <div>
       <span className="text-xs text-[var(--admin-muted)]">
-        Recovery and adjustments applied now
+        Recovery And Adjustments Applied Now
       </span>
       <strong className="mt-1 block text-xl text-red-700">
         {financeMoney(applied, currency)}
@@ -635,7 +635,7 @@ export const MoneyEquation = ({
     </div>
     <span className="text-xl text-[var(--admin-muted)]">=</span>
     <div>
-      <span className="text-xs text-[var(--admin-muted)]">Payable now</span>
+      <span className="text-xs text-[var(--admin-muted)]">Payable Now</span>
       <strong className="mt-1 block text-xl text-emerald-700">
         {financeMoney(payable, currency)}
       </strong>

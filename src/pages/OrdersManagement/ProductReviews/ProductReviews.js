@@ -26,6 +26,7 @@ import {
   BulkActionBar,
   FilterBar,
   StatusBadge,
+  ContentPanel,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -1198,73 +1199,72 @@ const ProductReviews = () => {
         }
       />
 
-      {isDetailMode && (
-        <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-400">
-                Selected Product
-              </p>
-              <h3 className="mt-1 text-lg font-semibold text-gray-800">
-                {selectedProductTitle}
-              </h3>
-            </div>
+    {isDetailMode && (
+  <ContentPanel
+    title={selectedProductTitle}
+    description="Review summary and status-wise review statistics for this product."
+    className="mb-6"
+    action={
+      <RatingStars
+        value={
+          detailPayload.summary?.avgRating ||
+          selectedSummaryRow?.averageRating ||
+          selectedProduct?.rating ||
+          0
+        }
+      />
+    }
+    bodyClassName="p-4"
+  >
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <Cards
+        label="Total Reviews"
+        value={Number(
+          detailPayload.summary?.count ||
+            selectedSummaryRow?.reviewCount ||
+            total ||
+            0
+        )}
+      />
 
-            <RatingStars
-              value={
-                detailPayload.summary?.avgRating ||
-                selectedSummaryRow?.averageRating ||
-                selectedProduct?.rating ||
-                0
-              }
-            />
-          </div>
+      <Cards
+        label="Published"
+        value={
+          selectedSummaryRow?.publishedCount ||
+          selectedStatusCounts.published ||
+          0
+        }
+      />
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <Cards
-              label="Total Reviews"
-              value={Number(
-                detailPayload.summary?.count ||
-                  selectedSummaryRow?.reviewCount ||
-                  total ||
-                  0,
-              )}
-            />
-            <Cards
-              label="Published"
-              value={
-                selectedSummaryRow?.publishedCount ||
-                selectedStatusCounts.published ||
-                0
-              }
-            />
-            <Cards
-              label="Pending"
-              value={
-                selectedSummaryRow?.pendingCount ||
-                selectedStatusCounts.pending ||
-                0
-              }
-            />
-            <Cards
-              label="Hidden"
-              value={
-                selectedSummaryRow?.hiddenCount ||
-                selectedStatusCounts.hidden ||
-                0
-              }
-            />
-            <Cards
-              label="Rejected"
-              value={
-                selectedSummaryRow?.rejectedCount ||
-                selectedStatusCounts.rejected ||
-                0
-              }
-            />
-          </div>
-        </div>
-      )}
+      <Cards
+        label="Pending"
+        value={
+          selectedSummaryRow?.pendingCount ||
+          selectedStatusCounts.pending ||
+          0
+        }
+      />
+
+      <Cards
+        label="Hidden"
+        value={
+          selectedSummaryRow?.hiddenCount ||
+          selectedStatusCounts.hidden ||
+          0
+        }
+      />
+
+      <Cards
+        label="Rejected"
+        value={
+          selectedSummaryRow?.rejectedCount ||
+          selectedStatusCounts.rejected ||
+          0
+        }
+      />
+    </div>
+  </ContentPanel>
+)}
 
       <DataTable
         columns={columns}
