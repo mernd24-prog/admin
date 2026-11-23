@@ -25,7 +25,12 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import DataTable from "../../components/Shared/DataTable";
 import CopyButton from "../../components/Atoms/CopyButton/CopyButton";
-import { PageHeader, StatusBadge, SummaryCard } from "../../components/Shared";
+import {
+  OrderLink,
+  PageHeader,
+  StatusBadge,
+  SummaryCard,
+} from "../../components/Shared";
 import { SkeletonLoader } from "../../components/Loader/SkeletonLoader";
 import {
   getReferralBonusAchievements,
@@ -702,14 +707,27 @@ const ReferralPartnerDetails = () => {
 
   const orderRows = useMemo(
     () =>
-      orders.map((order) => ({
-        key: getId(order),
-        order: order.orderNumber || order.orderId || "-",
-        code: order.code || "-",
-        amount: formatAmount(order.eligibleAmount),
-        status: <StatusBadge status={order.status} size="sm" />,
-        created: formatDate(order.createdAt),
-      })),
+      orders.map((order) => {
+        const orderId =
+          order.orderId || order.order_id || order.id || order._id;
+        const orderNumber = order.orderNumber || order.order_number;
+        const orderLabel = orderNumber || orderId || "-";
+
+        return {
+          key: getId(order) || orderId,
+          order: orderId ? (
+            <OrderLink orderId={orderId} orderNumber={orderNumber}>
+              {orderLabel}
+            </OrderLink>
+          ) : (
+            orderLabel
+          ),
+          code: order.code || "-",
+          amount: formatAmount(order.eligibleAmount),
+          status: <StatusBadge status={order.status} size="sm" />,
+          created: formatDate(order.createdAt),
+        };
+      }),
     [orders],
   );
 
@@ -983,7 +1001,8 @@ const ReferralPartnerDetails = () => {
       >
         <form
           id="edit-referral-partner-form"
-          onSubmit={saveProfile}
+          onSubmit={profileFormik.handleSubmit}
+          noValidate
           className="space-y-5"
         >
           <div>
