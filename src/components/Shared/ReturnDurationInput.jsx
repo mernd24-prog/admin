@@ -18,7 +18,17 @@ const localDateTime = (timestamp) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
-export default function ReturnDurationInput({ value, onChange, maxDays = 365, minMinutes = 0, label = "Return Window", error, onBlur, showDateTimePicker = false }) {
+export default function ReturnDurationInput({
+  value,
+  onChange,
+  maxDays = 365,
+  minMinutes = 0,
+  label = "Return Window",
+  error,
+  onBlur,
+  showDateTimePicker = true,
+  dataErrorField = "warranty.returnPolicy.returnWindowDays",
+}) {
   // Keep a stable reference while editing so the selected duration never drifts.
   const [referenceTime] = useState(() => Math.floor(Date.now() / 60000) * 60000);
   const [pickerError, setPickerError] = useState("");
@@ -33,7 +43,7 @@ export default function ReturnDurationInput({ value, onChange, maxDays = 365, mi
   const validationError = pickerError || error || (touched ? rangeError : "");
   if (showDateTimePicker) {
     return (
-      <div className="min-w-0 h-full" data-error-field="warranty.returnPolicy.returnWindowDays">
+      <div className="min-w-0 h-full" {...(dataErrorField ? { "data-error-field": dataErrorField } : {})}>
         <Input
           labelName={label}
           required={minMinutes > 0}

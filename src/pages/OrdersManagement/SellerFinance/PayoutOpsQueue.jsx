@@ -284,18 +284,29 @@ const payoutFailureReason = (row = {}) => {
 const payoutStatusReason = (row = {}) => {
   const status = String(row.status || "pending").toLowerCase();
   const metadata = metadataOf(row);
-  const explicitReason = payoutFailureReason(row) || metadata.holdReason || metadata.reason || row.notes;
+  const explicitReason =
+    payoutFailureReason(row) ||
+    metadata.holdReason ||
+    metadata.reason ||
+    row.notes;
   if (explicitReason) return explicitReason;
-  if (replacementPayoutIdOf(row)) return "A replacement payout was created; this record cannot be retried.";
+  if (replacementPayoutIdOf(row))
+    return "A replacement payout was created; this record cannot be retried.";
   if (status === "pending") return "Waiting for payout review and approval.";
-  if (status === "approved") return "Approved and ready to be sent using the selected payment method.";
-  if (["processing", "in_process"].includes(status)) return "Transfer submitted; waiting for the payment provider result.";
-  if (["completed", "paid", "processed"].includes(status)) return Number(valueOf(row, "net_amount", "netAmount", "amount")) > 0
-    ? "Transfer completed successfully."
-    : "No bank transfer was made because the amount was fully used for recovery or adjustment.";
-  if (["on_hold", "held"].includes(status)) return "Payout is paused until the recorded hold reason is resolved.";
-  if (["cancelled", "canceled"].includes(status)) return "Payout was cancelled; create a new payout after resolving the reason.";
-  if (status === "failed") return "Transfer failed; review the failure reason before retrying.";
+  if (status === "approved")
+    return "Approved and ready to be sent using the selected payment method.";
+  if (["processing", "in_process"].includes(status))
+    return "Transfer submitted; waiting for the payment provider result.";
+  if (["completed", "paid", "processed"].includes(status))
+    return Number(valueOf(row, "net_amount", "netAmount", "amount")) > 0
+      ? "Transfer completed successfully."
+      : "No bank transfer was made because the amount was fully used for recovery or adjustment.";
+  if (["on_hold", "held"].includes(status))
+    return "Payout is paused until the recorded hold reason is resolved.";
+  if (["cancelled", "canceled"].includes(status))
+    return "Payout was cancelled; create a new payout after resolving the reason.";
+  if (status === "failed")
+    return "Transfer failed; review the failure reason before retrying.";
   return "Review this payout before taking the next action.";
 };
 
@@ -332,6 +343,7 @@ const PayoutOpsQueue = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [action, setAction] = useState(EMPTY_ACTION);
+  const [paymentReferenceError, setPaymentReferenceError] = useState("");
   const [confirmAction, setConfirmAction] = useState({ open: false });
 
   const actionFormik = useFormik({
@@ -423,6 +435,7 @@ const PayoutOpsQueue = () => {
 
   const openAction = useCallback(
     (type, payout) => {
+      setPaymentReferenceError("");
       const existingMethod = valueOf(payout, "paymentMethod", "payment_method");
       const paymentMethod = existingMethod || defaultPayoutMethod;
       const isCancelledReopen =
@@ -500,9 +513,17 @@ const PayoutOpsQueue = () => {
     }
     const validationMessage = validateAction();
     if (validationMessage) {
-      toast.error(validationMessage);
+      if (
+        action.type === "complete" &&
+        validationMessage === "Payment reference is required before completion"
+      ) {
+        setPaymentReferenceError(validationMessage);
+      } else {
+        toast.error(validationMessage);
+      }
       return;
     }
+    setPaymentReferenceError("");
     setConfirmAction({
       open: true,
       title: `${action.title || ACTION_TITLES[action.type] || "Update Payout"}?`,
@@ -666,7 +687,9 @@ const PayoutOpsQueue = () => {
               label={replacementPayoutIdOf(row) ? "Superseded" : undefined}
               dot
             />
-            <div className={`mt-1 break-words whitespace-normal text-xs leading-4 ${String(row.status).toLowerCase() === "failed" ? "text-red-600" : "text-gray-500"}`}>
+            <div
+              className={`mt-1 break-words whitespace-normal text-xs leading-4 ${String(row.status).toLowerCase() === "failed" ? "text-red-600" : "text-gray-500"}`}
+            >
               {payoutStatusReason(row)}
             </div>
           </div>
@@ -961,11 +984,6 @@ const PayoutOpsQueue = () => {
           { label: "My Finance & Payouts" },
           { label: "Payout Ops Queue" },
         ]}
-        // actions={
-        //   <button type="button" onClick={fetchQueue}>
-        //     <MdRefresh size={17} /> Refresh
-        //   </button>
-        // }
       />
 
       <DataTable
@@ -1007,7 +1025,10 @@ const PayoutOpsQueue = () => {
       {/* Action modal */}
       <DefaultModal
         isOpen={action.open}
-        onClose={() => setAction(EMPTY_ACTION)}
+        onClose={() => {
+          setAction(EMPTY_ACTION);
+          setPaymentReferenceError("");
+        }}
         title={action.title}
         onSubmit={prepareAction}
         submitButtonText="Continue"
@@ -1363,12 +1384,14 @@ const PayoutOpsQueue = () => {
                 <Input
                   labelName="Payment Reference *"
                   value={action.paymentReference}
-                  onChange={(e) =>
+                  error={paymentReferenceError}
+                  onChange={(e) => {
                     setAction((prev) => ({
                       ...prev,
                       paymentReference: e.target.value,
-                    }))
-                  }
+                    }));
+                    if (e.target.value.trim()) setPaymentReferenceError("");
+                  }}
                 />
 
                 <div>

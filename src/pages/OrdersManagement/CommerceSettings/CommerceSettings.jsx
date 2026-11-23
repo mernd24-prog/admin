@@ -1079,6 +1079,8 @@ export default function CommerceSettings() {
             <ReturnDurationInput
               label="Global Return Window"
               maxDays={60}
+              showDateTimePicker
+              dataErrorField=""
               value={settings.returns.defaultWindowDays}
               onChange={(value) =>
                 patchSettings("returns", { defaultWindowDays: value })
@@ -1093,8 +1095,10 @@ export default function CommerceSettings() {
             />
             {settings.returns.allowSellerOverrides && (
               <ReturnDurationInput
-              label="Maximum Seller Override"
-              maxDays={60}
+                label="Maximum Seller Override"
+                maxDays={60}
+                showDateTimePicker
+                dataErrorField=""
                 value={settings.returns.maxSellerOverrideDays}
                 onChange={(value) =>
                   patchSettings("returns", { maxSellerOverrideDays: value })
