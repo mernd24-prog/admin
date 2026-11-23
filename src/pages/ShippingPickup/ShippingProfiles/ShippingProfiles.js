@@ -23,6 +23,7 @@ import {
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import {
   ConfirmModal,
+  ContentPanel,
   DataTable,
   FilterBar,
   PageHeader,
@@ -1842,17 +1843,12 @@ export default function ShippingProfiles() {
           </div>
         }
       />
-
-      <div className="mb-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="mb-3">
-          <h3 className="text-sm font-semibold text-[var(--admin-ink)]">
-            Admin Shipping Templates
-          </h3>
-          <p className="text-xs text-[var(--admin-muted)]">
-            Sellers copy these templates into their own profile, then edit only
-            their private copy. The admin template never changes.
-          </p>
-        </div>
+      <ContentPanel
+        title="Admin Shipping Templates"
+        description="Sellers copy these templates into their own profile, then edit only their private copy. The admin template never changes."
+        className="mb-5"
+        bodyClassName="p-4"
+      >
         {templatesPayload.list.length === 0 ? (
           <EmptyState>
             <p className="mt-3 text-center">
@@ -1878,6 +1874,7 @@ export default function ShippingProfiles() {
                       <span>•</span>
                       <span>{formatMoney(template.shippingCharge)}</span>
                     </div>
+
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -1886,6 +1883,7 @@ export default function ShippingProfiles() {
                       >
                         Use Template
                       </button>
+
                       {!isSeller && (
                         <>
                           <button
@@ -1895,13 +1893,14 @@ export default function ShippingProfiles() {
                           >
                             Edit Template
                           </button>
+
                           {/* <button
-                            type="button"
-                            className="text-xs font-semibold text-red-500 hover:underline"
-                            onClick={() => setDeleteTemplateTarget(template)}
-                          >
-                            Archive
-                          </button> */}
+                      type="button"
+                      className="text-xs font-semibold text-red-500 hover:underline"
+                      onClick={() => setDeleteTemplateTarget(template)}
+                    >
+                      Archive
+                    </button> */}
                         </>
                       )}
                     </div>
@@ -1911,7 +1910,7 @@ export default function ShippingProfiles() {
             ))}
           </div>
         )}
-      </div>
+      </ContentPanel>
 
       <DataTable
         columns={columns}

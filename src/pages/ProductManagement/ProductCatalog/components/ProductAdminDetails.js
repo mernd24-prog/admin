@@ -42,15 +42,6 @@ import Cards from "../../../../components/Cards/Cards";
 const sectionClass =
   "overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md";
 
-const sectionHeaderClass =
-  "flex flex-col gap-3 border-b border-gray-100 bg-gradient-to-r from-[var(--admin-surface-soft)] via-white to-white px-5 py-5 sm:flex-row sm:items-center sm:justify-between";
-
-const sectionEyebrowClass =
-  "text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--admin-gold)]";
-
-const sectionTitleClass =
-  "mt-1 text-xl font-bold tracking-tight text-[var(--admin-navy)]";
-
 /* -------------------------------------------------------------------------- */
 /*                                  Helpers                                   */
 /* -------------------------------------------------------------------------- */
@@ -652,8 +643,13 @@ const ProductAdminDetails = () => {
         {/* ---------------------------------------------------------------- */}
 
         {activeTab === "overview" && (
-          <section className={sectionClass}>
-            <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
+          <ContentPanel
+            title="Product Overview"
+            description="General product information, seller details, classification, tax settings, and approval timestamps."
+            className={sectionClass}
+            bodyClassName="p-3 sm:p-4"
+          >
+            <div className="grid grid-cols-1 gap-3 bg-gray-50/50 sm:grid-cols-2 lg:grid-cols-3">
               <Row label="Title" value={product.title} />
 
               <Row label="Seller" value={refToLabel(sellerDisplayName)} />
@@ -716,28 +712,19 @@ const ProductAdminDetails = () => {
                 value={formatDateTime12Hour(product.approvedAt)}
               />
             </div>
-          </section>
+          </ContentPanel>
         )}
-
         {/* ---------------------------------------------------------------- */}
         {/* Analytics                                                        */}
         {/* ---------------------------------------------------------------- */}
 
         {activeTab === "analytics" && product.analytics && (
-          <section className={sectionClass}>
-            {/* <div className={sectionHeaderClass}>
-              <div>
-                <p className={sectionEyebrowClass}>Performance overview</p>
-
-                <h2 className={sectionTitleClass}>Analytics</h2>
-              </div>
-
-              <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
-                Product performance
-              </span>
-            </div> */}
-
-            <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
+          <ContentPanel
+            title="Product Analytics"
+            description="Overview of product performance, customer engagement, sales, and reviews."
+            bodyClassName="p-4"
+          >
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
               {[
                 {
                   label: "Total Views",
@@ -791,7 +778,7 @@ const ProductAdminDetails = () => {
                 />
               ))}
             </div>
-          </section>
+          </ContentPanel>
         )}
 
         {/* ---------------------------------------------------------------- */}
@@ -799,8 +786,13 @@ const ProductAdminDetails = () => {
         {/* ---------------------------------------------------------------- */}
 
         {activeTab === "attributes" && Object.keys(attributes).length > 0 && (
-          <section className={sectionClass}>
-            <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
+          <ContentPanel
+            title="Product Attributes"
+            description="Specifications and additional characteristics of the product."
+            className={sectionClass}
+            bodyClassName="p-3 sm:p-4"
+          >
+            <div className="grid grid-cols-1 gap-3 bg-gray-50/50 sm:grid-cols-2 lg:grid-cols-3">
               {Object.entries(attributes).map(([key, value]) => (
                 <Row
                   key={key}
@@ -813,7 +805,7 @@ const ProductAdminDetails = () => {
                 />
               ))}
             </div>
-          </section>
+          </ContentPanel>
         )}
 
         {/* ---------------------------------------------------------------- */}
@@ -821,22 +813,25 @@ const ProductAdminDetails = () => {
         {/* ---------------------------------------------------------------- */}
 
         {activeTab === "variants" && product.variants?.length > 0 && (
-          <section className={sectionClass}>
-            <div className="overflow-x-auto p-3 sm:p-4">
-              <DataTable
-                columns={variantColumns}
-                data={variantTableData}
-                loading={selector.loading}
-                totalCount={product.variants?.length || 0}
-                rowKey={(variant, index) =>
-                  variant?.sku || variant?._id || variant?.id || index
-                }
-                emptyText="No variants found."
-                cardClassName="overflow-hidden rounded-none border-0 shadow-none"
-                tableContainerClassName="overflow-x-auto"
-              />
-            </div>
-          </section>
+          <ContentPanel
+            title="Product Variants"
+            description="View variant details, SKUs, pricing, stock, and other variant-specific information."
+            className={sectionClass}
+            bodyClassName="p-3 sm:p-4"
+          >
+            <DataTable
+              columns={variantColumns}
+              data={variantTableData}
+              loading={selector.loading}
+              totalCount={product.variants?.length || 0}
+              rowKey={(variant, index) =>
+                variant?.sku || variant?._id || variant?.id || index
+              }
+              emptyText="No variants found."
+              cardClassName="overflow-hidden rounded-none border-0 shadow-none"
+              tableContainerClassName="overflow-x-auto"
+            />
+          </ContentPanel>
         )}
 
         {/* ---------------------------------------------------------------- */}
@@ -858,8 +853,13 @@ const ProductAdminDetails = () => {
             product.origin ||
             product.warranty ||
             product.shipping) && (
-            <section className={sectionClass}>
-              <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
+            <ContentPanel
+              title="Shipping & Warranty"
+              description="Delivery settings, package dimensions, product origin, warranty, and return policy details."
+              className={sectionClass}
+              bodyClassName="p-3 sm:p-4"
+            >
+              <div className="grid grid-cols-1 gap-3 bg-gray-50/50 sm:grid-cols-2 lg:grid-cols-3">
                 {product.shipping && (
                   <>
                     <Row
@@ -955,14 +955,15 @@ const ProductAdminDetails = () => {
                       product.warranty.returnPolicy.eligible
                         ? `Eligible — ${formatReturnDuration(
                             product.warranty.returnPolicy.returnWindowDays ??
-                            product.warranty.returnPolicy.days ?? 0
+                              product.warranty.returnPolicy.days ??
+                              0,
                           )}`
                         : "Not eligible"
                     }
                   />
                 )}
               </div>
-            </section>
+            </ContentPanel>
           )}
 
         {/* ---------------------------------------------------------------- */}
@@ -972,9 +973,13 @@ const ProductAdminDetails = () => {
         {activeTab === "additional" && (
           <>
             {/* Digital Product ------------------------------------------- */}
-
             {product.productType === "digital" && product.digital && (
-              <section className={sectionClass}>
+              <ContentPanel
+                title="Digital Product Details"
+                description="Downloadable product information, file details, license, and access settings."
+                className={sectionClass}
+                bodyClassName="p-0"
+              >
                 <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
                   <Row label="File Type" value={product.digital.fileType} />
 
@@ -1036,13 +1041,17 @@ const ProductAdminDetails = () => {
                     </a>
                   </div>
                 )}
-              </section>
+              </ContentPanel>
             )}
 
             {/* Subscription --------------------------------------------- */}
-
             {product.productType === "subscription" && product.subscription && (
-              <section className={sectionClass}>
+              <ContentPanel
+                title="Subscription Details"
+                description="Billing, recurring charges, trial settings, renewal options, and subscription features."
+                className={sectionClass}
+                bodyClassName="p-0"
+              >
                 <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2 lg:grid-cols-3">
                   <Row
                     label="Billing Cycle"
@@ -1136,15 +1145,19 @@ const ProductAdminDetails = () => {
                     </div>
                   </div>
                 )}
-              </section>
+              </ContentPanel>
             )}
 
             {/* Bundle Items --------------------------------------------- */}
-
             {product.productType === "bundle" &&
               product.bundleItems?.length > 0 && (
-                <section className={sectionClass}>
-                  <div className="overflow-x-auto p-3 sm:p-4">
+                <ContentPanel
+                  title="Bundle Products"
+                  description="Products included in this bundle with their quantities, SKUs, pricing, and subtotals."
+                  className={sectionClass}
+                  bodyClassName="p-3 sm:p-4"
+                >
+                  <div className="overflow-x-auto">
                     <table className="w-full min-w-[750px] text-sm">
                       <thead>
                         <tr className="border-b border-gray-200 bg-[var(--admin-surface-soft)]">
@@ -1234,15 +1247,19 @@ const ProductAdminDetails = () => {
                       </tbody>
                     </table>
                   </div>
-                </section>
+                </ContentPanel>
               )}
 
             {/* SEO ------------------------------------------------------- */}
-
             {product.seo &&
               Object.keys(product.seo).some((key) => product.seo[key]) && (
-                <section className={sectionClass}>
-                  <div className="grid grid-cols-1 gap-3 bg-gray-50/50 p-3 sm:p-4 md:grid-cols-2">
+                <ContentPanel
+                  title="SEO Details"
+                  description="Search engine metadata used to improve product visibility and search results."
+                  className={sectionClass}
+                  bodyClassName="p-3 sm:p-4"
+                >
+                  <div className="grid grid-cols-1 gap-3 bg-gray-50/50 sm:grid-cols-2">
                     <Row label="Meta Title" value={product.seo.metaTitle} />
 
                     <Row
@@ -1257,13 +1274,15 @@ const ProductAdminDetails = () => {
 
                     <Row label="OG Title" value={product.seo.ogTitle} />
                   </div>
-                </section>
+                </ContentPanel>
               )}
 
+            {/* Keywords --------------------------------------------------- */}
             {product.seo?.keywords?.length > 0 && (
               <ContentPanel
-                title="Keywords"
-                description="Search engine optimization"
+                title="SEO Keywords"
+                description="Keywords configured to help search engines discover the product."
+                className={sectionClass}
                 action={
                   <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
                     {product.seo.keywords.length} keywords
@@ -1283,11 +1302,11 @@ const ProductAdminDetails = () => {
             )}
 
             {/* Tags ------------------------------------------------------ */}
-
             {product.tags?.length > 0 && (
               <ContentPanel
-                title="Tags"
-                description="Product organization"
+                title="Product Tags"
+                description="Tags used to categorize and organize the product."
+                className={sectionClass}
                 action={
                   <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-500">
                     {product.tags.length} tags
