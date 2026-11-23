@@ -275,7 +275,6 @@ export default function MarketingSettings({ kind = "coupons" }) {
               })
             }
             isSearchable={false}
-            isClearable={false}
             placeholder="Select customer eligibility"
           />
         </Field>

@@ -563,6 +563,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
   const { can } = usePermission();
   const empty = emptyProductReferralAmountForm;
   const [form, setForm] = useState(empty);
+  const [formErrors, setFormErrors] = useState({});
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [configs, setConfigs] = useState([]);
@@ -709,42 +710,30 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
     }
     if (!can("referral", "update")) return;
 
-    if (!form.storeKey) {
-      toast.error("Please select a store");
-      return;
-    }
-
-    if (!form.productId) {
-      toast.error("Please select a product");
-      return;
-    }
-
-    if (form.amountValue === "") {
-      toast.error("Please enter the referral amount");
-      return;
-    }
-
     const amountValue = Number(form.amountValue);
-
-    if (Number.isNaN(amountValue) || amountValue < 0) {
-      toast.error("Referral amount must be a valid positive number");
-      return;
-    }
-
-    if (form.amountType === "percentage" && amountValue > 100) {
-      toast.error("Percentage must be between 0 and 100");
-      return;
-    }
-
     const maximumAmount = form.amountType === "percentage"
       ? form.maximumAmount === "" ? 0 : Number(form.maximumAmount)
       : 0;
 
+    const nextErrors = {};
+    if (!form.storeKey) nextErrors.storeKey = "Please select a store";
+    if (!form.productId) nextErrors.productId = "Please select a product";
+    if (form.amountValue === "") {
+      nextErrors.amountValue = "Please enter the referral amount";
+    } else if (Number.isNaN(amountValue) || amountValue < 0) {
+      nextErrors.amountValue = "Referral amount must be a valid positive number";
+    } else if (form.amountType === "percentage" && amountValue > 100) {
+      nextErrors.amountValue = "Percentage must be between 0 and 100";
+    }
     if (
       form.amountType === "percentage" &&
       (Number.isNaN(maximumAmount) || maximumAmount < 0)
     ) {
-      toast.error("Maximum pool amount must be a valid number");
+      nextErrors.maximumAmount = "Maximum pool amount must be a valid number";
+    }
+
+    setFormErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
@@ -776,6 +765,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
       );
 
       setForm(empty);
+      setFormErrors({});
       setDrawerOpen(false);
 
       await load();
@@ -888,17 +878,20 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
         row.amountType === "percentage" ? row.maximumAmount ?? "" : "",
       active: row.active !== false,
     });
+    setFormErrors({});
     setDrawerOpen(true);
   };
 
   const handleCancelEdit = () => {
     setForm(empty);
+    setFormErrors({});
     setDrawerOpen(false);
   };
 
   const handleOpenAdd = useCallback(() => {
     if (!can("referral", "update")) return;
     setForm(empty);
+    setFormErrors({});
     setDrawerOpen(true);
   }, [empty, can]);
 
@@ -914,6 +907,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
   const handleCloseDrawer = () => {
     setDrawerOpen(false);
     setForm(empty);
+    setFormErrors({});
   };
 
   return (
@@ -1097,10 +1091,12 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
                     productId: "",
                     productTitle: "",
                   }));
+                  setFormErrors((current) => ({ ...current, storeKey: "" }));
                 }}
                 placeholder="Select store"
                 isSearchable
                 isClearable
+                error={formErrors.storeKey}
                 required
                 className="w-full"
               />
@@ -1127,6 +1123,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
                     productTitle: getProductTitle(product),
                     storeId: getProductStoreId(product),
                   }));
+                  setFormErrors((current) => ({ ...current, productId: "" }));
                 }}
                 placeholder={
                   form.storeKey ? "Select product" : "Select store first"
@@ -1134,6 +1131,7 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
                 isDisabled={!form.storeKey}
                 isSearchable
                 isClearable
+                error={formErrors.productId}
                 required
                 className="w-full"
               />
@@ -1163,6 +1161,11 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
                     maximumAmount:
                       amountType === "percentage" ? current.maximumAmount : "",
                   }));
+                  setFormErrors((current) => ({
+                    ...current,
+                    amountValue: "",
+                    maximumAmount: "",
+                  }));
                 }}
                 placeholder="Select amount type"
                 isSearchable={false}
@@ -1187,7 +1190,12 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
                     ...current,
                     amountValue: event.target.value,
                   }));
+                  setFormErrors((current) => ({
+                    ...current,
+                    amountValue: "",
+                  }));
                 }}
+                error={formErrors.amountValue}
                 placeholder={
                   form.amountType === "percentage" ? "e.g. 10" : "e.g. 50"
                 }
@@ -1214,7 +1222,12 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
                       ...current,
                       maximumAmount: event.target.value,
                     }));
+                    setFormErrors((current) => ({
+                      ...current,
+                      maximumAmount: "",
+                    }));
                   }}
+                  error={formErrors.maximumAmount}
                   placeholder="0 means no additional limit"
                   hint="Caps this product's percentage-based pool. It still contributes only once per order, regardless of quantity."
                   className="w-full"
@@ -1257,7 +1270,10 @@ const ProductReferralAmounts = ({ onHeaderActionsChange }) => {
                     <p className="text-xs font-medium text-[var(--admin-muted)]">
                       SKU
                     </p>
-                    <p className="mt-1 truncate text-sm font-semibold text-[var(--admin-ink)]">
+                    <p
+                      className="mt-1 break-all text-sm font-semibold text-[var(--admin-ink)]"
+                      title={selectedProduct.sku}
+                    >
                       {selectedProduct.sku}
                     </p>
                   </div>
