@@ -2087,7 +2087,11 @@ export default function BasicDetailsTab({
                 />
               </div>
 
-              <PermissionGuard module={isSellerPanelUser ? "products" : "brands"} action="create" hide>
+              <PermissionGuard
+                module={isSellerPanelUser ? "products" : "brands"}
+                action="create"
+                hide
+              >
                 <button
                   type="button"
                   className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
@@ -2201,7 +2205,11 @@ export default function BasicDetailsTab({
                   />
                 </div>
 
-                <PermissionGuard module={isSellerPanelUser ? "products" : "tax"} action="create" hide>
+                <PermissionGuard
+                  module={isSellerPanelUser ? "products" : "tax"}
+                  action="create"
+                  hide
+                >
                   <button
                     type="button"
                     className="mt-6 flex-shrink-0 rounded-md border border-[var(--admin-gold)] bg-[var(--admin-gold-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--admin-gold-dark)] transition-colors hover:bg-[var(--admin-gold-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-gold)]"
@@ -2590,11 +2598,23 @@ export default function BasicDetailsTab({
                   <ReturnDurationInput
                     showDateTimePicker
                     minMinutes={1}
-                    value={formData.warranty?.returnPolicy?.returnWindowDays ?? formData.warranty?.returnPolicy?.days ?? 0}
-                    onBlur={() => handleFieldBlur("warranty.returnPolicy.returnWindowDays")}
-                    error={formikTouched?.warranty?.returnPolicy?.returnWindowDays && formikErrors?.warranty?.returnPolicy?.returnWindowDays}
+                    value={
+                      formData.warranty?.returnPolicy?.returnWindowDays ??
+                      formData.warranty?.returnPolicy?.days ??
+                      0
+                    }
+                    onBlur={() =>
+                      handleFieldBlur("warranty.returnPolicy.returnWindowDays")
+                    }
+                    error={
+                      formikTouched?.warranty?.returnPolicy?.returnWindowDays &&
+                      formikErrors?.warranty?.returnPolicy?.returnWindowDays
+                    }
                     onChange={(value) => {
-                      handleNestedChange("warranty.returnPolicy.returnWindowDays", value);
+                      handleNestedChange(
+                        "warranty.returnPolicy.returnWindowDays",
+                        value,
+                      );
                       handleNestedChange("warranty.returnPolicy.days", value);
                     }}
                   />
@@ -2703,41 +2723,6 @@ export default function BasicDetailsTab({
                         : undefined
                     }
                   />
-
-                  {/* <div className="md:col-span-2 xl:col-span-3">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:gap-x-12">
-                      <Input
-                        labelName="Require Return Images"
-                        name="warranty.returnPolicy.requiresImages"
-                        type="switch"
-                        value={Boolean(
-                          formData.warranty?.returnPolicy?.requiresImages,
-                        )}
-                        onChange={(event) =>
-                          handleNestedChange(
-                            "warranty.returnPolicy.requiresImages",
-                            event.target.checked,
-                          )
-                        }
-                      />
-
-                      <Input
-                        labelName="Require Inspection / QC"
-                        name="warranty.returnPolicy.inspectionRequired"
-                        type="switch"
-                        value={
-                          formData.warranty?.returnPolicy
-                            ?.inspectionRequired !== false
-                        }
-                        onChange={(event) =>
-                          handleNestedChange(
-                            "warranty.returnPolicy.inspectionRequired",
-                            event.target.checked,
-                          )
-                        }
-                      />
-                    </div>
-                  </div> */}
                 </div>
               ) : (
                 <DisabledPolicyState
