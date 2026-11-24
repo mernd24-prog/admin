@@ -34,6 +34,8 @@ import {
   StatusBadge,
 } from "../../../../components/Shared";
 import Cards from "../../../../components/Cards/Cards";
+import TransparentButton from "../../../../components/Atoms/buttons/TransParentButton";
+import OrangeButton from "../../../../components/Atoms/buttons/OrangeButton";
 
 /* -------------------------------------------------------------------------- */
 /*                                  Constants                                 */
@@ -528,20 +530,21 @@ const ProductAdminDetails = () => {
             </button>
           )}
 
-          <button
+          <TransparentButton
             type="button"
+            label="Duplicate"
             onClick={() => setDuplicateConfirm(true)}
-            className="inline-flex min-h-9 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 transition hover:border-[var(--admin-gold)] hover:text-[var(--admin-navy)]"
-          >
-            Duplicate
-          </button>
+            size="compact"
+            className=""
+          />
 
-          <Link
-            to={`/app/product-catalog/form/${id}`}
-            className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[var(--admin-gold)] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:shadow-md"
+          <OrangeButton
+            type="button"
+            onClick={() => navigate(`/app/product-catalog/form/${id}`)}
+            className="min-h-9 rounded-lg px-4 py-2 text-xs font-bold text-white"
           >
             Edit Product
-          </Link>
+          </OrangeButton>
         </div>
       </div>
 

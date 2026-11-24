@@ -2365,7 +2365,7 @@ export default function BasicDetailsTab({
                 <div>
                   <h3>Warranty information</h3>
                   <p>
-                    Enable this only when the product includes warranty
+                    Turn this off if the product does not include warranty
                     coverage.
                   </p>
                 </div>
@@ -2624,6 +2624,7 @@ export default function BasicDetailsTab({
                       label="Allowed Resolution"
                       required
                       name="warranty.returnPolicy.resolution"
+                      isClearable
                       value={
                         [
                           {

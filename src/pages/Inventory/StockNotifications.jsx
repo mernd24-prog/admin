@@ -16,6 +16,7 @@ import {
   StatusBadge,
   CustomerIdentity,
   SellerIdentity,
+  ImageThumbnail,
 } from "../../components/Shared";
 import FilterSelect from "../../components/Atoms/FilterSelect/FilterSelect";
 import { axiosPrivate as axiosProvider } from "../../_helpers/axiosProvider";
@@ -47,35 +48,19 @@ const getPaginationTotal = (payload = {}, fallback = 0) =>
   );
 
 const productImageCell = (row = {}, onPreview) => (
-  <div className="flex flex-col items-center gap-1">
-    {row.productImage ? (
-      <>
-        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-[var(--admin-line)] bg-white">
-          <img
-            src={row.productImage}
-            alt={row.productTitle || "Product"}
-            loading="lazy"
-            className="h-full w-full object-contain p-1"
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onPreview(row.productImage);
-          }}
-          className="text-xs font-medium text-[var(--admin-blue)] hover:underline"
-        >
-          View
-        </button>
-      </>
-    ) : (
-      <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--admin-line)] bg-white text-[var(--admin-muted)]">
-        <MdImageNotSupported size={20} />
-      </div>
-    )}
-  </div>
+  <ImageThumbnail
+    src={row.productImage}
+    alt={row.productTitle || "Product"}
+    size="sm"
+    className="!rounded-md border-[var(--admin-line)] bg-white"
+    fallbackIcon={<MdImageNotSupported size={20} />}
+    showZoomIcon
+    showViewButton={Boolean(row.productImage)}
+    viewButtonText="View"
+    onClick={() => {
+      if (row.productImage) onPreview(row.productImage);
+    }}
+  />
 );
 
 const productNameCell = (row = {}) => (
