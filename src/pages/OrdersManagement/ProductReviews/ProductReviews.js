@@ -27,6 +27,7 @@ import {
   FilterBar,
   StatusBadge,
   ContentPanel,
+  ImageThumbnail,
 } from "../../../components/Shared";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
 import { ACTIONS } from "../../../_helpers/usePermission";
@@ -975,33 +976,22 @@ const ProductReviews = () => {
         const productImage = getProductImage(row);
         const productName = getProductName(row) || "Product";
 
-        return productImage ? (
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-gray-200 bg-gray-50">
-              <img
-                src={productImage}
-                alt={productName}
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                setPreviewImage(productImage);
-                setImagePreviewOpen(true);
-              }}
-              className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
-            >
-              View
-            </button>
-          </div>
-        ) : (
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-400">
-            <MdImageNotSupported size={19} />
-          </div>
+        return (
+          <ImageThumbnail
+            src={productImage}
+            alt={productName}
+            size="sm"
+            className="!rounded-md border-gray-200 bg-gray-50"
+            fallbackIcon={<MdImageNotSupported size={19} />}
+            showZoomIcon
+            showViewButton={Boolean(productImage)}
+            viewButtonText="View"
+            onClick={() => {
+              if (!productImage) return;
+              setPreviewImage(productImage);
+              setImagePreviewOpen(true);
+            }}
+          />
         );
       },
     },

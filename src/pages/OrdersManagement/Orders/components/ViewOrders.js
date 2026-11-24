@@ -1,5 +1,9 @@
 import { formatReturnDuration } from "../../../../components/Shared/ReturnDurationInput";
-import { itemDisplayStatus, orderDisplayStatus, returnProgressDisplayStatus } from "../../../../utils/orderDisplayStatus";
+import {
+  itemDisplayStatus,
+  orderDisplayStatus,
+  returnProgressDisplayStatus,
+} from "../../../../utils/orderDisplayStatus";
 import { boxLabelUnavailableReason } from "../../../../utils/boxLabelAvailability";
 import { cancellationRequesterLabel } from "../../../../utils/cancellationRequester";
 /* eslint-disable react-hooks/exhaustive-deps */
@@ -53,8 +57,6 @@ import {
   orderStatusOverrideValidationSchema,
 } from "../../../../_helpers/validationSchemas";
 import FormInput from "../../../../components/Atoms/FormInput/FormInput";
-
-
 
 const CANCELLABLE_SHIPMENT_STATUSES = new Set([
   "initiated",
@@ -134,10 +136,10 @@ const STATUS_ALIASES = {
 
 const normalizeStatusKey = (status = "") =>
   STATUS_ALIASES[
-  String(status || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[-\s]+/g, "_")
+    String(status || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[-\s]+/g, "_")
   ] ||
   String(status || "")
     .trim()
@@ -276,10 +278,10 @@ const getReturnItemQuantity = (item = {}, requestStatus = "") =>
         String(requestStatus).toLowerCase(),
       )
         ? firstDefined(
-          item.requestedQuantity,
-          item.requested_quantity,
-          item.quantity,
-        )
+            item.requestedQuantity,
+            item.requested_quantity,
+            item.quantity,
+          )
         : undefined,
       item.approvedQuantity,
       item.approved_quantity,
@@ -590,9 +592,9 @@ const buildSellerLookup = (relations = {}) => {
     );
     remember(
       shipment.sellerId ||
-      shipment.seller_id ||
-      shipment.seller?.id ||
-      shipment.seller?._id,
+        shipment.seller_id ||
+        shipment.seller?.id ||
+        shipment.seller?._id,
       shipment.organizationId || shipment.organization_id,
       {
         sellerName:
@@ -610,8 +612,8 @@ const getOrderTaxRates = (taxBreakup = {}, items = []) => {
     Array.isArray(taxBreakup.items) && taxBreakup.items.length
       ? taxBreakup.items
       : items.map((item) =>
-        normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {}),
-      );
+          normalizeJson(firstDefined(item.tax_breakup, item.taxBreakup), {}),
+        );
   const rates = sourceItems
     .map((taxItem, index) =>
       firstDefined(
@@ -675,10 +677,10 @@ const groupItemsBySeller = (items = [], relations = {}) => {
 
 const sameSellerGroup = (entry = {}, group = {}) =>
   String(firstDefined(entry.sellerId, entry.seller_id, "")) ===
-  String(group.sellerId || "") &&
+    String(group.sellerId || "") &&
   String(
     firstDefined(entry.organizationId, entry.organization_id, "default") ||
-    "default",
+      "default",
   ) === String(group.organizationId || "default");
 
 const groupItemsBySellerFromItems = (items = []) =>
@@ -744,7 +746,7 @@ const buildSellerSettlements = (items = []) =>
             itemTax.taxableAmount,
             itemTax.taxable_amount,
             lineTotal -
-            money(firstDefined(item.discount_amount, item.discountAmount)),
+              money(firstDefined(item.discount_amount, item.discountAmount)),
           ),
         );
         const taxAmount = money(
@@ -1247,7 +1249,7 @@ const commissionGstBaseNote = (
 const getOrderItemId = (item = {}) =>
   String(
     firstDefined(item.id, item._id, item.order_item_id, item.orderItemId, "") ||
-    "",
+      "",
   );
 
 const getItemProductId = (item = {}) =>
@@ -1495,9 +1497,9 @@ const getCommissionForItem = (item = {}, records = []) => {
         productId && candidate.productIds.includes(String(productId)),
     ).length === 1
       ? candidates.find(
-        (candidate) =>
-          productId && candidate.productIds.includes(String(productId)),
-      )?.record
+          (candidate) =>
+            productId && candidate.productIds.includes(String(productId)),
+        )?.record
       : null) ||
     null
   );
@@ -1634,26 +1636,26 @@ const buildSimpleItemPayoutRows = (
     const gstTcsTaxableBase = useReconciledLine
       ? taxableBase
       : money(
-        firstDefined(
-          metadata.taxableSupplyAmount,
-          metadata.gstTcsTaxableAmount,
-          metadata.gst_tcs_taxable_amount,
-          pricing.gstTcsTaxableAmount,
-          pricing.gst_tcs_taxable_amount,
-          taxableBase,
-        ),
-      );
+          firstDefined(
+            metadata.taxableSupplyAmount,
+            metadata.gstTcsTaxableAmount,
+            metadata.gst_tcs_taxable_amount,
+            pricing.gstTcsTaxableAmount,
+            pricing.gst_tcs_taxable_amount,
+            taxableBase,
+          ),
+        );
     const incomeTaxTdsTaxableBase = useReconciledLine
       ? taxableBase
       : money(
-        firstDefined(
-          metadata.incomeTaxTdsTaxableAmount,
-          metadata.income_tax_tds_taxable_amount,
-          pricing.incomeTaxTdsTaxableAmount,
-          pricing.income_tax_tds_taxable_amount,
-          taxableBase,
-        ),
-      );
+          firstDefined(
+            metadata.incomeTaxTdsTaxableAmount,
+            metadata.income_tax_tds_taxable_amount,
+            pricing.incomeTaxTdsTaxableAmount,
+            pricing.income_tax_tds_taxable_amount,
+            taxableBase,
+          ),
+        );
     const productShare = productTotal > 0 ? lineTotal / productTotal : 0;
     const taxableShare =
       taxableTotal > 0 ? taxableBase / taxableTotal : productShare;
@@ -1701,13 +1703,13 @@ const buildSimpleItemPayoutRows = (
     const discount = discountIncluded
       ? 0
       : money(
-        firstDefined(
-          pricing.marketplaceFundedDiscountAmount,
-          pricing.marketplace_funded_discount_amount,
-          product.marketplaceFundedDiscountAmount,
-          seller.marketplaceFundedDiscount * productShare,
-        ),
-      );
+          firstDefined(
+            pricing.marketplaceFundedDiscountAmount,
+            pricing.marketplace_funded_discount_amount,
+            product.marketplaceFundedDiscountAmount,
+            seller.marketplaceFundedDiscount * productShare,
+          ),
+        );
     const commissionRate = money(
       firstDefined(
         metadata.platformFeeRate,
@@ -1722,16 +1724,16 @@ const buildSimpleItemPayoutRows = (
       useReconciledLine && commissionRate > 0
         ? money((taxableBase * commissionRate) / 100)
         : money(
-          firstDefined(
-            record?.commission_amount,
-            record?.commissionAmount,
-            metadata.platformFeeAmount,
-            metadata.commissionFeeAmount,
-            product.platformFeeAmount,
-            pricing.platformFeeAmount,
-            seller.commissionFee * taxableShare,
-          ),
-        );
+            firstDefined(
+              record?.commission_amount,
+              record?.commissionAmount,
+              metadata.platformFeeAmount,
+              metadata.commissionFeeAmount,
+              product.platformFeeAmount,
+              pricing.platformFeeAmount,
+              seller.commissionFee * taxableShare,
+            ),
+          );
     const commissionGstRate = money(
       firstDefined(
         metadata.platformFeeTaxRate,
@@ -1745,15 +1747,15 @@ const buildSimpleItemPayoutRows = (
     const commissionGst = useReconciledLine
       ? money((commission * commissionGstRate) / 100)
       : money(
-        firstDefined(
-          record?.tax_amount,
-          record?.taxAmount,
-          metadata.platformFeeTaxAmount,
-          product.platformFeeTaxAmount,
-          pricing.platformFeeTaxAmount,
-          seller.platformFeeTax * taxableShare,
-        ),
-      );
+          firstDefined(
+            record?.tax_amount,
+            record?.taxAmount,
+            metadata.platformFeeTaxAmount,
+            product.platformFeeTaxAmount,
+            pricing.platformFeeTaxAmount,
+            seller.platformFeeTax * taxableShare,
+          ),
+        );
     const commissionBase = money(
       firstDefined(
         metadata.sellerCommissionBaseAmount,
@@ -1774,23 +1776,23 @@ const buildSimpleItemPayoutRows = (
     const gstTcs = useReconciledLine
       ? money((taxableBase * money(seller.gstTcsRate)) / 100)
       : money(
-        firstDefined(
-          metadata.gstTcsAmount,
-          pricing.gstTcsAmount,
-          pricing.gst_tcs_amount,
-          seller.gstTcsAmount * taxableShare,
-        ),
-      );
+          firstDefined(
+            metadata.gstTcsAmount,
+            pricing.gstTcsAmount,
+            pricing.gst_tcs_amount,
+            seller.gstTcsAmount * taxableShare,
+          ),
+        );
     const incomeTaxTds = useReconciledLine
       ? money((taxableBase * money(seller.incomeTaxTdsRate)) / 100)
       : money(
-        firstDefined(
-          metadata.incomeTaxTdsAmount,
-          pricing.incomeTaxTdsAmount,
-          pricing.income_tax_tds_amount,
-          seller.incomeTaxTdsAmount * taxableShare,
-        ),
-      );
+          firstDefined(
+            metadata.incomeTaxTdsAmount,
+            pricing.incomeTaxTdsAmount,
+            pricing.income_tax_tds_amount,
+            seller.incomeTaxTdsAmount * taxableShare,
+          ),
+        );
     const netGstTcs = money(gstTcs * (1 - returnRatio));
     const netIncomeTaxTds = money(incomeTaxTds * (1 - returnRatio));
     const netGstTcsTaxableBase = money(gstTcsTaxableBase * (1 - returnRatio));
@@ -1799,13 +1801,13 @@ const buildSimpleItemPayoutRows = (
     );
     const computedOriginalPayout = money(
       productAmount +
-      shipping +
-      discount -
-      shippingDeduction -
-      commission -
-      commissionGst -
-      gstTcs -
-      incomeTaxTds,
+        shipping +
+        discount -
+        shippingDeduction -
+        commission -
+        commissionGst -
+        gstTcs -
+        incomeTaxTds,
     );
     const backendRefundRecovery = money(
       firstDefined(
@@ -1827,19 +1829,19 @@ const buildSimpleItemPayoutRows = (
           ? Math.max(0, money(backendNetPayout - refundRecovery))
           : backendNetPayout
         : Math.max(
-          0,
-          money(
-            productAmount +
-            shipping +
-            discount -
-            shippingDeduction -
-            commission -
-            commissionGst -
-            gstTcs -
-            incomeTaxTds -
-            refundRecovery,
-          ),
-        );
+            0,
+            money(
+              productAmount +
+                shipping +
+                discount -
+                shippingDeduction -
+                commission -
+                commissionGst -
+                gstTcs -
+                incomeTaxTds -
+                refundRecovery,
+            ),
+          );
     const beforeReturn = money(finalPayout + refundRecovery);
     const originalShippingNet = money(shipping - shippingDeduction);
     const nonShippingOriginalPayout = money(
@@ -1886,15 +1888,15 @@ const buildSimpleItemPayoutRows = (
               : isReturned
                 ? "Partially returned"
                 : displayStatus(
-                  firstDefined(
-                    record?.status,
-                    item.payout_status,
-                    item.payoutStatus,
-                    item.delivery_status,
-                    item.deliveryStatus,
-                    "pending",
+                    firstDefined(
+                      record?.status,
+                      item.payout_status,
+                      item.payoutStatus,
+                      item.delivery_status,
+                      item.deliveryStatus,
+                      "pending",
+                    ),
                   ),
-                ),
       orderedQuantity: itemQuantity,
       returnedQuantity,
       cancelledQuantity,
@@ -1903,7 +1905,7 @@ const buildSimpleItemPayoutRows = (
       returnRatio,
       customerRefundAmount: money(
         (returnImpact.refundAmount || 0) +
-        (cancellationImpact.refundAmount || 0),
+          (cancellationImpact.refundAmount || 0),
       ),
       productAmount,
       shipping,
@@ -1929,7 +1931,7 @@ const buildSimpleItemPayoutRows = (
       incomeTaxTdsTaxableBase,
       taxAmount: money(
         money(firstDefined(tax.taxAmount, tax.tax_amount, 0)) +
-        money(firstDefined(tax.cessAmount, tax.cess_amount, 0)),
+          money(firstDefined(tax.cessAmount, tax.cess_amount, 0)),
       ),
       reconciledLegacySnapshot: useReconciledLine,
       netGstTcs,
@@ -1959,9 +1961,14 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
         const returned = row.refundRecovery > 0;
         return (
           <div key={row.id || index} className="px-4 py-3">
-            <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="font-bold text-[#202337]">{row.title}</div>
+            <div className="mb-2 flex min-w-0 flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div
+                  className="truncate font-bold text-[#202337]"
+                  title={row.title || ""}
+                >
+                  {row.title}
+                </div>
                 {row.variantLabel && (
                   <div className="mt-1 text-xs font-semibold text-[#2f6fed]">
                     Variant: {row.variantLabel}
@@ -1983,7 +1990,7 @@ const SimpleItemPayoutBreakup = ({ rows = [], finalTotal = 0 }) => (
                   )}
                 </div>
               </div>
-              <div className="text-right">
+              <div className="shrink-0 text-right">
                 <div className="text-xs text-[#65718b]">Item payout</div>
                 <div className="text-base font-bold text-[#21812C]">
                   {formatIndianNumber(row.finalPayout)}
@@ -2447,7 +2454,13 @@ const DetailStat = ({ label, value, icon, tone = "default" }) => {
   );
 };
 
-const ShipmentCard = ({ shipment = {}, seller, onManage, onDownloadLabel, labelUnavailableReason = "" }) => {
+const ShipmentCard = ({
+  shipment = {},
+  seller,
+  onManage,
+  onDownloadLabel,
+  labelUnavailableReason = "",
+}) => {
   const trackingNumber = firstDefined(
     shipment.tracking_number,
     shipment.trackingNumber,
@@ -2512,7 +2525,11 @@ const ShipmentCard = ({ shipment = {}, seller, onManage, onDownloadLabel, labelU
             ? `${eventCount} tracking update${eventCount === 1 ? "" : "s"}`
             : "No tracking updates yet"}
         </span>
-        {labelUnavailableReason && <span className="w-full text-amber-700">{labelUnavailableReason}</span>}
+        {labelUnavailableReason && (
+          <span className="w-full text-amber-700">
+            {labelUnavailableReason}
+          </span>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           {onDownloadLabel && !labelUnavailableReason && (
             <button
@@ -2589,14 +2606,22 @@ const PaymentCard = ({
 
 const DocumentCard = ({ document = {}, onOpen }) => {
   const metadata = normalizeJson(document.metadata, {});
-  const organization = normalizeJson(document.organization_snapshot || document.organizationSnapshot, {});
+  const organization = normalizeJson(
+    document.organization_snapshot || document.organizationSnapshot,
+    {},
+  );
   const sellerName = firstDefined(
-    organization.storeDisplayName, organization.legalBusinessName,
-    metadata.organization?.storeDisplayName, metadata.organization?.legalBusinessName,
-    metadata.seller?.displayName, metadata.seller?.businessName,
+    organization.storeDisplayName,
+    organization.legalBusinessName,
+    metadata.organization?.storeDisplayName,
+    metadata.organization?.legalBusinessName,
+    metadata.seller?.displayName,
+    metadata.seller?.businessName,
     document.sellerName,
   );
-  const isCommission = firstDefined(document.invoice_type, document.invoiceType) === "platform_commission";
+  const isCommission =
+    firstDefined(document.invoice_type, document.invoiceType) ===
+    "platform_commission";
 
   const number = firstDefined(
     document.invoice_number,
@@ -2623,7 +2648,11 @@ const DocumentCard = ({ document = {}, onOpen }) => {
         <div>
           <div className="font-bold text-[#202337]">{number}</div>
           <div className="mt-1 text-xs text-[#65718b] capitalize">{type}</div>
-          {sellerName && <div className="mt-1 text-sm font-medium text-[#202337]">{sellerName}</div>}
+          {sellerName && (
+            <div className="mt-1 text-sm font-medium text-[#202337]">
+              {sellerName}
+            </div>
+          )}
         </div>
         <StatusBadge
           status={firstDefined(document.status, "generated")}
@@ -2634,11 +2663,31 @@ const DocumentCard = ({ document = {}, onOpen }) => {
       <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2">
         {isCommission && (
           <>
-            <DetailStat label="Commission before GST" value={formatIndianNumber(firstDefined(document.taxable_amount, document.taxableAmount, 0))} tone="muted" />
-            <DetailStat label="GST on commission" value={formatIndianNumber(firstDefined(document.tax_amount, document.taxAmount, 0))} tone="muted" />
+            <DetailStat
+              label="Commission before GST"
+              value={formatIndianNumber(
+                firstDefined(
+                  document.taxable_amount,
+                  document.taxableAmount,
+                  0,
+                ),
+              )}
+              tone="muted"
+            />
+            <DetailStat
+              label="GST on commission"
+              value={formatIndianNumber(
+                firstDefined(document.tax_amount, document.taxAmount, 0),
+              )}
+              tone="muted"
+            />
           </>
         )}
-        <DetailStat label={isCommission ? "Total including GST" : "Total"} value={total} tone="success" />
+        <DetailStat
+          label={isCommission ? "Total including GST" : "Total"}
+          value={total}
+          tone="success"
+        />
         <DetailStat
           label="Created"
           value={formatDate(
@@ -2748,7 +2797,8 @@ const OrderSummary = () => {
       if (!res?.data) throw new Error("Invalid order response");
       setState((prev) => ({ ...prev, orderInfo: res.data }));
     } catch (error) {
-      if (request === orderInfoRequest.current) handleError(error, "Failed to fetch order information");
+      if (request === orderInfoRequest.current)
+        handleError(error, "Failed to fetch order information");
     } finally {
       if (request === orderInfoRequest.current) setLoading(false);
     }
@@ -2766,7 +2816,9 @@ const OrderSummary = () => {
   useEffect(() => {
     fetchOrderInfo();
     fetchUserData();
-    return () => { orderInfoRequest.current += 1; };
+    return () => {
+      orderInfoRequest.current += 1;
+    };
   }, [fetchOrderInfo, fetchUserData, realtimeRevision]);
 
   const fetchOrderReturns = useCallback(async () => {
@@ -2931,12 +2983,12 @@ const OrderSummary = () => {
     Math.max(
       0,
       subtotalAmount -
-      discountAmount +
-      taxPayableAmount +
-      deliveryChargeAmount +
-      customerPlatformFeeAmount +
-      customerPlatformFeeTaxAmount +
-      codChargeAmount,
+        discountAmount +
+        taxPayableAmount +
+        deliveryChargeAmount +
+        customerPlatformFeeAmount +
+        customerPlatformFeeTaxAmount +
+        codChargeAmount,
     ).toFixed(2),
   );
   const customerPayableAmount = Number(
@@ -2960,8 +3012,8 @@ const OrderSummary = () => {
           ),
       )
       .reduce(
-      (total, allocation) => total + Number(allocation.payableAmount || 0),
-      0,
+        (total, allocation) => total + Number(allocation.payableAmount || 0),
+        0,
       ),
   );
   const referralPoolAmount = money(referralSummary.referralPoolAmount);
@@ -2971,14 +3023,13 @@ const OrderSummary = () => {
   const referralUnallocatedAmount = Math.max(
     0,
     money(
-      referralPoolAmount -
-        referralCustomerDiscount -
-        referralPartnerAmount,
+      referralPoolAmount - referralCustomerDiscount - referralPartnerAmount,
     ),
   );
   const isCodOrder =
-    String(firstDefined(order.payment_provider, order.paymentProvider, ""))
-      .toLowerCase() === "cod";
+    String(
+      firstDefined(order.payment_provider, order.paymentProvider, ""),
+    ).toLowerCase() === "cod";
   const buyer = relations.buyer || order.buyer || order.buyerSnapshot || {};
   const buyerId = firstDefined(
     buyer.id,
@@ -3062,10 +3113,16 @@ const OrderSummary = () => {
   const returns = Array.isArray(state.returns) ? state.returns : [];
   const displayedOrderStatus = orderDisplayStatus(order);
   const invoice = relations.invoice || relations.taxInvoice || null;
-  const invoices = Array.isArray(relations.invoices) && relations.invoices.length
-    ? relations.invoices : invoice ? [invoice] : [];
-  const commissionInvoices = invoices.filter((document) =>
-    firstDefined(document.invoice_type, document.invoiceType) === "platform_commission",
+  const invoices =
+    Array.isArray(relations.invoices) && relations.invoices.length
+      ? relations.invoices
+      : invoice
+        ? [invoice]
+        : [];
+  const commissionInvoices = invoices.filter(
+    (document) =>
+      firstDefined(document.invoice_type, document.invoiceType) ===
+      "platform_commission",
   );
   const sellerGroups = useMemo(
     () => Object.values(groupItemsBySeller(items, relations)),
@@ -3291,7 +3348,7 @@ const OrderSummary = () => {
     ) {
       toast.error(
         state.cancellationPreviewError ||
-        "Wait for the cancellation impact to be calculated",
+          "Wait for the cancellation impact to be calculated",
       );
       return;
     }
@@ -3309,15 +3366,15 @@ const OrderSummary = () => {
       const res =
         formData.status === "cancelled"
           ? await dispatch(
-            orderCancel({
-              orderId,
-              reason: formData.reason,
-              reasonCode: formData.reasonCode,
-              refundMethod: formData.refundMethod,
-              items: cancellationItems,
-              idempotencyKey: `${isSeller ? "seller" : "admin"}:${orderId}:${Date.now()}`,
-            }),
-          ).unwrap()
+              orderCancel({
+                orderId,
+                reason: formData.reason,
+                reasonCode: formData.reasonCode,
+                refundMethod: formData.refundMethod,
+                items: cancellationItems,
+                idempotencyKey: `${isSeller ? "seller" : "admin"}:${orderId}:${Date.now()}`,
+              }),
+            ).unwrap()
           : await dispatch(updateOrderStatus(payload)).unwrap();
       toast.success(res?.message || "Order updated successfully");
       setState((prev) => ({ ...prev, statusModal: false }));
@@ -3562,8 +3619,9 @@ const OrderSummary = () => {
                     groupCodCollections
                       .filter(
                         (collection) =>
-                          String(collection.collected_by || "").toLowerCase() ===
-                          "seller",
+                          String(
+                            collection.collected_by || "",
+                          ).toLowerCase() === "seller",
                       )
                       .reduce(
                         (total, collection) =>
@@ -3654,7 +3712,14 @@ const OrderSummary = () => {
                               Returns:{" "}
                               {formatLabel(
                                 displayStatus(
-                                  firstDefined(returnProgressDisplayStatus(group.items, order), returnLifecycle.status, "none"),
+                                  firstDefined(
+                                    returnProgressDisplayStatus(
+                                      group.items,
+                                      order,
+                                    ),
+                                    returnLifecycle.status,
+                                    "none",
+                                  ),
                                 ),
                               )}
                             </span>
@@ -3749,7 +3814,9 @@ const OrderSummary = () => {
                                 <div className="text-[11px] font-semibold text-[#65718b]">
                                   {label}
                                 </div>
-                                <div className={`mt-1 text-sm font-bold ${tone}`}>
+                                <div
+                                  className={`mt-1 text-sm font-bold ${tone}`}
+                                >
                                   {formatIndianNumber(value)}
                                 </div>
                                 <div className="mt-1 text-[11px] leading-4 text-[#65718b]">
@@ -3786,8 +3853,8 @@ const OrderSummary = () => {
                         const variantLabel = getOrderItemVariantLabel(item);
                         const displayVariant =
                           variantLabel &&
-                            variantLabel !== "undefined" &&
-                            variantLabel !== "null"
+                          variantLabel !== "undefined" &&
+                          variantLabel !== "null"
                             ? variantLabel
                             : "N/A";
                         const productId = firstDefined(
@@ -3809,7 +3876,7 @@ const OrderSummary = () => {
                                       `/app/product-catalog/view/${productId}`,
                                     )
                                   }
-                                  className="font-semibold"
+                                  className="font-semibold  max-w-sm truncate line-clamp-1"
                                 >
                                   {productTitle}
                                 </DetailLink>
@@ -3903,34 +3970,49 @@ const OrderSummary = () => {
               <InfoRow
                 label="Return Window"
                 value={[
-                  firstDefined(order.return_window_days, order.returnWindowDays, order.return_policy_snapshot?.returnWindowDays) != null
-                    ? formatReturnDuration(firstDefined(order.return_window_days, order.returnWindowDays, order.return_policy_snapshot?.returnWindowDays))
+                  firstDefined(
+                    order.return_window_days,
+                    order.returnWindowDays,
+                    order.return_policy_snapshot?.returnWindowDays,
+                  ) != null
+                    ? formatReturnDuration(
+                        firstDefined(
+                          order.return_window_days,
+                          order.returnWindowDays,
+                          order.return_policy_snapshot?.returnWindowDays,
+                        ),
+                      )
                     : null,
                   formatDateTime12Hour(
-                    firstDefined(order.return_eligible_until, order.returnEligibleUntil),
+                    firstDefined(
+                      order.return_eligible_until,
+                      order.returnEligibleUntil,
+                    ),
                     "Starts after delivery",
                   ),
-                ].filter(Boolean).join(" · ")}
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               />
               <InfoRow
                 label={isSeller ? "Payment Collection" : "Payment Method"}
                 value={
                   isSeller
                     ? String(
-                      firstDefined(
-                        order.payment_provider,
-                        order.paymentProvider,
-                        "",
-                      ),
-                    ).toLowerCase() === "cod"
+                        firstDefined(
+                          order.payment_provider,
+                          order.paymentProvider,
+                          "",
+                        ),
+                      ).toLowerCase() === "cod"
                       ? "COD"
                       : "Prepaid"
                     : displayStatus(
-                      firstDefined(
-                        order.payment_provider,
-                        order.paymentProvider,
-                      ),
-                    )
+                        firstDefined(
+                          order.payment_provider,
+                          order.paymentProvider,
+                        ),
+                      )
                 }
               />
               <InfoRow
@@ -4115,29 +4197,29 @@ const OrderSummary = () => {
                 money(taxBreakup.sgstAmount) > 0 ||
                 money(taxBreakup.igstAmount) > 0 ||
                 money(taxBreakup.cessAmount) > 0) && (
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#65718b]">
-                    {money(taxBreakup.cgstAmount) > 0 && (
-                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                        CGST: {formatIndianNumber(taxBreakup.cgstAmount)}
-                      </span>
-                    )}
-                    {money(taxBreakup.sgstAmount) > 0 && (
-                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                        SGST: {formatIndianNumber(taxBreakup.sgstAmount)}
-                      </span>
-                    )}
-                    {money(taxBreakup.igstAmount) > 0 && (
-                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                        IGST: {formatIndianNumber(taxBreakup.igstAmount)}
-                      </span>
-                    )}
-                    {money(taxBreakup.cessAmount) > 0 && (
-                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
-                        Cess: {formatIndianNumber(taxBreakup.cessAmount)}
-                      </span>
-                    )}
-                  </div>
-                )}
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#65718b]">
+                  {money(taxBreakup.cgstAmount) > 0 && (
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
+                      CGST: {formatIndianNumber(taxBreakup.cgstAmount)}
+                    </span>
+                  )}
+                  {money(taxBreakup.sgstAmount) > 0 && (
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
+                      SGST: {formatIndianNumber(taxBreakup.sgstAmount)}
+                    </span>
+                  )}
+                  {money(taxBreakup.igstAmount) > 0 && (
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
+                      IGST: {formatIndianNumber(taxBreakup.igstAmount)}
+                    </span>
+                  )}
+                  {money(taxBreakup.cessAmount) > 0 && (
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#e0e7f5]">
+                      Cess: {formatIndianNumber(taxBreakup.cessAmount)}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             {Array.isArray(taxBreakup.items) && taxBreakup.items.length > 0 && (
               <div className="mt-3">
@@ -4203,12 +4285,12 @@ const OrderSummary = () => {
                                     `/app/product-catalog/view/${productId}`,
                                   )
                                 }
-                                className="text-xs font-semibold"
+                                className="text-xs font-semibold max-w-full truncate line-clamp-1"
                               >
                                 {productTitle}
                               </DetailLink>
                             ) : (
-                              <div className="font-semibold text-[#202337]">
+                              <div className="font-semibold text-[#202337] max-w-sm truncate line-clamp-1">
                                 {productTitle}
                               </div>
                             )}
@@ -4459,7 +4541,10 @@ const OrderSummary = () => {
                         }
                         shipment={shipment}
                         seller={seller}
-                        labelUnavailableReason={boxLabelUnavailableReason(order, shipment)}
+                        labelUnavailableReason={boxLabelUnavailableReason(
+                          order,
+                          shipment,
+                        )}
                         onDownloadLabel={() => handleDownloadBoxLabel(shipment)}
                         onManage={() =>
                           navigate(
@@ -4484,24 +4569,30 @@ const OrderSummary = () => {
               </h3>
 
               <div className="space-y-3">
-
-                {invoices.length ? invoices.map((document) => (
-                  <DocumentCard
-                    key={document.id || document._id || document.invoice_number || document.invoiceNumber}
-                    document={document}
-                    onOpen={() =>
-                      navigate(
-                        `/app/tax-invoices?search=${encodeURIComponent(
-                          firstDefined(
-                            document.invoice_number,
-                            document.invoiceNumber,
-                            "",
-                          ),
-                        )}`,
-                      )
-                    }
-                  />
-                )) : (
+                {invoices.length ? (
+                  invoices.map((document) => (
+                    <DocumentCard
+                      key={
+                        document.id ||
+                        document._id ||
+                        document.invoice_number ||
+                        document.invoiceNumber
+                      }
+                      document={document}
+                      onOpen={() =>
+                        navigate(
+                          `/app/tax-invoices?search=${encodeURIComponent(
+                            firstDefined(
+                              document.invoice_number,
+                              document.invoiceNumber,
+                              "",
+                            ),
+                          )}`,
+                        )
+                      }
+                    />
+                  ))
+                ) : (
                   <EmptyState>No tax invoices found</EmptyState>
                 )}
               </div>
@@ -4642,13 +4733,13 @@ const OrderSummary = () => {
                                             )}
                                             {getReturnItemVariantText(item)
                                               ? ` · ${getReturnItemVariantText(
-                                                item,
-                                              )}`
+                                                  item,
+                                                )}`
                                               : ""}
                                             {getReturnItemOrderItemId(item)
                                               ? ` · Item ${getReturnItemOrderItemId(
-                                                item,
-                                              ).slice(0, 8)}`
+                                                  item,
+                                                ).slice(0, 8)}`
                                               : ""}
                                           </div>
                                         </div>
@@ -4862,9 +4953,9 @@ const OrderSummary = () => {
                   ? itemIncomeTaxTdsBase
                   : seller.incomeTaxTdsReversal > 0
                     ? firstDefined(
-                      seller.netIncomeTaxTdsTaxableBase,
-                      seller.incomeTaxTdsTaxableBase,
-                    )
+                        seller.netIncomeTaxTdsTaxableBase,
+                        seller.incomeTaxTdsTaxableBase,
+                      )
                     : seller.incomeTaxTdsTaxableBase;
                 const hasRefundAdjustment =
                   itemRefundRecovery > 0 ||
@@ -5229,8 +5320,7 @@ const OrderSummary = () => {
         }
         closeButtonText="Close"
         submitDisabled={
-          formData.status === "cancelled" &&
-          state.cancellationPreviewLoading
+          formData.status === "cancelled" && state.cancellationPreviewLoading
         }
       >
         <div className="space-y-5 py-2">
@@ -5238,8 +5328,8 @@ const OrderSummary = () => {
           {!isSeller && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
               <p className="text-xs leading-5 text-amber-900">
-                Use this only for exceptional order corrections. Delivery changes
-                must be made through Shipment Management.
+                Use this only for exceptional order corrections. Delivery
+                changes must be made through Shipment Management.
               </p>
             </div>
           )}
@@ -5255,7 +5345,8 @@ const OrderSummary = () => {
                 options={statusOptions}
                 required
                 value={
-                  statusOptions.find((opt) => opt.value === formData.status) || null
+                  statusOptions.find((opt) => opt.value === formData.status) ||
+                  null
                 }
                 onChange={(option) => {
                   const status = option?.value || "";
@@ -5275,7 +5366,9 @@ const OrderSummary = () => {
                 }}
                 placeholder="Select Status"
                 isSearchable={false}
-                error={statusFormik.submitCount > 0 && statusFormik.errors.status}
+                error={
+                  statusFormik.submitCount > 0 && statusFormik.errors.status
+                }
               />
             </FormSection>
           )}
@@ -5284,55 +5377,55 @@ const OrderSummary = () => {
           {["ready_to_ship", "shipped", "out_for_delivery"].includes(
             formData.status,
           ) && (
-              <FormSection
-                title="Shipment Details"
-                subtitle="Enter the tracking information for this shipment."
-              >
-                <div className="space-y-4">
-                  <Input
-                    labelName="Tracking Number"
-                    value={formData.trackingNumber}
-                    onChange={(event) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        trackingNumber: event.target.value,
-                      }))
-                    }
-                    name="trackingNumber"
-                    placeholder="AWB / tracking number"
-                    maxLength={200}
-                  />
+            <FormSection
+              title="Shipment Details"
+              subtitle="Enter the tracking information for this shipment."
+            >
+              <div className="space-y-4">
+                <Input
+                  labelName="Tracking Number"
+                  value={formData.trackingNumber}
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      trackingNumber: event.target.value,
+                    }))
+                  }
+                  name="trackingNumber"
+                  placeholder="AWB / tracking number"
+                  maxLength={200}
+                />
 
-                  <Input
-                    labelName="Carrier / Courier"
-                    value={formData.carrierName}
-                    onChange={(event) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        carrierName: event.target.value,
-                      }))
-                    }
-                    name="carrierName"
-                    placeholder="e.g. Delhivery, BlueDart, FedEx"
-                    maxLength={100}
-                  />
+                <Input
+                  labelName="Carrier / Courier"
+                  value={formData.carrierName}
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      carrierName: event.target.value,
+                    }))
+                  }
+                  name="carrierName"
+                  placeholder="e.g. Delhivery, BlueDart, FedEx"
+                  maxLength={100}
+                />
 
-                  <Input
-                    labelName="Tracking URL (optional)"
-                    value={formData.carrierUrl}
-                    onChange={(event) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        carrierUrl: event.target.value,
-                      }))
-                    }
-                    name="carrierUrl"
-                    placeholder="https://..."
-                    maxLength={500}
-                  />
-                </div>
-              </FormSection>
-            )}
+                <Input
+                  labelName="Tracking URL (optional)"
+                  value={formData.carrierUrl}
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      carrierUrl: event.target.value,
+                    }))
+                  }
+                  name="carrierUrl"
+                  placeholder="https://..."
+                  maxLength={500}
+                />
+              </div>
+            </FormSection>
+          )}
 
           {/* Cancellation Details */}
           {formData.status === "cancelled" && (
@@ -5354,9 +5447,9 @@ const OrderSummary = () => {
                       </p>
 
                       <p className="mt-1 text-xs leading-5 text-blue-800">
-                        The customer refund route is selected based on the payment
-                        method and platform policy. Sellers cannot redirect or
-                        manually complete refunds.
+                        The customer refund route is selected based on the
+                        payment method and platform policy. Sellers cannot
+                        redirect or manually complete refunds.
                       </p>
                     </div>
                   </div>
@@ -5478,7 +5571,6 @@ const OrderSummary = () => {
                         setFormData((prev) => ({
                           ...prev,
                           refundMethod: option?.value || "auto",
-
                         }))
                       }
                       placeholder="Select refund method"
@@ -5505,7 +5597,9 @@ const OrderSummary = () => {
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-gray-800">
                             Products to Cancel
-                            <span className="ml-1 text-[var(--admin-danger)]">*</span>
+                            <span className="ml-1 text-[var(--admin-danger)]">
+                              *
+                            </span>
                           </p>
 
                           <p className="mt-1 text-xs text-gray-500">
@@ -5518,18 +5612,20 @@ const OrderSummary = () => {
 
                       <div className="flex shrink-0 items-center gap-3">
                         <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${selectedCount > 0
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            selectedCount > 0
                               ? "bg-red-50 text-red-700"
                               : "bg-gray-100 text-gray-500"
-                            }`}
+                          }`}
                         >
                           {selectedCount} selected
                         </span>
 
                         <ChevronDown
                           size={18}
-                          className={`text-gray-500 transition-transform duration-200 ${isProductsExpanded ? "rotate-180" : ""
-                            }`}
+                          className={`text-gray-500 transition-transform duration-200 ${
+                            isProductsExpanded ? "rotate-180" : ""
+                          }`}
                         />
                       </div>
                     </button>
@@ -5539,7 +5635,8 @@ const OrderSummary = () => {
                       <div className="border-t border-gray-200 p-4">
                         <div className="mb-3">
                           <p className="text-xs text-gray-500">
-                            Choose the products you want to cancel from this order.
+                            Choose the products you want to cancel from this
+                            order.
                           </p>
                         </div>
 
@@ -5548,7 +5645,8 @@ const OrderSummary = () => {
                             const itemId = String(item.id);
 
                             const pending = Number(
-                              pendingCancellationQuantityByItem.get(itemId) || 0,
+                              pendingCancellationQuantityByItem.get(itemId) ||
+                                0,
                             );
 
                             const remaining =
@@ -5556,24 +5654,29 @@ const OrderSummary = () => {
                               Number(item.cancelled_quantity || 0) -
                               pending;
 
-                            const shipmentCancellable = isItemShipmentCancellable(item);
-                            const blocked = remaining <= 0 || !shipmentCancellable;
+                            const shipmentCancellable =
+                              isItemShipmentCancellable(item);
+                            const blocked =
+                              remaining <= 0 || !shipmentCancellable;
 
-                            const selected = Object.prototype.hasOwnProperty.call(
-                              formData.cancelItems,
-                              itemId,
-                            );
+                            const selected =
+                              Object.prototype.hasOwnProperty.call(
+                                formData.cancelItems,
+                                itemId,
+                              );
 
                             return (
                               <label
                                 key={itemId}
-                                className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${selected
+                                className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                                  selected
                                     ? "border-red-200 bg-red-50/50"
                                     : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-                                  } ${blocked
+                                } ${
+                                  blocked
                                     ? "cursor-not-allowed opacity-60"
                                     : "cursor-pointer"
-                                  }`}
+                                }`}
                               >
                                 <input
                                   type="checkbox"
@@ -5603,14 +5706,18 @@ const OrderSummary = () => {
                                 />
 
                                 <span className="min-w-0 flex-1 break-words text-gray-800">
-                                  {firstDefined(item.product_title, item.product_id)}
+                                  {firstDefined(
+                                    item.product_title,
+                                    item.product_id,
+                                  )}
                                 </span>
 
                                 <span
-                                  className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${selected
+                                  className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${
+                                    selected
                                       ? "bg-red-100 text-red-700"
                                       : "bg-gray-100 text-gray-500"
-                                    }`}
+                                  }`}
                                 >
                                   {selected
                                     ? `Cancel all ${remaining}`
@@ -5638,7 +5745,6 @@ const OrderSummary = () => {
                         </p>
                       )}
                   </div>
-
                 </div>
 
                 {/* Cancellation Impact */}
@@ -5658,9 +5764,9 @@ const OrderSummary = () => {
                       </p>
 
                       <p className="mt-1">
-                        The cancellation will still be validated and calculated by
-                        the server when you confirm. No estimated amount is being
-                        assumed.
+                        The cancellation will still be validated and calculated
+                        by the server when you confirm. No estimated amount is
+                        being assumed.
                       </p>
                     </div>
                   ) : state.cancellationPreviewError ? (
@@ -5716,7 +5822,8 @@ const OrderSummary = () => {
                     </div>
                   ) : (
                     <p className="mt-2 text-xs text-red-400">
-                      Cancellation impact details will appear here once you select at least one product.
+                      Cancellation impact details will appear here once you
+                      select at least one product.
                     </p>
                   )}
                 </div>
@@ -5757,7 +5864,7 @@ const OrderSummary = () => {
                 placeholder="Reason or operational note"
                 error={
                   statusFormik.submitCount > 0 &&
-                    (formData.status !== "cancelled" || selectedCount > 0)
+                  (formData.status !== "cancelled" || selectedCount > 0)
                     ? statusFormik.errors.reason
                     : ""
                 }
@@ -5770,7 +5877,6 @@ const OrderSummary = () => {
                 maxLength={500}
                 minLength={10}
                 limitMessage="Note must be between 10 and 500 characters."
-
                 value={formData.note}
                 onChange={(event) => {
                   const value = event.target.value;
@@ -5789,9 +5895,7 @@ const OrderSummary = () => {
                 onBlur={statusFormik.handleBlur}
                 placeholder="Enter order note"
                 error={
-                  statusFormik.submitCount > 0
-                    ? statusFormik.errors.note
-                    : ""
+                  statusFormik.submitCount > 0 ? statusFormik.errors.note : ""
                 }
               />
             </div>

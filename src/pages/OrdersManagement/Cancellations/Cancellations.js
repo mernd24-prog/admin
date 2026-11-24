@@ -968,7 +968,7 @@ const Cancellations = () => {
                 <div>
                   <p className="text-xs font-medium text-gray-500">Reason</p>
 
-                  <p className="mt-1 text-sm text-gray-800">
+                  <p className="mt-1 text-sm text-gray-800 ">
                     {display(detail.reason)}
                   </p>
                 </div>
@@ -1160,7 +1160,7 @@ const Cancellations = () => {
                   <>
                     {/* Product title */}
                     <div className="col-span-3 min-w-0">
-                      <p className="truncate text-sm font-semibold text-gray-900">
+                      <p className="truncate text-sm font-semibold text-gray-900 max-w-lg">
                         {item.productTitle || item.product_title || "Product"}
                       </p>
                     </div>
@@ -1265,7 +1265,7 @@ const Cancellations = () => {
                             }
                             className="rounded-lg border border-gray-200 bg-white p-3"
                           >
-                            <p className="text-sm font-semibold text-gray-900">
+                            <p className="min-w-0 break-words line-clamp-1 text-sm font-semibold text-gray-900">
                               {product.productTitle ||
                                 product.product_title ||
                                 "Product"}

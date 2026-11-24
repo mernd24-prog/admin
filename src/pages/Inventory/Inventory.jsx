@@ -1225,45 +1225,22 @@ const Inventory = () => {
         const images = getVariantImagesList(row);
 
         return (
-          <div className="flex flex-col items-center gap-1">
-            {image ? (
-              <button
-                type="button"
-                className="h-12 w-12 overflow-hidden rounded-md border border-[var(--admin-line)] bg-[var(--admin-surface-soft)]"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  openImageGallery(row);
-                }}
-                title="View product images"
-              >
-                <img
-                  src={image}
-                  alt={row.productName || "Product"}
-                  className="h-full w-full object-cover"
-                />
-              </button>
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-md border border-dashed border-[var(--admin-line)] text-[10px] text-[var(--admin-muted)]">
+          <ImageThumbnail
+            src={image}
+            images={images}
+            alt={row.productName || "Product"}
+            size="md"
+            className="!rounded-md border-[var(--admin-line)] bg-[var(--admin-surface-soft)]"
+            fallbackIcon={
+              <span className="text-[10px] text-[var(--admin-muted)]">
                 No Image
-              </div>
-            )}
-
-            <button
-              type="button"
-              disabled={!images.length}
-              onClick={(event) => {
-                event.stopPropagation();
-                openImageGallery(row);
-              }}
-              className={`text-xs ${
-                images.length
-                  ? "text-[var(--admin-blue)] hover:underline"
-                  : "cursor-not-allowed text-[var(--admin-muted)]"
-              }`}
-            >
-              View
-            </button>
-          </div>
+              </span>
+            }
+            showZoomIcon
+            showViewButton
+            viewButtonText="View"
+            onClick={() => openImageGallery(row)}
+          />
         );
       },
     },
@@ -1335,35 +1312,28 @@ const Inventory = () => {
         key: "image",
         label: "Image",
         width: "150px",
-        render: (_value, variant) => (
-          <div className="flex flex-col items-center gap-1">
-            <button
-              type="button"
-              className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
-              onClick={(event) => {
-                event.stopPropagation();
-                openImageGallery(variant);
-              }}
-              title="View product images"
-            >
-              <img
-                src={getVariantImage(variant)}
-                alt={variant?.sku || variant?.variantName || "Variant"}
-                className="h-full w-full object-cover"
-              />
-            </button>
-            <button
-              type="button"
-              className="text-xs text-blue-500 hover:underline"
-              onClick={(event) => {
-                event.stopPropagation();
-                openImageGallery(variant);
-              }}
-            >
-              View
-            </button>
-          </div>
-        ),
+        render: (_value, variant) => {
+          const images = getVariantImagesList(variant);
+
+          return (
+            <ImageThumbnail
+              src={getVariantImage(variant)}
+              images={images}
+              alt={variant?.sku || variant?.variantName || "Variant"}
+              size="sm"
+              className="!rounded border-gray-200 bg-gray-50"
+              fallbackIcon={
+                <span className="text-[10px] text-[var(--admin-muted)]">
+                  No Image
+                </span>
+              }
+              showZoomIcon
+              showViewButton
+              viewButtonText="View"
+              onClick={() => openImageGallery(variant)}
+            />
+          );
+        },
       },
       {
         key: "productName",

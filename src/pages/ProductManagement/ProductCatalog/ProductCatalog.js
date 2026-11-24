@@ -32,12 +32,13 @@ import { toast } from "sonner";
 import { getAllSellerList } from "../../../Redux/StoreSlice";
 import ProductStatusBadge from "../../../components/Product/ProductStatusBadge";
 import PermissionGuard from "../../../components/Atoms/PermissionGuard/PermissionGuard";
-import { DataTable, PageHeader } from "../../../components/Shared";
-import ConfirmModal from "../../../components/Shared/ConfirmModal";
 import {
-  getPrimaryProductImage,
-  getProductImages,
-} from "../../../_helpers/productMedia";
+  DataTable,
+  ImageThumbnail,
+  PageHeader,
+} from "../../../components/Shared";
+import ConfirmModal from "../../../components/Shared/ConfirmModal";
+import { getProductImages } from "../../../_helpers/productMedia";
 import { useListPage } from "../../../hooks/useListPage";
 import { getSelectedSellerOrganizationId } from "../../../_helpers/sellerOrganizationContext";
 import {
@@ -966,48 +967,21 @@ const ProductCatalog = () => {
         render: (_, product) => {
           const productImages = getProductImages(product);
 
-          const primaryImage = getPrimaryProductImage(product);
-
           return (
-            <div className="flex flex-col items-center gap-1">
-              {primaryImage ? (
-                <button
-                  type="button"
-                  className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
-                  onClick={() => handleImageClick(productImages)}
-                  title="View product images"
-                >
-                  <span
-                    role="img"
-                    aria-label={product?.title || product?.name || "Product"}
-                    className="block h-full w-full bg-cover bg-center"
-                    style={{
-                      backgroundImage: `url("${String(primaryImage).replace(
-                        /"/g,
-                        "%22",
-                      )}")`,
-                    }}
-                  />
-                </button>
-              ) : (
-                <span className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400">
-                  No
-                </span>
-              )}
-
-              <button
-                type="button"
-                className={`text-xs ${
-                  productImages.length
-                    ? "text-blue-500 hover:underline"
-                    : "cursor-not-allowed text-gray-400"
-                }`}
-                onClick={() => handleImageClick(productImages)}
-                disabled={!productImages.length}
-              >
-                View
-              </button>
-            </div>
+            <ImageThumbnail
+              src={productImages[0] || ""}
+              images={productImages}
+              alt={product?.title || product?.name || "Product"}
+              size="sm"
+              className="!rounded border-gray-200 bg-gray-50"
+              fallbackIcon={
+                <span className="text-xs text-gray-400">No</span>
+              }
+              showZoomIcon
+              showViewButton
+              viewButtonText="View"
+              onClick={() => handleImageClick(productImages)}
+            />
           );
         },
       },

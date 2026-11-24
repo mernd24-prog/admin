@@ -2691,10 +2691,17 @@ export const productVariantsValidationSchema = Yup.mixed().test(
           ),
         );
       }
-      if (
-        !["active", "inactive", "out_of_stock"].includes(
-          variant?.status || "active",
-        )
+      const variantStatus = String(variant?.status ?? "").trim();
+      if (!variantStatus) {
+        errors.push(
+          new Yup.ValidationError(
+            "Status is required.",
+            variant?.status,
+            `variants.${index}.status`,
+          ),
+        );
+      } else if (
+        !["active", "inactive", "out_of_stock"].includes(variantStatus)
       ) {
         errors.push(
           new Yup.ValidationError(

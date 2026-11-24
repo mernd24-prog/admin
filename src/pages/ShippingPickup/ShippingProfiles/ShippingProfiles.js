@@ -332,6 +332,24 @@ function ProfileForm({
   );
   const patch = (key, val) => {
     setForm((prev) => ({ ...prev, [key]: val }));
+
+    if (key === "allowedPincodes" && formik) {
+      formik.setFieldValue(key, val, false);
+
+      let pincodeError;
+      if (form.serviceabilityMode === "selected_pincodes") {
+        if (!val.length) {
+          pincodeError = "Add at least one allowed pincode";
+        } else if (val.some((pincode) => !/^[1-9]\d{5}$/.test(pincode))) {
+          pincodeError =
+            "Each pincode must contain 6 digits and cannot start with 0";
+        }
+      }
+
+      formik.setFieldError(key, pincodeError);
+      return;
+    }
+
     formik?.setFieldValue(key, val, key !== "description");
   };
   const patchShippingAmount = (key, rawValue) => {

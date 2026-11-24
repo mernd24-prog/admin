@@ -135,7 +135,7 @@ const API_CALL_OBJECT = {
 
 const DEFAULT_PRODUCT_VARIANT = {
   sku: "",
-  title: "Default",
+  title: "",
   price: "",
   mrp: "",
   salePrice: "",
@@ -998,6 +998,17 @@ export default function ProductManagementUI() {
           setFormData({
             ...INITIALS_DATA,
             ...productData,
+            warranty: {
+              ...INITIALS_DATA.warranty,
+              ...(productData?.warranty || {}),
+              enabled:
+                productData?.warranty?.enabled ??
+                INITIALS_DATA.warranty.enabled,
+              returnPolicy: {
+                ...INITIALS_DATA.warranty.returnPolicy,
+                ...(productData?.warranty?.returnPolicy || {}),
+              },
+            },
             name: productData?.title || productData?.name || "",
             brandName:
               productData?.brandName ||
@@ -1109,7 +1120,7 @@ export default function ProductManagementUI() {
                 title:
                   productData?.color && productData.color !== "default"
                     ? productData.color
-                    : "Default",
+                    : "",
                 price: productData?.price ?? "",
                 mrp: productData?.mrp ?? "",
                 salePrice: getStoredSpecialPrice(productData),

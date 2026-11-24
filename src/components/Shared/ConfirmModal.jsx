@@ -170,7 +170,7 @@ const ConfirmModal = ({
               </h3>
 
               {body && (
-                <div className="mt-1.5 text-sm leading-5 text-[var(--admin-muted)]">
+                <div className="mt-1.5 min-w-0 break-words text-sm leading-5 text-[var(--admin-muted)] [overflow-wrap:anywhere]">
                   {body}
                 </div>
               )}

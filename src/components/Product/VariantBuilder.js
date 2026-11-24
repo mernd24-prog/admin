@@ -224,6 +224,7 @@ const VariantBuilder = ({
       const labels = {
         price: "Price",
         mrp: "MRP",
+        status: "Status",
       };
 
       return labels[field] ? `${labels[field]} is required` : "";
@@ -1146,6 +1147,8 @@ const VariantBuilder = ({
             const hasImages = imageCount > 0;
             const variantErrors =
               errors && typeof errors === "object" ? errors[idx] || {} : {};
+            const statusError =
+              variantErrors.status || getVariantFieldError(idx, "status");
             const hasVariantErrors = Object.keys(variantErrors).length > 0;
             const isExpanded = expandedVariants.has(idx) || hasVariantErrors;
             const isUploading = uploadingVariants.has(idx);
@@ -1257,7 +1260,7 @@ const VariantBuilder = ({
                             : "bg-gray-100 text-gray-600 ring-1 ring-inset ring-gray-200"
                         }`}
                       >
-                        {variant.status || "active"}
+                        {variant.status || "Not set"}
                       </span>
                     </div>
 
@@ -1607,27 +1610,28 @@ const VariantBuilder = ({
                         />
                       </div>
 
-                      <div>
+                      <div
+                        data-error-field={statusError ? "variants" : undefined}
+                      >
                         <FilterSelect
                           label="Status"
+                          required
                           options={productStatuses.options.filter((o) =>
                             ["active", "inactive"].includes(o.value),
                           )}
                           value={
                             productStatuses.options.find(
-                              (o) =>
-                                o.value ===
-                                (variant.status === undefined
-                                  ? "active"
-                                  : variant.status),
+                              (o) => o.value === variant.status,
                             ) || null
                           }
                           onChange={(selected) =>
                             updateVariant(idx, "status", selected?.value ?? "")
                           }
+                          onBlur={() => touchVariantField(idx, "status")}
                           isClearable={true}
                           isSearchable={false}
                           placeholder="Select status"
+                          error={statusError}
                           className="!mb-0"
                         />
                       </div>

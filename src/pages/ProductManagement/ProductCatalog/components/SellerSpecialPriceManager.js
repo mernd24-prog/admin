@@ -13,7 +13,6 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowLeft,
   ArrowRight,
   Download,
   Upload,
@@ -21,8 +20,6 @@ import {
   ChevronDown,
   ChevronUp,
   FileSpreadsheet,
-  Percent,
-  CheckCircle2,
 } from "lucide-react";
 import {
   bulkUpdateSpecialPrices,
@@ -34,6 +31,7 @@ import { transformArray } from "../../../../_helpers/globalFunctions";
 
 import {
   DataTable,
+  ImageThumbnail,
   PageHeader,
   FilterBar,
   SellerIdentity,
@@ -41,20 +39,10 @@ import {
   ContentPanel,
 } from "../../../../components/Shared";
 import ProductStatusBadge from "../../../../components/Product/ProductStatusBadge";
-import Loader from "../../../../components/Loader/Loader";
 import { useListPage } from "../../../../hooks/useListPage";
 import { isSellerPanel } from "../../../../_helpers/panelConfig";
-import {
-  ExportButton,
-  ImportButton,
-} from "../../../../components/Atoms/buttons/exportImport";
 import TransparentButton from "../../../../components/Atoms/buttons/TransParentButton";
-import { MdFileDownload } from "react-icons/md";
-
-import {
-  exportToExcelWorkbook,
-  parseImportFile,
-} from "../../../../_helpers/exportToCsv";
+import { exportToExcelWorkbook } from "../../../../_helpers/exportToCsv";
 import { toast } from "../../../../utils/toast";
 import { truncateToWordBoundary } from "../../../../utils/formatters";
 import FormInput from "../../../../components/Atoms/FormInput/FormInput";
@@ -1086,51 +1074,18 @@ const SellerSpecialPriceManager = () => {
           const primaryImage = getPrimaryProductImage(product);
 
           return (
-            <div className="flex flex-col items-center gap-1">
-              {primaryImage ? (
-                <button
-                  type="button"
-                  className="h-10 w-10 overflow-hidden rounded border border-gray-200 bg-gray-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleImageClick(productImages);
-                  }}
-                  title="View product images"
-                >
-                  <span
-                    role="img"
-                    aria-label={product?.title || product?.name || "Product"}
-                    className="block h-full w-full bg-cover bg-center"
-                    style={{
-                      backgroundImage: `url("${String(primaryImage).replace(
-                        /"/g,
-                        "%22",
-                      )}")`,
-                    }}
-                  />
-                </button>
-              ) : (
-                <span className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-400">
-                  No
-                </span>
-              )}
-
-              <button
-                type="button"
-                className={`text-xs ${
-                  productImages.length
-                    ? "text-blue-500 hover:underline"
-                    : "cursor-not-allowed text-gray-400"
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleImageClick(productImages);
-                }}
-                disabled={!productImages.length}
-              >
-                View
-              </button>
-            </div>
+            <ImageThumbnail
+              src={primaryImage}
+              images={productImages}
+              alt={product?.title || product?.name || "Product"}
+              size="sm"
+              className="!rounded border-gray-200 bg-gray-50"
+              fallbackIcon={<span className="text-xs text-gray-400">No</span>}
+              showZoomIcon
+              showViewButton
+              viewButtonText="View"
+              onClick={() => handleImageClick(productImages)}
+            />
           );
         },
       },
@@ -1151,7 +1106,7 @@ const SellerSpecialPriceManager = () => {
                   )
                 }
                 title={productName}
-                className="special-price-product-name text-left font-semibold text-[var(--admin-ink)] hover:text-[var(--admin-blue)] hover:underline focus:outline-none"
+                className="special-price-product-name text-left font-semibold text-[var(--admin-ink)]"
               >
                 {truncateToWordBoundary(productName, 40)}
               </button>
@@ -1172,15 +1127,7 @@ const SellerSpecialPriceManager = () => {
             },
           ]
         : []),
-      // {
-      //   key: "category",
-      //   label: "Category",
-      //   render: (_, row) => (
-      //     <span className="block max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap text-xs text-gray-600">
-      //       {row.category?.name || row.categoryName || row.category || "-"}
-      //     </span>
-      //   ),
-      // },
+
       {
         key: "variants",
         label: "Variants",
