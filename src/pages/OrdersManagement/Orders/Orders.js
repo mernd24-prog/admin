@@ -62,18 +62,6 @@ const PAYMENT_TYPE_OPTIONS = [
     label: "Online (Razorpay)",
   },
   {
-    value: "stripe",
-    label: "Online (Stripe)",
-  },
-  {
-    value: "manual_upi",
-    label: "Manual UPI",
-  },
-  {
-    value: "manual_bank_transfer",
-    label: "Bank Transfer",
-  },
-  {
     value: "wallet_only",
     label: "Wallet Only",
   },
@@ -340,8 +328,8 @@ const sellerIdentitiesOf = (row = {}) => {
       );
       const snapshot = normalizeJson(
         group.organizationSnapshot ||
-          group.organization_snapshot ||
-          group.organization,
+        group.organization_snapshot ||
+        group.organization,
         {},
       );
       const sellerName = firstDefined(
@@ -491,21 +479,21 @@ const createColumns = (
   showSellerColumn = true,
   showBuyerColumn = true,
 ) => [
-  {
-    key: "order_number",
-    label: "Order #",
-    sortable: true,
+    {
+      key: "order_number",
+      label: "Order #",
+      sortable: true,
 
-    render: (value, row) => (
-      <OrderLink
-        orderId={orderIdOf(row)}
-        orderNumber={value || row.orderNumber}
-      />
-    ),
-  },
+      render: (value, row) => (
+        <OrderLink
+          orderId={orderIdOf(row)}
+          orderNumber={value || row.orderNumber}
+        />
+      ),
+    },
 
-  ...(showBuyerColumn
-    ? [
+    ...(showBuyerColumn
+      ? [
         {
           key: "buyer_id",
           label: "Buyer",
@@ -564,10 +552,10 @@ const createColumns = (
           },
         },
       ]
-    : []),
+      : []),
 
-  ...(showSellerColumn
-    ? [
+    ...(showSellerColumn
+      ? [
         {
           key: "seller",
           label: "Sellers / Stores",
@@ -613,102 +601,102 @@ const createColumns = (
           },
         },
       ]
-    : []),
+      : []),
 
-  {
-    key: "items",
-    label: "Items",
-    headerClassName: "text-center",
-    render: (_, row) => (
-      <span className="block w-full text-center font-mono">
-        {countItems(row)}
-      </span>
-    ),
-  },
-
-  {
-    key: "total_amount",
-    label: "Total",
-    sortable: true,
-
-    render: (value, row) => (
-      <span className="font-mono font-semibold">
-        {formatMoney(firstDefined(value, row.totalAmount))}
-      </span>
-    ),
-  },
-
-  {
-    key: "payment_provider",
-    label: "Payment Type",
-
-    render: (value, row) => {
-      const provider = String(
-        firstDefined(value, row.paymentProvider, ""),
-      ).toLowerCase();
-
-      const label = PAYMENT_TYPE_OPTIONS.find(
-        (option) => option.value === provider,
-      )?.label;
-
-      return (
-        <span className="text-sm font-medium text-gray-700">
-          {label || (provider ? provider.replace(/_/g, " ") : "N/A")}
+    {
+      key: "items",
+      label: "Items",
+      headerClassName: "text-center",
+      render: (_, row) => (
+        <span className="block w-full text-center font-mono">
+          {countItems(row)}
         </span>
-      );
+      ),
     },
-  },
 
-  {
-    key: "payment_status",
-    label: "Payment Status",
+    {
+      key: "total_amount",
+      label: "Total",
+      sortable: true,
 
-    render: (_value, row) => {
-      const payment = paymentPresentationOf(row);
+      render: (value, row) => (
+        <span className="font-mono font-semibold">
+          {formatMoney(firstDefined(value, row.totalAmount))}
+        </span>
+      ),
+    },
 
-      return (
-        <div className="flex min-w-[180px] flex-col items-start">
-          <OrderStatusBadge
-            status={payment.status}
-            label={payment.label}
+    {
+      key: "payment_provider",
+      label: "Payment Type",
+
+      render: (value, row) => {
+        const provider = String(
+          firstDefined(value, row.paymentProvider, ""),
+        ).toLowerCase();
+
+        const label = PAYMENT_TYPE_OPTIONS.find(
+          (option) => option.value === provider,
+        )?.label;
+
+        return (
+          <span className="text-sm font-medium text-gray-700">
+            {label || (provider ? provider.replace(/_/g, " ") : "N/A")}
+          </span>
+        );
+      },
+    },
+
+    {
+      key: "payment_status",
+      label: "Payment Status",
+
+      render: (_value, row) => {
+        const payment = paymentPresentationOf(row);
+
+        return (
+          <div className="flex min-w-[180px] flex-col items-start">
+            <OrderStatusBadge
+              status={payment.status}
+              label={payment.label}
+              dot
+            />
+            {payment.detail && (
+              <div className="mt-1 text-[11px] leading-4 text-gray-500">
+                {payment.detail}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+
+    {
+      key: "status",
+      label: "Order Status",
+
+      render: (_, row) => (
+        <OrderStatusBadge status={orderDisplayStatus(row)} dot />
+      ),
+    },
+
+    {
+      key: "delivery_status",
+      label: "Shipment Status",
+      render: (value, row) => {
+        const status = firstDefined(shipmentStatusOf(row), value);
+
+        return status ? (
+          <StatusBadge
+            status={String(status).toLowerCase() === "rto" ? "RTO" : status}
             dot
           />
-          {payment.detail && (
-            <div className="mt-1 text-[11px] leading-4 text-gray-500">
-              {payment.detail}
-            </div>
-          )}
-        </div>
-      );
+        ) : (
+          <span className="text-gray-400">N/A</span>
+        );
+      },
     },
-  },
-
-  {
-    key: "status",
-    label: "Order Status",
-
-    render: (_, row) => (
-      <OrderStatusBadge status={orderDisplayStatus(row)} dot />
-    ),
-  },
-
-  {
-    key: "delivery_status",
-    label: "Shipment Status",
-    render: (value, row) => {
-      const status = firstDefined(shipmentStatusOf(row), value);
-
-      return status ? (
-        <StatusBadge
-          status={String(status).toLowerCase() === "rto" ? "RTO" : status}
-          dot
-        />
-      ) : (
-        <span className="text-gray-400">N/A</span>
-      );
-    },
-  },
-];
+  ];
 
 /* =========================================================
    API RESPONSE
@@ -1555,15 +1543,15 @@ const Orders = () => {
           // Show Seller and Organization only in Admin panel
           ...(isAdmin
             ? [
-                {
-                  key: "seller",
-                  label: "Seller",
-                },
-                {
-                  key: "organization",
-                  label: "Organization",
-                },
-              ]
+              {
+                key: "seller",
+                label: "Seller",
+              },
+              {
+                key: "organization",
+                label: "Organization",
+              },
+            ]
             : []),
 
           {

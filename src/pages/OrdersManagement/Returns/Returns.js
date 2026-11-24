@@ -1,5 +1,5 @@
 import { formatReturnDuration } from "../../../components/Shared/ReturnDurationInput";
-import { reverseTrackingOptions } from "../../../utils/returnTrackingOptions";
+import { reverseTrackingOptions, getAllowedReturnResolutions, getReturnShipmentLinks } from "../../../utils/returnTrackingOptions";
 import useRealtimeRefresh from "../../../hooks/useRealtimeRefresh";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormik } from "formik";
@@ -79,6 +79,7 @@ import {
 import { useListPage } from "../../../hooks/useListPage";
 import { uploadFileMulti } from "../../../_helpers/globalFunctions";
 import { useNavigate } from "react-router";
+import Button from "../../../components/Atoms/buttons/button";
 import moment from "moment";
 import FormInput from "../../../components/Atoms/FormInput/FormInput";
 import FormSelectGroup from "../../../components/Atoms/FormSelectGroup/FormSelectGroup";
@@ -690,11 +691,15 @@ const SellerReturnOverview = ({ returnRequest = {} }) => {
           </div>
 
           <div className="mt-0.5 text-xs font-semibold text-emerald-950">
-            Customer reimbursement: {money(refundAmount)}
+            {["replacement", "exchange"].includes(returnRequest.resolution)
+              ? "Resolution: Replacement — customer refund is not scheduled"
+              : `Customer reimbursement: ${money(refundAmount)}`}
           </div>
 
           <div className="mt-1 text-[10px] leading-4 text-emerald-800">
-            {isCod
+            {["replacement", "exchange"].includes(returnRequest.resolution)
+              ? "After accepted QC, replacement approval, shipping and delivery are managed separately."
+              : isCod
               ? "COD has no Razorpay refund. After QC, Admin/finance reimburses the customer by wallet or recorded manual bank/UPI payment. The returned item's seller payout is reversed; if already paid, it becomes a wallet adjustment or recoverable balance."
               : "After QC, Admin/finance refunds the original payment or wallet. The returned item's seller payout is reversed; if already paid, it becomes a wallet adjustment or recoverable balance."}
           </div>
@@ -706,7 +711,8 @@ const SellerReturnOverview = ({ returnRequest = {} }) => {
 const Returns = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { isSeller } = usePermission();
+  const { isSeller, canRoute } = usePermission();
+  const canViewShipments = canRoute("/app/shipment-tracking");
   const selector = useSelector((state) => state.adminCore);
   const payload = unwrapList(selector.adminReturnsData);
   const filterFields = useMemo(
@@ -901,10 +907,14 @@ const Returns = () => {
           returnRequest?.refundAmount ||
           returnRequest?.refundBreakup?.totalRefundAmount ||
           "",
-        trackingNumber: returnRequest?.trackingNumber || "",
+        trackingNumber: type === "replacement_ship"
+          ? returnRequest?.replacement?.trackingNumber || ""
+          : returnRequest?.trackingNumber || "",
         trackingUrl: returnRequest?.returnToCustomer?.trackingUrl || "",
         provider: returnRequest?.reverseShipment?.provider || "manual",
-        courierName: returnRequest?.reverseShipment?.courierName || "",
+        courierName: type === "replacement_ship"
+          ? returnRequest?.replacement?.courierName || ""
+          : returnRequest?.reverseShipment?.courierName || "",
         referenceId: ["refund", "retry_refund"].includes(type)
           ? returnRequest?.refund?.referenceId ||
             `return_${returnId(returnRequest)}`
@@ -951,6 +961,11 @@ const Returns = () => {
 
   const validateAction = () => {
     if (!returnId(action.returnRequest)) return "Return ID is missing";
+    const allowed = getAllowedReturnResolutions(action.returnRequest);
+    if (["replacement_request", "replacement_approve"].includes(action.type) && !allowed.includes("replacement"))
+      return "The product policy does not allow replacement";
+    if (action.type === "refund" && !allowed.includes("refund"))
+      return "The product policy does not allow refund";
     if (
       ["refund", "retry_refund"].includes(action.type) &&
       Number(action.refundAmount || 0) <= 0
@@ -970,6 +985,18 @@ const Returns = () => {
       (!action.courierName.trim() || !action.trackingNumber.trim())
     ) {
       return "Courier and tracking/AWB are required";
+    }
+    if (
+      (action.type === "replacement_ship" ||
+        (action.type === "schedule" && action.mode === "reverse_pickup")) &&
+      action.expectedDeliveryAt
+    ) {
+      const arrival = new Date(action.expectedDeliveryAt).getTime();
+      if (!Number.isFinite(arrival) || arrival <= Date.now())
+        return "Expected arrival must be a valid future date";
+      if (action.type === "schedule" && action.pickupScheduledAt &&
+        arrival <= new Date(action.pickupScheduledAt).getTime())
+        return "Expected warehouse arrival must be after pickup";
     }
     if (action.type === "tracking" && !action.shipmentStatus)
       return "Shipment status is required";
@@ -1114,7 +1141,8 @@ const Returns = () => {
       mode: action.mode,
       shippingMode: action.shippingMode,
       pickupScheduledAt: action.pickupScheduledAt || undefined,
-      expectedDeliveryAt: action.expectedDeliveryAt || undefined,
+      expectedDeliveryAt: action.expectedDeliveryAt
+        ? new Date(action.expectedDeliveryAt).toISOString() : undefined,
       status: action.shipmentStatus,
       location: action.location,
       action: action.type.startsWith("replacement_")
@@ -1283,10 +1311,11 @@ const Returns = () => {
       },
       {
         key: "refundAmount",
-        label: "Refund",
+        label: "Refund / Resolution",
         sortable: true,
         render: (value, row) =>
-          money(value || row.refundBreakup?.totalRefundAmount),
+          ["replacement", "exchange"].includes(row.resolution)
+            ? "Replacement" : money(value || row.refundBreakup?.totalRefundAmount),
       },
       {
         key: "createdAt",
@@ -1326,9 +1355,9 @@ const Returns = () => {
               value = buyerName(row);
               break;
             case "refundAmount":
-              value = money(
-                row.refundAmount || row.refundBreakup?.totalRefundAmount,
-              );
+              value = ["replacement", "exchange"].includes(row.resolution)
+                ? "Replacement"
+                : money(row.refundAmount || row.refundBreakup?.totalRefundAmount);
               break;
             case "createdAt":
               value = formatDateTime12Hour(row.createdAt);
@@ -1457,9 +1486,24 @@ const Returns = () => {
             }
           }
 
-          if (["approved", "pickup_failed"].includes(row.status)) {
+          if (canViewShipments) {
+            getReturnShipmentLinks(row).forEach(link => actions.push({
+              label: link.label,
+              icon: (
+                <MdLocalShipping aria-hidden="true" size={16} className="text-indigo-600" />
+              ),
+              onClick: () => navigate(link.path),
+            }));
+          }
+
+          if (
+            row.status === "pickup_failed" ||
+            (row.status === "approved" && !row.reverseShipment?.shipmentId)
+          ) {
             actions.push({
-              label: "Arrange Pickup",
+              label: row.status === "pickup_failed"
+                ? "Retry Pickup / Manual Ship-back"
+                : "Arrange Pickup",
               icon: (
                 <MdLocalShipping
                   aria-hidden="true"
@@ -1604,7 +1648,7 @@ const Returns = () => {
           }
 
           if (["qc_passed", "qc_completed"].includes(row.status)) {
-            if (!isSeller) {
+            if (!isSeller && getAllowedReturnResolutions(row).includes("refund")) {
               actions.push({
                 label: "Process Refund",
                 icon: (
@@ -1621,8 +1665,8 @@ const Returns = () => {
             }
 
             if (
-              !isSeller ||
-              ["replacement", "exchange"].includes(row.resolution)
+              getAllowedReturnResolutions(row).includes("replacement") &&
+              (!isSeller || ["replacement", "exchange"].includes(row.resolution))
             ) {
               actions.push({
                 label: "Request Replacement",
@@ -1640,7 +1684,7 @@ const Returns = () => {
             }
           }
 
-          if (!isSeller && row.status === "replacement_requested") {
+          if (!isSeller && row.status === "replacement_requested" && getAllowedReturnResolutions(row).includes("replacement")) {
             actions.push({
               label: "Approve Replacement",
               icon: (
@@ -1849,6 +1893,10 @@ const Returns = () => {
                   value: display(detailReturn?.resolution),
                 },
                 {
+                  label: "Allowed Resolutions",
+                  value: getAllowedReturnResolutions(detailReturn || {}).map(display).join(" / ") || "Non-returnable",
+                },
+                {
                   label: "Status",
                   value: display(detailReturn?.status),
                   className: "capitalize",
@@ -1878,13 +1926,15 @@ const Returns = () => {
           {/* Refund Information */}
 
           <FormSection
-            title="Refund Information"
-            description="Details about the refund amount, method, reference, and processing status."
+            title={["replacement", "exchange"].includes(detailReturn?.resolution) ? "Replacement Item Value" : "Refund Information"}
+            description={["replacement", "exchange"].includes(detailReturn?.resolution)
+              ? "The item value is recorded for accounting; it is not a scheduled customer refund."
+              : "Details about the refund amount, method, reference, and processing status."}
           >
             {(() => {
               const refundInfo = [
                 {
-                  label: "Refund Amount",
+                  label: ["replacement", "exchange"].includes(detailReturn?.resolution) ? "Item Value" : "Refund Amount",
                   value: money(
                     detailReturn?.refundAmount ||
                       detailReturn?.refundBreakup?.totalRefundAmount,
@@ -1984,6 +2034,14 @@ const Returns = () => {
                   className: "break-all text-sm font-regular text-[#252238]",
                 },
                 {
+                  label: "Scheduled Pickup",
+                  value: formatDateTime12Hour(detailReturn?.reverseShipment?.pickupScheduledAt),
+                },
+                {
+                  label: "Expected Warehouse Arrival",
+                  value: formatDateTime12Hour(detailReturn?.reverseShipment?.shipment?.expected_delivery_at),
+                },
+                {
                   label: "Shipment Status",
                   value: display(detailReturn?.reverseShipment?.status),
                   className: "capitalize",
@@ -1997,6 +2055,24 @@ const Returns = () => {
                 </div>
               ))}
             </div>
+            {canViewShipments && getReturnShipmentLinks(detailReturn || {}).map(link => (
+              <Button
+                key={link.label}
+                onClick={() => navigate(link.path)}
+                requiredModule="delivery"
+                requiredAction="view"
+                className="mt-3 mr-3 inline-flex items-center gap-2"
+              >
+                <MdLocalShipping aria-hidden="true" size={16} />
+                {link.label}
+              </Button>
+            ))}
+            {(detailReturn?.replacementOrderId || detailReturn?.replacement?.orderId) &&
+              !getReturnShipmentLinks(detailReturn || {}).some(link => link.label === "View Replacement Shipment") && (
+                <p className="mt-3 text-sm text-gray-500">
+                  Replacement order created. Use Ship Replacement to book its shipment.
+                </p>
+              )}
           </FormSection>
 
           {/* Items */}
@@ -2072,7 +2148,7 @@ const Returns = () => {
                     }`,
                   },
                   {
-                    label: "Refund",
+                    label: ["replacement", "exchange"].includes(detailReturn?.resolution) ? "Item Value" : "Refund",
                     value: money(item.refundAmount),
                     className: "font-regular text-sm text-[#252238]",
                   },
@@ -2457,12 +2533,12 @@ const Returns = () => {
           {((!isSeller && action.type === "approve") ||
             ["refund", "retry_refund"].includes(action.type)) && (
             <FormSection
-              title="Refund Details"
-              description="Enter the refund amount and related payment information."
+              title={["replacement", "exchange"].includes(action.returnRequest?.resolution) ? "Item Value" : "Refund Details"}
+              description="Review the approved item value and payment information."
             >
               <div className="space-y-4">
                 <FormInput
-                  label="Refund Amount"
+                  label={["replacement", "exchange"].includes(action.returnRequest?.resolution) ? "Item Value" : "Refund Amount"}
                   disabled
                   name="refundAmount"
                   type="number"
@@ -2606,8 +2682,8 @@ const Returns = () => {
               <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
                 <p className="text-sm leading-6 text-blue-900">
                   Accepting confirms that you will receive this return. The
-                  marketplace controls and releases the customer refund after
-                  receipt and QC; you cannot change the refund amount here.
+                  marketplace manages the selected refund or replacement after receipt and QC,
+                  according to the purchased product policy.
                 </p>
               </div>
             </FormSection>
@@ -2628,15 +2704,15 @@ const Returns = () => {
                   options={[
                     {
                       value: "uphold",
-                      label: "Uphold seller QC failure — no refund",
+                      label: "Uphold seller QC failure",
                     },
                     {
                       value: "override",
-                      label: "Override QC failure — full eligible refund",
+                      label: "Override QC failure — approve eligible resolution",
                     },
                     {
                       value: "partial",
-                      label: "Partially approve refund",
+                      label: "Partially approve eligible resolution",
                     },
                     {
                       value: "request_evidence",
@@ -2927,6 +3003,16 @@ const Returns = () => {
                           pickupScheduledAt: selectedValue,
                         }));
                       }}
+                    />
+                    <FormInput
+                      label="Expected Warehouse Arrival (optional)"
+                      name="expectedDeliveryAt"
+                      type="datetime-local"
+                      min={action.pickupScheduledAt || moment().format("YYYY-MM-DDTHH:mm")}
+                      value={action.expectedDeliveryAt}
+                      onChange={(event) => setAction((prev) => ({
+                        ...prev, expectedDeliveryAt: event.target.value,
+                      }))}
                     />
                   </div>
                 ) : (
@@ -3282,7 +3368,7 @@ const Returns = () => {
                       ["override", "partial"].includes(action.decision) && (
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <FormInput
-                            label={`Refund-Approved Quantity${
+                            label={`Approved Quantity${
                               item.receivedQuantity ||
                               item.requestedQuantity ||
                               item.quantity
@@ -3494,6 +3580,16 @@ const Returns = () => {
                   }
                   placeholder="Enter tracking number / AWB"
                   required
+                />
+                <FormInput
+                  label="Expected Customer Delivery (optional)"
+                  name="expectedDeliveryAt"
+                  type="datetime-local"
+                  min={moment().format("YYYY-MM-DDTHH:mm")}
+                  value={action.expectedDeliveryAt}
+                  onChange={(event) => setAction((prev) => ({
+                    ...prev, expectedDeliveryAt: event.target.value,
+                  }))}
                 />
               </div>
             </FormSection>

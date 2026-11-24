@@ -103,7 +103,6 @@ const ACTIVATION_STATUS_OPTIONS = [
   { value: "Draft", label: "Draft" },
   { value: "Active", label: "Active" },
   { value: "Inactive", label: "Inactive" },
-  { value: "Scheduled", label: "Scheduled" },
 ];
 
 const SELLER_PANEL_ROLES = new Set([

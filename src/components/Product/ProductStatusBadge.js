@@ -8,7 +8,7 @@ const STATUS_CONFIG = {
     color: "bg-yellow-100 text-yellow-700",
   },
   pending: {
-    label: "Pending Approval",
+    label: "Pending",
     color: "bg-yellow-100 text-yellow-700",
   },
   approved: { label: "Approved", color: "bg-green-100 text-green-700" },

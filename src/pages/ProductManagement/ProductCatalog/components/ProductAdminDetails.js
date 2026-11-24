@@ -675,7 +675,19 @@ const ProductAdminDetails = () => {
                 }
               />
 
-              <Row label="Brand" value={product.attributes?.brand} />
+              <Row
+                label="Brand"
+                value={
+                  product.brandName ||
+                  product.brandRef?.name ||
+                  (typeof product.brand === "object"
+                    ? product.brand?.brandName || product.brand?.name || product.brand?.label
+                    : /^[a-f\d]{24}$/i.test(product.brand || "")
+                      ? ""
+                      : product.brand) ||
+                  product.attributes?.brand
+                }
+              />
 
               <Row
                 label="GST Rate"

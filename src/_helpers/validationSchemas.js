@@ -569,7 +569,15 @@ export const shipmentTrackingActionValidationSchema = Yup.object({
         .test(
           "future-date",
           "Expected delivery must be in the future.",
-          (value) => Boolean(value) && new Date(value).getTime() > Date.now(),
+          function (value) {
+            if (!value) return false;
+            const timestamp = new Date(value).getTime();
+            const saved = this.parent.savedExpectedDeliveryAt;
+            return Number.isFinite(timestamp) && (
+              (saved && timestamp === new Date(saved).getTime()) ||
+              timestamp > Date.now()
+            );
+          },
         ),
     otherwise: (schema) => schema,
   }),

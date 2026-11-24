@@ -38,3 +38,29 @@ export const reverseTrackingOptions = (returnRequest = {}) => {
   }
   return REVERSE_TRACKING_OPTIONS.scheduled;
 };
+
+
+export const getAllowedReturnResolutions = (returnRequest = {}) => {
+  const allowed = (policy = {}) => {
+    if (policy.returnable === false || policy.eligible === false || policy.type === "non_returnable") return [];
+    if (policy.type === "replacement_only" || policy.resolution === "replacement") return ["replacement"];
+    if (policy.resolution === "refund") return ["refund"];
+    return policy.allowedResolutions || ["refund", "replacement"];
+  };
+  const policies = returnRequest.items?.length
+    ? returnRequest.items.map(item => ({ ...(returnRequest.policySnapshot || {}), ...(item.policySnapshot || {}) }))
+    : [returnRequest.policySnapshot || {}];
+  return ["refund", "replacement"].filter(resolution => policies.every(policy => allowed(policy).includes(resolution)));
+};
+
+
+export const getReturnShipmentLinks = (request = {}) => {
+  const replacementId = request.replacementShipmentId || request.replacement?.shipmentId || request.replacement?.shipment?.id;
+  const returnId = request.reverseShipment?.shipmentId || request.reverseShipment?.shipment?.id;
+  return [
+    { id: replacementId, label: "View Replacement Shipment" },
+    { id: returnId, label: "View Return Shipment" },
+  ].filter(link => link.id).map(link => ({
+    ...link, path: `/app/shipment-tracking?shipmentId=${encodeURIComponent(link.id)}`,
+  }));
+};
