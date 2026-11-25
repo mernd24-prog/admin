@@ -14,7 +14,11 @@ import StatusBadge from "../../../components/Shared/StatusBadge";
 import FilterSelect from "../../../components/Atoms/FilterSelect/FilterSelect";
 import { DateRangePickerModal } from "../../../components/Shared";
 import { GoldDateRangeCalendar } from "../../../components/Shared/FilterBar";
-import { formatCurrency, formatDate } from "../../../utils/formatters";
+import {
+  formatCurrency,
+  formatDate,
+  formatLabel,
+} from "../../../utils/formatters";
 
 export const unwrapFinance = (payload = {}) =>
   payload?.data?.data || payload?.data || {};
@@ -49,7 +53,6 @@ export const financeAmounts = (row = {}) => {
     ...(presentation.payout || {}),
   };
 };
-
 
 export const financeBreakdown = (row = {}) =>
   financeMetadata(row).financialBreakdown || financeMetadata(row);
@@ -252,11 +255,11 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
   ];
   const raw = String(
     (terminalPayoutStatuses.includes(payoutRaw) && payoutRaw) ||
-    row.releaseStatus ||
-    row.lifecycleStatus ||
-    row.status ||
-    payoutRaw ||
-    "pending",
+      row.releaseStatus ||
+      row.lifecycleStatus ||
+      row.status ||
+      payoutRaw ||
+      "pending",
   ).toLowerCase();
   const rawReason = String(
     row.releaseReason || row.release_reason || row.payoutHoldReason || "",
@@ -272,23 +275,33 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
     return {
       key: "adjusted",
       label: "Adjusted",
-      detail: rawReason || "The earning was changed by a refund, return, recovery, or another settlement adjustment.",
+      detail:
+        rawReason ||
+        "The earning was changed by a refund, return, recovery, or another settlement adjustment.",
     };
   if (["failed"].includes(raw))
     return {
       key: "failed",
       label: "Failed",
       detail:
-        row.failureReason || row.failure_reason || "The transfer failed; Admin must review the failure and retry or create a replacement payout.",
+        row.failureReason ||
+        row.failure_reason ||
+        "The transfer failed; Admin must review the failure and retry or create a replacement payout.",
     };
   if (["cancelled", "canceled"].includes(raw))
     return {
       key: "cancelled",
       label: "Cancelled",
-      detail: rawReason || "Admin cancelled this transfer; it will not be sent unless a new payout is created.",
+      detail:
+        rawReason ||
+        "Admin cancelled this transfer; it will not be sent unless a new payout is created.",
     };
   if (["completed", "processed", "paid", "released", "settled"].includes(raw))
-    return { key: "paid", label: "Paid", detail: "Successfully transferred to the selected payout destination." };
+    return {
+      key: "paid",
+      label: "Paid",
+      detail: "Successfully transferred to the selected payout destination.",
+    };
   if (["processing", "approved", "in_process"].includes(raw))
     return {
       key: "processing",
@@ -317,31 +330,36 @@ export const sellerFinanceStatus = (rowOrStatus = {}) => {
       key: "held",
       label: "On hold",
       detail:
-        reason.includes("return") || raw.includes("return") || raw === "qc_pending"
+        reason.includes("return") ||
+        raw.includes("return") ||
+        raw === "qc_pending"
           ? "Return or quality check in progress."
           : reason.includes("refund") || raw === "refund_pending"
             ? "Refund decision in progress."
             : reason.includes("dispute") || raw === "disputed"
               ? "Dispute review in progress."
-              : rawReason || (isPayoutRecord
-                ? "Admin placed this payout on hold; it will continue after the hold reason is resolved and Admin releases it."
-                : "This earning is temporarily unavailable; it becomes eligible after the hold is resolved."),
+              : rawReason ||
+                (isPayoutRecord
+                  ? "Admin placed this payout on hold; it will continue after the hold reason is resolved and Admin releases it."
+                  : "This earning is temporarily unavailable; it becomes eligible after the hold is resolved."),
     };
   if (["eligible", "available"].includes(raw))
     return {
       key: "available",
       label: "Available",
-      detail: "Release conditions are complete and this earning is ready for payout.",
+      detail:
+        "Release conditions are complete and this earning is ready for payout.",
     };
   return {
     key: "waiting",
     label: isPayoutRecord ? "Pending Admin Review" : "Waiting",
-    detail:
-      isPayoutRecord
-        ? rawReason || "The payout request is waiting for Admin review and approval. No transfer has started yet."
-        : row.eligibleAt || row.returnWindowEndsAt
+    detail: isPayoutRecord
+      ? rawReason ||
+        "The payout request is waiting for Admin review and approval. No transfer has started yet."
+      : row.eligibleAt || row.returnWindowEndsAt
         ? `Available after ${financeDateTime(row.eligibleAt || row.returnWindowEndsAt)}`
-        : rawReason || "Waiting for delivery, return-window closure, or another release condition.",
+        : rawReason ||
+          "Waiting for delivery, return-window closure, or another release condition.",
   };
 };
 
@@ -353,8 +371,8 @@ export const earningAmounts = (row = {}) => {
     products.reduce((sum, product) => sum + Number(product?.[key] || 0), 0);
   const shippingCredit = Number(
     breakdown.shippingReimbursementAmount ??
-    metadata.shippingReimbursementAmount ??
-    0,
+      metadata.shippingReimbursementAmount ??
+      0,
   );
   const shippingDeduction = Number(
     breakdown.shippingDeductionAmount ?? metadata.shippingDeductionAmount ?? 0,
@@ -425,68 +443,6 @@ const FINANCE_JOURNEY = [
   },
 ];
 
-// export const FinanceNav = () => (
-//   <section className="finance-journey mb-5 rounded-xl border border-[var(--admin-navy)] bg-[var(--admin-navy)] p-3 shadow-[0_12px_28px_rgba(31,27,95,0.14)]">
-//     <div className="mb-3 flex items-end justify-between gap-3 px-1">
-//       <div>
-//         <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--admin-gold)]">
-//           Finance workspace
-//         </span>
-//         <h2 className="mt-1 text-sm font-semibold text-white">
-//           Your money journey
-//         </h2>
-//       </div>
-//       <p className="hidden text-right text-xs text-white/60 sm:block">
-//         From earnings to completed payout records.
-//       </p>
-//     </div>
-//     <nav
-//       className="flex items-stretch gap-1 overflow-x-auto pb-1"
-//       aria-label="Finance journey"
-//     >
-//       {FINANCE_JOURNEY.map(({ to, label, helper, icon: Icon }, index) => (
-//         <React.Fragment key={to}>
-//           <NavLink
-//             to={to}
-//             className={({ isActive }) =>
-//               `group relative flex min-h-[72px] min-w-[190px] flex-1 items-center gap-3 rounded-lg border px-3 py-2.5 transition-all xl:min-w-0 ${isActive ? "border-[var(--admin-gold)] bg-white/10 text-white shadow-[inset_0_0_0_1px_rgba(214,163,35,0.2)]" : "border-white/10 bg-white/[0.06] text-white/80 hover:border-[var(--admin-gold)]/70 hover:bg-white/10"}`
-//             }
-//           >
-//             {({ isActive }) => (
-//               <>
-//                 <span
-//                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-[var(--admin-gold)] text-[var(--admin-navy)]" : "bg-white/10 text-[var(--admin-gold)]"}`}
-//                 >
-//                   <Icon size={18} />
-//                 </span>
-//                 <span className="min-w-0">
-//                   <span className="block text-[10px] font-bold uppercase tracking-wide text-[var(--admin-gold)]">
-//                     Step {index + 1}
-//                   </span>
-//                   <span className="block truncate text-sm font-semibold">
-//                     {label}
-//                   </span>
-//                   <span className="block truncate text-[10px] font-normal text-white/60">
-//                     {helper}
-//                   </span>
-//                 </span>
-//               </>
-//             )}
-//           </NavLink>
-//           {index < FINANCE_JOURNEY.length - 1 && (
-//             <span
-//               className="hidden shrink-0 items-center text-white/30 xl:flex"
-//               aria-hidden="true"
-//             >
-//               <MdChevronRight size={18} />
-//             </span>
-//           )}
-//         </React.Fragment>
-//       ))}
-//     </nav>
-//   </section>
-// );
-
 export const FinanceChoiceFilters = ({
   label = "Show",
   options = [],
@@ -540,11 +496,15 @@ export const FinanceStatusBadge = ({ row, status }) => {
 
 export const FinanceStatusCell = ({ row, status }) => {
   const mapped = sellerFinanceStatus(row || status);
+  const detail =
+    typeof mapped.detail === "string" && mapped.detail.includes("_")
+      ? formatLabel(mapped.detail)
+      : mapped.detail;
   return (
     <div className="min-w-[150px] max-w-[260px] whitespace-normal">
       <FinanceStatusBadge row={row} status={status} />
       <p className="mt-1 break-words text-xs leading-4 text-[var(--admin-muted)]">
-        {mapped.detail}
+        {detail}
       </p>
     </div>
   );
@@ -558,56 +518,6 @@ export const FinanceEmptyState = ({ title, description }) => (
     </p>
   </div>
 );
-
-// export const FinancePageGuide = ({
-//   step,
-//   title,
-//   description,
-//   points = [],
-//   icon: Icon,
-// }) => {
-//   const GuideIcon = Icon || MdTipsAndUpdates;
-
-//   return (
-//     <div className="flex flex-col gap-3 rounded-lg  bg-[#fffdf8] border border-[var(--admin-line)]/70 px-4 py-6 sm:flex-row sm:items-center sm:justify-between shadow-xs">
-//       <div className="flex min-w-0 flex-1 items-start gap-3">
-//         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#ead8a9] bg-[#fff8e6] text-[var(--admin-gold-dark)] shadow-xs">
-//           <GuideIcon size={17} />
-//         </span>
-//         <div className="min-w-0 flex-1">
-//           {step && (
-//             <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--admin-navy)]">
-//               Step {step} of 5
-//             </span>
-//           )}
-
-//           <h2 className="!mb-0 my-2 text-xs sm:text-[13px] font-bold text-[var(--admin-navy)]">
-//             {title}
-//           </h2>
-//           {description && (
-//             <p className="mt-0.5 text-xs leading-relaxed text-[var(--admin-muted)]">
-//               {description}
-//             </p>
-//           )}
-//         </div>
-//       </div>
-
-//       {points.length > 0 && (
-//         <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-//           {points.map((point) => (
-//             <span
-//               key={point}
-//               className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700"
-//             >
-//               <MdCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-//               <span>{point}</span>
-//             </span>
-//           ))}
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
 
 export const MoneyEquation = ({
   available,
@@ -666,7 +576,6 @@ export const CalculationRows = ({ row }) => {
   ];
   return (
     <div className="space-y-2">
-
       {lines
         .filter(([, amount], index) => index === 0 || Math.abs(amount) >= 0.005)
         .map(([label, amount, tone]) => (

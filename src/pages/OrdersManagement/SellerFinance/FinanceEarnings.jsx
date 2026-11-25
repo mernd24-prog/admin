@@ -36,6 +36,7 @@ import {
   unwrapFinance,
   useFinanceDateRange,
 } from "./financeUi";
+import { formatLabel } from "../../../utils/formatters";
 
 export default function FinanceEarnings() {
   const dispatch = useDispatch();
@@ -372,7 +373,6 @@ export default function FinanceEarnings() {
         }
       />
 
-
       {Number(codReconciliation.totalOrders || 0) > 0 && (
         <div className="rounded-lg border border-[#EADDBF] bg-[#FFFCF5] px-4 py-3 text-xs leading-5 text-[var(--admin-muted)]">
           COD collection is tracked separately from earnings. Open Overview to
@@ -551,7 +551,11 @@ export default function FinanceEarnings() {
             return next;
           });
         }}
-        title={detail?.orderNumber ? `Order #${detail.orderNumber}` : "Order earning details"}
+        title={
+          detail?.orderNumber
+            ? `Order #${detail.orderNumber}`
+            : "Order earning details"
+        }
         isButtonView={false}
       >
         {detail && (
@@ -628,9 +632,9 @@ export default function FinanceEarnings() {
 
                 <div className="mt-2">
                   <FinanceStatusBadge row={detail} />
-                  <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--admin-muted)]">
-                    {sellerFinanceStatus(detail).detail}
-                  </p>
+                  {/* <p className="mt-1 max-w-sm text-xs  leading-5 text-[var(--admin-muted)] lowercase">
+                    {formatLabel(sellerFinanceStatus(detail).detail)}
+                  </p> */}
                 </div>
               </div>
             </div>

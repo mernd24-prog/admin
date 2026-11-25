@@ -470,7 +470,7 @@ const SellerFinance = () => {
     sellerId: detailSellerId || initialParams.get("sellerId") || "",
     organizationId: initialParams.get("organizationId") || "",
     status: "",
-    search: initialParams.get("orderId") || "",
+    search: "",
   });
 
   const [overviewPage, setOverviewPage] = useState(1);

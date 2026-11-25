@@ -516,6 +516,14 @@ const ShipmentTracking = () => {
       ],
     },
     {
+      key: "courierName",
+      type: "select",
+      label: "Courier / Delivery Method",
+      width: "w-52",
+      placeholder: "All Delivery Methods",
+      options: DELIVERY_METHOD_OPTIONS,
+    },
+    {
       key: "sellerId",
       type: "asyncDropdown",
       label: "Seller",
@@ -548,12 +556,12 @@ const ShipmentTracking = () => {
       label: "AWB / Tracking",
       width: "w-44",
     },
-    {
-      key: "courierName",
-      type: "text",
-      label: "Courier",
-      width: "w-40",
-    },
+    // {
+    //   key: "courierName",
+    //   type: "text",
+    //   label: "Courier",
+    //   width: "w-40",
+    // },
     {
       key: "status",
       type: "select",
@@ -623,10 +631,17 @@ const ShipmentTracking = () => {
       selectedPaymentStatus === "authorized");
   const shipmentHasStarted = Boolean(
     selectedShipment?.shipped_at ||
-      selectedShipment?.shippedAt ||
-      ["picked_up", "in_transit", "out_for_delivery", "delivered", "failed", "rto", "lost", "damaged"].includes(
-        selectedShipment?.status,
-      ),
+    selectedShipment?.shippedAt ||
+    [
+      "picked_up",
+      "in_transit",
+      "out_for_delivery",
+      "delivered",
+      "failed",
+      "rto",
+      "lost",
+      "damaged",
+    ].includes(selectedShipment?.status),
   );
   const shipmentPaymentGateApplies =
     !selectedShipment?.direction || selectedShipment.direction === "forward"
@@ -640,7 +655,7 @@ const ShipmentTracking = () => {
             selectedShipment?.direction,
           )
         : [],
-      [
+    [
       selectedShipment?.status,
       selectedShipment?.direction,
       selectedShipmentPaid,
@@ -675,9 +690,8 @@ const ShipmentTracking = () => {
           : undefined;
         const etaOnlyUpdate = Boolean(
           values.status === selectedShipment.status &&
-            nextEta &&
-            new Date(nextEta).getTime() !==
-              new Date(currentEta || 0).getTime(),
+          nextEta &&
+          new Date(nextEta).getTime() !== new Date(currentEta || 0).getTime(),
         );
         await dispatch(
           addShipmentTracking({
@@ -693,10 +707,12 @@ const ShipmentTracking = () => {
             expectedDeliveryAt: nextEta,
             eventType: etaOnlyUpdate ? "eta_updated" : "status_updated",
             eventTime,
-            shippedAt: ["picked_up", "in_transit"].includes(values.status) &&
-              !selectedShipment.shipped_at && !selectedShipment.shippedAt
-              ? eventTime
-              : undefined,
+            shippedAt:
+              ["picked_up", "in_transit"].includes(values.status) &&
+              !selectedShipment.shipped_at &&
+              !selectedShipment.shippedAt
+                ? eventTime
+                : undefined,
           }),
         ).unwrap();
 
@@ -847,7 +863,8 @@ const ShipmentTracking = () => {
               nextShipment.expectedDeliveryAt,
           ),
           savedExpectedDeliveryAt: toDateTimeLocal(
-            nextShipment.expected_delivery_at || nextShipment.expectedDeliveryAt,
+            nextShipment.expected_delivery_at ||
+              nextShipment.expectedDeliveryAt,
           ),
         };
         setTrackingAction(nextAction);
@@ -889,8 +906,16 @@ const ShipmentTracking = () => {
         savedExpectedDeliveryAt: savedEta,
       }));
       trackingFormikSetFieldValueRef.current("status", nextStatus, false);
-      trackingFormikSetFieldValueRef.current("expectedDeliveryAt", savedEta, false);
-      trackingFormikSetFieldValueRef.current("savedExpectedDeliveryAt", savedEta, false);
+      trackingFormikSetFieldValueRef.current(
+        "expectedDeliveryAt",
+        savedEta,
+        false,
+      );
+      trackingFormikSetFieldValueRef.current(
+        "savedExpectedDeliveryAt",
+        savedEta,
+        false,
+      );
       await fetchShipments();
       return nextShipment;
     },
@@ -912,17 +937,18 @@ const ShipmentTracking = () => {
                 {row.awb_number || row.tracking_number || row.id}
               </div>
               <div className="text-xs text-gray-400">
-                <OrderLink
-                  orderId={row.order_id || row.orderId}
-                  orderNumber={row.orderNumber || row.order_number}
-                  prefix="Order #"
-                />
+                <div>
+                  <OrderLink
+                    orderId={row.order_id || row.orderId}
+                    orderNumber={row.orderNumber || row.order_number}
+                    prefix="Order #"
+                  />
+                </div>
 
                 {row.return_id && (
-                  <span className="text-gray-400">
-                    {" "}
-                    · Return #{String(row.return_id).slice(-8)}
-                  </span>
+                  <div className="mt-0.5 text-[#252238]">
+                    Return #{String(row.return_id).slice(-8)}
+                  </div>
                 )}
               </div>
             </div>
@@ -1540,15 +1566,21 @@ const ShipmentTracking = () => {
                         />
 
                         <FormInput
-                          label={selectedShipment?.direction === "reverse"
-                            ? "Expected Warehouse Arrival"
-                            : "Expected Customer Delivery"}
+                          label={
+                            selectedShipment?.direction === "reverse"
+                              ? "Expected Warehouse Arrival"
+                              : "Expected Customer Delivery"
+                          }
                           name="expectedDeliveryAt"
                           type="datetime-local"
                           required
                           className="!mb-0"
-                          min={trackingAction.expectedDeliveryAt === trackingAction.savedExpectedDeliveryAt
-                            ? undefined : toDateTimeLocal(new Date())}
+                          min={
+                            trackingAction.expectedDeliveryAt ===
+                            trackingAction.savedExpectedDeliveryAt
+                              ? undefined
+                              : toDateTimeLocal(new Date())
+                          }
                           value={trackingAction.expectedDeliveryAt}
                           error={
                             trackingSubmitAttempted &&
@@ -1746,7 +1778,8 @@ const ShipmentTracking = () => {
                   {trackingEventType(event) === "eta_updated" &&
                     trackingEventPayload(event).expectedDeliveryAt && (
                       <div className="mt-2 text-xs font-medium text-blue-700">
-                        New expected delivery: {formatDateTime12Hour(
+                        New expected delivery:{" "}
+                        {formatDateTime12Hour(
                           trackingEventPayload(event).expectedDeliveryAt,
                           "Date not available",
                         )}

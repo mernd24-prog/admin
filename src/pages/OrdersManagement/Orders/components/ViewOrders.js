@@ -4721,7 +4721,7 @@ const OrderSummary = () => {
                                         className="flex items-start justify-between gap-3 border-t border-[#efe6cd] pt-2 first:border-t-0 first:pt-0"
                                       >
                                         <div className="min-w-0">
-                                          <div className="font-medium text-[#202337]">
+                                          <div className="font-medium text-[#202337] line-clamp-1 truncate">
                                             {getReturnItemTitle(item)}
                                           </div>
 
