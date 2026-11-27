@@ -1,3 +1,4 @@
+import { clearedShippingProfile, preserveShippingProfileSelection } from "../../../../utils/productShippingProfile";
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { setNestedObjectValues, useFormik } from "formik";
@@ -2632,7 +2633,7 @@ export default function ProductManagementUI() {
     const manualDeliveryPincodes = normalizePincodeList(
       getShippingPincodes(updatedFormData.shipping),
     );
-    const shipping = compactObject(
+    const shipping = preserveShippingProfileSelection(compactObject(
       selectedShippingProfile
         ? {
             shippingProfileId: updatedFormData.shipping?.shippingProfileId,
@@ -2713,7 +2714,7 @@ export default function ProductManagementUI() {
               updatedFormData.shipping?.copiedFromShippingTemplateName ||
               undefined,
           },
-    );
+    ), updatedFormData.shipping?.shippingProfileId);
 
     const productPayload = {
       sellerId: updatedFormData.sellerId,
@@ -4032,9 +4033,8 @@ export default function ProductManagementUI() {
                       type="button"
                       className="text-xs text-red-500 hover:underline"
                       onClick={() => {
-                        patchShipping({
-                          shippingProfileId: null,
-                        });
+                        patchShipping(clearedShippingProfile());
+                        setShippingProfileDetail(null);
 
                         setSelectedShippingTemplate(null);
                       }}
@@ -4085,6 +4085,12 @@ export default function ProductManagementUI() {
                 }
                 onChange={(selected) => {
                   const profileId = selected?.value || null;
+                  if (!profileId) {
+                    patchShipping(clearedShippingProfile());
+                    setShippingProfileDetail(null);
+                    setSelectedShippingTemplate(null);
+                    return;
+                  }
                   patchShipping({
                     shippingProfileId: profileId,
                     ...(profileId

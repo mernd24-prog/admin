@@ -1,5 +1,13 @@
+import ReturnQcDecisionField from "./components/ReturnQcDecisionField";
+import { updateDoorstepChecklist } from "../../../utils/doorstepQcDecision";
+import { returnPickupInitialValues } from "../../../utils/returnPickupForm";
+import ReturnAcceptedQuantityField from "./components/ReturnAcceptedQuantityField";
+import { returnItemQuantities, validateReturnApprovalQuantities } from "../../../utils/returnItemQuantities";
+import { returnDetailPresentation, returnDetailStages, returnDecisionDetails } from "../../../utils/returnDetailPresentation";
+import DoorstepExchangePanel from "./components/DoorstepExchangePanel";
+import { DELIVERY_METHOD_OPTIONS } from "../../../constants/shippingOptions";
 import { formatReturnDuration } from "../../../components/Shared/ReturnDurationInput";
-import { reverseTrackingOptions, getAllowedReturnResolutions, getReturnShipmentLinks } from "../../../utils/returnTrackingOptions";
+import { reverseTrackingOptions, getAllowedReturnResolutions, getReturnShipmentLinks, isDoorstepReturn, isDoorstepExchange, doorstepReturnActions, canConfirmDoorstepCollection, doorstepCollectionStatusLabel } from "../../../utils/returnTrackingOptions";
 import useRealtimeRefresh from "../../../hooks/useRealtimeRefresh";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormik } from "formik";
@@ -51,6 +59,7 @@ import {
   getAdminReturn,
   getAdminReturns,
   qcReturn,
+  startReturnCollectionVisit,
   submitReturnQcEvidence,
   decideReturnQcFailure,
   arrangeReturnToCustomer,
@@ -73,6 +82,7 @@ import {
   replacementRequestValidationSchema,
   reverseShipmentTrackingValidationSchema,
   returnQualityControlValidationSchema,
+  returnDoorstepQualityControlValidationSchema,
   returnQcEvidenceValidationSchema,
   scheduleReturnValidationSchema,
 } from "../../../_helpers/validationSchemas";
@@ -98,7 +108,16 @@ const QC_DISPOSITION_OPTIONS = [
   { value: "rejected", label: "Rejected by QC" },
 ];
 
+const DOORSTEP_QC_DISPOSITION_OPTIONS = [
+  { value: "sellable", label: "Eligible — sellable after warehouse receipt" },
+  { value: "damaged", label: "Eligible reported damage — quarantine after receipt" },
+  { value: "missing", label: "Missing item — do not collect" },
+  { value: "rejected", label: "Not eligible — do not collect" },
+];
+
 const ACTION_TITLES = {
+  visit: "Confirm Courier Arrival",
+  exchange: "Arrange Doorstep Exchange",
   approve: "Approve Return",
   reject: "Reject Return",
   schedule: "Schedule Pickup",
@@ -198,6 +217,8 @@ const ADMIN_ONLY_RETURN_ACTIONS = new Set([
   "replacement_deliver",
   "replacement_complete",
 ]);
+const isAdminOnlyReturnAction = (type, request) => ADMIN_ONLY_RETURN_ACTIONS.has(type) &&
+  !(isDoorstepReturn(request) && ["replacement_approve", "replacement_deliver"].includes(type));
 
 const unwrapList = (payload = {}) => {
   const data = payload?.data?.data;
@@ -397,7 +418,7 @@ function QCEvidenceUploader({
 
       <Input
         type="textarea"
-        labelName={`Manual evidence image URLs (${required ? "required" : "optional"}, one per line)`}
+        labelName="Or paste inspection photo links (one per line)"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onBlur={onBlur}
@@ -454,129 +475,15 @@ const sellerQcGuidance = (row = {}) => {
   return null;
 };
 
-const RETURN_FLOW_STAGES = [
-  { label: "Return requested", statuses: ["requested"] },
-  { label: "Return accepted", statuses: ["approved", "pickup_failed"] },
-  {
-    label: "Item coming back",
-    statuses: [
-      "reverse_pickup_scheduled",
-      "manual_ship_back",
-      "shipped_back",
-      "in_reverse_transit",
-    ],
-  },
-  { label: "Item received", statuses: ["received"] },
-  {
-    label: "Quality check",
-    statuses: ["qc_passed", "qc_completed", "qc_failed", "qc_failure_upheld"],
-  },
-  {
-    label: "Customer reimbursed",
-    statuses: [
-      "refund_pending",
-      "refund_failed",
-      "partially_refunded",
-      "refunded",
-      "closed",
-    ],
-  },
-];
-
-const sellerReturnNextStep = (returnRequest = {}) => {
-  const status = String(returnRequest.status || "requested").toLowerCase();
-  const steps = {
-    requested: [
-      "Accept the return",
-      "Review the requested items and approve the quantities you will receive.",
-    ],
-    approved: [
-      "Arrange the return",
-      "Schedule reverse pickup or provide manual ship-back instructions.",
-    ],
-    pickup_failed: [
-      "Arrange pickup again",
-      "The previous pickup failed. Reschedule it or use manual ship-back.",
-    ],
-    reverse_pickup_scheduled: [
-      "Wait for pickup",
-      "Update tracking only when the courier status changes.",
-    ],
-    manual_ship_back: [
-      "Wait for customer shipment",
-      "Tracking will show when the customer ships the item.",
-    ],
-    shipped_back: [
-      "Track the return",
-      "Confirm receipt only after the returned item reaches you.",
-    ],
-    in_reverse_transit: [
-      "Track the return",
-      "Confirm receipt only after the returned item reaches you.",
-    ],
-    received: [
-      "Inspect the item",
-      "Record sellable or damaged quantities and upload evidence when required.",
-    ],
-    qc_passed: [
-      "No seller action",
-      "Admin/finance reimburses the customer and adjusts this item's payout.",
-    ],
-    qc_completed: [
-      "No seller action",
-      "Admin/finance reimburses the customer and adjusts this item's payout.",
-    ],
-    refund_pending: [
-      "Refund is processing",
-      "No seller payment is required. Wait for finance confirmation.",
-    ],
-    refund_failed: [
-      "Admin action required",
-      "Finance will retry or record the customer reimbursement.",
-    ],
-    refunded: [
-      "Return completed",
-      "Customer reimbursement and seller payout adjustment are recorded.",
-    ],
-    closed: ["Return closed", "No further seller action is required."],
-  };
-  if (status === "qc_failed") {
-    const guidance = sellerQcGuidance(returnRequest);
-    return [
-      guidance?.label || "Wait for review",
-      "Only this item's payout remains held while the QC dispute is reviewed.",
-    ];
-  }
-  return (
-    steps[status] || [
-      "Review return status",
-      "Use the available action shown for this return.",
-    ]
-  );
-};
-
 const SellerReturnOverview = ({ returnRequest = {} }) => {
   const status = String(returnRequest.status || "requested").toLowerCase();
+  const doorstep = isDoorstepReturn(returnRequest);
+  const flowStages = returnDetailStages(returnRequest);
+  const currentIndex = flowStages.findIndex(stage => !stage.complete);
+  const presentation = returnDetailPresentation(returnRequest);
+  const [nextLabel, nextDescription] = presentation.next;
 
-  const currentIndex = Math.max(
-    0,
-    RETURN_FLOW_STAGES.findIndex((stage) => stage.statuses.includes(status)),
-  );
-
-  const [nextLabel, nextDescription] = sellerReturnNextStep(returnRequest);
-
-  const isCod =
-    returnRequest.isCod ||
-    String(
-      returnRequest.paymentProvider || returnRequest.payment_provider || "",
-    ).toLowerCase() === "cod";
-
-  const refundAmount =
-    returnRequest.refundAmount ||
-    returnRequest.refundBreakup?.totalRefundAmount ||
-    0;
-
-  const isFinalStatus = ["refunded", "closed"].includes(status);
+  const terminal = ["refunded", "replaced", "closed", "rejected", "qc_failure_upheld"].includes(status);
 
   return (
     <div className="rounded-xl border border-[#eadfbd] bg-[#fffdf8] p-3">
@@ -587,12 +494,13 @@ const SellerReturnOverview = ({ returnRequest = {} }) => {
             What happens next
           </div>
 
-          <div className="mt-0.5 text-[10px] text-[#65718b]">
-            One return flow, with the action owner shown clearly.
+          <div className="mt-0.5 text-xs text-[#65718b]">
+            {presentation.resolution} — {doorstep ? "inspection at collection" : "warehouse inspection"}
           </div>
         </div>
 
         <StatusBadge
+          label={doorstepCollectionStatusLabel(returnRequest)}
           status={
             status === "requested"
               ? "return_requested"
@@ -607,17 +515,17 @@ const SellerReturnOverview = ({ returnRequest = {} }) => {
       </div>
 
       {/* Return Flow */}
-      <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
-        {RETURN_FLOW_STAGES.map((stage, index) => {
-          const complete = index < currentIndex || isFinalStatus;
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {flowStages.map((stage, index) => {
+          const complete = stage.complete;
 
-          const active = index === currentIndex && !isFinalStatus;
+          const active = !terminal && index === currentIndex;
 
           return (
             <div
               key={stage.label}
               className={`
-                min-h-[55px]
+                min-h-[72px]
                 rounded-md
                 border
                 px-2
@@ -635,7 +543,7 @@ const SellerReturnOverview = ({ returnRequest = {} }) => {
               <div
                 className={`
                   flex h-4 w-4 items-center justify-center rounded-full
-                  text-[9px] font-bold
+                  text-[11px] font-bold
                   ${
                     active
                       ? "bg-[#2f6fed] text-white"
@@ -650,7 +558,7 @@ const SellerReturnOverview = ({ returnRequest = {} }) => {
 
               <div
                 className={`
-                  mt-1 text-[10px] font-semibold leading-3
+                  mt-1 text-xs font-semibold leading-4
                   ${
                     active
                       ? "text-[#1f4fc9]"
@@ -671,7 +579,7 @@ const SellerReturnOverview = ({ returnRequest = {} }) => {
       <div className="mt-3 grid gap-2 md:grid-cols-2">
         {/* Next Step */}
         <div className="rounded-md border border-blue-200 bg-blue-50 p-2.5">
-          <div className="text-[9px] font-bold uppercase tracking-wide text-blue-700">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-blue-700">
             Your next step
           </div>
 
@@ -679,29 +587,23 @@ const SellerReturnOverview = ({ returnRequest = {} }) => {
             {nextLabel}
           </div>
 
-          <div className="mt-1 text-[10px] leading-4 text-blue-800">
+          <div className="mt-1 text-xs leading-4 text-blue-800">
             {nextDescription}
           </div>
         </div>
 
         {/* Money Impact */}
         <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2.5">
-          <div className="text-[9px] font-bold uppercase tracking-wide text-emerald-700">
-            Money impact
+          <div className="text-[11px] font-bold uppercase tracking-wide text-emerald-700">
+            {presentation.amountLabel}
           </div>
 
           <div className="mt-0.5 text-xs font-semibold text-emerald-950">
-            {["replacement", "exchange"].includes(returnRequest.resolution)
-              ? "Resolution: Replacement — customer refund is not scheduled"
-              : `Customer reimbursement: ${money(refundAmount)}`}
+            {money(presentation.amount)}
           </div>
 
-          <div className="mt-1 text-[10px] leading-4 text-emerald-800">
-            {["replacement", "exchange"].includes(returnRequest.resolution)
-              ? "After accepted QC, replacement approval, shipping and delivery are managed separately."
-              : isCod
-              ? "COD has no Razorpay refund. After QC, Admin/finance reimburses the customer by wallet or recorded manual bank/UPI payment. The returned item's seller payout is reversed; if already paid, it becomes a wallet adjustment or recoverable balance."
-              : "After QC, Admin/finance refunds the original payment or wallet. The returned item's seller payout is reversed; if already paid, it becomes a wallet adjustment or recoverable balance."}
+          <div className="mt-1 text-xs leading-4 text-emerald-800">
+            {presentation.moneyDescription}
           </div>
         </div>
       </div>
@@ -750,6 +652,9 @@ const Returns = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [detailReturn, setDetailReturn] = useState(null);
+  const [exchangeReturn, setExchangeReturn] = useState(null);
+  const [exchangeContextId, setExchangeContextId] = useState("");
+  const [exchangeError, setExchangeError] = useState("");
   const [action, setAction] = useState(EMPTY_ACTION);
   const [qcInitialItemActions, setQcInitialItemActions] = useState([]);
   const [closeFormVersion, setCloseFormVersion] = useState(0);
@@ -762,16 +667,7 @@ const Returns = () => {
     () => ({ reason: "", note: "" }),
     [rejectFormVersion],
   );
-  const [scheduleFormVersion, setScheduleFormVersion] = useState(0);
-  const scheduleReturnInitialValues = useMemo(
-    () => ({
-      mode: "reverse_pickup",
-      courierName: "",
-      trackingNumber: "",
-      note: "",
-    }),
-    [scheduleFormVersion],
-  );
+  const [scheduleReturnInitialValues, setScheduleReturnInitialValues] = useState(() => returnPickupInitialValues());
   const [replacementRequestFormVersion, setReplacementRequestFormVersion] =
     useState(0);
   const [reverseTrackingFormVersion, setReverseTrackingFormVersion] =
@@ -785,8 +681,8 @@ const Returns = () => {
     [reverseTrackingFormVersion],
   );
   const qcInitialValues = useMemo(
-    () => ({ note: "", itemActions: qcInitialItemActions }),
-    [qcInitialItemActions],
+    () => ({ note: "", itemActions: qcInitialItemActions, returnReason: action.returnRequest?.reason }),
+    [qcInitialItemActions, action.returnRequest?.reason],
   );
   const [confirmAction, setConfirmAction] = useState({ open: false });
   const visibleReturns = payload.list;
@@ -818,6 +714,22 @@ const Returns = () => {
     fetchReturns();
   }, [fetchReturns, realtimeRevision]);
 
+  const openExchange = useCallback(async row => {
+    const id = returnId(row);
+    setExchangeContextId(id);
+    setExchangeReturn(row);
+    setExchangeError("");
+    try {
+      setLoading(true);
+      const response = await dispatch(getAdminReturn({ returnId: id })).unwrap();
+      setExchangeReturn(unwrapResult(response));
+    } catch (requestError) {
+      setExchangeError(requestError?.message || "Unable to load the latest exchange. Refresh before continuing.");
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch]);
+
   const openDetail = useCallback(
     async (row) => {
       setDetailReturn(row);
@@ -842,7 +754,7 @@ const Returns = () => {
 
   const openAction = useCallback(
     (type, returnRequest) => {
-      if (isSeller && ADMIN_ONLY_RETURN_ACTIONS.has(type)) {
+      if (isSeller && isAdminOnlyReturnAction(type, returnRequest)) {
         toast.error("This return action is admin-only");
         return;
       }
@@ -855,7 +767,7 @@ const Returns = () => {
         setRejectFormVersion((version) => version + 1);
       }
       if (type === "schedule") {
-        setScheduleFormVersion((version) => version + 1);
+        setScheduleReturnInitialValues(returnPickupInitialValues(returnRequest));
       }
       if (type === "replacement_request") {
         setReplacementRequestFormVersion((version) => version + 1);
@@ -863,21 +775,15 @@ const Returns = () => {
       if (type === "tracking") {
         setReverseTrackingFormVersion((version) => version + 1);
       }
-      const itemActions = (returnRequest?.items || []).map((item) => ({
+      const savedInspections = new Map((returnRequest?.collectionQc?.items || []).map(item => [String(item.orderItemId), item]));
+      const itemActions = (returnRequest?.items || [])
+        .filter(item => !(type === "qc" && isDoorstepReturn(returnRequest)) || Number(item.approvedQuantity) > 0)
+        .map((item) => ({
         orderItemId: item.orderItemId || "",
         productId: item.productId || "",
         variantSku: item.variantSku || "",
         label: item.productTitle || item.productId || "Item",
-        approvedQuantity: Number(
-          item.approvedQuantity || item.requestedQuantity || item.quantity || 0,
-        ),
-        receivedQuantity: Number(
-          item.receivedQuantity ||
-            item.approvedQuantity ||
-            item.requestedQuantity ||
-            item.quantity ||
-            0,
-        ),
+        ...returnItemQuantities(item, type),
         quantity: Number(
           item.receivedQuantity ||
             item.approvedQuantity ||
@@ -886,22 +792,44 @@ const Returns = () => {
             0,
         ),
         result:
-          item.qcResult === "pending" || !item.qcResult ? "" : item.qcResult,
-        condition: item.condition || "",
-        notes: item.qcNotes || "",
-        photos: (item.qcPhotos || []).join("\n"),
+          isDoorstepReturn(returnRequest) && type === "qc" ? savedInspections.get(String(item.orderItemId))?.result || ""
+            : item.qcResult === "pending" || !item.qcResult ? "" : item.qcResult,
+        acceptedQuantity: isDoorstepReturn(returnRequest) ? savedInspections.get(String(item.orderItemId))?.acceptedQuantity ?? "" : undefined,
+        checks: savedInspections.get(String(item.orderItemId))?.checks || {},
+        condition: isDoorstepReturn(returnRequest) && type === "qc" ? savedInspections.get(String(item.orderItemId))?.condition || "" : item.condition || "",
+        notes: isDoorstepReturn(returnRequest) && type === "qc" ? savedInspections.get(String(item.orderItemId))?.notes || "" : item.qcNotes || "",
+        photos: (isDoorstepReturn(returnRequest) && type === "qc" ? savedInspections.get(String(item.orderItemId))?.photos || [] : item.qcPhotos || []).join("\n"),
       }));
       if (["qc", "qc_evidence", "qc_decision"].includes(type)) {
         setQcInitialItemActions(itemActions);
       }
       setAction({
         ...EMPTY_ACTION,
+        courierAtDoorstep: false,
+        collectionConfirmed: type === "qc" && !!returnRequest.collectionQc?.exchangeCompletionConfirmed,
+        replacementReady: type === "qc" && !!returnRequest.collectionQc?.exchangeCompletionConfirmed,
+        replacementInspected: type === "qc" && !!returnRequest.collectionQc?.replacementInspected,
+        customerAccepted: type === "qc" && !!returnRequest.collectionQc?.customerAccepted,
+        exchangeReference: returnRequest.collectionQc?.exchangeReference || "",
+        handoverConfirmed: false,
+        pickupTrackingNumber: "",
+        replacementTrackingNumber: "",
         open: true,
         type,
-        title:
-          isSeller && type === "approve"
-            ? "Accept Return"
-            : ACTION_TITLES[type] || "Update Return",
+        title: isDoorstepExchange(returnRequest)
+          ? ({
+              approve: "Approve Replacement",
+              qc: ["passed", "partially_passed"].includes(returnRequest.collectionQc?.status) ? "Confirm Exchange Completed" : "Record Exchange Inspection",
+              exchange_failure: "Record Exchange Failure",
+              exchange: returnRequest.status === "pickup_failed" ? "Reschedule Exchange" : "Schedule Doorstep Exchange",
+              replacement_deliver: "Confirm Replacement Handover",
+              replacement_complete: "Complete Exchange",
+              close: "Close Exchange",
+              reject: "Reject Exchange",
+            }[type] || ACTION_TITLES[type] || "Update Exchange")
+          : type === "tracking" && isDoorstepReturn(returnRequest) && !returnRequest.collectionQc?.collectedAt ? "Report Pickup Failure"
+          : type === "schedule" && returnRequest.status === "pickup_failed" ? "Reschedule Pickup"
+          : isSeller && type === "approve" ? "Accept Return" : ACTION_TITLES[type] || "Update Return",
         returnRequest,
         refundAmount:
           returnRequest?.refundAmount ||
@@ -938,7 +866,7 @@ const Returns = () => {
               returnRequest?.refundAmount ||
               returnRequest?.refundBreakup?.totalRefundAmount ||
               "",
-            itemActions: returnRequest?.items || [],
+            itemActions,
             note: "",
           },
         });
@@ -948,8 +876,10 @@ const Returns = () => {
   );
 
   const updateItemAction = (index, key, value) => {
+    if (action.type === "approve") approveReturnFormik.setFieldValue(`itemActions[${index}].${key}`, value);
     if (["qc", "qc_evidence", "qc_decision"].includes(action.type)) {
       qcFormik.setFieldValue(`itemActions[${index}].${key}`, value);
+      return;
     }
     setAction((prev) => ({
       ...prev,
@@ -961,7 +891,36 @@ const Returns = () => {
 
   const validateAction = () => {
     if (!returnId(action.returnRequest)) return "Return ID is missing";
+    if (collectionConfirmationOnly && !action.collectionConfirmed) return "Confirm physical collection of the inspected items";
+    if (action.type === "visit" && !action.courierAtDoorstep) return "Confirm the courier is physically at the customer’s address";
+    if (action.type === "approve") {
+      const message = validateReturnApprovalQuantities(currentItemActions);
+      if (message) return message;
+    }
+    if (action.type === "replacement_deliver" && isDoorstepReturn(action.returnRequest) && !action.handoverConfirmed)
+      return "Confirm physical handover of the replacement";
+    if (action.type === "exchange") {
+      if (!action.courierName?.trim()) return "Select the exchange courier";
+      if (!action.exchangeReference?.trim() || action.exchangeReference.trim().length < 3) return "Enter the exchange booking reference";
+    }
+    if (action.type === "exchange_failure" && (action.note || "").trim().length < 3) return "Explain why the exchange could not be completed";
     const allowed = getAllowedReturnResolutions(action.returnRequest);
+    if (action.type === "qc" && isDoorstepReturn(action.returnRequest)) {
+      if (action.collectionConfirmed && isDoorstepExchange(action.returnRequest) && (!action.replacementInspected || !action.customerAccepted))
+        return "Confirm the replacement was checked with the customer and accepted";
+      if (action.collectionConfirmed && ["replacement", "exchange"].includes(action.returnRequest.resolution) && !action.replacementReady)
+        return "Confirm the replacement is with the courier before collecting the old item";
+      for (const item of collectionConfirmationOnly ? [] : currentItemActions) {
+        if (["identity", "serialNumber", "accessories", "packaging", "condition"].some(key => !item.checks?.[key]))
+          return "Complete every doorstep check for each item";
+        if (item.acceptedQuantity === "" || !Number.isInteger(Number(item.acceptedQuantity)) || Number(item.acceptedQuantity) < 0 || Number(item.acceptedQuantity) > Number(item.approvedQuantity))
+          return "Enter the accepted quantity from zero to the approved quantity";
+        if (!item.notes.trim() || !item.photos.trim()) return "Inspection notes and photos are required for every item";
+      }
+    }
+    if (["replacement_request", "replacement_approve"].includes(action.type) &&
+      !["replacement", "exchange"].includes(action.returnRequest.resolution))
+      return "The customer selected a refund; replacement is not available";
     if (["replacement_request", "replacement_approve"].includes(action.type) && !allowed.includes("replacement"))
       return "The product policy does not allow replacement";
     if (action.type === "refund" && !allowed.includes("refund"))
@@ -981,53 +940,55 @@ const Returns = () => {
       return "Refund reference ID is required";
     if (
       action.type === "schedule" &&
-      action.mode === "reverse_pickup" &&
-      (!action.courierName.trim() || !action.trackingNumber.trim())
+      formAction.mode === "reverse_pickup" &&
+      (!formAction.courierName.trim() || !formAction.trackingNumber.trim())
     ) {
-      return "Courier and tracking/AWB are required";
+      return "Courier and tracking number are required";
     }
     if (
       (action.type === "replacement_ship" ||
-        (action.type === "schedule" && action.mode === "reverse_pickup")) &&
-      action.expectedDeliveryAt
+        (action.type === "schedule" && formAction.mode === "reverse_pickup")) &&
+      formAction.expectedDeliveryAt
     ) {
-      const arrival = new Date(action.expectedDeliveryAt).getTime();
+      const arrival = new Date(formAction.expectedDeliveryAt).getTime();
       if (!Number.isFinite(arrival) || arrival <= Date.now())
         return "Expected arrival must be a valid future date";
-      if (action.type === "schedule" && action.pickupScheduledAt &&
-        arrival <= new Date(action.pickupScheduledAt).getTime())
+      if (action.type === "schedule" && formAction.pickupScheduledAt &&
+        arrival <= new Date(formAction.pickupScheduledAt).getTime())
         return "Expected warehouse arrival must be after pickup";
     }
+    if (action.type === "tracking" && ["pickup_failed", "failed"].includes(action.shipmentStatus) && !action.note?.trim())
+      return "Explain why the pickup could not be completed";
     if (action.type === "tracking" && !action.shipmentStatus)
       return "Shipment status is required";
     if (
       ["approve", "receive", "qc"].includes(action.type) &&
-      !action.itemActions.length
+      !currentItemActions.length
     )
       return "Return items are missing";
     if (
       ["qc_evidence", "qc_decision"].includes(action.type) &&
       !action.reason.trim() &&
-      !action.note.trim()
+      !formAction.note.trim()
     )
       return "A review reason or note is required";
     if (
       action.type === "qc_evidence" &&
-      action.itemActions.some(
+      currentItemActions.some(
         (item) => !item.notes.trim() || !item.photos.trim(),
       )
     )
       return "Each rejected item requires notes and at least one evidence image";
     if (
       action.type === "return_customer" &&
-      (!action.courierName.trim() || !action.trackingNumber.trim())
+      (!formAction.courierName.trim() || !formAction.trackingNumber.trim())
     )
-      return "Courier and tracking/AWB are required";
+      return "Courier and tracking number are required";
     if (
       action.type === "replacement_ship" &&
-      (!action.courierName.trim() || !action.trackingNumber.trim())
+      (!formAction.courierName.trim() || !formAction.trackingNumber.trim())
     ) {
-      return "Courier and tracking/AWB are required";
+      return "Courier and tracking number are required";
     }
     if (action.type === "close" && !action.reason.trim())
       return "Close reason is required";
@@ -1035,7 +996,7 @@ const Returns = () => {
   };
 
   const prepareAction = () => {
-    if (isSeller && ADMIN_ONLY_RETURN_ACTIONS.has(action.type)) {
+    if (isSeller && isAdminOnlyReturnAction(action.type, action.returnRequest)) {
       toast.error("This return action is admin-only");
       return;
     }
@@ -1046,8 +1007,17 @@ const Returns = () => {
     }
     setConfirmAction({
       open: true,
-      title: `${ACTION_TITLES[action.type] || "Update Return"}?`,
-      message: `Are you sure you want to move this return request to the next stage of its lifecycle?`,
+      title: `${action.title || ACTION_TITLES[action.type] || "Update Return"}?`,
+      message: action.type === "tracking" && isDoorstepReturn(action.returnRequest) && !action.returnRequest.collectionQc?.collectedAt
+        ? "Record this visit as failed. The item stays with the customer. You can then reschedule pickup from Returns."
+        : isDoorstepExchange(action.returnRequest) && action.type === "qc"
+        ? action.collectionConfirmed
+          ? "Confirm the old item passed inspection and was collected, and the replacement was opened, accepted and handed to the customer during the same visit."
+          : "Save the inspection results only. The item remains with the customer until collection is confirmed."
+        : isDoorstepExchange(action.returnRequest) && action.type === "replacement_deliver"
+          ? "Confirm the replacement was physically handed to the customer after collecting the old item."
+          : isDoorstepExchange(action.returnRequest) ? "Confirm this action for the exchange."
+          : "Are you sure you want to move this return request to the next stage of its lifecycle?",
     });
   };
 
@@ -1087,7 +1057,9 @@ const Returns = () => {
     validationSchema:
       action.type === "qc_evidence"
         ? returnQcEvidenceValidationSchema
-        : returnQualityControlValidationSchema,
+        : action.type === "qc" && isDoorstepReturn(action.returnRequest)
+          ? returnDoorstepQualityControlValidationSchema
+          : returnQualityControlValidationSchema,
     onSubmit: prepareAction,
   });
   const approveReturnFormik = useFormik({
@@ -1095,6 +1067,11 @@ const Returns = () => {
     validationSchema: approveReturnValidationSchema,
     onSubmit: prepareAction,
   });
+  const collectionConfirmationOnly = action.type === "qc" && (canConfirmDoorstepCollection(action.returnRequest) || (isDoorstepExchange(action.returnRequest) && action.returnRequest.collectionQc?.exchangeCompletionConfirmed && action.returnRequest.status === "replacement_shipped"));
+  const formAction = action.type === "schedule" ? { ...action, ...scheduleReturnFormik.values } : action;
+  const currentItemActions = ["qc", "qc_evidence", "qc_decision"].includes(action.type)
+    ? qcFormik.values.itemActions : action.itemActions;
+
   const closeActionModal = useCallback(() => {
     closeReturnFormik.resetForm();
     rejectReturnFormik.resetForm();
@@ -1115,17 +1092,17 @@ const Returns = () => {
   ]);
 
   const executeAction = useCallback(async () => {
-    if (isSeller && ADMIN_ONLY_RETURN_ACTIONS.has(action.type)) {
+    if (isSeller && isAdminOnlyReturnAction(action.type, action.returnRequest)) {
       toast.error("This return action is admin-only");
       return;
     }
     const base = {
       returnId: returnId(action.returnRequest),
       refundAmount: Number(action.refundAmount || 0),
-      reason: action.reason || action.note,
-      note: action.note,
-      trackingNumber: action.trackingNumber,
-      notes: action.note,
+      reason: action.reason || formAction.note,
+      note: formAction.note,
+      trackingNumber: formAction.trackingNumber,
+      notes: formAction.note,
       referenceId: action.referenceId,
       method: action.method,
       walletAmount:
@@ -1137,41 +1114,57 @@ const Returns = () => {
           ? Number(action.providerAmount || 0)
           : undefined,
       provider: action.provider,
-      courierName: action.courierName,
-      mode: action.mode,
-      shippingMode: action.shippingMode,
-      pickupScheduledAt: action.pickupScheduledAt || undefined,
-      expectedDeliveryAt: action.expectedDeliveryAt
-        ? new Date(action.expectedDeliveryAt).toISOString() : undefined,
+      courierName: formAction.courierName,
+      mode: formAction.mode,
+      shippingMode: formAction.shippingMode,
+      pickupScheduledAt: formAction.pickupScheduledAt || undefined,
+      expectedDeliveryAt: formAction.expectedDeliveryAt
+        ? new Date(formAction.expectedDeliveryAt).toISOString() : undefined,
       status: action.shipmentStatus,
       location: action.location,
-      action: action.type.startsWith("replacement_")
+      exchangeReference: action.exchangeReference,
+      pickupTrackingNumber: action.pickupTrackingNumber,
+      replacementTrackingNumber: action.replacementTrackingNumber,
+      action: action.type === "exchange_failure" ? "exchange_failure" : action.type === "exchange" ? "arrange_exchange" : action.type.startsWith("replacement_")
         ? action.type.replace("replacement_", "")
         : undefined,
+      inspectionMode: action.type === "qc" && isDoorstepReturn(action.returnRequest) ? "doorstep" : undefined,
+      courierAtDoorstep: action.courierAtDoorstep === true,
+      confirmCollectionOnly: collectionConfirmationOnly || undefined,
+      collectionConfirmed: action.type === "qc" && isDoorstepReturn(action.returnRequest) ? action.collectionConfirmed === true : undefined,
+      replacementReady: action.replacementReady === true,
+      exchangeCompleted: action.type === "qc" && isDoorstepExchange(action.returnRequest) && action.collectionConfirmed || undefined,
+      replacementInspected: action.replacementInspected === true,
+      customerAccepted: action.customerAccepted === true,
+      handoverConfirmed: isDoorstepExchange(action.returnRequest) && action.type === "qc" ? action.collectionConfirmed === true : action.handoverConfirmed === true,
+      advanceExchange: action.type === "replacement_approve" && isDoorstepReturn(action.returnRequest) ? true : undefined,
       decision: action.decision,
       returnToCustomerRequired: action.returnToCustomerRequired,
       trackingUrl: action.trackingUrl,
       items:
-        action.type === "approve"
-          ? action.itemActions.map((item) => ({
+        collectionConfirmationOnly ? undefined : action.type === "approve"
+          ? currentItemActions.map((item) => ({
               orderItemId: item.orderItemId,
               productId: item.productId,
               variantSku: item.variantSku,
               approvedQuantity: Number(item.approvedQuantity || 0),
             }))
           : action.type === "receive"
-            ? action.itemActions.map((item) => ({
+            ? currentItemActions.map((item) => ({
                 orderItemId: item.orderItemId,
                 productId: item.productId,
                 variantSku: item.variantSku,
                 receivedQuantity: Number(item.receivedQuantity || 0),
               }))
             : action.type === "qc"
-              ? action.itemActions.map((item) => ({
+              ? currentItemActions.map((item) => ({
                   orderItemId: item.orderItemId,
                   productId: item.productId,
                   variantSku: item.variantSku,
                   quantity: Number(item.quantity || 0),
+                  ...(isDoorstepReturn(action.returnRequest) ? {
+                    acceptedQuantity: Number(item.acceptedQuantity), checks: item.checks,
+                  } : {}),
                   result: item.result,
                   condition: item.condition,
                   notes: item.notes,
@@ -1181,7 +1174,7 @@ const Returns = () => {
                     .filter(Boolean),
                 }))
               : action.type === "qc_evidence"
-                ? action.itemActions.map((item) => ({
+                ? currentItemActions.map((item) => ({
                     orderItemId: item.orderItemId,
                     productId: item.productId,
                     variantSku: item.variantSku,
@@ -1191,8 +1184,8 @@ const Returns = () => {
                       .map((value) => value.trim())
                       .filter(Boolean),
                   }))
-                : action.type === "qc_decision"
-                  ? action.itemActions.map((item) => ({
+                : action.type === "qc_decision" && !isDoorstepReturn(action.returnRequest)
+                  ? currentItemActions.map((item) => ({
                       orderItemId: item.orderItemId,
                       productId: item.productId,
                       variantSku: item.variantSku,
@@ -1203,6 +1196,9 @@ const Returns = () => {
                   : undefined,
     };
     const actionMap = {
+      visit: startReturnCollectionVisit,
+      exchange: replaceReturn,
+      exchange_failure: replaceReturn,
       approve: approveReturn,
       reject: rejectReturn,
       schedule: scheduleReturn,
@@ -1234,18 +1230,27 @@ const Returns = () => {
     try {
       setLoading(true);
       await dispatch(actionCreator(base)).unwrap();
-      toast.success("Return updated");
+      toast.success(action.type === "exchange_failure" ? "Exchange marked failed. Resolve the issue, then reschedule." : action.type === "qc" && isDoorstepReturn(action.returnRequest)
+        ? action.collectionConfirmed ? "Collection confirmed" : "Inspection saved. Collection has not been confirmed."
+        : "Return updated");
       closeActionModal();
       setConfirmAction({ open: false });
       await fetchReturns();
+      if (exchangeContextId) await openExchange({ _id: exchangeContextId });
     } catch (requestError) {
       toast.error(
         requestError?.message || requestError || "Failed to update return",
       );
+      if (action.type === "exchange") {
+        closeActionModal();
+        setConfirmAction({ open: false });
+        await fetchReturns();
+        if (exchangeContextId) await openExchange({ _id: exchangeContextId });
+      }
     } finally {
       setLoading(false);
     }
-  }, [action, closeActionModal, dispatch, fetchReturns, isSeller]);
+  }, [action, formAction, currentItemActions, collectionConfirmationOnly, closeActionModal, dispatch, fetchReturns, isSeller, exchangeContextId, openExchange]);
 
   const columns = useMemo(
     () => [
@@ -1268,7 +1273,7 @@ const Returns = () => {
       },
       {
         key: "buyerId",
-        label: "Buyer",
+        label: "Customer",
         sortable: true,
         render: (value, row) => {
           const name = buyerName(row);
@@ -1294,8 +1299,9 @@ const Returns = () => {
         key: "status",
         label: "Status",
         sortable: false,
-        render: (value) => (
+        render: (value, row) => (
           <StatusBadge
+            label={doorstepCollectionStatusLabel(row)}
             status={
               value === "requested"
                 ? "return_requested"
@@ -1440,9 +1446,14 @@ const Returns = () => {
           </div>
         }
         rowActions={(row) => {
+          if (isDoorstepExchange(row)) return [{
+            label: "Manage Doorstep Exchange",
+            icon: <MdSwapHoriz aria-hidden="true" size={16} className="text-violet-600" />,
+            onClick: () => openExchange(row),
+          }];
           const actions = [
             {
-              label: "View Details",
+              label: row.status === "qc_failed" ? "View QC Review" : "View Details",
               icon: (
                 <MdVisibility
                   aria-hidden="true"
@@ -1486,7 +1497,7 @@ const Returns = () => {
             }
           }
 
-          if (canViewShipments) {
+          if (canViewShipments && !(isDoorstepReturn(row) && !row.collectionQc?.collectedAt && !["replacement", "exchange"].includes(row.resolution))) {
             getReturnShipmentLinks(row).forEach(link => actions.push({
               label: link.label,
               icon: (
@@ -1497,12 +1508,14 @@ const Returns = () => {
           }
 
           if (
-            row.status === "pickup_failed" ||
-            (row.status === "approved" && !row.reverseShipment?.shipmentId)
+            !(isDoorstepReturn(row) && ["replacement", "exchange"].includes(row.resolution)) && (
+              row.status === "pickup_failed" ||
+              (row.status === "approved" && !row.reverseShipment?.shipmentId)
+            )
           ) {
             actions.push({
               label: row.status === "pickup_failed"
-                ? "Retry Pickup / Manual Ship-back"
+                ? "Reschedule Pickup"
                 : "Arrange Pickup",
               icon: (
                 <MdLocalShipping
@@ -1517,17 +1530,32 @@ const Returns = () => {
             });
           }
 
+          if (isDoorstepReturn(row) && !["replacement", "exchange"].includes(row.resolution) &&
+              row.status === "reverse_pickup_scheduled" && !row.collectionQc?.collectedAt && row.reverseShipment?.shipmentId) {
+            actions.push({
+              label: "Report Pickup Failure",
+              icon: <MdClose aria-hidden="true" size={16} className="text-red-600" />,
+              requiredModule: "returns",
+              requiredAction: "update",
+              onClick: () => openAction("tracking", row),
+            });
+          }
+
+          // Shipment details already provides status updates. Keep the inline
+          // editor only for roles that cannot open the shipment screen.
           if (
-            [
+            !canViewShipments &&
+            !(isDoorstepReturn(row) && !row.collectionQc?.collectedAt && !["replacement", "exchange"].includes(row.resolution)) &&
+            ([
               "reverse_pickup_scheduled",
               "pickup_failed",
               "in_reverse_transit",
-            ].includes(row.status) &&
+            ].includes(row.status) || (isDoorstepReturn(row) && !!row.collectionQc?.collectedAt)) &&
             row.reverseShipment?.shipmentId &&
             reverseTrackingOptions(row).length > 0
           ) {
             actions.push({
-              label: "Update Tracking",
+              label: row.collectionQc?.collectedAt ? "Track Return to Warehouse" : "Manage Return Shipment",
               icon: (
                 <MdLocalShipping
                   aria-hidden="true"
@@ -1557,7 +1585,21 @@ const Returns = () => {
             });
           }
 
-          if (row.status === "received") {
+          doorstepReturnActions(row).forEach(type => actions.push({
+            label: {
+              exchange: row.status === "pickup_failed" ? "Retry Doorstep Exchange" : "Arrange Doorstep Exchange",
+              visit: "Confirm Courier Arrival",
+              qc: canConfirmDoorstepCollection(row) ? "Confirm Collection" : "Record Doorstep QC",
+              replacement_approve: "Prepare Doorstep Replacement",
+              replacement_ship: "Dispatch Doorstep Replacement",
+              replacement_deliver: "Confirm Replacement Handover",
+            }[type],
+            icon: <MdFactCheck aria-hidden="true" size={16} className="text-amber-600" />,
+            requiredModule: "returns", requiredAction: "update",
+            onClick: () => openAction(type, row),
+          }));
+
+          if (row.status === "received" && !isDoorstepReturn(row)) {
             actions.push({
               label: "Record QC",
               icon: (
@@ -1665,8 +1707,8 @@ const Returns = () => {
             }
 
             if (
-              getAllowedReturnResolutions(row).includes("replacement") &&
-              (!isSeller || ["replacement", "exchange"].includes(row.resolution))
+              !isDoorstepReturn(row) && getAllowedReturnResolutions(row).includes("replacement") &&
+              ["replacement", "exchange"].includes(row.resolution)
             ) {
               actions.push({
                 label: "Request Replacement",
@@ -1684,7 +1726,9 @@ const Returns = () => {
             }
           }
 
-          if (!isSeller && row.status === "replacement_requested" && getAllowedReturnResolutions(row).includes("replacement")) {
+          if (!isDoorstepReturn(row) && !isSeller && row.status === "replacement_requested" &&
+            ["replacement", "exchange"].includes(row.resolution) &&
+            getAllowedReturnResolutions(row).includes("replacement")) {
             actions.push({
               label: "Approve Replacement",
               icon: (
@@ -1700,7 +1744,7 @@ const Returns = () => {
             });
           }
 
-          if (row.status === "replacement_created") {
+          if (!isDoorstepReturn(row) && row.status === "replacement_created") {
             actions.push({
               label: "Ship Replacement",
               icon: (
@@ -1716,7 +1760,7 @@ const Returns = () => {
             });
           }
 
-          if (!isSeller && row.status === "replacement_shipped") {
+          if (!isDoorstepReturn(row) && !isSeller && row.status === "replacement_shipped") {
             actions.push({
               label: "Confirm Replacement Delivery",
               icon: (
@@ -1818,10 +1862,26 @@ const Returns = () => {
           disabled: loading || !visibleReturns.length,
         }}
       />
+      <DefaultModal isOpen={Boolean(exchangeReturn)} title="Manage Doorstep Exchange" isButtonView={false}
+        onClose={() => { setExchangeReturn(null); setExchangeContextId(""); setExchangeError(""); }}>
+        {exchangeReturn && <>
+          {exchangeError && <div role="alert" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+            <p>{exchangeError}</p><Button className="mt-3" onClick={() => openExchange(exchangeReturn)}>Refresh Exchange</Button>
+          </div>}
+          <DoorstepExchangePanel request={exchangeReturn} isSeller={isSeller} canViewShipments={canViewShipments}
+            loading={loading || !!exchangeError}
+            onAction={type => { setExchangeReturn(null); openAction(type, exchangeReturn); }}
+            onDetails={() => { setExchangeReturn(null); openDetail(exchangeReturn); }}
+            onShipment={path => { setExchangeReturn(null); setExchangeContextId(""); navigate(path); }} />
+        </>}
+      </DefaultModal>
       <DefaultModal
         isOpen={Boolean(detailReturn)}
-        onClose={() => setDetailReturn(null)}
-        title="Return Detail"
+        onClose={() => {
+          setDetailReturn(null);
+          if (exchangeContextId) openExchange({ _id: exchangeContextId });
+        }}
+        title={returnDetailPresentation(detailReturn || {}).title}
         isButtonView={false}
       >
         <div className="space-y-5 text-sm">
@@ -1889,21 +1949,19 @@ const Returns = () => {
                   subtext: buyerContact(detailReturn),
                 },
                 {
-                  label: "Resolution",
-                  value: display(detailReturn?.resolution),
+                  label: "Customer’s requested resolution",
+                  value: returnDetailPresentation(detailReturn || {}).resolution,
                 },
                 {
-                  label: "Allowed Resolutions",
-                  value: getAllowedReturnResolutions(detailReturn || {}).map(display).join(" / ") || "Non-returnable",
-                },
-                {
-                  label: "Status",
-                  value: display(detailReturn?.status),
+                  label: "Request status",
+                  value: formatLabel(detailReturn?.status || "Not recorded"),
                   className: "capitalize",
                 },
+                { label: "Requested at", value: formatDateTime12Hour(detailReturn?.createdAt || detailReturn?.created_at) },
+                ...(detailReturn?.approvedAt ? [{ label: "Accepted at", value: formatDateTime12Hour(detailReturn.approvedAt) }] : []),
                 {
-                  label: "Reason",
-                  value: display(detailReturn?.reason),
+                  label: "Customer’s return reason",
+                  value: formatLabel(detailReturn?.reason || "Not provided"),
                 },
               ].map((item, index) => (
                 <div key={index} className={INFO_CARD_CLASS}>
@@ -1923,46 +1981,48 @@ const Returns = () => {
             </div>
           </FormSection>
 
+          <FormSection title="Customer’s explanation and evidence" description="Information supplied with this request; inspection findings are recorded separately.">
+            <p className="whitespace-pre-wrap break-words text-sm text-gray-700">{detailReturn?.description || "No additional explanation provided."}</p>
+            <div className="mt-3 flex flex-wrap gap-3">{(detailReturn?.photos || []).map((url, index) => (
+              <a key={url} href={url} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">Customer evidence {index + 1}</a>
+            ))}</div>
+          </FormSection>
+          <details className="rounded-lg border border-gray-200 p-4 text-sm">
+            <summary className="cursor-pointer font-semibold">Purchased Product Policy</summary>
+            <p className="mt-3 text-gray-600">Policy-supported options: {getAllowedReturnResolutions(detailReturn || {}).map(formatLabel).join(" / ") || "None recorded"}. These describe the purchased product policy. This request follows the customer’s selected resolution shown above.</p>
+          </details>
+
+          {returnDecisionDetails(detailReturn || {}).length > 0 && (
+            <FormSection title="Decision and exception details" description="These are review or processing reasons, separate from the customer’s original return reason.">
+              <div className="space-y-3">{returnDecisionDetails(detailReturn).map(entry => (
+                <div key={entry.label} className={INFO_CARD_CLASS}><p className={LABEL_CLASS}>{entry.label}</p><p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-800">{entry.value}</p></div>
+              ))}</div>
+            </FormSection>
+          )}
+
           {/* Refund Information */}
 
           <FormSection
-            title={["replacement", "exchange"].includes(detailReturn?.resolution) ? "Replacement Item Value" : "Refund Information"}
+            title={returnDetailPresentation(detailReturn || {}).replacement ? "Replacement Information" : "Refund Information"}
             description={["replacement", "exchange"].includes(detailReturn?.resolution)
               ? "The item value is recorded for accounting; it is not a scheduled customer refund."
               : "Details about the refund amount, method, reference, and processing status."}
           >
             {(() => {
+              const presentation = returnDetailPresentation(detailReturn || {});
+              const refund = detailReturn?.refund || {};
               const refundInfo = [
-                {
-                  label: ["replacement", "exchange"].includes(detailReturn?.resolution) ? "Item Value" : "Refund Amount",
-                  value: money(
-                    detailReturn?.refundAmount ||
-                      detailReturn?.refundBreakup?.totalRefundAmount,
-                  ),
-                  className: "text-sm font-regular text-[#252238]",
-                },
-                {
-                  label: "Refund Reference",
-                  value: detailReturn?.refundReferenceId,
-                  className: "break-all text-sm font-regular text-[#252238]",
-                },
-                {
-                  label: "Refund Method",
-                  value: display(detailReturn?.refundMethod),
-                },
-                {
-                  label: "Refund Status",
-                  value: display(detailReturn?.refund?.status),
-                  className: "capitalize",
-                },
-                {
-                  label: "Provider Refund ID",
-                  value:
-                    detailReturn?.refund?.providerRefundId ||
-                    detailReturn?.providerRefundId,
-                  className: "break-all text-sm font-regular text-[#252238]",
-                  fullWidth: true,
-                },
+                { label: presentation.amountLabel, value: money(presentation.amount) },
+                ...(presentation.replacement ? [
+                  { label: "Replacement status", value: detailReturn?.replacement?.status ? formatLabel(detailReturn.replacement.status) : "Not prepared yet" },
+                  { label: "Replacement order", value: detailReturn?.replacement?.orderNumber || detailReturn?.replacementOrderId },
+                  { label: "Replacement delivery tracking number", value: detailReturn?.replacement?.trackingNumber },
+                ] : [
+                  { label: "Refund status", value: refund.status ? formatLabel(refund.status) : "Not started" },
+                  { label: "Refund method", value: refund.method || detailReturn?.refundMethod ? formatLabel(refund.method || detailReturn.refundMethod) : null },
+                  { label: "Refund reference", value: refund.referenceId || detailReturn?.refundReferenceId },
+                  { label: "Payment provider refund reference", value: refund.providerRefundId || detailReturn?.providerRefundId },
+                ]),
               ].filter(
                 (item) =>
                   item.value != null &&
@@ -2010,7 +2070,7 @@ const Returns = () => {
                   ),
                 },
                 {
-                  label: "AWB",
+                  label: "Courier booking reference",
                   value:
                     detailReturn?.reverseShipment?.awbNumber ||
                     detailReturn?.reverseShipment?.shipment?.awb_number ||
@@ -2025,7 +2085,7 @@ const Returns = () => {
                     "Not assigned",
                 },
                 {
-                  label: "Tracking",
+                  label: "Return pickup tracking number",
                   value:
                     detailReturn?.reverseShipment?.trackingNumber ||
                     detailReturn?.reverseShipment?.shipment?.tracking_number ||
@@ -2074,6 +2134,25 @@ const Returns = () => {
                 </p>
               )}
           </FormSection>
+
+          {detailReturn?.collectionQc?.required && (
+            <FormSection title="Doorstep QC and collection" description="Inspection is recorded before collection. Warehouse inventory is updated only after physical receipt.">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {[["Inspection", display(detailReturn.collectionQc.status)], ["Collected", formatDateTime12Hour(detailReturn.collectionQc.collectedAt)], ["Warehouse received", formatDateTime12Hour(detailReturn.collectionQc.warehouseReceivedAt)]].map(([label, value]) => (
+                  <div key={label} className={INFO_CARD_CLASS}><p className={LABEL_CLASS}>{label}</p><p className={VALUE_CLASS}>{value || "Pending"}</p></div>
+                ))}
+              </div>
+              {(detailReturn.collectionQc.items || []).map(item => (
+                <div key={item.orderItemId} className="mt-3 rounded-lg border border-gray-200 p-3 text-sm">
+                  <p className="font-semibold">{detailReturn.items?.find(entry => entry.orderItemId === item.orderItemId)?.productTitle || item.orderItemId}</p>
+                  <p>Inspected: {item.quantity} · Accepted: {item.acceptedQuantity}</p>
+                  <p className="mt-1 text-gray-600">{item.notes}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">{Object.entries(item.checks || {}).map(([key, value]) => <span key={key}>{({ identity: "Product identity", serialNumber: "Serial number / IMEI", accessories: "Accessories", packaging: "Packaging", condition: "Condition eligibility" })[key] || formatLabel(key)}: {formatLabel(value)}</span>)}</div>
+                  <div className="mt-2 flex flex-wrap gap-2">{(item.photos || []).map(url => <a key={url} href={url} target="_blank" rel="noreferrer" className="text-blue-600 underline">View inspection photo</a>)}</div>
+                </div>
+              ))}
+            </FormSection>
+          )}
 
           {/* Items */}
           <FormSection
@@ -2143,9 +2222,8 @@ const Returns = () => {
                     label: "Quantity",
                     value: `Requested ${
                       item.requestedQuantity || item.quantity || 0
-                    } · Approved ${item.approvedQuantity || 0} · Received ${
-                      item.receivedQuantity || 0
-                    }`,
+                    } · Approved ${item.approvedQuantity || 0}${detailReturn?.collectionQc?.required ? ` · Collected ${item.collectedQuantity ?? 0}` : ""} · Warehouse received ${item.receivedQuantity || 0}`,
+
                   },
                   {
                     label: ["replacement", "exchange"].includes(detailReturn?.resolution) ? "Item Value" : "Refund",
@@ -2501,10 +2579,15 @@ const Returns = () => {
       </DefaultModal>
       <DefaultModal
         isOpen={action.open}
-        onClose={closeActionModal}
+        onClose={() => {
+          closeActionModal();
+          if (exchangeContextId) openExchange({ _id: exchangeContextId });
+        }}
         title={action.title}
         onSubmit={
-          action.type === "approve" && !isSeller
+          collectionConfirmationOnly || (action.type === "qc_decision" && isDoorstepReturn(action.returnRequest))
+            ? prepareAction
+            : action.type === "approve" && !isSeller
             ? approveReturnFormik.handleSubmit
             : action.type === "schedule"
               ? scheduleReturnFormik.handleSubmit
@@ -2522,8 +2605,9 @@ const Returns = () => {
                         ? qcFormik.handleSubmit
                         : prepareAction
         }
-        submitButtonText="Continue"
-        closeButtonText="Cancel"
+        submitButtonText={action.type === "tracking" && isDoorstepReturn(action.returnRequest) && !action.returnRequest.collectionQc?.collectedAt ? "Report Pickup Failure" : action.type === "visit" ? "Confirm Arrival" : action.type === "qc" && isDoorstepReturn(action.returnRequest) ? collectionConfirmationOnly ? isDoorstepExchange(action.returnRequest) ? "Confirm Exchange Completed" : "Confirm Collection" : isDoorstepExchange(action.returnRequest) ? "Save Exchange Inspection" : "Save Inspection" : "Continue"}
+        submitDisabled={(action.type === "visit" && !action.courierAtDoorstep) || (collectionConfirmationOnly && (!action.collectionConfirmed || (isDoorstepExchange(action.returnRequest) && (!action.replacementReady || !action.replacementInspected || !action.customerAccepted))))}
+        closeButtonText={exchangeContextId ? "Back to Exchange" : "Cancel"}
         loading={loading}
       >
         <div className="space-y-5">
@@ -2578,7 +2662,7 @@ const Returns = () => {
                 )}
 
                 {["refund", "retry_refund"].includes(action.type) && (
-                  <FormSelectGroup
+                  <FormSelectGroup wrapSingleValue
                     label="Refund Method"
                     value={
                       [
@@ -2681,9 +2765,11 @@ const Returns = () => {
             >
               <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
                 <p className="text-sm leading-6 text-blue-900">
-                  Accepting confirms that you will receive this return. The
-                  marketplace manages the selected refund or replacement after receipt and QC,
-                  according to the purchased product policy.
+                  {isDoorstepExchange(action.returnRequest)
+                    ? "Accept the quantities for a doorstep exchange. Next, arrange the courier visit. The old item must pass doorstep QC and be collected before replacement handover."
+                    : isDoorstepReturn(action.returnRequest)
+                      ? "Accept the quantities eligible for a return pickup. This does not confirm collection or a refund. The courier will inspect the item before collection; platform finance handles the approved refund afterward."
+                      : "Accept the quantities eligible to be sent back. This does not confirm warehouse receipt or a refund. Record receipt and warehouse QC separately before refund or replacement processing."}
                 </p>
               </div>
             </FormSection>
@@ -2698,37 +2784,16 @@ const Returns = () => {
               description="Review the seller QC result and select the appropriate decision."
             >
               <div className="space-y-4">
-                <FormSelectGroup
-                  label="Decision"
+                <ReturnQcDecisionField
+                  doorstep={isDoorstepReturn(action.returnRequest)}
                   value={action.decision}
-                  options={[
-                    {
-                      value: "uphold",
-                      label: "Uphold seller QC failure",
-                    },
-                    {
-                      value: "override",
-                      label: "Override QC failure — approve eligible resolution",
-                    },
-                    {
-                      value: "partial",
-                      label: "Partially approve eligible resolution",
-                    },
-                    {
-                      value: "request_evidence",
-                      label: "Request more seller evidence",
-                    },
-                  ]}
-                  onChange={(selectedOption) =>
-                    setAction((prev) => ({
-                      ...prev,
-                      decision: selectedOption?.value || selectedOption || "",
-                    }))
-                  }
-                  placeholder="Select QC decision"
+                  onChange={decision => setAction(prev => ({ ...prev, decision }))}
                 />
 
-                {action.decision === "uphold" && (
+                {isDoorstepReturn(action.returnRequest) && (
+                  <p className="text-sm text-gray-600">The item is still with the customer. Review may confirm rejection or allow reinspection; it cannot authorize a refund or replacement handover before collection.</p>
+                )}
+                {action.decision === "uphold" && !isDoorstepReturn(action.returnRequest) && (
                   <FormToggleRow
                     title="Return rejected product to customer"
                     description="Seller must ship the rejected product back to the customer."
@@ -2814,7 +2879,7 @@ const Returns = () => {
                   label="Note"
                   name="note"
                   type="textarea"
-                  value={action.note}
+                  value={formAction.note}
                   onChange={(event) => {
                     rejectReturnFormik.handleChange(event);
                     setAction((prev) => ({
@@ -2836,7 +2901,7 @@ const Returns = () => {
                   label="Note"
                   name="note"
                   type="textarea"
-                  value={action.note}
+                  value={formAction.note}
                   onChange={(event) => {
                     closeReturnFormik.handleChange(event);
                     setAction((prev) => ({
@@ -2856,50 +2921,41 @@ const Returns = () => {
             </FormSection>
           )}
 
+          {action.type === "exchange_failure" && <FormSection title="Exchange not completed"
+            description="Leave the old item with the customer and do not hand over the replacement. Explain the issue below. Resolve replacement condition or customer acceptance before rescheduling." />}
+          {action.type === "exchange" && (
+            <FormSection title="One visit, one exchange" description="Prepare the replacement and arrange collection together. The courier must inspect and collect the old item before handing over the replacement during the same visit.">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormSelectGroup wrapSingleValue label="Courier / delivery service" name="courierName"
+                  options={formAction.courierName && !DELIVERY_METHOD_OPTIONS.some(option => option.value === formAction.courierName)
+                    ? [{ value: formAction.courierName, label: formAction.courierName }, ...DELIVERY_METHOD_OPTIONS] : DELIVERY_METHOD_OPTIONS}
+                  value={formAction.courierName ? { value: formAction.courierName, label: DELIVERY_METHOD_OPTIONS.find(option => option.value === formAction.courierName)?.label || formAction.courierName } : null}
+                  onChange={option => setAction(previous => ({ ...previous, courierName: option?.value || "" }))}
+                  placeholder="Select courier" required />
+                <FormInput label="Exchange tracking / booking reference" name="exchangeReference"
+                  helperText="One reference for this same-visit exchange. The courier brings the replacement and collects the old item together."
+                  value={action.exchangeReference || ""}
+                  onChange={event => setAction(previous => ({ ...previous, exchangeReference: event.target.value }))} required />
+                {["approved", "pickup_failed"].includes(action.returnRequest.status) && (
+                  <FormInput label="Exchange visit scheduled at" name="pickupScheduledAt" type="datetime-local" value={formAction.pickupScheduledAt || ""}
+                    onChange={event => setAction(previous => ({ ...previous, pickupScheduledAt: event.target.value }))} />
+                )}
+              </div>
+              <p className="mt-3 text-xs text-gray-600">Use the exchange reference supplied by the courier. Existing replacement stock and parcel records are reused when rescheduling; no second replacement is prepared.</p>
+            </FormSection>
+          )}
+
           {action.type === "schedule" && (
             <FormSection
-              title="Return Shipment"
-              description="Configure how the returned product will be shipped."
+              title="Arrange Return Collection"
+              description={action.returnRequest?.status === "pickup_failed"
+                ? "Create a new pickup attempt. The previous courier booking remains in history; arrival and QC must be confirmed again for the new visit."
+                : "Choose how the item will return to the seller. Booking a pickup does not confirm inspection or collection."}
             >
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <FormSelectGroup
-                    label="Return Mode"
-                    value={
-                      [
-                        {
-                          value: "reverse_pickup",
-                          label: "Seller-arranged reverse courier",
-                        },
-                        {
-                          value: "manual_ship_back",
-                          label: "Customer self-ships",
-                        },
-                      ].find((option) => option.value === action.mode) || null
-                    }
-                    options={[
-                      {
-                        value: "reverse_pickup",
-                        label: "Seller-arranged reverse courier",
-                      },
-                      {
-                        value: "manual_ship_back",
-                        label: "Customer self-ships",
-                      },
-                    ]}
-                    onChange={(selectedOption) => {
-                      const mode = selectedOption?.value || "";
-                      scheduleReturnFormik.setFieldValue("mode", mode);
-                      setAction((prev) => ({
-                        ...prev,
-                        mode,
-                      }));
-                    }}
-                    placeholder="Select return mode"
-                  />
-
-                  {action.mode === "reverse_pickup" && (
-                    <FormSelectGroup
+                  {formAction.mode === "reverse_pickup" && (
+                    <FormSelectGroup wrapSingleValue
                       label="Shipping Mode"
                       value={
                         [
@@ -2908,7 +2964,7 @@ const Returns = () => {
                           { value: "same_day", label: "Same day" },
                           { value: "hyperlocal", label: "Hyperlocal" },
                         ].find(
-                          (option) => option.value === action.shippingMode,
+                          (option) => option.value === formAction.shippingMode,
                         ) || null
                       }
                       options={[
@@ -2917,52 +2973,47 @@ const Returns = () => {
                         { value: "same_day", label: "Same day" },
                         { value: "hyperlocal", label: "Hyperlocal" },
                       ]}
-                      onChange={(selectedOption) =>
-                        setAction((prev) => ({
-                          ...prev,
-                          shippingMode: selectedOption?.value || "",
-                        }))
-                      }
+                      onChange={option => scheduleReturnFormik.setFieldValue("shippingMode", option?.value || "")}
                       placeholder="Select shipping mode"
                     />
                   )}
                 </div>
 
-                {action.mode === "reverse_pickup" ? (
+                {formAction.mode === "reverse_pickup" ? (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <FormInput
+                    <FormSelectGroup wrapSingleValue
                       label="Courier"
+                      className="md:col-span-2"
                       name="courierName"
-                      maxLength={100}
-                      minLength={3}
-                      limitMessage="Courier name must be between 3 and 100 characters."
-                      showLengthCount={false}
-                      value={action.courierName}
-                      onChange={(event) => {
-                        scheduleReturnFormik.handleChange(event);
-                        setAction((prev) => ({
-                          ...prev,
-                          courierName: event.target.value,
-                        }));
+                      options={formAction.courierName && !DELIVERY_METHOD_OPTIONS.some(option => option.value === formAction.courierName)
+                        ? [{ value: formAction.courierName, label: formAction.courierName }, ...DELIVERY_METHOD_OPTIONS]
+                        : DELIVERY_METHOD_OPTIONS}
+                      value={formAction.courierName ? {
+                        value: formAction.courierName,
+                        label: DELIVERY_METHOD_OPTIONS.find(option => option.value === formAction.courierName)?.label || formAction.courierName,
+                      } : null}
+                      onChange={option => {
+                        const courierName = option?.value || "";
+                        scheduleReturnFormik.setFieldValue("courierName", courierName);
+                        scheduleReturnFormik.setFieldTouched("courierName", true, false);
+                        setAction(previous => ({ ...previous, courierName }));
                       }}
-                      onBlur={scheduleReturnFormik.handleBlur}
-                      error={
-                        scheduleReturnFormik.touched.courierName
-                          ? scheduleReturnFormik.errors.courierName
-                          : ""
-                      }
-                      placeholder="Enter courier name"
+                      error={scheduleReturnFormik.touched.courierName ? scheduleReturnFormik.errors.courierName : ""}
+                      placeholder="Select courier"
+                      isClearable={false}
+                      onBlur={() => scheduleReturnFormik.setFieldTouched("courierName", true)}
                       required
                     />
 
                     <FormInput
-                      label="Tracking / AWB"
+                      label={action.returnRequest?.status === "pickup_failed" ? "New pickup tracking number" : "Return pickup tracking number"}
+                      helperText={action.returnRequest?.status === "pickup_failed" ? "Enter the tracking number supplied for the new courier booking. The failed attempt keeps its original tracking history." : undefined}
                       name="trackingNumber"
                       maxLength={100}
                       minLength={3}
                       limitMessage="Tracking number must be between 3 and 100 characters."
                       showLengthCount={false}
-                      value={action.trackingNumber}
+                      value={formAction.trackingNumber}
                       onChange={(event) => {
                         scheduleReturnFormik.handleChange(event);
                         setAction((prev) => ({
@@ -2976,7 +3027,7 @@ const Returns = () => {
                           ? scheduleReturnFormik.errors.trackingNumber
                           : ""
                       }
-                      placeholder="Enter tracking number / AWB"
+                      placeholder="Enter courier tracking number"
                       required
                     />
 
@@ -2984,7 +3035,7 @@ const Returns = () => {
                       label="Pickup Date"
                       name="pickupScheduledAt"
                       type="datetime-local"
-                      value={action.pickupScheduledAt}
+                      value={formAction.pickupScheduledAt}
                       min={moment().format("YYYY-MM-DDTHH:mm")}
                       onChange={(event) => {
                         const selectedValue = event.target.value;
@@ -2998,21 +3049,16 @@ const Returns = () => {
                           return;
                         }
 
-                        setAction((prev) => ({
-                          ...prev,
-                          pickupScheduledAt: selectedValue,
-                        }));
+                        scheduleReturnFormik.setFieldValue("pickupScheduledAt", selectedValue);
                       }}
                     />
                     <FormInput
                       label="Expected Warehouse Arrival (optional)"
                       name="expectedDeliveryAt"
                       type="datetime-local"
-                      min={action.pickupScheduledAt || moment().format("YYYY-MM-DDTHH:mm")}
-                      value={action.expectedDeliveryAt}
-                      onChange={(event) => setAction((prev) => ({
-                        ...prev, expectedDeliveryAt: event.target.value,
-                      }))}
+                      min={formAction.pickupScheduledAt || moment().format("YYYY-MM-DDTHH:mm")}
+                      value={formAction.expectedDeliveryAt}
+                      onChange={event => scheduleReturnFormik.setFieldValue("expectedDeliveryAt", event.target.value)}
                     />
                   </div>
                 ) : (
@@ -3033,10 +3079,12 @@ const Returns = () => {
     ====================================================== */}
           {action.type === "tracking" && (
             <FormSection
-              title="Shipment Tracking"
-              description="Update the current status of the reverse shipment."
+              title={isDoorstepReturn(action.returnRequest) && !action.returnRequest.collectionQc?.collectedAt ? "Report Pickup Failure" : "Return Shipment Tracking"}
+              description={isDoorstepReturn(action.returnRequest) && !action.returnRequest.collectionQc?.collectedAt ? "Use this only when the courier visit could not be completed. The item remains with the customer. After saving, reschedule pickup from Returns. Product inspection failures must be recorded in Doorstep QC." : "Track the existing return parcel back to the warehouse."}
             >
-              <FormSelectGroup
+              {isDoorstepReturn(action.returnRequest) && !action.returnRequest.collectionQc?.collectedAt ? (
+                <p className="text-sm text-gray-700">Explain the failed visit in the required note below.</p>
+              ) : (<FormSelectGroup wrapSingleValue
                 label="Shipment Status"
                 value={
                   reverseTrackingOptions(action.returnRequest).find(
@@ -3051,7 +3099,62 @@ const Returns = () => {
                   }))
                 }
                 placeholder="Select shipment status"
-              />
+              />)}
+            </FormSection>
+          )}
+
+          {action.type === "replacement_deliver" && isDoorstepReturn(action.returnRequest) && (
+            <FormSection title="Confirm doorstep handover" description="The old item has passed QC and been collected. Record delivery only after the replacement is physically given to the customer.">
+              <FormSelectGroup wrapSingleValue label="Replacement handed over"
+                options={[{ value: false, label: "Not handed over" }, { value: true, label: "Replacement physically handed to customer" }]}
+                value={{ value: action.handoverConfirmed === true, label: action.handoverConfirmed ? "Replacement physically handed to customer" : "Not handed over" }}
+                onChange={option => setAction(previous => ({ ...previous, handoverConfirmed: option?.value === true }))} isClearable={false} />
+            </FormSection>
+          )}
+          {action.type === "visit" && (
+            <FormSection title="Start the actual doorstep visit" description="Booking a shipment does not mean the courier has arrived. Confirm this only when the courier is physically with the customer and ready to inspect the item.">
+              <Input type="checkbox" name="courierAtDoorstep" value={action.courierAtDoorstep === true}
+                onChange={event => setAction(previous => ({ ...previous, courierAtDoorstep: event.target.checked }))}
+                required>
+                <span className="text-sm leading-6">I confirm the courier is at the customer’s address and ready to inspect the item. <span className="text-red-500" aria-hidden="true">*</span></span>
+              </Input>
+              <p className="mt-3 text-xs leading-5 text-gray-500">If the courier has not arrived, close this form and wait. Use the pickup-failure action only when the scheduled visit could not be completed.</p>
+            </FormSection>
+          )}
+
+          {action.type === "qc" && isDoorstepReturn(action.returnRequest) && (
+            <FormSection title={isDoorstepExchange(action.returnRequest) ? collectionConfirmationOnly ? "Complete the doorstep exchange" : "Inspect the old item" : collectionConfirmationOnly ? "Confirm physical collection" : "Record doorstep inspection"}
+              description={isDoorstepExchange(action.returnRequest) ? collectionConfirmationOnly ? "Check the replacement with the customer. Confirm completion only after both collection and handover happen together. If either item fails or the customer refuses the replacement, close this form and record an exchange failure." : "Inspect the old item first and save the required notes and photos. Do not collect it unless the replacement also passes inspection and the customer accepts the exchange." : collectionConfirmationOnly ? "Your inspection is already saved. Confirm only after the courier physically takes the accepted units. You do not need to repeat QC." : "Record the checks, accepted quantities, notes and photos first. Saving inspection does not confirm physical collection or start a refund."}>
+              <p className="mb-3 text-sm text-gray-700">Customer's reported reason: {formatLabel(action.returnRequest?.reason)}. {action.returnRequest?.description || ""}</p>
+              {collectionConfirmationOnly ? <>
+                <div className="mb-4 space-y-3">{(action.returnRequest.collectionQc.items || []).map(item => (
+                  <div key={item.orderItemId} className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
+                    <p className="font-semibold">{action.returnRequest.items?.find(entry => entry.orderItemId === item.orderItemId)?.productTitle || "Inspected item"}</p>
+                    <p className="mt-1">Inspected: {item.quantity} · Eligible for collection: {item.acceptedQuantity}</p>
+                    <p className="mt-2 whitespace-pre-wrap text-gray-600">{item.notes}</p>
+                  </div>
+                ))}</div>
+                <Input type="checkbox" name="collectionConfirmed" value={action.collectionConfirmed === true} required
+                  onChange={event => setAction(previous => ({ ...previous, collectionConfirmed: event.target.checked }))}>
+                  <span>{isDoorstepExchange(action.returnRequest) ? "I confirm the old item was collected and the replacement was handed to the customer during the same visit." : "I confirm the courier physically collected the accepted units. Rejected units remain with the customer."}</span>
+                </Input>
+                {["replacement", "exchange"].includes(action.returnRequest?.resolution) && (
+                  <Input type="checkbox" name="replacementReady" value={action.replacementReady === true} required
+                    onChange={event => setAction(previous => ({ ...previous, replacementReady: event.target.checked }))}>
+                    <span>The replacement is with the courier for this exchange.</span>
+                  </Input>
+                )}
+                {isDoorstepExchange(action.returnRequest) && <>
+                  <Input type="checkbox" name="replacementInspected" value={action.replacementInspected === true} required
+                    onChange={event => setAction(previous => ({ ...previous, replacementInspected: event.target.checked }))}>
+                    <span>The replacement was opened with the customer, and its product, variant and condition were checked.</span>
+                  </Input>
+                  <Input type="checkbox" name="customerAccepted" value={action.customerAccepted === true} required
+                    onChange={event => setAction(previous => ({ ...previous, customerAccepted: event.target.checked }))}>
+                    <span>The customer accepted the replacement. No exchange takes place if either item fails inspection.</span>
+                  </Input>
+                </>}
+              </> : <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">{isDoorstepExchange(action.returnRequest) ? "Save the old item inspection first. Next, check the replacement with the customer and confirm the exchange together. If either item fails, leave the old item with the customer." : "Save the inspection below. If QC passes, confirm physical collection in the next step. If QC fails, leave the item with the customer for review."}</p>}
             </FormSection>
           )}
 
@@ -3060,13 +3163,13 @@ const Returns = () => {
     ====================================================== */}
           {["approve", "receive", "qc", "qc_evidence", "qc_decision"].includes(
             action.type,
-          ) && (
+          ) && !collectionConfirmationOnly && !(action.type === "qc_decision" && isDoorstepReturn(action.returnRequest)) && (
             <FormSection
-              title="Item Decisions"
-              description="Review and update the decision for each returned item."
+              title={action.type === "approve" ? "Items to Accept" : "Item Decisions"}
+              description={action.type === "approve" ? "Review the requested quantities. Nothing is marked collected or received by accepting this request." : "Review and update the decision for each returned item."}
             >
               <div className="space-y-4">
-                {action.itemActions.map((item, index) => (
+                {currentItemActions.map((item, index) => (
                   <div
                     key={`${item.orderItemId || item.productId}-${index}`}
                     className="rounded-xl border border-gray-200 bg-gray-50 p-4"
@@ -3076,51 +3179,24 @@ const Returns = () => {
                         {item.label}
                       </p>
 
-                      {(item.requestedQuantity ||
-                        item.approvedQuantity ||
-                        item.receivedQuantity) && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          Requested:{" "}
-                          {item.requestedQuantity || item.quantity || 0}
-                          {" · "}
-                          Approved: {item.approvedQuantity || 0}
-                          {" · "}
-                          Received: {item.receivedQuantity || 0}
-                        </p>
-                      )}
+                      <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
+                        {[
+                          ["Requested", item.requestedQuantity],
+                          ...(action.type === "approve" ? [] : [["Accepted", item.recordedApprovedQuantity]]),
+                          ["Collected", item.recordedCollectedQuantity],
+                          ["Warehouse received", item.recordedReceivedQuantity],
+                        ].map(([label, value]) => (
+                          <div key={label} className="rounded-md border border-gray-200 bg-white px-3 py-2">
+                            <p className="text-gray-500">{label}</p><p className="mt-1 font-semibold text-gray-900">{value ?? 0}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    {/* 
                     {action.type === "approve" && (
-                      <FormInput
-                        label={`Approved Quantity${
-                          item.requestedQuantity || item.quantity
-                            ? ` (max ${
-                                item.requestedQuantity || item.quantity
-                              })`
-                            : ""
-                        }`}
-                        name={`approvedQuantity-${index}`}
-                        type="number"
-                        min="0"
-                        max={
-                          item.requestedQuantity || item.quantity || undefined
-                        }
-                        value={
-                          item.approvedQuantity ??
-                          item.requestedQuantity ??
-                          item.quantity ??
-                          ""
-                        }
-                        onChange={(event) =>
-                          updateItemAction(
-                            index,
-                            "approvedQuantity",
-                            event.target.value,
-                          )
-                        }
-                        required
-                      />
-                    )} */}
+                      <FormInput label="Quantity being accepted" name={`approvedQuantity-${index}`} type="text"
+                        value={item.approvedQuantity} readOnly
+                        helperText="Prefilled from the customer’s requested quantity. Collection and QC are recorded separately." />
+                    )}
 
                     {action.type === "receive" && (
                       <FormInput
@@ -3158,7 +3234,28 @@ const Returns = () => {
 
                     {action.type === "qc" && (
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <FormInput
+                        {isDoorstepReturn(action.returnRequest) && (
+                          <div className="space-y-4 md:col-span-2">
+                            <p className="text-sm font-semibold text-gray-800">1. Inspect all {item.approvedQuantity} approved unit(s)</p>
+                            <p className="text-xs leading-5 text-gray-500">For partial acceptance, these checks must pass for every accepted unit. Explain why the remaining units failed in the inspection notes.</p>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                              {[["identity", "Product / variant identity"], ["serialNumber", "Serial number / IMEI"], ["accessories", "Required accessories"], ["packaging", "Required packaging"], ["condition", "Condition eligible under return policy"]].map(([key, label]) => (
+                                <FormSelectGroup wrapSingleValue key={key} label={label}
+                                  options={[{ value: "pass", label: "Pass" }, { value: "fail", label: "Fail" }, ...(["identity", "condition"].includes(key) ? [] : [{ value: "not_applicable", label: "Not required by policy" }])]}
+                                  value={item.checks?.[key] ? { value: item.checks[key], label: item.checks[key] === "not_applicable" ? "Not required by policy" : item.checks[key] === "pass" ? "Pass" : "Fail" } : null}
+                                  error={qcFormik.submitCount > 0 || qcFormik.touched.itemActions?.[index]?.checks?.[key] ? qcFormik.errors.itemActions?.[index]?.checks?.[key] : ""}
+                                  onChange={option => {
+                                    qcFormik.setFieldTouched(`itemActions[${index}].checks.${key}`, true, false);
+                                    qcFormik.setFieldValue(`itemActions[${index}]`, updateDoorstepChecklist(item, key, option?.value || ""));
+                                  }}
+                                  placeholder="Record inspection result" required />
+                              ))}
+                            </div>
+                            <p className="text-sm font-semibold text-gray-800">2. Record eligible units and the inspection decision</p>
+                            <ReturnAcceptedQuantityField formik={qcFormik} index={index} maximum={item.approvedQuantity} automatic />
+                          </div>
+                        )}
+                        {!isDoorstepReturn(action.returnRequest) && <FormInput
                           label={`QC Quantity${
                             item.receivedQuantity ||
                             item.approvedQuantity ||
@@ -3208,17 +3305,17 @@ const Returns = () => {
                               : ""
                           }
                           required
-                        />
+                        />}
 
                         <div>
-                          <FormSelectGroup
-                            label="Disposition"
+                          <FormSelectGroup wrapSingleValue
+                            label={isDoorstepReturn(action.returnRequest) ? "Inspection decision" : "Disposition"}
                             value={
-                              QC_DISPOSITION_OPTIONS.find(
+                              (isDoorstepReturn(action.returnRequest) ? DOORSTEP_QC_DISPOSITION_OPTIONS : QC_DISPOSITION_OPTIONS).find(
                                 (option) => option.value === item.result,
                               ) || null
                             }
-                            options={QC_DISPOSITION_OPTIONS}
+                            options={isDoorstepReturn(action.returnRequest) ? DOORSTEP_QC_DISPOSITION_OPTIONS : QC_DISPOSITION_OPTIONS}
                             onChange={(selectedOption) => {
                               qcFormik.setFieldTouched(
                                 `itemActions[${index}].result`,
@@ -3236,7 +3333,7 @@ const Returns = () => {
                                 : ""
                             }
                             required
-                            placeholder="Select disposition"
+                            placeholder={isDoorstepReturn(action.returnRequest) ? "Select inspection decision" : "Select disposition"}
                           />
                         </div>
                         <FormInput
@@ -3268,8 +3365,14 @@ const Returns = () => {
                           placeholder="Enter item condition"
                         />
 
+                        {isDoorstepReturn(action.returnRequest) && <p className="text-sm font-semibold text-gray-800 md:col-span-2">3. Add inspection notes and photos</p>}
                         <FormInput
-                          label="Item Note"
+                          label="Inspection notes"
+                          type="textarea"
+                          rows={4}
+                          className="md:col-span-2"
+                          required={isDoorstepReturn(action.returnRequest) || ["missing", "rejected"].includes(item.result)}
+                          helperText={isDoorstepReturn(action.returnRequest) || ["missing", "rejected"].includes(item.result) ? "Required for this item. Explain the inspection result and any rejected units." : "Add details about the inspection result."}
                           name={`itemNote-${index}`}
                           value={item.notes}
                           onChange={(event) =>
@@ -3283,18 +3386,19 @@ const Returns = () => {
                           }
                           minLength={3}
                           maxLength={500}
-                          showLengthCount={false}
-                          limitMessage="Item note must be between 3 and 500 characters."
+                          showLengthCount={true}
+                          limitMessage="Inspection notes must be between 3 and 500 characters."
                           error={
                             qcFormik.touched.itemActions?.[index]?.notes
                               ? qcFormik.errors.itemActions?.[index]?.notes
                               : ""
                           }
-                          placeholder="Add inspection notes"
+                          placeholder="Describe what was checked, the item’s condition, and the reason for any failed checks or rejected units."
                         />
 
                         <div className="md:col-span-2">
                           <QCEvidenceUploader
+                            required={isDoorstepReturn(action.returnRequest) || ["missing", "rejected"].includes(item.result)}
                             value={item.photos}
                             onChange={(value) =>
                               updateItemAction(index, "photos", value)
@@ -3399,7 +3503,7 @@ const Returns = () => {
                             required
                           />
 
-                          <FormSelectGroup
+                          <FormSelectGroup wrapSingleValue
                             label="Inventory Disposition"
                             value={
                               item.result === "sellable"
@@ -3452,7 +3556,7 @@ const Returns = () => {
                 <FormInput
                   label="Courier"
                   name="courierName"
-                  value={action.courierName}
+                  value={formAction.courierName}
                   onChange={(event) =>
                     setAction((prev) => ({
                       ...prev,
@@ -3464,16 +3568,16 @@ const Returns = () => {
                 />
 
                 <FormInput
-                  label="Tracking / AWB"
+                  label="Delivery tracking number for rejected item"
                   name="trackingNumber"
-                  value={action.trackingNumber}
+                  value={formAction.trackingNumber}
                   onChange={(event) =>
                     setAction((prev) => ({
                       ...prev,
                       trackingNumber: event.target.value,
                     }))
                   }
-                  placeholder="Enter tracking number / AWB"
+                  placeholder="Enter courier tracking number"
                   required
                 />
 
@@ -3502,7 +3606,7 @@ const Returns = () => {
               description="Update the shipment status and current location."
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <FormSelectGroup
+                <FormSelectGroup wrapSingleValue
                   label="Shipment Status"
                   value={action.shipmentStatus}
                   options={[
@@ -3557,7 +3661,7 @@ const Returns = () => {
                 <FormInput
                   label="Courier"
                   name="courierName"
-                  value={action.courierName}
+                  value={formAction.courierName}
                   onChange={(event) =>
                     setAction((prev) => ({
                       ...prev,
@@ -3569,16 +3673,16 @@ const Returns = () => {
                 />
 
                 <FormInput
-                  label="Tracking / AWB"
+                  label="Replacement delivery tracking number"
                   name="trackingNumber"
-                  value={action.trackingNumber}
+                  value={formAction.trackingNumber}
                   onChange={(event) =>
                     setAction((prev) => ({
                       ...prev,
                       trackingNumber: event.target.value,
                     }))
                   }
-                  placeholder="Enter tracking number / AWB"
+                  placeholder="Enter courier tracking number"
                   required
                 />
                 <FormInput
@@ -3586,7 +3690,7 @@ const Returns = () => {
                   name="expectedDeliveryAt"
                   type="datetime-local"
                   min={moment().format("YYYY-MM-DDTHH:mm")}
-                  value={action.expectedDeliveryAt}
+                  value={formAction.expectedDeliveryAt}
                   onChange={(event) => setAction((prev) => ({
                     ...prev, expectedDeliveryAt: event.target.value,
                   }))}
@@ -3604,14 +3708,15 @@ const Returns = () => {
               description="Add any additional information related to this action."
             >
               <FormInput
-                label="Note"
+                label={action.type === "tracking" && ["pickup_failed", "failed"].includes(action.shipmentStatus) ? "Pickup failure reason" : "Note"}
+                required={action.type === "exchange_failure" || (action.type === "tracking" && ["pickup_failed", "failed"].includes(action.shipmentStatus))}
                 name="note"
                 type="textarea"
                 maxLength={500}
                 minLength={3}
                 limitMessage="Note must be between 3 and 500 characters."
                 showLengthCount={true}
-                value={action.note}
+                value={formAction.note}
                 onChange={(event) => {
                   if (action.type === "approve") {
                     approveReturnFormik.handleChange(event);
@@ -3684,7 +3789,7 @@ const Returns = () => {
                                 ? qcFormik.errors.note
                                 : ""
                 }
-                placeholder="Add an optional note..."
+                placeholder={action.type === "tracking" && ["pickup_failed", "failed"].includes(action.shipmentStatus) ? "Explain why the courier could not collect the item" : "Add an optional note..."}
               />
             </FormSection>
           )}

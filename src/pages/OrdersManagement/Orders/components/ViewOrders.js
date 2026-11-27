@@ -1,3 +1,5 @@
+import { shipmentStatusLabel } from "../../../../utils/shipmentStatusLabel";
+import { cancellationRefundBreakdown } from "../../../../utils/cancellationRefund";
 import { formatReturnDuration } from "../../../../components/Shared/ReturnDurationInput";
 import {
   itemDisplayStatus,
@@ -2497,7 +2499,7 @@ const ShipmentCard = ({
             <div className="mt-1 text-xs text-[#65718b]">{seller}</div>
           )}
         </div>
-        <StatusBadge status={shipment.status || "not_created"} size="sm" dot />
+        <StatusBadge status={shipment.status || "not_created"} label={shipmentStatusLabel(shipment)} size="sm" dot />
       </div>
 
       <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2">
@@ -4423,7 +4425,17 @@ const OrderSummary = () => {
                       rows={[
                         {
                           label: "Refund",
-                          value: formatIndianNumber(cancellation.refund_amount),
+                          value: formatIndianNumber(cancellation.refundAmount ?? cancellation.refund_amount),
+                        },
+                        {
+                          label: "Included shipping refund",
+                          value: cancellationRefundBreakdown(cancellation).shipping === null
+                            ? "Not recorded" : formatIndianNumber(cancellationRefundBreakdown(cancellation).shipping),
+                        },
+                        {
+                          label: "Included platform fee / GST refund",
+                          value: cancellationRefundBreakdown(cancellation).platformFee === null
+                            ? "Not recorded" : formatIndianNumber(cancellationRefundBreakdown(cancellation).platformFee),
                         },
                         {
                           label: "Refund status",
@@ -5794,7 +5806,7 @@ const OrderSummary = () => {
                       </div>
 
                       <div>
-                        <span className="text-gray-500">Platform fee</span>
+                        <span className="text-gray-500">Platform fee (including GST)</span>
                         <p className="font-semibold">
                           {formatIndianNumber(
                             state.cancellationPreview.platformFeeRefundAmount,

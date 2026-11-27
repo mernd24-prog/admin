@@ -1293,6 +1293,11 @@ const Orders = () => {
     defaultFilters: getInitialQueryFilters(),
   });
   const [exportLoading, setExportLoading] = useState(false);
+  const [, setPayoutClock] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setPayoutClock((tick) => tick + 1), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   const { toQueryParams } = list;
 
@@ -1701,7 +1706,7 @@ const Orders = () => {
           );
         }
 
-        if (payout.fulfilled) {
+        if (payout.eligible) {
           return (
             <div className="flex flex-col items-start">
               <StatusBadge status="eligible" dot />

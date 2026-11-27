@@ -1,3 +1,4 @@
+import { cancellationRefundBreakdown } from "../../../utils/cancellationRefund";
 import { cancellationRequesterLabel } from "../../../utils/cancellationRequester";
 import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -168,6 +169,29 @@ const fmt = (value) => formatDateTime12Hour(value, "—");
 const display = (v = "") => String(v || "—").replace(/_/g, " ");
 const money = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const RefundBreakdown = ({ record }) => {
+  const breakdown = cancellationRefundBreakdown(record);
+  return (
+    <div className="mt-3 space-y-2 text-xs">
+      {[
+        ["Item refund (after discounts, including item tax)", breakdown.items],
+        ["Shipping refund", breakdown.shipping],
+        ["Platform fee refund (including applicable GST)", breakdown.platformFee],
+        ["Wallet refund", breakdown.wallet],
+        ["Payment / manual refund", breakdown.provider],
+      ].map(([label, value]) => (
+        <div key={label} className="flex justify-between gap-4">
+          <span className="text-gray-500">{label}</span>
+          <span className="font-medium text-gray-900">{value === null ? "Not recorded" : money(value)}</span>
+        </div>
+      ))}
+      <p className="pt-1 text-gray-500">
+        Wallet and payment amounts show how the total is returned. Completion is shown in Refund Status.
+      </p>
+    </div>
+  );
+};
 
 const normalizeCancellation = (row = {}) => {
   const items = Array.isArray(row.items) ? row.items : [];
@@ -642,7 +666,19 @@ const Cancellations = () => {
       key: "refundAmount",
       label: isSeller ? "My Cancelled Item Value" : "Customer Refund",
       sortable: false,
-      render: (v) => <span className="text-sm font-medium">{money(v)}</span>,
+      render: (v, row) => {
+        const fee = cancellationRefundBreakdown(row).platformFee;
+        return (
+          <div className="text-sm font-medium">
+            {money(v)}
+            {!isSeller && fee !== null && (
+              <div className="text-xs font-normal text-gray-500">
+                Includes {money(fee)} platform fee / GST
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "sellerCancelledValue",
@@ -997,6 +1033,7 @@ const Cancellations = () => {
                   <p className="mt-1 text-lg font-bold text-gray-900">
                     {money(detail.refundAmount)}
                   </p>
+                  {!isSeller && <RefundBreakdown record={detail} />}
                 </div>
 
                 {!isSeller && (
@@ -1326,6 +1363,7 @@ const Cancellations = () => {
                       <p className="mt-1 text-xl font-bold text-gray-900">
                         {money(item.refundAmount ?? item.refund_amount)}
                       </p>
+                      {!isSeller && <RefundBreakdown record={item} />}
                       <p className="mt-2 text-xs leading-5 text-amber-800">
                         Refund processing will start after cancellation
                         approval.

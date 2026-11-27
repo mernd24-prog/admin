@@ -518,7 +518,10 @@ const returnEvidenceUrlsValidation = ({ required = false } = {}) => {
     );
 
   return required
-    ? schema.required("Upload or enter at least one evidence URL.")
+    ? schema.required("Upload at least one inspection photo.").test(
+        "at-least-one-evidence-photo", "Upload at least one inspection photo.",
+        value => !!value && value.split(/[\n,]/).some(url => url.trim()),
+      )
     : schema.notRequired();
 };
 
@@ -863,10 +866,63 @@ export const returnQualityControlValidationSchema = Yup.object({
         .notRequired()
         .min(3, "Condition must be at least 3 characters.")
         .max(200, "Condition must be at most 200 characters."),
-      notes: returnNoteValidation("Item note"),
-      photos: returnEvidenceUrlsValidation(),
+      notes: Yup.string().when("result", {
+        is: result => ["missing", "rejected"].includes(result),
+        then: () => returnNoteValidation("Inspection notes", { required: true }),
+        otherwise: () => returnNoteValidation("Inspection notes"),
+      }),
+      photos: Yup.string().when("result", {
+        is: result => ["missing", "rejected"].includes(result),
+        then: () => returnEvidenceUrlsValidation({ required: true }),
+        otherwise: () => returnEvidenceUrlsValidation(),
+      }),
     }),
   ),
+});
+
+const doorstepCheckSchema = label => Yup.string()
+  .oneOf(["pass", "fail", "not_applicable"], `Record the ${label} inspection result.`)
+  .required(`Record the ${label} inspection result.`);
+
+export const returnDoorstepQualityControlValidationSchema = returnQualityControlValidationSchema.shape({
+  itemActions: Yup.array().min(1, "Inspect at least one approved item.").required("Inspection items are required.").of(
+    returnQualityControlValidationSchema.fields.itemActions.innerType.shape({
+      acceptedQuantity: Yup.number()
+        .transform((value, original) => original === "" || original == null ? undefined : value)
+        .typeError("Accepted quantity must be a number.")
+        .required("Accepted quantity is required; enter 0 if no units qualify.")
+        .integer("Accepted quantity must be a whole number.").min(0, "Accepted quantity cannot be negative.")
+        .test("maximum-accepted", "Accepted quantity cannot exceed the approved quantity.", function(value) {
+          return value == null || value <= Number(this.parent.approvedQuantity ?? 0);
+        })
+        .test("zero-needs-failure", "All checks pass. Accept the eligible units, or record the failed check that makes them ineligible.", function(value) {
+          return value !== 0 || Object.values(this.parent.checks || {}).includes("fail");
+        })
+        .test("zero-disposition", "No units qualify. Choose Not eligible or Item missing.", function(value) {
+          return value !== 0 || ["rejected", "missing"].includes(this.parent.result);
+        })
+        .test("passing-checks", "Accepted units must pass identity, condition and every applicable check.", function(value) {
+          const checks = this.parent.checks || {};
+          return !(value > 0) || (checks.identity === "pass" && checks.condition === "pass" && !Object.values(checks).includes("fail"));
+        })
+        .test("accepted-disposition", "Accepted units need an eligible disposition.", function(value) {
+          return !(value > 0) || ["sellable", "damaged"].includes(this.parent.result);
+        }),
+      checks: Yup.object({
+        identity: doorstepCheckSchema("product identity").notOneOf(["not_applicable"], "Product identity must pass or fail."),
+        serialNumber: doorstepCheckSchema("serial number / IMEI"),
+        accessories: doorstepCheckSchema("accessories"),
+        packaging: doorstepCheckSchema("packaging"),
+        condition: doorstepCheckSchema("condition eligibility").notOneOf(["not_applicable"], "Condition eligibility must pass or fail."),
+      }).required("Complete the inspection checklist."),
+      notes: returnNoteValidation("Inspection notes", { required: true }),
+      photos: returnEvidenceUrlsValidation({ required: true }),
+    }),
+  ),
+}).test("reported-damage-eligibility", function(values) {
+  const index = (values?.itemActions || []).findIndex(item => Number(item.acceptedQuantity) > 0 && item.result === "damaged");
+  if (index < 0 || ["defective", "damaged_in_transit", "quality_issue", "not_as_described"].includes(values?.returnReason)) return true;
+  return this.createError({ path: `itemActions[${index}].result`, message: "Unreported damage is not eligible for collection; record failed QC with evidence." });
 });
 
 export const returnQcEvidenceValidationSchema = Yup.object({
@@ -1345,10 +1401,10 @@ export const scheduleReturnValidationSchema = Yup.object({
     then: (schema) =>
       schema
         .trim()
-        .required("Tracking / AWB is required")
-        .min(3, "Tracking / AWB must be at least 3 characters")
-        .max(100, "Tracking / AWB must be at most 100 characters"),
-    otherwise: () => optionalTextWithLength("Tracking / AWB", 100),
+        .required("Tracking number is required")
+        .min(3, "Tracking number must be at least 3 characters")
+        .max(100, "Tracking number must be at most 100 characters"),
+    otherwise: () => optionalTextWithLength("Tracking number", 100),
   }),
   note: returnNoteValidation(),
 });

@@ -88,13 +88,18 @@ export const paymentPresentationOf = (row = {}) => {
   return { status, label: null, detail: null, ...amounts };
 };
 
-export const payoutWindowOf = (row = {}) => {
+export const payoutWindowOf = (row = {}, now = Date.now()) => {
   const items = asArray(row.items);
   const commissions = asArray(row.relations?.sellerCommissions);
   const payouts = asArray(row.relations?.sellerPayouts);
   const orderStatus = statusOf(row.status);
 
-  const deadlines = items
+  const payableItems = items.filter((item) =>
+    !new Set(["refunded", "cancelled"]).has(statusOf(item.payout_status || item.payoutStatus)),
+  );
+  const deadlineOf = (item) => item.payout_eligible_at || item.payoutEligibleAt ||
+    item.return_eligible_until || item.returnEligibleUntil;
+  const deadlines = payableItems
     .map(
       (item) =>
         item.payout_eligible_at ||
@@ -102,7 +107,7 @@ export const payoutWindowOf = (row = {}) => {
         item.return_eligible_until ||
         item.returnEligibleUntil,
     )
-    .filter(Boolean);
+    .filter((value) => value && Number.isFinite(new Date(value).getTime()));
   const latestDeadline = deadlines.length
     ? deadlines.reduce((latest, value) =>
         new Date(value).getTime() > new Date(latest).getTime() ? value : latest,
@@ -134,10 +139,24 @@ export const payoutWindowOf = (row = {}) => {
   const noPayout = !paid &&
     (commissionsFullyRefunded || itemsFullyRefunded || terminalWithoutPayout);
 
-  const held = !noPayout && items.some(
-    (item) => statusOf(item.payout_status || item.payoutStatus) === "held",
+  const held = !noPayout && (
+    payableItems.some((item) => statusOf(item.payout_status || item.payoutStatus) === "held") ||
+    commissions.some((commission) => new Set(["held", "on_hold"]).has(statusOf(commission.status)))
   );
-  const fulfilled = !noPayout && orderStatus === "fulfilled";
+  // Resolve each remaining item separately: a refunded item's later deadline
+  // must not delay earnings on delivered items that the customer kept.
+  const eligible = !noPayout && !held && !paid && (payableItems.length
+    ? payableItems.every((item) => {
+        const status = statusOf(item.payout_status || item.payoutStatus);
+        if (new Set(["eligible", "paid"]).has(status)) return true;
+        if (status && status !== "pending") return false;
+        const deadline = new Date(deadlineOf(item)).getTime();
+        const delivered = Boolean(item.delivered_at || item.deliveredAt) ||
+          new Set(["delivered", "fulfilled"]).has(orderStatus);
+        return delivered && Number.isFinite(deadline) && deadline <= now;
+      })
+    : orderStatus === "fulfilled");
+  const fulfilled = eligible;
 
   return {
     latestDeadline,
@@ -150,6 +169,7 @@ export const payoutWindowOf = (row = {}) => {
         ? "Order closed without a payout"
         : null,
     fulfilled,
+    eligible,
   };
 };
 

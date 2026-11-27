@@ -9,8 +9,9 @@ const customStyles = (
   mutedValue,
   wrapMultiValues,
   isMulti,
+  wrapSingleValue,
 ) => {
-  const shouldWrap = Boolean(wrapMultiValues || isMulti);
+  const shouldWrap = Boolean(wrapMultiValues || isMulti || wrapSingleValue);
 
   return {
     control: (provided, state) => ({
@@ -62,17 +63,25 @@ const customStyles = (
   ...provided,
   padding: shouldWrap ? "3px 6px" : "2px 8px",
   gap: shouldWrap ? "4px" : undefined,
-  display: "flex",
+  display: wrapSingleValue && !isMulti ? "grid" : "flex",
   alignItems: "center",
   flexWrap: shouldWrap ? "wrap" : "nowrap",
   minWidth: 0,
+  overflow: "hidden",
 }),
    placeholder: (provided, state) => ({
   ...provided,
   color: state.isDisabled ? "#9ca3af" : "var(--admin-muted)",
   fontSize: "0.875rem",
   paddingLeft: "2px",
-  position: "absolute",
+  position: wrapSingleValue ? "relative" : "absolute",
+  gridArea: "1 / 1 / 2 / 3",
+  maxWidth: "100%",
+  whiteSpace: wrapSingleValue ? "normal" : "nowrap",
+  overflowWrap: wrapSingleValue ? "anywhere" : "normal",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  lineHeight: "20px",
   pointerEvents: "none",
 }),
 
@@ -85,6 +94,14 @@ const customStyles = (
           : "var(--admin-ink)",
       fontSize: "0.875rem",
       paddingLeft: "2px",
+      position: "relative",
+      gridArea: "1 / 1 / 2 / 3",
+      maxWidth: "100%",
+      whiteSpace: wrapSingleValue ? "normal" : "nowrap",
+      overflowWrap: wrapSingleValue ? "anywhere" : "normal",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      lineHeight: "20px",
     }),
 
 input: (provided) => ({
@@ -253,6 +270,7 @@ const FilterSelect = ({
   formatOptionLabel,
   controlHeight,
   wrapMultiValues = false,
+  wrapSingleValue = false,
   mutedValue = false,
   noOptionsMessage = isCreatable
     ? ({ inputValue }) =>
@@ -287,6 +305,7 @@ const FilterSelect = ({
             mutedValue,
             wrapMultiValues,
             isMulti,
+            wrapSingleValue,
           )}
           className="capitalize"
           classNamePrefix="admin-filter-select"
@@ -314,6 +333,8 @@ const FilterSelect = ({
           menuPortalTarget={menuPortalTarget}
           menuPosition="fixed"
           aria-invalid={Boolean(error)}
+          required={required}
+          aria-required={required || undefined}
           noOptionsMessage={noOptionsMessage}
           loadingMessage={loadingMessage}
           components={{

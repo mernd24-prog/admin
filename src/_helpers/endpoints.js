@@ -420,6 +420,7 @@ export const ENDPOINTS = {
       `/returns/${returnId}/reverse-shipment/tracking`,
     receive: (returnId) => `/returns/${returnId}/receive`,
     qc: (returnId) => `/returns/${returnId}/qc`,
+    collectionVisit: (returnId) => `/returns/${returnId}/collection-visit`,
     qcEvidence: (returnId) => `/returns/${returnId}/qc/evidence`,
     qcDecision: (returnId) => `/returns/${returnId}/qc/decision`,
     returnToCustomer: (returnId) => `/returns/${returnId}/return-to-customer`,

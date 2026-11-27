@@ -29,7 +29,7 @@ export function itemDisplayStatus(item = {}, order = {}) {
   const effective = key(item.effective_status || item.effectiveStatus);
   if (effective && effective !== "initiated") return returnDisplay(effective);
   const lifecycle = key(item.return_status || item.returnStatus);
-  if (["return_requested", "return_approved", "returned", "partially_returned", "refunded", "partially_refunded", "refund_pending", "refund_failed"].includes(lifecycle)) return lifecycle;
+  if (["return_requested", "return_approved", "returned", "partially_returned", "refunded", "partially_refunded", "refund_pending", "refund_failed", "replaced", "replacement_created", "replacement_shipped", "replacement_delivered"].includes(lifecycle)) return lifecycle;
   const itemId = String(item.id || item._id || "");
   const shipments = (order.relations?.shipments || []).filter((shipment) => {
     if (!forward(shipment) || !groupMatches(shipment, item)) return false;

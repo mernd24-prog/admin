@@ -84,3 +84,7 @@ test('explicitly packed and ready packages retain their real fulfillment stages'
   expect(itemDisplayStatus(a, { status: 'packed', relations: { shipments: [shipment('seller-a', 'initiated')] } })).toBe('packed');
   expect(itemDisplayStatus(a, { status: 'confirmed', relations: { shipments: [shipment('seller-a', 'manifested')] } })).toBe('ready_to_ship');
 });
+
+test('replacement lifecycle remains visible in an order item', () => {
+  expect(itemDisplayStatus({ quantity: 1, return_status: 'replaced' }, { status: 'delivered' })).toBe('replaced');
+});

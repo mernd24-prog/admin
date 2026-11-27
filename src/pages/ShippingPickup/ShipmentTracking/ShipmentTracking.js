@@ -1,4 +1,6 @@
-import { reverseTrackingOptions } from "../../../utils/returnTrackingOptions";
+import { shipmentStatusLabel } from "../../../utils/shipmentStatusLabel";
+import { DELIVERY_METHOD_OPTIONS } from "../../../constants/shippingOptions";
+import { reverseTrackingOptions, filterDoorstepShipmentOptions } from "../../../utils/returnTrackingOptions";
 import React, {
   useCallback,
   useEffect,
@@ -69,17 +71,6 @@ const FULFILLMENT_STATUS_OPTIONS = [
   { value: "failed", label: "Failed delivery" },
   { value: "rto", label: "Return to origin" },
   { value: "cancelled", label: "Cancelled" },
-];
-const DELIVERY_METHOD_OPTIONS = [
-  { value: "manual", label: "Manual / Seller Delivery" },
-  { value: "Local Same Day", label: "Local Same Day" },
-  {
-    value: "Prepaid Heavy and High Value",
-    label: "Prepaid Heavy and High Value",
-  },
-  { value: "Express Metro", label: "Express Metro" },
-  { value: "Standard All India", label: "Standard All India" },
-  { value: "Ecom Express", label: "Ecom Express" },
 ];
 const FULFILLMENT_TRANSITIONS = {
   initiated: ["picked_up", "failed"],
@@ -305,7 +296,7 @@ const ShipmentTracking = () => {
           label: column.label,
         })),
         { key: "shipment_id", label: "Shipment ID" },
-        { key: "awb_number", label: "AWB / Tracking Number" },
+        { key: "awb_number", label: "Tracking Number" },
         { key: "tracking_url", label: "Tracking URL" },
         { key: "recipient_name", label: "Recipient Name" },
         { key: "recipient_phone", label: "Recipient Phone" },
@@ -321,6 +312,10 @@ const ShipmentTracking = () => {
         const exportRow = {};
 
         excelColumns.forEach(({ key, label }) => {
+          if (key === "status") {
+            exportRow[key] = shipmentStatusLabel(row);
+            return;
+          }
           // Export the order/shipment reference instead of the raw ID.
           if (
             String(key).toLowerCase() === "shipment" ||
@@ -545,7 +540,7 @@ const ShipmentTracking = () => {
     {
       key: "awbNumber",
       type: "text",
-      label: "AWB / Tracking",
+      label: "Tracking Number",
       width: "w-44",
     },
     {
@@ -635,16 +630,12 @@ const ShipmentTracking = () => {
   const trackingActionOptions = useMemo(
     () =>
       !shipmentPaymentGateApplies
-        ? getTrackingActionOptions(
+        ? filterDoorstepShipmentOptions(selectedShipment || {}, getTrackingActionOptions(
             selectedShipment?.status || "initiated",
             selectedShipment?.direction,
-          )
+          ))
         : [],
-      [
-      selectedShipment?.status,
-      selectedShipment?.direction,
-      selectedShipmentPaid,
-    ],
+    [selectedShipment, shipmentPaymentGateApplies],
   );
   const trackingFormik = useFormik({
     initialValues: {
@@ -832,10 +823,9 @@ const ShipmentTracking = () => {
         const nextShipment = unwrapResult(response);
         setSelectedShipment(nextShipment);
         const nextAction = {
-          status: getDefaultTrackingStatus(
-            nextShipment.status || "initiated",
-            nextShipment.direction,
-          ),
+          status: filterDoorstepShipmentOptions(nextShipment, getTrackingActionOptions(
+            nextShipment.status || "initiated", nextShipment.direction,
+          ))[0]?.value || nextShipment.status || "initiated",
           note: "",
           location: "",
           courierName: nextShipment.courier_name || "",
@@ -1050,9 +1040,10 @@ const ShipmentTracking = () => {
         key: "status",
         label: "Status",
         sortable: true,
-        render: (value) => (
+        render: (value, row) => (
           <StatusBadge
-            status={String(value).toLowerCase() === "rto" ? "RTO" : value}
+            label={shipmentStatusLabel(row)}
+            status={value}
             dot
           />
         ),
@@ -1109,7 +1100,7 @@ const ShipmentTracking = () => {
         onPageChange={list.setPage}
         onPageSizeChange={list.setPageSize}
         onSearch={list.setSearch}
-        searchPlaceholder="Search shipment, AWB, courier, or order..."
+        searchPlaceholder="Search shipment, tracking number, courier, or order..."
         onSort={list.setSort}
         sortKey={list.sortKey}
         sortDir={list.sortDir}
@@ -1188,9 +1179,8 @@ const ShipmentTracking = () => {
                 </div>
               </div>
               <StatusBadge
-                status={shipmentStepLabel(
-                  selectedShipment?.status || "initiated",
-                )}
+                status={selectedShipment?.status || "initiated"}
+                label={shipmentStatusLabel(selectedShipment || {})}
                 dot
               />
             </div>
@@ -1253,18 +1243,19 @@ const ShipmentTracking = () => {
             {!isCancelledBeforeShipment(selectedShipment) && (
               <div className="grid grid-cols-1 gap-2 border-t border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 sm:grid-cols-2">
                 <div>
-                  Shipment date:{" "}
+                  {selectedShipment?.direction === "reverse" ? "Collected at:" : "Shipment date:"}{" "}
                   <strong className="font-medium text-gray-700">
                     {formatDateTime12Hour(
                       selectedShipment?.shipped_at ||
-                        selectedShipment?.shippedAt,
-                      "Not shipped",
+                        selectedShipment?.shippedAt ||
+                        (selectedShipment?.direction === "reverse" ? selectedShipment?.returnWorkflow?.collectedAt : null),
+                      selectedShipment?.direction === "reverse" ? "Not collected" : "Not shipped",
                     )}
                   </strong>
                 </div>
                 <div className="sm:text-right">
                   {selectedShipment?.status === "delivered"
-                    ? "Delivered at"
+                    ? selectedShipment?.direction === "reverse" ? "Returned to seller at" : "Delivered at"
                     : selectedShipment?.direction === "reverse"
                       ? "Expected warehouse arrival"
                       : "Expected customer delivery"}
@@ -1312,7 +1303,7 @@ const ShipmentTracking = () => {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-semibold text-gray-900">
-                    Seller delivery action
+                    {selectedShipment?.returnWorkflow?.sameVisitExchange ? "Doorstep exchange" : selectedShipment?.direction === "reverse" ? (selectedShipment?.returnWorkflow?.sellerResponsibilityCompletedAt ? "Return completed" : selectedShipment?.returnWorkflow?.collected ? "Return journey to seller / warehouse" : "Return pickup tracking") : "Seller delivery action"}
                   </h3>
 
                   {/* <StatusBadge
@@ -1322,12 +1313,26 @@ const ShipmentTracking = () => {
                 </div>
 
                 <p className="mt-1 max-w-xl text-xs leading-5 text-gray-500">
-                  Select the next valid shipment stage and provide the relevant
-                  details. Update time is recorded automatically.
+                  {selectedShipment?.direction === "reverse"
+                    ? selectedShipment?.returnWorkflow?.sameVisitExchange
+                      ? "One visit covers replacement handover and old-item collection. Record inspection and confirm Exchange Completed in Returns. No separate return journey needs to be marked manually."
+                    : selectedShipment?.returnWorkflow?.sellerResponsibilityCompletedAt
+                      ? "Doorstep QC and collection are complete. No further shipment update is required. Onward transport is the seller’s responsibility; refund payment is handled separately."
+                    : selectedShipment?.returnWorkflow?.collected
+                      ? "Collection is already confirmed. Track this same parcel back to the seller or warehouse. A courier issue after handover must not reset collection or the customer’s refund eligibility."
+                      : "Confirm courier arrival and record doorstep inspection and collection in Returns."
+                    : "Select the next valid shipment stage and provide the relevant details. Update time is recorded automatically."}
                 </p>
               </div>
             </div>
             <div className="space-y-4 p-4">
+              {selectedShipment?.returnWorkflow?.doorstepQcRequired && !selectedShipment.returnWorkflow.collected && (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  {selectedShipment.direction === "reverse" && ["qc_failed", "qc_failure_upheld", "rejected", "closed"].includes(selectedShipment.returnWorkflow.returnStatus)
+                    ? "This item was not collected after doorstep QC. Shipment history is read-only; review the inspection in Returns. Do not record QC rejection as a courier failure."
+                    : "Doorstep QC and collection must be recorded in Returns before pickup progress or replacement delivery can be confirmed. Courier failures can still be recorded here."}
+                </div>
+              )}
               {trackingActionOptions.length > 0 ? (
                 <div className="space-y-4">
                   {/* Next Shipment Status */}
@@ -1511,7 +1516,7 @@ const ShipmentTracking = () => {
                         />
 
                         <FormInput
-                          label="AWB / Tracking Reference"
+                          label="Tracking Number"
                           name="awbNumber"
                           required
                           className="!mb-0"
@@ -1620,11 +1625,19 @@ const ShipmentTracking = () => {
                         captured or COD is authorized.
                       </p>
                     </div>
+                  ) : selectedShipment?.returnWorkflow?.sameVisitExchange ? (
+                    <p className="leading-5 text-gray-600">{selectedShipment.returnWorkflow.exchangeCompletedAt || selectedShipment.returnWorkflow.returnStatus === "replaced"
+                      ? "Exchange completed. The old item was collected and the replacement handed over during the same visit. Onward transport is the seller’s responsibility."
+                      : "Manage this exchange in Returns: inspect both items and confirm collection and replacement handover together. No separate shipment update is needed here."}</p>
+                  ) : selectedShipment?.returnWorkflow?.doorstepQcRequired && !selectedShipment.returnWorkflow.collected ? (
+                    <p className="leading-5 text-gray-600">This parcel is booked but the item has not been collected. {selectedShipment.returnWorkflow.returnStatus === "qc_failed"
+                      ? "Doorstep QC failed; platform review is pending in Returns."
+                      : "Confirm courier arrival and record doorstep inspection in Returns before updating collection progress."}</p>
                   ) : (
                     <p className="leading-5 text-gray-600">
                       This shipment is{" "}
                       <strong className="font-semibold text-gray-900">
-                        {shipmentStepLabel(selectedShipment?.status)}
+                        {shipmentStatusLabel(selectedShipment || {})}
                       </strong>
                       . No further seller action is currently required.
                     </p>
@@ -1722,7 +1735,7 @@ const ShipmentTracking = () => {
                   <span className="absolute -left-[7px] top-1 h-3 w-3 rounded-full border-2 border-white bg-blue-500 ring-2 ring-blue-100" />
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="font-semibold text-gray-800">
-                      {trackingEventLabel(event)}
+                      {trackingEventType(event) === "eta_updated" ? trackingEventLabel(event) : shipmentStatusLabel(selectedShipment || {}, event.status)}
                     </div>
                     <time className="text-xs text-gray-500">
                       {formatDateTime12Hour(

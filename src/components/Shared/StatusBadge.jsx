@@ -197,6 +197,10 @@ const DOT_COLORS = {
 
 // Human-readable display labels override for underscore keys
 const DISPLAY_LABELS = {
+  return_received: "Returned to Seller",
+  replacement_delivered: "Replacement Delivered",
+  replacement_shipped: "Replacement in Transit",
+  replaced: "Replaced",
   shipment_cancelled: "Shipment Cancelled",
   in_stock: "In Stock",
   low_stock: "Low Stock",

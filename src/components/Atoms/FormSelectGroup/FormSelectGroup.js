@@ -19,12 +19,16 @@ const FormSelectGroup = ({
   selectClassName = "",
   name,
   id,
+  onBlur,
+  wrapSingleValue = false,
 }) => {
+  const generatedId = React.useId();
+  const inputId = id || name || generatedId;
   return (
-    <div className={`admin-field ${className}`}>
+    <div className={`admin-field min-w-0 ${className}`}>
       {label && (
         <label
-          htmlFor={id}
+          htmlFor={inputId}
           className="admin-label"
         >
           {label}
@@ -39,11 +43,14 @@ const FormSelectGroup = ({
       )}
 
       <FilterSelect
-        id={id}
+        inputId={inputId}
         name={name}
         options={options}
         value={value}
         onChange={onChange}
+        onBlur={onBlur}
+        wrapSingleValue={wrapSingleValue}
+        required={required}
         placeholder={placeholder}
         isDisabled={isDisabled}
         isMulti={isMulti}
